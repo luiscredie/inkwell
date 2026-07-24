@@ -1,0 +1,22 @@
+{
+  "generated_at": "2026-07-24T02:52:26.529694+00:00",
+  "source_file": "C:\\Users\\luisc\\OneDrive\\Desktop\\newlorcana\\cards.json",
+  "catalog_csv": null,
+  "source_type": "json",
+  "naming": "name",
+  "total": 3442,
+  "counts": {
+    "official_not_found": 283,
+    "skipped": 3155,
+    "downloaded": 4
+  },
+  "official_fallback": {
+    "resolved": 4,
+    "unresolved": 283
+  },
+  "ligalorcana_fallback": {
+    "resolved": 0,
+    "unresolved": 283,
+    "blocked": true
+  }
+}
