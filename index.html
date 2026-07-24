@@ -27,12 +27,13 @@
   @keyframes ink-spin{to{transform:rotate(360deg)}}
   .ink-view{animation:ink-fade .35s cubic-bezier(.2,.7,.2,1) both}
   @media(max-width:860px){
+    #app{flex-direction:column!important}
     #rail{position:fixed;bottom:0;left:0;right:0;top:auto!important;width:100%!important;height:62px!important;flex-direction:row!important;padding:0 6px!important;border-right:none!important;border-top:1px solid rgba(255,255,255,.08);z-index:50;justify-content:space-around!important;background:rgba(14,14,18,.96)!important;backdrop-filter:blur(12px)}
     #rail .rail-brand,#rail .rail-user{display:none!important}
     #rail .rail-label{display:none!important}
     #rail .rail-nav{flex-direction:row!important;gap:2px!important;flex:1;justify-content:space-around}
     #rail .rail-nav button{flex-direction:column!important;gap:3px!important;padding:8px 6px!important;font-size:10px!important;justify-content:center!important;text-align:center!important;flex:1}
-    #ink-main{padding-bottom:78px!important}
+    #ink-main{padding-bottom:78px!important;width:100%!important;min-width:0!important}
     #ink-scroll{padding:16px!important}
     #ink-main header{padding:14px 16px!important;flex-wrap:wrap!important;gap:10px!important}
     #ink-main header h1{font-size:19px!important}
