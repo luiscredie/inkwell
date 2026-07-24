@@ -246,7 +246,7 @@
           <sc-if value="{{ showAcquire }}" hint-placeholder-val="{{ false }}">
             <div style="display:flex;align-items:center;gap:14px;padding:14px 18px;border-radius:14px;background:linear-gradient(160deg,rgba(183,155,255,.1),rgba(46,144,224,.06));border:1px solid rgba(183,155,255,.2);margin-bottom:16px">
               <div style="flex:1">
-                <div style="font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:#8a8a92">Custo para adquirir o que falta</div>
+                <div style="font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:#8a8a92">Cost to acquire what's missing</div>
                 <div style="font-family:'Bricolage Grotesque';font-weight:800;font-size:24px;letter-spacing:-.02em;margin-top:3px">{{ acquireCost }}</div>
               </div>
               <div style="font-size:12px;color:#8a8a92;font-family:'JetBrains Mono'">{{ acquireSub }}</div>
@@ -937,7 +937,7 @@ class Component extends DCLogic {
       V.setMenuLabel=st.sets.length?(st.sets.length+' set'+(st.sets.length>1?'s':'')):'All sets';
       V.clearSets=()=>this.setState({sets:[],page:0});
       V.sort=st.sort; V.onSort=(e)=>this.setState({sort:e.target.value});
-      const modes=[['owned','Tenho'],['missing','Faltando'],['all','Todas']];
+      const modes=[['owned','Owned'],['missing','Missing'],['all','All']];
       V.collModes=modes.map(([m,label])=>({label,_go:()=>this.setState({collMode:m,page:0}),_style:this.chipStyle(st.collMode===m)}));
       V.exportCollection=this.exportCollection; V.triggerImport=this.triggerImport; V.importCollection=this.importCollection; V.setImpRef=this.setImpRef;
       const all=this.filtered(); V.resultCount=all.length.toLocaleString('en-US');
@@ -945,7 +945,7 @@ class Component extends DCLogic {
       V.pageInfo=pages>1?` · page ${page+1}/${pages}`:''; V.noResults=all.length===0;
       const acquire=st.collMode==='missing'?all.reduce((s,c)=>s+this.priceOr0(c),0):0;
       const acqPriced=st.collMode==='missing'?all.filter(c=>this.hasRealPrice(c)).length:0;
-      V.showAcquire=st.collMode==='missing'; V.acquireCost=this.fmt(acquire); V.acquireSub=acqPriced+' com preço';
+      V.showAcquire=st.collMode==='missing'; V.acquireCost=this.fmt(acquire); V.acquireSub=acqPriced+' with price';
       V.prevPage=()=>this.setState({page:Math.max(0,page-1)}); V.nextPage=()=>this.setState({page:Math.min(pages-1,page+1)});
       V.clearFilters=()=>this.setState({inks:[],types:[],sets:[],q:'',collMode:'all',page:0});
       V.accent='#b79bff';
