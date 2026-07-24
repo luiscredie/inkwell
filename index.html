@@ -27,11 +27,24 @@
   @keyframes ink-spin{to{transform:rotate(360deg)}}
   .ink-view{animation:ink-fade .35s cubic-bezier(.2,.7,.2,1) both}
   @media(max-width:860px){
-    #rail{position:fixed;bottom:0;left:0;right:0;top:auto!important;width:100%!important;height:64px!important;flex-direction:row!important;padding:0 8px!important;border-right:none!important;border-top:1px solid rgba(255,255,255,.08);z-index:50;justify-content:space-around!important}
+    #rail{position:fixed;bottom:0;left:0;right:0;top:auto!important;width:100%!important;height:62px!important;flex-direction:row!important;padding:0 6px!important;border-right:none!important;border-top:1px solid rgba(255,255,255,.08);z-index:50;justify-content:space-around!important;background:rgba(14,14,18,.96)!important;backdrop-filter:blur(12px)}
     #rail .rail-brand,#rail .rail-user{display:none!important}
     #rail .rail-label{display:none!important}
     #rail .rail-nav{flex-direction:row!important;gap:2px!important;flex:1;justify-content:space-around}
-    #ink-main{padding-bottom:80px!important}
+    #rail .rail-nav button{flex-direction:column!important;gap:3px!important;padding:8px 6px!important;font-size:10px!important;justify-content:center!important;text-align:center!important;flex:1}
+    #ink-main{padding-bottom:78px!important}
+    #ink-scroll{padding:16px!important}
+    #ink-main header{padding:14px 16px!important;flex-wrap:wrap!important;gap:10px!important}
+    #ink-main header h1{font-size:19px!important}
+    #ink-main header > div:last-child{width:100%!important}
+    .ink-view{max-width:100%!important}
+    .ink-grid-2,.ink-grid-3{grid-template-columns:1fr!important}
+    .ink-price-row{grid-template-columns:1fr auto!important;gap:6px 10px!important}
+    .ink-price-row .ink-col-range{display:none!important}
+    .ink-price-head{display:none!important}
+    .ink-deck-split{grid-template-columns:1fr!important}
+    .ink-card-modal{grid-template-columns:1fr!important;max-height:92vh!important}
+    .ink-card-modal > div:first-child{max-height:44vh!important}
   }
 </style>
 <script>
@@ -131,7 +144,7 @@
 
             <div style="padding:22px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)">
               <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:18px">
-                <h3 style="font-family:'Bricolage Grotesque';font-weight:700;font-size:16px">Price Movers · 7d</h3>
+                <h3 style="font-family:'Bricolage Grotesque';font-weight:700;font-size:16px">Most Valuable</h3>
                 <span style="font-size:12px;color:#7c7c85;font-family:'JetBrains Mono'">owned singles</span>
               </div>
               <div style="display:flex;flex-direction:column;gap:3px">
@@ -281,11 +294,11 @@
           </div>
 
           <div style="border-radius:16px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);overflow:hidden">
-            <div style="display:grid;grid-template-columns:1fr 90px 100px 96px 90px;gap:10px;padding:13px 18px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#7c7c85;border-bottom:1px solid rgba(255,255,255,.06);font-weight:600">
-              <span>Card</span><span style="text-align:right">Owned</span><span style="text-align:right">Price</span><span style="text-align:center">30d</span><span style="text-align:right">7d</span>
+            <div class="ink-price-head" style="display:grid;grid-template-columns:1fr 80px 110px 150px 100px;gap:10px;padding:13px 18px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#7c7c85;border-bottom:1px solid rgba(255,255,255,.06);font-weight:600">
+              <span>Card</span><span style="text-align:right">Owned</span><span style="text-align:right">Price</span><span style="text-align:right">Range (low–high)</span><span style="text-align:right">Foil</span>
             </div>
             <sc-for list="{{ priceRows }}" as="r" hint-placeholder-count="12">
-              <button onClick="{{ r._open }}" style="display:grid;grid-template-columns:1fr 90px 100px 96px 90px;gap:10px;align-items:center;width:100%;padding:11px 18px;background:none;border:none;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;text-align:left" style-hover="background:rgba(255,255,255,.03)">
+              <button onClick="{{ r._open }}" class="ink-price-row" style="display:grid;grid-template-columns:1fr 80px 110px 150px 100px;gap:10px;align-items:center;width:100%;padding:11px 18px;background:none;border:none;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;text-align:left" style-hover="background:rgba(255,255,255,.03)">
                 <span style="display:flex;align-items:center;gap:11px;min-width:0">
                   <span style="width:26px;height:36px;border-radius:5px;flex-shrink:0;background:{{ r.ink }};background-size:cover;background-position:center;background-image:{{ r._bg }}"></span>
                   <span style="min-width:0">
@@ -293,10 +306,10 @@
                     <span style="font-size:11px;color:#7c7c85">{{ r.setName }}</span>
                   </span>
                 </span>
-                <span style="text-align:right;font-family:'JetBrains Mono';font-size:13px;color:#a8a8b0">{{ r.owned }}</span>
-                <span style="text-align:right;font-family:'JetBrains Mono';font-size:13px;font-weight:500">{{ r.price }}</span>
-                <span style="display:flex;justify-content:center"><svg viewBox="0 0 100 30" preserveAspectRatio="none" style="width:80px;height:26px"><polyline points="{{ r.spark }}" fill="none" stroke="{{ r.chgColor }}" stroke-width="2" vector-effect="non-scaling-stroke"></polyline></svg></span>
-                <span style="text-align:right;font-family:'JetBrains Mono';font-size:12.5px;font-weight:700;color:{{ r.chgColor }}">{{ r.chg }}</span>
+                <span class="ink-col-range" style="text-align:right;font-family:'JetBrains Mono';font-size:13px;color:#a8a8b0">{{ r.owned }}</span>
+                <span style="text-align:right;font-family:'JetBrains Mono';font-size:13px;font-weight:600">{{ r.price }}</span>
+                <span class="ink-col-range" style="text-align:right;font-family:'JetBrains Mono';font-size:12px;color:#8a8a92">{{ r.range }}</span>
+                <span class="ink-col-range" style="text-align:right;font-family:'JetBrains Mono';font-size:12.5px;color:#e0c15a">{{ r.foil }}</span>
               </button>
             </sc-for>
           </div>
@@ -481,7 +494,7 @@
             </div>
           </sc-if>
 
-          <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;align-items:start">
+          <div class="ink-deck-split" style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;align-items:start">
             <div style="padding:22px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)">
               <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px">
                 <h3 style="font-family:'Bricolage Grotesque';font-weight:700;font-size:15px">Decklist</h3>
@@ -546,7 +559,7 @@
   <!-- ================= CARD MODAL ================= -->
   <sc-if value="{{ cardOpen }}" hint-placeholder-val="{{ false }}">
     <div onClick="{{ closeCard }}" style="position:fixed;inset:0;z-index:100;background:rgba(5,5,7,.72);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:24px;animation:ink-fade .2s both">
-      <div onClick="{{ stop }}" style="width:min(760px,100%);max-height:90vh;overflow-y:auto;display:grid;grid-template-columns:300px 1fr;gap:0;background:#121216;border:1px solid rgba(255,255,255,.1);border-radius:22px;overflow:hidden;animation:ink-pop .28s both" class="ink-sc">
+      <div onClick="{{ stop }}" class="ink-sc ink-card-modal" style="width:min(760px,100%);max-height:90vh;overflow-y:auto;display:grid;grid-template-columns:300px 1fr;gap:0;background:#121216;border:1px solid rgba(255,255,255,.1);border-radius:22px;overflow:hidden;animation:ink-pop .28s both">
         <div style="background:{{ cm.ink }};position:relative;min-height:100%">
           <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;text-align:center;font-family:'Bricolage Grotesque';font-weight:700;font-size:18px;background:{{ cm.ink }}">{{ cm.name }}</div>
           {{ cm.imgEl }}
@@ -586,23 +599,23 @@
           </div>
 
           <div style="margin-top:20px;padding:16px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px">
               <div>
                 <div style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#8a8a92">Market · normal</div>
                 <div style="font-family:'JetBrains Mono';font-weight:700;font-size:20px;margin-top:2px">{{ cm.price }}</div>
+                <sc-if value="{{ cm.range }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-family:'JetBrains Mono';font-size:11.5px;color:#8a8a92;margin-top:3px">low–high {{ cm.range }}</div>
+                </sc-if>
               </div>
               <div style="text-align:right">
                 <div style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#8a8a92">foil</div>
-                <div style="font-family:'JetBrains Mono';font-weight:700;font-size:16px;margin-top:2px;color:#e0c15a">{{ cm.foilPrice }}</div>
-              </div>
-              <div style="text-align:right">
-                <div style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#8a8a92">7d</div>
-                <div style="font-family:'JetBrains Mono';font-weight:700;font-size:16px;margin-top:2px;color:{{ cm.chgColor }}">{{ cm.chg }}</div>
+                <div style="font-family:'JetBrains Mono';font-weight:700;font-size:20px;margin-top:2px;color:#e0c15a">{{ cm.foilPrice }}</div>
+                <sc-if value="{{ cm.foilRange }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-family:'JetBrains Mono';font-size:11.5px;color:#8a8a92;margin-top:3px">low–high {{ cm.foilRange }}</div>
+                </sc-if>
               </div>
             </div>
-            <svg viewBox="0 0 100 32" preserveAspectRatio="none" style="width:100%;height:52px">
-              <polyline points="{{ cm.spark }}" fill="none" stroke="{{ cm.chgColor }}" stroke-width="2" vector-effect="non-scaling-stroke"></polyline>
-            </svg>
+            <div style="font-size:10.5px;color:#6f6f78;margin-top:12px;font-family:'JetBrains Mono'">{{ cm.priceSrc }}</div>
           </div>
 
           <div style="margin-top:18px">
@@ -685,7 +698,8 @@ class Component extends DCLogic {
   imgLocal(card){ if(!card) return ''; return card.image_file ? encodeURI('lorcana-card-images/'+card.image_file) : (card.image_url||''); }
   imgRemote(card){ if(!card) return ''; return (card.image_file && card.image_url) ? card.image_url : ''; }
   setName(code){ return this.setMap[code]||code; }
-  fmt(v){ return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v||0); }
+  fmt(v){ if(v==null) return '—'; return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v); }
+  priceOr0(card){ const p=this.price(card); return p==null?0:p; }
 
   hash(str){ let h=2166136261; for(let i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
   rng(seed){ let a=seed>>>0; return ()=>{ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
@@ -700,13 +714,15 @@ class Component extends DCLogic {
     }
     return out;
   }
-  basePrice(card){ const b={C:2.5,U:4.5,R:11,SR:26,L:64,E:210,P:16}[card.rarity]||6; const h=this.hash(card.card_id); const f=0.55+((h%1000)/1000)*1.9; return Math.round(b*f*100)/100; }
-  hasRealPrice(card){ const p=this.prices&&this.prices[card.card_id]; return !!(p&&(p.n!=null||p.f!=null)); }
-  price(card){ const p=this.prices&&this.prices[card.card_id]; if(p&&p.n!=null) return p.n; return this.basePrice(card); }
-  foilPrice(card){ const p=this.prices&&this.prices[card.card_id]; if(p&&p.f!=null) return p.f; if(p&&p.n!=null) return Math.round(p.n*2.2*100)/100; return Math.round(this.basePrice(card)*2.6*100)/100; }
-  change7d(card){ const h=this.hash(card.card_id+'7'); return Math.round(((h%4100)/100-19)*10)/10; }
-  spark(card){ const r=this.rng(this.hash(card.card_id+'h')); const end=this.basePrice(card); const chg=this.change7d(card)/100; let start=end/(1+chg*1.3); const pts=[]; const N=24; for(let i=0;i<N;i++){ const t=i/(N-1); const trend=start+(end-start)*t; const noise=(r()-0.5)*end*0.09; pts.push(Math.max(0.1,trend+noise)); } pts[N-1]=end; return pts; }
-  sparkPath(card, w=100, h=30){ const p=this.spark(card); const mn=Math.min(...p), mx=Math.max(...p), rg=(mx-mn)||1; return p.map((v,i)=>`${(i/(p.length-1)*w).toFixed(1)},${(h-2-((v-mn)/rg)*(h-4)).toFixed(1)}`).join(' '); }
+  pd(card){ return (card && this.prices && this.prices[card.card_id]) || null; }
+  hasRealPrice(card){ const p=this.pd(card); return !!(p&&(p.n!=null||p.f!=null)); }
+  price(card){ const p=this.pd(card); return p&&p.n!=null ? p.n : null; }
+  foilPrice(card){ const p=this.pd(card); return p&&p.f!=null ? p.f : null; }
+  priceOr0(card){ const v=this.price(card); return v==null ? 0 : v; }
+  normalRange(card){ const p=this.pd(card); if(!p||(p.nl==null&&p.nh==null)) return null; return {lo:p.nl,hi:p.nh}; }
+  foilRangeOf(card){ const p=this.pd(card); if(!p||(p.fl==null&&p.fh==null)) return null; return {lo:p.fl,hi:p.fh}; }
+  fmtRange(r){ if(!r) return ''; const lo=r.lo!=null?this.fmt(r.lo):null, hi=r.hi!=null?this.fmt(r.hi):null; if(lo&&hi&&r.lo!==r.hi) return lo+' – '+hi; return lo||hi||''; }
+  fmtOrDash(v){ return v==null ? '—' : this.fmt(v); }
   ownedOf(id){ const e=this.state.collection[id]; return e?{n:e.n||0,f:e.f||0}:{n:0,f:0}; }
   isOwned(id){ const o=this.ownedOf(id); return o.n>0||o.f>0; }
   chgColor(v){ return v>0.05?'#5fd07f':v<-0.05?'#ff7a86':'#8a8a92'; }
@@ -788,7 +804,7 @@ class Component extends DCLogic {
       if(s==='cost') return (a.ink_cost||0)-(b.ink_cost||0) || a.name_en.localeCompare(b.name_en);
       if(s==='lore') return (b.lore||0)-(a.lore||0);
       if(s==='rarity') return (this.RARITY_RANK[b.rarity]||0)-(this.RARITY_RANK[a.rarity]||0);
-      return this.price(b)-this.price(a);
+      return this.priceOr0(b)-this.priceOr0(a);
     });
     return arr;
   }
@@ -797,7 +813,7 @@ class Component extends DCLogic {
   deckById(id){ return this.state.decks.find(d=>d.id===id); }
   deckEntries(deck){ if(!deck) return []; return Object.entries(deck.cards||{}).map(([id,ct])=>({card:this.byId[id],count:ct})).filter(x=>x.card); }
   deckCount(deck){ return this.deckEntries(deck).reduce((s,e)=>s+e.count,0); }
-  deckValue(deck){ return this.deckEntries(deck).reduce((s,e)=>s+this.price(e.card)*e.count,0); }
+  deckValue(deck){ return this.deckEntries(deck).reduce((s,e)=>s+this.priceOr0(e.card)*e.count,0); }
   deckLore(deck){ return this.deckEntries(deck).reduce((s,e)=>s+(e.card.lore||0)*e.count,0); }
   deckMatches(id){ return this.state.matches.filter(m=>m.deck_id===id).slice().reverse(); }
   winRate(ms){ if(!ms.length) return null; return Math.round(ms.filter(m=>m.result==='win').length/ms.length*100); }
@@ -850,7 +866,7 @@ class Component extends DCLogic {
     // ---- OVERVIEW ----
     if(V.isOverview){
       let uniq=0,totCards=0,foils=0,value=0;
-      for(const [id,e] of Object.entries(st.collection)){ const c=this.byId[id]; if(!c) continue; const n=e.n||0,f=e.f||0; if(n+f>0) uniq++; totCards+=n+f; foils+=f; value+=this.price(c)*n+this.foilPrice(c)*f; }
+      for(const [id,e] of Object.entries(st.collection)){ const c=this.byId[id]; if(!c) continue; const n=e.n||0,f=e.f||0; if(n+f>0) uniq++; totCards+=n+f; foils+=f; value+=this.priceOr0(c)*n+(this.foilPrice(c)??this.priceOr0(c))*f; }
       V.kpis=[
         {label:'Collection Value',value:this.fmt(value),sub:`${totCards} cards total`,glow:'#9B72CF'},
         {label:'Unique Cards',value:uniq.toLocaleString('en-US'),sub:`of ${this.cards.length.toLocaleString('en-US')} in database`,glow:'#2E90E0'},
@@ -860,9 +876,9 @@ class Component extends DCLogic {
       const dist={}; for(const [id,e] of Object.entries(st.collection)){ const c=this.byId[id]; if(!c) continue; const cnt=(e.n||0)+(e.f||0); for(const ink of this.inkList(c)) dist[ink]=(dist[ink]||0)+cnt; }
       const mx=Math.max(1,...Object.values(dist));
       V.inkDist=this.INK_ORDER.map(ink=>({label:ink,count:dist[ink]||0,pct:((dist[ink]||0)/mx*100).toFixed(1),color:this.INK[ink]}));
-      const ownedCards=Object.keys(st.collection).map(id=>this.byId[id]).filter(Boolean);
-      const movers=ownedCards.map(c=>({c,chg:this.change7d(c)})).sort((a,b)=>Math.abs(b.chg)-Math.abs(a.chg)).slice(0,6);
-      V.movers=movers.map(({c,chg})=>{ const cv=this.cardView(c); return {name:c.name_en,price:this.fmt(this.price(c)),chg:(chg>0?'+':'')+chg+'%',chgColor:this.chgColor(chg),ink:cv.ink,_bg:cv._bg,_open:()=>this.openCard(c.card_id)}; });
+      const ownedCards=Object.keys(st.collection).map(id=>this.byId[id]).filter(Boolean).filter(c=>this.hasRealPrice(c));
+      const movers=ownedCards.slice().sort((a,b)=>this.priceOr0(b)-this.priceOr0(a)).slice(0,6);
+      V.movers=movers.map(c=>{ const cv=this.cardView(c); const o=this.ownedOf(c.card_id); return {name:c.name_en,price:this.fmtOrDash(this.price(c)),chg:'×'+(o.n+o.f),chgColor:'#a8a8b0',ink:cv.ink,_bg:cv._bg,_open:()=>this.openCard(c.card_id)}; });
       const allWR=this.winRate(st.matches); V.overallWR=allWR===null?'—':allWR+'%'; V.winColor=this.wrColor(allWR||0);
       V.recentMatches=st.matches.slice().reverse().slice(0,6).map(m=>{ const d=this.deckById(m.deck_id); const win=m.result==='win'; return {wl:win?'W':'L',opp:(m.opponent_inks||[]).join('/')||'Unknown',deck:d?d.name:'—',date:m.date,badgeBg:win?'rgba(95,208,127,.16)':'rgba(255,122,134,.16)',badgeColor:win?'#5fd07f':'#ff7a86'}; });
       const setTot={},setOwn={}; for(const c of this.cards){ setTot[c.set_code]=(setTot[c.set_code]||0)+1; if(this.isOwned(c.card_id)) setOwn[c.set_code]=(setOwn[c.set_code]||0)+1; }
@@ -887,23 +903,24 @@ class Component extends DCLogic {
       V.prevPage=()=>this.setState({page:Math.max(0,page-1)}); V.nextPage=()=>this.setState({page:Math.min(pages-1,page+1)});
       V.clearFilters=()=>this.setState({inks:[],types:[],sets:[],q:'',ownedOnly:false,page:0});
       V.accent='#b79bff';
-      V.pageCards=all.slice(page*this.PAGE_SIZE,(page+1)*this.PAGE_SIZE).map(c=>{ const o=this.ownedOf(c.card_id); const owned=o.n+o.f>0; const cv=this.cardView(c); return { name:c.name_en, cost:c.ink_cost==null?'–':c.ink_cost, ink:cv.ink, _local:cv._local, _remote:cv._remote, rarityColor:cv.rarityColor, price:this.fmt(this.price(c)), owned, notOwned:!owned&&!st.ownedOnly, ownedQty:o.n+o.f, foilTag:o.f>0?'✦':'', _open:()=>this.openCard(c.card_id) }; });
+      V.pageCards=all.slice(page*this.PAGE_SIZE,(page+1)*this.PAGE_SIZE).map(c=>{ const o=this.ownedOf(c.card_id); const owned=o.n+o.f>0; const cv=this.cardView(c); return { name:c.name_en, cost:c.ink_cost==null?'–':c.ink_cost, ink:cv.ink, _local:cv._local, _remote:cv._remote, rarityColor:cv.rarityColor, price:this.fmtOrDash(this.price(c)), owned, notOwned:!owned&&!st.ownedOnly, ownedQty:o.n+o.f, foilTag:o.f>0?'✦':'', _open:()=>this.openCard(c.card_id) }; });
     }
 
     // ---- PRICES ----
     if(V.isPrices){
-      let value=0,cnt=0; for(const [id,e] of Object.entries(st.collection)){ const c=this.byId[id]; if(!c) continue; value+=this.price(c)*(e.n||0)+this.foilPrice(c)*(e.f||0); cnt+=(e.n||0)+(e.f||0); }
-      const pool=st.priceOwnedOnly?Object.keys(st.collection).map(id=>this.byId[id]).filter(Boolean):this.cards;
-      const gainers=pool.map(c=>this.change7d(c)).filter(v=>v>0);
-      V.priceKpis=[ {label:'Total Value',value:this.fmt(value)}, {label:'Tracked Cards',value:(st.priceOwnedOnly?pool.length:this.cards.length).toLocaleString('en-US')}, {label:'Avg 7d Trend',value:(pool.length?((pool.reduce((s,c)=>s+this.change7d(c),0)/pool.length).toFixed(1)):'0')+'%'} ];
+      let value=0,cnt=0; for(const [id,e] of Object.entries(st.collection)){ const c=this.byId[id]; if(!c) continue; value+=this.priceOr0(c)*(e.n||0)+(this.foilPrice(c)??this.priceOr0(c))*(e.f||0); cnt+=(e.n||0)+(e.f||0); }
+      const basePool=st.priceOwnedOnly?Object.keys(st.collection).map(id=>this.byId[id]).filter(Boolean):this.cards;
+      const pool=basePool.filter(c=>this.hasRealPrice(c));
+      const unpriced=basePool.length-pool.length;
+      V.priceKpis=[ {label:'Total Value',value:this.fmt(value)}, {label:'Cards Priced',value:pool.length.toLocaleString('en-US')}, {label:'No Price',value:unpriced.toLocaleString('en-US')} ];
       V.priceOwnedLabel=st.priceOwnedOnly?'✓ Owned only':'All cards'; V.priceOwnedBtnStyle=this.chipStyle(st.priceOwnedOnly);
       V.togglePriceOwned=()=>this.setState({priceOwnedOnly:!st.priceOwnedOnly,page:0});
-      V.priceNote=this.priceSource?('prices · '+this.priceSource+' · trend illustrative'):'seeded estimates — add prices.json for real prices';
-      const arr=pool.slice().sort((a,b)=>this.price(b)-this.price(a));
+      V.priceNote=this.priceSource?('source · '+this.priceSource):'no prices.json loaded';
+      const arr=pool.slice().sort((a,b)=>this.priceOr0(b)-this.priceOr0(a));
       const pages=Math.max(1,Math.ceil(arr.length/this.PAGE_SIZE)); const page=Math.min(st.page,pages-1);
       V.pageLabel=`${page+1} / ${pages}`; V.pageLabelShort=V.pageLabel;
       V.prevPage=()=>this.setState({page:Math.max(0,page-1)}); V.nextPage=()=>this.setState({page:Math.min(pages-1,page+1)});
-      V.priceRows=arr.slice(page*this.PAGE_SIZE,(page+1)*this.PAGE_SIZE).map(c=>{ const o=this.ownedOf(c.card_id); const chg=this.change7d(c); const cv=this.cardView(c); return { name:c.name_en, setName:this.setName(c.set_code), ink:cv.ink, _bg:cv._bg, owned:(o.n+o.f)>0?'×'+(o.n+o.f):'—', price:this.fmt(this.price(c)), chg:(chg>0?'+':'')+chg+'%', chgColor:this.chgColor(chg), spark:this.sparkPath(c), _open:()=>this.openCard(c.card_id) }; });
+      V.priceRows=arr.slice(page*this.PAGE_SIZE,(page+1)*this.PAGE_SIZE).map(c=>{ const o=this.ownedOf(c.card_id); const cv=this.cardView(c); const rng=this.normalRange(c); const foil=this.foilPrice(c); return { name:c.name_en, setName:this.setName(c.set_code), ink:cv.ink, _bg:cv._bg, owned:(o.n+o.f)>0?'×'+(o.n+o.f):'—', price:this.fmtOrDash(this.price(c)), range:this.fmtRange(rng)||'—', foil:foil!=null?this.fmt(foil):'—', _open:()=>this.openCard(c.card_id) }; });
     }
 
     // ---- DECKS LIST ----
@@ -949,7 +966,7 @@ class Component extends DCLogic {
         const rar={}; for(const e of entries){ const r=e.card.rarity||'?'; rar[r]=(rar[r]||0)+e.count; } const rmax=Math.max(1,...Object.values(rar));
         V.dd.rarity=Object.entries(rar).sort((a,b)=>(this.RARITY_RANK[b[0]]||0)-(this.RARITY_RANK[a[0]]||0)).map(([k,v])=>({label:(this.RARITY[k]&&this.RARITY[k].l)||k,count:v,pct:(v/rmax*100).toFixed(1),color:(this.RARITY[k]&&this.RARITY[k].c)||'#8a8a92'}));
         V.dd.count=total;
-        V.dd.list=entries.sort((a,b)=>(a.card.ink_cost||0)-(b.card.ink_cost||0)||a.card.name_en.localeCompare(b.card.name_en)).map(e=>({ name:e.card.name_en, cost:e.card.ink_cost==null?'–':e.card.ink_cost, ink:this.inkHex(e.card), price:this.fmt(this.price(e.card)), count:e.count, _open:()=>this.openCard(e.card.card_id), _inc:()=>this.deckDelta(e.card.card_id,1), _dec:()=>this.deckDelta(e.card.card_id,-1) }));
+        V.dd.list=entries.sort((a,b)=>(a.card.ink_cost||0)-(b.card.ink_cost||0)||a.card.name_en.localeCompare(b.card.name_en)).map(e=>({ name:e.card.name_en, cost:e.card.ink_cost==null?'–':e.card.ink_cost, ink:this.inkHex(e.card), price:this.fmtOrDash(this.price(e.card)), count:e.count, _open:()=>this.openCard(e.card.card_id), _inc:()=>this.deckDelta(e.card.card_id,1), _dec:()=>this.deckDelta(e.card.card_id,-1) }));
         V.dd.wr=wr===null?'—':wr+'%'; V.dd.wrColor=this.wrColor(wr||0);
         V.dd.form=ms.slice(0,8).reverse().map(m=>({color:m.result==='win'?'#5fd07f':'#ff7a86'}));
         V.dd.matches=ms.map(m=>({wl:m.result==='win'?'W':'L',opp:(m.opponent_inks||[]).join('/')||'Unknown',date:m.date,badgeBg:m.result==='win'?'rgba(95,208,127,.16)':'rgba(255,122,134,.16)',badgeColor:m.result==='win'?'#5fd07f':'#ff7a86',_del:()=>this.delMatch(m.id)}));
@@ -971,11 +988,11 @@ class Component extends DCLogic {
 
     // ---- CARD MODAL ----
     V.cardOpen=!!st.selectedCard;
-    if(st.selectedCard){ const c=this.byId[st.selectedCard]; if(c){ const cv=this.cardView(c); const o=this.ownedOf(c.card_id); const chg=this.change7d(c);
+    if(st.selectedCard){ const c=this.byId[st.selectedCard]; if(c){ const cv=this.cardView(c); const o=this.ownedOf(c.card_id);
       const pips=[]; if(c.card_type==='Character'){ pips.push({label:'Cost',value:c.ink_cost==null?'–':c.ink_cost,color:'#c8c8cc'},{label:'Strength',value:c.strength==null?'–':c.strength,color:'#ff8a72'},{label:'Willpower',value:c.willpower==null?'–':c.willpower,color:'#7ab8ff'},{label:'Lore',value:c.lore==null?'–':c.lore,color:'#F2B33D'}); }
       else if(c.card_type==='Location'){ pips.push({label:'Cost',value:c.ink_cost,color:'#c8c8cc'},{label:'Move Cost',value:c.strength==null?'–':c.strength,color:'#ff8a72'},{label:'Willpower',value:c.willpower==null?'–':c.willpower,color:'#7ab8ff'},{label:'Lore',value:c.lore==null?'–':c.lore,color:'#F2B33D'}); }
       else { pips.push({label:'Cost',value:c.ink_cost==null?'–':c.ink_cost,color:'#c8c8cc'},{label:'Type',value:c.card_type,color:'#c8c8cc'},{label:'Ink',value:c.inkable?'Yes':'No',color:c.inkable?'#5fd07f':'#ff7a86'}); }
-      V.cm={ name:c.name_en, ink:cv.ink, inkSoft:(this.inkList(c)[0]?this.INK[this.inkList(c)[0]]:'#888')+'22', inkColor:this.inkList(c).join(' / ')||'—', _local:cv._local, _remote:cv._remote, imgEl: cv._local ? React.createElement('img',{src:cv._local,'data-remote':cv._remote,onError:window.imgError,style:{position:'relative',width:'100%',height:'100%',objectFit:'cover',display:'block'}}) : null, rarity:this.rar(c).l, rarityColor:this.rar(c).c, setName:this.setName(c.set_code), number:c.card_number, pips, classification:c.classification||'', ability:c.ability_text||'No ability text.', abilities:this.parseAbility(c.ability_text), price:this.fmt(this.price(c)), foilPrice:this.fmt(this.foilPrice(c)), chg:(chg>0?'+':'')+chg+'%', chgColor:this.chgColor(chg), spark:this.sparkPath(c,100,32), qtyN:o.n, qtyF:o.f, _incN:()=>this.setQty(c.card_id,'n',1), _decN:()=>this.setQty(c.card_id,'n',-1), _incF:()=>this.setQty(c.card_id,'f',1), _decF:()=>this.setQty(c.card_id,'f',-1) };
+      V.cm={ name:c.name_en, ink:cv.ink, inkSoft:(this.inkList(c)[0]?this.INK[this.inkList(c)[0]]:'#888')+'22', inkColor:this.inkList(c).join(' / ')||'—', _local:cv._local, _remote:cv._remote, imgEl: cv._local ? React.createElement('img',{src:cv._local,'data-remote':cv._remote,onError:window.imgError,style:{position:'relative',width:'100%',height:'100%',objectFit:'cover',display:'block'}}) : null, rarity:this.rar(c).l, rarityColor:this.rar(c).c, setName:this.setName(c.set_code), number:c.card_number, pips, classification:c.classification||'', ability:c.ability_text||'No ability text.', abilities:this.parseAbility(c.ability_text), price:this.fmtOrDash(this.price(c)), foilPrice:this.fmtOrDash(this.foilPrice(c)), range:this.fmtRange(this.normalRange(c)), foilRange:this.fmtRange(this.foilRangeOf(c)), priceSrc:this.hasRealPrice(c)?('source · '+(this.priceSource||'prices.json')):'no price in prices.json', qtyN:o.n, qtyF:o.f, _incN:()=>this.setQty(c.card_id,'n',1), _decN:()=>this.setQty(c.card_id,'n',-1), _incF:()=>this.setQty(c.card_id,'f',1), _decF:()=>this.setQty(c.card_id,'f',-1) };
     } }
     V.closeCard=()=>this.setState({selectedCard:null});
     return V;
