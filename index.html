@@ -1160,7 +1160,7 @@ class Component extends DCLogic {
           if(!c.card_type||c.card_type==='Token'||!c.name_en) return false;
           if(dq && !c.name_en.toLowerCase().includes(dq)) return false;
           if(st.bInks.length){ const l=this.inkList(c); if(!l.some(i=>st.bInks.includes(i))) return false; }
-          if(st.bCost!=='all'){ const cost=c.ink_cost==null?0:c.ink_cost; if(st.bCost==='7'){ if(cost<7) return false; } else if(cost!==+st.bCost) return false; }
+          if(st.bCost!=='all'){ const cost=(typeof c.ink_cost==='number')?c.ink_cost:0; if(st.bCost==='7'){ if(cost<7) return false; } else if(cost!==+st.bCost) return false; }
           if(st.bSets.length && !st.bSets.includes(c.set_code)) return false;
           if(st.bOwnedOnly && !this.isOwned(c.card_id)) return false;
           if(!this.legalInFormat(c, deck.format)) return false;
