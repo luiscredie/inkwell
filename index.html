@@ -18,6 +18,7 @@
   a{color:#b79bff;text-decoration:none}
   a:hover{color:#cbb8ff}
   input,button,select,textarea{font-family:inherit}
+  button{color:inherit}
   input:focus,select:focus,textarea:focus{outline:none}
   #ink-scroll::-webkit-scrollbar,.ink-sc::-webkit-scrollbar{width:10px;height:10px}
   #ink-scroll::-webkit-scrollbar-thumb,.ink-sc::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:8px;border:3px solid transparent;background-clip:padding-box}
@@ -276,7 +277,7 @@
           <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px">
             <button onClick="{{ togglePriceOwned }}" style="{{ priceOwnedBtnStyle }}">{{ priceOwnedLabel }}</button>
             <div style="flex:1"></div>
-            <span style="font-size:12px;color:#7c7c85;font-family:'JetBrains Mono'">note: seeded estimates — plug in prices.json to override</span>
+            <span style="font-size:12px;color:#7c7c85;font-family:'JetBrains Mono'">{{ priceNote }}</span>
           </div>
 
           <div style="border-radius:16px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);overflow:hidden">
@@ -652,6 +653,8 @@ class Component extends DCLogic {
   TYPE_COLOR = { Character:'#9B72CF', Action:'#E23B4E', Song:'#2E90E0', Item:'#37B36B', Location:'#F2B33D' };
   PAGE_SIZE = 48;
   base = 'images/';
+  prices = {};
+  priceSource = '';
 
   async componentDidMount() {
     try {
@@ -661,6 +664,7 @@ class Component extends DCLogic {
       this.base = cardsData.image_base_path || 'images/';
       this.byId = {}; for (const c of this.cards) this.byId[c.card_id] = c;
       this.setMap = {}; for (const s of cardsData.sets) this.setMap[s.code] = s.name_en;
+      try { const pr = await fetch('prices.json'); if (pr.ok) { const pj = await pr.json(); this.prices = this.normalizePrices(pj); this.priceSource = pj.source || ''; } } catch(e) { this.prices = {}; }
       let user = await userRes.json();
       const saved = this.loadLocal();
       if (saved) user = { ...user, ...saved };
@@ -685,9 +689,21 @@ class Component extends DCLogic {
 
   hash(str){ let h=2166136261; for(let i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
   rng(seed){ let a=seed>>>0; return ()=>{ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+  normalizePrices(pj){
+    if(!pj) return {};
+    if(pj.prices) return pj.prices;
+    const src=pj.prices_by_liga_id||pj; const out={};
+    for(const id in src){ const p=src[id]; if(!p||typeof p!=='object') continue;
+      const nn=(p.normal&&(p.normal.average??p.normal.low)!=null)?(p.normal.average??p.normal.low):(p.minimum_price_brl??null);
+      const ff=(p.foil&&(p.foil.average??p.foil.low)!=null)?(p.foil.average??p.foil.low):null;
+      if(nn==null&&ff==null) continue; const e={}; if(nn!=null)e.n=Math.round(nn*100)/100; if(ff!=null)e.f=Math.round(ff*100)/100; out[id]=e;
+    }
+    return out;
+  }
   basePrice(card){ const b={C:2.5,U:4.5,R:11,SR:26,L:64,E:210,P:16}[card.rarity]||6; const h=this.hash(card.card_id); const f=0.55+((h%1000)/1000)*1.9; return Math.round(b*f*100)/100; }
-  price(card){ return this.basePrice(card); }
-  foilPrice(card){ return Math.round(this.basePrice(card)*2.6*100)/100; }
+  hasRealPrice(card){ const p=this.prices&&this.prices[card.card_id]; return !!(p&&(p.n!=null||p.f!=null)); }
+  price(card){ const p=this.prices&&this.prices[card.card_id]; if(p&&p.n!=null) return p.n; return this.basePrice(card); }
+  foilPrice(card){ const p=this.prices&&this.prices[card.card_id]; if(p&&p.f!=null) return p.f; if(p&&p.n!=null) return Math.round(p.n*2.2*100)/100; return Math.round(this.basePrice(card)*2.6*100)/100; }
   change7d(card){ const h=this.hash(card.card_id+'7'); return Math.round(((h%4100)/100-19)*10)/10; }
   spark(card){ const r=this.rng(this.hash(card.card_id+'h')); const end=this.basePrice(card); const chg=this.change7d(card)/100; let start=end/(1+chg*1.3); const pts=[]; const N=24; for(let i=0;i<N;i++){ const t=i/(N-1); const trend=start+(end-start)*t; const noise=(r()-0.5)*end*0.09; pts.push(Math.max(0.1,trend+noise)); } pts[N-1]=end; return pts; }
   sparkPath(card, w=100, h=30){ const p=this.spark(card); const mn=Math.min(...p), mx=Math.max(...p), rg=(mx-mn)||1; return p.map((v,i)=>`${(i/(p.length-1)*w).toFixed(1)},${(h-2-((v-mn)/rg)*(h-4)).toFixed(1)}`).join(' '); }
@@ -725,7 +741,24 @@ class Component extends DCLogic {
   }
   buildBody(text){
     const parts=String(text).split(/(\{[a-z]\})/gi);
-    return parts.filter(p=>p!=='').map((p,idx)=>{ const m=p.match(/^\{([a-z])\}$/i); return m?this.symbolEl(m[1].toLowerCase(),idx):p; });
+    const out=[]; let key=0;
+    for(const p of parts){
+      if(p==='') continue;
+      const m=p.match(/^\{([a-z])\}$/i);
+      if(m){ out.push(this.symbolEl(m[1].toLowerCase(),'k'+(key++))); }
+      else { this.boldKeywords(p, out, ()=>('k'+(key++))); }
+    }
+    return out;
+  }
+  boldKeywords(str, out, nextKey){
+    const re=/(Sing Together|Puppy Shift|Universal Shift|Shift|Singer|Bodyguard|Evasive|Ward|Rush|Resist|Challenger|Support|Reckless|Vanish|Boost)(\s?\+?\d+)?/g;
+    let last=0, m;
+    while((m=re.exec(str))){
+      if(m.index>last) out.push(str.slice(last,m.index));
+      out.push(React.createElement('b',{key:nextKey(),style:{fontWeight:800,color:'#f3f3f5'}}, m[0]));
+      last=m.index+m[0].length;
+    }
+    if(last<str.length) out.push(str.slice(last));
   }
   symbolEl(k,key){
     const map={s:['⚔','#ff8a72'],w:['⛊','#7ab8ff'],l:['◆','#F2B33D'],i:['⬢','#b79bff'],e:['↻','#c8c8cc'],n:['◇','#c8c8cc']};
@@ -865,6 +898,7 @@ class Component extends DCLogic {
       V.priceKpis=[ {label:'Total Value',value:this.fmt(value)}, {label:'Tracked Cards',value:(st.priceOwnedOnly?pool.length:this.cards.length).toLocaleString('en-US')}, {label:'Avg 7d Trend',value:(pool.length?((pool.reduce((s,c)=>s+this.change7d(c),0)/pool.length).toFixed(1)):'0')+'%'} ];
       V.priceOwnedLabel=st.priceOwnedOnly?'✓ Owned only':'All cards'; V.priceOwnedBtnStyle=this.chipStyle(st.priceOwnedOnly);
       V.togglePriceOwned=()=>this.setState({priceOwnedOnly:!st.priceOwnedOnly,page:0});
+      V.priceNote=this.priceSource?('prices · '+this.priceSource+' · trend illustrative'):'seeded estimates — add prices.json for real prices';
       const arr=pool.slice().sort((a,b)=>this.price(b)-this.price(a));
       const pages=Math.max(1,Math.ceil(arr.length/this.PAGE_SIZE)); const page=Math.min(st.page,pages-1);
       V.pageLabel=`${page+1} / ${pages}`; V.pageLabelShort=V.pageLabel;
@@ -877,6 +911,7 @@ class Component extends DCLogic {
       V.accent='#b79bff';
       V.newDeckOpen=st.newDeckOpen; V.newDeckToggle=()=>this.setState({newDeckOpen:!st.newDeckOpen}); V.newDeckName=st.newDeckName; V.onNewDeckName=(e)=>this.setState({newDeckName:e.target.value});
       V.newDeckInkChips=this.INK_ORDER.map(ink=>({label:ink,_toggle:()=>{ const a=st.newDeckInks; const na=a.includes(ink)?a.filter(x=>x!==ink):(a.length>=2?a:[...a,ink]); this.setState({newDeckInks:na}); },_style:this.chipStyle(st.newDeckInks.includes(ink),this.INK[ink])}));
+      V.createDeck=this.createDeck;
       V.noDecks=st.decks.length===0;
       V.deckCards=st.decks.map(d=>{ const inks=(d.colors||[]).filter(Boolean); const ms=this.deckMatches(d.id); const wr=this.winRate(ms); const grad=inks.length?`linear-gradient(120deg,${inks.map(i=>this.INK[i]||'#333').join(',')})`:'linear-gradient(120deg,#333,#555)'; return { name:d.name, inks, count:this.deckCount(d), wr:wr===null?'—':wr+'%', wrColor:this.wrColor(wr||0), value:this.fmt(this.deckValue(d)), gradient:grad, _open:()=>this.openDeck(d.id) }; });
     }
