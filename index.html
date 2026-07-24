@@ -729,6 +729,24 @@ class Component extends DCLogic {
   chgColor(v){ return v>0.05?'#5fd07f':v<-0.05?'#ff7a86':'#8a8a92'; }
   wrColor(w){ return w>=55?'#5fd07f':w>=45?'#e6c15a':'#ff7a86'; }
 
+  buildAbilities(card){
+    const list=card&&card.abilities;
+    if(Array.isArray(list)&&list.length){
+      return list.map(a=>{
+        let name='',body='';
+        if(a.type==='keyword'){
+          name=(a.name||'')+(a.parameter?(' '+a.parameter):'');
+          body=a.reminder_text||a.text||'';
+        } else {
+          name=a.name||'';
+          body=a.effect||a.reminder_text||a.text||'';
+          if(name && body.indexOf(name)===0) body=body.slice(name.length).replace(/^\s*[-–:]\s*/,'');
+        }
+        return { name:(name||'').trim().toUpperCase(), body:this.buildBody(body.trim()) };
+      }).filter(x=>x.name||(Array.isArray(x.body)&&x.body.length));
+    }
+    return this.parseAbility(card&&card.ability_text);
+  }
   parseAbility(text){
     if(!text || !text.trim()) return [{name:'', body:'No ability text.'}];
     const segs=text.split('\n').map(raw=>{
@@ -993,7 +1011,7 @@ class Component extends DCLogic {
       const pips=[]; if(c.card_type==='Character'){ pips.push({label:'Cost',value:c.ink_cost==null?'–':c.ink_cost,color:'#c8c8cc'},{label:'Strength',value:c.strength==null?'–':c.strength,color:'#ff8a72'},{label:'Willpower',value:c.willpower==null?'–':c.willpower,color:'#7ab8ff'},{label:'Lore',value:c.lore==null?'–':c.lore,color:'#F2B33D'}); }
       else if(c.card_type==='Location'){ pips.push({label:'Cost',value:c.ink_cost,color:'#c8c8cc'},{label:'Move Cost',value:c.strength==null?'–':c.strength,color:'#ff8a72'},{label:'Willpower',value:c.willpower==null?'–':c.willpower,color:'#7ab8ff'},{label:'Lore',value:c.lore==null?'–':c.lore,color:'#F2B33D'}); }
       else { pips.push({label:'Cost',value:c.ink_cost==null?'–':c.ink_cost,color:'#c8c8cc'},{label:'Type',value:c.card_type,color:'#c8c8cc'},{label:'Ink',value:c.inkable?'Yes':'No',color:c.inkable?'#5fd07f':'#ff7a86'}); }
-      V.cm={ name:c.name_en, ink:cv.ink, inkSoft:(this.inkList(c)[0]?this.INK[this.inkList(c)[0]]:'#888')+'22', inkColor:this.inkList(c).join(' / ')||'—', _local:cv._local, _remote:cv._remote, imgEl: cv._local ? React.createElement('img',{src:cv._local,'data-remote':cv._remote,onError:window.imgError,style:{position:'relative',width:'100%',height:'100%',objectFit:'cover',display:'block'}}) : null, rarity:this.rar(c).l, rarityColor:this.rar(c).c, setName:this.setName(c.set_code), number:c.card_number, pips, classification:c.classification||'', ability:c.ability_text||'No ability text.', abilities:this.parseAbility(c.ability_text), price:this.fmtOrDash(this.price(c)), foilPrice:this.fmtOrDash(this.foilPrice(c)), range:this.fmtRange(this.normalRange(c)), foilRange:this.fmtRange(this.foilRangeOf(c)), priceSrc:this.hasRealPrice(c)?('source · '+(this.priceSource||'prices.json')):'no price in prices.json', qtyN:o.n, qtyF:o.f, _incN:()=>this.setQty(c.card_id,'n',1), _decN:()=>this.setQty(c.card_id,'n',-1), _incF:()=>this.setQty(c.card_id,'f',1), _decF:()=>this.setQty(c.card_id,'f',-1) };
+      V.cm={ name:c.name_en, ink:cv.ink, inkSoft:(this.inkList(c)[0]?this.INK[this.inkList(c)[0]]:'#888')+'22', inkColor:this.inkList(c).join(' / ')||'—', _local:cv._local, _remote:cv._remote, imgEl: cv._local ? React.createElement('img',{src:cv._local,'data-remote':cv._remote,onError:window.imgError,style:{position:'relative',width:'100%',height:'100%',objectFit:'cover',display:'block'}}) : null, rarity:this.rar(c).l, rarityColor:this.rar(c).c, setName:this.setName(c.set_code), number:c.card_number, pips, classification:c.classification||'', ability:c.ability_text||'No ability text.', abilities:this.buildAbilities(c), price:this.fmtOrDash(this.price(c)), foilPrice:this.fmtOrDash(this.foilPrice(c)), range:this.fmtRange(this.normalRange(c)), foilRange:this.fmtRange(this.foilRangeOf(c)), priceSrc:this.hasRealPrice(c)?('source · '+(this.priceSource||'prices.json')):'no price in prices.json', qtyN:o.n, qtyF:o.f, _incN:()=>this.setQty(c.card_id,'n',1), _decN:()=>this.setQty(c.card_id,'n',-1), _incF:()=>this.setQty(c.card_id,'f',1), _decF:()=>this.setQty(c.card_id,'f',-1) };
     } }
     V.closeCard=()=>this.setState({selectedCard:null});
     return V;
