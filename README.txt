@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#0a0a0c;-webkit-font-smoothing:antialiased}
+  ::selection{background:rgba(183,155,255,.3)}
+  a{color:#b79bff;text-decoration:none}
+  a:hover{color:#cbb8ff}
+  input,button,select,textarea{font-family:inherit}
+  input:focus,select:focus,textarea:focus{outline:none}
+  #ink-scroll::-webkit-scrollbar,.ink-sc::-webkit-scrollbar{width:10px;height:10px}
+  #ink-scroll::-webkit-scrollbar-thumb,.ink-sc::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:8px;border:3px solid transparent;background-clip:padding-box}
+  @keyframes ink-fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  @keyframes ink-pop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
+  @keyframes ink-spin{to{transform:rotate(360deg)}}
+  .ink-view{animation:ink-fade .35s cubic-bezier(.2,.7,.2,1) both}
+  @media(max-width:860px){
+    #rail{position:fixed;bottom:0;left:0;right:0;top:auto!important;width:100%!important;height:64px!important;flex-direction:row!important;padding:0 8px!important;border-right:none!important;border-top:1px solid rgba(255,255,255,.08);z-index:50;justify-content:space-around!important}
+    #rail .rail-brand,#rail .rail-user{display:none!important}
+    #rail .rail-label{display:none!important}
+    #rail .rail-nav{flex-direction:row!important;gap:2px!important;flex:1;justify-content:space-around}
+    #ink-main{padding-bottom:80px!important}
+  }
+</style>
+<script>
+  window.imgError = function(e){ var el=e.target; var rem=(el.dataset&&el.dataset.remote)||''; if(rem && rem.indexOf('{{')<0 && el.src!==rem){ el.src=rem; } else { el.style.display='none'; var ph=el.parentElement&&el.parentElement.querySelector('[data-ph]'); if(ph) ph.style.display='flex'; } };
+</script>
+</helmet>
+<div id="app" style="display:flex;min-height:100vh;background:#0a0a0c;color:#f3f3f5;font-family:'Instrument Sans',system-ui,sans-serif;font-size:15px;line-height:1.5">
+
+  <aside id="rail" style="position:sticky;top:0;height:100vh;width:236px;flex-shrink:0;display:flex;flex-direction:column;padding:26px 18px;border-right:1px solid rgba(255,255,255,.07);background:linear-gradient(180deg,#0e0e12,#0a0a0c)">
+    <div class="rail-brand" style="display:flex;align-items:center;gap:11px;padding:0 8px 30px">
+      <div style="width:34px;height:34px;border-radius:10px;background:conic-gradient(from 210deg,#F2B33D,#E23B4E,#9B72CF,#2E90E0,#37B36B,#F2B33D);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 22px rgba(155,114,207,.4)">
+        <div style="width:12px;height:12px;border-radius:50%;background:#0a0a0c"></div>
+      </div>
+      <div>
+        <div style="font-family:'Bricolage Grotesque';font-weight:800;font-size:19px;letter-spacing:-.02em;line-height:1">Inkwell</div>
+        <div style="font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#6f6f78;margin-top:2px">Lorcana Codex</div>
+      </div>
+    </div>
+
+    <nav class="rail-nav" style="display:flex;flex-direction:column;gap:4px">
+      <sc-for list="{{ nav }}" as="item" hint-placeholder-count="4">
+        <button onClick="{{ item._go }}" style="{{ item._style }}">
+          <span class="rail-ico" style="display:flex;width:20px;justify-content:center">{{ item._icon }}</span>
+          <span class="rail-label">{{ item.label }}</span>
+        </button>
+      </sc-for>
+    </nav>
+
+    <div style="flex:1"></div>
+    <div class="rail-user" style="display:flex;align-items:center;gap:11px;padding:12px 10px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)">
+      <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#9B72CF,#2E90E0);display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Bricolage Grotesque'">{{ userInitial }}</div>
+      <div style="min-width:0">
+        <div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ displayName }}</div>
+        <div style="font-size:11px;color:#6f6f78">Illumineer</div>
+      </div>
+    </div>
+  </aside>
+
+  <main id="ink-main" style="flex:1;min-width:0;display:flex;flex-direction:column">
+    <sc-if value="{{ loading }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;min-height:100vh">
+        <div style="width:40px;height:40px;border-radius:50%;border:3px solid rgba(255,255,255,.1);border-top-color:#b79bff;animation:ink-spin .8s linear infinite"></div>
+        <div style="color:#8a8a92;font-size:13px;letter-spacing:.04em">Summoning your codex…</div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ ready }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;min-height:100vh">
+      <header style="position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:16px;padding:18px 30px;background:rgba(10,10,12,.82);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.06)">
+        <div style="min-width:0;flex-shrink:0">
+          <h1 style="font-family:'Bricolage Grotesque';font-weight:800;font-size:22px;letter-spacing:-.02em;line-height:1.1">{{ pageTitle }}</h1>
+          <div style="font-size:12.5px;color:#7c7c85;margin-top:2px">{{ pageSub }}</div>
+        </div>
+        <div style="flex:1"></div>
+        <div style="position:relative;width:min(340px,42vw)">
+          <span style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#6f6f78;pointer-events:none;font-size:14px">⌕</span>
+          <input value="{{ q }}" onInput="{{ onSearch }}" placeholder="Search 3,400+ cards…" style="width:100%;padding:10px 14px 10px 34px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);color:#f3f3f5;font-size:14px" />
+        </div>
+      </header>
+
+      <div id="ink-scroll" style="flex:1;overflow-y:auto;padding:30px">
+
+        <!-- ================= OVERVIEW ================= -->
+        <sc-if value="{{ isOverview }}" hint-placeholder-val="{{ true }}">
+        <div class="ink-view" style="max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:22px">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px">
+            <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+              <div style="padding:22px;border-radius:18px;background:linear-gradient(160deg,rgba(255,255,255,.05),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.07);position:relative;overflow:hidden">
+                <div style="position:absolute;right:-20px;top:-20px;width:90px;height:90px;border-radius:50%;background:{{ k.glow }};filter:blur(30px);opacity:.5"></div>
+                <div style="font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#8a8a92">{{ k.label }}</div>
+                <div style="font-family:'Bricolage Grotesque';font-weight:800;font-size:34px;letter-spacing:-.03em;margin-top:10px;position:relative">{{ k.value }}</div>
+                <div style="font-size:12.5px;color:#7c7c85;margin-top:4px">{{ k.sub }}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px">
+            <div style="padding:22px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:18px">
+                <h3 style="font-family:'Bricolage Grotesque';font-weight:700;font-size:16px">Ink Distribution</h3>
+                <span style="font-size:12px;color:#7c7c85;font-family:'JetBrains Mono'">by copies owned</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:13px">
+                <sc-for list="{{ inkDist }}" as="d" hint-placeholder-count="6">
+                  <div>
+                    <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px">
+                      <span style="display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:3px;background:{{ d.color }}"></span>{{ d.label }}</span>
+                      <span style="font-family:'JetBrains Mono';color:#a8a8b0">{{ d.count }}</span>
+                    </div>
+                    <div style="height:7px;border-radius:5px;background:rgba(255,255,255,.06);overflow:hidden">
+                      <div style="height:100%;width:{{ d.pct }}%;background:{{ d.color }};border-radius:5px"></div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="padding:22px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:18px">
+                <h3 style="font-family:'Bricolage Grotesque';font-weight:700;font-size:16px">Price Movers · 7d</h3>
+                <span style="font-size:12px;color:#7c7c85;font-family:'JetBrains Mono'">owned singles</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:3px">
+                <sc-for list="{{ movers }}" as="m" hint-placeholder-count="5">
+                  <button onClick="{{ m._open }}" style="display:flex;align-items:center;gap:12px;padding:8px 6px;background:none;border:none;cursor:pointer;text-align:left;border-radius:10px" style-hover="background:rgba(255,255,255,.04)">
+                    <div style="width:30px;height:42px;border-radius:5px;background:{{ m.ink }};flex-shrink:0;background-size:cover;background-position:center;background-image:{{ m._bg }}"></div>
+                    <div style="flex:1;min-width:0">
+                      <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#e8e8ec">{{ m.name }}</div>
+                      <div style="font-size:11.5px;color:#7c7c85;font-family:'JetBrains Mono'">{{ m.price }}</div>
+                    </div>
+                    <div style="font-family:'JetBrains Mono';font-weight:700;font-size:13px;color:{{ m.chgColor }}">{{ m.chg }}</div>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="padding:22px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px">
+                <h3 style="font-family:'Bricolage Grotesque';font-weight:700;font-size:16px">Recent Games</h3>
+                <span style="font-family:'JetBrains Mono';font-size:13px;color:{{ winColor }}">{{ overallWR }} WR</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <sc-for list="{{ recentMatches }}" as="g" hint-placeholder-count="5">
+                  <div style="display:flex;align-items:center;gap:12px;padding:8px 4px">
+                    <div style="width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;font-family:'JetBrains Mono';background:{{ g.badgeBg }};color:{{ g.badgeColor }}">{{ g.wl }}</div>
+                    <div style="flex:1;min-width:0">
+                      <div style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">vs {{ g.opp }}</div>
+                      <div style="font-size:11px;color:#7c7c85">{{ g.deck }} · {{ g.date }}</div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <div style="padding:22px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)">
+            <h3 style="font-family:'Bricolage Grotesque';font-weight:700;font-size:16px;margin-bottom:18px">Set Completion</h3>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px">
+              <sc-for list="{{ setProgress }}" as="s" hint-placeholder-count="8">
+                <div>
+                  <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+                    <span style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ s.name }}</span>
+                    <span style="font-family:'JetBrains Mono';color:#8a8a92;font-size:12px">{{ s.frac }}</span>
+                  </div>
+                  <div style="height:6px;border-radius:4px;background:rgba(255,255,255,.06);overflow:hidden">
+                    <div style="height:100%;width:{{ s.pct }}%;background:linear-gradient(90deg,#9B72CF,#2E90E0);border-radius:4px"></div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ================= COLLECTION ================= -->
+        <sc-if value="{{ isCollection }}" hint-placeholder-val="{{ false }}">
+        <div class="ink-view" style="max-width:1400px;margin:0 auto">
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:20px">
+            <sc-for list="{{ inkChips }}" as="c" hint-placeholder-count="6">
+              <button onClick="{{ c._toggle }}" style="{{ c._style }}">{{ c.label }}</button>
+            </sc-for>
+            <div style="width:1px;height:22px;background:rgba(255,255,255,.1);margin:0 4px"></div>
+            <sc-for list="{{ typeChips }}" as="c" hint-placeholder-count="5">
+              <button onClick="{{ c._toggle }}" style="{{ c._style }}">{{ c.label }}</button>
+            </sc-for>
+            <div style="flex:1"></div>
+            <div style="position:relative">
+              <button onClick="{{ toggleSetMenu }}" style="padding:9px 12px;border-radius:11px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#f3f3f5;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px">{{ setMenuLabel }} <span style="color:#7c7c85;font-size:9px">▼</span></button>
+              <sc-if value="{{ setMenuOpen }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;top:calc(100% + 6px);right:0;z-index:30;width:270px;max-height:360px;overflow-y:auto;background:#16161c;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:8px;box-shadow:0 16px 44px rgba(0,0,0,.55);animation:ink-pop .18s both" class="ink-sc">
+                  <button onClick="{{ clearSets }}" style="width:100%;text-align:left;padding:8px 10px;border-radius:9px;background:none;border:none;color:#b79bff;cursor:pointer;font-size:13px;font-weight:600" style-hover="background:rgba(255,255,255,.05)">All sets</button>
+                  <sc-for list="{{ setOptions }}" as="s" hint-placeholder-count="6">
+                    <button onClick="{{ s._toggle }}" style="width:100%;display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;background:none;border:none;color:#e2e2e6;cursor:pointer;font-size:13px;text-align:left" style-hover="background:rgba(255,255,255,.05)">
+                      <span style="width:16px;height:16px;border-radius:5px;border:1px solid rgba(255,255,255,.2);background:{{ s.checkBg }};flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:#0a0a0c;font-weight:700">{{ s.check }}</span>
+                      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ s.name }}</span>
+                    </button>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+            <select value="{{ sort }}" onChange="{{ onSort }}" style="padding:9px 12px;border-radius:11px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#f3f3f5;font-size:13px">
+              <option value="value">Sort: Value</option>
+              <option value="cost">Sort: Cost</option>
+              <option value="name">Sort: Name</option>
+              <option value="rarity">Sort: Rarity</option>
+              <option value="lore">Sort: Lore</option>
+            </select>
+            <button onClick="{{ toggleOwned }}" style="{{ ownedBtnStyle }}">{{ ownedLabel }}</button>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;font-size:13px;color:#8a8a92">
+            <span><b style="color:#e8e8ec;font-family:'JetBrains Mono'">{{ resultCount }}</b> cards{{ pageInfo }}</span>
+            <div style="display:flex;gap:8px">
+              <button onClick="{{ prevPage }}" style="padding:7px 13px;border-radius:9px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#d8d8dc;cursor:pointer;font-size:13px">‹ Prev</button>
+              <button onClick="{{ nextPage }}" style="padding:7px 13px;border-radius:9px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#d8d8dc;cursor:pointer;font-size:13px">Next ›</button>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:16px">
+            <sc-for list="{{ pageCards }}" as="c" hint-placeholder-count="12">
+              <button onClick="{{ c._open }}" style="background:none;border:none;padding:0;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:8px" style-hover="transform:translateY(-4px)">
+                <div style="position:relative;aspect-ratio:734/1024;border-radius:12px;overflow:hidden;background:{{ c.ink }};box-shadow:0 8px 22px rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.08)">
+                  <img src="{{ c._local }}" data-remote="{{ c._remote }}" onError="{{ imgError }}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block" />
+                  <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:12px;text-align:center;font-family:'Bricolage Grotesque';font-weight:700;font-size:14px;background:{{ c.ink }};display:none" data-ph>{{ c.name }}</div>
+                  <sc-if value="{{ c.owned }}" hint-placeholder-val="{{ false }}">
+                    <div style="position:absolute;bottom:7px;right:7px;padding:3px 8px;border-radius:8px;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);font-family:'JetBrains Mono';font-weight:700;font-size:12px;color:#9be6a8">×{{ c.ownedQty }}{{ c.foilTag }}</div>
+                  </sc-if>
+                  <sc-if value="{{ c.notOwned }}" hint-placeholder-val="{{ false }}">
+                    <div style="position:absolute;inset:0;background:rgba(6,6,8,.55)"></div>
+                  </sc-if>
+                </div>
+                <div style="padding:0 2px">
+                  <div style="font-size:12.5px;font-weight:500;line-height:1.25;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;min-height:31px;color:#e2e2e6">{{ c.name }}</div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+                    <span style="width:8px;height:8px;border-radius:50%;background:{{ c.rarityColor }}"></span>
+                    <span style="font-family:'JetBrains Mono';font-size:12px;color:#9a9aa2">{{ c.price }}</span>
+                  </div>
+                </div>
+              </button>
+            </sc-for>
+          </div>
+          <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+            <div style="text-align:center;padding:80px 20px;color:#7c7c85">
+              <div style="font-family:'Bricolage Grotesque';font-size:20px;margin-bottom:8px">No cards match</div>
+              <button onClick="{{ clearFilters }}" style="margin-top:12px;padding:9px 18px;border-radius:11px;background:{{ accent }};border:none;color:#0a0a0c;font-weight:600;cursor:pointer">Clear filters</button>
+            </div>
+          </sc-if>
+        </div>
+        </sc-if>
+
+        <!-- ================= PRICES ================= -->
+        <sc-if value="{{ isPrices }}" hint-placeholder-val="{{ false }}">
+        <div class="ink-view" style="max-width:1080px;margin:0 auto">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:22px">
+            <sc-for list="{{ priceKpis }}" as="k" hint-placeholder-count="3">
+              <div style="padding:20px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)">
+                <div style="font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:#8a8a92">{{ k.label }}</div>
+                <div style="font-family:'Bricolage Grotesque';font-weight:800;font-size:28px;margin-top:8px;letter-spacing:-.02em">{{ k.value }}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px">
+            <button onClick="{{ togglePriceOwned }}" style="{{ priceOwnedBtnStyle }}">{{ priceOwnedLabel }}</button>
+            <div style="flex:1"></div>
+            <span style="font-size:12px;color:#7c7c85;font-family:'JetBrains Mono'">note: seeded estimates — plug in prices.json to override</span>
+          </div>
+
+          <div style="border-radius:16px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);overflow:hidden">
+            <div style="display:grid;grid-template-columns:1fr 90px 100px 96px 90px;gap:10px;padding:13px 18px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#7c7c85;border-bottom:1px solid rgba(255,255,255,.06);font-weight:600">
+              <span>Card</span><span style="text-align:right">Owned</span><span style="text-align:right">Price</span><span style="text-align:center">30d</span><span style="text-align:right">7d</span>
+            </div>
+            <sc-for list="{{ priceRows }}" as="r" hint-placeholder-count="12">
+              <button onClick="{{ r._open }}" style="display:grid;grid-template-columns:1fr 90px 100px 96px 90px;gap:10px;align-items:center;width:100%;padding:11px 18px;background:none;border:none;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;text-align:left" style-hover="background:rgba(255,255,255,.03)">
+                <span style="display:flex;align-items:center;gap:11px;min-width:0">
+                  <span style="width:26px;height:36px;border-radius:5px;flex-shrink:0;background:{{ r.ink }};background-size:cover;background-position:center;background-image:{{ r._bg }}"></span>
+                  <span style="min-width:0">
+                    <span style="display:block;font-size:13px;font-weight:500;color:#e8e8ec;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.name }}</span>
+                    <span style="font-size:11px;color:#7c7c85">{{ r.setName }}</span>
+                  </span>
+                </span>
+                <span style="text-align:right;font-family:'JetBrains Mono';font-size:13px;color:#a8a8b0">{{ r.owned }}</span>
+                <span style="text-align:right;font-family:'JetBrains Mono';font-size:13px;font-weight:500">{{ r.price }}</span>
+                <span style="display:flex;justify-content:center"><svg viewBox="0 0 100 30" preserveAspectRatio="none" style="width:80px;height:26px"><polyline points="{{ r.spark }}" fill="none" stroke="{{ r.chgColor }}" stroke-width="2" vector-effect="non-scaling-stroke"></polyline></svg></span>
+                <span style="text-align:right;font-family:'JetBrains Mono';font-size:12.5px;font-weight:700;color:{{ r.chgColor }}">{{ r.chg }}</span>
+              </button>
+            </sc-for>
+          </div>
+          <div style="display:flex;justify-content:center;gap:8px;margin-top:18px">
+            <button onClick="{{ prevPage }}" style="padding:8px 15px;border-radius:9px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#d8d8dc;cursor:pointer;font-size:13px">‹ Prev</button>
+            <span style="padding:8px 4px;font-size:13px;color:#8a8a92;font-family:'JetBrains Mono'">{{ pageLabel }}</span>
+            <button onClick="{{ nextPage }}" style="padding:8px 15px;border-radius:9px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#d8d8dc;cursor:pointer;font-size:13px">Next ›</button>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ================= DECKS LIST ================= -->
+        <sc-if value="{{ isDecks }}" hint-placeholder-val="{{ false }}">
+        <div class="ink-view" style="max-width:1180px;margin:0 auto">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px">
+            <p style="color:#8a8a92;font-size:14px">Archive your builds and dive into per-deck analytics.</p>
+            <button onClick="{{ newDeckToggle }}" style="padding:10px 18px;border-radius:12px;background:{{ accent }};border:none;color:#0a0a0c;font-weight:700;cursor:pointer;font-size:14px">+ New Deck</button>
+          </div>
+
+          <sc-if value="{{ newDeckOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:22px;border-radius:18px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);margin-bottom:22px;animation:ink-pop .25s both">
+              <h3 style="font-family:'Bricolage Grotesque';font-weight:700;font-size:16px;margin-bottom:16px">Create a deck</h3>
+              <input value="{{ newDeckName }}" onInput="{{ onNewDeckName }}" placeholder="Deck name" style="width:100%;padding:11px 14px;border-radius:11px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.12);color:#f3f3f5;font-size:14px;margin-bottom:14px" />
+              <div style="font-size:12px;color:#8a8a92;margin-bottom:9px">Choose up to 2 inks</div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px">
+                <sc-for list="{{ newDeckInkChips }}" as="c" hint-placeholder-count="6">
+                  <button onClick="{{ c._toggle }}" style="{{ c._style }}">{{ c.label }}</button>
+                </sc-for>
+              </div>
+              <div style="display:flex;gap:10px">
+                <button onClick="{{ createDeck }}" style="padding:10px 20px;border-radius:11px;background:{{ accent }};border:none;color:#0a0a0c;font-weight:700;cursor:pointer">Create</button>
+                <button onClick="{{ newDeckToggle }}" style="padding:10px 20px;border-radius:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#d8d8dc;cursor:pointer">Cancel</button>
+              </div>
+            </div>
+          </sc-if>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px">
+            <sc-for list="{{ deckCards }}" as="d" hint-placeholder-count="2">
+              <button onClick="{{ d._open }}" style="text-align:left;background:linear-gradient(160deg,rgba(255,255,255,.05),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:0;cursor:pointer;overflow:hidden" style-hover="border-color:rgba(255,255,255,.18)">
+                <div style="height:78px;background:{{ d.gradient }};position:relative;display:flex;align-items:flex-end;padding:14px">
+                  <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent,rgba(0,0,0,.4))"></div>
+                  <div style="position:relative;display:flex;gap:6px">
+                    <sc-for list="{{ d.inks }}" as="ink" hint-placeholder-count="2">
+                      <span style="padding:3px 10px;border-radius:20px;background:rgba(0,0,0,.4);backdrop-filter:blur(4px);font-size:11px;font-weight:600">{{ ink }}</span>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="padding:16px 18px">
+                  <div style="font-family:'Bricolage Grotesque';font-weight:700;font-size:18px;letter-spacing:-.01em">{{ d.name }}</div>
+                  <div style="display:flex;gap:18px;margin-top:14px">
+                    <div><div style="font-family:'JetBrains Mono';font-weight:700;font-size:17px">{{ d.count }}</div><div style="font-size:11px;color:#7c7c85">cards</div></div>
+                    <div><div style="font-family:'JetBrains Mono';font-weight:700;font-size:17px;color:{{ d.wrColor }}">{{ d.wr }}</div><div style="font-size:11px;color:#7c7c85">win rate</div></div>
+                    <div><div style="font-family:'JetBrains Mono';font-weight:700;font-size:17px">{{ d.value }}</div><div style="font-size:11px;color:#7c7c85">value</div></div>
+                  </div>
+                </div>
+              </button>
+            </sc-for>
+          </div>
+          <sc-if value="{{ noDecks }}" hint-placeholder-val="{{ false }}">
+            <div style="text-align:center;padding:70px 20px;color:#7c7c85;border:1px dashed rgba(255,255,255,.12);border-radius:18px">
+              <div style="font-family:'Bricolage Grotesque';font-size:19px;margin-bottom:6px">No decks yet</div>
+              <div style="font-size:14px">Create your first build to unlock analytics.</div>
+            </div>
+          </sc-if>
+        </div>
+        </sc-if>
+
+        <!-- ================= DECK DETAIL ================= -->
+        <sc-if value="{{ isDeckDetail }}" hint-placeholder-val="{{ false }}">
+        <div class="ink-view" style="max-width:1240px;margin:0 auto">
+          <button onClick="{{ backToDecks }}" style="background:none;border:none;color:#8a8a92;cursor:pointer;font-size:13px;margin-bottom:16px;padding:0" style-hover="color:#e8e8ec">‹ All decks</button>
+
+          <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content:space-between;margin-bottom:22px">
+            <div>
+              <div style="display:flex;gap:6px;margin-bottom:10px">
+                <sc-for list="{{ dd.inks }}" as="ink" hint-placeholder-count="2">
+                  <span style="padding:3px 12px;border-radius:20px;font-size:12px;font-weight:600;background:{{ ink._bg }};color:{{ ink._fg }}">{{ ink.name }}</span>
+                </sc-for>
+                <span style="padding:3px 12px;border-radius:20px;font-size:12px;font-weight:600;background:{{ dd.validBg }};color:{{ dd.validColor }}">{{ dd.validLabel }}</span>
+              </div>
+              <h2 style="font-family:'Bricolage Grotesque';font-weight:800;font-size:30px;letter-spacing:-.02em">{{ dd.name }}</h2>
+              <p style="color:#8a8a92;font-size:14px;margin-top:6px;max-width:520px">{{ dd.notes }}</p>
+            </div>
+            <div style="display:flex;gap:10px">
+              <button onClick="{{ toggleDeckEdit }}" style="{{ deckEditBtnStyle }}">{{ deckEditLabel }}</button>
+              <button onClick="{{ logMatchToggle }}" style="padding:9px 16px;border-radius:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#e8e8ec;cursor:pointer;font-size:13px;font-weight:600">Log game</button>
+              <button onClick="{{ deleteDeck }}" style="padding:9px 14px;border-radius:11px;background:rgba(226,59,78,.12);border:1px solid rgba(226,59,78,.3);color:#ff8a96;cursor:pointer;font-size:13px">Delete</button>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:22px">
+            <sc-for list="{{ dd.stats }}" as="s" hint-placeholder-count="5">
+              <div style="padding:18px;border-radius:15px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)">
+                <div style="font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:#8a8a92">{{ s.label }}</div>
+                <div style="font-family:'Bricolage Grotesque';font-weight:800;font-size:26px;margin-top:7px;letter-spacing:-.02em;color:{{ s.color }}">{{ s.value }}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:22px">
+            <div style="padding:22px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)">
+              <h3 style="font-family:'Bricolage Grotesque';font-weight:700;font-size:15px;margin-bottom:20px">Mana Curve</h3>
+              <div style="display:flex;align-items:flex-end;gap:8px;height:130px">
+                <sc-for list="{{ dd.curve }}" as="b" hint-placeholder-count="8">
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;height:100%;justify-content:flex-end">
+                    <span style="font-family:'JetBrains Mono';font-size:11px;color:#a8a8b0">{{ b.count }}</span>
+                    <div style="width:100%;height:{{ b.pct }}%;min-height:3px;background:linear-gradient(180deg,#b79bff,#7d5fd6);border-radius:5px 5px 0 0"></div>
+                    <span style="font-size:11px;color:#7c7c85;font-family:'JetBrains Mono'">{{ b.label }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="padding:22px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)">
+              <h3 style="font-family:'Bricolage Grotesque';font-weight:700;font-size:15px;margin-bottom:18px">Card Types</h3>
+              <div style="display:flex;height:12px;border-radius:7px;overflow:hidden;margin-bottom:16px">
+                <sc-for list="{{ dd.types }}" as="t" hint-placeholder-count="4">
+                  <div style="width:{{ t.pct }}%;background:{{ t.color }}"></div>
+                </sc-for>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <sc-for list="{{ dd.types }}" as="t" hint-placeholder-count="4">
+                  <div style="display:flex;justify-content:space-between;font-size:13px">
+                    <span style="display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:3px;background:{{ t.color }}"></span>{{ t.label }}</span>
+                    <span style="font-family:'JetBrains Mono';color:#a8a8b0">{{ t.count }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="padding:22px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)">
+              <h3 style="font-family:'Bricolage Grotesque';font-weight:700;font-size:15px;margin-bottom:18px">Rarity Spread</h3>
+              <div style="display:flex;flex-direction:column;gap:11px">
+                <sc-for list="{{ dd.rarity }}" as="r" hint-placeholder-count="4">
+                  <div>
+                    <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px">
+                      <span style="display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:50%;background:{{ r.color }}"></span>{{ r.label }}</span>
+                      <span style="font-family:'JetBrains Mono';color:#a8a8b0">{{ r.count }}</span>
+                    </div>
+                    <div style="height:6px;border-radius:4px;background:rgba(255,255,255,.06);overflow:hidden"><div style="height:100%;width:{{ r.pct }}%;background:{{ r.color }};border-radius:4px"></div></div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <!-- deck builder add panel -->
+          <sc-if value="{{ deckEdit }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:20px;border-radius:18px;background:rgba(183,155,255,.06);border:1px solid rgba(183,155,255,.22);margin-bottom:22px;animation:ink-pop .2s both">
+              <h3 style="font-family:'Bricolage Grotesque';font-weight:700;font-size:15px;margin-bottom:12px">Add cards from your collection</h3>
+              <input value="{{ deckSearch }}" onInput="{{ onDeckSearch }}" placeholder="Search owned cards in these inks…" style="width:100%;padding:11px 14px;border-radius:11px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.12);color:#f3f3f5;font-size:14px;margin-bottom:14px" />
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;max-height:280px;overflow-y:auto" class="ink-sc">
+                <sc-for list="{{ deckSearchResults }}" as="r" hint-placeholder-count="6">
+                  <button onClick="{{ r._add }}" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);cursor:pointer;text-align:left" style-hover="background:rgba(255,255,255,.08)">
+                    <span style="width:24px;height:24px;border-radius:6px;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono';font-weight:700;font-size:12px;flex-shrink:0">{{ r.cost }}</span>
+                    <span style="flex:1;min-width:0;font-size:12.5px;color:#e2e2e6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.name }}</span>
+                    <span style="font-size:11px;color:#7c7c85;font-family:'JetBrains Mono'">×{{ r.own }}</span>
+                    <span style="color:{{ accent }};font-weight:700">+</span>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- match log form -->
+          <sc-if value="{{ logMatchOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:20px;border-radius:18px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);margin-bottom:22px;animation:ink-pop .2s both">
+              <h3 style="font-family:'Bricolage Grotesque';font-weight:700;font-size:15px;margin-bottom:14px">Log a game</h3>
+              <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+                <div style="display:flex;gap:6px">
+                  <button onClick="{{ setMatchWin }}" style="{{ matchWinStyle }}">Win</button>
+                  <button onClick="{{ setMatchLoss }}" style="{{ matchLossStyle }}">Loss</button>
+                </div>
+                <span style="font-size:13px;color:#8a8a92">vs inks:</span>
+                <div style="display:flex;flex-wrap:wrap;gap:6px">
+                  <sc-for list="{{ oppInkChips }}" as="c" hint-placeholder-count="6">
+                    <button onClick="{{ c._toggle }}" style="{{ c._style }}">{{ c.label }}</button>
+                  </sc-for>
+                </div>
+                <button onClick="{{ saveMatch }}" style="padding:9px 18px;border-radius:11px;background:{{ accent }};border:none;color:#0a0a0c;font-weight:700;cursor:pointer;margin-left:auto">Save game</button>
+              </div>
+            </div>
+          </sc-if>
+
+          <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;align-items:start">
+            <div style="padding:22px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px">
+                <h3 style="font-family:'Bricolage Grotesque';font-weight:700;font-size:15px">Decklist</h3>
+                <span style="font-size:12px;color:#7c7c85;font-family:'JetBrains Mono'">{{ dd.count }} / 60</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:3px">
+                <sc-for list="{{ dd.list }}" as="c" hint-placeholder-count="8">
+                  <div style="display:flex;align-items:center;gap:11px;padding:6px 8px;border-radius:9px" style-hover="background:rgba(255,255,255,.03)">
+                    <span style="width:22px;height:22px;border-radius:6px;background:{{ c.ink }};display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono';font-weight:700;font-size:11px;flex-shrink:0;color:#0a0a0c">{{ c.cost }}</span>
+                    <button onClick="{{ c._open }}" style="flex:1;min-width:0;text-align:left;background:none;border:none;cursor:pointer;color:#e2e2e6;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0" style-hover="color:#fff">{{ c.name }}</button>
+                    <span style="font-size:11px;color:#7c7c85;font-family:'JetBrains Mono'">{{ c.price }}</span>
+                    <sc-if value="{{ deckEdit }}" hint-placeholder-val="{{ false }}">
+                      <span style="display:flex;align-items:center;gap:6px">
+                        <button onClick="{{ c._dec }}" style="width:22px;height:22px;border-radius:6px;background:rgba(255,255,255,.08);border:none;color:#e8e8ec;cursor:pointer;font-size:14px;line-height:1">−</button>
+                        <span style="font-family:'JetBrains Mono';font-weight:700;width:14px;text-align:center">{{ c.count }}</span>
+                        <button onClick="{{ c._inc }}" style="width:22px;height:22px;border-radius:6px;background:rgba(255,255,255,.08);border:none;color:#e8e8ec;cursor:pointer;font-size:14px;line-height:1">+</button>
+                      </span>
+                    </sc-if>
+                    <sc-if value="{{ deckView }}" hint-placeholder-val="{{ true }}">
+                      <span style="font-family:'JetBrains Mono';font-weight:700;font-size:13px;color:#a8a8b0">×{{ c.count }}</span>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="padding:22px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px">
+                <h3 style="font-family:'Bricolage Grotesque';font-weight:700;font-size:15px">Match History</h3>
+                <span style="font-family:'JetBrains Mono';font-size:13px;color:{{ dd.wrColor }}">{{ dd.wr }}</span>
+              </div>
+              <div style="display:flex;gap:4px;margin-bottom:16px">
+                <sc-for list="{{ dd.form }}" as="f" hint-placeholder-count="5">
+                  <span style="flex:1;height:5px;border-radius:3px;background:{{ f.color }}"></span>
+                </sc-for>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <sc-for list="{{ dd.matches }}" as="m" hint-placeholder-count="5">
+                  <div style="display:flex;align-items:center;gap:11px;padding:7px 4px">
+                    <div style="width:23px;height:23px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;font-family:'JetBrains Mono';background:{{ m.badgeBg }};color:{{ m.badgeColor }}">{{ m.wl }}</div>
+                    <div style="flex:1;min-width:0">
+                      <div style="font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">vs {{ m.opp }}</div>
+                      <div style="font-size:11px;color:#7c7c85">{{ m.date }}</div>
+                    </div>
+                    <button onClick="{{ m._del }}" style="background:none;border:none;color:#5a5a62;cursor:pointer;font-size:15px" style-hover="color:#ff8a96">×</button>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ dd.noMatches }}" hint-placeholder-val="{{ false }}">
+                  <div style="text-align:center;color:#6f6f78;font-size:13px;padding:24px 0">No games logged yet.</div>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+        </div>
+        </sc-if>
+
+      </div>
+    </div>
+    </sc-if>
+  </main>
+
+  <!-- ================= CARD MODAL ================= -->
+  <sc-if value="{{ cardOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeCard }}" style="position:fixed;inset:0;z-index:100;background:rgba(5,5,7,.72);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:24px;animation:ink-fade .2s both">
+      <div onClick="{{ stop }}" style="width:min(760px,100%);max-height:90vh;overflow-y:auto;display:grid;grid-template-columns:300px 1fr;gap:0;background:#121216;border:1px solid rgba(255,255,255,.1);border-radius:22px;overflow:hidden;animation:ink-pop .28s both" class="ink-sc">
+        <div style="background:{{ cm.ink }};position:relative;min-height:100%">
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;text-align:center;font-family:'Bricolage Grotesque';font-weight:700;font-size:18px;background:{{ cm.ink }}">{{ cm.name }}</div>
+          {{ cm.imgEl }}
+        </div>
+        <div style="padding:26px 28px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+            <div>
+              <div style="display:flex;gap:7px;align-items:center;margin-bottom:8px">
+                <span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:{{ cm.inkSoft }};color:{{ cm.ink }}">{{ cm.inkColor }}</span>
+                <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:#a8a8b0"><span style="width:8px;height:8px;border-radius:50%;background:{{ cm.rarityColor }}"></span>{{ cm.rarity }}</span>
+              </div>
+              <h2 style="font-family:'Bricolage Grotesque';font-weight:800;font-size:22px;letter-spacing:-.02em;line-height:1.15">{{ cm.name }}</h2>
+              <div style="font-size:12.5px;color:#7c7c85;margin-top:3px">{{ cm.setName }} · #{{ cm.number }}</div>
+            </div>
+            <button onClick="{{ closeCard }}" style="background:rgba(255,255,255,.06);border:none;color:#c8c8cc;width:30px;height:30px;border-radius:9px;cursor:pointer;font-size:16px;flex-shrink:0">×</button>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:16px">
+            <sc-for list="{{ cm.pips }}" as="p" hint-placeholder-count="4">
+              <div style="flex:1;text-align:center;padding:10px 4px;border-radius:11px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)">
+                <div style="font-family:'Bricolage Grotesque';font-weight:800;font-size:20px;color:{{ p.color }}">{{ p.value }}</div>
+                <div style="font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:#8a8a92;margin-top:2px">{{ p.label }}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="font-size:12px;color:#8a8a92;margin-top:16px">{{ cm.classification }}</div>
+          <div style="margin-top:10px;display:flex;flex-direction:column;gap:12px">
+            <sc-for list="{{ cm.abilities }}" as="ab" hint-placeholder-count="1">
+              <div>
+                <sc-if value="{{ ab.name }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:inline-block;background:#0e0e12;color:#fff;font-family:'Bricolage Grotesque';font-weight:800;font-size:12px;letter-spacing:.09em;text-transform:uppercase;padding:5px 11px;border-radius:7px;margin-bottom:7px;border:1px solid rgba(255,255,255,.14);box-shadow:0 2px 8px rgba(0,0,0,.35)">{{ ab.name }}</div>
+                </sc-if>
+                <p style="font-size:13.5px;line-height:1.6;color:#d2d2d8;white-space:pre-line">{{ ab.body }}</p>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="margin-top:20px;padding:16px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <div>
+                <div style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#8a8a92">Market · normal</div>
+                <div style="font-family:'JetBrains Mono';font-weight:700;font-size:20px;margin-top:2px">{{ cm.price }}</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#8a8a92">foil</div>
+                <div style="font-family:'JetBrains Mono';font-weight:700;font-size:16px;margin-top:2px;color:#e0c15a">{{ cm.foilPrice }}</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#8a8a92">7d</div>
+                <div style="font-family:'JetBrains Mono';font-weight:700;font-size:16px;margin-top:2px;color:{{ cm.chgColor }}">{{ cm.chg }}</div>
+              </div>
+            </div>
+            <svg viewBox="0 0 100 32" preserveAspectRatio="none" style="width:100%;height:52px">
+              <polyline points="{{ cm.spark }}" fill="none" stroke="{{ cm.chgColor }}" stroke-width="2" vector-effect="non-scaling-stroke"></polyline>
+            </svg>
+          </div>
+
+          <div style="margin-top:18px">
+            <div style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#8a8a92;margin-bottom:10px">Your copies</div>
+            <div style="display:flex;gap:20px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <span style="font-size:13px;color:#a8a8b0;width:48px">Normal</span>
+                <button onClick="{{ cm._decN }}" style="width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.08);border:none;color:#e8e8ec;cursor:pointer;font-size:16px">−</button>
+                <span style="font-family:'JetBrains Mono';font-weight:700;font-size:16px;width:24px;text-align:center">{{ cm.qtyN }}</span>
+                <button onClick="{{ cm._incN }}" style="width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.08);border:none;color:#e8e8ec;cursor:pointer;font-size:16px">+</button>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <span style="font-size:13px;color:#e0c15a;width:48px">Foil</span>
+                <button onClick="{{ cm._decF }}" style="width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.08);border:none;color:#e8e8ec;cursor:pointer;font-size:16px">−</button>
+                <span style="font-family:'JetBrains Mono';font-weight:700;font-size:16px;width:24px;text-align:center">{{ cm.qtyF }}</span>
+                <button onClick="{{ cm._incF }}" style="width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.08);border:none;color:#e8e8ec;cursor:pointer;font-size:16px">+</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;bottom:28px;left:50%;transform:translateX(-50%);z-index:200;padding:12px 22px;border-radius:13px;background:#1c1c22;border:1px solid rgba(255,255,255,.14);box-shadow:0 12px 40px rgba(0,0,0,.5);font-size:14px;font-weight:500;animation:ink-pop .25s both">{{ toast }}</div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#b79bff&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Theme&quot;}}">
+class Component extends DCLogic {
+  state = {
+    loading: true, ready: false, view: 'overview',
+    q: '', inks: [], types: [], sets: [], setMenuOpen: false, sort: 'value', ownedOnly: true, page: 0,
+    priceOwnedOnly: true,
+    selectedCard: null, selectedDeck: null,
+    deckEdit: false, deckSearch: '', logMatchOpen: false, matchResult: 'win', matchInks: [],
+    newDeckOpen: false, newDeckName: '', newDeckInks: [],
+    collection: {}, decks: [], matches: [], displayName: 'Illumineer',
+    toast: null,
+  };
+
+  INK = { Amber:'#F2B33D', Amethyst:'#9B72CF', Emerald:'#37B36B', Ruby:'#E23B4E', Sapphire:'#2E90E0', Steel:'#8C97A8' };
+  INK_ORDER = ['Amber','Amethyst','Emerald','Ruby','Sapphire','Steel'];
+  RARITY = { C:{l:'Common',c:'#9a9aa2'}, U:{l:'Uncommon',c:'#c6d0da'}, R:{l:'Rare',c:'#e6c15a'}, SR:{l:'Super Rare',c:'#d98cff'}, L:{l:'Legendary',c:'#ff9d5c'}, E:{l:'Enchanted',c:'#5ce0d8'}, P:{l:'Promo',c:'#8ab4ff'} };
+  RARITY_RANK = { C:0,U:1,R:2,SR:3,L:4,E:5,P:2 };
+  TYPE_COLOR = { Character:'#9B72CF', Action:'#E23B4E', Song:'#2E90E0', Item:'#37B36B', Location:'#F2B33D' };
+  PAGE_SIZE = 48;
+  base = 'images/';
+
+  async componentDidMount() {
+    try {
+      const [cardsRes, userRes] = await Promise.all([ fetch('cards.json'), fetch('users/luis.json') ]);
+      const cardsData = await cardsRes.json();
+      this.cards = cardsData.cards.filter(c => c.card_type && c.card_type !== 'Token' && c.name_en);
+      this.base = cardsData.image_base_path || 'images/';
+      this.byId = {}; for (const c of this.cards) this.byId[c.card_id] = c;
+      this.setMap = {}; for (const s of cardsData.sets) this.setMap[s.code] = s.name_en;
+      let user = await userRes.json();
+      const saved = this.loadLocal();
+      if (saved) user = { ...user, ...saved };
+      this.setState({ loading:false, ready:true,
+        collection: user.collection||{}, decks: user.decks||[], matches: user.matches||[],
+        displayName: user.display_name || user.user || 'Illumineer' });
+    } catch(e) { console.error(e); this.setState({ loading:false, ready:true }); }
+  }
+
+  loadLocal(){ try { const s = localStorage.getItem('inkwell_user_luis'); return s?JSON.parse(s):null; } catch(e){ return null; } }
+  saveLocal(){ try { localStorage.setItem('inkwell_user_luis', JSON.stringify({ collection:this.state.collection, decks:this.state.decks, matches:this.state.matches, display_name:this.state.displayName })); } catch(e){} }
+  showToast(t){ this.setState({toast:t}); clearTimeout(this._tt); this._tt=setTimeout(()=>this.setState({toast:null}),1900); }
+
+  // ---------- helpers ----------
+  inkList(card){ if(!card||!card.ink_color) return []; return String(card.ink_color).split(/[,\/-]/).map(s=>s.trim()).filter(Boolean).filter(i=>this.INK[i]); }
+  inkHex(card){ const l=this.inkList(card); if(!l.length) return '#2a2a30'; if(l.length===1) return this.INK[l[0]]; return `linear-gradient(135deg,${this.INK[l[0]]},${this.INK[l[1]]})`; }
+  rar(card){ return this.RARITY[card&&card.rarity] || {l:(card&&card.rarity)||'—',c:'#9a9aa2'}; }
+  imgLocal(card){ if(!card) return ''; return card.image_file ? encodeURI(card.image_file) : (card.image_url||''); }
+  imgRemote(card){ if(!card) return ''; return (card.image_file && card.image_url) ? card.image_url : ''; }
+  setName(code){ return this.setMap[code]||code; }
+  fmt(v){ return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v||0); }
+
+  hash(str){ let h=2166136261; for(let i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
+  rng(seed){ let a=seed>>>0; return ()=>{ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+  basePrice(card){ const b={C:2.5,U:4.5,R:11,SR:26,L:64,E:210,P:16}[card.rarity]||6; const h=this.hash(card.card_id); const f=0.55+((h%1000)/1000)*1.9; return Math.round(b*f*100)/100; }
+  price(card){ return this.basePrice(card); }
+  foilPrice(card){ return Math.round(this.basePrice(card)*2.6*100)/100; }
+  change7d(card){ const h=this.hash(card.card_id+'7'); return Math.round(((h%4100)/100-19)*10)/10; }
+  spark(card){ const r=this.rng(this.hash(card.card_id+'h')); const end=this.basePrice(card); const chg=this.change7d(card)/100; let start=end/(1+chg*1.3); const pts=[]; const N=24; for(let i=0;i<N;i++){ const t=i/(N-1); const trend=start+(end-start)*t; const noise=(r()-0.5)*end*0.09; pts.push(Math.max(0.1,trend+noise)); } pts[N-1]=end; return pts; }
+  sparkPath(card, w=100, h=30){ const p=this.spark(card); const mn=Math.min(...p), mx=Math.max(...p), rg=(mx-mn)||1; return p.map((v,i)=>`${(i/(p.length-1)*w).toFixed(1)},${(h-2-((v-mn)/rg)*(h-4)).toFixed(1)}`).join(' '); }
+  ownedOf(id){ const e=this.state.collection[id]; return e?{n:e.n||0,f:e.f||0}:{n:0,f:0}; }
+  isOwned(id){ const o=this.ownedOf(id); return o.n>0||o.f>0; }
+  chgColor(v){ return v>0.05?'#5fd07f':v<-0.05?'#ff7a86':'#8a8a92'; }
+  wrColor(w){ return w>=55?'#5fd07f':w>=45?'#e6c15a':'#ff7a86'; }
+
+  parseAbility(text){
+    if(!text || !text.trim()) return [{name:'', body:'No ability text.'}];
+    const segs=text.split('\n').map(raw=>{
+      const line=raw.trim(); if(!line) return null;
+      const mColon=line.match(/^([^.\n]{2,45}?):\s+(.+)$/);
+      const mDash=line.match(/^([^.\n]{2,45}?)\s+[-–]\s+(.+)$/);
+      let m=null;
+      if(mColon && (!mDash || mColon[1].length<=mDash[1].length)) m=mColon; else if(mDash) m=mDash;
+      let name='', body=line;
+      if(m){ name=m[1]; body=m[2].trim(); }
+      else {
+        const words=line.split(' '); let k=0;
+        while(k<words.length && /[A-Z]/.test(words[k]) && !/[a-z]/.test(words[k]) && /^[-A-Z0-9'’.,!&]+$/.test(words[k])) k++;
+        if(k>=1 && k<words.length){ const cand=words.slice(0,k).join(' '); if(cand.replace(/[^A-Za-z]/g,'').length>=3 && cand.length<=40){ name=cand; body=words.slice(k).join(' ').trim(); } }
+      }
+      name=name.replace(/\{[^}]*\}/g,'').trim().toUpperCase();
+      return {name, body};
+    }).filter(Boolean);
+    const out=[];
+    for(const s of segs){
+      const prev=out[out.length-1];
+      if(prev && !s.name && /^[a-z0-9{]/.test(s.body)){ prev.body=(prev.body+' '+s.body).trim(); }
+      else out.push(s);
+    }
+    const res=out.length?out:[{name:'',body:'No ability text.'}];
+    return res.map(s=>({name:s.name, body:this.buildBody(s.body)}));
+  }
+  buildBody(text){
+    const parts=String(text).split(/(\{[a-z]\})/gi);
+    return parts.filter(p=>p!=='').map((p,idx)=>{ const m=p.match(/^\{([a-z])\}$/i); return m?this.symbolEl(m[1].toLowerCase(),idx):p; });
+  }
+  symbolEl(k,key){
+    const map={s:['⚔','#ff8a72'],w:['⛊','#7ab8ff'],l:['◆','#F2B33D'],i:['⬢','#b79bff'],e:['↻','#c8c8cc'],n:['◇','#c8c8cc']};
+    const g=map[k]; if(!g) return '{'+k+'}';
+    return React.createElement('span',{key,style:{display:'inline-flex',alignItems:'center',justifyContent:'center',minWidth:'18px',height:'18px',padding:'0 4px',margin:'0 1px',borderRadius:'5px',background:g[1]+'22',color:g[1],fontWeight:700,fontSize:'11.5px',lineHeight:1}},g[0]);
+  }
+
+  cardView(card){ return { ...card, _local:this.imgLocal(card), _remote:this.imgRemote(card), _bg:card&&(card.image_url||card.image_file)?`url("${this.imgLocal(card)}")`:'none', ink:this.inkHex(card), rarityColor:this.rar(card).c }; }
+
+  imgError = (e)=>{ const el=e.target; const rem=el.dataset.remote; if(rem && el.src!==rem && rem!==''){ el.src=rem; } else { el.style.display='none'; const ph=el.parentElement&&el.parentElement.querySelector('[data-ph]'); if(ph) ph.style.display='flex'; } };
+  stop = (e)=>{ e.stopPropagation(); };
+
+  // ---------- collection filtering ----------
+  filtered(){
+    const st=this.state; const q=st.q.trim().toLowerCase();
+    let arr = this.cards.filter(c=>{
+      if(st.ownedOnly && !this.isOwned(c.card_id)) return false;
+      if(st.sets.length && !st.sets.includes(c.set_code)) return false;
+      if(st.inks.length){ const l=this.inkList(c); if(!l.some(i=>st.inks.includes(i))) return false; }
+      if(st.types.length && !st.types.includes(c.card_type)) return false;
+      if(q && !(c.name_en.toLowerCase().includes(q) || (c.ability_text||'').toLowerCase().includes(q))) return false;
+      return true;
+    });
+    const s=st.sort;
+    arr.sort((a,b)=>{
+      if(s==='name') return a.name_en.localeCompare(b.name_en);
+      if(s==='cost') return (a.ink_cost||0)-(b.ink_cost||0) || a.name_en.localeCompare(b.name_en);
+      if(s==='lore') return (b.lore||0)-(a.lore||0);
+      if(s==='rarity') return (this.RARITY_RANK[b.rarity]||0)-(this.RARITY_RANK[a.rarity]||0);
+      return this.price(b)-this.price(a);
+    });
+    return arr;
+  }
+
+  // ---------- deck helpers ----------
+  deckById(id){ return this.state.decks.find(d=>d.id===id); }
+  deckEntries(deck){ if(!deck) return []; return Object.entries(deck.cards||{}).map(([id,ct])=>({card:this.byId[id],count:ct})).filter(x=>x.card); }
+  deckCount(deck){ return this.deckEntries(deck).reduce((s,e)=>s+e.count,0); }
+  deckValue(deck){ return this.deckEntries(deck).reduce((s,e)=>s+this.price(e.card)*e.count,0); }
+  deckLore(deck){ return this.deckEntries(deck).reduce((s,e)=>s+(e.card.lore||0)*e.count,0); }
+  deckMatches(id){ return this.state.matches.filter(m=>m.deck_id===id).slice().reverse(); }
+  winRate(ms){ if(!ms.length) return null; return Math.round(ms.filter(m=>m.result==='win').length/ms.length*100); }
+
+  // ---------- mutations ----------
+  setQty(id, field, delta){
+    const coll={...this.state.collection}; const cur=coll[id]?{...coll[id]}:{n:0,f:0};
+    cur[field]=Math.max(0,(cur[field]||0)+delta);
+    if((cur.n||0)===0 && (cur.f||0)===0) delete coll[id]; else coll[id]=cur;
+    this.setState({collection:coll}, ()=>this.saveLocal());
+  }
+  createDeck = ()=>{ const st=this.state; if(!st.newDeckName.trim()){ this.showToast('Name your deck first'); return; } const id='deck-'+Date.now().toString(36); const deck={id,name:st.newDeckName.trim(),colors:st.newDeckInks.slice(0,2),cards:{},notes:'',created_at:new Date().toISOString().slice(0,10)}; this.setState({decks:[...st.decks,deck],newDeckOpen:false,newDeckName:'',newDeckInks:[],view:'deckDetail',selectedDeck:id,deckEdit:true},()=>this.saveLocal()); };
+  deleteDeck = ()=>{ const id=this.state.selectedDeck; this.setState({decks:this.state.decks.filter(d=>d.id!==id),matches:this.state.matches.filter(m=>m.deck_id!==id),view:'decks',selectedDeck:null},()=>{this.saveLocal();this.showToast('Deck deleted');}); };
+  deckDelta(cardId, delta){ const decks=this.state.decks.map(d=>{ if(d.id!==this.state.selectedDeck) return d; const cards={...d.cards}; const nv=Math.min(4,Math.max(0,(cards[cardId]||0)+delta)); if(nv===0) delete cards[cardId]; else cards[cardId]=nv; return {...d,cards}; }); this.setState({decks},()=>this.saveLocal()); }
+  saveMatch = ()=>{ const st=this.state; const m={id:'m'+Date.now().toString(36),deck_id:st.selectedDeck,result:st.matchResult,opponent_inks:st.matchInks.slice(),date:new Date().toISOString().slice(0,10)}; this.setState({matches:[...st.matches,m],logMatchOpen:false,matchInks:[]},()=>{this.saveLocal();this.showToast('Game logged');}); };
+  delMatch(id){ this.setState({matches:this.state.matches.filter(m=>m.id!==id)},()=>this.saveLocal()); }
+
+  toggleArr(key,val){ const a=this.state[key]; const na=a.includes(val)?a.filter(x=>x!==val):[...a,val]; this.setState({[key]:na, page:0}); }
+  chipStyle(active, hex){ const base='padding:8px 14px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;border:1px solid '; return active?`${base}${hex||'#b79bff'};background:${hex?hex:'#b79bff'}22;color:${hex||'#cbb8ff'}`:`${base}rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#9a9aa2`; }
+
+  navStyle(v){ const active=this.state.view===v || (v==='decks'&&this.state.view==='deckDetail'); const b='display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:12px;border:none;cursor:pointer;font-size:14px;font-weight:600;font-family:inherit;text-align:left;width:100%;transition:all .15s;'; return active?b+'background:rgba(183,155,255,.14);color:#cbb8ff':b+'background:none;color:#8a8a92'; }
+  icon(name){ const s={width:19,height:19,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'}; const e=React.createElement; const map={
+    overview: e('svg',s, e('rect',{x:3,y:3,width:8,height:8,rx:1.5}), e('rect',{x:13,y:3,width:8,height:8,rx:1.5}), e('rect',{x:3,y:13,width:8,height:8,rx:1.5}), e('rect',{x:13,y:13,width:8,height:8,rx:1.5})),
+    collection: e('svg',s, e('rect',{x:3,y:4,width:18,height:16,rx:2}), e('line',{x1:3,y1:9,x2:21,y2:9}), e('line',{x1:9,y1:9,x2:9,y2:20})),
+    prices: e('svg',s, e('polyline',{points:'3,16 9,10 13,14 21,5'}), e('polyline',{points:'21,10 21,5 16,5'})),
+    decks: e('svg',s, e('rect',{x:4,y:3,width:11,height:15,rx:2}), e('rect',{x:9,y:6,width:11,height:15,rx:2})),
+  }; return map[name]; }
+
+  go(view){ return ()=>this.setState({view,page:0,selectedCard:null,newDeckOpen:false}); }
+  openCard(id){ this.setState({selectedCard:id}); }
+  openDeck(id){ this.setState({view:'deckDetail',selectedDeck:id,deckEdit:false,logMatchOpen:false,deckSearch:''}); }
+
+  renderVals(){
+    if(!this.state.ready){ return { loading:this.state.loading, ready:false, isOverview:false, isCollection:false, isPrices:false, isDecks:false, isDeckDetail:false, cardOpen:false, toast:null }; }
+    const st=this.state; const V={};
+    V.loading=false; V.ready=true; V.toast=st.toast; V.displayName=st.displayName;
+    V.userInitial=(st.displayName||'I').charAt(0).toUpperCase(); V.accent='#b79bff';
+    V.nav=[
+      {key:'overview',label:'Overview',_go:this.go('overview'),_style:this.navStyle('overview'),_icon:this.icon('overview')},
+      {key:'collection',label:'Collection',_go:this.go('collection'),_style:this.navStyle('collection'),_icon:this.icon('collection')},
+      {key:'prices',label:'Prices',_go:this.go('prices'),_style:this.navStyle('prices'),_icon:this.icon('prices')},
+      {key:'decks',label:'Decks · TCG',_go:this.go('decks'),_style:this.navStyle('decks'),_icon:this.icon('decks')},
+    ];
+    const titles={overview:['Overview',`Welcome back, ${st.displayName}`],collection:['Collection','Every card in the multiverse — yours highlighted'],prices:['Price Watch','Market values across your collection'],decks:['Decks · TCG','Your archived builds & analytics'],deckDetail:['Deck Analytics','']};
+    const t=titles[st.view]||titles.overview; V.pageTitle=t[0]; V.pageSub=t[1];
+    V.isOverview=st.view==='overview'; V.isCollection=st.view==='collection'; V.isPrices=st.view==='prices'; V.isDecks=st.view==='decks'; V.isDeckDetail=st.view==='deckDetail';
+    V.q=st.q; V.onSearch=(e)=>this.setState({q:e.target.value,page:0,view:(st.view==='overview'||st.view==='decks'||st.view==='deckDetail')?'collection':st.view});
+    V.imgError=window.imgError||this.imgError; V.stop=this.stop;
+
+    // ---- OVERVIEW ----
+    if(V.isOverview){
+      let uniq=0,totCards=0,foils=0,value=0;
+      for(const [id,e] of Object.entries(st.collection)){ const c=this.byId[id]; if(!c) continue; const n=e.n||0,f=e.f||0; if(n+f>0) uniq++; totCards+=n+f; foils+=f; value+=this.price(c)*n+this.foilPrice(c)*f; }
+      V.kpis=[
+        {label:'Collection Value',value:this.fmt(value),sub:`${totCards} cards total`,glow:'#9B72CF'},
+        {label:'Unique Cards',value:uniq.toLocaleString('en-US'),sub:`of ${this.cards.length.toLocaleString('en-US')} in database`,glow:'#2E90E0'},
+        {label:'Foils',value:foils.toString(),sub:'shiny pulls',glow:'#F2B33D'},
+        {label:'Decks',value:st.decks.length.toString(),sub:`${st.matches.length} games logged`,glow:'#37B36B'},
+      ];
+      const dist={}; for(const [id,e] of Object.entries(st.collection)){ const c=this.byId[id]; if(!c) continue; const cnt=(e.n||0)+(e.f||0); for(const ink of this.inkList(c)) dist[ink]=(dist[ink]||0)+cnt; }
+      const mx=Math.max(1,...Object.values(dist));
+      V.inkDist=this.INK_ORDER.map(ink=>({label:ink,count:dist[ink]||0,pct:((dist[ink]||0)/mx*100).toFixed(1),color:this.INK[ink]}));
+      const ownedCards=Object.keys(st.collection).map(id=>this.byId[id]).filter(Boolean);
+      const movers=ownedCards.map(c=>({c,chg:this.change7d(c)})).sort((a,b)=>Math.abs(b.chg)-Math.abs(a.chg)).slice(0,6);
+      V.movers=movers.map(({c,chg})=>{ const cv=this.cardView(c); return {name:c.name_en,price:this.fmt(this.price(c)),chg:(chg>0?'+':'')+chg+'%',chgColor:this.chgColor(chg),ink:cv.ink,_bg:cv._bg,_open:()=>this.openCard(c.card_id)}; });
+      const allWR=this.winRate(st.matches); V.overallWR=allWR===null?'—':allWR+'%'; V.winColor=this.wrColor(allWR||0);
+      V.recentMatches=st.matches.slice().reverse().slice(0,6).map(m=>{ const d=this.deckById(m.deck_id); const win=m.result==='win'; return {wl:win?'W':'L',opp:(m.opponent_inks||[]).join('/')||'Unknown',deck:d?d.name:'—',date:m.date,badgeBg:win?'rgba(95,208,127,.16)':'rgba(255,122,134,.16)',badgeColor:win?'#5fd07f':'#ff7a86'}; });
+      const setTot={},setOwn={}; for(const c of this.cards){ setTot[c.set_code]=(setTot[c.set_code]||0)+1; if(this.isOwned(c.card_id)) setOwn[c.set_code]=(setOwn[c.set_code]||0)+1; }
+      V.setProgress=Object.keys(setTot).map(s=>{ const pn=(setOwn[s]||0)/setTot[s]*100; return {name:this.setName(s),frac:`${setOwn[s]||0}/${setTot[s]}`,pct:pn.toFixed(1),pctNum:pn}; }).sort((a,b)=>b.pctNum-a.pctNum);
+    }
+
+    // ---- COLLECTION ----
+    if(V.isCollection){
+      V.inkChips=this.INK_ORDER.map(ink=>({label:ink,_toggle:()=>this.toggleArr('inks',ink),_style:this.chipStyle(st.inks.includes(ink),this.INK[ink])}));
+      V.typeChips=['Character','Action','Song','Item','Location'].map(t=>({label:t,_toggle:()=>this.toggleArr('types',t),_style:this.chipStyle(st.types.includes(t))}));
+      const setsPresent=[...new Set(this.cards.map(c=>c.set_code))];
+      V.setOptions=setsPresent.map(code=>({code,name:this.setName(code)})).sort((a,b)=>a.name.localeCompare(b.name)).map(o=>({code:o.code,name:o.name,check:st.sets.includes(o.code)?'✓':'',checkBg:st.sets.includes(o.code)?'#b79bff':'transparent',_toggle:()=>this.toggleArr('sets',o.code)}));
+      V.setMenuOpen=st.setMenuOpen; V.toggleSetMenu=()=>this.setState({setMenuOpen:!st.setMenuOpen});
+      V.setMenuLabel=st.sets.length?(st.sets.length+' set'+(st.sets.length>1?'s':'')):'All sets';
+      V.clearSets=()=>this.setState({sets:[],page:0});
+      V.sort=st.sort; V.onSort=(e)=>this.setState({sort:e.target.value});
+      V.ownedLabel=st.ownedOnly?'✓ Owned only':'All cards'; V.ownedBtnStyle=this.chipStyle(st.ownedOnly);
+      V.toggleOwned=()=>this.setState({ownedOnly:!st.ownedOnly,page:0});
+      const all=this.filtered(); V.resultCount=all.length.toLocaleString('en-US');
+      const pages=Math.max(1,Math.ceil(all.length/this.PAGE_SIZE)); const page=Math.min(st.page,pages-1);
+      V.pageInfo=pages>1?` · page ${page+1}/${pages}`:''; V.noResults=all.length===0;
+      V.prevPage=()=>this.setState({page:Math.max(0,page-1)}); V.nextPage=()=>this.setState({page:Math.min(pages-1,page+1)});
+      V.clearFilters=()=>this.setState({inks:[],types:[],sets:[],q:'',ownedOnly:false,page:0});
+      V.accent='#b79bff';
+      V.pageCards=all.slice(page*this.PAGE_SIZE,(page+1)*this.PAGE_SIZE).map(c=>{ const o=this.ownedOf(c.card_id); const owned=o.n+o.f>0; const cv=this.cardView(c); return { name:c.name_en, cost:c.ink_cost==null?'–':c.ink_cost, ink:cv.ink, _local:cv._local, _remote:cv._remote, rarityColor:cv.rarityColor, price:this.fmt(this.price(c)), owned, notOwned:!owned&&!st.ownedOnly, ownedQty:o.n+o.f, foilTag:o.f>0?'✦':'', _open:()=>this.openCard(c.card_id) }; });
+    }
+
+    // ---- PRICES ----
+    if(V.isPrices){
+      let value=0,cnt=0; for(const [id,e] of Object.entries(st.collection)){ const c=this.byId[id]; if(!c) continue; value+=this.price(c)*(e.n||0)+this.foilPrice(c)*(e.f||0); cnt+=(e.n||0)+(e.f||0); }
+      const pool=st.priceOwnedOnly?Object.keys(st.collection).map(id=>this.byId[id]).filter(Boolean):this.cards;
+      const gainers=pool.map(c=>this.change7d(c)).filter(v=>v>0);
+      V.priceKpis=[ {label:'Total Value',value:this.fmt(value)}, {label:'Tracked Cards',value:(st.priceOwnedOnly?pool.length:this.cards.length).toLocaleString('en-US')}, {label:'Avg 7d Trend',value:(pool.length?((pool.reduce((s,c)=>s+this.change7d(c),0)/pool.length).toFixed(1)):'0')+'%'} ];
+      V.priceOwnedLabel=st.priceOwnedOnly?'✓ Owned only':'All cards'; V.priceOwnedBtnStyle=this.chipStyle(st.priceOwnedOnly);
+      V.togglePriceOwned=()=>this.setState({priceOwnedOnly:!st.priceOwnedOnly,page:0});
+      const arr=pool.slice().sort((a,b)=>this.price(b)-this.price(a));
+      const pages=Math.max(1,Math.ceil(arr.length/this.PAGE_SIZE)); const page=Math.min(st.page,pages-1);
+      V.pageLabel=`${page+1} / ${pages}`; V.pageLabelShort=V.pageLabel;
+      V.prevPage=()=>this.setState({page:Math.max(0,page-1)}); V.nextPage=()=>this.setState({page:Math.min(pages-1,page+1)});
+      V.priceRows=arr.slice(page*this.PAGE_SIZE,(page+1)*this.PAGE_SIZE).map(c=>{ const o=this.ownedOf(c.card_id); const chg=this.change7d(c); const cv=this.cardView(c); return { name:c.name_en, setName:this.setName(c.set_code), ink:cv.ink, _bg:cv._bg, owned:(o.n+o.f)>0?'×'+(o.n+o.f):'—', price:this.fmt(this.price(c)), chg:(chg>0?'+':'')+chg+'%', chgColor:this.chgColor(chg), spark:this.sparkPath(c), _open:()=>this.openCard(c.card_id) }; });
+    }
+
+    // ---- DECKS LIST ----
+    if(V.isDecks){
+      V.accent='#b79bff';
+      V.newDeckOpen=st.newDeckOpen; V.newDeckToggle=()=>this.setState({newDeckOpen:!st.newDeckOpen}); V.newDeckName=st.newDeckName; V.onNewDeckName=(e)=>this.setState({newDeckName:e.target.value});
+      V.newDeckInkChips=this.INK_ORDER.map(ink=>({label:ink,_toggle:()=>{ const a=st.newDeckInks; const na=a.includes(ink)?a.filter(x=>x!==ink):(a.length>=2?a:[...a,ink]); this.setState({newDeckInks:na}); },_style:this.chipStyle(st.newDeckInks.includes(ink),this.INK[ink])}));
+      V.noDecks=st.decks.length===0;
+      V.deckCards=st.decks.map(d=>{ const inks=(d.colors||[]).filter(Boolean); const ms=this.deckMatches(d.id); const wr=this.winRate(ms); const grad=inks.length?`linear-gradient(120deg,${inks.map(i=>this.INK[i]||'#333').join(',')})`:'linear-gradient(120deg,#333,#555)'; return { name:d.name, inks, count:this.deckCount(d), wr:wr===null?'—':wr+'%', wrColor:this.wrColor(wr||0), value:this.fmt(this.deckValue(d)), gradient:grad, _open:()=>this.openDeck(d.id) }; });
+    }
+
+    // ---- DECK DETAIL ----
+    if(V.isDeckDetail){
+      const deck=this.deckById(st.selectedDeck); V.accent='#b79bff'; V.deckEdit=st.deckEdit; V.deckView=!st.deckEdit;
+      if(!deck){ V.dd={inks:[],name:'Deck not found',notes:'',stats:[],curve:[],types:[],rarity:[],list:[],matches:[],form:[],count:0,wr:'—',wrColor:'#8a8a92',validLabel:'',validBg:'',validColor:'',noMatches:true}; V.backToDecks=this.go('decks'); }
+      else {
+        const entries=this.deckEntries(deck); const total=this.deckCount(deck); const colors=(deck.colors||[]).filter(Boolean);
+        const valid=total>=60; V.backToDecks=this.go('decks');
+        V.dd={};
+        V.dd.inks=colors.map(i=>({name:i,_bg:this.INK[i]+'22',_fg:this.INK[i]}));
+        V.dd.name=deck.name; V.dd.notes=deck.notes||'No notes yet.';
+        V.dd.validLabel=valid?'Tournament legal':`${total}/60 cards`; V.dd.validBg=valid?'rgba(95,208,127,.14)':'rgba(230,193,90,.14)'; V.dd.validColor=valid?'#5fd07f':'#e6c15a';
+        const ms=this.deckMatches(deck.id); const wr=this.winRate(ms);
+        let owned=0,inkable=0,uninkable=0;
+        for(const e of entries){ const o=this.ownedOf(e.card.card_id); owned+=Math.min(o.n+o.f,e.count); if(e.card.inkable===1) inkable+=e.count; else if(e.card.inkable===0) uninkable+=e.count; }
+        const completion=total?Math.round(owned/total*100):0;
+        const compColor=completion>=100?'#5fd07f':completion>=75?'#e6c15a':'#ff7a86';
+        V.dd.stats=[
+          {label:'Cards',value:total,color:'#f3f3f5'},
+          {label:'In Collection',value:completion+'%',color:compColor},
+          {label:'Inkable',value:inkable,color:'#37B36B'},
+          {label:'Uninkable',value:uninkable,color:'#8C97A8'},
+          {label:'Total Lore',value:this.deckLore(deck),color:'#F2B33D'},
+          {label:'Deck Value',value:this.fmt(this.deckValue(deck)),color:'#f3f3f5'},
+          {label:'Win Rate',value:wr===null?'—':wr+'%',color:this.wrColor(wr||0)},
+          {label:'Games',value:ms.length,color:'#f3f3f5'},
+        ];
+        const buckets=[0,0,0,0,0,0,0,0]; for(const e of entries){ const cost=Math.min(7,Math.max(0,e.card.ink_cost||0)); buckets[cost]+=e.count; } const bmax=Math.max(1,...buckets);
+        V.dd.curve=buckets.map((c,i)=>({label:i===7?'7+':String(i),count:c,pct:(c/bmax*100).toFixed(1)}));
+        const types={}; for(const e of entries) types[e.card.card_type]=(types[e.card.card_type]||0)+e.count; const tmax=Object.values(types).reduce((a,b)=>a+b,0)||1;
+        V.dd.types=Object.entries(types).sort((a,b)=>b[1]-a[1]).map(([k,v])=>({label:k,count:v,pct:(v/tmax*100).toFixed(1),color:this.TYPE_COLOR[k]||'#8a8a92'}));
+        const rar={}; for(const e of entries){ const r=e.card.rarity||'?'; rar[r]=(rar[r]||0)+e.count; } const rmax=Math.max(1,...Object.values(rar));
+        V.dd.rarity=Object.entries(rar).sort((a,b)=>(this.RARITY_RANK[b[0]]||0)-(this.RARITY_RANK[a[0]]||0)).map(([k,v])=>({label:(this.RARITY[k]&&this.RARITY[k].l)||k,count:v,pct:(v/rmax*100).toFixed(1),color:(this.RARITY[k]&&this.RARITY[k].c)||'#8a8a92'}));
+        V.dd.count=total;
+        V.dd.list=entries.sort((a,b)=>(a.card.ink_cost||0)-(b.card.ink_cost||0)||a.card.name_en.localeCompare(b.card.name_en)).map(e=>({ name:e.card.name_en, cost:e.card.ink_cost==null?'–':e.card.ink_cost, ink:this.inkHex(e.card), price:this.fmt(this.price(e.card)), count:e.count, _open:()=>this.openCard(e.card.card_id), _inc:()=>this.deckDelta(e.card.card_id,1), _dec:()=>this.deckDelta(e.card.card_id,-1) }));
+        V.dd.wr=wr===null?'—':wr+'%'; V.dd.wrColor=this.wrColor(wr||0);
+        V.dd.form=ms.slice(0,8).reverse().map(m=>({color:m.result==='win'?'#5fd07f':'#ff7a86'}));
+        V.dd.matches=ms.map(m=>({wl:m.result==='win'?'W':'L',opp:(m.opponent_inks||[]).join('/')||'Unknown',date:m.date,badgeBg:m.result==='win'?'rgba(95,208,127,.16)':'rgba(255,122,134,.16)',badgeColor:m.result==='win'?'#5fd07f':'#ff7a86',_del:()=>this.delMatch(m.id)}));
+        V.dd.noMatches=ms.length===0;
+        // edit
+        V.toggleDeckEdit=()=>this.setState({deckEdit:!st.deckEdit,logMatchOpen:false}); V.deckEditLabel=st.deckEdit?'Done editing':'Edit cards'; V.deckEditBtnStyle=st.deckEdit?'padding:9px 16px;border-radius:11px;background:#b79bff;border:none;color:#0a0a0c;cursor:pointer;font-size:13px;font-weight:700':'padding:9px 16px;border-radius:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#e8e8ec;cursor:pointer;font-size:13px;font-weight:600';
+        V.deleteDeck=this.deleteDeck; V.deckSearch=st.deckSearch; V.onDeckSearch=(e)=>this.setState({deckSearch:e.target.value});
+        const dq=st.deckSearch.trim().toLowerCase();
+        const legalPool=this.cards.filter(c=>{ if(!this.isOwned(c.card_id)) return false; const l=this.inkList(c); if(colors.length && !l.every(i=>colors.includes(i))) return false; if(dq && !c.name_en.toLowerCase().includes(dq)) return false; return true; }).sort((a,b)=>(a.ink_cost||0)-(b.ink_cost||0)).slice(0,40);
+        V.deckSearchResults=legalPool.map(c=>({ name:c.name_en, cost:c.ink_cost==null?'–':c.ink_cost, own:this.ownedOf(c.card_id).n+this.ownedOf(c.card_id).f, _add:()=>this.deckDelta(c.card_id,1) }));
+        // match log
+        V.logMatchOpen=st.logMatchOpen; V.logMatchToggle=()=>this.setState({logMatchOpen:!st.logMatchOpen,deckEdit:false});
+        V.setMatchWin=()=>this.setState({matchResult:'win'}); V.setMatchLoss=()=>this.setState({matchResult:'loss'});
+        V.matchWinStyle=this.chipStyle(st.matchResult==='win','#37B36B'); V.matchLossStyle=this.chipStyle(st.matchResult==='loss','#E23B4E');
+        V.oppInkChips=this.INK_ORDER.map(ink=>({label:ink,_toggle:()=>this.toggleArr('matchInks',ink),_style:this.chipStyle(st.matchInks.includes(ink),this.INK[ink])}));
+        V.saveMatch=this.saveMatch;
+      }
+    }
+
+    // ---- CARD MODAL ----
+    V.cardOpen=!!st.selectedCard;
+    if(st.selectedCard){ const c=this.byId[st.selectedCard]; if(c){ const cv=this.cardView(c); const o=this.ownedOf(c.card_id); const chg=this.change7d(c);
+      const pips=[]; if(c.card_type==='Character'){ pips.push({label:'Cost',value:c.ink_cost==null?'–':c.ink_cost,color:'#c8c8cc'},{label:'Strength',value:c.strength==null?'–':c.strength,color:'#ff8a72'},{label:'Willpower',value:c.willpower==null?'–':c.willpower,color:'#7ab8ff'},{label:'Lore',value:c.lore==null?'–':c.lore,color:'#F2B33D'}); }
+      else if(c.card_type==='Location'){ pips.push({label:'Cost',value:c.ink_cost,color:'#c8c8cc'},{label:'Move Cost',value:c.strength==null?'–':c.strength,color:'#ff8a72'},{label:'Willpower',value:c.willpower==null?'–':c.willpower,color:'#7ab8ff'},{label:'Lore',value:c.lore==null?'–':c.lore,color:'#F2B33D'}); }
+      else { pips.push({label:'Cost',value:c.ink_cost==null?'–':c.ink_cost,color:'#c8c8cc'},{label:'Type',value:c.card_type,color:'#c8c8cc'},{label:'Ink',value:c.inkable?'Yes':'No',color:c.inkable?'#5fd07f':'#ff7a86'}); }
+      V.cm={ name:c.name_en, ink:cv.ink, inkSoft:(this.inkList(c)[0]?this.INK[this.inkList(c)[0]]:'#888')+'22', inkColor:this.inkList(c).join(' / ')||'—', _local:cv._local, _remote:cv._remote, imgEl: cv._local ? React.createElement('img',{src:cv._local,'data-remote':cv._remote,onError:window.imgError,style:{position:'relative',width:'100%',height:'100%',objectFit:'cover',display:'block'}}) : null, rarity:this.rar(c).l, rarityColor:this.rar(c).c, setName:this.setName(c.set_code), number:c.card_number, pips, classification:c.classification||'', ability:c.ability_text||'No ability text.', abilities:this.parseAbility(c.ability_text), price:this.fmt(this.price(c)), foilPrice:this.fmt(this.foilPrice(c)), chg:(chg>0?'+':'')+chg+'%', chgColor:this.chgColor(chg), spark:this.sparkPath(c,100,32), qtyN:o.n, qtyF:o.f, _incN:()=>this.setQty(c.card_id,'n',1), _decN:()=>this.setQty(c.card_id,'n',-1), _incF:()=>this.setQty(c.card_id,'f',1), _decF:()=>this.setQty(c.card_id,'f',-1) };
+    } }
+    V.closeCard=()=>this.setState({selectedCard:null});
+    return V;
+  }
+}
+</script>
+</body>
+</html>
