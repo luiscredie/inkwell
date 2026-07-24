@@ -628,7 +628,10 @@
               <div style="display:flex;flex-direction:column;gap:3px">
                 <sc-for list="{{ dd.list }}" as="c" hint-placeholder-count="8">
                   <div style="display:flex;align-items:center;gap:11px;padding:6px 8px;border-radius:9px" style-hover="background:rgba(255,255,255,.03)">
-                    <span style="width:22px;height:22px;border-radius:6px;background:{{ c.ink }};display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono';font-weight:700;font-size:11px;flex-shrink:0;color:#0a0a0c">{{ c.cost }}</span>
+                    <span style="position:relative;width:30px;height:42px;border-radius:5px;overflow:hidden;flex-shrink:0;background:{{ c.ink }}">
+                      <img src="{{ c._local }}" data-remote="{{ c._remote }}" onError="{{ imgError }}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block" />
+                      <span data-ph style="position:absolute;inset:0;display:none;align-items:center;justify-content:center;font-family:'JetBrains Mono';font-weight:700;font-size:11px;background:{{ c.ink }};color:#0a0a0c">{{ c.cost }}</span>
+                    </span>
                     <button onClick="{{ c._open }}" style="flex:1;min-width:0;text-align:left;background:none;border:none;cursor:pointer;color:#e2e2e6;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0" style-hover="color:#fff">{{ c.name }}</button>
                     <sc-if value="{{ c.invalid }}" hint-placeholder-val="{{ false }}">
                       <span title="{{ c.warn }}" style="color:#e6c15a;font-size:14px;cursor:help">⚠</span>
@@ -966,6 +969,7 @@ class Component extends DCLogic {
     return {ok:true,reason:''};
   }
   ligaUrl(card){ return 'https://www.ligalorcana.com.br/?view=ecomm/itens&busca='+encodeURIComponent(card.name_en||''); }
+  setOrder(code){ const m=String(code).match(/^([A-Za-z]+)(\d+)?$/); const pre=m?m[1]:code; const num=m&&m[2]?+m[2]:0; const grp={LOR:0,Q:1,DLPC:2,D:3}[pre]!=null?{LOR:0,Q:1,DLPC:2,D:3}[pre]:9; return grp*1000+num; }
   deckById(id){ return this.state.decks.find(d=>d.id===id); }
   deckEntries(deck){ if(!deck) return []; return Object.entries(deck.cards||{}).map(([id,ct])=>({card:this.byId[id],count:ct})).filter(x=>x.card); }
   deckCount(deck){ return this.deckEntries(deck).reduce((s,e)=>s+e.count,0); }
@@ -1053,7 +1057,7 @@ class Component extends DCLogic {
       V.inkChips=this.INK_ORDER.map(ink=>({label:ink,_toggle:()=>this.toggleArr('inks',ink),_style:this.chipStyle(st.inks.includes(ink),this.INK[ink])}));
       V.typeChips=['Character','Action','Song','Item','Location'].map(t=>({label:t,_toggle:()=>this.toggleArr('types',t),_style:this.chipStyle(st.types.includes(t))}));
       const setsPresent=[...new Set(this.cards.map(c=>c.set_code))];
-      V.setOptions=setsPresent.map(code=>({code,name:this.setName(code)})).sort((a,b)=>a.name.localeCompare(b.name)).map(o=>({code:o.code,name:o.name,check:st.sets.includes(o.code)?'✓':'',checkBg:st.sets.includes(o.code)?'#b79bff':'transparent',_toggle:()=>this.toggleArr('sets',o.code)}));
+      V.setOptions=setsPresent.map(code=>({code,name:this.setName(code)})).sort((a,b)=>this.setOrder(a.code)-this.setOrder(b.code)).map(o=>({code:o.code,name:o.name,check:st.sets.includes(o.code)?'✓':'',checkBg:st.sets.includes(o.code)?'#b79bff':'transparent',_toggle:()=>this.toggleArr('sets',o.code)}));
       V.setMenuOpen=st.setMenuOpen; V.toggleSetMenu=()=>this.setState({setMenuOpen:!st.setMenuOpen});
       V.setMenuLabel=st.sets.length?(st.sets.length+' set'+(st.sets.length>1?'s':'')):'All sets';
       V.clearSets=()=>this.setState({sets:[],page:0});
@@ -1134,7 +1138,7 @@ class Component extends DCLogic {
         const rar={}; for(const e of entries){ const r=e.card.rarity||'?'; rar[r]=(rar[r]||0)+e.count; } const rmax=Math.max(1,...Object.values(rar));
         V.dd.rarity=Object.entries(rar).sort((a,b)=>(this.RARITY_RANK[b[0]]||0)-(this.RARITY_RANK[a[0]]||0)).map(([k,v])=>({label:(this.RARITY[k]&&this.RARITY[k].l)||k,count:v,pct:(v/rmax*100).toFixed(1),color:(this.RARITY[k]&&this.RARITY[k].c)||'#8a8a92'}));
         V.dd.count=total;
-        V.dd.list=entries.sort((a,b)=>(a.card.ink_cost||0)-(b.card.ink_cost||0)||a.card.name_en.localeCompare(b.card.name_en)).map(e=>{ const v=this.validForDeck(e.card,deck); return { name:e.card.name_en, cost:e.card.ink_cost==null?'–':e.card.ink_cost, ink:this.inkHex(e.card), price:this.fmtOrDash(this.price(e.card)), count:e.count, invalid:!v.ok, warn:v.reason, _open:()=>this.openCard(e.card.card_id), _inc:()=>this.deckDelta(e.card.card_id,1), _dec:()=>this.deckDelta(e.card.card_id,-1) }; });
+        V.dd.list=entries.sort((a,b)=>(a.card.ink_cost||0)-(b.card.ink_cost||0)||a.card.name_en.localeCompare(b.card.name_en)).map(e=>{ const v=this.validForDeck(e.card,deck); const cv=this.cardView(e.card); return { name:e.card.name_en, cost:e.card.ink_cost==null?'–':e.card.ink_cost, ink:this.inkHex(e.card), _local:cv._local, _remote:cv._remote, price:this.fmtOrDash(this.price(e.card)), count:e.count, invalid:!v.ok, warn:v.reason, _open:()=>this.openCard(e.card.card_id), _inc:()=>this.deckDelta(e.card.card_id,1), _dec:()=>this.deckDelta(e.card.card_id,-1) }; });
         // missing cards (owned fewer than required)
         const missing=entries.map(e=>{ const o=this.ownedOf(e.card.card_id); const have=o.n+o.f; const need=Math.max(0,e.count-have); return {card:e.card,need,have,count:e.count}; }).filter(x=>x.need>0).sort((a,b)=>this.priceOr0(b.card)-this.priceOr0(a.card));
         V.dd.missing=missing.map(m=>({ name:m.card.name_en, ink:this.inkHex(m.card), need:m.need, price:this.fmtOrDash(this.price(m.card)), sub:'have '+m.have+' of '+m.count, liga:this.ligaUrl(m.card), _open:()=>this.openCard(m.card.card_id) }));
@@ -1159,6 +1163,7 @@ class Component extends DCLogic {
           if(st.bCost!=='all'){ const cost=c.ink_cost==null?0:c.ink_cost; if(st.bCost==='7'){ if(cost<7) return false; } else if(cost!==+st.bCost) return false; }
           if(st.bSets.length && !st.bSets.includes(c.set_code)) return false;
           if(st.bOwnedOnly && !this.isOwned(c.card_id)) return false;
+          if(!this.legalInFormat(c, deck.format)) return false;
           return true;
         });
         const so=st.bSort;
@@ -1178,11 +1183,11 @@ class Component extends DCLogic {
           groups=order.filter(k=>buckets[k]).map(k=>({label:k,color:this.INK[k]||'#8a8a92',count:buckets[k].length,cards:buckets[k].map(mkCard)}));
         } else if(st.bGroup==='set'){
           const buckets={}; for(const c of capped){ (buckets[c.set_code]=buckets[c.set_code]||[]).push(c); }
-          groups=Object.keys(buckets).sort().map(k=>({label:this.setName(k),color:'#8a8a92',count:buckets[k].length,cards:buckets[k].map(mkCard)}));
+          groups=Object.keys(buckets).sort((a,b)=>this.setOrder(a)-this.setOrder(b)).map(k=>({label:this.setName(k),color:'#8a8a92',count:buckets[k].length,cards:buckets[k].map(mkCard)}));
         } else {
           groups=[{label:'',color:'',count:capped.length,cards:capped.map(mkCard)}];
         }
-        const setsPresent=[...new Set(this.cards.map(c=>c.set_code))].map(code=>({code,name:this.setName(code)})).sort((a,b)=>a.name.localeCompare(b.name));
+        const setsPresent=[...new Set(this.cards.map(c=>c.set_code))].map(code=>({code,name:this.setName(code)})).sort((a,b)=>this.setOrder(a.code)-this.setOrder(b.code));
         V.b={
           fmtLabel:this.fmtLabel(deck.format), deckColorsLabel:colors.length?colors.join('/'):'Any ink',
           size:st.bSize, sizeLabel:st.bSize+' / row', onSize:(e)=>this.setState({bSize:+e.target.value}), gridCols:`repeat(${st.bSize},1fr)`,
