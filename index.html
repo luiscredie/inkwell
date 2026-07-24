@@ -233,8 +233,25 @@
               <option value="rarity">Sort: Rarity</option>
               <option value="lore">Sort: Lore</option>
             </select>
-            <button onClick="{{ toggleOwned }}" style="{{ ownedBtnStyle }}">{{ ownedLabel }}</button>
+            <div style="display:flex;gap:6px">
+              <sc-for list="{{ collModes }}" as="m" hint-placeholder-count="3">
+                <button onClick="{{ m._go }}" style="{{ m._style }}">{{ m.label }}</button>
+              </sc-for>
+            </div>
+            <button onClick="{{ exportCollection }}" style="padding:8px 12px;border-radius:11px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#d8d8dc;cursor:pointer;font-size:13px">↓ Export</button>
+            <button onClick="{{ triggerImport }}" style="padding:8px 12px;border-radius:11px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#d8d8dc;cursor:pointer;font-size:13px">↑ Import</button>
+            <input type="file" accept=".csv,.json" ref="{{ setImpRef }}" onChange="{{ importCollection }}" style="display:none" />
           </div>
+
+          <sc-if value="{{ showAcquire }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:14px;padding:14px 18px;border-radius:14px;background:linear-gradient(160deg,rgba(183,155,255,.1),rgba(46,144,224,.06));border:1px solid rgba(183,155,255,.2);margin-bottom:16px">
+              <div style="flex:1">
+                <div style="font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:#8a8a92">Custo para adquirir o que falta</div>
+                <div style="font-family:'Bricolage Grotesque';font-weight:800;font-size:24px;letter-spacing:-.02em;margin-top:3px">{{ acquireCost }}</div>
+              </div>
+              <div style="font-size:12px;color:#8a8a92;font-family:'JetBrains Mono'">{{ acquireSub }}</div>
+            </div>
+          </sc-if>
 
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;font-size:13px;color:#8a8a92">
             <span><b style="color:#e8e8ec;font-family:'JetBrains Mono'">{{ resultCount }}</b> cards{{ pageInfo }}</span>
@@ -651,7 +668,7 @@
 class Component extends DCLogic {
   state = {
     loading: true, ready: false, view: 'overview',
-    q: '', inks: [], types: [], sets: [], setMenuOpen: false, sort: 'value', ownedOnly: true, page: 0,
+    q: '', inks: [], types: [], sets: [], setMenuOpen: false, sort: 'value', collMode: 'owned', page: 0,
     priceOwnedOnly: true,
     selectedCard: null, selectedDeck: null,
     deckEdit: false, deckSearch: '', logMatchOpen: false, matchResult: 'win', matchInks: [],
@@ -810,7 +827,8 @@ class Component extends DCLogic {
   filtered(){
     const st=this.state; const q=st.q.trim().toLowerCase();
     let arr = this.cards.filter(c=>{
-      if(st.ownedOnly && !this.isOwned(c.card_id)) return false;
+      if(st.collMode==='owned' && !this.isOwned(c.card_id)) return false;
+      if(st.collMode==='missing' && this.isOwned(c.card_id)) return false;
       if(st.sets.length && !st.sets.includes(c.set_code)) return false;
       if(st.inks.length){ const l=this.inkList(c); if(!l.some(i=>st.inks.includes(i))) return false; }
       if(st.types.length && !st.types.includes(c.card_type)) return false;
@@ -838,6 +856,11 @@ class Component extends DCLogic {
   winRate(ms){ if(!ms.length) return null; return Math.round(ms.filter(m=>m.result==='win').length/ms.length*100); }
 
   // ---------- mutations ----------
+  parseCsvLine(line){ const out=[]; let cur='',q=false; for(let i=0;i<line.length;i++){ const ch=line[i]; if(q){ if(ch==='"'){ if(line[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=ch; } else { if(ch==='"')q=true; else if(ch===','){out.push(cur);cur='';} else cur+=ch; } } out.push(cur); return out; }
+  exportCollection = ()=>{ const rows=[['card_id','name','set','normal','foil']]; for(const [id,e] of Object.entries(this.state.collection)){ const c=this.byId[id]; if(!c) continue; rows.push([id,'"'+(c.name_en||'').replace(/"/g,'""')+'"',c.set_code,e.n||0,e.f||0]); } const csv=rows.map(r=>r.join(',')).join('\n'); const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='inkwell-collection.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); this.showToast('Collection exported'); };
+  triggerImport = ()=>{ if(this._imp) this._imp.click(); };
+  importCollection = (e)=>{ const file=e.target&&e.target.files&&e.target.files[0]; if(!file) return; const rd=new FileReader(); rd.onload=()=>{ try{ const txt=String(rd.result); let coll={}; if(/\.json$/i.test(file.name)){ const j=JSON.parse(txt); coll=j.collection||j; } else { const lines=txt.split(/\r?\n/).filter(l=>l.trim()); const start=/card_id/i.test(lines[0]||'')?1:0; for(let i=start;i<lines.length;i++){ const p=this.parseCsvLine(lines[i]); const id=(p[0]||'').trim(); if(!id||!this.byId[id]) continue; const n=parseInt(p[p.length-2])||0, f=parseInt(p[p.length-1])||0; if(n||f) coll[id]={n,f}; } } if(!Object.keys(coll).length){ this.showToast('No cards found in file'); return; } this.setState({collection:coll},()=>{this.saveLocal();this.showToast('Collection imported ('+Object.keys(coll).length+' cards)');}); }catch(err){ this.showToast('Import failed — check file'); } }; rd.readAsText(file); e.target.value=''; };
+  setImpRef = (el)=>{ this._imp=el; };
   setQty(id, field, delta){
     const coll={...this.state.collection}; const cur=coll[id]?{...coll[id]}:{n:0,f:0};
     cur[field]=Math.max(0,(cur[field]||0)+delta);
@@ -914,15 +937,19 @@ class Component extends DCLogic {
       V.setMenuLabel=st.sets.length?(st.sets.length+' set'+(st.sets.length>1?'s':'')):'All sets';
       V.clearSets=()=>this.setState({sets:[],page:0});
       V.sort=st.sort; V.onSort=(e)=>this.setState({sort:e.target.value});
-      V.ownedLabel=st.ownedOnly?'✓ Owned only':'All cards'; V.ownedBtnStyle=this.chipStyle(st.ownedOnly);
-      V.toggleOwned=()=>this.setState({ownedOnly:!st.ownedOnly,page:0});
+      const modes=[['owned','Tenho'],['missing','Faltando'],['all','Todas']];
+      V.collModes=modes.map(([m,label])=>({label,_go:()=>this.setState({collMode:m,page:0}),_style:this.chipStyle(st.collMode===m)}));
+      V.exportCollection=this.exportCollection; V.triggerImport=this.triggerImport; V.importCollection=this.importCollection; V.setImpRef=this.setImpRef;
       const all=this.filtered(); V.resultCount=all.length.toLocaleString('en-US');
       const pages=Math.max(1,Math.ceil(all.length/this.PAGE_SIZE)); const page=Math.min(st.page,pages-1);
       V.pageInfo=pages>1?` · page ${page+1}/${pages}`:''; V.noResults=all.length===0;
+      const acquire=st.collMode==='missing'?all.reduce((s,c)=>s+this.priceOr0(c),0):0;
+      const acqPriced=st.collMode==='missing'?all.filter(c=>this.hasRealPrice(c)).length:0;
+      V.showAcquire=st.collMode==='missing'; V.acquireCost=this.fmt(acquire); V.acquireSub=acqPriced+' com preço';
       V.prevPage=()=>this.setState({page:Math.max(0,page-1)}); V.nextPage=()=>this.setState({page:Math.min(pages-1,page+1)});
-      V.clearFilters=()=>this.setState({inks:[],types:[],sets:[],q:'',ownedOnly:false,page:0});
+      V.clearFilters=()=>this.setState({inks:[],types:[],sets:[],q:'',collMode:'all',page:0});
       V.accent='#b79bff';
-      V.pageCards=all.slice(page*this.PAGE_SIZE,(page+1)*this.PAGE_SIZE).map(c=>{ const o=this.ownedOf(c.card_id); const owned=o.n+o.f>0; const cv=this.cardView(c); return { name:c.name_en, cost:c.ink_cost==null?'–':c.ink_cost, ink:cv.ink, _local:cv._local, _remote:cv._remote, rarityColor:cv.rarityColor, price:this.fmtOrDash(this.price(c)), owned, notOwned:!owned&&!st.ownedOnly, ownedQty:o.n+o.f, foilTag:o.f>0?'✦':'', _open:()=>this.openCard(c.card_id) }; });
+      V.pageCards=all.slice(page*this.PAGE_SIZE,(page+1)*this.PAGE_SIZE).map(c=>{ const o=this.ownedOf(c.card_id); const owned=o.n+o.f>0; const cv=this.cardView(c); return { name:c.name_en, cost:c.ink_cost==null?'–':c.ink_cost, ink:cv.ink, _local:cv._local, _remote:cv._remote, rarityColor:cv.rarityColor, price:this.fmtOrDash(this.price(c)), owned, notOwned:!owned&&st.collMode==='all', ownedQty:o.n+o.f, foilTag:o.f>0?'✦':'', _open:()=>this.openCard(c.card_id) }; });
     }
 
     // ---- PRICES ----

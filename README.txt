@@ -1,33 +1,33 @@
 INKWELL — Lorcana Codex — how to publish
 =========================================
 
-FOLDER STRUCTURE (everything inside your "inkwell" repo root):
+FOLDER STRUCTURE (inside your "inkwell" repo root):
 
    inkwell/
      index.html                    <- the app (entry point)
      support.js                    <- required runtime
      cards.json                    <- shared card database
+     prices.json                   <- prices (LigaLorcana). Optional; drop next to index.html
      users/
-       luis.json                   <- your personal data (collection, decks, matches)
+       luis.json                   <- your personal data
      lorcana-card-images/
-       images/
-         Alma_Madrigal_-_Family_Matriarch__LOR4-2.jpg
-         ... (all your card jpgs)
+       images/                     <- your card jpgs
 
-IMPORTANT: index.html, support.js and cards.json go at the ROOT (next to the
-"users" and "lorcana-card-images" folders), exactly as above.
+PRICES
+   The app loads prices.json from the same folder as index.html.
+   It accepts BOTH formats:
+     - the full LigaLorcana export (with "prices_by_liga_id"), or
+     - the compact form (with "prices": { "LOR4-2": { "n": 3.62, "f": 7.07 } }).
+   For each card it uses the normal "average" (falling back to low / minimum),
+   and the foil "average". Cards without a price fall back to an estimate.
+   The mini 7d/30d trend line is illustrative only (no historical feed yet).
 
 IMAGES
-   The app loads each card from:  lorcana-card-images/images/<image_file>
-   where <image_file> is the "image_file" value in cards.json
-   (e.g. images/Alma_Madrigal_-_Family_Matriarch__LOR4-2.jpg).
-   If a file is missing, it falls back to the official Ravensburger CDN.
+   Loaded from lorcana-card-images/images/<image_file> (image_file is the value
+   in cards.json). Missing files fall back to the official Ravensburger CDN.
 
 GITHUB PAGES
    Settings > Pages > Deploy from branch > root.
-   Site URL: https://<user>.github.io/<repo>/
 
 NOTES
-   - Your edits (collection, decks, logged games) save in the browser
-     (localStorage) per device.
-   - Prices are computed in-app for now; send your price file to wire in real data.
+   - Edits (collection, decks, games) save in the browser (localStorage) per device.
