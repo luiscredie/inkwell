@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="160" height="160">
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="46%" r="52%">
+      <stop offset="0%" stop-color="#e8c877" stop-opacity="0.30"></stop>
+      <stop offset="70%" stop-color="#e8c877" stop-opacity="0"></stop>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f4dd9a"></stop>
+      <stop offset="55%" stop-color="#c79a44"></stop>
+      <stop offset="100%" stop-color="#8a6a2c"></stop>
+    </linearGradient>
+    <radialGradient id="drop" cx="40%" cy="25%" r="120%">
+      <stop offset="0%" stop-color="#2a2118"></stop>
+      <stop offset="100%" stop-color="#0b0910"></stop>
+    </radialGradient>
+    <clipPath id="ihex">
+      <polygon points="80,19 141,49.5 141,110.5 80,141 19,110.5 19,49.5"></polygon>
+    </clipPath>
+  </defs>
+  <circle cx="80" cy="76" r="72" fill="url(#glow)"></circle>
+  <polygon points="80,10 150,45 150,115 80,150 10,115 10,45" fill="url(#gold)"></polygon>
+  <g clip-path="url(#ihex)">
+    <polygon points="80,80 80,-5 153.6,37.5" fill="#e0483d"></polygon>
+    <polygon points="80,80 153.6,37.5 153.6,122.5" fill="#8b5cf6"></polygon>
+    <polygon points="80,80 153.6,122.5 80,165" fill="#2f8fe0"></polygon>
+    <polygon points="80,80 80,165 6.4,122.5" fill="#34a853"></polygon>
+    <polygon points="80,80 6.4,122.5 6.4,37.5" fill="#9aa3b0"></polygon>
+    <polygon points="80,80 6.4,37.5 80,-5" fill="#f5b73a"></polygon>
+    <g stroke="#efe6c8" stroke-width="2.4" stroke-linecap="round">
+      <line x1="80" y1="80" x2="80" y2="-5"></line>
+      <line x1="80" y1="80" x2="153.6" y2="37.5"></line>
+      <line x1="80" y1="80" x2="153.6" y2="122.5"></line>
+      <line x1="80" y1="80" x2="80" y2="165"></line>
+      <line x1="80" y1="80" x2="6.4" y2="122.5"></line>
+      <line x1="80" y1="80" x2="6.4" y2="37.5"></line>
+    </g>
+  </g>
+  <path d="M80,54 C99,80 99,97 80,107 C61,97 61,80 80,54 Z" fill="#f6edcf"></path>
+  <path d="M80,60 C95,81 95,95 80,103 C65,95 65,81 80,60 Z" fill="url(#drop)"></path>
+  <ellipse cx="76" cy="76" rx="5" ry="7" fill="#f6edcf" opacity="0.5"></ellipse>
+</svg>
