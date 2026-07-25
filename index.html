@@ -471,9 +471,9 @@
               <h3 style="font-family:'Bricolage Grotesque';font-weight:700;font-size:15px;margin-bottom:20px">Mana Curve</h3>
               <div style="display:flex;align-items:flex-end;gap:8px;height:130px">
                 <sc-for list="{{ dd.curve }}" as="b" hint-placeholder-count="8">
-                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;height:100%;justify-content:flex-end">
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;justify-content:flex-end">
                     <span style="font-family:'JetBrains Mono';font-size:11px;color:#a8a8b0">{{ b.count }}</span>
-                    <div style="width:100%;height:{{ b.pct }}%;min-height:3px;background:linear-gradient(180deg,#b79bff,#7d5fd6);border-radius:5px 5px 0 0"></div>
+                    <div style="width:100%;height:{{ b.h }}px;min-height:3px;background:linear-gradient(180deg,#b79bff,#7d5fd6);border-radius:5px 5px 0 0"></div>
                     <span style="font-size:11px;color:#7c7c85;font-family:'JetBrains Mono'">{{ b.label }}</span>
                   </div>
                 </sc-for>
@@ -1027,7 +1027,7 @@ class Component extends DCLogic {
   switchVariant(fromId, toId){ if(fromId===toId){ this.setState({selectedCard:toId}); return; } const coll={...this.state.collection}; const src=coll[fromId]; if(src){ const dst=coll[toId]?{...coll[toId]}:{n:0,f:0}; dst.n=(dst.n||0)+(src.n||0); dst.f=(dst.f||0)+(src.f||0); coll[toId]=dst; delete coll[fromId]; } this.setState({collection:coll,selectedCard:toId},()=>{ this.saveLocal(); this.showToast('Art updated'); }); }
   inkIcon(name){ return 'ink/'+String(name).toLowerCase()+'.svg'; }
   inkIconEl(name, size){ const s=size||18; return React.createElement('img',{src:this.inkIcon(name),alt:'',style:{width:s+'px',height:s+'px',display:'block'}}); }
-  ligaUrl(card){ return 'https://www.ligalorcana.com.br/?view=ecomm/itens&busca='+encodeURIComponent(card.name_en||''); }
+  ligaUrl(card){ return 'https://www.ligalorcana.com.br/?view=cards%2Fcard&card='+encodeURIComponent(card.name_en||'').replace(/%20/g,'+')+'&tipo=1'; }
   setOrder(code){ const m=String(code).match(/^([A-Za-z]+)(\d+)?$/); const pre=m?m[1]:code; const num=m&&m[2]?+m[2]:0; const grp={LOR:0,Q:1,DLPC:2,D:3}[pre]!=null?{LOR:0,Q:1,DLPC:2,D:3}[pre]:9; return grp*1000+num; }
   deckById(id){ return this.state.decks.find(d=>d.id===id); }
   deckEntries(deck){ if(!deck) return []; return Object.entries(deck.cards||{}).map(([id,ct])=>({card:this.byId[id],count:ct})).filter(x=>x.card); }
@@ -1243,8 +1243,8 @@ class Component extends DCLogic {
           {label:'Win Rate',value:wr===null?'—':wr+'%',color:this.wrColor(wr||0)},
           {label:'Games',value:ms.length,color:'#f3f3f5'},
         ];
-        const buckets=[0,0,0,0,0,0,0,0]; for(const e of entries){ const cost=Math.min(7,Math.max(0,e.card.ink_cost||0)); buckets[cost]+=e.count; } const bmax=Math.max(1,...buckets);
-        V.dd.curve=buckets.map((c,i)=>({label:i===7?'7+':String(i),count:c,pct:(c/bmax*100).toFixed(1)}));
+        const buckets=[0,0,0,0,0,0,0,0]; for(const e of entries){ const cost=Math.min(7,Math.max(0,(typeof e.card.ink_cost==='number'?e.card.ink_cost:0))); buckets[cost]+=e.count; } const bmax=Math.max(1,...buckets);
+        V.dd.curve=buckets.map((c,i)=>({label:i===7?'7+':String(i),count:c,h:Math.round(c/bmax*104)}));
         const types={}; for(const e of entries){ const ct=this.cardTypes(e.card); const disp=ct.includes('Song')?'Song':(e.card.card_type||'?'); types[disp]=(types[disp]||0)+e.count; } const tmax=Object.values(types).reduce((a,b)=>a+b,0)||1;
         V.dd.types=Object.entries(types).sort((a,b)=>b[1]-a[1]).map(([k,v])=>({label:k,count:v,pct:(v/tmax*100).toFixed(1),color:this.TYPE_COLOR[k]||'#8a8a92'}));
         const rar={}; for(const e of entries){ const r=e.card.rarity||'?'; rar[r]=(rar[r]||0)+e.count; } const rmax=Math.max(1,...Object.values(rar));
