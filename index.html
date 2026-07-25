@@ -1140,7 +1140,7 @@ class Component extends DCLogic {
   wrColor(w){ return w>=55?'#5fd07f':w>=45?'#e6c15a':'#ff7a86'; }
 
   buildAbilities(card){
-    const list=card&&card.abilities;
+    const list=(this.state.lang==='pt' && Array.isArray(card&&card.abilities_pt) && card.abilities_pt.length) ? card.abilities_pt : (card&&card.abilities);
     if(Array.isArray(list)&&list.length){
       return list.map(a=>{
         let name='',body='';
