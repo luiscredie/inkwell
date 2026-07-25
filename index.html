@@ -213,8 +213,8 @@
               <button onClick="{{ c._toggle }}" style="{{ c._style }}">{{ c.label }}</button>
             </sc-for>
             <div style="width:1px;height:22px;background:rgba(255,255,255,.1);margin:0 4px"></div>
-            <sc-for list="{{ inkableChips }}" as="c" hint-placeholder-count="2">
-              <button onClick="{{ c._toggle }}" style="{{ c._style }}">{{ c.label }}</button>
+            <sc-for list="{{ inkableChips }}" as="c">
+              <button onClick="{{ c._toggle }}" style="{{ c._style }};display:inline-flex;align-items:center;gap:7px">{{ c.iconEl }}{{ c.label }}</button>
             </sc-for>
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-bottom:20px">
@@ -1032,6 +1032,7 @@ class Component extends DCLogic {
   variantLabel(card){ const m=String(card.name_en).match(/\(([^)]+)\)\s*$/); if(m) return m[1]; const r={C:'Standard',U:'Standard',R:'Rare',SR:'Super Rare',L:'Legendary',E:'Enchanted',EP:'Epic',P:'Promo'}[card.rarity]; return r||'Standard'; }
   variantsOf(card){ if(!card) return []; const bn=this.baseName(card.name_en); return this.cards.filter(c=>this.baseName(c.name_en)===bn).sort((a,b)=>this.setOrder(a.set_code)-this.setOrder(b.set_code)); }
   switchVariant(fromId, toId){ if(fromId===toId){ this.setState({selectedCard:toId}); return; } const coll={...this.state.collection}; const src=coll[fromId]; if(src){ const dst=coll[toId]?{...coll[toId]}:{n:0,f:0}; dst.n=(dst.n||0)+(src.n||0); dst.f=(dst.f||0)+(src.f||0); coll[toId]=dst; delete coll[fromId]; } this.setState({collection:coll,selectedCard:toId},()=>{ this.saveLocal(); this.showToast('Art updated'); }); }
+  iconImgEl(src, size){ const s=size||16; return React.createElement('img',{src:src,alt:'',style:{width:s+'px',height:s+'px',display:'block'}}); }
   inkIcon(name){ return 'ink/'+String(name).toLowerCase()+'.svg'; }
   inkIconEl(name, size){ const s=size||18; return React.createElement('img',{src:this.inkIcon(name),alt:'',style:{width:s+'px',height:s+'px',display:'block'}}); }
   ligaUrl(card){ return 'https://www.ligalorcana.com.br/?view=cards%2Fcard&card='+encodeURIComponent(card.name_en||'').replace(/%20/g,'+')+'&tipo=1'; }
@@ -1168,7 +1169,7 @@ class Component extends DCLogic {
     if(V.isCollection){
       V.inkChips=this.INK_ORDER.map(ink=>({label:ink,iconEl:this.inkIconEl(ink,18),_toggle:()=>this.toggleArr('inks',ink),_style:this.chipStyle(st.inks.includes(ink),this.INK[ink])}));
       V.typeChips=['Character','Action','Song','Item','Location'].map(t=>({label:t,_toggle:()=>this.toggleArr('types',t),_style:this.chipStyle(st.types.includes(t))}));
-      V.inkableChips=[['inkable','◆ Inkable'],['uninkable','Uninkable']].map(([v,label])=>({label,_toggle:()=>this.setState({inkable:st.inkable===v?'all':v,page:0}),_style:this.chipStyle(st.inkable===v)}));
+      V.inkableChips=[['inkable','Inkable','ink/inkwell.svg'],['uninkable','Uninkable','ink/inkcost.svg']].map(([v,label,icon])=>({label,iconEl:this.iconImgEl(icon,16),_toggle:()=>this.setState({inkable:st.inkable===v?'all':v,page:0}),_style:this.chipStyle(st.inkable===v)}));
       V.costChips=[['all','All'],['0','0'],['1','1'],['2','2'],['3','3'],['4','4'],['5','5'],['6','6'],['7','7'],['8','8'],['9','9'],['10','10+']].map(([v,label])=>({label,_toggle:()=>this.setState({cost:st.cost===v?'all':v,page:0}),_style:this.chipStyleSm(st.cost===v)}));
       const setsPresent=[...new Set(this.cards.map(c=>c.set_code))];
       V.setOptions=setsPresent.map(code=>({code,name:this.setName(code)})).sort((a,b)=>this.setOrder(a.code)-this.setOrder(b.code)).map(o=>({code:o.code,name:o.name,check:st.sets.includes(o.code)?'✓':'',checkBg:st.sets.includes(o.code)?'#b79bff':'transparent',_toggle:()=>this.toggleArr('sets',o.code)}));
