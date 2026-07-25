@@ -212,6 +212,16 @@
             <sc-for list="{{ typeChips }}" as="c" hint-placeholder-count="5">
               <button onClick="{{ c._toggle }}" style="{{ c._style }}">{{ c.label }}</button>
             </sc-for>
+            <div style="width:1px;height:22px;background:rgba(255,255,255,.1);margin:0 4px"></div>
+            <sc-for list="{{ inkableChips }}" as="c" hint-placeholder-count="2">
+              <button onClick="{{ c._toggle }}" style="{{ c._style }}">{{ c.label }}</button>
+            </sc-for>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-bottom:20px">
+            <span style="font-size:12px;color:#7c7c85;margin-right:2px">Cost</span>
+            <sc-for list="{{ costChips }}" as="c" hint-placeholder-count="11">
+              <button onClick="{{ c._toggle }}" style="{{ c._style }}">{{ c.label }}</button>
+            </sc-for>
             <div style="flex:1"></div>
             <div style="position:relative">
               <button onClick="{{ toggleSetMenu }}" style="padding:9px 12px;border-radius:11px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#f3f3f5;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px">{{ setMenuLabel }} <span style="color:#7c7c85;font-size:9px">▼</span></button>
@@ -343,10 +353,32 @@
         <!-- ================= DECKS LIST ================= -->
         <sc-if value="{{ isDecks }}" hint-placeholder-val="{{ false }}">
         <div class="ink-view" style="max-width:1180px;margin:0 auto">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;gap:12px">
             <p style="color:#8a8a92;font-size:14px">Archive your builds and dive into per-deck analytics.</p>
-            <button onClick="{{ newDeckToggle }}" style="padding:10px 18px;border-radius:12px;background:{{ accent }};border:none;color:#0a0a0c;font-weight:700;cursor:pointer;font-size:14px">+ New Deck</button>
+            <div style="display:flex;gap:10px">
+              <button onClick="{{ importDeckToggle }}" style="padding:10px 16px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#e8e8ec;font-weight:600;cursor:pointer;font-size:14px">↑ Import</button>
+              <button onClick="{{ newDeckToggle }}" style="padding:10px 18px;border-radius:12px;background:{{ accent }};border:none;color:#0a0a0c;font-weight:700;cursor:pointer;font-size:14px">+ New Deck</button>
+            </div>
           </div>
+
+          <sc-if value="{{ importDeckOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:22px;border-radius:18px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);margin-bottom:22px;animation:ink-pop .25s both">
+              <h3 style="font-family:'Bricolage Grotesque';font-weight:700;font-size:16px;margin-bottom:6px">Import a deck</h3>
+              <p style="font-size:12.5px;color:#8a8a92;margin-bottom:14px">Paste a list like <span style="font-family:'JetBrains Mono';color:#b79bff">4 Dumbo - Ninth Wonder of the Universe (9-45)</span> — one card per line. Colors are detected automatically.</p>
+              <input value="{{ importDeckName }}" onInput="{{ onImportDeckName }}" placeholder="Deck name (optional)" style="width:100%;padding:11px 14px;border-radius:11px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.12);color:#f3f3f5;font-size:14px;margin-bottom:12px" />
+              <textarea value="{{ importDeckText }}" onInput="{{ onImportDeckText }}" placeholder="4 Dumbo - Ninth Wonder of the Universe (9-45)&#10;4 Demona - Scourge of the Wyvern Clan (10-55)&#10;…" style="width:100%;min-height:180px;padding:12px 14px;border-radius:11px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.12);color:#f3f3f5;font-size:13px;font-family:'JetBrains Mono';line-height:1.5;resize:vertical;margin-bottom:14px"></textarea>
+              <div style="font-size:12px;color:#8a8a92;margin-bottom:9px">Format</div>
+              <div style="display:flex;gap:8px;margin-bottom:18px">
+                <sc-for list="{{ importDeckFmtChips }}" as="c" hint-placeholder-count="2">
+                  <button onClick="{{ c._toggle }}" style="{{ c._style }}">{{ c.label }}</button>
+                </sc-for>
+              </div>
+              <div style="display:flex;gap:10px">
+                <button onClick="{{ importDeck }}" style="padding:10px 20px;border-radius:11px;background:{{ accent }};border:none;color:#0a0a0c;font-weight:700;cursor:pointer">Import deck</button>
+                <button onClick="{{ importDeckToggle }}" style="padding:10px 20px;border-radius:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#d8d8dc;cursor:pointer">Cancel</button>
+              </div>
+            </div>
+          </sc-if>
 
           <sc-if value="{{ newDeckOpen }}" hint-placeholder-val="{{ false }}">
             <div style="padding:22px;border-radius:18px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);margin-bottom:22px;animation:ink-pop .25s both">
@@ -500,7 +532,7 @@
                   <button onClick="{{ c._toggle }}" title="{{ c.label }}" style="{{ c._style }}">{{ c.iconEl }}</button>
                 </sc-for>
                 <div style="width:1px;height:20px;background:rgba(255,255,255,.1)"></div>
-                <sc-for list="{{ b.costChips }}" as="c" hint-placeholder-count="9">
+                <sc-for list="{{ b.costChips }}" as="c" hint-placeholder-count="12">
                   <button onClick="{{ c._toggle }}" style="{{ c._style }}">{{ c.label }}</button>
                 </sc-for>
               </div>
@@ -794,12 +826,13 @@
 class Component extends DCLogic {
   state = {
     loading: true, ready: false, view: 'overview',
-    q: '', inks: [], types: [], sets: [], setMenuOpen: false, sort: 'value', collMode: 'owned', page: 0,
+    q: '', inks: [], types: [], sets: [], setMenuOpen: false, sort: 'value', collMode: 'owned', inkable: 'all', cost: 'all', page: 0,
     priceOwnedOnly: true,
     selectedCard: null, selectedDeck: null,
     deckEdit: false, deckSearch: '', logMatchOpen: false, matchResult: 'win', matchInks: [],
     bInks: [], bCost: 'all', bSets: [], bSetMenu: false, bSort: 'cost-asc', bGroup: 'none', bSize: 4, bOwnedOnly: false,
     newDeckOpen: false, newDeckName: '', newDeckInks: [], newDeckFmt: 'core',
+    importDeckOpen: false, importDeckName: '', importDeckText: '', importDeckFmt: 'core',
     collection: {}, decks: [], matches: [], displayName: 'Illumineer',
     toast: null,
   };
@@ -958,7 +991,10 @@ class Component extends DCLogic {
       if(st.collMode==='missing' && this.isOwned(c.card_id)) return false;
       if(st.sets.length && !st.sets.includes(c.set_code)) return false;
       if(st.inks.length){ const l=this.inkList(c); if(!l.some(i=>st.inks.includes(i))) return false; }
-      if(st.types.length && !st.types.includes(c.card_type)) return false;
+      if(st.types.length){ const ct=this.cardTypes(c); if(!st.types.some(t=>ct.includes(t))) return false; }
+      if(st.cost!=='all'){ const cost=(typeof c.ink_cost==='number')?c.ink_cost:0; if(!this.matchCost(cost, st.cost)) return false; }
+      if(st.inkable==='inkable' && c.inkable!==1) return false;
+      if(st.inkable==='uninkable' && c.inkable!==0) return false;
       if(q && !(c.name_en.toLowerCase().includes(q) || (c.ability_text||'').toLowerCase().includes(q))) return false;
       return true;
     });
@@ -983,6 +1019,8 @@ class Component extends DCLogic {
     if(!this.legalInFormat(card, deck.format)) return {ok:false,reason:'Rotated — not legal in '+this.fmtLabel(deck.format)};
     return {ok:true,reason:''};
   }
+  cardTypes(c){ const t=c.card_type; if(t==='Song') return ['Action','Song']; if(t==='Action' && /song/i.test(String(c.classification||''))) return ['Action','Song']; return t?[t]:[]; }
+  matchCost(cost, f){ if(f==='all') return true; if(f==='10') return cost>=10; return cost===+f; }
   baseName(n){ return String(n||'').replace(/\s*\(.*?\)\s*/g,'').trim().toLowerCase(); }
   variantLabel(card){ const m=String(card.name_en).match(/\(([^)]+)\)\s*$/); if(m) return m[1]; const r={C:'Standard',U:'Standard',R:'Rare',SR:'Super Rare',L:'Legendary',E:'Enchanted',EP:'Epic',P:'Promo'}[card.rarity]; return r||'Standard'; }
   variantsOf(card){ if(!card) return []; const bn=this.baseName(card.name_en); return this.cards.filter(c=>this.baseName(c.name_en)===bn).sort((a,b)=>this.setOrder(a.set_code)-this.setOrder(b.set_code)); }
@@ -1039,6 +1077,25 @@ class Component extends DCLogic {
     this.setState({collection:coll}, ()=>this.saveLocal());
   }
   createDeck = ()=>{ const st=this.state; if(!st.newDeckName.trim()){ this.showToast('Name your deck first'); return; } const id='deck-'+Date.now().toString(36); const deck={id,name:st.newDeckName.trim(),colors:st.newDeckInks.slice(0,2),format:st.newDeckFmt,cards:{},notes:'',created_at:new Date().toISOString().slice(0,10)}; this.setState({decks:[...st.decks,deck],newDeckOpen:false,newDeckName:'',newDeckInks:[],newDeckFmt:'core',view:'deckDetail',selectedDeck:id,deckEdit:true},()=>this.saveLocal()); };
+  importDeck = ()=>{ const st=this.state; const text=st.importDeckText||''; if(!text.trim()){ this.showToast('Paste a decklist first'); return; }
+    if(!this.byNumIdx){ this.byNumIdx={}; for(const c of this.cards) this.byNumIdx[c.set_code+'|'+String(c.card_number)]=c; }
+    const cards={}; let matched=0, unresolved=0; const inkTally={};
+    for(const raw of text.split(/\r?\n/)){ const line=raw.trim(); if(!line) continue;
+      let m=line.match(/^(\d+)\s*[xX]?\s+(.+?)\s*\((\d+)\s*-\s*([0-9A-Za-z\/]+)\)\s*$/);
+      let qty,name,setNum,cardNum;
+      if(m){ qty=+m[1]; name=m[2]; setNum=m[3]; cardNum=m[4]; }
+      else { const m2=line.match(/^(\d+)\s*[xX]?\s+(.+)$/); if(!m2) continue; qty=+m2[1]; name=m2[2].replace(/\s*\([^)]*\)\s*$/,''); }
+      const c=this.resolveCsvCard(setNum, cardNum, name);
+      if(!c){ unresolved++; continue; }
+      cards[c.card_id]=Math.min(99,(cards[c.card_id]||0)+qty); matched++;
+      for(const ink of this.inkList(c)) inkTally[ink]=(inkTally[ink]||0)+qty;
+    }
+    if(!matched){ this.showToast('No cards matched — check the format'); return; }
+    const colors=Object.entries(inkTally).sort((a,b)=>b[1]-a[1]).slice(0,2).map(x=>x[0]);
+    const id='deck-'+Date.now().toString(36); const name=st.importDeckName.trim()||'Imported deck';
+    const deck={id,name,colors,format:st.importDeckFmt,cards,notes:'',created_at:new Date().toISOString().slice(0,10)};
+    this.setState({decks:[...st.decks,deck],importDeckOpen:false,importDeckName:'',importDeckText:'',importDeckFmt:'core',view:'deckDetail',selectedDeck:id,deckEdit:false},()=>{ this.saveLocal(); this.showToast('Deck imported · '+matched+' cards'+(unresolved?' · '+unresolved+' unmatched':'')); });
+  };
   deleteDeck = ()=>{ const id=this.state.selectedDeck; this.setState({decks:this.state.decks.filter(d=>d.id!==id),matches:this.state.matches.filter(m=>m.deck_id!==id),view:'decks',selectedDeck:null},()=>{this.saveLocal();this.showToast('Deck deleted');}); };
   deckDelta(cardId, delta){ const decks=this.state.decks.map(d=>{ if(d.id!==this.state.selectedDeck) return d; const cards={...d.cards}; const nv=Math.min(4,Math.max(0,(cards[cardId]||0)+delta)); if(nv===0) delete cards[cardId]; else cards[cardId]=nv; return {...d,cards}; }); this.setState({decks},()=>this.saveLocal()); }
   saveMatch = ()=>{ const st=this.state; const m={id:'m'+Date.now().toString(36),deck_id:st.selectedDeck,result:st.matchResult,opponent_inks:st.matchInks.slice(),date:new Date().toISOString().slice(0,10)}; this.setState({matches:[...st.matches,m],logMatchOpen:false,matchInks:[]},()=>{this.saveLocal();this.showToast('Game logged');}); };
@@ -1104,6 +1161,8 @@ class Component extends DCLogic {
     if(V.isCollection){
       V.inkChips=this.INK_ORDER.map(ink=>({label:ink,iconEl:this.inkIconEl(ink,18),_toggle:()=>this.toggleArr('inks',ink),_style:this.chipStyle(st.inks.includes(ink),this.INK[ink])}));
       V.typeChips=['Character','Action','Song','Item','Location'].map(t=>({label:t,_toggle:()=>this.toggleArr('types',t),_style:this.chipStyle(st.types.includes(t))}));
+      V.inkableChips=[['inkable','◆ Inkable'],['uninkable','Uninkable']].map(([v,label])=>({label,_toggle:()=>this.setState({inkable:st.inkable===v?'all':v,page:0}),_style:this.chipStyle(st.inkable===v)}));
+      V.costChips=[['all','All'],['0','0'],['1','1'],['2','2'],['3','3'],['4','4'],['5','5'],['6','6'],['7','7'],['8','8'],['9','9'],['10','10+']].map(([v,label])=>({label,_toggle:()=>this.setState({cost:st.cost===v?'all':v,page:0}),_style:this.chipStyleSm(st.cost===v)}));
       const setsPresent=[...new Set(this.cards.map(c=>c.set_code))];
       V.setOptions=setsPresent.map(code=>({code,name:this.setName(code)})).sort((a,b)=>this.setOrder(a.code)-this.setOrder(b.code)).map(o=>({code:o.code,name:o.name,check:st.sets.includes(o.code)?'✓':'',checkBg:st.sets.includes(o.code)?'#b79bff':'transparent',_toggle:()=>this.toggleArr('sets',o.code)}));
       V.setMenuOpen=st.setMenuOpen; V.toggleSetMenu=()=>this.setState({setMenuOpen:!st.setMenuOpen});
@@ -1120,7 +1179,7 @@ class Component extends DCLogic {
       const acqPriced=st.collMode==='missing'?all.filter(c=>this.hasRealPrice(c)).length:0;
       V.showAcquire=st.collMode==='missing'; V.acquireCost=this.fmt(acquire); V.acquireSub=acqPriced+' with price';
       V.prevPage=()=>this.setState({page:Math.max(0,page-1)}); V.nextPage=()=>this.setState({page:Math.min(pages-1,page+1)});
-      V.clearFilters=()=>this.setState({inks:[],types:[],sets:[],q:'',collMode:'all',page:0});
+      V.clearFilters=()=>this.setState({inks:[],types:[],sets:[],q:'',collMode:'all',inkable:'all',cost:'all',page:0});
       V.accent='#b79bff';
       V.pageCards=all.slice(page*this.PAGE_SIZE,(page+1)*this.PAGE_SIZE).map(c=>{ const o=this.ownedOf(c.card_id); const owned=o.n+o.f>0; const cv=this.cardView(c); return { name:c.name_en, cost:c.ink_cost==null?'–':c.ink_cost, ink:cv.ink, _local:cv._local, _remote:cv._remote, rarityColor:cv.rarityColor, price:this.fmtOrDash(this.price(c)), owned, notOwned:!owned&&st.collMode==='all', ownedQty:o.n+o.f, foilTag:o.f>0?'✦':'', _open:()=>this.openCard(c.card_id) }; });
     }
@@ -1145,9 +1204,14 @@ class Component extends DCLogic {
     // ---- DECKS LIST ----
     if(V.isDecks){
       V.accent='#b79bff';
-      V.newDeckOpen=st.newDeckOpen; V.newDeckToggle=()=>this.setState({newDeckOpen:!st.newDeckOpen}); V.newDeckName=st.newDeckName; V.onNewDeckName=(e)=>this.setState({newDeckName:e.target.value});
+      V.newDeckOpen=st.newDeckOpen; V.newDeckToggle=()=>this.setState({newDeckOpen:!st.newDeckOpen,importDeckOpen:false}); V.newDeckName=st.newDeckName; V.onNewDeckName=(e)=>this.setState({newDeckName:e.target.value});
       V.newDeckInkChips=this.INK_ORDER.map(ink=>({label:ink,_toggle:()=>{ const a=st.newDeckInks; const na=a.includes(ink)?a.filter(x=>x!==ink):(a.length>=2?a:[...a,ink]); this.setState({newDeckInks:na}); },_style:this.chipStyle(st.newDeckInks.includes(ink),this.INK[ink])}));
       V.createDeck=this.createDeck;
+      V.importDeckOpen=st.importDeckOpen; V.importDeckToggle=()=>this.setState({importDeckOpen:!st.importDeckOpen,newDeckOpen:false});
+      V.importDeckName=st.importDeckName; V.onImportDeckName=(e)=>this.setState({importDeckName:e.target.value});
+      V.importDeckText=st.importDeckText; V.onImportDeckText=(e)=>this.setState({importDeckText:e.target.value});
+      V.importDeck=this.importDeck;
+      V.importDeckFmtChips=[['core','Core'],['infinity','Infinity']].map(([f,label])=>({label,_toggle:()=>this.setState({importDeckFmt:f}),_style:this.chipStyle(st.importDeckFmt===f)}));
       V.newDeckFmtChips=[['core','Core'],['infinity','Infinity']].map(([f,label])=>({label,_toggle:()=>this.setState({newDeckFmt:f}),_style:this.chipStyle(st.newDeckFmt===f)}));
       V.noDecks=st.decks.length===0;
       V.deckCards=st.decks.map(d=>{ const inks=(d.colors||[]).filter(Boolean); const ms=this.deckMatches(d.id); const wr=this.winRate(ms); const grad=inks.length?`linear-gradient(120deg,${inks.map(i=>this.INK[i]||'#333').join(',')})`:'linear-gradient(120deg,#333,#555)'; return { name:d.name, inks, count:this.deckCount(d), wr:wr===null?'—':wr+'%', wrColor:this.wrColor(wr||0), value:this.fmt(this.deckValue(d)), gradient:grad, _open:()=>this.openDeck(d.id) }; });
@@ -1181,7 +1245,7 @@ class Component extends DCLogic {
         ];
         const buckets=[0,0,0,0,0,0,0,0]; for(const e of entries){ const cost=Math.min(7,Math.max(0,e.card.ink_cost||0)); buckets[cost]+=e.count; } const bmax=Math.max(1,...buckets);
         V.dd.curve=buckets.map((c,i)=>({label:i===7?'7+':String(i),count:c,pct:(c/bmax*100).toFixed(1)}));
-        const types={}; for(const e of entries) types[e.card.card_type]=(types[e.card.card_type]||0)+e.count; const tmax=Object.values(types).reduce((a,b)=>a+b,0)||1;
+        const types={}; for(const e of entries){ const ct=this.cardTypes(e.card); const disp=ct.includes('Song')?'Song':(e.card.card_type||'?'); types[disp]=(types[disp]||0)+e.count; } const tmax=Object.values(types).reduce((a,b)=>a+b,0)||1;
         V.dd.types=Object.entries(types).sort((a,b)=>b[1]-a[1]).map(([k,v])=>({label:k,count:v,pct:(v/tmax*100).toFixed(1),color:this.TYPE_COLOR[k]||'#8a8a92'}));
         const rar={}; for(const e of entries){ const r=e.card.rarity||'?'; rar[r]=(rar[r]||0)+e.count; } const rmax=Math.max(1,...Object.values(rar));
         V.dd.rarity=Object.entries(rar).sort((a,b)=>(this.RARITY_RANK[b[0]]||0)-(this.RARITY_RANK[a[0]]||0)).map(([k,v])=>({label:(this.RARITY[k]&&this.RARITY[k].l)||k,count:v,pct:(v/rmax*100).toFixed(1),color:(this.RARITY[k]&&this.RARITY[k].c)||'#8a8a92'}));
@@ -1208,7 +1272,7 @@ class Component extends DCLogic {
           if(!c.card_type||c.card_type==='Token'||!c.name_en) return false;
           if(dq && !c.name_en.toLowerCase().includes(dq)) return false;
           if(st.bInks.length){ const l=this.inkList(c); if(!l.some(i=>st.bInks.includes(i))) return false; }
-          if(st.bCost!=='all'){ const cost=(typeof c.ink_cost==='number')?c.ink_cost:0; if(st.bCost==='7'){ if(cost<7) return false; } else if(cost!==+st.bCost) return false; }
+          if(st.bCost!=='all'){ const cost=(typeof c.ink_cost==='number')?c.ink_cost:0; if(!this.matchCost(cost, st.bCost)) return false; }
           if(st.bSets.length && !st.bSets.includes(c.set_code)) return false;
           if(st.bOwnedOnly && !this.isOwned(c.card_id)) return false;
           if(!this.legalInFormat(c, deck.format)) return false;
@@ -1240,7 +1304,7 @@ class Component extends DCLogic {
           fmtLabel:this.fmtLabel(deck.format), deckColorsLabel:colors.length?colors.join('/'):'Any ink',
           size:st.bSize, sizeLabel:st.bSize+' / row', onSize:(e)=>this.setState({bSize:+e.target.value}), gridCols:`repeat(${st.bSize},1fr)`,
           inkChips:this.INK_ORDER.map(ink=>({label:ink,iconEl:this.inkIconEl(ink,22),_toggle:()=>this.toggleArr('bInks',ink),_style:this.chipStyleSm(st.bInks.includes(ink),this.INK[ink])})),
-          costChips:[['all','All'],['0','0'],['1','1'],['2','2'],['3','3'],['4','4'],['5','5'],['6','6'],['7','7+']].map(([v,label])=>({label,_toggle:()=>this.setState({bCost:v,page:0}),_style:this.chipStyleSm(st.bCost===v)})),
+          costChips:[['all','All'],['0','0'],['1','1'],['2','2'],['3','3'],['4','4'],['5','5'],['6','6'],['7','7'],['8','8'],['9','9'],['10','10+']].map(([v,label])=>({label,_toggle:()=>this.setState({bCost:v,page:0}),_style:this.chipStyleSm(st.bCost===v)})),
           setLabel:st.bSets.length?(st.bSets.length+' sets'):'All sets', setMenu:st.bSetMenu, toggleSetMenu:()=>this.setState({bSetMenu:!st.bSetMenu}), clearSets:()=>this.setState({bSets:[]}),
           setOptions:setsPresent.map(o=>({name:o.name,check:st.bSets.includes(o.code)?'✓':'',checkBg:st.bSets.includes(o.code)?'#b79bff':'transparent',_toggle:()=>this.toggleArr('bSets',o.code)})),
           sort:st.bSort, onSort:(e)=>this.setState({bSort:e.target.value}),
