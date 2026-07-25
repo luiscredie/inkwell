@@ -303,6 +303,13 @@
               <button onClick="{{ clearFilters }}" style="margin-top:12px;padding:9px 18px;border-radius:11px;background:{{ accent }};border:none;color:#0a0a0c;font-weight:600;cursor:pointer">Clear filters</button>
             </div>
           </sc-if>
+          <sc-if value="{{ showPager }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;justify-content:center;align-items:center;gap:8px;margin-top:26px">
+              <button onClick="{{ prevPage }}" style="padding:8px 16px;border-radius:9px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#d8d8dc;cursor:pointer;font-size:13px">‹ Prev</button>
+              <span style="padding:8px 6px;font-size:13px;color:#8a8a92;font-family:'JetBrains Mono'">{{ pageLabelC }}</span>
+              <button onClick="{{ nextPage }}" style="padding:8px 16px;border-radius:9px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#d8d8dc;cursor:pointer;font-size:13px">Next ›</button>
+            </div>
+          </sc-if>
         </div>
         </sc-if>
 
@@ -1235,6 +1242,7 @@ class Component extends DCLogic {
       const all=this.filtered(); V.resultCount=all.length.toLocaleString('en-US');
       const pages=Math.max(1,Math.ceil(all.length/this.PAGE_SIZE)); const page=Math.min(st.page,pages-1);
       V.pageInfo=pages>1?` · page ${page+1}/${pages}`:''; V.noResults=all.length===0;
+      V.showPager=pages>1; V.pageLabelC=`${page+1} / ${pages}`;
       const acquire=st.collMode==='missing'?all.reduce((s,c)=>s+this.priceOr0(c),0):0;
       const acqPriced=st.collMode==='missing'?all.filter(c=>this.hasRealPrice(c)).length:0;
       V.showAcquire=st.collMode==='missing'; V.acquireCost=this.fmt(acquire); V.acquireSub=acqPriced+' with price';
