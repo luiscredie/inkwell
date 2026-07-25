@@ -657,28 +657,35 @@
                 <h3 style="font-family:'Bricolage Grotesque';font-weight:700;font-size:15px">Decklist</h3>
                 <span style="font-size:12px;color:#7c7c85;font-family:'JetBrains Mono'">{{ dd.count }} / 60</span>
               </div>
-              <div style="display:flex;flex-direction:column;gap:3px">
-                <sc-for list="{{ dd.list }}" as="c" hint-placeholder-count="8">
-                  <div style="display:flex;align-items:center;gap:11px;padding:6px 8px;border-radius:9px" style-hover="background:rgba(255,255,255,.03)">
-                    <span style="position:relative;width:30px;height:42px;border-radius:5px;overflow:hidden;flex-shrink:0;background:{{ c.ink }}">
-                      <img src="{{ c._local }}" data-remote="{{ c._remote }}" onError="{{ imgError }}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block" />
-                      <span data-ph style="position:absolute;inset:0;display:none;align-items:center;justify-content:center;font-family:'JetBrains Mono';font-weight:700;font-size:11px;background:{{ c.ink }};color:#0a0a0c">{{ c.cost }}</span>
-                    </span>
-                    <button onClick="{{ c._open }}" style="flex:1;min-width:0;text-align:left;background:none;border:none;cursor:pointer;color:#e2e2e6;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0" style-hover="color:#fff">{{ c.name }}</button>
-                    <sc-if value="{{ c.invalid }}" hint-placeholder-val="{{ false }}">
-                      <span title="{{ c.warn }}" style="color:#e6c15a;font-size:14px;cursor:help">⚠</span>
-                    </sc-if>
-                    <span style="font-size:11px;color:#7c7c85;font-family:'JetBrains Mono'">{{ c.price }}</span>
-                    <sc-if value="{{ deckEdit }}" hint-placeholder-val="{{ false }}">
-                      <span style="display:flex;align-items:center;gap:6px">
-                        <button onClick="{{ c._dec }}" style="width:22px;height:22px;border-radius:6px;background:rgba(255,255,255,.08);border:none;color:#e8e8ec;cursor:pointer;font-size:14px;line-height:1">−</button>
-                        <span style="font-family:'JetBrains Mono';font-weight:700;width:14px;text-align:center">{{ c.count }}</span>
-                        <button onClick="{{ c._inc }}" style="width:22px;height:22px;border-radius:6px;background:rgba(255,255,255,.08);border:none;color:#e8e8ec;cursor:pointer;font-size:14px;line-height:1">+</button>
-                      </span>
-                    </sc-if>
-                    <sc-if value="{{ deckView }}" hint-placeholder-val="{{ true }}">
-                      <span style="font-family:'JetBrains Mono';font-weight:700;font-size:13px;color:#a8a8b0">×{{ c.count }}</span>
-                    </sc-if>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <sc-for list="{{ dd.listGroups }}" as="g" hint-placeholder-count="3">
+                  <div>
+                    <div style="display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#8a8a92;font-weight:600;margin-bottom:6px">{{ g.label }} <span style="font-family:'JetBrains Mono';color:#5a5a62">{{ g.count }}</span></div>
+                    <div style="display:flex;flex-direction:column;gap:3px">
+                      <sc-for list="{{ g.cards }}" as="c" hint-placeholder-count="5">
+                        <div style="display:flex;align-items:center;gap:11px;padding:6px 8px;border-radius:9px" style-hover="background:rgba(255,255,255,.03)">
+                          <span style="position:relative;width:30px;height:42px;border-radius:5px;overflow:hidden;flex-shrink:0;background:{{ c.ink }}">
+                            <img src="{{ c._local }}" data-remote="{{ c._remote }}" onError="{{ imgError }}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block" />
+                            <span data-ph style="position:absolute;inset:0;display:none;align-items:center;justify-content:center;font-family:'JetBrains Mono';font-weight:700;font-size:11px;background:{{ c.ink }};color:#0a0a0c">{{ c.cost }}</span>
+                          </span>
+                          <button onClick="{{ c._open }}" style="flex:1;min-width:0;text-align:left;background:none;border:none;cursor:pointer;color:#e2e2e6;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0" style-hover="color:#fff">{{ c.name }}</button>
+                          <sc-if value="{{ c.invalid }}" hint-placeholder-val="{{ false }}">
+                            <span title="{{ c.warn }}" style="color:#e6c15a;font-size:14px;cursor:help">⚠</span>
+                          </sc-if>
+                          <a href="{{ c.liga }}" target="_blank" rel="noopener" title="Buy on LigaLorcana" style="font-size:11px;color:#7ac0ff;font-family:'JetBrains Mono';white-space:nowrap">{{ c.price }} ↗</a>
+                          <sc-if value="{{ deckEdit }}" hint-placeholder-val="{{ false }}">
+                            <span style="display:flex;align-items:center;gap:6px">
+                              <button onClick="{{ c._dec }}" style="width:22px;height:22px;border-radius:6px;background:rgba(255,255,255,.08);border:none;color:#e8e8ec;cursor:pointer;font-size:14px;line-height:1">−</button>
+                              <span style="font-family:'JetBrains Mono';font-weight:700;width:14px;text-align:center">{{ c.count }}</span>
+                              <button onClick="{{ c._inc }}" style="width:22px;height:22px;border-radius:6px;background:rgba(255,255,255,.08);border:none;color:#e8e8ec;cursor:pointer;font-size:14px;line-height:1">+</button>
+                            </span>
+                          </sc-if>
+                          <sc-if value="{{ deckView }}" hint-placeholder-val="{{ true }}">
+                            <span style="font-family:'JetBrains Mono';font-weight:700;font-size:13px;color:#a8a8b0">×{{ c.count }}</span>
+                          </sc-if>
+                        </div>
+                      </sc-for>
+                    </div>
                   </div>
                 </sc-for>
               </div>
@@ -1220,7 +1227,7 @@ class Component extends DCLogic {
     // ---- DECK DETAIL ----
     if(V.isDeckDetail){
       const deck=this.deckById(st.selectedDeck); V.accent='#b79bff'; V.deckEdit=st.deckEdit; V.deckView=!st.deckEdit;
-      if(!deck){ V.dd={inks:[],name:'Deck not found',notes:'',stats:[],curve:[],types:[],rarity:[],list:[],matches:[],form:[],count:0,wr:'—',wrColor:'#8a8a92',validLabel:'',validBg:'',validColor:'',noMatches:true,missing:[],noMissing:true,missingCount:0,missingCost:''}; V.backToDecks=this.go('decks'); }
+      if(!deck){ V.dd={inks:[],name:'Deck not found',notes:'',stats:[],curve:[],types:[],rarity:[],list:[],listGroups:[],matches:[],form:[],count:0,wr:'—',wrColor:'#8a8a92',validLabel:'',validBg:'',validColor:'',noMatches:true,missing:[],noMissing:true,missingCount:0,missingCost:''}; V.backToDecks=this.go('decks'); }
       else {
         const entries=this.deckEntries(deck); const total=this.deckCount(deck); const colors=(deck.colors||[]).filter(Boolean);
         const valid=total>=60; V.backToDecks=this.go('decks');
@@ -1250,7 +1257,9 @@ class Component extends DCLogic {
         const rar={}; for(const e of entries){ const r=e.card.rarity||'?'; rar[r]=(rar[r]||0)+e.count; } const rmax=Math.max(1,...Object.values(rar));
         V.dd.rarity=Object.entries(rar).sort((a,b)=>(this.RARITY_RANK[b[0]]||0)-(this.RARITY_RANK[a[0]]||0)).map(([k,v])=>({label:(this.RARITY[k]&&this.RARITY[k].l)||k,count:v,pct:(v/rmax*100).toFixed(1),color:(this.RARITY[k]&&this.RARITY[k].c)||'#8a8a92'}));
         V.dd.count=total;
-        V.dd.list=entries.sort((a,b)=>(a.card.ink_cost||0)-(b.card.ink_cost||0)||a.card.name_en.localeCompare(b.card.name_en)).map(e=>{ const v=this.validForDeck(e.card,deck); const cv=this.cardView(e.card); return { name:e.card.name_en, cost:e.card.ink_cost==null?'–':e.card.ink_cost, ink:this.inkHex(e.card), _local:cv._local, _remote:cv._remote, price:this.fmtOrDash(this.price(e.card)), count:e.count, invalid:!v.ok, warn:v.reason, _open:()=>this.openCard(e.card.card_id), _inc:()=>this.deckDelta(e.card.card_id,1), _dec:()=>this.deckDelta(e.card.card_id,-1) }; });
+        V.dd.list=entries.sort((a,b)=>(a.card.ink_cost||0)-(b.card.ink_cost||0)||a.card.name_en.localeCompare(b.card.name_en)).map(e=>{ const v=this.validForDeck(e.card,deck); const cv=this.cardView(e.card); const ct=this.cardTypes(e.card); const grp=ct.includes('Song')?'Songs':({Character:'Characters',Action:'Actions',Item:'Items',Location:'Locations'}[e.card.card_type]||'Other'); return { grp, name:e.card.name_en, cost:e.card.ink_cost==null?'–':e.card.ink_cost, ink:this.inkHex(e.card), _local:cv._local, _remote:cv._remote, price:this.fmtOrDash(this.price(e.card)), liga:this.ligaUrl(e.card), count:e.count, invalid:!v.ok, warn:v.reason, _open:()=>this.openCard(e.card.card_id), _inc:()=>this.deckDelta(e.card.card_id,1), _dec:()=>this.deckDelta(e.card.card_id,-1) }; });
+        const grpOrder=['Characters','Actions','Songs','Items','Locations','Other'];
+        V.dd.listGroups=grpOrder.map(g=>{ const cards=V.dd.list.filter(x=>x.grp===g); return {label:g,count:cards.reduce((s,c)=>s+c.count,0),cards}; }).filter(g=>g.cards.length);
         // missing cards (owned fewer than required)
         const missing=entries.map(e=>{ const o=this.ownedOf(e.card.card_id); const have=o.n+o.f; const need=Math.max(0,e.count-have); return {card:e.card,need,have,count:e.count}; }).filter(x=>x.need>0).sort((a,b)=>this.priceOr0(b.card)-this.priceOr0(a.card));
         V.dd.missing=missing.map(m=>({ name:m.card.name_en, ink:this.inkHex(m.card), need:m.need, price:this.fmtOrDash(this.price(m.card)), sub:'have '+m.have+' of '+m.count, liga:this.ligaUrl(m.card), _open:()=>this.openCard(m.card.card_id) }));
