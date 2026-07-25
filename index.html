@@ -1192,9 +1192,9 @@ class Component extends DCLogic {
       {key:'overview',label:'Overview',_go:this.go('overview'),_style:this.navStyle('overview'),_icon:this.icon('overview')},
       {key:'collection',label:'Collection',_go:this.go('collection'),_style:this.navStyle('collection'),_icon:this.icon('collection')},
       {key:'prices',label:'Prices',_go:this.go('prices'),_style:this.navStyle('prices'),_icon:this.icon('prices')},
-      {key:'decks',label:'Decks · TCG',_go:this.go('decks'),_style:this.navStyle('decks'),_icon:this.icon('decks')},
+      {key:'decks',label:'Decks',_go:this.go('decks'),_style:this.navStyle('decks'),_icon:this.icon('decks')},
     ];
-    const titles={overview:['Overview',`Welcome back, ${st.displayName}`],collection:['Collection','Every card in the multiverse — yours highlighted'],prices:['Price Watch','Market values across your collection'],decks:['Decks · TCG','Your archived builds & analytics'],deckDetail:['Deck Analytics','']};
+    const titles={overview:['Overview',`Welcome back, ${st.displayName}`],collection:['Collection','Every card in the multiverse — yours highlighted'],prices:['Price Watch','Market values across your collection'],decks:['Decks','Your archived builds & analytics'],deckDetail:['Deck Analytics','']};
     const t=titles[st.view]||titles.overview; V.pageTitle=t[0]; V.pageSub=t[1];
     V.isOverview=st.view==='overview'; V.isCollection=st.view==='collection'; V.isPrices=st.view==='prices'; V.isDecks=st.view==='decks'; V.isDeckDetail=st.view==='deckDetail';
     V.q=st.q; V.onSearch=(e)=>this.setState({q:e.target.value,page:0,view:(st.view==='overview'||st.view==='decks'||st.view==='deckDetail')?'collection':st.view});
