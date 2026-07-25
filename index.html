@@ -1473,6 +1473,7 @@ class Component extends DCLogic {
       V.newDeckOpen=st.newDeckOpen; V.newDeckToggle=()=>this.setState({newDeckOpen:!st.newDeckOpen,importDeckOpen:false}); V.newDeckName=st.newDeckName; V.onNewDeckName=(e)=>this.setState({newDeckName:e.target.value});
       V.newDeckInkChips=this.INK_ORDER.map(ink=>({label:ink,_toggle:()=>{ const a=st.newDeckInks; const na=a.includes(ink)?a.filter(x=>x!==ink):(a.length>=2?a:[...a,ink]); this.setState({newDeckInks:na}); },_style:this.chipStyle(st.newDeckInks.includes(ink),this.INK[ink])}));
       V.createDeck=this.createDeck;
+      V.importBtnLabel=this.t('importBtn'); V.newDeckBtnLabel=this.t('newDeckBtn');
       V.importDeckOpen=st.importDeckOpen; V.importDeckToggle=()=>this.setState({importDeckOpen:!st.importDeckOpen,newDeckOpen:false});
       V.importDeckName=st.importDeckName; V.onImportDeckName=(e)=>this.setState({importDeckName:e.target.value});
       V.importDeckText=st.importDeckText; V.onImportDeckText=(e)=>this.setState({importDeckText:e.target.value});
