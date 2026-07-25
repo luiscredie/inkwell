@@ -838,6 +838,19 @@
           </sc-if>
 
           <div style="margin-top:18px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px">
+              <span style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#8a8a92">Inkwell status</span>
+              <sc-if value="{{ cm.inkableOverridden }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ exportOverrides }}" title="Export your inkable corrections" style="font-size:10.5px;color:#7ac0ff;background:none;border:none;cursor:pointer;font-family:'JetBrains Mono'">edited · export ↓</button>
+              </sc-if>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button onClick="{{ cm._setInk }}" style="{{ cm.inkStyle }}">{{ cm.inkIconEl }}Inkable</button>
+              <button onClick="{{ cm._setUnink }}" style="{{ cm.uninkStyle }}">{{ cm.uninkIconEl }}Uninkable</button>
+            </div>
+          </div>
+
+          <div style="margin-top:18px">
             <div style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#8a8a92;margin-bottom:10px">Your copies</div>
             <div style="display:flex;gap:20px">
               <div style="display:flex;align-items:center;gap:10px">
@@ -876,7 +889,7 @@ class Component extends DCLogic {
     bInks: [], bCost: 'all', bSets: [], bSetMenu: false, bSort: 'cost-asc', bGroup: 'none', bSize: 5, bOwnedOnly: false,
     newDeckOpen: false, newDeckName: '', newDeckInks: [], newDeckFmt: 'core',
     importDeckOpen: false, importDeckName: '', importDeckText: '', importDeckFmt: 'core',
-    collection: {}, decks: [], matches: [], displayName: 'Illumineer',
+    collection: {}, decks: [], matches: [], overrides: {}, displayName: 'Illumineer',
     toast: null,
   };
 
@@ -903,13 +916,16 @@ class Component extends DCLogic {
       const saved = this.loadLocal();
       if (saved) user = { ...user, ...saved };
       this.setState({ loading:false, ready:true,
-        collection: user.collection||{}, decks: user.decks||[], matches: user.matches||[],
+        collection: user.collection||{}, decks: user.decks||[], matches: user.matches||[], overrides: user.overrides||{},
         displayName: user.display_name || user.user || 'Illumineer' });
     } catch(e) { console.error(e); this.setState({ loading:false, ready:true }); }
   }
 
   loadLocal(){ try { const s = localStorage.getItem('inkwell_user_luis'); return s?JSON.parse(s):null; } catch(e){ return null; } }
-  saveLocal(){ try { localStorage.setItem('inkwell_user_luis', JSON.stringify({ collection:this.state.collection, decks:this.state.decks, matches:this.state.matches, display_name:this.state.displayName })); } catch(e){} }
+  saveLocal(){ try { localStorage.setItem('inkwell_user_luis', JSON.stringify({ collection:this.state.collection, decks:this.state.decks, matches:this.state.matches, display_name:this.state.displayName, overrides:this.state.overrides })); } catch(e){} }
+  inkableOf(card){ if(!card) return null; const o=this.state.overrides&&this.state.overrides[card.card_id]; if(o&&typeof o.inkable==='number') return o.inkable; return (typeof card.inkable==='number')?card.inkable:null; }
+  setInkable(cardId, val){ const ov={...(this.state.overrides||{})}; const card=this.byId[cardId]; if(card && card.inkable===val){ if(ov[cardId]){ delete ov[cardId].inkable; if(!Object.keys(ov[cardId]).length) delete ov[cardId]; } } else { ov[cardId]={...(ov[cardId]||{}),inkable:val}; } this.setState({overrides:ov},()=>{ this.saveLocal(); this.showToast(val===1?'Marked inkable':'Marked uninkable'); }); }
+  exportOverrides = ()=>{ const ov=this.state.overrides||{}; const rows=[['card_id','name','inkable']]; for(const id in ov){ if(typeof ov[id].inkable==='number'){ const c=this.byId[id]; rows.push([id,'"'+((c&&c.name_en)||'').replace(/"/g,'""')+'"',ov[id].inkable]); } } if(rows.length<2){ this.showToast('No corrections to export'); return; } const csv=rows.map(r=>r.join(',')).join('\n'); const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='inkwell-inkable-corrections.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); this.showToast('Corrections exported ('+(rows.length-1)+')'); };
   showToast(t){ this.setState({toast:t}); clearTimeout(this._tt); this._tt=setTimeout(()=>this.setState({toast:null}),1900); }
 
   // ---------- helpers ----------
@@ -1036,8 +1052,8 @@ class Component extends DCLogic {
       if(st.inks.length){ const l=this.inkList(c); if(!l.some(i=>st.inks.includes(i))) return false; }
       if(st.types.length){ const ct=this.cardTypes(c); if(!st.types.some(t=>ct.includes(t))) return false; }
       if(st.cost!=='all'){ const cost=(typeof c.ink_cost==='number')?c.ink_cost:0; if(!this.matchCost(cost, st.cost)) return false; }
-      if(st.inkable==='inkable' && c.inkable!==1) return false;
-      if(st.inkable==='uninkable' && c.inkable!==0) return false;
+      if(st.inkable==='inkable' && this.inkableOf(c)!==1) return false;
+      if(st.inkable==='uninkable' && this.inkableOf(c)!==0) return false;
       if(q && !(c.name_en.toLowerCase().includes(q) || (c.ability_text||'').toLowerCase().includes(q))) return false;
       return true;
     });
@@ -1274,7 +1290,7 @@ class Component extends DCLogic {
         V.dd.validLabel=valid?'Tournament legal':`${total}/60 cards`; V.dd.validBg=valid?'rgba(95,208,127,.14)':'rgba(230,193,90,.14)'; V.dd.validColor=valid?'#5fd07f':'#e6c15a';
         const ms=this.deckMatches(deck.id); const wr=this.winRate(ms);
         let owned=0,inkable=0,uninkable=0;
-        for(const e of entries){ const o=this.ownedOf(e.card.card_id); owned+=Math.min(o.n+o.f,e.count); if(e.card.inkable===1) inkable+=e.count; else if(e.card.inkable===0) uninkable+=e.count; }
+        for(const e of entries){ const o=this.ownedOf(e.card.card_id); owned+=Math.min(o.n+o.f,e.count); const ink=this.inkableOf(e.card); if(ink===1) inkable+=e.count; else if(ink===0) uninkable+=e.count; }
         const completion=total?Math.round(owned/total*100):0;
         const compColor=completion>=100?'#5fd07f':completion>=75?'#e6c15a':'#ff7a86';
         V.dd.stats=[
@@ -1373,12 +1389,20 @@ class Component extends DCLogic {
     if(st.selectedCard){ const c=this.byId[st.selectedCard]; if(c){ const cv=this.cardView(c); const o=this.ownedOf(c.card_id);
       const pips=[]; if(c.card_type==='Character'){ pips.push({label:'Cost',value:c.ink_cost==null?'–':c.ink_cost,color:'#c8c8cc'},{label:'Strength',value:c.strength==null?'–':c.strength,color:'#ff8a72'},{label:'Willpower',value:c.willpower==null?'–':c.willpower,color:'#7ab8ff'},{label:'Lore',value:c.lore==null?'–':c.lore,color:'#F2B33D'}); }
       else if(c.card_type==='Location'){ pips.push({label:'Cost',value:c.ink_cost,color:'#c8c8cc'},{label:'Move Cost',value:c.strength==null?'–':c.strength,color:'#ff8a72'},{label:'Willpower',value:c.willpower==null?'–':c.willpower,color:'#7ab8ff'},{label:'Lore',value:c.lore==null?'–':c.lore,color:'#F2B33D'}); }
-      else { pips.push({label:'Cost',value:c.ink_cost==null?'–':c.ink_cost,color:'#c8c8cc'},{label:'Type',value:c.card_type,color:'#c8c8cc'},{label:'Ink',value:c.inkable?'Yes':'No',color:c.inkable?'#5fd07f':'#ff7a86'}); }
+      else { const ink=this.inkableOf(c); pips.push({label:'Cost',value:c.ink_cost==null?'–':c.ink_cost,color:'#c8c8cc'},{label:'Type',value:c.card_type,color:'#c8c8cc'},{label:'Ink',value:ink===1?'Yes':ink===0?'No':'—',color:ink===1?'#5fd07f':ink===0?'#ff7a86':'#8a8a92'}); }
       const vlist=this.variantsOf(c);
       const variants=vlist.map(vc=>{ const vcv=this.cardView(vc); const active=vc.card_id===c.card_id; return { label:this.variantLabel(vc), num:vc.card_number, ink:vcv.ink, imgEl:vcv._local?React.createElement('img',{src:vcv._local,'data-remote':vcv._remote,onError:window.imgError,style:{width:'100%',height:'100%',objectFit:'cover',display:'block'}}):null, _pick:()=>this.switchVariant(c.card_id,vc.card_id), _style:'background:none;border:2px solid '+(active?'#b79bff':'transparent')+';border-radius:9px;padding:3px;cursor:pointer' }; });
-      V.cm={ name:c.name_en, ink:cv.ink, hasVariants:vlist.length>1, variants, inkSoft:(this.inkList(c)[0]?this.INK[this.inkList(c)[0]]:'#888')+'22', inkColor:this.inkList(c).join(' / ')||'—', _local:cv._local, _remote:cv._remote, imgEl: cv._local ? React.createElement('img',{src:cv._local,'data-remote':cv._remote,onError:window.imgError,style:{position:'relative',width:'100%',height:'100%',objectFit:'cover',display:'block'}}) : null, rarity:this.rar(c).l, rarityColor:this.rar(c).c, setName:this.setName(c.set_code), number:c.card_number, pips, classification:c.classification||'', ability:c.ability_text||'No ability text.', abilities:this.buildAbilities(c), price:this.fmtOrDash(this.price(c)), foilPrice:this.fmtOrDash(this.foilPrice(c)), range:this.fmtRange(this.normalRange(c)), foilRange:this.fmtRange(this.foilRangeOf(c)), priceSrc:this.hasRealPrice(c)?('source · '+(this.priceSource||'prices.json')):'no price in prices.json', qtyN:o.n, qtyF:o.f, _incN:()=>this.setQty(c.card_id,'n',1), _decN:()=>this.setQty(c.card_id,'n',-1), _incF:()=>this.setQty(c.card_id,'f',1), _decF:()=>this.setQty(c.card_id,'f',-1) };
+      const _ink=this.inkableOf(c); const _isOverride=!!(this.state.overrides&&this.state.overrides[c.card_id]&&typeof this.state.overrides[c.card_id].inkable==='number');
+      V.cm={ name:c.name_en, ink:cv.ink, hasVariants:vlist.length>1, variants,
+        inkableVal:_ink, inkableOverridden:_isOverride,
+        inkStyle:_ink===1?'flex:1;padding:9px;border-radius:10px;cursor:pointer;font-size:12.5px;font-weight:700;border:1px solid #5fd07f;background:rgba(95,208,127,.16);color:#5fd07f;display:inline-flex;align-items:center;justify-content:center;gap:6px':'flex:1;padding:9px;border-radius:10px;cursor:pointer;font-size:12.5px;font-weight:600;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#9a9aa2;display:inline-flex;align-items:center;justify-content:center;gap:6px',
+        uninkStyle:_ink===0?'flex:1;padding:9px;border-radius:10px;cursor:pointer;font-size:12.5px;font-weight:700;border:1px solid #ff7a86;background:rgba(255,122,134,.16);color:#ff7a86;display:inline-flex;align-items:center;justify-content:center;gap:6px':'flex:1;padding:9px;border-radius:10px;cursor:pointer;font-size:12.5px;font-weight:600;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#9a9aa2;display:inline-flex;align-items:center;justify-content:center;gap:6px',
+        inkIconEl:this.iconImgEl('ink/inkwell.svg',15), uninkIconEl:this.iconImgEl('ink/inkcost.svg',15),
+        _setInk:()=>this.setInkable(c.card_id,1), _setUnink:()=>this.setInkable(c.card_id,0),
+        inkSoft:(this.inkList(c)[0]?this.INK[this.inkList(c)[0]]:'#888')+'22', inkColor:this.inkList(c).join(' / ')||'—', _local:cv._local, _remote:cv._remote, imgEl: cv._local ? React.createElement('img',{src:cv._local,'data-remote':cv._remote,onError:window.imgError,style:{position:'relative',width:'100%',height:'100%',objectFit:'cover',display:'block'}}) : null, rarity:this.rar(c).l, rarityColor:this.rar(c).c, setName:this.setName(c.set_code), number:c.card_number, pips, classification:c.classification||'', ability:c.ability_text||'No ability text.', abilities:this.buildAbilities(c), price:this.fmtOrDash(this.price(c)), foilPrice:this.fmtOrDash(this.foilPrice(c)), range:this.fmtRange(this.normalRange(c)), foilRange:this.fmtRange(this.foilRangeOf(c)), priceSrc:this.hasRealPrice(c)?('source · '+(this.priceSource||'prices.json')):'no price in prices.json', qtyN:o.n, qtyF:o.f, _incN:()=>this.setQty(c.card_id,'n',1), _decN:()=>this.setQty(c.card_id,'n',-1), _incF:()=>this.setQty(c.card_id,'f',1), _decF:()=>this.setQty(c.card_id,'f',-1) };
     } }
     V.closeCard=()=>this.setState({selectedCard:null});
+    V.exportOverrides=this.exportOverrides;
     return V;
   }
 }

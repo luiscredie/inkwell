@@ -98,7 +98,22 @@ def compact_text(value: Any) -> str:
 
 def name_key(value: Any) -> str:
     value = compact_text(value).translate(
-        str.maketrans({"–": "-", "—": "-", "−": "-", "’": "'", "‘": "'"})
+        str.maketrans(
+            {
+                "‐": "-",  # U+2010 hyphen (used by Jack‐Jack in the database)
+                "‑": "-",  # U+2011 non-breaking hyphen
+                "‒": "-",
+                "–": "-",
+                "—": "-",
+                "―": "-",
+                "−": "-",
+                "﹘": "-",
+                "﹣": "-",
+                "－": "-",
+                "’": "'",
+                "‘": "'",
+            }
+        )
     )
     value = (
         unicodedata.normalize("NFKD", value)
@@ -107,6 +122,23 @@ def name_key(value: Any) -> str:
         .lower()
     )
     return re.sub(r"[^a-z0-9]+", " ", value).strip()
+
+
+VARIANT_SUFFIX = re.compile(
+    r"\s*\((?:"
+    r"alternate\s+art|enchanted|epic|iconic|foil|promo|"
+    r"disney\s+lorcana\s+challenge|participation\s+card|top\s+\d+"
+    r")\)\s*$",
+    flags=re.I,
+)
+
+
+def gameplay_name_key(value: Any) -> str:
+    """Normalize a gameplay card name while ignoring printing-only suffixes."""
+    cleaned = compact_text(value)
+    while VARIANT_SUFFIX.search(cleaned):
+        cleaned = VARIANT_SUFFIX.sub("", cleaned).strip()
+    return name_key(cleaned)
 
 
 def collector_number(value: Any) -> str:
@@ -427,6 +459,41 @@ def source_index(cards: Iterable[dict[str, Any]]) -> dict[tuple[int, str], dict[
     return {(row["set_number"], row["number"]): row for row in cards}
 
 
+def source_name_consensus(
+    cards: Iterable[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    """
+    Return only gameplay names whose exact source printings unanimously agree.
+
+    This safely covers promo/alternate-art records whose local identifiers do
+    not map to a numbered LOR set. A disagreement disables inheritance for that
+    name instead of guessing.
+    """
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in cards:
+        key = gameplay_name_key(row.get("name"))
+        if key:
+            grouped[key].append(row)
+
+    consensus: dict[str, dict[str, Any]] = {}
+    for key, rows in grouped.items():
+        values = {bool(row["inkable"]) for row in rows}
+        if len(values) != 1:
+            continue
+        preferred = max(
+            rows,
+            key=lambda row: (
+                row.get("source") == "official_disney_catalog",
+                bool(row.get("name")),
+            ),
+        )
+        consensus[key] = {
+            **preferred,
+            "source": f"{preferred['source']}:same_gameplay_card",
+        }
+    return consensus
+
+
 def merge_sources(
     official: Iterable[dict[str, Any]],
     fallback: Iterable[dict[str, Any]],
@@ -440,7 +507,7 @@ def merge_sources(
 def name_compatible(database_name: str, source_name: str) -> bool:
     if not source_name:
         return True
-    left, right = name_key(database_name), name_key(source_name)
+    left, right = gameplay_name_key(database_name), gameplay_name_key(source_name)
     if not left or not right:
         return True
     # Exact printing identity remains primary, but this catches mismatched set
@@ -458,24 +525,44 @@ def build_plan(
     source_counts: Counter[str] = Counter()
     eligible_by_set: Counter[int] = Counter()
     matched_by_set: Counter[int] = Counter()
+    by_gameplay_name = source_name_consensus(sources.values())
 
     for card in cards:
         identity = database_identity(card)
-        if identity is None:
-            continue
-        set_number, _ = identity
-        eligible_by_set[set_number] += 1
-        source = sources.get(identity)
+        if identity is not None:
+            set_number, _ = identity
+            eligible_by_set[set_number] += 1
+
+        source = sources.get(identity) if identity is not None else None
+        direct_match = source is not None
+        if source is not None and not name_compatible(
+            full_name(card), source.get("name", "")
+        ):
+            source = None
+
+        # Promo, Epic, Enchanted and other alternate printings may not have a
+        # directly queryable numbered-set identity. Inherit only from unanimous
+        # exact-name source data.
         if source is None:
-            unmatched.append(compact_text(card.get("card_id")) or f"{identity[0]}/{identity[1]}")
+            source = by_gameplay_name.get(gameplay_name_key(full_name(card)))
+            direct_match = False
+
+        if source is None:
+            if identity is not None:
+                unmatched.append(
+                    compact_text(card.get("card_id"))
+                    or f"{identity[0]}/{identity[1]}"
+                )
             continue
+
         if not name_compatible(full_name(card), source.get("name", "")):
             mismatched_names.append(
                 f"{compact_text(card.get('card_id'))}: "
                 f"{full_name(card)!r} != {source.get('name')!r}"
             )
             continue
-        matched_by_set[set_number] += 1
+        if identity is not None and direct_match:
+            matched_by_set[identity[0]] += 1
         source_counts[source["source"]] += 1
         old_raw = card.get("inkable")
         old = parse_bool(old_raw)
@@ -486,10 +573,18 @@ def build_plan(
             {
                 "card": card,
                 "card_id": compact_text(card.get("card_id"))
-                or f"LOR{identity[0]}-{identity[1]}",
+                or (
+                    f"LOR{identity[0]}-{identity[1]}"
+                    if identity is not None
+                    else full_name(card)
+                ),
                 "name": full_name(card),
-                "set_number": identity[0],
-                "number": identity[1],
+                "set_number": identity[0] if identity is not None else None,
+                "number": (
+                    identity[1]
+                    if identity is not None
+                    else row_collector_number(card)
+                ),
                 "old": old_raw,
                 "new": int(new),
                 "source": source["source"],
