@@ -130,10 +130,10 @@
                 <span style="font-size:12px;color:#7c7c85;font-family:'JetBrains Mono'">by copies owned</span>
               </div>
               <div style="display:flex;flex-direction:column;gap:13px">
-                <sc-for list="{{ inkDist }}" as="d" hint-placeholder-count="6">
+                <sc-for list="{{ inkDist }}" as="d">
                   <div>
                     <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px">
-                      <span style="display:flex;align-items:center;gap:8px"><img src="{{ d.icon }}" alt="" style="width:18px;height:18px;display:block" />{{ d.label }}</span>
+                      <span style="display:flex;align-items:center;gap:8px">{{ d.iconEl }}{{ d.label }}</span>
                       <span style="font-family:'JetBrains Mono';color:#a8a8b0">{{ d.count }}</span>
                     </div>
                     <div style="height:7px;border-radius:5px;background:rgba(255,255,255,.06);overflow:hidden">
@@ -205,8 +205,8 @@
         <sc-if value="{{ isCollection }}" hint-placeholder-val="{{ false }}">
         <div class="ink-view" style="max-width:1400px;margin:0 auto">
           <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:20px">
-            <sc-for list="{{ inkChips }}" as="c" hint-placeholder-count="6">
-              <button onClick="{{ c._toggle }}" style="{{ c._style }};display:inline-flex;align-items:center;gap:7px"><img src="{{ c.icon }}" alt="" style="width:18px;height:18px;display:block" />{{ c.label }}</button>
+            <sc-for list="{{ inkChips }}" as="c">
+              <button onClick="{{ c._toggle }}" style="{{ c._style }};display:inline-flex;align-items:center;gap:7px">{{ c.iconEl }}{{ c.label }}</button>
             </sc-for>
             <div style="width:1px;height:22px;background:rgba(255,255,255,.1);margin:0 4px"></div>
             <sc-for list="{{ typeChips }}" as="c" hint-placeholder-count="5">
@@ -496,8 +496,8 @@
               <input value="{{ deckSearch }}" onInput="{{ onDeckSearch }}" placeholder="Search cards by name…" style="width:100%;padding:11px 14px;border-radius:11px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.12);color:#f3f3f5;font-size:14px;margin-bottom:12px" />
 
               <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px">
-                <sc-for list="{{ b.inkChips }}" as="c" hint-placeholder-count="6">
-                  <button onClick="{{ c._toggle }}" title="{{ c.label }}" style="{{ c._style }}"><img src="{{ c.icon }}" alt="{{ c.label }}" style="width:22px;height:22px;display:block" /></button>
+                <sc-for list="{{ b.inkChips }}" as="c">
+                  <button onClick="{{ c._toggle }}" title="{{ c.label }}" style="{{ c._style }}">{{ c.iconEl }}</button>
                 </sc-for>
                 <div style="width:1px;height:20px;background:rgba(255,255,255,.1)"></div>
                 <sc-for list="{{ b.costChips }}" as="c" hint-placeholder-count="9">
@@ -747,6 +747,21 @@
             <div style="font-size:10.5px;color:#6f6f78;margin-top:12px;font-family:'JetBrains Mono'">{{ cm.priceSrc }}</div>
           </div>
 
+          <sc-if value="{{ cm.hasVariants }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:18px">
+              <div style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#8a8a92;margin-bottom:10px">Printing / Art · pick the one you own</div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap">
+                <sc-for list="{{ cm.variants }}" as="v">
+                  <button onClick="{{ v._pick }}" title="{{ v.label }}" style="{{ v._style }}">
+                    <span style="position:relative;display:block;width:52px;aspect-ratio:734/1024;border-radius:7px;overflow:hidden;background:{{ v.ink }}">{{ v.imgEl }}</span>
+                    <span style="display:block;font-size:9.5px;color:#c8c8cc;margin-top:4px;max-width:56px;text-align:center;line-height:1.15">{{ v.label }}</span>
+                    <span style="display:block;font-size:9px;font-family:'JetBrains Mono';color:#7c7c85">{{ v.num }}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
           <div style="margin-top:18px">
             <div style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#8a8a92;margin-bottom:10px">Your copies</div>
             <div style="display:flex;gap:20px">
@@ -968,7 +983,12 @@ class Component extends DCLogic {
     if(!this.legalInFormat(card, deck.format)) return {ok:false,reason:'Rotated — not legal in '+this.fmtLabel(deck.format)};
     return {ok:true,reason:''};
   }
+  baseName(n){ return String(n||'').replace(/\s*\(.*?\)\s*/g,'').trim().toLowerCase(); }
+  variantLabel(card){ const m=String(card.name_en).match(/\(([^)]+)\)\s*$/); if(m) return m[1]; const r={C:'Standard',U:'Standard',R:'Rare',SR:'Super Rare',L:'Legendary',E:'Enchanted',EP:'Epic',P:'Promo'}[card.rarity]; return r||'Standard'; }
+  variantsOf(card){ if(!card) return []; const bn=this.baseName(card.name_en); return this.cards.filter(c=>this.baseName(c.name_en)===bn).sort((a,b)=>this.setOrder(a.set_code)-this.setOrder(b.set_code)); }
+  switchVariant(fromId, toId){ if(fromId===toId){ this.setState({selectedCard:toId}); return; } const coll={...this.state.collection}; const src=coll[fromId]; if(src){ const dst=coll[toId]?{...coll[toId]}:{n:0,f:0}; dst.n=(dst.n||0)+(src.n||0); dst.f=(dst.f||0)+(src.f||0); coll[toId]=dst; delete coll[fromId]; } this.setState({collection:coll,selectedCard:toId},()=>{ this.saveLocal(); this.showToast('Art updated'); }); }
   inkIcon(name){ return 'ink/'+String(name).toLowerCase()+'.svg'; }
+  inkIconEl(name, size){ const s=size||18; return React.createElement('img',{src:this.inkIcon(name),alt:'',style:{width:s+'px',height:s+'px',display:'block'}}); }
   ligaUrl(card){ return 'https://www.ligalorcana.com.br/?view=ecomm/itens&busca='+encodeURIComponent(card.name_en||''); }
   setOrder(code){ const m=String(code).match(/^([A-Za-z]+)(\d+)?$/); const pre=m?m[1]:code; const num=m&&m[2]?+m[2]:0; const grp={LOR:0,Q:1,DLPC:2,D:3}[pre]!=null?{LOR:0,Q:1,DLPC:2,D:3}[pre]:9; return grp*1000+num; }
   deckById(id){ return this.state.decks.find(d=>d.id===id); }
@@ -1070,7 +1090,7 @@ class Component extends DCLogic {
       ];
       const dist={}; for(const [id,e] of Object.entries(st.collection)){ const c=this.byId[id]; if(!c) continue; const cnt=(e.n||0)+(e.f||0); for(const ink of this.inkList(c)) dist[ink]=(dist[ink]||0)+cnt; }
       const mx=Math.max(1,...Object.values(dist));
-      V.inkDist=this.INK_ORDER.map(ink=>({label:ink,icon:this.inkIcon(ink),count:dist[ink]||0,pct:((dist[ink]||0)/mx*100).toFixed(1),color:this.INK[ink]}));
+      V.inkDist=this.INK_ORDER.map(ink=>({label:ink,iconEl:this.inkIconEl(ink,18),count:dist[ink]||0,pct:((dist[ink]||0)/mx*100).toFixed(1),color:this.INK[ink]}));
       const ownedCards=Object.keys(st.collection).map(id=>this.byId[id]).filter(Boolean).filter(c=>this.hasRealPrice(c));
       const movers=ownedCards.slice().sort((a,b)=>this.priceOr0(b)-this.priceOr0(a)).slice(0,6);
       V.movers=movers.map(c=>{ const cv=this.cardView(c); const o=this.ownedOf(c.card_id); return {name:c.name_en,price:this.fmtOrDash(this.price(c)),chg:'×'+(o.n+o.f),chgColor:'#a8a8b0',ink:cv.ink,_bg:cv._bg,_open:()=>this.openCard(c.card_id)}; });
@@ -1082,7 +1102,7 @@ class Component extends DCLogic {
 
     // ---- COLLECTION ----
     if(V.isCollection){
-      V.inkChips=this.INK_ORDER.map(ink=>({label:ink,icon:this.inkIcon(ink),_toggle:()=>this.toggleArr('inks',ink),_style:this.chipStyle(st.inks.includes(ink),this.INK[ink])}));
+      V.inkChips=this.INK_ORDER.map(ink=>({label:ink,iconEl:this.inkIconEl(ink,18),_toggle:()=>this.toggleArr('inks',ink),_style:this.chipStyle(st.inks.includes(ink),this.INK[ink])}));
       V.typeChips=['Character','Action','Song','Item','Location'].map(t=>({label:t,_toggle:()=>this.toggleArr('types',t),_style:this.chipStyle(st.types.includes(t))}));
       const setsPresent=[...new Set(this.cards.map(c=>c.set_code))];
       V.setOptions=setsPresent.map(code=>({code,name:this.setName(code)})).sort((a,b)=>this.setOrder(a.code)-this.setOrder(b.code)).map(o=>({code:o.code,name:o.name,check:st.sets.includes(o.code)?'✓':'',checkBg:st.sets.includes(o.code)?'#b79bff':'transparent',_toggle:()=>this.toggleArr('sets',o.code)}));
@@ -1219,7 +1239,7 @@ class Component extends DCLogic {
         V.b={
           fmtLabel:this.fmtLabel(deck.format), deckColorsLabel:colors.length?colors.join('/'):'Any ink',
           size:st.bSize, sizeLabel:st.bSize+' / row', onSize:(e)=>this.setState({bSize:+e.target.value}), gridCols:`repeat(${st.bSize},1fr)`,
-          inkChips:this.INK_ORDER.map(ink=>({label:ink,icon:this.inkIcon(ink),_toggle:()=>this.toggleArr('bInks',ink),_style:this.chipStyleSm(st.bInks.includes(ink),this.INK[ink])})),
+          inkChips:this.INK_ORDER.map(ink=>({label:ink,iconEl:this.inkIconEl(ink,22),_toggle:()=>this.toggleArr('bInks',ink),_style:this.chipStyleSm(st.bInks.includes(ink),this.INK[ink])})),
           costChips:[['all','All'],['0','0'],['1','1'],['2','2'],['3','3'],['4','4'],['5','5'],['6','6'],['7','7+']].map(([v,label])=>({label,_toggle:()=>this.setState({bCost:v,page:0}),_style:this.chipStyleSm(st.bCost===v)})),
           setLabel:st.bSets.length?(st.bSets.length+' sets'):'All sets', setMenu:st.bSetMenu, toggleSetMenu:()=>this.setState({bSetMenu:!st.bSetMenu}), clearSets:()=>this.setState({bSets:[]}),
           setOptions:setsPresent.map(o=>({name:o.name,check:st.bSets.includes(o.code)?'✓':'',checkBg:st.bSets.includes(o.code)?'#b79bff':'transparent',_toggle:()=>this.toggleArr('bSets',o.code)})),
@@ -1243,7 +1263,9 @@ class Component extends DCLogic {
       const pips=[]; if(c.card_type==='Character'){ pips.push({label:'Cost',value:c.ink_cost==null?'–':c.ink_cost,color:'#c8c8cc'},{label:'Strength',value:c.strength==null?'–':c.strength,color:'#ff8a72'},{label:'Willpower',value:c.willpower==null?'–':c.willpower,color:'#7ab8ff'},{label:'Lore',value:c.lore==null?'–':c.lore,color:'#F2B33D'}); }
       else if(c.card_type==='Location'){ pips.push({label:'Cost',value:c.ink_cost,color:'#c8c8cc'},{label:'Move Cost',value:c.strength==null?'–':c.strength,color:'#ff8a72'},{label:'Willpower',value:c.willpower==null?'–':c.willpower,color:'#7ab8ff'},{label:'Lore',value:c.lore==null?'–':c.lore,color:'#F2B33D'}); }
       else { pips.push({label:'Cost',value:c.ink_cost==null?'–':c.ink_cost,color:'#c8c8cc'},{label:'Type',value:c.card_type,color:'#c8c8cc'},{label:'Ink',value:c.inkable?'Yes':'No',color:c.inkable?'#5fd07f':'#ff7a86'}); }
-      V.cm={ name:c.name_en, ink:cv.ink, inkSoft:(this.inkList(c)[0]?this.INK[this.inkList(c)[0]]:'#888')+'22', inkColor:this.inkList(c).join(' / ')||'—', _local:cv._local, _remote:cv._remote, imgEl: cv._local ? React.createElement('img',{src:cv._local,'data-remote':cv._remote,onError:window.imgError,style:{position:'relative',width:'100%',height:'100%',objectFit:'cover',display:'block'}}) : null, rarity:this.rar(c).l, rarityColor:this.rar(c).c, setName:this.setName(c.set_code), number:c.card_number, pips, classification:c.classification||'', ability:c.ability_text||'No ability text.', abilities:this.buildAbilities(c), price:this.fmtOrDash(this.price(c)), foilPrice:this.fmtOrDash(this.foilPrice(c)), range:this.fmtRange(this.normalRange(c)), foilRange:this.fmtRange(this.foilRangeOf(c)), priceSrc:this.hasRealPrice(c)?('source · '+(this.priceSource||'prices.json')):'no price in prices.json', qtyN:o.n, qtyF:o.f, _incN:()=>this.setQty(c.card_id,'n',1), _decN:()=>this.setQty(c.card_id,'n',-1), _incF:()=>this.setQty(c.card_id,'f',1), _decF:()=>this.setQty(c.card_id,'f',-1) };
+      const vlist=this.variantsOf(c);
+      const variants=vlist.map(vc=>{ const vcv=this.cardView(vc); const active=vc.card_id===c.card_id; return { label:this.variantLabel(vc), num:vc.card_number, ink:vcv.ink, imgEl:vcv._local?React.createElement('img',{src:vcv._local,'data-remote':vcv._remote,onError:window.imgError,style:{width:'100%',height:'100%',objectFit:'cover',display:'block'}}):null, _pick:()=>this.switchVariant(c.card_id,vc.card_id), _style:'background:none;border:2px solid '+(active?'#b79bff':'transparent')+';border-radius:9px;padding:3px;cursor:pointer' }; });
+      V.cm={ name:c.name_en, ink:cv.ink, hasVariants:vlist.length>1, variants, inkSoft:(this.inkList(c)[0]?this.INK[this.inkList(c)[0]]:'#888')+'22', inkColor:this.inkList(c).join(' / ')||'—', _local:cv._local, _remote:cv._remote, imgEl: cv._local ? React.createElement('img',{src:cv._local,'data-remote':cv._remote,onError:window.imgError,style:{position:'relative',width:'100%',height:'100%',objectFit:'cover',display:'block'}}) : null, rarity:this.rar(c).l, rarityColor:this.rar(c).c, setName:this.setName(c.set_code), number:c.card_number, pips, classification:c.classification||'', ability:c.ability_text||'No ability text.', abilities:this.buildAbilities(c), price:this.fmtOrDash(this.price(c)), foilPrice:this.fmtOrDash(this.foilPrice(c)), range:this.fmtRange(this.normalRange(c)), foilRange:this.fmtRange(this.foilRangeOf(c)), priceSrc:this.hasRealPrice(c)?('source · '+(this.priceSource||'prices.json')):'no price in prices.json', qtyN:o.n, qtyF:o.f, _incN:()=>this.setQty(c.card_id,'n',1), _decN:()=>this.setQty(c.card_id,'n',-1), _incF:()=>this.setQty(c.card_id,'f',1), _decF:()=>this.setQty(c.card_id,'f',-1) };
     } }
     V.closeCard=()=>this.setState({selectedCard:null});
     return V;
