@@ -240,7 +240,7 @@
               </sc-for>
             </div>
             <button onClick="{{ exportCollection }}" style="padding:8px 12px;border-radius:11px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#d8d8dc;cursor:pointer;font-size:13px">↓ Export</button>
-            <button onClick="{{ triggerImport }}" style="padding:8px 12px;border-radius:11px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#d8d8dc;cursor:pointer;font-size:13px">↑ Import</button>
+            <button onClick="{{ triggerImport }}" title="Import from Dreamborn / Inkwell CSV or JSON" style="padding:8px 12px;border-radius:11px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#d8d8dc;cursor:pointer;font-size:13px">↑ Import</button>
             <input type="file" accept=".csv,.json" ref="{{ setImpRef }}" onChange="{{ importCollection }}" style="display:none" />
           </div>
 
@@ -982,7 +982,34 @@ class Component extends DCLogic {
   parseCsvLine(line){ const out=[]; let cur='',q=false; for(let i=0;i<line.length;i++){ const ch=line[i]; if(q){ if(ch==='"'){ if(line[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=ch; } else { if(ch==='"')q=true; else if(ch===','){out.push(cur);cur='';} else cur+=ch; } } out.push(cur); return out; }
   exportCollection = ()=>{ const rows=[['card_id','name','set','normal','foil']]; for(const [id,e] of Object.entries(this.state.collection)){ const c=this.byId[id]; if(!c) continue; rows.push([id,'"'+(c.name_en||'').replace(/"/g,'""')+'"',c.set_code,e.n||0,e.f||0]); } const csv=rows.map(r=>r.join(',')).join('\n'); const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='inkwell-collection.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); this.showToast('Collection exported'); };
   triggerImport = ()=>{ if(this._imp) this._imp.click(); };
-  importCollection = (e)=>{ const file=e.target&&e.target.files&&e.target.files[0]; if(!file) return; const rd=new FileReader(); rd.onload=()=>{ try{ const txt=String(rd.result); let coll={}; if(/\.json$/i.test(file.name)){ const j=JSON.parse(txt); coll=j.collection||j; } else { const lines=txt.split(/\r?\n/).filter(l=>l.trim()); const start=/card_id/i.test(lines[0]||'')?1:0; for(let i=start;i<lines.length;i++){ const p=this.parseCsvLine(lines[i]); const id=(p[0]||'').trim(); if(!id||!this.byId[id]) continue; const n=parseInt(p[p.length-2])||0, f=parseInt(p[p.length-1])||0; if(n||f) coll[id]={n,f}; } } if(!Object.keys(coll).length){ this.showToast('No cards found in file'); return; } this.setState({collection:coll},()=>{this.saveLocal();this.showToast('Collection imported ('+Object.keys(coll).length+' cards)');}); }catch(err){ this.showToast('Import failed — check file'); } }; rd.readAsText(file); e.target.value=''; };
+  nameKey(n){ return String(n||'').toLowerCase().replace(/\s*\(.*?\)\s*/g,'').trim(); }
+  buildNameIndex(){ if(this._byName) return; this._byName={}; for(const c of this.cards){ const k=this.nameKey(c.name_en); (this._byName[k]=this._byName[k]||[]).push(c); } }
+  resolveCsvCard(setNum, cardNum, name){
+    if(setNum){ const code='LOR'+parseInt(setNum,10); const c=this.byNumIdx&&this.byNumIdx[code+'|'+String(cardNum).trim()]; if(c) return c; }
+    if(name){ this.buildNameIndex(); const arr=this._byName[this.nameKey(name)]; if(arr&&arr.length){ if(setNum){ const code='LOR'+parseInt(setNum,10); return arr.find(x=>x.set_code===code)||arr[0]; } return arr[0]; } }
+    return null;
+  }
+  importCollection = (e)=>{ const file=e.target&&e.target.files&&e.target.files[0]; if(!file) return; const rd=new FileReader(); rd.onload=()=>{ try{
+    const txt=String(rd.result); const coll={}; let matched=0, unresolved=0;
+    if(!this.byNumIdx){ this.byNumIdx={}; for(const c of this.cards) this.byNumIdx[c.set_code+'|'+String(c.card_number)]=c; }
+    const add=(id,n,f)=>{ if(!id) return; const cur=coll[id]||{n:0,f:0}; cur.n+=n||0; cur.f+=f||0; coll[id]=cur; };
+    if(/\.json$/i.test(file.name)){ const j=JSON.parse(txt); const src=j.collection||j; for(const id in src){ if(this.byId[id]){ const e2=src[id]; add(id,e2.n||0,e2.f||0); matched++; } else unresolved++; } }
+    else {
+      const lines=txt.split(/\r?\n/).filter(l=>l.trim()); if(!lines.length){ this.showToast('Empty file'); return; }
+      const head=lines[0].toLowerCase(); const cols=this.parseCsvLine(lines[0]).map(h=>h.trim().toLowerCase());
+      const dream=/set number/.test(head)&&/card number/.test(head);
+      const ci=(names)=>{ for(const n of names){ const i=cols.indexOf(n); if(i>=0) return i; } return -1; };
+      if(dream){
+        const iSet=ci(['set number']), iNum=ci(['card number']), iVar=ci(['variant','finish']), iCnt=ci(['count','quantity','qty']), iName=ci(['name']);
+        for(let i=1;i<lines.length;i++){ const p=this.parseCsvLine(lines[i]); if(p.length<2) continue; const c=this.resolveCsvCard(p[iSet], p[iNum], iName>=0?p[iName]:''); if(!c){ unresolved++; continue; } const cnt=parseInt(p[iCnt])||0; const foil=/foil/i.test((p[iVar]||'')); add(c.card_id, foil?0:cnt, foil?cnt:0); matched++; }
+      } else {
+        const iId=ci(['card_id','id']), iN=ci(['normal','n']), iF=ci(['foil','f']), start=(iId>=0||/card_id/.test(head))?1:0;
+        for(let i=start;i<lines.length;i++){ const p=this.parseCsvLine(lines[i]); const id=(p[iId>=0?iId:0]||'').trim(); if(!this.byId[id]){ if(id) unresolved++; continue; } const n=parseInt(p[iN>=0?iN:p.length-2])||0, f=parseInt(p[iF>=0?iF:p.length-1])||0; add(id,n,f); matched++; }
+      }
+    }
+    if(!Object.keys(coll).length){ this.showToast('No matching cards found'); return; }
+    this.setState({collection:coll},()=>{ this.saveLocal(); this.showToast('Imported '+Object.keys(coll).length+' cards'+(unresolved?' · '+unresolved+' unmatched':'')); });
+  }catch(err){ console.error(err); this.showToast('Import failed — check file format'); } }; rd.readAsText(file); e.target.value=''; };
   setImpRef = (el)=>{ this._imp=el; };
   setQty(id, field, delta){
     const coll={...this.state.collection}; const cur=coll[id]?{...coll[id]}:{n:0,f:0};
