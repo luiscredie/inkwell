@@ -1135,7 +1135,7 @@ class Component extends DCLogic {
     const m = man.data; this.manifestMode = true;
     if (!this.supports('manifest', m.manifest_version)) return { fatal:'Unsupported data manifest (v'+m.manifest_version+'). Update the app.' };
     if (m.min_app_version && !this.semverGte(this.APP_VERSION, m.min_app_version)) return { fatal:'This data requires app '+m.min_app_version+' or newer (you have '+this.APP_VERSION+'). Please update Inkwell.' };
-    const files = m.files || {}; const schema = m.schema || {}; const dir = '';  // manifest lives at root of its own dir
+    const files = m.artifacts || m.files || {}; const schema = m.schema || {}; const dir = '';  // manifest lives at root of its own dir
     const hashJobs = [];
     // cards (required)
     if (!files.cards) return { fatal:'Manifest missing required "cards" artifact.' };
@@ -1421,11 +1421,13 @@ class Component extends DCLogic {
   triggerImport = ()=>{ if(this._imp) this._imp.click(); };
   nameKey(n){ return String(n||'').toLowerCase().replace(/\s*\(.*?\)\s*/g,'').trim(); }
   buildNameIndex(){ if(this._byName) return; this._byName={}; for(const c of this.cards){ const k=this.nameKey(c.name_en); (this._byName[k]=this._byName[k]||[]).push(c); } }
+  aliasKey(n){ return String(n||'').toLowerCase().replace(/\([^)]*\)/g,' ').replace(/[^a-z0-9]+/g,' ').trim(); }
+  buildAliasIndex(){ if(this._aliasIdx!==undefined) return; this._aliasIdx=null; const a=this.aliases; const map=a&&a.aliases; if(!map||typeof map!=='object') return; this._aliasIdx={}; for(const k in map){ const ids=map[k]; const id=Array.isArray(ids)?ids[0]:ids; if(id) this._aliasIdx[this.aliasKey(k)]=Array.isArray(ids)?ids:[ids]; } }
   resolveCsvCard(setNum, cardNum, name){
-    // Preferred: aliases.json (explicit import only). Falls back to local number/name index.
-    if(this.aliases){
-      if(setNum && cardNum!=null){ const k=parseInt(setNum,10)+'-'+String(cardNum).trim(); const id=this.aliases.by_number&&this.aliases.by_number[k]; if(id && this.byId[id]) return this.byId[id]; }
-      if(name){ const id=this.aliases.by_name&&this.aliases.by_name[String(name).trim()]; if(id && this.byId[id]) return this.byId[id]; }
+    // Preferred: aliases.json (explicit import only). Normalized-name -> [card_id]. Falls back to local number/name index.
+    if(this.aliases && name){
+      this.buildAliasIndex();
+      if(this._aliasIdx){ const ids=this._aliasIdx[this.aliasKey(name)]; if(ids&&ids.length){ if(setNum){ const code='LOR'+parseInt(setNum,10); const hit=ids.find(id=>this.byId[id]&&this.byId[id].set_code===code); if(hit) return this.byId[hit]; } for(const id of ids){ if(this.byId[id]) return this.byId[id]; } } }
     }
     if(setNum){ const code='LOR'+parseInt(setNum,10); const c=this.byNumIdx&&this.byNumIdx[code+'|'+String(cardNum).trim()]; if(c) return c; }
     if(name){ this.buildNameIndex(); const arr=this._byName[this.nameKey(name)]; if(arr&&arr.length){ if(setNum){ const code='LOR'+parseInt(setNum,10); return arr.find(x=>x.set_code===code)||arr[0]; } return arr[0]; } }
