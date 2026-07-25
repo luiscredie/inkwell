@@ -76,12 +76,29 @@
     </nav>
 
     <div style="flex:1"></div>
-    <div class="rail-user" style="display:flex;align-items:center;gap:11px;padding:12px 10px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)">
-      <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#9B72CF,#2E90E0);display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Bricolage Grotesque'">{{ userInitial }}</div>
-      <div style="min-width:0">
-        <div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ displayName }}</div>
-        <div style="font-size:11px;color:#6f6f78">Illumineer</div>
-      </div>
+    <div class="rail-user" style="position:relative">
+      <sc-if value="{{ profileMenuOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;bottom:calc(100% + 8px);left:0;right:0;background:#16111e;border:1px solid rgba(199,154,68,.2);border-radius:14px;padding:7px;box-shadow:0 18px 44px rgba(0,0,0,.6);animation:ink-pop .16s both">
+          <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#7c7c85;padding:6px 9px 4px">Switch profile</div>
+          <sc-for list="{{ profiles }}" as="p">
+            <button onClick="{{ p._pick }}" style="{{ p._style }}">
+              <span style="width:26px;height:26px;border-radius:50%;background:{{ p.avatar }};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#0a0a0c;flex-shrink:0">{{ p.initial }}</span>
+              <span style="flex:1;text-align:left;font-size:13px">{{ p.name }}</span>
+              <sc-if value="{{ p.active }}" hint-placeholder-val="{{ false }}"><span style="color:#e0c15a;font-size:13px">✓</span></sc-if>
+            </button>
+          </sc-for>
+          <div style="height:1px;background:rgba(255,255,255,.08);margin:6px 4px"></div>
+          <button onClick="{{ openSettings }}" style="width:100%;display:flex;align-items:center;gap:8px;padding:8px 9px;border-radius:9px;background:none;border:none;color:#c8c8cc;cursor:pointer;font-size:13px" style-hover="background:rgba(255,255,255,.05)"><span>⚙</span> Backup & settings</button>
+        </div>
+      </sc-if>
+      <button onClick="{{ toggleProfileMenu }}" style="width:100%;display:flex;align-items:center;gap:11px;padding:12px 10px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(199,154,68,.14);cursor:pointer" style-hover="border-color:rgba(199,154,68,.3)">
+        <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#c79a44,#8a6a2c);display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Bricolage Grotesque';color:#0a0a0c">{{ userInitial }}</div>
+        <div style="min-width:0;flex:1;text-align:left">
+          <div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#f3f3f5">{{ displayName }}</div>
+          <div style="font-size:11px;color:#b89a5e">@{{ activeUser }}</div>
+        </div>
+        <span style="color:#7c7c85;font-size:10px">▲</span>
+      </button>
     </div>
   </aside>
 
@@ -111,6 +128,31 @@
 
         <!-- ================= OVERVIEW ================= -->
         <sc-if value="{{ isOverview }}" hint-placeholder-val="{{ true }}">
+        <sc-if value="{{ onboarding }}" hint-placeholder-val="{{ false }}">
+          <div class="ink-view" style="max-width:760px;margin:0 auto;text-align:center;padding:40px 20px 20px;animation:ink-fade .35s both">
+            <img src="ink/logo.svg" alt="" style="width:96px;height:96px;margin:0 auto 22px;display:block;filter:drop-shadow(0 10px 30px rgba(199,154,68,.35))" />
+            <h2 style="font-family:'Cinzel Decorative',serif;font-weight:700;font-size:30px;background:linear-gradient(180deg,#f9ecc4,#d4af5a);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:12px">Welcome, {{ displayName }}</h2>
+            <p style="font-size:15px;color:#9a93ad;line-height:1.6;max-width:520px;margin:0 auto 30px">Your codex is empty. Import your collection from Dreamborn, or start building a deck — everything is tracked privately in your profile.</p>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;text-align:left">
+              <button onClick="{{ obImport }}" style="padding:20px;border-radius:16px;background:linear-gradient(160deg,rgba(232,200,119,.1),rgba(199,154,68,.04));border:1px solid rgba(199,154,68,.25);cursor:pointer;color:#f3f3f5" style-hover="border-color:rgba(199,154,68,.5)">
+                <div style="font-size:22px;margin-bottom:10px">📥</div>
+                <div style="font-family:'Bricolage Grotesque';font-weight:700;font-size:16px;margin-bottom:5px">Import collection</div>
+                <div style="font-size:13px;color:#9a93ad;line-height:1.5">Upload a Dreamborn CSV to fill your collection in seconds.</div>
+              </button>
+              <button onClick="{{ obBrowse }}" style="padding:20px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);cursor:pointer;color:#f3f3f5" style-hover="border-color:rgba(255,255,255,.2)">
+                <div style="font-size:22px;margin-bottom:10px">🔍</div>
+                <div style="font-family:'Bricolage Grotesque';font-weight:700;font-size:16px;margin-bottom:5px">Browse all cards</div>
+                <div style="font-size:13px;color:#9a93ad;line-height:1.5">Explore 3,400+ cards and mark the ones you own.</div>
+              </button>
+              <button onClick="{{ obDeck }}" style="padding:20px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);cursor:pointer;color:#f3f3f5" style-hover="border-color:rgba(255,255,255,.2)">
+                <div style="font-size:22px;margin-bottom:10px">🃏</div>
+                <div style="font-family:'Bricolage Grotesque';font-weight:700;font-size:16px;margin-bottom:5px">Build a deck</div>
+                <div style="font-size:13px;color:#9a93ad;line-height:1.5">Create or import a decklist and get instant analytics.</div>
+              </button>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ showOverview }}" hint-placeholder-val="{{ true }}">
         <div class="ink-view" style="max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:22px">
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px">
             <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
@@ -199,6 +241,7 @@
             </div>
           </div>
         </div>
+        </sc-if>
         </sc-if>
 
         <!-- ================= COLLECTION ================= -->
@@ -877,6 +920,62 @@
     </div>
   </sc-if>
 
+  <sc-if value="{{ settingsOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeSettings }}" style="position:fixed;inset:0;z-index:120;background:rgba(5,5,7,.72);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:24px;animation:ink-fade .2s both">
+      <div onClick="{{ stop }}" class="ink-sc" style="width:min(520px,100%);max-height:88vh;overflow-y:auto;background:#141019;border:1px solid rgba(199,154,68,.2);border-radius:20px;padding:26px 26px 24px;animation:ink-pop .26s both">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
+          <div>
+            <h2 style="font-family:'Cinzel Decorative',serif;font-weight:700;font-size:20px;background:linear-gradient(180deg,#f9ecc4,#d4af5a);-webkit-background-clip:text;background-clip:text;color:transparent">Backup & Settings</h2>
+            <div style="font-size:12.5px;color:#8a8a92;margin-top:3px">Profile · {{ displayName }} (@{{ activeUser }})</div>
+          </div>
+          <button onClick="{{ closeSettings }}" style="background:rgba(255,255,255,.06);border:none;color:#c8c8cc;width:30px;height:30px;border-radius:9px;cursor:pointer;font-size:16px">×</button>
+        </div>
+
+        <div style="padding:16px;border-radius:14px;background:rgba(232,200,119,.06);border:1px solid rgba(199,154,68,.18);margin-bottom:16px">
+          <div style="display:flex;align-items:flex-start;gap:10px">
+            <span style="font-size:16px">⚠</span>
+            <div style="font-size:12.5px;color:#d8cfa8;line-height:1.5">Your data lives only in this browser. Download a backup regularly — clearing browser data erases your collection, decks and games.</div>
+          </div>
+        </div>
+
+        <div style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#8a8a92;margin-bottom:10px">Full profile backup</div>
+        <div style="display:flex;gap:10px;margin-bottom:6px">
+          <button onClick="{{ fullExport }}" style="flex:1;padding:11px;border-radius:11px;background:linear-gradient(180deg,#f4dd9a,#c79a44);border:none;color:#2a2118;font-weight:700;cursor:pointer;font-size:13.5px">↓ Download backup (.json)</button>
+          <button onClick="{{ triggerFullImport }}" style="flex:1;padding:11px;border-radius:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#e8e8ec;cursor:pointer;font-size:13.5px">↑ Restore backup</button>
+          <input type="file" accept=".json" ref="{{ setFimpRef }}" onChange="{{ fullImport }}" style="display:none" />
+        </div>
+        <div style="font-size:11.5px;color:#7c7c85;font-family:'JetBrains Mono';margin-bottom:20px">{{ backupLabel }}</div>
+
+        <div style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#8a8a92;margin-bottom:10px">Collection (CSV)</div>
+        <div style="display:flex;gap:10px;margin-bottom:20px">
+          <button onClick="{{ exportCollection }}" style="flex:1;padding:10px;border-radius:11px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#d8d8dc;cursor:pointer;font-size:13px">Export collection CSV</button>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <span style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#8a8a92">Your data corrections</span>
+          <span style="font-size:12px;color:#a8a8b0;font-family:'JetBrains Mono'">{{ correctionCount }}</span>
+        </div>
+        <sc-if value="{{ hasCorrections }}" hint-placeholder-val="{{ false }}">
+          <div class="ink-sc" style="max-height:150px;overflow-y:auto;border-radius:11px;border:1px solid rgba(255,255,255,.08);margin-bottom:10px">
+            <sc-for list="{{ corrections }}" as="c">
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.04);font-size:12.5px">
+                <span style="color:#e2e2e6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.name }}</span>
+                <span style="color:{{ c.valColor }};font-weight:600;flex-shrink:0;margin-left:10px">{{ c.val }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;gap:10px">
+            <button onClick="{{ exportOverrides }}" style="flex:1;padding:9px;border-radius:10px;background:rgba(46,144,224,.14);border:1px solid rgba(46,144,224,.3);color:#7ac0ff;cursor:pointer;font-size:12.5px">Export corrections CSV</button>
+            <button onClick="{{ clearCorrections }}" style="padding:9px 14px;border-radius:10px;background:rgba(226,59,78,.12);border:1px solid rgba(226,59,78,.3);color:#ff8a96;cursor:pointer;font-size:12.5px">Clear</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ noCorrections }}" hint-placeholder-val="{{ true }}">
+          <div style="font-size:12.5px;color:#6f6f78;padding:4px 0">No inkable/art corrections yet. Edit a card to add one.</div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
   <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;bottom:28px;left:50%;transform:translateX(-50%);z-index:200;padding:12px 22px;border-radius:13px;background:#1c1c22;border:1px solid rgba(255,255,255,.14);box-shadow:0 12px 40px rgba(0,0,0,.5);font-size:14px;font-weight:500;animation:ink-pop .25s both">{{ toast }}</div>
   </sc-if>
@@ -895,8 +994,11 @@ class Component extends DCLogic {
     newDeckOpen: false, newDeckName: '', newDeckInks: [], newDeckFmt: 'core',
     importDeckOpen: false, importDeckName: '', importDeckText: '', importDeckFmt: 'core',
     collection: {}, decks: [], matches: [], overrides: {}, displayName: 'Illumineer',
+    activeUser: 'luiscredie', profileMenuOpen: false, settingsOpen: false, lastSaved: null,
     toast: null,
   };
+
+  USERS = [ {id:'luiscredie', name:'Luis', seed:'users/luis.json'}, {id:'thaiscredie', name:'Thais', seed:null} ];
 
   INK = { Amber:'#F2B33D', Amethyst:'#9B72CF', Emerald:'#37B36B', Ruby:'#E23B4E', Sapphire:'#2E90E0', Steel:'#8C97A8' };
   INK_ORDER = ['Amber','Amethyst','Emerald','Ruby','Sapphire','Steel'];
@@ -910,24 +1012,37 @@ class Component extends DCLogic {
 
   async componentDidMount() {
     try {
-      const [cardsRes, userRes] = await Promise.all([ fetch('cards.json'), fetch('users/luis.json') ]);
+      const cardsRes = await fetch('cards.json');
       const cardsData = await cardsRes.json();
       this.cards = cardsData.cards.filter(c => c.card_type && c.card_type !== 'Token' && c.name_en);
       this.base = cardsData.image_base_path || 'images/';
       this.byId = {}; for (const c of this.cards) this.byId[c.card_id] = c;
       this.setMap = {}; for (const s of cardsData.sets) this.setMap[s.code] = s.name_en;
       try { const pr = await fetch('prices.json'); if (pr.ok) { const pj = await pr.json(); this.prices = this.normalizePrices(pj); this.priceSource = pj.source || ''; } } catch(e) { this.prices = {}; }
-      let user = await userRes.json();
-      const saved = this.loadLocal();
-      if (saved) user = { ...user, ...saved };
-      this.setState({ loading:false, ready:true,
-        collection: user.collection||{}, decks: user.decks||[], matches: user.matches||[], overrides: user.overrides||{},
-        displayName: user.display_name || user.user || 'Illumineer' });
+      let active = 'luiscredie';
+      try { const a = localStorage.getItem('inkwell_active_user'); if (a && this.USERS.some(u=>u.id===a)) active = a; } catch(e){}
+      const data = await this.loadUser(active);
+      this.setState({ loading:false, ready:true, activeUser:active, ...data });
     } catch(e) { console.error(e); this.setState({ loading:false, ready:true }); }
   }
 
-  loadLocal(){ try { const s = localStorage.getItem('inkwell_user_luis'); return s?JSON.parse(s):null; } catch(e){ return null; } }
-  saveLocal(){ try { localStorage.setItem('inkwell_user_luis', JSON.stringify({ collection:this.state.collection, decks:this.state.decks, matches:this.state.matches, display_name:this.state.displayName, overrides:this.state.overrides })); } catch(e){} }
+  async loadUser(id){
+    const meta = this.USERS.find(u=>u.id===id) || {id, name:id};
+    let user = null;
+    try { const s = localStorage.getItem('inkwell_user_'+id); if (s) user = JSON.parse(s); } catch(e){}
+    if (!user && meta.seed) { try { const r = await fetch(meta.seed); if (r.ok) user = await r.json(); } catch(e){} }
+    user = user || {};
+    return { collection:user.collection||{}, decks:user.decks||[], matches:user.matches||[], overrides:user.overrides||{}, displayName: meta.name || user.display_name || user.user || id };
+  }
+
+  switchUser = (id)=>{ if(id===this.state.activeUser){ this.setState({profileMenuOpen:false}); return; } this.saveLocal(); this.loadUser(id).then(data=>{ try{ localStorage.setItem('inkwell_active_user', id); }catch(e){} this.setState({ activeUser:id, profileMenuOpen:false, view:'overview', selectedDeck:null, selectedCard:null, ...data }, ()=>this.showToast('Switched to '+data.displayName)); }); };
+
+  loadLocal(){ try { const s = localStorage.getItem('inkwell_user_'+this.state.activeUser); return s?JSON.parse(s):null; } catch(e){ return null; } }
+  saveLocal(){ try { const payload = JSON.stringify({ collection:this.state.collection, decks:this.state.decks, matches:this.state.matches, display_name:this.state.displayName, overrides:this.state.overrides }); const key='inkwell_user_'+this.state.activeUser; localStorage.setItem(key, payload); localStorage.setItem('inkwell_backup_'+this.state.activeUser, JSON.stringify({ ts:Date.now(), data:payload })); this.setState({lastSaved:Date.now()}); } catch(e){} }
+  fullExport = ()=>{ const payload={ schema:'inkwell', user:this.state.activeUser, display_name:this.state.displayName, exported_at:new Date().toISOString(), collection:this.state.collection, decks:this.state.decks, matches:this.state.matches, overrides:this.state.overrides }; const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='inkwell-'+this.state.activeUser+'-backup.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); this.showToast('Backup downloaded'); };
+  triggerFullImport = ()=>{ if(this._fimp) this._fimp.click(); };
+  fullImport = (e)=>{ const file=e.target&&e.target.files&&e.target.files[0]; if(!file) return; const rd=new FileReader(); rd.onload=()=>{ try{ const j=JSON.parse(String(rd.result)); this.setState({ collection:j.collection||{}, decks:j.decks||[], matches:j.matches||[], overrides:j.overrides||{} }, ()=>{ this.saveLocal(); this.showToast('Backup restored'); }); }catch(err){ this.showToast('Invalid backup file'); } }; rd.readAsText(file); e.target.value=''; };
+  setFimpRef = (el)=>{ this._fimp=el; };
   inkableOf(card){ if(!card) return null; const o=this.state.overrides&&this.state.overrides[card.card_id]; if(o&&typeof o.inkable==='number') return o.inkable; return (typeof card.inkable==='number')?card.inkable:null; }
   setInkable(cardId, val){ const ov={...(this.state.overrides||{})}; const card=this.byId[cardId]; if(card && card.inkable===val){ if(ov[cardId]){ delete ov[cardId].inkable; if(!Object.keys(ov[cardId]).length) delete ov[cardId]; } } else { ov[cardId]={...(ov[cardId]||{}),inkable:val}; } this.setState({overrides:ov},()=>{ this.saveLocal(); this.showToast(val===1?'Marked inkable':'Marked uninkable'); }); }
   exportOverrides = ()=>{ const ov=this.state.overrides||{}; const rows=[['card_id','name','inkable']]; for(const id in ov){ if(typeof ov[id].inkable==='number'){ const c=this.byId[id]; rows.push([id,'"'+((c&&c.name_en)||'').replace(/"/g,'""')+'"',ov[id].inkable]); } } if(rows.length<2){ this.showToast('No corrections to export'); return; } const csv=rows.map(r=>r.join(',')).join('\n'); const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='inkwell-inkable-corrections.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); this.showToast('Corrections exported ('+(rows.length-1)+')'); };
@@ -1188,6 +1303,19 @@ class Component extends DCLogic {
     const st=this.state; const V={};
     V.loading=false; V.ready=true; V.toast=st.toast; V.displayName=st.displayName;
     V.userInitial=(st.displayName||'I').charAt(0).toUpperCase(); V.accent='#b79bff';
+    V.activeUser=st.activeUser;
+    V.profileMenuOpen=st.profileMenuOpen; V.toggleProfileMenu=()=>this.setState({profileMenuOpen:!st.profileMenuOpen});
+    V.profiles=this.USERS.map(u=>({ name:u.name, initial:(u.name||u.id).charAt(0).toUpperCase(), avatar:u.id===st.activeUser?'linear-gradient(135deg,#c79a44,#8a6a2c)':'linear-gradient(135deg,#9B72CF,#2E90E0)', active:u.id===st.activeUser, _pick:()=>this.switchUser(u.id), _style:'width:100%;display:flex;align-items:center;gap:10px;padding:8px 9px;border-radius:9px;background:'+(u.id===st.activeUser?'rgba(199,154,68,.1)':'none')+';border:none;color:#e2e2e6;cursor:pointer' }));
+    V.openSettings=()=>this.setState({settingsOpen:true,profileMenuOpen:false});
+    V.closeSettings=()=>this.setState({settingsOpen:false});
+    V.settingsOpen=st.settingsOpen;
+    V.fullExport=this.fullExport; V.triggerFullImport=this.triggerFullImport; V.fullImport=this.fullImport; V.setFimpRef=this.setFimpRef;
+    V.exportCollection=this.exportCollection; V.exportOverrides=this.exportOverrides;
+    V.lastSavedLabel=st.lastSaved?('Saved '+new Date(st.lastSaved).toLocaleTimeString()):'Auto-saves to this browser';
+    { let bts=null; try{ const b=localStorage.getItem('inkwell_backup_'+st.activeUser); if(b) bts=JSON.parse(b).ts; }catch(e){} V.backupLabel=bts?('Last snapshot '+new Date(bts).toLocaleString()):'No snapshot yet'; }
+    const corr=Object.entries(st.overrides||{}).filter(([id,o])=>o&&typeof o.inkable==='number').map(([id,o])=>{ const c=this.byId[id]; return {name:(c&&c.name_en)||id, val:o.inkable===1?'Inkable':'Uninkable', valColor:o.inkable===1?'#5fd07f':'#ff7a86'}; });
+    V.corrections=corr; V.correctionCount=corr.length; V.hasCorrections=corr.length>0; V.noCorrections=corr.length===0;
+    V.clearCorrections=()=>{ this.setState({overrides:{}},()=>{ this.saveLocal(); this.showToast('Corrections cleared'); }); };
     V.nav=[
       {key:'overview',label:'Overview',_go:this.go('overview'),_style:this.navStyle('overview'),_icon:this.icon('overview')},
       {key:'collection',label:'Collection',_go:this.go('collection'),_style:this.navStyle('collection'),_icon:this.icon('collection')},
@@ -1197,6 +1325,12 @@ class Component extends DCLogic {
     const titles={overview:['Overview',`Welcome back, ${st.displayName}`],collection:['Collection','Every card in the multiverse — yours highlighted'],prices:['Price Watch','Market values across your collection'],decks:['Decks','Your archived builds & analytics'],deckDetail:['Deck Analytics','']};
     const t=titles[st.view]||titles.overview; V.pageTitle=t[0]; V.pageSub=t[1];
     V.isOverview=st.view==='overview'; V.isCollection=st.view==='collection'; V.isPrices=st.view==='prices'; V.isDecks=st.view==='decks'; V.isDeckDetail=st.view==='deckDetail';
+    const isEmpty=Object.keys(st.collection).length===0 && st.decks.length===0;
+    V.onboarding=st.view==='overview' && isEmpty;
+    V.showOverview=st.view==='overview' && !isEmpty;
+    V.obImport=()=>this.setState({view:'collection',collMode:'all',page:0},()=>{ setTimeout(()=>this.triggerImport&&this.triggerImport(),120); });
+    V.obBrowse=()=>this.setState({view:'collection',collMode:'all',page:0});
+    V.obDeck=()=>this.setState({view:'decks',newDeckOpen:true});
     V.q=st.q; V.onSearch=(e)=>this.setState({q:e.target.value,page:0,view:(st.view==='overview'||st.view==='decks'||st.view==='deckDetail')?'collection':st.view});
     V.imgError=window.imgError||this.imgError; V.stop=this.stop;
 
