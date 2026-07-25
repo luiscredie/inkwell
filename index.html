@@ -49,7 +49,9 @@
     .ink-card-modal{grid-template-columns:1fr!important;max-height:92vh!important}
     .ink-card-modal > div:first-child{max-height:34vh!important;min-height:180px!important}
     .ink-card-modal > div:last-child{padding:20px 18px!important}
+    .ink-mobile-profile{display:flex!important}
   }
+  .ink-mobile-profile{display:none}
 </style>
 <script>
   window.imgError = function(e){ var el=e.target; var rem=(el.dataset&&el.dataset.remote)||''; if(rem && rem.indexOf('{{')<0 && el.src!==rem){ el.src=rem; } else { el.style.display='none'; var ph=el.parentElement&&el.parentElement.querySelector('[data-ph]'); if(ph) ph.style.display='flex'; } };
@@ -110,14 +112,47 @@
       </div>
     </sc-if>
 
+    <sc-if value="{{ dataFatal }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;min-height:100vh;padding:30px;text-align:center">
+        <div style="width:52px;height:52px;border-radius:14px;background:rgba(226,59,78,.12);border:1px solid rgba(226,59,78,.35);display:flex;align-items:center;justify-content:center;font-size:26px">⚠</div>
+        <h2 style="font-family:'Cinzel Decorative',serif;font-weight:700;font-size:22px;color:#ff9aa4">Data could not be loaded</h2>
+        <p style="max-width:460px;color:#c8c0d0;font-size:14px;line-height:1.6">{{ dataFatal }}</p>
+        <button onClick="{{ reloadApp }}" style="margin-top:6px;padding:10px 20px;border-radius:11px;background:linear-gradient(180deg,#f4dd9a,#c79a44);border:none;color:#2a2118;font-weight:700;cursor:pointer">Reload</button>
+      </div>
+    </sc-if>
+
     <sc-if value="{{ ready }}" hint-placeholder-val="{{ false }}">
     <div style="display:flex;flex-direction:column;min-height:100vh">
+      <sc-if value="{{ dataWarning }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 18px;background:rgba(230,193,90,.1);border-bottom:1px solid rgba(230,193,90,.25);color:#e6c15a;font-size:12.5px">
+          <span>⚠</span><span style="flex:1">{{ dataWarning }}</span>
+          <button onClick="{{ dismissWarning }}" style="background:none;border:none;color:#e6c15a;cursor:pointer;font-size:15px;line-height:1">×</button>
+        </div>
+      </sc-if>
       <header style="position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:16px;padding:18px 30px;background:rgba(11,9,16,.82);backdrop-filter:blur(16px);border-bottom:1px solid rgba(199,154,68,.12)">
         <div style="min-width:0;flex-shrink:0">
           <h1 style="font-family:'Cinzel Decorative','Bricolage Grotesque',serif;font-weight:700;font-size:23px;letter-spacing:.4px;line-height:1.1;background:linear-gradient(180deg,#f9ecc4,#d4af5a);-webkit-background-clip:text;background-clip:text;color:transparent">{{ pageTitle }}</h1>
           <div style="font-size:12.5px;color:#7c7c85;margin-top:2px">{{ pageSub }}</div>
         </div>
         <div style="flex:1"></div>
+        <div class="ink-mobile-profile" style="position:relative;align-items:center">
+          <button onClick="{{ toggleProfileMenu }}" aria-haspopup="menu" aria-expanded="{{ profileMenuExpanded }}" aria-label="{{ profileMenuAria }}" title="{{ displayName }}" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#c79a44,#8a6a2c);display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Bricolage Grotesque';color:#0a0a0c;border:1px solid rgba(199,154,68,.3);cursor:pointer;font-size:15px">{{ userInitial }}</button>
+          <sc-if value="{{ profileMenuOpen }}" hint-placeholder-val="{{ false }}">
+            <div onClick="{{ closeProfileMenu }}" style="position:fixed;inset:0;z-index:60;background:rgba(5,5,7,.4)"></div>
+            <div role="menu" aria-label="{{ profileMenuAria }}" onKeyDown="{{ onProfileMenuKey }}" style="position:absolute;top:calc(100% + 8px);right:0;z-index:70;width:230px;background:#16111e;border:1px solid rgba(199,154,68,.2);border-radius:14px;padding:7px;box-shadow:0 18px 44px rgba(0,0,0,.6);animation:ink-pop .16s both">
+              <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#7c7c85;padding:6px 9px 4px">{{ switchProfileLabel }}</div>
+              <sc-for list="{{ profiles }}" as="p">
+                <button role="menuitem" onClick="{{ p._pick }}" style="{{ p._style }}">
+                  <span style="width:26px;height:26px;border-radius:50%;background:{{ p.avatar }};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#0a0a0c;flex-shrink:0">{{ p.initial }}</span>
+                  <span style="flex:1;text-align:left;font-size:13px">{{ p.name }}</span>
+                  <sc-if value="{{ p.active }}" hint-placeholder-val="{{ false }}"><span style="color:#e0c15a;font-size:13px">✓</span></sc-if>
+                </button>
+              </sc-for>
+              <div style="height:1px;background:rgba(255,255,255,.08);margin:6px 4px"></div>
+              <button role="menuitem" onClick="{{ openSettings }}" style="width:100%;display:flex;align-items:center;gap:8px;padding:8px 9px;border-radius:9px;background:none;border:none;color:#c8c8cc;cursor:pointer;font-size:13px" style-hover="background:rgba(255,255,255,.05)"><span>⚙</span> {{ backupSettingsLabel }}</button>
+            </div>
+          </sc-if>
+        </div>
         <div style="display:flex;align-items:center;gap:2px;padding:3px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);margin-right:12px">
           <button onClick="{{ setLangEn }}" style="{{ langEnStyle }}">EN</button>
           <button onClick="{{ setLangPt }}" style="{{ langPtStyle }}">PT</button>
@@ -991,7 +1026,7 @@
 <script type="text/x-dc" data-dc-script data-props="{&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#b79bff&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Theme&quot;}}">
 class Component extends DCLogic {
   state = {
-    loading: true, ready: false, view: 'overview',
+    loading: true, ready: false, dataFatal: null, dataWarning: null, view: 'overview',
     q: '', inks: [], types: [], sets: [], setMenuOpen: false, sort: 'value', collMode: 'owned', inkable: 'all', cost: 'all', page: 0,
     priceOwnedOnly: true,
     selectedCard: null, selectedDeck: null,
@@ -1063,39 +1098,138 @@ class Component extends DCLogic {
   prices = {};
   priceSource = '';
 
+  // ---------- M1: data contract (see DATA_CONTRACT.md) ----------
+  APP_VERSION = '1.4.0';
+  SUPPORTED = { manifest:[1], cards:[3], cards_pt:[1], prices:[2], aliases:[1], validation:[1] };
+  LEGACY = { cards:2, prices:1 };            // pre-contract files still deployed today
+  dataRoot = '';                              // dir of data-manifest.json (paths resolve here)
+  aliases = null; validationReport = null; ptOverlay = null; manifestMode = false;
+
+  semverGte(a,b){ const pa=String(a).split('.').map(Number), pb=String(b).split('.').map(Number); for(let i=0;i<3;i++){ const x=pa[i]||0,y=pb[i]||0; if(x>y)return true; if(x<y)return false; } return true; }
+  supports(type, v){ const s=this.SUPPORTED[type]; return Array.isArray(s) && s.indexOf(v)>=0; }
+  resolvePath(dir, p){ if(typeof p!=='string'||!p) throw new Error('bad path'); if(p.indexOf('..')>=0 || /^([a-z]+:)?\//i.test(p)) throw new Error('unsafe path: '+p); return (dir||'') + p; }
+  async fetchJson(url){ const r=await fetch(url,{cache:'no-cache'}); if(!r.ok) return {ok:false,status:r.status}; try{ return {ok:true, data:await r.json(), text:null}; }catch(e){ return {ok:false, status:'parse'}; } }
+
   async componentDidMount() {
-    try {
-      const cardsRes = await fetch('cards.json');
-      const cardsData = await cardsRes.json();
-      this.cards = cardsData.cards.filter(c => c.card_type && c.card_type !== 'Token' && c.name_en);
-      this.base = cardsData.image_base_path || 'images/';
-      this.byId = {}; for (const c of this.cards) this.byId[c.card_id] = c;
-      this.setMap = {}; for (const s of cardsData.sets) this.setMap[s.code] = s.name_en;
-      try { const pr = await fetch('prices.json'); if (pr.ok) { const pj = await pr.json(); this.prices = this.normalizePrices(pj); this.priceSource = pj.source || ''; } } catch(e) { this.prices = {}; }
-      let active = 'luiscredie';
-      try { const a = localStorage.getItem('inkwell_active_user'); if (a && this.USERS.some(u=>u.id===a)) active = a; } catch(e){}
-      let lang='en'; try { const l=localStorage.getItem('inkwell_lang'); if(l==='pt'||l==='en') lang=l; } catch(e){}
-      const data = await this.loadUser(active);
-      this.setState({ loading:false, ready:true, activeUser:active, lang, ...data });
-    } catch(e) { console.error(e); this.setState({ loading:false, ready:true }); }
+    let boot;
+    try { boot = await this.bootData(); }
+    catch(e){ console.error(e); this.setState({ loading:false, ready:false, dataFatal:'Failed to load data: '+(e&&e.message||e) }); return; }
+    if (boot.fatal) { this.setState({ loading:false, ready:false, dataFatal:boot.fatal }); return; }
+    this.cards = boot.cards.filter(c => c.card_type && c.card_type !== 'Token' && c.name_en);
+    this.base = boot.image_base_path || 'images/';
+    this.byId = {}; for (const c of this.cards) this.byId[c.card_id] = c;
+    this.setMap = {}; for (const s of (boot.sets||[])) this.setMap[s.code] = s.name_en;
+    this.prices = boot.prices || {}; this.priceSource = boot.priceSource || '';
+    this.aliases = boot.aliases || null; this.validationReport = boot.validation || null;
+    let active = 'luiscredie';
+    try { const a = localStorage.getItem('inkwell_active_user'); if (a && this.USERS.some(u=>u.id===a)) active = a; } catch(e){}
+    let lang='en'; try { const l=localStorage.getItem('inkwell_lang'); if(l==='pt'||l==='en') lang=l; } catch(e){}
+    const data = await this.loadUser(active);
+    this.setState({ loading:false, ready:true, activeUser:active, lang, dataWarning:data.userDataWarning||boot.warning||null, ...data });
+    if (boot.hashJobs && boot.hashJobs.length) this.verifyHashes(boot.hashJobs);
   }
+
+  async bootData(){
+    const man = await this.fetchJson('data-manifest.json');
+    if (!man.ok) return await this.bootLegacy();          // pipeline manifest not deployed yet
+    const m = man.data; this.manifestMode = true;
+    if (!this.supports('manifest', m.manifest_version)) return { fatal:'Unsupported data manifest (v'+m.manifest_version+'). Update the app.' };
+    if (m.min_app_version && !this.semverGte(this.APP_VERSION, m.min_app_version)) return { fatal:'This data requires app '+m.min_app_version+' or newer (you have '+this.APP_VERSION+'). Please update Inkwell.' };
+    const files = m.files || {}; const schema = m.schema || {}; const dir = '';  // manifest lives at root of its own dir
+    const hashJobs = [];
+    // cards (required)
+    if (!files.cards) return { fatal:'Manifest missing required "cards" artifact.' };
+    const cRes = await this.loadArtifact('cards', files.cards, schema.cards, dir, hashJobs, true);
+    if (cRes.fatal) return { fatal:cRes.fatal };
+    // prices (required for the app to be useful; block if declared but broken)
+    let prices={}, priceSource='', warning=null;
+    if (files.prices){
+      const pRes = await this.loadArtifact('prices', files.prices, schema.prices, dir, hashJobs, true);
+      if (pRes.fatal) return { fatal:pRes.fatal };
+      const norm = this.priceMap(pRes.data);
+      if (norm.error) return { fatal:'Prices file is in raw pipeline format — the app expects the compact prices schema. Re-run the pipeline export.' };
+      prices = norm.map; priceSource = pRes.data.source||'';
+    } else { warning = 'No prices artifact in manifest.'; }
+    // optional artifacts
+    let aliases=null, validation=null, ptOverlay=null;
+    if (files.aliases){ const a=await this.loadArtifact('aliases', files.aliases, schema.aliases, dir, hashJobs, false); if(!a.fatal && a.data) aliases=a.data; }
+    if (files.validation){ const v=await this.loadArtifact('validation', files.validation, schema.validation, dir, hashJobs, false); if(!v.fatal && v.data) validation=v.data; }
+    if (files.cards_pt){ const p=await this.loadArtifact('cards_pt', files.cards_pt, schema.cards_pt, dir, hashJobs, false); if(!p.fatal && p.data){ ptOverlay=p.data; this.ptOverlay=p.data; } }
+    return { cards:cRes.data.cards||[], sets:cRes.data.sets||[], image_base_path:cRes.data.image_base_path, prices, priceSource, aliases, validation, warning, hashJobs };
+  }
+
+  async loadArtifact(type, entry, manifestSchema, dir, hashJobs, required){
+    let url; try { url = this.resolvePath(dir, entry.path); } catch(e){ return required?{fatal:'Unsafe path for '+type+' artifact.'}:{}; }
+    const res = await this.fetchJson(url);
+    if (!res.ok){ return required?{fatal:'Could not load required "'+type+'" artifact ('+url+').'}:{}; }
+    const data = res.data;
+    // self-describing check: artifact.schema_version must equal manifest.schema[type]
+    if (typeof manifestSchema==='number' && data.schema_version !== manifestSchema){ const msg='Deployment mismatch: '+type+'.json is v'+data.schema_version+' but manifest expects v'+manifestSchema+'. Redeploy data.'; return required?{fatal:msg}:{}; }
+    if (!this.supports(type, data.schema_version)){ const msg='Unsupported '+type+' schema v'+data.schema_version+'. Update the app.'; return required?{fatal:msg}:{}; }
+    if (entry.sha256) hashJobs.push({ url, expected:entry.sha256, type });
+    return { data };
+  }
+
+  async bootLegacy(){
+    this.manifestMode = false;
+    const c = await this.fetchJson('cards.json');
+    if (!c.ok || !c.data || !Array.isArray(c.data.cards)) return { fatal:'Could not load cards.json.' };
+    let prices={}, priceSource='', warning='Running without data manifest (legacy mode).';
+    const p = await this.fetchJson('prices.json');
+    if (p.ok && p.data){ const norm=this.priceMap(p.data); if(norm.error){ warning='Prices file is in raw format and was ignored.'; } else { prices=norm.map; priceSource=p.data.source||''; } }
+    return { cards:c.data.cards||[], sets:c.data.sets||[], image_base_path:c.data.image_base_path, prices, priceSource, aliases:null, validation:null, warning, hashJobs:[] };
+  }
+
+  async verifyHashes(jobs){
+    if (!(window.crypto && window.crypto.subtle)) return;
+    for (const job of jobs){
+      try {
+        let ok = await this.hashMatches(job.url, job.expected);
+        if (!ok){ ok = await this.hashMatches(job.url + (job.url.indexOf('?')>=0?'&':'?') + 'v=' + encodeURIComponent(job.expected), job.expected); }
+        if (!ok){ this.setState({ dataWarning:'Data integrity warning: '+job.type+' file did not match its published checksum. It may be cached or out of date.' }); }
+      } catch(e){}
+    }
+  }
+  async hashMatches(url, expected){ const r=await fetch(url,{cache:'reload'}); if(!r.ok) return true; const buf=await r.arrayBuffer(); const dig=await window.crypto.subtle.digest('SHA-256', buf); const hex=Array.from(new Uint8Array(dig)).map(b=>b.toString(16).padStart(2,'0')).join(''); return hex===String(expected).toLowerCase(); }
 
   async loadUser(id){
     const meta = this.USERS.find(u=>u.id===id) || {id, name:id};
     let user = null;
     try { const s = localStorage.getItem('inkwell_user_'+id); if (s) user = JSON.parse(s); } catch(e){}
     if (!user && meta.seed) { try { const r = await fetch(meta.seed); if (r.ok) user = await r.json(); } catch(e){} }
-    user = user || {};
-    return { collection:user.collection||{}, decks:user.decks||[], matches:user.matches||[], overrides:user.overrides||{}, displayName: meta.name || user.display_name || user.user || id };
+    const m = this.migrateUser(user, id);
+    return { collection:m.collection, decks:m.decks, matches:m.matches, overrides:m.overrides, displayName: meta.name || m.display_name || id, userDataWarning:m.warning||null };
   }
 
-  switchUser = (id)=>{ if(id===this.state.activeUser){ this.setState({profileMenuOpen:false}); return; } this.saveLocal(); this.loadUser(id).then(data=>{ try{ localStorage.setItem('inkwell_active_user', id); }catch(e){} this.setState({ activeUser:id, profileMenuOpen:false, view:'overview', selectedDeck:null, selectedCard:null, ...data }, ()=>this.showToast('Switched to '+data.displayName)); }); };
+  // ---------- M2: user-data schema versioning + migrations ----------
+  USER_SCHEMA = 1;
+  USER_MIGRATIONS = {
+    // 0 (unstamped legacy) -> 1: normalize field presence/types
+    0: (d)=>({ _schema:1, collection:(d&&d.collection&&typeof d.collection==='object')?d.collection:{}, decks:Array.isArray(d&&d.decks)?d.decks:[], matches:Array.isArray(d&&d.matches)?d.matches:[], overrides:(d&&d.overrides&&typeof d.overrides==='object')?d.overrides:{}, display_name:(d&&(d.display_name||d.user))||null })
+  };
+  migrateUser(raw, id){
+    let d = (raw && typeof raw==='object') ? {...raw} : {};
+    let v = (typeof d._schema==='number') ? d._schema : 0;
+    let warning = null;
+    if (v > this.USER_SCHEMA){ warning = 'This profile was saved by a newer version of Inkwell. Some fields may be ignored until you update.'; v = this.USER_SCHEMA; }
+    while (v < this.USER_SCHEMA && this.USER_MIGRATIONS[v]){ d = this.USER_MIGRATIONS[v](d); v = d._schema; }
+    d._schema = this.USER_SCHEMA;
+    d.collection = (d.collection && typeof d.collection==='object') ? d.collection : {};
+    d.decks = Array.isArray(d.decks) ? d.decks : [];
+    d.matches = Array.isArray(d.matches) ? d.matches : [];
+    d.overrides = (d.overrides && typeof d.overrides==='object') ? d.overrides : {};
+    d.warning = warning;
+    return d;
+  }
+  userPayload(){ return { _schema:this.USER_SCHEMA, saved_at:new Date().toISOString(), app_version:this.APP_VERSION, collection:this.state.collection, decks:this.state.decks, matches:this.state.matches, overrides:this.state.overrides, display_name:this.state.displayName }; }
 
-  loadLocal(){ try { const s = localStorage.getItem('inkwell_user_'+this.state.activeUser); return s?JSON.parse(s):null; } catch(e){ return null; } }
-  saveLocal(){ try { const payload = JSON.stringify({ collection:this.state.collection, decks:this.state.decks, matches:this.state.matches, display_name:this.state.displayName, overrides:this.state.overrides }); const key='inkwell_user_'+this.state.activeUser; localStorage.setItem(key, payload); localStorage.setItem('inkwell_backup_'+this.state.activeUser, JSON.stringify({ ts:Date.now(), data:payload })); this.setState({lastSaved:Date.now()}); } catch(e){} }
-  fullExport = ()=>{ const payload={ schema:'inkwell', user:this.state.activeUser, display_name:this.state.displayName, exported_at:new Date().toISOString(), collection:this.state.collection, decks:this.state.decks, matches:this.state.matches, overrides:this.state.overrides }; const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='inkwell-'+this.state.activeUser+'-backup.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); this.showToast('Backup downloaded'); };
+  switchUser = (id)=>{ if(id===this.state.activeUser){ this.setState({profileMenuOpen:false}); return; } this.saveLocal(); this.loadUser(id).then(data=>{ try{ localStorage.setItem('inkwell_active_user', id); }catch(e){} this.setState({ activeUser:id, profileMenuOpen:false, view:'overview', selectedDeck:null, selectedCard:null, ...data, dataWarning:data.userDataWarning||this.state.dataWarning }, ()=>this.showToast('Switched to '+data.displayName)); }); };
+
+  loadLocal(){ try { const s = localStorage.getItem('inkwell_user_'+this.state.activeUser); return s?this.migrateUser(JSON.parse(s), this.state.activeUser):null; } catch(e){ return null; } }
+  saveLocal(){ try { const payload = JSON.stringify(this.userPayload()); const key='inkwell_user_'+this.state.activeUser; localStorage.setItem(key, payload); localStorage.setItem('inkwell_backup_'+this.state.activeUser, JSON.stringify({ ts:Date.now(), schema:this.USER_SCHEMA, data:payload })); this.setState({lastSaved:Date.now()}); } catch(e){} }
+  fullExport = ()=>{ const payload={ schema:'inkwell', _schema:this.USER_SCHEMA, app_version:this.APP_VERSION, user:this.state.activeUser, display_name:this.state.displayName, exported_at:new Date().toISOString(), collection:this.state.collection, decks:this.state.decks, matches:this.state.matches, overrides:this.state.overrides }; const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='inkwell-'+this.state.activeUser+'-backup.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); this.showToast('Backup downloaded'); };
   triggerFullImport = ()=>{ if(this._fimp) this._fimp.click(); };
-  fullImport = (e)=>{ const file=e.target&&e.target.files&&e.target.files[0]; if(!file) return; const rd=new FileReader(); rd.onload=()=>{ try{ const j=JSON.parse(String(rd.result)); this.setState({ collection:j.collection||{}, decks:j.decks||[], matches:j.matches||[], overrides:j.overrides||{} }, ()=>{ this.saveLocal(); this.showToast('Backup restored'); }); }catch(err){ this.showToast('Invalid backup file'); } }; rd.readAsText(file); e.target.value=''; };
+  fullImport = (e)=>{ const file=e.target&&e.target.files&&e.target.files[0]; if(!file) return; const rd=new FileReader(); rd.onload=()=>{ try{ const j=this.migrateUser(JSON.parse(String(rd.result)), this.state.activeUser); this.setState({ collection:j.collection, decks:j.decks, matches:j.matches, overrides:j.overrides, dataWarning:j.warning||this.state.dataWarning }, ()=>{ this.saveLocal(); this.showToast('Backup restored'); }); }catch(err){ this.showToast('Invalid backup file'); } }; rd.readAsText(file); e.target.value=''; };
   setFimpRef = (el)=>{ this._fimp=el; };
   inkableOf(card){ if(!card) return null; const o=this.state.overrides&&this.state.overrides[card.card_id]; if(o&&typeof o.inkable==='number') return o.inkable; return (typeof card.inkable==='number')?card.inkable:null; }
   setInkable(cardId, val){ const ov={...(this.state.overrides||{})}; const card=this.byId[cardId]; if(card && card.inkable===val){ if(ov[cardId]){ delete ov[cardId].inkable; if(!Object.keys(ov[cardId]).length) delete ov[cardId]; } } else { ov[cardId]={...(ov[cardId]||{}),inkable:val}; } this.setState({overrides:ov},()=>{ this.saveLocal(); this.showToast(val===1?'Marked inkable':'Marked uninkable'); }); }
@@ -1114,17 +1248,13 @@ class Component extends DCLogic {
 
   hash(str){ let h=2166136261; for(let i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
   rng(seed){ let a=seed>>>0; return ()=>{ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
-  normalizePrices(pj){
-    if(!pj) return {};
-    if(pj.prices) return pj.prices;
-    const src=pj.prices_by_liga_id||pj; const out={};
-    for(const id in src){ const p=src[id]; if(!p||typeof p!=='object') continue;
-      const nn=(p.normal&&(p.normal.average??p.normal.low)!=null)?(p.normal.average??p.normal.low):(p.minimum_price_brl??null);
-      const ff=(p.foil&&(p.foil.average??p.foil.low)!=null)?(p.foil.average??p.foil.low):null;
-      if(nn==null&&ff==null) continue; const e={}; if(nn!=null)e.n=Math.round(nn*100)/100; if(ff!=null)e.f=Math.round(ff*100)/100; out[id]=e;
-    }
-    return out;
+  priceMap(pj){
+    if(!pj) return {map:{}};
+    if(pj.prices && typeof pj.prices==='object') return {map:pj.prices};   // compact canonical
+    if(pj.prices_by_liga_id) return {error:'raw'};                          // must be normalized by pipeline
+    return {map:{}};
   }
+  normalizePrices(pj){ const r=this.priceMap(pj); return r.error?{}:r.map; }
   pd(card){ return (card && this.prices && this.prices[card.card_id]) || null; }
   hasRealPrice(card){ const p=this.pd(card); return !!(p&&(p.n!=null||p.f!=null)); }
   price(card){ const p=this.pd(card); return p&&p.n!=null ? p.n : null; }
@@ -1139,8 +1269,22 @@ class Component extends DCLogic {
   chgColor(v){ return v>0.05?'#5fd07f':v<-0.05?'#ff7a86':'#8a8a92'; }
   wrColor(w){ return w>=55?'#5fd07f':w>=45?'#e6c15a':'#ff7a86'; }
 
+  ptAbilities(card){
+    // Merge PT overlay by ability_id. Fall back to EN for the whole card on any mismatch.
+    const ov = this.ptOverlay && this.ptOverlay.cards && this.ptOverlay.cards[card.card_id];
+    const en = Array.isArray(card.abilities) ? card.abilities : null;
+    if (!ov || !en) return card.abilities_pt || en;   // legacy abilities_pt still honored if present
+    const ovAb = Array.isArray(ov.abilities) ? ov.abilities : [];
+    if (typeof ov.ability_count==='number' && ov.ability_count!==en.length) return en;   // structural drift → EN
+    const byId = {}; for (const a of ovAb){ if(a.ability_id) byId[a.ability_id]=a; }
+    return en.map(a=>{ const t=a.ability_id && byId[a.ability_id]; if(!t) return a; return { ...a, name:t.name!=null?t.name:a.name, text:t.text!=null?t.text:a.text, reminder_text:t.reminder_text!=null?t.reminder_text:a.reminder_text }; });
+  }
   buildAbilities(card){
-    const list=(this.state.lang==='pt' && Array.isArray(card&&card.abilities_pt) && card.abilities_pt.length) ? card.abilities_pt : (card&&card.abilities);
+    let list = card && card.abilities;
+    if (this.state.lang==='pt' && card){
+      if (this.ptOverlay) list = this.ptAbilities(card);
+      else if (Array.isArray(card.abilities_pt) && card.abilities_pt.length) list = card.abilities_pt;   // legacy merged PT
+    }
     if(Array.isArray(list)&&list.length){
       return list.map(a=>{
         let name='',body='';
@@ -1278,6 +1422,11 @@ class Component extends DCLogic {
   nameKey(n){ return String(n||'').toLowerCase().replace(/\s*\(.*?\)\s*/g,'').trim(); }
   buildNameIndex(){ if(this._byName) return; this._byName={}; for(const c of this.cards){ const k=this.nameKey(c.name_en); (this._byName[k]=this._byName[k]||[]).push(c); } }
   resolveCsvCard(setNum, cardNum, name){
+    // Preferred: aliases.json (explicit import only). Falls back to local number/name index.
+    if(this.aliases){
+      if(setNum && cardNum!=null){ const k=parseInt(setNum,10)+'-'+String(cardNum).trim(); const id=this.aliases.by_number&&this.aliases.by_number[k]; if(id && this.byId[id]) return this.byId[id]; }
+      if(name){ const id=this.aliases.by_name&&this.aliases.by_name[String(name).trim()]; if(id && this.byId[id]) return this.byId[id]; }
+    }
     if(setNum){ const code='LOR'+parseInt(setNum,10); const c=this.byNumIdx&&this.byNumIdx[code+'|'+String(cardNum).trim()]; if(c) return c; }
     if(name){ this.buildNameIndex(); const arr=this._byName[this.nameKey(name)]; if(arr&&arr.length){ if(setNum){ const code='LOR'+parseInt(setNum,10); return arr.find(x=>x.set_code===code)||arr[0]; } return arr[0]; } }
     return null;
@@ -1353,12 +1502,17 @@ class Component extends DCLogic {
   openDeck(id){ const d=this.deckById(id); const cols=d?(d.colors||[]).filter(Boolean):[]; this.setState({view:'deckDetail',selectedDeck:id,deckEdit:false,logMatchOpen:false,deckSearch:'',bInks:cols,bCost:'all',bSets:[],bGroup:'none'}); }
 
   renderVals(){
-    if(!this.state.ready){ return { loading:this.state.loading, ready:false, isOverview:false, isCollection:false, isPrices:false, isDecks:false, isDeckDetail:false, cardOpen:false, toast:null }; }
+    if(!this.state.ready){ return { loading:this.state.loading, ready:false, dataFatal:this.state.dataFatal, reloadApp:()=>{ try{ location.reload(); }catch(e){} }, isOverview:false, isCollection:false, isPrices:false, isDecks:false, isDeckDetail:false, cardOpen:false, toast:null }; }
     const st=this.state; const V={};
-    V.loading=false; V.ready=true; V.toast=st.toast; V.displayName=st.displayName;
+    V.loading=false; V.ready=true; V.dataFatal=null; V.toast=st.toast; V.displayName=st.displayName;
+    V.dataWarning=st.dataWarning; V.dismissWarning=()=>this.setState({dataWarning:null}); V.reloadApp=()=>{ try{ location.reload(); }catch(e){} };
     V.userInitial=(st.displayName||'I').charAt(0).toUpperCase(); V.accent='#b79bff';
     V.activeUser=st.activeUser;
     V.profileMenuOpen=st.profileMenuOpen; V.toggleProfileMenu=()=>this.setState({profileMenuOpen:!st.profileMenuOpen});
+    V.closeProfileMenu=()=>this.setState({profileMenuOpen:false});
+    V.profileMenuExpanded=st.profileMenuOpen?'true':'false';
+    V.profileMenuAria=this.t('switchProfile');
+    V.onProfileMenuKey=(e)=>{ if(e.key==='Escape'){ e.stopPropagation(); this.setState({profileMenuOpen:false}); } };
     V.profiles=this.USERS.map(u=>({ name:u.name, initial:(u.name||u.id).charAt(0).toUpperCase(), avatar:u.id===st.activeUser?'linear-gradient(135deg,#c79a44,#8a6a2c)':'linear-gradient(135deg,#9B72CF,#2E90E0)', active:u.id===st.activeUser, _pick:()=>this.switchUser(u.id), _style:'width:100%;display:flex;align-items:center;gap:10px;padding:8px 9px;border-radius:9px;background:'+(u.id===st.activeUser?'rgba(199,154,68,.1)':'none')+';border:none;color:#e2e2e6;cursor:pointer' }));
     V.switchProfileLabel=this.t('switchProfile'); V.backupSettingsLabel=this.t('backupSettings');
     V.openSettings=()=>this.setState({settingsOpen:true,profileMenuOpen:false});
