@@ -684,6 +684,35 @@
         </div>
         </sc-if>
 
+        <!-- ================= LEARN ================= -->
+        <sc-if value="{{ isLearn }}" hint-placeholder-val="{{ false }}">
+        <div class="ink-view" style="max-width:920px;margin:0 auto">
+          <p style="color:#8a8a92;font-size:14px;margin-bottom:20px">{{ learnIntro }}</p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-bottom:26px">
+            <sc-for list="{{ learnTracks }}" as="t" hint-placeholder-count="5">
+              <button onClick="{{ t._open }}" style="text-align:left;background:linear-gradient(160deg,rgba(199,154,68,.1),rgba(255,255,255,.02));border:1px solid rgba(199,154,68,.2);border-radius:16px;padding:18px;cursor:pointer;color:#f3f3f5" style-hover="border-color:rgba(199,154,68,.45)">
+                <div style="font-size:22px;margin-bottom:10px">{{ t.icon }}</div>
+                <div style="font-family:'Bricolage Grotesque';font-weight:700;font-size:16px;margin-bottom:5px">{{ t.title }}</div>
+                <div style="font-size:12.5px;color:#9a93ad;line-height:1.5">{{ t.blurb }}</div>
+                <div style="font-size:11px;color:{{ t.doneColor }};margin-top:10px;font-weight:600">{{ t.doneLabel }}</div>
+              </button>
+            </sc-for>
+          </div>
+          <div style="padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)">
+            <h3 style="font-family:'Bricolage Grotesque';font-weight:700;font-size:15px;margin-bottom:14px">{{ resourcesTitle }}</h3>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <sc-for list="{{ learnResources }}" as="r" hint-placeholder-count="4">
+                <a href="{{ r.url }}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:11px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);text-decoration:none" style-hover="background:rgba(255,255,255,.06)">
+                  <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;background:{{ r.badgeBg }};color:{{ r.badgeColor }};flex-shrink:0">{{ r.badge }}</span>
+                  <span style="flex:1;min-width:0"><span style="display:block;font-size:13.5px;color:#e8e8ec">{{ r.title }}</span><span style="font-size:11.5px;color:#7c7c85">{{ r.desc }}</span></span>
+                  <span style="color:#8ab4ff;font-size:12px">↗</span>
+                </a>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        </sc-if>
+
         <!-- ================= DECK DETAIL ================= -->
         <sc-if value="{{ isDeckDetail }}" hint-placeholder-val="{{ false }}">
         <div class="ink-view" style="max-width:1240px;margin:0 auto">
@@ -1297,6 +1326,26 @@
     </div>
   </sc-if>
 
+  <sc-if value="{{ lessonOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeLesson }}" style="position:fixed;inset:0;z-index:120;background:rgba(5,5,7,.72);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:24px;animation:ink-fade .2s both">
+      <div onClick="{{ stop }}" role="dialog" aria-modal="true" class="ink-sc" style="width:min(600px,100%);max-height:88vh;overflow-y:auto;background:#141019;border:1px solid rgba(199,154,68,.22);border-radius:20px;padding:26px;animation:ink-pop .26s both">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px">
+          <h2 style="font-family:'Bricolage Grotesque';font-weight:800;font-size:20px">{{ lesson.title }}</h2>
+          <button onClick="{{ closeLesson }}" aria-label="Close" style="background:rgba(255,255,255,.06);border:none;color:#c8c8cc;width:30px;height:30px;border-radius:9px;cursor:pointer;font-size:16px;flex-shrink:0">×</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px;margin-top:10px">
+          <sc-for list="{{ lesson.steps }}" as="s" hint-placeholder-count="3">
+            <div>
+              <div style="font-family:'Bricolage Grotesque';font-weight:700;font-size:14px;color:#e0c15a;margin-bottom:4px">{{ s.h }}</div>
+              <div style="font-size:13.5px;line-height:1.6;color:#d2d2d8">{{ s.b }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <button onClick="{{ completeLesson }}" style="margin-top:20px;padding:11px 20px;border-radius:12px;background:linear-gradient(180deg,#f4dd9a,#c79a44);border:none;color:#2a2118;font-weight:800;cursor:pointer;font-size:14px">{{ lessonDoneLabel }}</button>
+      </div>
+    </div>
+  </sc-if>
+
   <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;bottom:28px;left:50%;transform:translateX(-50%);z-index:200;padding:12px 22px;border-radius:13px;background:#1c1c22;border:1px solid rgba(255,255,255,.14);box-shadow:0 12px 40px rgba(0,0,0,.5);font-size:14px;font-weight:500;animation:ink-pop .25s both">{{ toast }}</div>
   </sc-if>
@@ -1314,7 +1363,7 @@ class Component extends DCLogic {
     bInks: [], bCost: 'all', bSets: [], bSetMenu: false, bSort: 'cost-asc', bGroup: 'none', bSize: 5, bOwnedOnly: false,
     newDeckOpen: false, newDeckName: '', newDeckInks: [], newDeckFmt: 'core',
     importDeckOpen: false, importDeckName: '', importDeckText: '', importDeckFmt: 'core',
-    advisorMode: 'all',
+    advisorMode: 'all', lesson: null, learnDone: {},
     collection: {}, decks: [], matches: [], overrides: {}, wishlist: {}, displayName: 'Illumineer',
     activeUser: 'luiscredie', profileMenuOpen: false, settingsOpen: false, lastSaved: null,
     syncEnabled: false, syncStatus: 'off', syncEmail: null, syncUser: null, syncLast: null, syncMsg: null, syncInput: '',
@@ -1325,8 +1374,9 @@ class Component extends DCLogic {
 
   I18N = {
     en: {
-      overview:'Overview', collection:'Collection', prices:'Prices', decks:'Decks', matches:'Matches',
-      sub_matches:'All your logged games',
+      overview:'Overview', collection:'Collection', prices:'Prices', decks:'Decks', matches:'Matches', learn:'Learn',
+      sub_matches:'All your logged games', sub_learn:'Learn to play Lorcana',
+      learnIntro:'Short lessons to go from zero to playing. No collection needed.', resourcesTitle:'Official places to learn & play', lessonStart:'Start →', lessonDone:'✓ Completed', markComplete:'Mark complete', lessonComplete:'Lesson complete',
       sub_overview:'Welcome back, {name}', sub_collection:'Every card in the multiverse — yours highlighted', sub_prices:'Market values across your collection', sub_decks:'Your archived builds & analytics', sub_deck:'Deck Analytics',
       search:'Search 3,400+ cards…', have:'Owned', missing:'Missing', wishlist:'Wishlist', all:'All', allCards:'All cards',
       valueHistory:'Collection value over time', valueHistoryHint:'Value history builds automatically as prices update. Check back after the next price refresh.', priceHistory:'Price history',
@@ -1351,8 +1401,9 @@ class Component extends DCLogic {
       marketNormal:'Market · normal', foilLc:'foil', printingArt:'Printing / Art · pick the one you own', inkwellStatus:'Inkwell status', exportCorr:'edited · export ↓', yourCopies:'Your copies', normal:'Normal', pCost:'Cost', pStrength:'Strength', pWillpower:'Willpower', pLore:'Lore', pMoveCost:'Move Cost', pType:'Type', pInk:'Ink', yes:'Yes', no:'No',
     },
     pt: {
-      overview:'Visão Geral', collection:'Coleção', prices:'Preços', decks:'Decks', matches:'Partidas',
-      sub_matches:'Todas as suas partidas registradas',
+      overview:'Visão Geral', collection:'Coleção', prices:'Preços', decks:'Decks', matches:'Partidas', learn:'Aprender',
+      sub_matches:'Todas as suas partidas registradas', sub_learn:'Aprenda a jogar Lorcana',
+      learnIntro:'Lições curtas do zero até jogar. Não precisa de coleção.', resourcesTitle:'Lugares oficiais para aprender e jogar', lessonStart:'Começar →', lessonDone:'✓ Concluída', markComplete:'Marcar como concluída', lessonComplete:'Lição concluída',
       sub_overview:'Bem-vindo de volta, {name}', sub_collection:'Todas as cartas do multiverso — as suas em destaque', sub_prices:'Valores de mercado da sua coleção', sub_decks:'Seus decks arquivados e análises', sub_deck:'Análise do Deck',
       search:'Buscar 3.400+ cartas…', have:'Tenho', missing:'Faltando', wishlist:'Lista de Desejos', all:'Todas', allCards:'Todas as cartas',
       valueHistory:'Valor da coleção ao longo do tempo', valueHistoryHint:'O histórico de valor é criado automaticamente conforme os preços atualizam. Volte após a próxima atualização de preços.', priceHistory:'Histórico de preço',
@@ -1659,7 +1710,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     try { const s = localStorage.getItem('inkwell_user_'+id); if (s) user = JSON.parse(s); } catch(e){}
     if (!user && meta.seed) { try { const r = await fetch(meta.seed); if (r.ok) user = await r.json(); } catch(e){} }
     const m = this.migrateUser(user, id);
-    return { collection:m.collection, decks:m.decks, matches:m.matches, overrides:m.overrides, wishlist:m.wishlist, displayName: meta.name || m.display_name || id, userDataWarning:m.warning||null };
+    return { collection:m.collection, decks:m.decks, matches:m.matches, overrides:m.overrides, wishlist:m.wishlist, learnDone:m.learnDone, displayName: meta.name || m.display_name || id, userDataWarning:m.warning||null };
   }
 
   // ---------- M2: user-data schema versioning + migrations ----------
@@ -1680,18 +1731,19 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     d.matches = Array.isArray(d.matches) ? d.matches : [];
     d.overrides = (d.overrides && typeof d.overrides==='object') ? d.overrides : {};
     d.wishlist = (d.wishlist && typeof d.wishlist==='object') ? d.wishlist : {};
+    d.learnDone = (d.learnDone && typeof d.learnDone==='object') ? d.learnDone : {};
     d.warning = warning;
     return d;
   }
-  userPayload(){ return { _schema:this.USER_SCHEMA, saved_at:new Date().toISOString(), app_version:this.APP_VERSION, collection:this.state.collection, decks:this.state.decks, matches:this.state.matches, overrides:this.state.overrides, wishlist:this.state.wishlist, display_name:this.state.displayName }; }
+  userPayload(){ return { _schema:this.USER_SCHEMA, saved_at:new Date().toISOString(), app_version:this.APP_VERSION, collection:this.state.collection, decks:this.state.decks, matches:this.state.matches, overrides:this.state.overrides, wishlist:this.state.wishlist, learnDone:this.state.learnDone, display_name:this.state.displayName }; }
 
   switchUser = (id)=>{ if(id===this.state.activeUser){ this.setState({profileMenuOpen:false}); return; } this.saveLocal(); this.loadUser(id).then(data=>{ try{ localStorage.setItem('inkwell_active_user', id); }catch(e){} this.setState({ activeUser:id, profileMenuOpen:false, view:'overview', selectedDeck:null, selectedCard:null, ...data, dataWarning:data.userDataWarning||this.state.dataWarning }, ()=>{ this.showToast('Switched to '+data.displayName); this.recordPriceSnapshot(); if(this.sb && this.state.syncUser){ this.setState({syncStatus:'syncing'}); this.reconcile(id).then(()=>this.setState({syncStatus:'synced', syncLast:Date.now()})).catch(e=>this.setState({syncStatus:'error', syncMsg:String(e&&e.message||e)})); } }); }); };
 
   loadLocal(){ try { const s = localStorage.getItem('inkwell_user_'+this.state.activeUser); return s?this.migrateUser(JSON.parse(s), this.state.activeUser):null; } catch(e){ return null; } }
   saveLocal(){ try { const payload = JSON.stringify(this.userPayload()); const key='inkwell_user_'+this.state.activeUser; localStorage.setItem(key, payload); localStorage.setItem('inkwell_backup_'+this.state.activeUser, JSON.stringify({ ts:Date.now(), schema:this.USER_SCHEMA, data:payload })); this.setState({lastSaved:Date.now()}); this.recordPriceSnapshot(); this.queueSync(); } catch(e){} }
-  fullExport = ()=>{ const payload={ schema:'inkwell', _schema:this.USER_SCHEMA, app_version:this.APP_VERSION, user:this.state.activeUser, display_name:this.state.displayName, exported_at:new Date().toISOString(), collection:this.state.collection, decks:this.state.decks, matches:this.state.matches, overrides:this.state.overrides, wishlist:this.state.wishlist }; const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='inkwell-'+this.state.activeUser+'-backup.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); this.showToast('Backup downloaded'); };
+  fullExport = ()=>{ const payload={ schema:'inkwell', _schema:this.USER_SCHEMA, app_version:this.APP_VERSION, user:this.state.activeUser, display_name:this.state.displayName, exported_at:new Date().toISOString(), collection:this.state.collection, decks:this.state.decks, matches:this.state.matches, overrides:this.state.overrides, wishlist:this.state.wishlist, learnDone:this.state.learnDone }; const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='inkwell-'+this.state.activeUser+'-backup.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); this.showToast('Backup downloaded'); };
   triggerFullImport = ()=>{ if(this._fimp) this._fimp.click(); };
-  fullImport = (e)=>{ const file=e.target&&e.target.files&&e.target.files[0]; if(!file) return; const rd=new FileReader(); rd.onload=()=>{ try{ const j=this.migrateUser(JSON.parse(String(rd.result)), this.state.activeUser); this.setState({ collection:j.collection, decks:j.decks, matches:j.matches, overrides:j.overrides, wishlist:j.wishlist, dataWarning:j.warning||this.state.dataWarning }, ()=>{ this.saveLocal(); this.showToast('Backup restored'); }); }catch(err){ this.showToast('Invalid backup file'); } }; rd.readAsText(file); e.target.value=''; };
+  fullImport = (e)=>{ const file=e.target&&e.target.files&&e.target.files[0]; if(!file) return; const rd=new FileReader(); rd.onload=()=>{ try{ const j=this.migrateUser(JSON.parse(String(rd.result)), this.state.activeUser); this.setState({ collection:j.collection, decks:j.decks, matches:j.matches, overrides:j.overrides, wishlist:j.wishlist, learnDone:j.learnDone, dataWarning:j.warning||this.state.dataWarning }, ()=>{ this.saveLocal(); this.showToast('Backup restored'); }); }catch(err){ this.showToast('Invalid backup file'); } }; rd.readAsText(file); e.target.value=''; };
   setFimpRef = (el)=>{ this._fimp=el; };
   inkableOf(card){ if(!card) return null; const o=this.state.overrides&&this.state.overrides[card.card_id]; if(o&&typeof o.inkable==='number') return o.inkable; return (typeof card.inkable==='number')?card.inkable:null; }
   setInkable(cardId, val){ const ov={...(this.state.overrides||{})}; const card=this.byId[cardId]; if(card && card.inkable===val){ if(ov[cardId]){ delete ov[cardId].inkable; if(!Object.keys(ov[cardId]).length) delete ov[cardId]; } } else { ov[cardId]={...(ov[cardId]||{}),inkable:val}; } this.setState({overrides:ov},()=>{ this.saveLocal(); this.showToast(val===1?'Marked inkable':'Marked uninkable'); }); }
@@ -1900,6 +1952,44 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     return { legal:val.legal, legalityReasons:val.reasons, total:val.total, ownedCopies, requiredCopies, ownedPct, missingCopies, missingMarketValue:missingMarket, hasStrategy, matchesLogged:ms.length, status, nextAction:next };
   }
   activeDeckKey(){ return 'inkwell_activedeck_'+this.state.activeUser; }
+  learnData(){
+    const pt=this.state.lang==='pt';
+    const T=(en,br)=>pt?br:en;
+    const tracks=[
+      {id:'play', icon:'🎯', title:T('Play your first game','Sua primeira partida'), blurb:T('Objective, setup, turns, questing, winning.','Objetivo, preparo, turnos, aventura, vitória.'),
+        steps:[ {h:T('The goal','O objetivo'),b:T('Be the first to gather 20 lore. You earn lore mainly by sending characters on quests.','Seja o primeiro a juntar 20 de lore. Você ganha lore principalmente enviando personagens em aventuras.')},
+          {h:T('Ink','Tinta'),b:T('Once per turn you may put a card with an ink swirl into your inkwell face-down. Ink pays for cards.','Uma vez por turno você pode colocar uma carta com o símbolo de tinta no seu inkwell, virada para baixo. A tinta paga as cartas.')},
+          {h:T('Your turn','Seu turno'),b:T('Ready cards, draw, then play cards, quest, or challenge with characters that are dry (in play since last turn).','Prepare as cartas, compre, depois jogue cartas, vá em aventura ou desafie com personagens secos (em jogo desde o turno anterior).')},
+          {h:T('Quest & challenge','Aventura e desafio'),b:T('Questing gains lore. Challenging lets a character fight an opposing character. Reach 20 lore to win.','Aventurar ganha lore. Desafiar faz um personagem lutar com um adversário. Chegue a 20 de lore para vencer.')} ]},
+      {id:'card', icon:'🃏', title:T('Read a Lorcana card','Ler uma carta'), blurb:T('Cost, ink, strength, willpower, lore, types.','Custo, tinta, força, vontade, lore, tipos.'),
+        steps:[ {h:T('Cost & ink','Custo e tinta'),b:T('Top-left number is the ink cost. The gemstone shows the ink color. A card is inkable if it has the extra swirl border.','O número no topo à esquerda é o custo. A gema mostra a cor da tinta. A carta é inkável se tiver a borda com o símbolo extra.')},
+          {h:T('Strength & willpower','Força e vontade'),b:T('Strength (⚔) is damage dealt in a challenge. Willpower (⛊) is how much damage it survives.','Força (⚔) é o dano causado num desafio. Vontade (⛊) é quanto dano ele aguenta.')},
+          {h:T('Lore','Lore'),b:T('The ◆ value is how much lore the character gains each time it quests.','O valor ◆ é quanto lore o personagem ganha cada vez que vai em aventura.')},
+          {h:T('Types','Tipos'),b:T('Characters quest and challenge. Actions/Songs are one-time effects. Items and Locations stay in play with ongoing effects.','Personagens aventuram e desafiam. Ações/Canções são efeitos únicos. Itens e Locais ficam em jogo com efeitos contínuos.')} ]},
+      {id:'build', icon:'🛠️', title:T('Build your first deck','Monte seu primeiro deck'), blurb:T('60 cards, 2 inks, 4-copy limit, curve.','60 cartas, 2 inks, limite de 4, curva.'),
+        steps:[ {h:T('Size & inks','Tamanho e inks'),b:T('At least 60 cards, using at most two ink colors.','No mínimo 60 cartas, usando no máximo duas cores de tinta.')},
+          {h:T('Copy limit','Limite de cópias'),b:T('No more than four cards with the same name (a few special cards allow more).','No máximo quatro cartas com o mesmo nome (algumas cartas especiais permitem mais).')},
+          {h:T('Curve','Curva'),b:T('Spread costs so you have plays on turns 1–5. Too many expensive cards means slow starts.','Distribua os custos para ter jogadas nos turnos 1–5. Cartas caras demais deixam o início lento.')},
+          {h:T('A plan','Um plano'),b:T('Pick a way to win — fast questing, board control, or big finishers — not just your favorite cards.','Escolha um jeito de vencer — aventura rápida, controle de mesa, ou finalizadores grandes — não só suas cartas favoritas.')} ]},
+      {id:'better', icon:'📈', title:T('Play better','Jogue melhor'), blurb:T('Win conditions, mulligan, tempo, review.','Condições de vitória, mulligan, tempo, revisão.'),
+        steps:[ {h:T('Win condition','Condição de vitória'),b:T('Know the 2–3 cards that usually close the game and protect them.','Saiba quais 2–3 cartas costumam fechar o jogo e proteja-as.')},
+          {h:T('Mulligan','Mulligan'),b:T('Keep hands with early plays and ink. Redraw hands that are all high-cost.','Fique com mãos que tenham jogadas iniciais e tinta. Troque mãos só de cartas caras.')},
+          {h:T('Quest or challenge?','Aventurar ou desafiar?'),b:T('Quest when ahead; challenge to remove threats when behind.','Aventure quando estiver na frente; desafie para remover ameaças quando atrás.')},
+          {h:T('Review','Revisão'),b:T('After a loss, ask what you could change — not just blame the draw. Log the game in Inkwell.','Após uma derrota, pense no que poderia mudar — não culpe só a sorte. Registre a partida no Inkwell.')} ]},
+      {id:'people', icon:'🤝', title:T('Play with others','Jogue com outros'), blurb:T('Etiquette, casual vs tournament, find a store.','Etiqueta, casual vs torneio, achar loja.'),
+        steps:[ {h:T('What to bring','O que levar'),b:T('Your deck (sleeved), a way to track lore/damage, and a friendly attitude.','Seu deck (com sleeves), algo para marcar lore/dano, e uma atitude amigável.')},
+          {h:T('Casual vs tournament','Casual vs torneio'),b:T('Casual is relaxed; tournaments enforce deck legality and time limits.','Casual é relaxado; torneios exigem legalidade do deck e tempo limite.')},
+          {h:T('Find a store','Achar uma loja'),b:T('Use the official Store Locator and the Ravensburger Play Hub (in Resources below).','Use o localizador oficial de lojas e o Ravensburger Play Hub (nos Recursos abaixo).')},
+          {h:T('After the game','Depois do jogo'),b:T('Record the result in Inkwell so your matchup data grows.','Registre o resultado no Inkwell para acumular dados de confronto.')} ]},
+    ];
+    const res=[
+      {badge:'OFFICIAL',official:true, title:'Disney Lorcana — How to Play', desc:T('Beginner videos & Quickstart Rules','Vídeos para iniciantes e regras rápidas'), url:'https://www.disneylorcana.com/en-GB/how-to-play'},
+      {badge:'OFFICIAL',official:true, title:'Disney Lorcana — Resources', desc:T('Comprehensive rules, FAQ, set notes','Regras completas, FAQ, notas de sets'), url:'https://www.disneylorcana.com/en-GB/resources'},
+      {badge:'OFFICIAL',official:true, title:'Official Store Locator', desc:T('Find stores to play, buy, trade','Ache lojas para jogar, comprar, trocar'), url:'https://www.disneylorcana.com/en-GB/locator'},
+      {badge:'OFFICIAL',official:true, title:'Ravensburger Play Hub', desc:T('Find organized-play events','Ache eventos de organized play'), url:'https://tcg.ravensburgerplay.com/'},
+    ];
+    return {tracks,res};
+  }
   getActiveDeck(){ let id=null; try{ id=localStorage.getItem(this.activeDeckKey()); }catch(e){} const decks=this.state.decks||[]; if(id && decks.some(d=>d.id===id)) return this.deckById(id); return decks[0]||null; }
   setActiveDeck(id){ try{ localStorage.setItem(this.activeDeckKey(), id); }catch(e){} this.forceUpdate(); this.showToast('Active deck set'); }
   // Authoritative deck legality — used by badge, imports, coach, advisor.
@@ -2039,6 +2129,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     prices: e('svg',s, e('polyline',{points:'3,16 9,10 13,14 21,5'}), e('polyline',{points:'21,10 21,5 16,5'})),
     decks: e('svg',s, e('rect',{x:4,y:3,width:11,height:15,rx:2}), e('rect',{x:9,y:6,width:11,height:15,rx:2})),
     matches: e('svg',s, e('path',{d:'M4 6h16M4 12h16M4 18h10'}), e('circle',{cx:19,cy:18,r:2})),
+    learn: e('svg',s, e('path',{d:'M3 5a2 2 0 0 1 2-2h6v16H5a2 2 0 0 0-2 2zM21 5a2 2 0 0 0-2-2h-6v16h6a2 2 0 0 1 2 2z'})),
   }; return map[name]; }
 
   go(view){ return ()=>this.setState({view,page:0,selectedCard:null,newDeckOpen:false}); }
@@ -2098,13 +2189,26 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       {key:'prices',label:this.t('prices'),_go:this.go('prices'),_style:this.navStyle('prices'),_icon:this.icon('prices')},
       {key:'decks',label:this.t('decks'),_go:this.go('decks'),_style:this.navStyle('decks'),_icon:this.icon('decks')},
       {key:'matches',label:this.t('matches'),_go:this.go('matches'),_style:this.navStyle('matches'),_icon:this.icon('matches')},
+      {key:'learn',label:this.t('learn'),_go:this.go('learn'),_style:this.navStyle('learn'),_icon:this.icon('learn')},
     ];
-    const titles={matches:[this.t('matches'),this.t('sub_matches')],overview:[this.t('overview'),this.t('sub_overview',{name:st.displayName})],collection:[this.t('collection'),this.t('sub_collection')],prices:[this.t('prices'),this.t('sub_prices')],decks:[this.t('decks'),this.t('sub_decks')],deckDetail:[this.t('sub_deck'),'']};
+    const titles={learn:[this.t('learn'),this.t('sub_learn')],matches:[this.t('matches'),this.t('sub_matches')],overview:[this.t('overview'),this.t('sub_overview',{name:st.displayName})],collection:[this.t('collection'),this.t('sub_collection')],prices:[this.t('prices'),this.t('sub_prices')],decks:[this.t('decks'),this.t('sub_decks')],deckDetail:[this.t('sub_deck'),'']};
     const t=titles[st.view]||titles.overview; V.pageTitle=t[0]; V.pageSub=t[1];
     V.lang=st.lang; V.setLangEn=()=>{ try{localStorage.setItem('inkwell_lang','en');}catch(e){} this.setState({lang:'en'}); }; V.setLangPt=()=>{ try{localStorage.setItem('inkwell_lang','pt');}catch(e){} this.setState({lang:'pt'}); };
     V.langEnStyle='padding:4px 9px;border-radius:7px;border:none;cursor:pointer;font-size:11px;font-weight:700;'+(st.lang==='en'?'background:rgba(199,154,68,.22);color:#e0c15a':'background:none;color:#7c7c85');
     V.langPtStyle='padding:4px 9px;border-radius:7px;border:none;cursor:pointer;font-size:11px;font-weight:700;'+(st.lang==='pt'?'background:rgba(199,154,68,.22);color:#e0c15a':'background:none;color:#7c7c85');
     V.isOverview=st.view==='overview'; V.isCollection=st.view==='collection'; V.isPrices=st.view==='prices'; V.isDecks=st.view==='decks'; V.isDeckDetail=st.view==='deckDetail'; V.isAdvisor=st.view==='advisor'; V.isMatches=st.view==='matches';
+    V.isMatches=st.view==='matches'; V.isLearn=st.view==='learn';
+    if(V.isLearn){
+      const LD=this.learnData(); const done=st.learnDone||{};
+      V.learnIntro=this.t('learnIntro'); V.resourcesTitle=this.t('resourcesTitle');
+      V.learnTracks=LD.tracks.map(t=>({ icon:t.icon, title:t.title, blurb:t.blurb, doneLabel:done[t.id]?this.t('lessonDone'):this.t('lessonStart'), doneColor:done[t.id]?'#5fd07f':'#b89a5e', _open:()=>this.setState({lesson:t.id}) }));
+      V.learnResources=LD.res.map(r=>({ title:r.title, desc:r.desc, url:r.url, badge:r.official?'OFFICIAL':'COMMUNITY', badgeBg:r.official?'rgba(95,208,127,.16)':'rgba(255,255,255,.08)', badgeColor:r.official?'#5fd07f':'#9a9aa2' }));
+    }
+    V.lessonOpen=!!st.lesson;
+    if(st.lesson){ const LD=this.learnData(); const t=LD.tracks.find(x=>x.id===st.lesson); if(t){ V.lesson={title:t.title, steps:t.steps.map(s=>({h:s.h,b:s.b}))}; }
+      V.closeLesson=()=>this.setState({lesson:null}); V.lessonDoneLabel=this.t('markComplete');
+      V.completeLesson=()=>{ const d={...(st.learnDone||{})}; d[st.lesson]=1; this.setState({learnDone:d, lesson:null}, ()=>this.saveLocal()); this.showToast(this.t('lessonComplete')); };
+    }
     if(V.isMatches){
       const all=st.matches.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
       const f=st.matchFilter||'all'; const rows=f==='all'?all:all.filter(m=>m.deck_id===f);
