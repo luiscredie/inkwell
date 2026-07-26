@@ -623,11 +623,22 @@
                 <sc-for list="{{ dd.curve }}" as="b" hint-placeholder-count="8">
                   <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;justify-content:flex-end">
                     <span style="font-family:'JetBrains Mono';font-size:11px;color:#a8a8b0">{{ b.count }}</span>
-                    <div style="width:100%;height:{{ b.h }}px;min-height:3px;background:linear-gradient(180deg,#b79bff,#7d5fd6);border-radius:5px 5px 0 0"></div>
+                    <div style="width:100%;height:{{ b.h }}px;min-height:3px;display:flex;flex-direction:column;border-radius:5px 5px 0 0;overflow:hidden">
+                      <sc-for list="{{ b.segs }}" as="sg" hint-placeholder-count="1">
+                        <div style="width:100%;height:{{ sg.pct }}%;background:{{ sg.color }}"></div>
+                      </sc-for>
+                    </div>
                     <span style="font-size:11px;color:#7c7c85;font-family:'JetBrains Mono'">{{ b.label }}</span>
                   </div>
                 </sc-for>
               </div>
+              <sc-if value="{{ dd.curveMulti }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:16px">
+                  <sc-for list="{{ dd.curveLegend }}" as="l" hint-placeholder-count="2">
+                    <span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:#a8a8b0"><span style="width:9px;height:9px;border-radius:3px;background:{{ l.color }}"></span>{{ l.label }}</span>
+                  </sc-for>
+                </div>
+              </sc-if>
             </div>
 
             <div style="padding:22px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)">
@@ -1098,6 +1109,35 @@
         <sc-if value="{{ noCorrections }}" hint-placeholder-val="{{ true }}">
           <div style="font-size:12.5px;color:#6f6f78;padding:4px 0">No inkable/art corrections yet. Edit a card to add one.</div>
         </sc-if>
+
+        <sc-if value="{{ hasReport }}" hint-placeholder-val="{{ false }}">
+          <div style="height:1px;background:rgba(255,255,255,.08);margin:20px 0"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <span style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#8a8a92">Data health</span>
+            <span style="font-size:11px;color:#7c7c85;font-family:'JetBrains Mono'">{{ reportDate }}</span>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+            <sc-for list="{{ reportStats }}" as="s" hint-placeholder-count="3">
+              <div style="flex:1;min-width:88px;padding:10px 12px;border-radius:11px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)">
+                <div style="font-family:'Bricolage Grotesque';font-weight:800;font-size:18px;color:{{ s.color }}">{{ s.value }}</div>
+                <div style="font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;color:#8a8a92;margin-top:2px">{{ s.label }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <sc-if value="{{ reportHasIssues }}" hint-placeholder-val="{{ false }}">
+            <div class="ink-sc" style="max-height:190px;overflow-y:auto;border-radius:11px;border:1px solid rgba(255,255,255,.08)">
+              <sc-for list="{{ reportIssues }}" as="r" hint-placeholder-count="3">
+                <div style="display:flex;align-items:flex-start;gap:9px;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.04);font-size:12px">
+                  <span style="font-size:11px;font-weight:700;padding:1px 6px;border-radius:6px;flex-shrink:0;background:{{ r.badgeBg }};color:{{ r.badgeColor }}">{{ r.kind }}</span>
+                  <span style="min-width:0"><b style="color:#e2e2e6;font-family:'JetBrains Mono';font-size:11px">{{ r.code }}</b> <span style="color:#b8b8c0">{{ r.message }}</span></span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ reportClean }}" hint-placeholder-val="{{ true }}">
+            <div style="font-size:12.5px;color:#5fd07f;padding:4px 0">✓ No issues reported by the data pipeline.</div>
+          </sc-if>
+        </sc-if>
       </div>
     </div>
   </sc-if>
@@ -1191,7 +1231,7 @@ class Component extends DCLogic {
 
   // ---------- M1: data contract (see DATA_CONTRACT.md) ----------
   APP_VERSION = '1.4.0';
-  SUPPORTED = { manifest:[1], cards:[3], cards_pt:[1], prices:[2], aliases:[1], validation:[1] };
+  SUPPORTED = { manifest:[1], cards:[3], cards_pt:[1], prices:[2], aliases:[1], validation:[1], price_history:[1] };
   LEGACY = { cards:2, prices:1 };            // pre-contract files still deployed today
   dataRoot = '';                              // dir of data-manifest.json (paths resolve here)
   aliases = null; validationReport = null; ptOverlay = null; manifestMode = false;
@@ -1226,6 +1266,13 @@ class Component extends DCLogic {
   collectionValueNow(){ let value=0,cards=0; const coll=this.state.collection||{}; for(const id in coll){ const c=this.byId[id]; if(!c) continue; const e=coll[id]; const n=e.n||0,f=e.f||0; value+=this.priceOr0(c)*n+(this.foilPrice(c)??this.priceOr0(c))*f; cards+=n+f; } return {value:Math.round(value*100)/100, cards}; }
   histKey(){ return 'inkwell_pricehist_'+this.state.activeUser; }
   loadHist(){ try{ const s=localStorage.getItem(this.histKey()); const a=s?JSON.parse(s):[]; return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+  valueAtPrices(pmap){ let v=0; const coll=this.state.collection||{}; for(const id in coll){ const p=pmap[id]; if(!p) continue; const e=coll[id]; const nn=(p.nl!=null?p.nl:(p.n!=null?p.n:null)); const ff=(p.fl!=null?p.fl:(p.f!=null?p.f:nn)); if(nn!=null) v+=nn*(e.n||0); if(ff!=null) v+=ff*(e.f||0); } return Math.round(v*100)/100; }
+  mergedHistory(){
+    const map={}; for(const p of this.loadHist()){ if(p&&p.date) map[p.date]={date:p.date,value:p.value,cards:p.cards}; }
+    const art=this.priceHistoryArtifact;
+    if(art && Array.isArray(art.series)){ for(const snap of art.series){ if(!snap||!snap.date||!snap.prices) continue; map[snap.date]={date:snap.date, value:this.valueAtPrices(snap.prices), cards:(map[snap.date]&&map[snap.date].cards)||null, src:'pipeline'}; } }
+    return Object.values(map).sort((a,b)=>a.date<b.date?-1:1);
+  }
   recordPriceSnapshot(){
     if(!this.prices || !Object.keys(this.prices).length) return;
     const date = this.pricesDate || new Date().toISOString().slice(0,10);
@@ -1362,6 +1409,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     if (files.aliases){ const a=await this.loadArtifact('aliases', files.aliases, schema.aliases, dir, hashJobs, false); if(!a.fatal && a.data) aliases=a.data; }
     if (files.validation){ const v=await this.loadArtifact('validation', files.validation, schema.validation, dir, hashJobs, false); if(!v.fatal && v.data) validation=v.data; }
     if (files.cards_pt){ const p=await this.loadArtifact('cards_pt', files.cards_pt, schema.cards_pt, dir, hashJobs, false); if(!p.fatal && p.data){ ptOverlay=p.data; this.ptOverlay=p.data; } }
+    if (files.price_history){ const ph=await this.loadArtifact('price_history', files.price_history, schema.price_history, dir, hashJobs, false); if(!ph.fatal && ph.data) this.priceHistoryArtifact=ph.data; }
     return { cards:cRes.data.cards||[], sets:cRes.data.sets||[], image_base_path:cRes.data.image_base_path, prices, priceSource, aliases, validation, warning, hashJobs };
   }
 
@@ -1752,6 +1800,18 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     const corr=Object.entries(st.overrides||{}).filter(([id,o])=>o&&typeof o.inkable==='number').map(([id,o])=>{ const c=this.byId[id]; return {name:(c&&c.name_en)||id, val:o.inkable===1?'Inkable':'Uninkable', valColor:o.inkable===1?'#5fd07f':'#ff7a86'}; });
     V.corrections=corr; V.correctionCount=corr.length; V.hasCorrections=corr.length>0; V.noCorrections=corr.length===0;
     V.clearCorrections=()=>{ this.setState({overrides:{}},()=>{ this.saveLocal(); this.showToast('Corrections cleared'); }); };
+    // ---- M7 validation report ----
+    const rep=this.validationReport;
+    V.hasReport=!!rep;
+    if(rep){
+      const errs=Array.isArray(rep.errors)?rep.errors:[]; const warns=Array.isArray(rep.warnings)?rep.warnings:[];
+      V.reportDate=(rep.generated_at||'').slice(0,10);
+      const st2=rep.stats||{};
+      V.reportStats=[ {label:'Cards',value:(st2.cards!=null?st2.cards:'—'),color:'#e8e8ec'}, {label:'Errors',value:errs.length,color:errs.length?'#ff8a96':'#5fd07f'}, {label:'Warnings',value:warns.length,color:warns.length?'#e6c15a':'#5fd07f'} ];
+      const mk=(arr,kind,bg,fg)=>arr.slice(0,200).map(x=>({kind,badgeBg:bg,badgeColor:fg,code:x.code||x.type||'—',message:(x.message||x.card_id||'').toString().slice(0,160)}));
+      const issues=mk(errs,'ERR','rgba(226,59,78,.16)','#ff8a96').concat(mk(warns,'WARN','rgba(230,193,90,.16)','#e6c15a'));
+      V.reportIssues=issues; V.reportHasIssues=issues.length>0; V.reportClean=issues.length===0;
+    }
     V.nav=[
       {key:'overview',label:this.t('overview'),_go:this.go('overview'),_style:this.navStyle('overview'),_icon:this.icon('overview')},
       {key:'collection',label:this.t('collection'),_go:this.go('collection'),_style:this.navStyle('collection'),_icon:this.icon('collection')},
@@ -1840,7 +1900,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       const unpriced=basePool.length-pool.length;
       V.priceKpis=[ {label:this.t('totalValue'),value:this.fmt(value)}, {label:this.t('cardsPriced'),value:pool.length.toLocaleString('en-US')}, {label:this.t('noPrice'),value:unpriced.toLocaleString('en-US')} ];
       // ---- M5 value history ----
-      const hist=(this._hist&&this._hist.length)?this._hist:this.loadHist();
+      const hist=this.mergedHistory();
       V.histTitle=this.t('valueHistory'); V.histHint=this.t('valueHistoryHint');
       if(hist && hist.length>=2){
         V.histHas=true; V.histEmpty=false;
@@ -1912,8 +1972,13 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
           {label:this.t('winRate'),value:wr===null?'—':wr+'%',color:this.wrColor(wr||0)},
           {label:this.t('games'),value:ms.length,color:'#f3f3f5'},
         ];
-        const buckets=[0,0,0,0,0,0,0,0]; for(const e of entries){ const cost=Math.min(7,Math.max(0,(typeof e.card.ink_cost==='number'?e.card.ink_cost:0))); buckets[cost]+=e.count; } const bmax=Math.max(1,...buckets);
-        V.dd.curve=buckets.map((c,i)=>({label:i===7?'7+':String(i),count:c,h:Math.round(c/bmax*104)}));
+        const buckets=[0,0,0,0,0,0,0,0]; const bseg=[{},{},{},{},{},{},{},{}]; const inkTot={};
+        for(const e of entries){ const cost=Math.min(7,Math.max(0,(typeof e.card.ink_cost==='number'?e.card.ink_cost:0))); buckets[cost]+=e.count; const inks=this.inkList(e.card); const key=inks.length?inks[0]:'—'; bseg[cost][key]=(bseg[cost][key]||0)+e.count; inkTot[key]=(inkTot[key]||0)+e.count; }
+        const bmax=Math.max(1,...buckets);
+        const segOrder=this.INK_ORDER.filter(i=>inkTot[i]).concat(inkTot['—']?['—']:[]);
+        V.dd.curveMulti=segOrder.length>1;
+        V.dd.curveLegend=segOrder.map(k=>({label:k==='—'?'Other':k,color:k==='—'?'#8a8a92':this.INK[k]}));
+        V.dd.curve=buckets.map((c,i)=>({label:i===7?'7+':String(i),count:c,h:Math.round(c/bmax*104),segs:(c>0?segOrder.filter(k=>bseg[i][k]).map(k=>({color:k==='—'?'#8a8a92':this.INK[k],pct:(bseg[i][k]/c*100).toFixed(2)})):[{color:'#7d5fd6',pct:'100'}])}));
         const types={}; for(const e of entries){ const ct=this.cardTypes(e.card); const disp=ct.includes('Song')?'Song':(e.card.card_type||'?'); types[disp]=(types[disp]||0)+e.count; } const tmax=Object.values(types).reduce((a,b)=>a+b,0)||1;
         V.dd.types=Object.entries(types).sort((a,b)=>b[1]-a[1]).map(([k,v])=>({label:k,count:v,pct:(v/tmax*100).toFixed(1),color:this.TYPE_COLOR[k]||'#8a8a92'}));
         const rar={}; for(const e of entries){ const r=e.card.rarity||'?'; rar[r]=(rar[r]||0)+e.count; } const rmax=Math.max(1,...Object.values(rar));
