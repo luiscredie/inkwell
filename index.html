@@ -22,6 +22,8 @@
   button{color:inherit}
   input,textarea,select{color:#f3f3f5}
   input:focus,select:focus,textarea:focus{outline:none}
+  :focus-visible{outline:2px solid #c9a6ff;outline-offset:2px;border-radius:4px}
+  @media (prefers-reduced-motion: reduce){ *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important} }
   #ink-scroll::-webkit-scrollbar,.ink-sc::-webkit-scrollbar{width:10px;height:10px}
   #ink-scroll::-webkit-scrollbar-thumb,.ink-sc::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:8px;border:3px solid transparent;background-clip:padding-box}
   @keyframes ink-fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
@@ -362,11 +364,11 @@
 
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:16px">
             <sc-for list="{{ pageCards }}" as="c" hint-placeholder-count="12">
-              <button onClick="{{ c._open }}" style="background:none;border:none;padding:0;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:8px" style-hover="transform:translateY(-4px)">
+              <div onClick="{{ c._open }}" onKeyDown="{{ c._openKey }}" role="button" tabindex="0" aria-label="{{ c.openAria }}" style="background:none;border:none;padding:0;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:8px" style-hover="transform:translateY(-4px)">
                 <div style="position:relative;aspect-ratio:734/1024;border-radius:12px;overflow:hidden;background:{{ c.ink }};box-shadow:0 8px 22px rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.08)">
                   <img src="{{ c._local }}" data-remote="{{ c._remote }}" onError="{{ imgError }}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block" />
                   <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:12px;text-align:center;font-family:'Bricolage Grotesque';font-weight:700;font-size:14px;background:{{ c.ink }};display:none" data-ph>{{ c.name }}</div>
-                  <span onClick="{{ c._wish }}" title="Wishlist" style="position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;font-size:14px;line-height:1;color:{{ c.wishColor }};cursor:pointer;z-index:2" style-hover="background:rgba(0,0,0,.85)">{{ c.wishIcon }}</span>
+                  <button onClick="{{ c._wish }}" aria-label="{{ c.wishAria }}" title="Wishlist" style="position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;font-size:14px;line-height:1;color:{{ c.wishColor }};cursor:pointer;z-index:2;border:none;padding:0" style-hover="background:rgba(0,0,0,.85)">{{ c.wishIcon }}</button>
                   <sc-if value="{{ c.owned }}" hint-placeholder-val="{{ false }}">
                     <div style="position:absolute;bottom:7px;right:7px;padding:3px 8px;border-radius:8px;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);font-family:'JetBrains Mono';font-weight:700;font-size:12px;color:#9be6a8">×{{ c.ownedQty }}{{ c.foilTag }}</div>
                   </sc-if>
@@ -381,7 +383,7 @@
                     <span style="font-family:'JetBrains Mono';font-size:12px;color:#9a9aa2">{{ c.price }}</span>
                   </div>
                 </div>
-              </button>
+              </div>
             </sc-for>
           </div>
           <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
@@ -637,6 +639,13 @@
               </div>
               <h2 style="font-family:'Bricolage Grotesque';font-weight:800;font-size:30px;letter-spacing:-.02em">{{ dd.name }}</h2>
               <p style="color:#8a8a92;font-size:14px;margin-top:6px;max-width:520px">{{ dd.notes }}</p>
+              <sc-if value="{{ dd.legalIssues }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">
+                  <sc-for list="{{ dd.legalReasons }}" as="r" hint-placeholder-count="1">
+                    <span style="font-size:11.5px;padding:3px 9px;border-radius:8px;background:rgba(226,59,78,.12);border:1px solid rgba(226,59,78,.28);color:#ff9aa4">{{ r }}</span>
+                  </sc-for>
+                </div>
+              </sc-if>
             </div>
             <div style="display:flex;gap:10px">
               <sc-if value="{{ coachAvail }}" hint-placeholder-val="{{ false }}">
@@ -1358,14 +1367,13 @@ class Component extends DCLogic {
   histFL(p, fallback){ if(!p) return fallback; if(p.fl!=null) return p.fl; if(p.f!=null) return p.f; if(p.foil) return p.foil.low!=null?p.foil.low:(p.foil.average!=null?p.foil.average:fallback); return fallback; }
   valueAtPrices(pmap){ let v=0; const coll=this.state.collection||{}; for(const id in coll){ const p=pmap[id]; if(!p) continue; const e=coll[id]; const nn=this.histNL(p); const ff=this.histFL(p, nn); if(nn!=null) v+=nn*(e.n||0); if(ff!=null) v+=ff*(e.f||0); } return Math.round(v*100)/100; }
   cardHistory(card){
-    // Per-card price curve from the pipeline price-history artifact (lowest-first), across all printings.
+    // Per-card price curve from the pipeline price-history artifact (lowest-first). Uses the EXACT
+    // card_id so an alt-art/Enchanted shows its own history — not a cheaper reprint's.
     const art=this.priceHistoryArtifact; if(!art||!card) return [];
     const series = Array.isArray(art.series)?art.series : (Array.isArray(art.history)?art.history : null); if(!series) return [];
-    const ids=(this.printingsOf?this.printingsOf(card):[card]).map(c=>c.card_id);
     const pts=[];
     for(const snap of series){ if(!snap||!snap.date) continue; const pm=snap.prices||snap.prices_by_liga_id; if(!pm) continue;
-      let best=null; for(const id of ids){ const p=pm[id]; const v=this.histNL(p); if(v!=null && (best==null || v<best)) best=v; }
-      if(best!=null) pts.push({date:snap.date, value:best});
+      const v=this.histNL(pm[card.card_id]); if(v!=null) pts.push({date:snap.date, value:v});
     }
     pts.sort((a,b)=>a.date<b.date?-1:1);
     return pts;
@@ -1374,7 +1382,15 @@ class Component extends DCLogic {
     const map={}; for(const p of this.loadHist()){ if(p&&p.date) map[p.date]={date:p.date,value:p.value,cards:p.cards}; }
     const art=this.priceHistoryArtifact;
     const series = art && (Array.isArray(art.series)?art.series : (Array.isArray(art.history)?art.history : null));
-    if(series){ for(const snap of series){ if(!snap||!snap.date) continue; const pm=snap.prices||snap.prices_by_liga_id; if(!pm) continue; map[snap.date]={date:snap.date, value:this.valueAtPrices(pm), cards:(map[snap.date]&&map[snap.date].cards)||null, src:'pipeline'}; } }
+    if(series){
+      // Coverage guard: a snapshot covering far fewer cards than the fullest one distorts total value.
+      const counts=series.map(s=>{ const pm=s&&(s.prices||s.prices_by_liga_id); return pm?Object.keys(pm).length:0; });
+      const maxCov=Math.max(1,...counts);
+      series.forEach((snap,i)=>{ if(!snap||!snap.date) return; const pm=snap.prices||snap.prices_by_liga_id; if(!pm) return;
+        if(counts[i] < maxCov*0.5) return;   // drop only severe-undercoverage snapshots
+        map[snap.date]={date:snap.date, value:this.valueAtPrices(pm), cards:(map[snap.date]&&map[snap.date].cards)||null, src:'pipeline'};
+      });
+    }
     return Object.values(map).sort((a,b)=>a.date<b.date?-1:1);
   }
   recordPriceSnapshot(){
@@ -1677,7 +1693,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     const ovAb = Array.isArray(ov.abilities) ? ov.abilities : [];
     if (typeof ov.ability_count==='number' && ov.ability_count!==en.length) return en;   // structural drift → EN
     const byId = {}; for (const a of ovAb){ if(a.ability_id) byId[a.ability_id]=a; }
-    return en.map(a=>{ const t=a.ability_id && byId[a.ability_id]; if(!t) return a; return { ...a, name:t.name!=null?t.name:a.name, text:t.text!=null?t.text:a.text, reminder_text:t.reminder_text!=null?t.reminder_text:a.reminder_text }; });
+    return en.map(a=>{ const t=a.ability_id && byId[a.ability_id]; if(!t) return a; const tx=t.text!=null?t.text:a.text; return { ...a, name:t.name!=null?t.name:a.name, text:tx, effect:t.text!=null?t.text:a.effect, reminder_text:t.reminder_text!=null?t.reminder_text:a.reminder_text }; });
   }
   buildAbilities(card){
     let list = card && card.abilities;
@@ -1693,7 +1709,8 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
           body=a.reminder_text||a.text||'';
         } else {
           name=a.name||'';
-          body=a.effect||a.reminder_text||a.text||'';
+          // PT: prefer translated text over English effect. EN: effect is the full sentence.
+          body=(this.state.lang==='pt') ? (a.text||a.effect||a.reminder_text||'') : (a.effect||a.reminder_text||a.text||'');
           if(name && body.indexOf(name)===0) body=body.slice(name.length).replace(/^\s*[-–:]\s*/,'');
         }
         return { name:(name||'').trim().toUpperCase(), body:this.buildBody(body.trim()) };
@@ -1797,6 +1814,24 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     if(colors.length && inks.length && !inks.every(i=>colors.includes(i))) return {ok:false,reason:'Off-color for this deck ('+inks.join('/')+')'};
     if(!this.legalInFormat(card, deck.format)) return {ok:false,reason:'Rotated — not legal in '+this.fmtLabel(deck.format)};
     return {ok:true,reason:''};
+  }
+  // Authoritative deck legality — used by badge, imports, coach, advisor.
+  validateDeck(deck){
+    if(!deck) return {legal:false, total:0, reasons:['Unknown deck']};
+    const entries=this.deckEntries(deck); const total=this.deckCount(deck);
+    const colors=(deck.colors||[]).filter(Boolean); const reasons=[]; const bad=[];
+    // aggregate copies across reprints, by merged name
+    const byName={};
+    for(const e of entries){ const k=this.nameKey(e.card.name_en); byName[k]=(byName[k]||0)+e.count; }
+    for(const e of entries){
+      const inks=this.inkList(e.card);
+      if(colors.length && inks.length && !inks.every(i=>colors.includes(i))){ reasons.push(e.card.name_en+' is off-color'); bad.push(e.card.card_id); }
+      if(!this.legalInFormat(e.card, deck.format)){ reasons.push(e.card.name_en+' is rotated'); bad.push(e.card.card_id); }
+    }
+    for(const k in byName){ if(byName[k]>4){ const nm=entries.find(e=>this.nameKey(e.card.name_en)===k); reasons.push((nm?nm.card.name_en:k)+': '+byName[k]+' copies (max 4 across reprints)'); } }
+    if(total!==60) reasons.push(total+'/60 cards');
+    const uniqReasons=[...new Set(reasons)];
+    return { legal: total===60 && uniqReasons.length===0, total, reasons:uniqReasons, badIds:bad };
   }
   cardTypes(c){ const t=c.card_type; if(t==='Song') return ['Action','Song']; if(t==='Action' && /song/i.test(String(c.classification||''))) return ['Action','Song']; return t?[t]:[]; }
   matchCost(cost, f){ if(f==='all') return true; if(f==='10') return cost>=10; return cost===+f; }
@@ -2047,7 +2082,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       V.prevPage=()=>this.setState({page:Math.max(0,page-1)}); V.nextPage=()=>this.setState({page:Math.min(pages-1,page+1)});
       V.clearFilters=()=>this.setState({inks:[],types:[],sets:[],rarities:[],q:'',collMode:'all',inkable:'all',cost:'all',page:0});
       V.accent='#b79bff';
-      V.pageCards=all.slice(page*this.PAGE_SIZE,(page+1)*this.PAGE_SIZE).map(c=>{ const o=this.ownedOf(c.card_id); const owned=o.n+o.f>0; const cv=this.cardView(c); const wished=this.isWishlisted(c.card_id); return { name:c.name_en, cost:c.ink_cost==null?'–':c.ink_cost, ink:cv.ink, _local:cv._local, _remote:cv._remote, rarityColor:cv.rarityColor, price:this.fmtOrDash(this.price(c)), owned, notOwned:!owned&&st.collMode==='all', ownedQty:o.n+o.f, foilTag:o.f>0?'✦':'', wishIcon:wished?'★':'☆', wishColor:wished?'#e0c15a':'#c8c8cc', _wish:(e)=>{ e.stopPropagation(); this.toggleWishlist(c.card_id); }, _open:()=>this.openCard(c.card_id) }; });
+      V.pageCards=all.slice(page*this.PAGE_SIZE,(page+1)*this.PAGE_SIZE).map(c=>{ const o=this.ownedOf(c.card_id); const owned=o.n+o.f>0; const cv=this.cardView(c); const wished=this.isWishlisted(c.card_id); return { name:c.name_en, cost:c.ink_cost==null?'–':c.ink_cost, ink:cv.ink, _local:cv._local, _remote:cv._remote, rarityColor:cv.rarityColor, price:this.fmtOrDash(this.price(c)), owned, notOwned:!owned&&st.collMode==='all', ownedQty:o.n+o.f, foilTag:o.f>0?'✦':'', wishIcon:wished?'★':'☆', wishColor:wished?'#e0c15a':'#c8c8cc', wishAria:(wished?'Remove from wishlist: ':'Add to wishlist: ')+c.name_en, openAria:c.name_en, _wish:(e)=>{ e.stopPropagation(); this.toggleWishlist(c.card_id); }, _open:()=>this.openCard(c.card_id), _openKey:(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); this.openCard(c.card_id); } } }; });
     }
 
     // ---- PRICES ----
@@ -2136,12 +2171,13 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       if(!deck){ V.dd={inks:[],name:'Deck not found',notes:'',stats:[],curve:[],types:[],rarity:[],list:[],listGroups:[],matches:[],form:[],count:0,wr:'—',wrColor:'#8a8a92',validLabel:'',validBg:'',validColor:'',noMatches:true,missing:[],noMissing:true,missingCount:0,missingCost:''}; V.backToDecks=this.go('decks'); }
       else {
         const entries=this.deckEntries(deck); const total=this.deckCount(deck); const colors=(deck.colors||[]).filter(Boolean);
-        const valid=total>=60; V.backToDecks=this.go('decks');
+        const legality=this.validateDeck(deck); const valid=legality.legal; V.backToDecks=this.go('decks');
         V.dd={};
         V.dd.inks=colors.map(i=>({name:i,iconEl:this.inkIconEl(i,16),_bg:this.INK[i]+'22',_fg:this.INK[i]}));
         V.hManaCurve=this.t('manaCurve'); V.hCardTypes=this.t('cardTypes'); V.hRaritySpread=this.t('raritySpread'); V.hDecklist=this.t('decklist'); V.hMatchHistory=this.t('matchHistory'); V.hMissingCards=this.t('missingCards'); V.hOwnEvery=this.t('ownEvery'); V.addCardsLabel=this.t('addCards'); V.searchCardsPh=this.t('searchCardsPh'); V.sizeLabel2=this.t('size'); V.clickPlusLabel=this.t('clickPlus'); V.noGamesLoggedLabel=this.t('noGamesLogged'); V.logGameBtnLabel=this.t('logGameBtn'); V.deleteBtnLabel=this.t('deleteBtn');
         V.dd.name=deck.name; V.dd.notes=deck.notes||this.t('noNotes');
-        V.dd.validLabel=valid?this.t('tournamentLegal'):this.t('cardsOf60',{n:total}); V.dd.validBg=valid?'rgba(95,208,127,.14)':'rgba(230,193,90,.14)'; V.dd.validColor=valid?'#5fd07f':'#e6c15a';
+        V.dd.validLabel=valid?this.t('tournamentLegal'):(legality.reasons[0]||this.t('cardsOf60',{n:total})); V.dd.validBg=valid?'rgba(95,208,127,.14)':'rgba(230,193,90,.14)'; V.dd.validColor=valid?'#5fd07f':'#e6c15a';
+        V.dd.legalReasons=legality.reasons; V.dd.legalIssues=!valid; V.dd.legalMoreCount=Math.max(0,legality.reasons.length-1);
         const ms=this.deckMatches(deck.id); const wr=this.winRate(ms);
         let owned=0,inkable=0,uninkable=0;
         for(const e of entries){ const o=this.ownedAcross(e.card); owned+=Math.min(o.n+o.f,e.count); const ink=this.inkableOf(e.card); if(ink===1) inkable+=e.count; else if(ink===0) uninkable+=e.count; }
@@ -2277,7 +2313,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
         uninkStyle:_ink===0?'flex:1;padding:9px;border-radius:10px;cursor:pointer;font-size:12.5px;font-weight:700;border:1px solid #ff7a86;background:rgba(255,122,134,.16);color:#ff7a86;display:inline-flex;align-items:center;justify-content:center;gap:6px':'flex:1;padding:9px;border-radius:10px;cursor:pointer;font-size:12.5px;font-weight:600;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#9a9aa2;display:inline-flex;align-items:center;justify-content:center;gap:6px',
         inkIconEl:this.iconImgEl('ink/inkwell.svg',15), uninkIconEl:this.iconImgEl('ink/inkcost.svg',15),
         _setInk:()=>this.setInkable(c.card_id,1), _setUnink:()=>this.setInkable(c.card_id,0),
-        inkSoft:(this.inkList(c)[0]?this.INK[this.inkList(c)[0]]:'#888')+'22', inkColor:this.inkList(c).join(' / ')||'—', _local:cv._local, _remote:cv._remote, imgEl: cv._local ? React.createElement('img',{src:cv._local,'data-remote':cv._remote,onError:window.imgError,style:{position:'relative',width:'100%',height:'100%',objectFit:'cover',objectPosition:'center 20%',display:'block'}}) : null, rarity:this.rar(c).l, rarityColor:this.rar(c).c, setName:this.setName(c.set_code), number:c.card_number, pips, classification:c.classification||'', ability:c.ability_text||'No ability text.', abilities:this.buildAbilities(c), price:this.fmtOrDash(this.price(c)), foilPrice:this.fmtOrDash(this.foilPrice(c)), range:this.fmtRange(this.normalRange(c)), foilRange:this.fmtRange(this.foilRangeOf(c)), priceSrc:this.hasRealPrice(c)?('source · '+(this.priceSource||'prices.json')):'no price in prices.json', ligaUrl:this.hasRealPrice(c)?this.ligaUrl(c):'', noLiga:!this.hasRealPrice(c), qtyN:o.n, qtyF:o.f, _incN:()=>this.setQty(c.card_id,'n',1), _decN:()=>this.setQty(c.card_id,'n',-1), _incF:()=>this.setQty(c.card_id,'f',1), _decF:()=>this.setQty(c.card_id,'f',-1) };
+        inkSoft:(this.inkList(c)[0]?this.INK[this.inkList(c)[0]]:'#888')+'22', inkColor:this.inkList(c).join(' / ')||'—', _local:cv._local, _remote:cv._remote, imgEl: cv._local ? React.createElement('img',{src:cv._local,'data-remote':cv._remote,onError:window.imgError,style:{position:'relative',width:'100%',height:'100%',objectFit:'contain',objectPosition:'center',display:'block'}}) : null, rarity:this.rar(c).l, rarityColor:this.rar(c).c, setName:this.setName(c.set_code), number:c.card_number, pips, classification:c.classification||'', ability:c.ability_text||'No ability text.', abilities:this.buildAbilities(c), price:this.fmtOrDash(this.price(c)), foilPrice:this.fmtOrDash(this.foilPrice(c)), range:this.fmtRange(this.normalRange(c)), foilRange:this.fmtRange(this.foilRangeOf(c)), priceSrc:this.hasRealPrice(c)?('source · '+(this.priceSource||'prices.json')):'no price in prices.json', ligaUrl:this.hasRealPrice(c)?this.ligaUrl(c):'', noLiga:!this.hasRealPrice(c), qtyN:o.n, qtyF:o.f, _incN:()=>this.setQty(c.card_id,'n',1), _decN:()=>this.setQty(c.card_id,'n',-1), _incF:()=>this.setQty(c.card_id,'f',1), _decF:()=>this.setQty(c.card_id,'f',-1) };
     } }
     V.closeCard=()=>this.setState({selectedCard:null});
     V.exportOverrides=this.exportOverrides;
