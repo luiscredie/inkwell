@@ -1444,7 +1444,7 @@ class Component extends DCLogic {
 
   // ---------- M1: data contract (see DATA_CONTRACT.md) ----------
   APP_VERSION = '1.4.1';
-  SUPPORTED = { manifest:[1], cards:[3], cards_pt:[1], prices:[2,3,4], aliases:[1], validation:[1], price_history:[1,2,3,4] };
+  SUPPORTED = { manifest:[1], cards:[3], cards_pt:[1], prices:[2,3,4], aliases:[1], validation:[1], price_history:[1,2,3,4], legality:[1] };
   LEGACY = { cards:2, prices:1 };            // pre-contract files still deployed today
   dataRoot = '';                              // dir of data-manifest.json (paths resolve here)
   aliases = null; validationReport = null; ptOverlay = null; manifestMode = false;
@@ -1661,6 +1661,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     if (files.validation){ const v=await this.loadArtifact('validation', files.validation, schema.validation, dir, hashJobs, false); if(!v.fatal && v.data) validation=v.data; }
     if (files.cards_pt){ const p=await this.loadArtifact('cards_pt', files.cards_pt, schema.cards_pt, dir, hashJobs, false); if(!p.fatal && p.data){ ptOverlay=p.data; this.ptOverlay=p.data; } }
     if (files.price_history){ const ph=await this.loadArtifact('price_history', files.price_history, schema.price_history, dir, hashJobs, false); if(!ph.fatal && ph.data) this.priceHistoryArtifact=ph.data; }
+    if (files.legality){ const lg=await this.loadArtifact('legality', files.legality, schema.legality, dir, hashJobs, false); if(!lg.fatal && lg.data && lg.data.formats) this.legalityData=lg.data; }
     if(this._deployWarn) warning=(warning?warning+' ':'')+this._deployWarn;
     return { cards:cRes.data.cards||[], sets:cRes.data.sets||[], image_base_path:cRes.data.image_base_path, prices, priceSource, aliases, validation, warning, hashJobs };
   }
@@ -1925,15 +1926,20 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
 
   // ---------- deck helpers ----------
   CORE_SETS = ['LOR7','LOR8','LOR9','LOR10','LOR11','LOR12','LOR13','Q2','DLPC2'];
+  fmtRules(fmt){ const d=this.legalityData; if(d&&d.formats&&d.formats[fmt]) return d.formats[fmt]; return null; }
+  legalSets(fmt){ const r=this.fmtRules(fmt); return (r&&Array.isArray(r.legal_sets)&&r.legal_sets.length)?r.legal_sets:this.CORE_SETS; }
+  legalityRevision(fmt){ const r=this.fmtRules(fmt); return r&&r.effective_from?r.effective_from:null; }
+  minDeckSize(fmt){ const r=this.fmtRules(fmt); return (r&&r.minimum_deck_size)||60; }
+  bannedIn(card, fmt){ const r=this.fmtRules(fmt); if(!r) return false; const ids=r.banned_card_ids||[]; const names=r.banned_full_names||[]; return (card.card_id&&ids.includes(card.card_id)) || names.map(n=>String(n).toLowerCase()).includes(this.baseName(card.name_en)); }
   fmtLabel(f){ return f==='infinity'?'Infinity':'Core'; }
-  legalInFormat(card, fmt){ if(fmt==='infinity'||!fmt) return true; return this.printingsOf(card).some(p=>this.CORE_SETS.includes(p.set_code)); }
+  legalInFormat(card, fmt){ if(fmt==='infinity'||!fmt) return true; if(this.bannedIn(card,fmt)) return false; const sets=this.legalSets(fmt); return this.printingsOf(card).some(p=>sets.includes(p.set_code)); }
   validForDeck(card, deck){ if(!card) return {ok:false,reason:'Unknown card'};
     const inks=this.inkList(card); const colors=(deck.colors||[]).filter(Boolean);
     if(colors.length && inks.length && !inks.every(i=>colors.includes(i))) return {ok:false,reason:'Off-color for this deck ('+inks.join('/')+')'};
     if(!this.legalInFormat(card, deck.format)) return {ok:false,reason:'Rotated — not legal in '+this.fmtLabel(deck.format)};
     return {ok:true,reason:''};
   }
-  copyLimitFor(card, fmt){ if(card && this.baseName(card.name_en)==='dalmatian puppy - tail wagger') return 99; return 4; }
+  copyLimitFor(card, fmt){ const r=this.fmtRules(fmt); if(r&&r.copy_limit_overrides){ const o=r.copy_limit_overrides[this.baseName(card&&card.name_en)]; if(o!=null) return o; } if(card && this.baseName(card.name_en)==='dalmatian puppy - tail wagger') return 99; return (r&&r.default_copy_limit)||4; }
   // Shared deck-readiness model — single source for Home, deck cards, deck detail.
   deckReadiness(deck){
     if(!deck) return null;
@@ -2005,9 +2011,10 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       if(!this.legalInFormat(e.card, deck.format)){ reasons.push(e.card.name_en+' is rotated'); bad.push(e.card.card_id); }
     }
     for(const k in byName){ const lim=this.copyLimitFor(repCard[k], deck.format); if(byName[k]>lim){ reasons.push((repCard[k]?repCard[k].name_en:k)+': '+byName[k]+' copies (max '+lim+' across reprints)'); } }
-    if(total<60) reasons.push(total+'/60 cards');
+    const minSz=this.minDeckSize(deck.format);
+    if(total<minSz) reasons.push(total+'/'+minSz+' cards');
     const uniqReasons=[...new Set(reasons)];
-    return { legal: total>=60 && uniqReasons.length===0, total, reasons:uniqReasons, badIds:bad };
+    return { legal: total>=minSz && uniqReasons.length===0, total, reasons:uniqReasons, badIds:bad };
   }
   cardTypes(c){ const t=c.card_type; if(t==='Song') return ['Action','Song']; if(t==='Action' && /song/i.test(String(c.classification||''))) return ['Action','Song']; return t?[t]:[]; }
   matchCost(cost, f){ if(f==='all') return true; if(f==='10') return cost>=10; return cost===+f; }
