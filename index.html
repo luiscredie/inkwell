@@ -472,6 +472,7 @@
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;gap:12px">
             <p style="color:#8a8a92;font-size:14px">{{ archiveBuilds }}</p>
             <div style="display:flex;gap:10px">
+              <button onClick="{{ openAdvisor }}" style="padding:10px 16px;border-radius:12px;background:linear-gradient(180deg,#c9a6ff,#8a5cf6);border:none;color:#160a2e;font-weight:700;cursor:pointer;font-size:14px">✦ {{ advisorBtnLabel }}</button>
               <button onClick="{{ importDeckToggle }}" style="padding:10px 16px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#e8e8ec;font-weight:600;cursor:pointer;font-size:14px">{{ importBtnLabel }}</button>
               <button onClick="{{ newDeckToggle }}" style="padding:10px 18px;border-radius:12px;background:{{ accent }};border:none;color:#0a0a0c;font-weight:700;cursor:pointer;font-size:14px">{{ newDeckBtnLabel }}</button>
             </div>
@@ -546,6 +547,76 @@
             <div style="text-align:center;padding:70px 20px;color:#7c7c85;border:1px dashed rgba(255,255,255,.12);border-radius:18px">
                <div style="font-family:'Bricolage Grotesque';font-size:19px;margin-bottom:6px">{{ noDecksTitle }}</div>
                <div style="font-size:14px">{{ noDecksSub }}</div>
+            </div>
+          </sc-if>
+        </div>
+        </sc-if>
+
+        <!-- ================= DECK ADVISOR ================= -->
+        <sc-if value="{{ isAdvisor }}" hint-placeholder-val="{{ false }}">
+        <div class="ink-view" style="max-width:1100px;margin:0 auto">
+          <button onClick="{{ backToDecks }}" style="background:none;border:none;color:#8a8a92;cursor:pointer;font-size:13px;margin-bottom:16px;padding:0" style-hover="color:#e8e8ec">{{ allDecksBackLabel }}</button>
+          <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:20px">
+            <div>
+              <h2 style="font-family:'Cinzel Decorative',serif;font-weight:700;font-size:24px;background:linear-gradient(180deg,#f9ecc4,#d4af5a);-webkit-background-clip:text;background-clip:text;color:transparent">✦ {{ advisorBtnLabel }}</h2>
+              <p style="color:#8a8a92;font-size:13.5px;margin-top:4px">{{ advisorSub }}</p>
+            </div>
+            <div style="display:flex;gap:6px;padding:3px;border-radius:11px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)">
+              <button onClick="{{ advAll }}" style="{{ advAllStyle }}">{{ advAllLabel }}</button>
+              <button onClick="{{ advEach }}" style="{{ advEachStyle }}">{{ advEachLabel }}</button>
+            </div>
+          </div>
+
+          <sc-if value="{{ advNoDecks }}" hint-placeholder-val="{{ false }}">
+            <div style="text-align:center;padding:60px 20px;color:#7c7c85;border:1px dashed rgba(255,255,255,.12);border-radius:18px">{{ advNoDecksMsg }}</div>
+          </sc-if>
+
+          <sc-if value="{{ advIsAll }}" hint-placeholder-val="{{ true }}">
+            <div style="padding:20px 22px;border-radius:18px;background:{{ adv.bannerBg }};border:1px solid {{ adv.bannerBorder }};margin-bottom:20px">
+              <div style="display:flex;align-items:center;gap:12px">
+                <span style="font-size:22px">{{ adv.icon }}</span>
+                <div>
+                  <div style="font-family:'Bricolage Grotesque';font-weight:700;font-size:16px;color:{{ adv.headColor }}">{{ adv.headline }}</div>
+                  <div style="font-size:13px;color:#b8b8c0;margin-top:2px">{{ adv.subline }}</div>
+                </div>
+              </div>
+            </div>
+            <sc-if value="{{ adv.hasShort }}" hint-placeholder-val="{{ false }}">
+              <div style="border-radius:16px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);overflow:hidden;margin-bottom:20px">
+                <div style="display:grid;grid-template-columns:1fr 70px 90px 60px;gap:10px;padding:12px 18px;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#7c7c85;border-bottom:1px solid rgba(255,255,255,.06);font-weight:600">
+                  <span>{{ colCard }}</span><span style="text-align:center">Buy</span><span style="text-align:right">{{ colPrice }}</span><span></span>
+                </div>
+                <sc-for list="{{ adv.short }}" as="r" hint-placeholder-count="4">
+                  <div style="display:grid;grid-template-columns:1fr 70px 90px 60px;gap:10px;align-items:center;padding:11px 18px;border-bottom:1px solid rgba(255,255,255,.04)">
+                    <span style="min-width:0"><span style="display:block;font-size:13px;color:#e8e8ec;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.name }}</span><span style="font-size:11px;color:#7c7c85">want {{ r.need }} · own {{ r.have }}</span></span>
+                    <span style="text-align:center;font-family:'JetBrains Mono';font-weight:700;color:#ff9aa4">+{{ r.buy }}</span>
+                    <span style="text-align:right;font-family:'JetBrains Mono';font-size:13px">{{ r.cost }}</span>
+                    <a href="{{ r.liga }}" target="_blank" rel="noopener" style="text-align:right;font-size:12px;color:#8ab4ff">Buy ↗</a>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <sc-for list="{{ adv.deckStatus }}" as="d" hint-placeholder-count="2">
+                <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)">
+                  <span style="font-size:15px">{{ d.mark }}</span>
+                  <span style="flex:1;min-width:0;font-weight:600;font-size:14px">{{ d.name }}</span>
+                  <span style="font-size:12.5px;color:{{ d.color }};font-family:'JetBrains Mono'">{{ d.label }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ advIsEach }}" hint-placeholder-val="{{ false }}">
+            <p style="font-size:13px;color:#8a8a92;margin-bottom:14px">{{ advEachNote }}</p>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <sc-for list="{{ adv.eachStatus }}" as="d" hint-placeholder-count="2">
+                <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)">
+                  <span style="font-size:15px">{{ d.mark }}</span>
+                  <span style="flex:1;min-width:0;font-weight:600;font-size:14px">{{ d.name }}</span>
+                  <span style="font-size:12.5px;color:{{ d.color }};font-family:'JetBrains Mono'">{{ d.label }}</span>
+                </div>
+              </sc-for>
             </div>
           </sc-if>
         </div>
@@ -1159,6 +1230,7 @@ class Component extends DCLogic {
     bInks: [], bCost: 'all', bSets: [], bSetMenu: false, bSort: 'cost-asc', bGroup: 'none', bSize: 5, bOwnedOnly: false,
     newDeckOpen: false, newDeckName: '', newDeckInks: [], newDeckFmt: 'core',
     importDeckOpen: false, importDeckName: '', importDeckText: '', importDeckFmt: 'core',
+    advisorMode: 'all',
     collection: {}, decks: [], matches: [], overrides: {}, wishlist: {}, displayName: 'Illumineer',
     activeUser: 'luiscredie', profileMenuOpen: false, settingsOpen: false, lastSaved: null,
     syncEnabled: false, syncStatus: 'off', syncEmail: null, syncUser: null, syncLast: null, syncMsg: null, syncInput: '',
@@ -1186,6 +1258,7 @@ class Component extends DCLogic {
       colCard:'Card', colOwned:'Owned', colPrice:'Price', colRange:'Range (low–high)', colFoil:'Foil', source:'source', noPrices:'no prices.json loaded', totalValue:'Total Value', cardsPriced:'Cards Priced', noPrice:'No Price', ownedOnly:'✓ Owned only', withPrice:'{n} with price',
       archiveBuilds:'Archive your builds and dive into per-deck analytics.', createDeckTitle:'Create a deck', deckName:'Deck name', chooseInks:'Choose up to 2 inks', create:'Create', importDeckTitle:'Import a deck', importDeckHint:'Paste a list — one card per line. Colors are detected automatically.', deckNameOpt:'Deck name (optional)', noDecksTitle:'No decks yet', noDecksSub:'Create your first build to unlock analytics.', kCards:'cards', kWinRate:'win rate', kValue:'value', kOwnedPct:'% owned',
       inkDist:'Ink Distribution', mostValuable:'Most Valuable', recentGames:'Recent Games', setCompletion:'Set Completion',
+      advisorBtn:'Deck Advisor', advisorSub:'Can you build your decks from your collection?', advAll:'All at once', advEach:'One at a time', advEachNote:'Each deck built on its own, drawing from your full collection (rebuild between events).', advNoDecks:'Add some decks first, then the advisor can plan your copies.', advAllOk:'All decks buildable at once', advAllShort:'{n} extra copies needed', advAllOkSub:'Your {n} decks share no card beyond what you own — sleeve them all simultaneously.', advAllShortSub:'Buy these to have every deck fully built at the same time — {v} total.', advBuildable:'buildable together', advBlocked:'shares copies', advComplete:'100% owned', advNeedN:'need {n} more',
       missingCards:"Cards you're missing", ownEvery:'You own every card ✓', decklist:'Decklist', matchHistory:'Match History', logGame:'Log game', editCards:'Edit cards', doneEditing:'Done editing', delete:'Delete', manaCurve:'Mana Curve', cardTypes:'Card Types', raritySpread:'Rarity Spread',
       totalLore:'Total Lore', deckValue:'Deck Value', winRate:'Win Rate', games:'Games', inCollection:'In Collection',
       importBtn:'↑ Import', newDeckBtn:'+ New Deck', allDecksBack:'‹ All decks', cards2:'Cards', tournamentLegal:'Tournament legal', cardsOf60:'{n}/60 cards', noNotes:'No notes yet.', logGameBtn:'Log game', deleteBtn:'Delete', addCards:'Add cards', searchCardsPh:'Search cards by name…', size:'Size', perRow:'{n} / row', noGamesLogged:'No games logged yet.', clickPlus:'Click + on cards to add them.', copiesToComplete:'{n} copies · {v} to complete', need:'need', buy:'Buy ↗', haveOf:'have {h} of {c}',
@@ -1209,6 +1282,7 @@ class Component extends DCLogic {
       colCard:'Carta', colOwned:'Possui', colPrice:'Preço', colRange:'Faixa (min–max)', colFoil:'Foil', source:'fonte', noPrices:'prices.json não carregado', totalValue:'Valor Total', cardsPriced:'Cartas com Preço', noPrice:'Sem Preço', ownedOnly:'✓ Só que possuo', withPrice:'{n} com preço',
       archiveBuilds:'Arquive seus decks e veja análises detalhadas.', createDeckTitle:'Criar um deck', deckName:'Nome do deck', chooseInks:'Escolha até 2 inks', create:'Criar', importDeckTitle:'Importar um deck', importDeckHint:'Cole uma lista — uma carta por linha. As cores são detectadas automaticamente.', deckNameOpt:'Nome do deck (opcional)', noDecksTitle:'Nenhum deck ainda', noDecksSub:'Crie seu primeiro deck para desbloquear as análises.', kCards:'cartas', kWinRate:'vitórias', kValue:'valor', kOwnedPct:'% na coleção',
       inkDist:'Distribuição de Ink', mostValuable:'Mais Valiosas', recentGames:'Partidas Recentes', setCompletion:'Conclusão de Sets',
+      advisorBtn:'Consultor de Decks', advisorSub:'Você consegue montar seus decks com sua coleção?', advAll:'Todos ao mesmo tempo', advEach:'Um de cada vez', advEachNote:'Cada deck montado sozinho, usando sua coleção inteira (remontando entre eventos).', advNoDecks:'Adicione decks primeiro para o consultor planejar suas cópias.', advAllOk:'Todos os decks montáveis ao mesmo tempo', advAllShort:'{n} cópias extras necessárias', advAllOkSub:'Seus {n} decks não dividem cartas além do que você tem — monte todos ao mesmo tempo.', advAllShortSub:'Compre estas para ter todos os decks montados simultaneamente — {v} no total.', advBuildable:'montável junto', advBlocked:'divide cópias', advComplete:'100% na coleção', advNeedN:'faltam {n}',
       missingCards:'Cartas que faltam', ownEvery:'Você tem todas as cartas ✓', decklist:'Decklist', matchHistory:'Histórico de Partidas', logGame:'Registrar', editCards:'Editar cartas', doneEditing:'Concluir', delete:'Excluir', manaCurve:'Curva de Mana', cardTypes:'Tipos de Carta', raritySpread:'Raridades',
       totalLore:'Lore Total', deckValue:'Valor do Deck', winRate:'Vitórias', games:'Jogos', inCollection:'Na Coleção',
       importBtn:'↑ Importar', newDeckBtn:'+ Novo Deck', allDecksBack:'‹ Todos os decks', cards2:'Cartas', tournamentLegal:'Legal para torneio', cardsOf60:'{n}/60 cartas', noNotes:'Sem notas ainda.', logGameBtn:'Registrar jogo', deleteBtn:'Excluir', addCards:'Adicionar cartas', searchCardsPh:'Buscar cartas por nome…', size:'Tamanho', perRow:'{n} / linha', noGamesLogged:'Nenhum jogo registrado ainda.', clickPlus:'Clique + nas cartas para adicioná-las.', copiesToComplete:'{n} cópias · {v} para completar', need:'faltam', buy:'Comprar ↗', haveOf:'tem {h} de {c}',
@@ -1231,7 +1305,7 @@ class Component extends DCLogic {
 
   // ---------- M1: data contract (see DATA_CONTRACT.md) ----------
   APP_VERSION = '1.4.0';
-  SUPPORTED = { manifest:[1], cards:[3], cards_pt:[1], prices:[2,3,4], aliases:[1], validation:[1], price_history:[1] };
+  SUPPORTED = { manifest:[1], cards:[3], cards_pt:[1], prices:[2,3,4], aliases:[1], validation:[1], price_history:[1,2,3,4] };
   LEGACY = { cards:2, prices:1 };            // pre-contract files still deployed today
   dataRoot = '';                              // dir of data-manifest.json (paths resolve here)
   aliases = null; validationReport = null; ptOverlay = null; manifestMode = false;
@@ -1266,11 +1340,14 @@ class Component extends DCLogic {
   collectionValueNow(){ let value=0,cards=0; const coll=this.state.collection||{}; for(const id in coll){ const c=this.byId[id]; if(!c) continue; const e=coll[id]; const n=e.n||0,f=e.f||0; value+=this.priceOr0(c)*n+(this.foilPrice(c)??this.priceOr0(c))*f; cards+=n+f; } return {value:Math.round(value*100)/100, cards}; }
   histKey(){ return 'inkwell_pricehist_'+this.state.activeUser; }
   loadHist(){ try{ const s=localStorage.getItem(this.histKey()); const a=s?JSON.parse(s):[]; return Array.isArray(a)?a:[]; }catch(e){ return []; } }
-  valueAtPrices(pmap){ let v=0; const coll=this.state.collection||{}; for(const id in coll){ const p=pmap[id]; if(!p) continue; const e=coll[id]; const nn=(p.nl!=null?p.nl:(p.n!=null?p.n:null)); const ff=(p.fl!=null?p.fl:(p.f!=null?p.f:nn)); if(nn!=null) v+=nn*(e.n||0); if(ff!=null) v+=ff*(e.f||0); } return Math.round(v*100)/100; }
+  histNL(p){ if(!p) return null; if(p.nl!=null) return p.nl; if(p.n!=null) return p.n; if(p.normal) return p.normal.low!=null?p.normal.low:(p.normal.average!=null?p.normal.average:null); if(p.minimum_price_brl!=null) return p.minimum_price_brl; return null; }
+  histFL(p, fallback){ if(!p) return fallback; if(p.fl!=null) return p.fl; if(p.f!=null) return p.f; if(p.foil) return p.foil.low!=null?p.foil.low:(p.foil.average!=null?p.foil.average:fallback); return fallback; }
+  valueAtPrices(pmap){ let v=0; const coll=this.state.collection||{}; for(const id in coll){ const p=pmap[id]; if(!p) continue; const e=coll[id]; const nn=this.histNL(p); const ff=this.histFL(p, nn); if(nn!=null) v+=nn*(e.n||0); if(ff!=null) v+=ff*(e.f||0); } return Math.round(v*100)/100; }
   mergedHistory(){
     const map={}; for(const p of this.loadHist()){ if(p&&p.date) map[p.date]={date:p.date,value:p.value,cards:p.cards}; }
     const art=this.priceHistoryArtifact;
-    if(art && Array.isArray(art.series)){ for(const snap of art.series){ if(!snap||!snap.date||!snap.prices) continue; map[snap.date]={date:snap.date, value:this.valueAtPrices(snap.prices), cards:(map[snap.date]&&map[snap.date].cards)||null, src:'pipeline'}; } }
+    const series = art && (Array.isArray(art.series)?art.series : (Array.isArray(art.history)?art.history : null));
+    if(series){ for(const snap of series){ if(!snap||!snap.date) continue; const pm=snap.prices||snap.prices_by_liga_id; if(!pm) continue; map[snap.date]={date:snap.date, value:this.valueAtPrices(pm), cards:(map[snap.date]&&map[snap.date].cards)||null, src:'pipeline'}; } }
     return Object.values(map).sort((a,b)=>a.date<b.date?-1:1);
   }
   recordPriceSnapshot(){
@@ -1712,6 +1789,24 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
   deckLore(deck){ return this.deckEntries(deck).reduce((s,e)=>s+(e.card.lore||0)*e.count,0); }
   deckMatches(id){ return this.state.matches.filter(m=>m.deck_id===id).slice().reverse(); }
   winRate(ms){ if(!ms.length) return null; return Math.round(ms.filter(m=>m.result==='win').length/ms.length*100); }
+  computeAdvisor(){
+    const decks=this.state.decks||[];
+    const req={}, rep={};   // reprint-merged name -> total copies wanted across ALL decks
+    const deckNeed=decks.map(d=>{ const per={}; for(const [id,ct] of Object.entries(d.cards||{})){ const c=this.byId[id]; if(!c) continue; const k=this.nameKey(c.name_en); per[k]=(per[k]||0)+ct; req[k]=(req[k]||0)+ct; rep[k]=c; } return {deck:d, per}; });
+    const ownedK=(k)=>{ const o=this.ownedAcross(rep[k]); return o.n+o.f; };
+    // all-at-once shortfalls
+    const short=[];
+    for(const k in req){ const need=req[k], have=ownedK(k); if(need>have){ const c=rep[k]; short.push({name:c.name_en, need, have, buy:need-have, unit:this.priceOr0(c), liga:this.ligaUrl(c)}); } }
+    short.sort((a,b)=>b.buy-a.buy||b.unit-a.unit);
+    // per-deck: fully buildable from collection alone (one-at-a-time)?
+    const each=deckNeed.map(({deck,per})=>{ let missing=0; for(const k in per){ missing+=Math.max(0,per[k]-ownedK(k)); } return {deck, missing}; });
+    // all-at-once per-deck: which decks are conflict-free given the shared pool.
+    // Greedy: allocate owned copies to decks in listed order; a deck is "buildable together" if it gets all its copies.
+    const pool={}; for(const k in rep) pool[k]=ownedK(k);
+    const allStatus=[]; const tmp={}; for(const k in pool) tmp[k]=pool[k];
+    for(const {deck,per} of deckNeed){ let ok=true; const draft={}; for(const k in per){ if((tmp[k]||0)>=per[k]) draft[k]=per[k]; else { ok=false; } } if(ok){ for(const k in per) tmp[k]-=per[k]; } allStatus.push({deck, ok}); }
+    return { short, buyCopies:short.reduce((s,x)=>s+x.buy,0), buyCost:short.reduce((s,x)=>s+x.buy*x.unit,0), each, allStatus, deckCount:decks.length };
+  }
 
   // ---------- mutations ----------
   parseCsvLine(line){ const out=[]; let cur='',q=false; for(let i=0;i<line.length;i++){ const ch=line[i]; if(q){ if(ch==='"'){ if(line[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=ch; } else { if(ch==='"')q=true; else if(ch===','){out.push(cur);cur='';} else cur+=ch; } } out.push(cur); return out; }
@@ -1859,7 +1954,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     V.lang=st.lang; V.setLangEn=()=>{ try{localStorage.setItem('inkwell_lang','en');}catch(e){} this.setState({lang:'en'}); }; V.setLangPt=()=>{ try{localStorage.setItem('inkwell_lang','pt');}catch(e){} this.setState({lang:'pt'}); };
     V.langEnStyle='padding:4px 9px;border-radius:7px;border:none;cursor:pointer;font-size:11px;font-weight:700;'+(st.lang==='en'?'background:rgba(199,154,68,.22);color:#e0c15a':'background:none;color:#7c7c85');
     V.langPtStyle='padding:4px 9px;border-radius:7px;border:none;cursor:pointer;font-size:11px;font-weight:700;'+(st.lang==='pt'?'background:rgba(199,154,68,.22);color:#e0c15a':'background:none;color:#7c7c85');
-    V.isOverview=st.view==='overview'; V.isCollection=st.view==='collection'; V.isPrices=st.view==='prices'; V.isDecks=st.view==='decks'; V.isDeckDetail=st.view==='deckDetail';
+    V.isOverview=st.view==='overview'; V.isCollection=st.view==='collection'; V.isPrices=st.view==='prices'; V.isDecks=st.view==='decks'; V.isDeckDetail=st.view==='deckDetail'; V.isAdvisor=st.view==='advisor';
     const isEmpty=Object.keys(st.collection).length===0 && st.decks.length===0;
     V.onboarding=st.view==='overview' && isEmpty;
     V.showOverview=st.view==='overview' && !isEmpty;
@@ -1978,6 +2073,33 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       V.archiveBuilds=this.t('archiveBuilds'); V.createDeckTitle=this.t('createDeckTitle'); V.deckNamePh=this.t('deckName'); V.chooseInksLabel=this.t('chooseInks'); V.createLabel=this.t('create'); V.cancelLabel=this.t('cancel'); V.formatLabel=this.t('format');
       V.importDeckTitleLabel=this.t('importDeckTitle'); V.importDeckHint=this.t('importDeckHint'); V.deckNameOptPh=this.t('deckNameOpt');
       V.noDecksTitle=this.t('noDecksTitle'); V.noDecksSub=this.t('noDecksSub');
+      V.openAdvisor=()=>this.setState({view:'advisor'}); V.advisorBtnLabel=this.t('advisorBtn');
+    }
+
+    // ---- DECK ADVISOR ----
+    if(V.isAdvisor){
+      V.accent='#b79bff'; V.backToDecks=this.go('decks'); V.allDecksBackLabel=this.t('allDecksBack');
+      V.advisorBtnLabel=this.t('advisorBtn'); V.advisorSub=this.t('advisorSub');
+      const mode=st.advisorMode||'all';
+      V.advIsAll=mode==='all'; V.advIsEach=mode==='each';
+      V.advAll=()=>this.setState({advisorMode:'all'}); V.advEach=()=>this.setState({advisorMode:'each'});
+      V.advAllLabel=this.t('advAll'); V.advEachLabel=this.t('advEach'); V.advEachNote=this.t('advEachNote');
+      const chip=(on)=>'padding:7px 13px;border-radius:9px;border:none;cursor:pointer;font-size:12.5px;font-weight:700;'+(on?'background:#8a5cf6;color:#fff':'background:none;color:#9a9aa2');
+      V.advAllStyle=chip(mode==='all'); V.advEachStyle=chip(mode==='each');
+      V.advNoDecks=st.decks.length===0; V.advNoDecksMsg=this.t('advNoDecks');
+      const A=this.computeAdvisor(); V.adv={};
+      const clean=A.short.length===0;
+      V.adv.hasShort=!clean;
+      V.adv.icon=clean?'✅':'⚠';
+      V.adv.bannerBg=clean?'rgba(95,208,127,.08)':'rgba(230,193,90,.08)';
+      V.adv.bannerBorder=clean?'rgba(95,208,127,.25)':'rgba(230,193,90,.25)';
+      V.adv.headColor=clean?'#5fd07f':'#e6c15a';
+      V.adv.headline=clean?this.t('advAllOk'):this.t('advAllShort',{n:A.buyCopies});
+      V.adv.subline=clean?this.t('advAllOkSub',{n:A.deckCount}):this.t('advAllShortSub',{v:this.fmt(A.buyCost)});
+      V.adv.short=A.short.map(r=>({name:r.name, need:r.need, have:r.have, buy:r.buy, cost:this.fmt(r.buy*r.unit), liga:r.liga}));
+      V.adv.deckStatus=A.allStatus.map(s=>({name:s.deck.name, mark:s.ok?'✅':'🔴', color:s.ok?'#5fd07f':'#ff8a96', label:s.ok?this.t('advBuildable'):this.t('advBlocked')}));
+      V.adv.eachStatus=A.each.map(s=>({name:s.deck.name, mark:s.missing===0?'✅':'🟡', color:s.missing===0?'#5fd07f':'#e6c15a', label:s.missing===0?this.t('advComplete'):this.t('advNeedN',{n:s.missing})}));
+      V.colCard=this.t('colCard'); V.colPrice=this.t('colPrice');
     }
 
     // ---- DECK DETAIL ----
