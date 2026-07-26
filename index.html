@@ -1036,7 +1036,7 @@
             <sc-for list="{{ cm.abilities }}" as="ab" hint-placeholder-count="1">
               <p style="font-size:13px;line-height:1.45;color:#d2d2d8;white-space:pre-line;margin:0">
                 <sc-if value="{{ ab.name }}" hint-placeholder-val="{{ false }}">
-                  <span style="background:#0e0e12;color:#fff;font-family:'Bricolage Grotesque';font-weight:800;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:6px;border:1px solid rgba(255,255,255,.14);margin-right:8px;white-space:nowrap">{{ ab.name }}</span>
+                  <span style="background:#0e0e12;color:#fff;font-family:'Bricolage Grotesque';font-weight:800;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:6px;border:1px solid rgba(255,255,255,.14);margin-right:8px;white-space:nowrap;display:inline-flex;align-items:center;gap:4px">{{ ab.nameEl }}</span>
                 </sc-if>{{ ab.body }}</p>
             </sc-for>
           </div>
@@ -1713,7 +1713,8 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
           body=(this.state.lang==='pt') ? (a.text||a.effect||a.reminder_text||'') : (a.effect||a.reminder_text||a.text||'');
           if(name && body.indexOf(name)===0) body=body.slice(name.length).replace(/^\s*[-–:]\s*/,'');
         }
-        return { name:(name||'').trim().toUpperCase(), body:this.buildBody(body.trim()) };
+        const nm=(name||'').trim().toUpperCase();
+        return { name:nm, nameEl:this.buildBody(nm), body:this.buildBody(body.trim()) };
       }).filter(x=>x.name||(Array.isArray(x.body)&&x.body.length));
     }
     return this.parseAbility(card&&card.ability_text);
@@ -1743,7 +1744,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       else out.push(s);
     }
     const res=out.length?out:[{name:'',body:'No ability text.'}];
-    return res.map(s=>({name:s.name, body:this.buildBody(s.body)}));
+    return res.map(s=>({name:s.name, nameEl:this.buildBody(s.name||''), body:this.buildBody(s.body)}));
   }
   buildBody(text){
     const parts=String(text).split(/(\{[a-z]\})/gi);
