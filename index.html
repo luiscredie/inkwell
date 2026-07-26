@@ -365,7 +365,7 @@
                 <div style="position:relative;aspect-ratio:734/1024;border-radius:12px;overflow:hidden;background:{{ c.ink }};box-shadow:0 8px 22px rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.08)">
                   <img src="{{ c._local }}" data-remote="{{ c._remote }}" onError="{{ imgError }}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block" />
                   <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:12px;text-align:center;font-family:'Bricolage Grotesque';font-weight:700;font-size:14px;background:{{ c.ink }};display:none" data-ph>{{ c.name }}</div>
-                  <span onClick="{{ c._wish }}" title="Wishlist" style="position:absolute;top:6px;left:6px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;font-size:14px;line-height:1;color:{{ c.wishColor }};cursor:pointer;z-index:2" style-hover="background:rgba(0,0,0,.85)">{{ c.wishIcon }}</span>
+                  <span onClick="{{ c._wish }}" title="Wishlist" style="position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;font-size:14px;line-height:1;color:{{ c.wishColor }};cursor:pointer;z-index:2" style-hover="background:rgba(0,0,0,.85)">{{ c.wishIcon }}</span>
                   <sc-if value="{{ c.owned }}" hint-placeholder-val="{{ false }}">
                     <div style="position:absolute;bottom:7px;right:7px;padding:3px 8px;border-radius:8px;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);font-family:'JetBrains Mono';font-weight:700;font-size:12px;color:#9be6a8">×{{ c.ownedQty }}{{ c.foilTag }}</div>
                   </sc-if>
@@ -568,11 +568,44 @@
               <p style="color:#8a8a92;font-size:14px;margin-top:6px;max-width:520px">{{ dd.notes }}</p>
             </div>
             <div style="display:flex;gap:10px">
+              <sc-if value="{{ coachAvail }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ runCoach }}" style="padding:9px 16px;border-radius:11px;background:linear-gradient(180deg,#c9a6ff,#8a5cf6);border:none;color:#160a2e;cursor:pointer;font-size:13px;font-weight:700">{{ coachBtnLabel }}</button>
+              </sc-if>
               <button onClick="{{ toggleDeckEdit }}" style="{{ deckEditBtnStyle }}">{{ deckEditLabel }}</button>
               <button onClick="{{ logMatchToggle }}" style="padding:9px 16px;border-radius:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#e8e8ec;cursor:pointer;font-size:13px;font-weight:600">{{ logGameBtnLabel }}</button>
               <button onClick="{{ deleteDeck }}" style="padding:9px 14px;border-radius:11px;background:rgba(226,59,78,.12);border:1px solid rgba(226,59,78,.3);color:#ff8a96;cursor:pointer;font-size:13px">{{ deleteBtnLabel }}</button>
             </div>
           </div>
+
+          <sc-if value="{{ coachShow }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:22px;border-radius:18px;background:linear-gradient(160deg,rgba(138,92,246,.1),rgba(138,92,246,.03));border:1px solid rgba(138,92,246,.25);margin-bottom:22px;animation:ink-pop .2s both">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+                <h3 style="font-family:'Bricolage Grotesque';font-weight:700;font-size:16px;display:flex;align-items:center;gap:8px"><span>✦</span> {{ coachTitle }}</h3>
+                <button onClick="{{ closeCoach }}" style="background:rgba(255,255,255,.06);border:none;color:#c8c8cc;width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:15px">×</button>
+              </div>
+              <sc-if value="{{ coachLoading }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;align-items:center;gap:12px;color:#c9a6ff;font-size:14px;padding:10px 0">
+                  <div style="width:20px;height:20px;border-radius:50%;border:2px solid rgba(201,166,255,.25);border-top-color:#c9a6ff;animation:ink-spin .8s linear infinite"></div>{{ coachLoadingLabel }}
+                </div>
+              </sc-if>
+              <sc-if value="{{ coachErr }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size:13px;color:#ff9aa4">{{ coachErr }}</div>
+              </sc-if>
+              <sc-if value="{{ coachReady }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:12px">
+                  <sc-for list="{{ coachBlocks }}" as="b" hint-placeholder-count="4">
+                    <div>
+                      <sc-if value="{{ b.head }}" hint-placeholder-val="{{ false }}">
+                        <div style="font-family:'Bricolage Grotesque';font-weight:700;font-size:13.5px;color:#d9c6ff;letter-spacing:.02em;margin-bottom:5px">{{ b.head }}</div>
+                      </sc-if>
+                      <div style="font-size:13.5px;line-height:1.6;color:#d8d4e2;white-space:pre-line">{{ b.body }}</div>
+                    </div>
+                  </sc-for>
+                  <div style="font-size:10.5px;color:#7c7c85;margin-top:2px">{{ coachDisclaimer }}</div>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
 
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:22px">
             <sc-for list="{{ dd.stats }}" as="s" hint-placeholder-count="5">
@@ -908,9 +941,9 @@
           </div>
 
           <div style="font-size:12px;color:#8a8a92;margin-top:16px">{{ cm.classification }}</div>
-          <div style="margin-top:10px;display:flex;flex-direction:column;gap:12px">
+          <div style="margin-top:10px;display:flex;flex-direction:column;gap:7px">
             <sc-for list="{{ cm.abilities }}" as="ab" hint-placeholder-count="1">
-              <p style="font-size:13.5px;line-height:1.7;color:#d2d2d8;white-space:pre-line;margin:0">
+              <p style="font-size:13px;line-height:1.45;color:#d2d2d8;white-space:pre-line;margin:0">
                 <sc-if value="{{ ab.name }}" hint-placeholder-val="{{ false }}">
                   <span style="background:#0e0e12;color:#fff;font-family:'Bricolage Grotesque';font-weight:800;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:6px;border:1px solid rgba(255,255,255,.14);margin-right:8px;white-space:nowrap">{{ ab.name }}</span>
                 </sc-if>{{ ab.body }}</p>
@@ -934,7 +967,7 @@
                 </sc-if>
               </div>
             </div>
-            <div style="font-size:10.5px;color:#6f6f78;margin-top:12px;font-family:'JetBrains Mono'">{{ cm.priceSrc }}</div>
+            <div style="font-size:10.5px;color:#6f6f78;margin-top:12px;font-family:'JetBrains Mono'"><sc-if value="{{ cm.ligaUrl }}" hint-placeholder-val="{{ false }}"><a href="{{ cm.ligaUrl }}" target="_blank" rel="noopener" style="color:#8ab4ff">{{ cm.priceSrc }} ↗</a></sc-if><sc-if value="{{ cm.noLiga }}" hint-placeholder-val="{{ true }}">{{ cm.priceSrc }}</sc-if></div>
           </div>
 
           <sc-if value="{{ cm.hasVariants }}" hint-placeholder-val="{{ false }}">
@@ -1089,6 +1122,7 @@ class Component extends DCLogic {
     collection: {}, decks: [], matches: [], overrides: {}, wishlist: {}, displayName: 'Illumineer',
     activeUser: 'luiscredie', profileMenuOpen: false, settingsOpen: false, lastSaved: null,
     syncEnabled: false, syncStatus: 'off', syncEmail: null, syncUser: null, syncLast: null, syncMsg: null, syncInput: '',
+    coachDeck: null, coachLoading: false, coachErr: null, coachText: null,
     lang: 'en',
     toast: null,
   };
@@ -1099,6 +1133,7 @@ class Component extends DCLogic {
       sub_overview:'Welcome back, {name}', sub_collection:'Every card in the multiverse — yours highlighted', sub_prices:'Market values across your collection', sub_decks:'Your archived builds & analytics', sub_deck:'Deck Analytics',
       search:'Search 3,400+ cards…', have:'Owned', missing:'Missing', wishlist:'Wishlist', all:'All', allCards:'All cards',
       valueHistory:'Collection value over time', valueHistoryHint:'Value history builds automatically as prices update. Check back after the next price refresh.',
+      aiCoach:'✦ AI Coach', aiCoachTitle:'AI Coach', coachLoading:'Analyzing your deck…', coachErr:'Coaching failed — please try again.', coachUnavail:'AI Coach runs inside the Inkwell app host and is unavailable on this deployment.', coachDisclaimer:'AI-generated guidance — verify against current meta and card text.',
       export:'Export', import:'Import', cards:'cards', prev:'‹ Prev', next:'Next ›',
       newDeck:'+ New Deck', importDeck:'↑ Import', createDeck:'Create', cancel:'Cancel', format:'Format',
       inkable:'Inkable', uninkable:'Uninkable', cost:'Cost', allSets:'All sets',
@@ -1121,6 +1156,7 @@ class Component extends DCLogic {
       sub_overview:'Bem-vindo de volta, {name}', sub_collection:'Todas as cartas do multiverso — as suas em destaque', sub_prices:'Valores de mercado da sua coleção', sub_decks:'Seus decks arquivados e análises', sub_deck:'Análise do Deck',
       search:'Buscar 3.400+ cartas…', have:'Tenho', missing:'Faltando', wishlist:'Lista de Desejos', all:'Todas', allCards:'Todas as cartas',
       valueHistory:'Valor da coleção ao longo do tempo', valueHistoryHint:'O histórico de valor é criado automaticamente conforme os preços atualizam. Volte após a próxima atualização de preços.',
+      aiCoach:'✦ Treinador IA', aiCoachTitle:'Treinador IA', coachLoading:'Analisando seu deck…', coachErr:'Falha na análise — tente novamente.', coachUnavail:'O Treinador IA roda dentro do app Inkwell e não está disponível neste site.', coachDisclaimer:'Orientação gerada por IA — confira com o meta atual e o texto das cartas.',
       export:'Exportar', import:'Importar', cards:'cartas', prev:'‹ Anterior', next:'Próxima ›',
       newDeck:'+ Novo Deck', importDeck:'↑ Importar', createDeck:'Criar', cancel:'Cancelar', format:'Formato',
       inkable:'Inkável', uninkable:'Não-inkável', cost:'Custo', allSets:'Todos os sets',
@@ -1251,6 +1287,49 @@ class Component extends DCLogic {
   queueSync(){ if(!this.sb || this.state.syncStatus==='off' || !this.state.syncUser) return; clearTimeout(this._syncT); this._syncT=setTimeout(()=>{ this.setState({syncStatus:'syncing'}); this.pushRemote(this.state.activeUser).then(()=>this.setState({syncStatus:'synced', syncLast:Date.now()})).catch(e=>this.setState({syncStatus:'error', syncMsg:String(e&&e.message||e)})); }, 1400); }
   syncNow = ()=>{ if(!this.sb || !this.state.syncUser){ this.showToast('Sign in to sync'); return; } this.setState({syncStatus:'syncing'}); this.reconcile(this.state.activeUser).then(()=>this.setState({syncStatus:'synced', syncLast:Date.now(), syncMsg:'Synced.'})).catch(e=>this.setState({syncStatus:'error', syncMsg:String(e&&e.message||e)})); };
   onSyncInput = (e)=>this.setState({syncInput:e.target.value});
+
+  // ---------- M6: AI Coach ----------
+  coachAvailable(){ return !!(window.claude && typeof window.claude.complete==='function'); }
+  buildCoachPrompt(deck){
+    const entries=this.deckEntries(deck); const total=this.deckCount(deck);
+    const buckets=[0,0,0,0,0,0,0,0]; for(const e of entries){ const cost=Math.min(7,Math.max(0,(typeof e.card.ink_cost==='number'?e.card.ink_cost:0))); buckets[cost]+=e.count; }
+    const types={}; for(const e of entries){ const disp=this.cardTypes(e.card).includes('Song')?'Song':(e.card.card_type||'?'); types[disp]=(types[disp]||0)+e.count; }
+    const list=entries.sort((a,b)=>(a.card.ink_cost||0)-(b.card.ink_cost||0)).map(e=>`${e.count}x ${e.card.name_en} [cost ${e.card.ink_cost==null?'-':e.card.ink_cost}, ${e.card.card_type||'?'}${e.card.lore!=null?', '+e.card.lore+' lore':''}${this.inkableOf(e.card)===0?', uninkable':''}]`).join('\n');
+    const ms=this.deckMatches(deck.id); const wr=this.winRate(ms);
+    const lang=this.state.lang==='pt'?'Portuguese (Brazil)':'English';
+    return `You are an expert Disney Lorcana deck coach. Analyze this ${ (deck.colors||[]).filter(Boolean).join('/')||'—' } deck (format: ${deck.format||'core'}). Respond in ${lang}. Be specific and concise.
+
+Deck: ${deck.name}
+Total cards: ${total}/60
+Ink/cost curve (cost:count): ${buckets.map((n,i)=>(i===7?'7+':i)+':'+n).join(', ')}
+Type split: ${Object.entries(types).map(([k,v])=>k+' '+v).join(', ')}
+Total lore in deck: ${this.deckLore(deck)}
+Record: ${ms.length?`${ms.filter(m=>m.result==='win').length}W-${ms.filter(m=>m.result==='loss').length}L (${wr}% win)`:'no games logged'}
+
+Decklist:
+${list}
+
+Give your answer in these sections, each starting with the exact header line followed by content:
+## Archetype
+## Win conditions
+## Weaknesses
+## Curve & consistency
+## 3 concrete improvements
+## Mulligan guidance
+Only reference plausible Lorcana cards (prefer cards already in the list). Keep each section to 1-3 sentences or short bullets.`;
+  }
+  runCoach = ()=>{
+    const deck=this.deckById(this.state.selectedDeck); if(!deck) return;
+    if(!this.coachAvailable()){ this.setState({coachDeck:deck.id, coachErr:this.t('coachUnavail'), coachText:null, coachLoading:false}); return; }
+    const cache=this._coachCache&&this._coachCache[deck.id];
+    if(cache){ this.setState({coachDeck:deck.id, coachText:cache, coachErr:null, coachLoading:false}); return; }
+    this.setState({coachDeck:deck.id, coachLoading:true, coachErr:null, coachText:null});
+    window.claude.complete({ model:'claude-sonnet-4-5', max_tokens:1400, messages:[{role:'user', content:this.buildCoachPrompt(deck)}] })
+      .then(txt=>{ this._coachCache=this._coachCache||{}; this._coachCache[deck.id]=txt; if(this.state.selectedDeck===deck.id) this.setState({coachText:txt, coachLoading:false}); })
+      .catch(e=>{ if(this.state.selectedDeck===deck.id) this.setState({coachErr:this.t('coachErr'), coachLoading:false}); });
+  };
+  closeCoach = ()=>this.setState({coachDeck:null, coachText:null, coachErr:null, coachLoading:false});
+  parseCoach(txt){ if(!txt) return []; const blocks=[]; const lines=String(txt).split('\n'); let cur={head:'',body:''}; for(const ln of lines){ const h=ln.match(/^#{1,4}\s+(.+)/)||ln.match(/^\*\*(.+?)\*\*\s*$/); if(h){ if(cur.head||cur.body.trim()) blocks.push(cur); cur={head:h[1].trim(),body:''}; } else { cur.body+=(cur.body?'\n':'')+ln; } } if(cur.head||cur.body.trim()) blocks.push(cur); return blocks.map(b=>({head:b.head,body:b.body.trim()})); }
 
   async bootData(){
     let man = await this.fetchJson('data-manifest.json');
@@ -1385,9 +1464,9 @@ class Component extends DCLogic {
   }
   normalizePrices(pj){ const r=this.priceMap(pj); return r.error?{}:r.map; }
   pd(card){ return (card && this.prices && this.prices[card.card_id]) || null; }
-  hasRealPrice(card){ const p=this.pd(card); return !!(p&&(p.n!=null||p.f!=null)); }
-  price(card){ const p=this.pd(card); return p&&p.n!=null ? p.n : null; }
-  foilPrice(card){ const p=this.pd(card); return p&&p.f!=null ? p.f : null; }
+  hasRealPrice(card){ const p=this.pd(card); return !!(p&&(p.n!=null||p.nl!=null||p.f!=null||p.fl!=null)); }
+  price(card){ const p=this.pd(card); if(!p) return null; return p.nl!=null ? p.nl : (p.n!=null ? p.n : null); }
+  foilPrice(card){ const p=this.pd(card); if(!p) return null; return p.fl!=null ? p.fl : (p.f!=null ? p.f : null); }
   priceOr0(card){ const v=this.price(card); return v==null ? 0 : v; }
   normalRange(card){ const p=this.pd(card); if(!p||(p.nl==null&&p.nh==null)) return null; return {lo:p.nl,hi:p.nh}; }
   foilRangeOf(card){ const p=this.pd(card); if(!p||(p.fl==null&&p.fh==null)) return null; return {lo:p.fl,hi:p.fh}; }
@@ -1860,6 +1939,14 @@ class Component extends DCLogic {
         // edit
         V.toggleDeckEdit=()=>this.setState({deckEdit:!st.deckEdit,logMatchOpen:false}); V.deckEditLabel=st.deckEdit?this.t('doneEditing'):this.t('editCards'); V.deckEditBtnStyle=st.deckEdit?'padding:9px 16px;border-radius:11px;background:#b79bff;border:none;color:#0a0a0c;cursor:pointer;font-size:13px;font-weight:700':'padding:9px 16px;border-radius:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#e8e8ec;cursor:pointer;font-size:13px;font-weight:600';
         V.deleteDeck=this.deleteDeck; V.deckSearch=st.deckSearch; V.onDeckSearch=(e)=>this.setState({deckSearch:e.target.value,page:0});
+        // ---- M6 AI Coach ----
+        V.coachAvail=this.coachAvailable();
+        V.coachBtnLabel=this.t('aiCoach'); V.coachTitle=this.t('aiCoachTitle');
+        V.coachShow=st.coachDeck===deck.id; V.coachLoading=st.coachLoading; V.coachErr=st.coachErr;
+        V.coachReady=!st.coachLoading && !st.coachErr && !!st.coachText;
+        V.coachBlocks=this.parseCoach(st.coachText);
+        V.runCoach=this.runCoach; V.closeCoach=this.closeCoach;
+        V.coachLoadingLabel=this.t('coachLoading'); V.coachDisclaimer=this.t('coachDisclaimer');
         // ---- builder ----
         const dq=st.deckSearch.trim().toLowerCase();
         const inDeck=(id)=>deck.cards[id]||0;
@@ -1931,7 +2018,7 @@ class Component extends DCLogic {
         uninkStyle:_ink===0?'flex:1;padding:9px;border-radius:10px;cursor:pointer;font-size:12.5px;font-weight:700;border:1px solid #ff7a86;background:rgba(255,122,134,.16);color:#ff7a86;display:inline-flex;align-items:center;justify-content:center;gap:6px':'flex:1;padding:9px;border-radius:10px;cursor:pointer;font-size:12.5px;font-weight:600;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#9a9aa2;display:inline-flex;align-items:center;justify-content:center;gap:6px',
         inkIconEl:this.iconImgEl('ink/inkwell.svg',15), uninkIconEl:this.iconImgEl('ink/inkcost.svg',15),
         _setInk:()=>this.setInkable(c.card_id,1), _setUnink:()=>this.setInkable(c.card_id,0),
-        inkSoft:(this.inkList(c)[0]?this.INK[this.inkList(c)[0]]:'#888')+'22', inkColor:this.inkList(c).join(' / ')||'—', _local:cv._local, _remote:cv._remote, imgEl: cv._local ? React.createElement('img',{src:cv._local,'data-remote':cv._remote,onError:window.imgError,style:{position:'relative',width:'100%',height:'100%',objectFit:'cover',display:'block'}}) : null, rarity:this.rar(c).l, rarityColor:this.rar(c).c, setName:this.setName(c.set_code), number:c.card_number, pips, classification:c.classification||'', ability:c.ability_text||'No ability text.', abilities:this.buildAbilities(c), price:this.fmtOrDash(this.price(c)), foilPrice:this.fmtOrDash(this.foilPrice(c)), range:this.fmtRange(this.normalRange(c)), foilRange:this.fmtRange(this.foilRangeOf(c)), priceSrc:this.hasRealPrice(c)?('source · '+(this.priceSource||'prices.json')):'no price in prices.json', qtyN:o.n, qtyF:o.f, _incN:()=>this.setQty(c.card_id,'n',1), _decN:()=>this.setQty(c.card_id,'n',-1), _incF:()=>this.setQty(c.card_id,'f',1), _decF:()=>this.setQty(c.card_id,'f',-1) };
+        inkSoft:(this.inkList(c)[0]?this.INK[this.inkList(c)[0]]:'#888')+'22', inkColor:this.inkList(c).join(' / ')||'—', _local:cv._local, _remote:cv._remote, imgEl: cv._local ? React.createElement('img',{src:cv._local,'data-remote':cv._remote,onError:window.imgError,style:{position:'relative',width:'100%',height:'100%',objectFit:'cover',objectPosition:'center 20%',display:'block'}}) : null, rarity:this.rar(c).l, rarityColor:this.rar(c).c, setName:this.setName(c.set_code), number:c.card_number, pips, classification:c.classification||'', ability:c.ability_text||'No ability text.', abilities:this.buildAbilities(c), price:this.fmtOrDash(this.price(c)), foilPrice:this.fmtOrDash(this.foilPrice(c)), range:this.fmtRange(this.normalRange(c)), foilRange:this.fmtRange(this.foilRangeOf(c)), priceSrc:this.hasRealPrice(c)?('source · '+(this.priceSource||'prices.json')):'no price in prices.json', ligaUrl:this.hasRealPrice(c)?this.ligaUrl(c):'', noLiga:!this.hasRealPrice(c), qtyN:o.n, qtyF:o.f, _incN:()=>this.setQty(c.card_id,'n',1), _decN:()=>this.setQty(c.card_id,'n',-1), _incF:()=>this.setQty(c.card_id,'f',1), _decF:()=>this.setQty(c.card_id,'f',-1) };
     } }
     V.closeCard=()=>this.setState({selectedCard:null});
     V.exportOverrides=this.exportOverrides;
