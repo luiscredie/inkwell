@@ -197,6 +197,37 @@
         </sc-if>
         <sc-if value="{{ showOverview }}" hint-placeholder-val="{{ true }}">
         <div class="ink-view" style="max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:22px">
+          <sc-if value="{{ nowPlaying }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:24px;border-radius:20px;background:linear-gradient(150deg,rgba(199,154,68,.14),rgba(138,92,246,.06));border:1px solid rgba(199,154,68,.24)">
+              <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:16px">
+                <div style="min-width:0">
+                  <div style="font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#b89a5e;margin-bottom:6px">{{ npLabel }}</div>
+                  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                    <h2 style="font-family:'Bricolage Grotesque';font-weight:800;font-size:26px;letter-spacing:-.02em">{{ np.name }}</h2>
+                    <span style="padding:3px 12px;border-radius:20px;font-size:12px;font-weight:700;background:{{ np.statusBg }};color:{{ np.statusColor }}">{{ np.statusLabel }}</span>
+                  </div>
+                  <div style="display:flex;gap:6px;margin-top:8px">
+                    <sc-for list="{{ np.inks }}" as="ink" hint-placeholder-count="2"><span style="padding:2px 10px;border-radius:20px;font-size:11.5px;font-weight:600;background:{{ ink._bg }};color:{{ ink._fg }}">{{ ink.name }}</span></sc-for>
+                    <span style="padding:2px 10px;border-radius:20px;font-size:11.5px;color:#9a9aa2;background:rgba(255,255,255,.05)">{{ np.format }}</span>
+                  </div>
+                </div>
+                <button onClick="{{ np._act }}" style="padding:11px 20px;border-radius:12px;background:linear-gradient(180deg,#f4dd9a,#c79a44);border:none;color:#2a2118;font-weight:800;cursor:pointer;font-size:14px;white-space:nowrap">{{ np.actionLabel }}</button>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-top:20px">
+                <div style="padding:14px;border-radius:13px;background:rgba(0,0,0,.22)"><div style="font-family:'JetBrains Mono';font-weight:700;font-size:19px;color:{{ np.legalColor }}">{{ np.legalText }}</div><div style="font-size:11px;color:#8a8a92;margin-top:3px">{{ npLegality }}</div></div>
+                <div style="padding:14px;border-radius:13px;background:rgba(0,0,0,.22)"><div style="font-family:'JetBrains Mono';font-weight:700;font-size:19px">{{ np.count }}</div><div style="font-size:11px;color:#8a8a92;margin-top:3px">{{ npCards }}</div></div>
+                <div style="padding:14px;border-radius:13px;background:rgba(0,0,0,.22)"><div style="font-family:'JetBrains Mono';font-weight:700;font-size:19px;color:{{ np.ownColor }}">{{ np.ownedPct }}%</div><div style="font-size:11px;color:#8a8a92;margin-top:3px">{{ npOwned }}</div></div>
+                <div style="padding:14px;border-radius:13px;background:rgba(0,0,0,.22)"><div style="font-family:'JetBrains Mono';font-weight:700;font-size:19px">{{ np.record }}</div><div style="font-size:11px;color:#8a8a92;margin-top:3px">{{ npLast10 }}</div></div>
+                <div style="padding:14px;border-radius:13px;background:rgba(0,0,0,.22)"><div style="font-family:'JetBrains Mono';font-weight:700;font-size:19px">{{ np.missingText }}</div><div style="font-size:11px;color:#8a8a92;margin-top:3px">{{ npMissing }}</div></div>
+              </div>
+              <sc-if value="{{ np.hasDeckSwitch }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                  <span style="font-size:11.5px;color:#8a8a92">{{ npSwitch }}</span>
+                  <sc-for list="{{ np.others }}" as="d" hint-placeholder-count="1"><button onClick="{{ d._pick }}" style="padding:5px 12px;border-radius:9px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#d8d8dc;cursor:pointer;font-size:12px">{{ d.name }}</button></sc-for>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px">
             <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
               <div style="padding:22px;border-radius:18px;background:linear-gradient(160deg,rgba(255,255,255,.05),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.07);position:relative;overflow:hidden">
@@ -651,6 +682,7 @@
               <sc-if value="{{ coachAvail }}" hint-placeholder-val="{{ false }}">
                 <button onClick="{{ runCoach }}" style="padding:9px 16px;border-radius:11px;background:linear-gradient(180deg,#c9a6ff,#8a5cf6);border:none;color:#160a2e;cursor:pointer;font-size:13px;font-weight:700">{{ coachBtnLabel }}</button>
               </sc-if>
+              <button onClick="{{ setActive }}" style="{{ setActiveStyle }}">{{ setActiveLabel }}</button>
               <button onClick="{{ toggleDeckEdit }}" style="{{ deckEditBtnStyle }}">{{ deckEditLabel }}</button>
               <button onClick="{{ logMatchToggle }}" style="padding:9px 16px;border-radius:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#e8e8ec;cursor:pointer;font-size:13px;font-weight:600">{{ logGameBtnLabel }}</button>
               <button onClick="{{ deleteDeck }}" style="padding:9px 14px;border-radius:11px;background:rgba(226,59,78,.12);border:1px solid rgba(226,59,78,.3);color:#ff8a96;cursor:pointer;font-size:13px">{{ deleteBtnLabel }}</button>
@@ -1281,6 +1313,7 @@ class Component extends DCLogic {
       colCard:'Card', colOwned:'Owned', colPrice:'Price', colRange:'Range (low–high)', colFoil:'Foil', source:'source', noPrices:'no prices.json loaded', totalValue:'Total Value', cardsPriced:'Cards Priced', noPrice:'No Price', ownedOnly:'✓ Owned only', withPrice:'{n} with price',
       archiveBuilds:'Archive your builds and dive into per-deck analytics.', createDeckTitle:'Create a deck', deckName:'Deck name', chooseInks:'Choose up to 2 inks', create:'Create', importDeckTitle:'Import a deck', importDeckHint:'Paste a list — one card per line. Colors are detected automatically.', deckNameOpt:'Deck name (optional)', noDecksTitle:'No decks yet', noDecksSub:'Create your first build to unlock analytics.', kCards:'cards', kWinRate:'win rate', kValue:'value', kOwnedPct:'% owned',
       inkDist:'Ink Distribution', mostValuable:'Most Valuable', recentGames:'Recent Games', setCompletion:'Set Completion',
+      nowPlaying:'Now Playing', legality:'Legality', last10:'Last 10', switchDeck:'Switch deck:', stSetup:'Setup needed', stIllegal:'Legality issue', stMissing:'Missing cards', stReady:'Ready to play', stPlay:'In rotation', na_finishDeck:'Finish deck', na_fixLegality:'Fix legality', na_viewMissing:'View missing cards', na_logFirst:'Log first match', na_review:'Review / log match', setActive:'Set as active', activeDeck:'✓ Active deck',
       advisorBtn:'Deck Advisor', advisorSub:'Can you build your decks from your collection?', advAll:'All at once', advEach:'One at a time', advEachNote:'Each deck built on its own, drawing from your full collection (rebuild between events).', advNoDecks:'Add some decks first, then the advisor can plan your copies.', advAllOk:'All decks buildable at once', advAllShort:'{n} extra copies needed', advAllOkSub:'Your {n} decks share no card beyond what you own — sleeve them all simultaneously.', advAllShortSub:'Buy these to have every deck fully built at the same time — {v} total.', advBuildable:'buildable together', advBlocked:'shares copies', advComplete:'100% owned', advNeedN:'need {n} more',
       missingCards:"Cards you're missing", ownEvery:'You own every card ✓', decklist:'Decklist', matchHistory:'Match History', logGame:'Log game', editCards:'Edit cards', doneEditing:'Done editing', delete:'Delete', manaCurve:'Mana Curve', cardTypes:'Card Types', raritySpread:'Rarity Spread',
       totalLore:'Total Lore', deckValue:'Deck Value', winRate:'Win Rate', games:'Games', inCollection:'In Collection',
@@ -1305,6 +1338,7 @@ class Component extends DCLogic {
       colCard:'Carta', colOwned:'Possui', colPrice:'Preço', colRange:'Faixa (min–max)', colFoil:'Foil', source:'fonte', noPrices:'prices.json não carregado', totalValue:'Valor Total', cardsPriced:'Cartas com Preço', noPrice:'Sem Preço', ownedOnly:'✓ Só que possuo', withPrice:'{n} com preço',
       archiveBuilds:'Arquive seus decks e veja análises detalhadas.', createDeckTitle:'Criar um deck', deckName:'Nome do deck', chooseInks:'Escolha até 2 inks', create:'Criar', importDeckTitle:'Importar um deck', importDeckHint:'Cole uma lista — uma carta por linha. As cores são detectadas automaticamente.', deckNameOpt:'Nome do deck (opcional)', noDecksTitle:'Nenhum deck ainda', noDecksSub:'Crie seu primeiro deck para desbloquear as análises.', kCards:'cartas', kWinRate:'vitórias', kValue:'valor', kOwnedPct:'% na coleção',
       inkDist:'Distribuição de Ink', mostValuable:'Mais Valiosas', recentGames:'Partidas Recentes', setCompletion:'Conclusão de Sets',
+      nowPlaying:'Jogando Agora', legality:'Legalidade', last10:'Últimas 10', switchDeck:'Trocar deck:', stSetup:'Precisa montar', stIllegal:'Problema de legalidade', stMissing:'Faltam cartas', stReady:'Pronto para jogar', stPlay:'Em rotação', na_finishDeck:'Terminar deck', na_fixLegality:'Corrigir legalidade', na_viewMissing:'Ver cartas que faltam', na_logFirst:'Registrar 1ª partida', na_review:'Revisar / registrar', setActive:'Definir como ativo', activeDeck:'✓ Deck ativo',
       advisorBtn:'Consultor de Decks', advisorSub:'Você consegue montar seus decks com sua coleção?', advAll:'Todos ao mesmo tempo', advEach:'Um de cada vez', advEachNote:'Cada deck montado sozinho, usando sua coleção inteira (remontando entre eventos).', advNoDecks:'Adicione decks primeiro para o consultor planejar suas cópias.', advAllOk:'Todos os decks montáveis ao mesmo tempo', advAllShort:'{n} cópias extras necessárias', advAllOkSub:'Seus {n} decks não dividem cartas além do que você tem — monte todos ao mesmo tempo.', advAllShortSub:'Compre estas para ter todos os decks montados simultaneamente — {v} no total.', advBuildable:'montável junto', advBlocked:'divide cópias', advComplete:'100% na coleção', advNeedN:'faltam {n}',
       missingCards:'Cartas que faltam', ownEvery:'Você tem todas as cartas ✓', decklist:'Decklist', matchHistory:'Histórico de Partidas', logGame:'Registrar', editCards:'Editar cartas', doneEditing:'Concluir', delete:'Excluir', manaCurve:'Curva de Mana', cardTypes:'Tipos de Carta', raritySpread:'Raridades',
       totalLore:'Lore Total', deckValue:'Valor do Deck', winRate:'Vitórias', games:'Jogos', inCollection:'Na Coleção',
@@ -1327,7 +1361,7 @@ class Component extends DCLogic {
   priceSource = '';
 
   // ---------- M1: data contract (see DATA_CONTRACT.md) ----------
-  APP_VERSION = '1.4.0';
+  APP_VERSION = '1.4.1';
   SUPPORTED = { manifest:[1], cards:[3], cards_pt:[1], prices:[2,3,4], aliases:[1], validation:[1], price_history:[1,2,3,4] };
   LEGACY = { cards:2, prices:1 };            // pre-contract files still deployed today
   dataRoot = '';                              // dir of data-manifest.json (paths resolve here)
@@ -1361,7 +1395,7 @@ class Component extends DCLogic {
 
   // ---------- M5: collection value history ----------
   collectionValueNow(){ let value=0,cards=0; const coll=this.state.collection||{}; for(const id in coll){ const c=this.byId[id]; if(!c) continue; const e=coll[id]; const n=e.n||0,f=e.f||0; value+=this.priceOr0(c)*n+(this.foilPrice(c)??this.priceOr0(c))*f; cards+=n+f; } return {value:Math.round(value*100)/100, cards}; }
-  histKey(){ return 'inkwell_pricehist_'+this.state.activeUser; }
+  histKey(){ return 'inkwell_pricehist_v2_'+this.state.activeUser; }
   loadHist(){ try{ const s=localStorage.getItem(this.histKey()); const a=s?JSON.parse(s):[]; return Array.isArray(a)?a:[]; }catch(e){ return []; } }
   histNL(p){ if(!p) return null; if(p.nl!=null) return p.nl; if(p.n!=null) return p.n; if(p.normal) return p.normal.low!=null?p.normal.low:(p.normal.average!=null?p.normal.average:null); if(p.minimum_price_brl!=null) return p.minimum_price_brl; return null; }
   histFL(p, fallback){ if(!p) return fallback; if(p.fl!=null) return p.fl; if(p.f!=null) return p.f; if(p.foil) return p.foil.low!=null?p.foil.low:(p.foil.average!=null?p.foil.average:fallback); return fallback; }
@@ -1816,23 +1850,43 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     if(!this.legalInFormat(card, deck.format)) return {ok:false,reason:'Rotated — not legal in '+this.fmtLabel(deck.format)};
     return {ok:true,reason:''};
   }
+  copyLimitFor(card, fmt){ if(card && this.baseName(card.name_en)==='dalmatian puppy - tail wagger') return 99; return 4; }
+  // Shared deck-readiness model — single source for Home, deck cards, deck detail.
+  deckReadiness(deck){
+    if(!deck) return null;
+    const val=this.validateDeck(deck); const entries=this.deckEntries(deck);
+    let ownedCopies=0, requiredCopies=0, missingMarket=0;
+    for(const e of entries){ requiredCopies+=e.count; const have=this.ownedAcross(e.card); const got=Math.min(have.n+have.f, e.count); ownedCopies+=got; const need=e.count-got; if(need>0) missingMarket+=this.priceOr0(e.card)*need; }
+    const ownedPct=requiredCopies?Math.round(ownedCopies/requiredCopies*100):0;
+    const missingCopies=requiredCopies-ownedCopies;
+    const ms=this.deckMatches(deck.id); const hasStrategy=!!((deck.strategy||deck.notes||'').trim());
+    let status, next;
+    if(val.total<60){ status='setup'; next='finishDeck'; }
+    else if(!val.legal){ status='illegal'; next='fixLegality'; }
+    else if(missingCopies>0){ status='missing'; next='viewMissing'; }
+    else if(ms.length===0){ status='ready'; next='logFirst'; }
+    else { status='play'; next='review'; }
+    return { legal:val.legal, legalityReasons:val.reasons, total:val.total, ownedCopies, requiredCopies, ownedPct, missingCopies, missingMarketValue:missingMarket, hasStrategy, matchesLogged:ms.length, status, nextAction:next };
+  }
+  activeDeckKey(){ return 'inkwell_activedeck_'+this.state.activeUser; }
+  getActiveDeck(){ let id=null; try{ id=localStorage.getItem(this.activeDeckKey()); }catch(e){} const decks=this.state.decks||[]; if(id && decks.some(d=>d.id===id)) return this.deckById(id); return decks[0]||null; }
+  setActiveDeck(id){ try{ localStorage.setItem(this.activeDeckKey(), id); }catch(e){} this.forceUpdate(); this.showToast('Active deck set'); }
   // Authoritative deck legality — used by badge, imports, coach, advisor.
   validateDeck(deck){
     if(!deck) return {legal:false, total:0, reasons:['Unknown deck']};
     const entries=this.deckEntries(deck); const total=this.deckCount(deck);
     const colors=(deck.colors||[]).filter(Boolean); const reasons=[]; const bad=[];
-    // aggregate copies across reprints, by merged name
-    const byName={};
-    for(const e of entries){ const k=this.nameKey(e.card.name_en); byName[k]=(byName[k]||0)+e.count; }
+    const byName={}, repCard={};
+    for(const e of entries){ const k=this.nameKey(e.card.name_en); byName[k]=(byName[k]||0)+e.count; if(!repCard[k]) repCard[k]=e.card; }
     for(const e of entries){
       const inks=this.inkList(e.card);
       if(colors.length && inks.length && !inks.every(i=>colors.includes(i))){ reasons.push(e.card.name_en+' is off-color'); bad.push(e.card.card_id); }
       if(!this.legalInFormat(e.card, deck.format)){ reasons.push(e.card.name_en+' is rotated'); bad.push(e.card.card_id); }
     }
-    for(const k in byName){ if(byName[k]>4){ const nm=entries.find(e=>this.nameKey(e.card.name_en)===k); reasons.push((nm?nm.card.name_en:k)+': '+byName[k]+' copies (max 4 across reprints)'); } }
-    if(total!==60) reasons.push(total+'/60 cards');
+    for(const k in byName){ const lim=this.copyLimitFor(repCard[k], deck.format); if(byName[k]>lim){ reasons.push((repCard[k]?repCard[k].name_en:k)+': '+byName[k]+' copies (max '+lim+' across reprints)'); } }
+    if(total<60) reasons.push(total+'/60 cards');
     const uniqReasons=[...new Set(reasons)];
-    return { legal: total===60 && uniqReasons.length===0, total, reasons:uniqReasons, badIds:bad };
+    return { legal: total>=60 && uniqReasons.length===0, total, reasons:uniqReasons, badIds:bad };
   }
   cardTypes(c){ const t=c.card_type; if(t==='Song') return ['Action','Song']; if(t==='Action' && /song/i.test(String(c.classification||''))) return ['Action','Song']; return t?[t]:[]; }
   matchCost(cost, f){ if(f==='all') return true; if(f==='10') return cost>=10; return cost===+f; }
@@ -2000,7 +2054,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     if(rep){
       const errs=Array.isArray(rep.errors)?rep.errors:[]; const warns=Array.isArray(rep.warnings)?rep.warnings:[];
       V.reportDate=(rep.generated_at||'').slice(0,10);
-      const st2=rep.stats||{};
+      const st2=rep.summary||rep.stats||{};
       V.reportStats=[ {label:'Cards',value:(st2.cards!=null?st2.cards:'—'),color:'#e8e8ec'}, {label:'Errors',value:errs.length,color:errs.length?'#ff8a96':'#5fd07f'}, {label:'Warnings',value:warns.length,color:warns.length?'#e6c15a':'#5fd07f'} ];
       const mk=(arr,kind,bg,fg)=>arr.slice(0,200).map(x=>({kind,badgeBg:bg,badgeColor:fg,code:x.code||x.type||'—',message:(x.message||x.card_id||'').toString().slice(0,160)}));
       const issues=mk(errs,'ERR','rgba(226,59,78,.16)','#ff8a96').concat(mk(warns,'WARN','rgba(230,193,90,.16)','#e6c15a'));
@@ -2031,6 +2085,22 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
 
     // ---- OVERVIEW ----
     if(V.isOverview){
+      const ad=this.getActiveDeck();
+      V.nowPlaying=!!ad; V.npLabel=this.t('nowPlaying'); V.npLegality=this.t('legality'); V.npCards=this.t('cards2'); V.npOwned=this.t('inCollection'); V.npLast10=this.t('last10'); V.npMissing=this.t('missing'); V.npSwitch=this.t('switchDeck');
+      if(ad){ const rd=this.deckReadiness(ad); const ms=this.deckMatches(ad.id); const last10=ms.slice(0,10); const w=last10.filter(m=>m.result==='win').length;
+        const SL={setup:[this.t('stSetup'),'#e6c15a','rgba(230,193,90,.16)'],illegal:[this.t('stIllegal'),'#ff8a96','rgba(226,59,78,.16)'],missing:[this.t('stMissing'),'#e6c15a','rgba(230,193,90,.16)'],ready:[this.t('stReady'),'#5fd07f','rgba(95,208,127,.16)'],play:[this.t('stPlay'),'#5fd07f','rgba(95,208,127,.16)']}[rd.status];
+        const NA={finishDeck:['fixDeck','decks'],fixLegality:['fixLegality','deck'],viewMissing:['viewMissing','deck'],logFirst:['logFirst','deck'],review:['review','deck']}[rd.nextAction];
+        const act=()=>{ this.openDeck(ad.id); };
+        V.np={ name:ad.name, format:(ad.format==='infinity'?'Infinity':'Core'),
+          inks:(ad.colors||[]).filter(Boolean).map(i=>({name:i,_bg:this.INK[i]+'22',_fg:this.INK[i]})),
+          statusLabel:SL[0], statusColor:SL[1], statusBg:SL[2],
+          legalText:rd.legal?'✓':'✗', legalColor:rd.legal?'#5fd07f':'#ff8a96',
+          count:rd.total, ownedPct:rd.ownedPct, ownColor:rd.ownedPct>=100?'#5fd07f':rd.ownedPct>=75?'#e6c15a':'#ff8a96',
+          record:ms.length?(w+'–'+(last10.length-w)):'—',
+          missingText:rd.missingCopies>0?(rd.missingCopies+' · '+this.fmt(rd.missingMarketValue)):'0',
+          actionLabel:this.t('na_'+rd.nextAction), _act:act,
+          hasDeckSwitch:st.decks.length>1, others:st.decks.filter(d=>d.id!==ad.id).slice(0,4).map(d=>({name:d.name,_pick:()=>this.setActiveDeck(d.id)})) };
+      }
       let uniq=0,totCards=0,foils=0,value=0;
       for(const [id,e] of Object.entries(st.collection)){ const c=this.byId[id]; if(!c) continue; const n=e.n||0,f=e.f||0; if(n+f>0) uniq++; totCards+=n+f; foils+=f; value+=this.priceOr0(c)*n+(this.foilPrice(c)??this.priceOr0(c))*f; }
       V.kpis=[
@@ -2224,7 +2294,10 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
         V.dd.matches=ms.map(m=>({wl:m.result==='win'?'W':'L',opp:(m.opponent_inks||[]).join('/')||'Unknown',date:m.date,badgeBg:m.result==='win'?'rgba(95,208,127,.16)':'rgba(255,122,134,.16)',badgeColor:m.result==='win'?'#5fd07f':'#ff7a86',_del:()=>this.delMatch(m.id)}));
         V.dd.noMatches=ms.length===0;
         // edit
-        V.toggleDeckEdit=()=>this.setState({deckEdit:!st.deckEdit,logMatchOpen:false}); V.deckEditLabel=st.deckEdit?this.t('doneEditing'):this.t('editCards'); V.deckEditBtnStyle=st.deckEdit?'padding:9px 16px;border-radius:11px;background:#b79bff;border:none;color:#0a0a0c;cursor:pointer;font-size:13px;font-weight:700':'padding:9px 16px;border-radius:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#e8e8ec;cursor:pointer;font-size:13px;font-weight:600';
+        V.toggleDeckEdit=()=>this.setState({deckEdit:!st.deckEdit,logMatchOpen:false});
+        const _isActive=(this.getActiveDeck()||{}).id===deck.id;
+        V.setActive=()=>this.setActiveDeck(deck.id); V.setActiveLabel=_isActive?this.t('activeDeck'):this.t('setActive');
+        V.setActiveStyle='padding:9px 16px;border-radius:11px;border:1px solid '+(_isActive?'#5fd07f;background:rgba(95,208,127,.14);color:#5fd07f':'rgba(199,154,68,.3);background:rgba(199,154,68,.1);color:#e0c15a')+';cursor:pointer;font-size:13px;font-weight:600'; V.deckEditLabel=st.deckEdit?this.t('doneEditing'):this.t('editCards'); V.deckEditBtnStyle=st.deckEdit?'padding:9px 16px;border-radius:11px;background:#b79bff;border:none;color:#0a0a0c;cursor:pointer;font-size:13px;font-weight:700':'padding:9px 16px;border-radius:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#e8e8ec;cursor:pointer;font-size:13px;font-weight:600';
         V.deleteDeck=this.deleteDeck; V.deckSearch=st.deckSearch; V.onDeckSearch=(e)=>this.setState({deckSearch:e.target.value,page:0});
         // ---- M6 AI Coach ----
         V.coachAvail=this.coachAvailable();
