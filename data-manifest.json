@@ -23,8 +23,8 @@
     },
     "prices": {
       "path": "data/prices.json",
-      "sha256": "b8a09dc302a686e7d481a410776be1b3832e813a46fe3b5f75e286dc0771d123",
-      "bytes": 210250
+      "sha256": "b2a003e9f8105f616c6f4f9bca5cb8db16809308a6f4fd45081749d72ee7b8c9",
+      "bytes": 210249
     },
     "aliases": {
       "path": "data/aliases.json",
@@ -38,8 +38,8 @@
     },
     "price_history": {
       "path": "data/price-history.json",
-      "sha256": "99fc9f17019cb202d4df768a33e17f3d5f0ce836c61e8e47881b925a765b6e3a",
-      "bytes": 742285
+      "sha256": "e27177dfceb55da29cce248cd7fa81d9e64d233cf6dec666d4313cf72c3e7439",
+      "bytes": 742284
     }
   },
   "counts": {
