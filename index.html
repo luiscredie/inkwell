@@ -1130,17 +1130,22 @@ class Component extends DCLogic {
   }
 
   async bootData(){
-    const man = await this.fetchJson('data-manifest.json');
+    let man = await this.fetchJson('data-manifest.json');
+    if (!man.ok) man = await this.fetchJson('data/data-manifest.json');   // pipeline may place it in data/
     if (!man.ok) return await this.bootLegacy();          // pipeline manifest not deployed yet
     const m = man.data; this.manifestMode = true;
     if (!this.supports('manifest', m.manifest_version)) return { fatal:'Unsupported data manifest (v'+m.manifest_version+'). Update the app.' };
     if (m.min_app_version && !this.semverGte(this.APP_VERSION, m.min_app_version)) return { fatal:'This data requires app '+m.min_app_version+' or newer (you have '+this.APP_VERSION+'). Please update Inkwell.' };
     const files = m.artifacts || m.files || {}; const schema = m.schema || {}; const dir = '';  // manifest lives at root of its own dir
     const hashJobs = [];
-    // cards (required)
+    // cards (required). A fetch failure here means a partial/incorrect deploy — fall back to
+    // legacy root files rather than dead-ending. A schema MISMATCH still blocks (data is wrong, not missing).
     if (!files.cards) return { fatal:'Manifest missing required "cards" artifact.' };
     const cRes = await this.loadArtifact('cards', files.cards, schema.cards, dir, hashJobs, true);
-    if (cRes.fatal) return { fatal:cRes.fatal };
+    if (cRes.fatal){
+      if (cRes.fetchFailed){ const leg = await this.bootLegacy(); if (!leg.fatal){ leg.warning = 'Data manifest is published but its files could not be loaded — running on the older root data. Finish deploying the data/ folder.'; return leg; } }
+      return { fatal:cRes.fatal };
+    }
     // prices (required for the app to be useful; block if declared but broken)
     let prices={}, priceSource='', warning=null;
     if (files.prices){
@@ -1161,7 +1166,7 @@ class Component extends DCLogic {
   async loadArtifact(type, entry, manifestSchema, dir, hashJobs, required){
     let url; try { url = this.resolvePath(dir, entry.path); } catch(e){ return required?{fatal:'Unsafe path for '+type+' artifact.'}:{}; }
     const res = await this.fetchJson(url);
-    if (!res.ok){ return required?{fatal:'Could not load required "'+type+'" artifact ('+url+').'}:{}; }
+    if (!res.ok){ return required?{fatal:'Could not load required "'+type+'" artifact ('+url+').', fetchFailed:true}:{}; }
     const data = res.data;
     // self-describing check: artifact.schema_version must equal manifest.schema[type]
     if (typeof manifestSchema==='number' && data.schema_version !== manifestSchema){ const msg='Deployment mismatch: '+type+'.json is v'+data.schema_version+' but manifest expects v'+manifestSchema+'. Redeploy data.'; return required?{fatal:msg}:{}; }
@@ -1266,6 +1271,8 @@ class Component extends DCLogic {
   fmtOrDash(v){ return v==null ? '—' : this.fmt(v); }
   ownedOf(id){ const e=this.state.collection[id]; return e?{n:e.n||0,f:e.f||0}:{n:0,f:0}; }
   isOwned(id){ const o=this.ownedOf(id); return o.n>0||o.f>0; }
+  printingsOf(card){ if(!card) return []; this.buildNameIndex(); const k=this.nameKey(card.name_en); return (this._byName&&this._byName[k])||[card]; }
+  ownedAcross(card){ let n=0,f=0; const seen={}; for(const c of this.printingsOf(card)){ if(seen[c.card_id]) continue; seen[c.card_id]=1; const o=this.ownedOf(c.card_id); n+=o.n; f+=o.f; } return {n,f}; }
   chgColor(v){ return v>0.05?'#5fd07f':v<-0.05?'#ff7a86':'#8a8a92'; }
   wrColor(w){ return w>=55?'#5fd07f':w>=45?'#e6c15a':'#ff7a86'; }
 
@@ -1389,7 +1396,7 @@ class Component extends DCLogic {
   // ---------- deck helpers ----------
   CORE_SETS = ['LOR7','LOR8','LOR9','LOR10','LOR11','LOR12','LOR13','Q2','DLPC2'];
   fmtLabel(f){ return f==='infinity'?'Infinity':'Core'; }
-  legalInFormat(card, fmt){ if(fmt==='infinity'||!fmt) return true; return this.CORE_SETS.includes(card.set_code); }
+  legalInFormat(card, fmt){ if(fmt==='infinity'||!fmt) return true; return this.printingsOf(card).some(p=>this.CORE_SETS.includes(p.set_code)); }
   validForDeck(card, deck){ if(!card) return {ok:false,reason:'Unknown card'};
     const inks=this.inkList(card); const colors=(deck.colors||[]).filter(Boolean);
     if(colors.length && inks.length && !inks.every(i=>colors.includes(i))) return {ok:false,reason:'Off-color for this deck ('+inks.join('/')+')'};
@@ -1659,7 +1666,7 @@ class Component extends DCLogic {
         V.dd.validLabel=valid?this.t('tournamentLegal'):this.t('cardsOf60',{n:total}); V.dd.validBg=valid?'rgba(95,208,127,.14)':'rgba(230,193,90,.14)'; V.dd.validColor=valid?'#5fd07f':'#e6c15a';
         const ms=this.deckMatches(deck.id); const wr=this.winRate(ms);
         let owned=0,inkable=0,uninkable=0;
-        for(const e of entries){ const o=this.ownedOf(e.card.card_id); owned+=Math.min(o.n+o.f,e.count); const ink=this.inkableOf(e.card); if(ink===1) inkable+=e.count; else if(ink===0) uninkable+=e.count; }
+        for(const e of entries){ const o=this.ownedAcross(e.card); owned+=Math.min(o.n+o.f,e.count); const ink=this.inkableOf(e.card); if(ink===1) inkable+=e.count; else if(ink===0) uninkable+=e.count; }
         const completion=total?Math.round(owned/total*100):0;
         const compColor=completion>=100?'#5fd07f':completion>=75?'#e6c15a':'#ff7a86';
         V.dd.stats=[
@@ -1684,7 +1691,7 @@ class Component extends DCLogic {
         V.dd.listGroups=grpOrder.map(g=>{ const cards=V.dd.list.filter(x=>x.grp===g); return {label:g,count:cards.reduce((s,c)=>s+c.count,0),cards}; }).filter(g=>g.cards.length);
         V.dd.countColor=total>=60?'#5fd07f':'#e6c15a'; V.dd.buildValue=this.fmt(this.deckValue(deck))+' · '+this.deckLore(deck)+' lore'; V.dd.emptyList=entries.length===0;
         // missing cards (owned fewer than required)
-        const missing=entries.map(e=>{ const o=this.ownedOf(e.card.card_id); const have=o.n+o.f; const need=Math.max(0,e.count-have); return {card:e.card,need,have,count:e.count}; }).filter(x=>x.need>0).sort((a,b)=>this.priceOr0(b.card)-this.priceOr0(a.card));
+        const missing=entries.map(e=>{ const o=this.ownedAcross(e.card); const have=o.n+o.f; const need=Math.max(0,e.count-have); return {card:e.card,need,have,count:e.count}; }).filter(x=>x.need>0).sort((a,b)=>this.priceOr0(b.card)-this.priceOr0(a.card));
         V.dd.missing=missing.map(m=>({ name:m.card.name_en, ink:this.inkHex(m.card), need:m.need, price:this.fmtOrDash(this.price(m.card)), sub:this.t('haveOf',{h:m.have,c:m.count}), liga:this.ligaUrl(m.card), _open:()=>this.openCard(m.card.card_id) }));
         V.dd.missingCount=missing.reduce((s,m)=>s+m.need,0);
         V.dd.missingCost=this.fmt(missing.reduce((s,m)=>s+this.priceOr0(m.card)*m.need,0));
