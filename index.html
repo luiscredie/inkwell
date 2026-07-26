@@ -11,6 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Cinzel+Decorative:wght@700;900&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{background:#0b0910;-webkit-font-smoothing:antialiased}
@@ -298,6 +299,10 @@
             <sc-for list="{{ inkableChips }}" as="c">
               <button onClick="{{ c._toggle }}" style="{{ c._style }};display:inline-flex;align-items:center;gap:7px">{{ c.iconEl }}{{ c.label }}</button>
             </sc-for>
+            <div style="width:1px;height:22px;background:rgba(255,255,255,.1);margin:0 4px"></div>
+            <sc-for list="{{ rarityChips }}" as="c" hint-placeholder-count="6">
+              <button onClick="{{ c._toggle }}" style="{{ c._style }};display:inline-flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:{{ c.color }}"></span>{{ c.label }}</button>
+            </sc-for>
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-bottom:20px">
             <span style="font-size:12px;color:#7c7c85;margin-right:2px">Cost</span>
@@ -360,6 +365,7 @@
                 <div style="position:relative;aspect-ratio:734/1024;border-radius:12px;overflow:hidden;background:{{ c.ink }};box-shadow:0 8px 22px rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.08)">
                   <img src="{{ c._local }}" data-remote="{{ c._remote }}" onError="{{ imgError }}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block" />
                   <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:12px;text-align:center;font-family:'Bricolage Grotesque';font-weight:700;font-size:14px;background:{{ c.ink }};display:none" data-ph>{{ c.name }}</div>
+                  <span onClick="{{ c._wish }}" title="Wishlist" style="position:absolute;top:6px;left:6px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;font-size:14px;line-height:1;color:{{ c.wishColor }};cursor:pointer;z-index:2" style-hover="background:rgba(0,0,0,.85)">{{ c.wishIcon }}</span>
                   <sc-if value="{{ c.owned }}" hint-placeholder-val="{{ false }}">
                     <div style="position:absolute;bottom:7px;right:7px;padding:3px 8px;border-radius:8px;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);font-family:'JetBrains Mono';font-weight:700;font-size:12px;color:#9be6a8">×{{ c.ownedQty }}{{ c.foilTag }}</div>
                   </sc-if>
@@ -404,6 +410,26 @@
               </div>
             </sc-for>
           </div>
+
+          <sc-if value="{{ histHas }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:22px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);margin-bottom:22px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+                <h3 style="font-family:'Bricolage Grotesque';font-weight:700;font-size:16px">{{ histTitle }}</h3>
+                <span style="font-family:'JetBrains Mono';font-size:12.5px;color:{{ histChgColor }}">{{ histChg }}</span>
+              </div>
+              <svg viewBox="0 0 100 34" preserveAspectRatio="none" style="width:100%;height:120px;overflow:visible">
+                <defs><linearGradient id="histgrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#c79a44" stop-opacity="0.35"></stop><stop offset="100%" stop-color="#c79a44" stop-opacity="0"></stop></linearGradient></defs>
+                <polygon points="{{ histArea }}" fill="url(#histgrad)"></polygon>
+                <polyline points="{{ histLine }}" fill="none" stroke="#e0c15a" stroke-width="1.6" vector-effect="non-scaling-stroke"></polyline>
+              </svg>
+              <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:#7c7c85;font-family:'JetBrains Mono'">
+                <span>{{ histFirst }}</span><span>{{ histLast }}</span>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ histEmpty }}" hint-placeholder-val="{{ true }}">
+            <div style="padding:16px 18px;border-radius:14px;background:rgba(255,255,255,.02);border:1px dashed rgba(255,255,255,.12);margin-bottom:22px;font-size:12.5px;color:#8a8a92">{{ histHint }}</div>
+          </sc-if>
 
           <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px">
             <button onClick="{{ togglePriceOwned }}" style="{{ priceOwnedBtnStyle }}">{{ priceOwnedLabel }}</button>
@@ -972,10 +998,36 @@
           <button onClick="{{ closeSettings }}" style="background:rgba(255,255,255,.06);border:none;color:#c8c8cc;width:30px;height:30px;border-radius:9px;cursor:pointer;font-size:16px">×</button>
         </div>
 
+        <sc-if value="{{ syncOn }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px;border-radius:14px;background:rgba(46,144,224,.07);border:1px solid rgba(46,144,224,.22);margin-bottom:16px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div style="display:flex;align-items:center;gap:9px"><span style="font-size:15px">☁</span><span style="font-weight:700;font-size:14px;color:#e8e8ec">Cloud Sync</span></div>
+              <span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:{{ syncBadgeBg }};color:{{ syncBadgeColor }}">{{ syncBadge }}</span>
+            </div>
+            <sc-if value="{{ syncSignedIn }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size:12.5px;color:#c8d4e0;margin-bottom:12px">Signed in as <b>{{ syncEmail }}</b>. Your profiles sync across devices automatically.</div>
+              <div style="display:flex;gap:10px">
+                <button onClick="{{ syncNow }}" style="flex:1;padding:10px;border-radius:11px;background:rgba(46,144,224,.2);border:1px solid rgba(46,144,224,.4);color:#9ccdff;cursor:pointer;font-size:13px;font-weight:600">↻ Sync now</button>
+                <button onClick="{{ signOutSync }}" style="padding:10px 16px;border-radius:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#d8d8dc;cursor:pointer;font-size:13px">Sign out</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ syncSignedOut }}" hint-placeholder-val="{{ true }}">
+              <div style="font-size:12.5px;color:#c8d4e0;line-height:1.5;margin-bottom:12px">Sign in with your email to back up and sync your collection, decks and games across devices. We'll send you a one-tap sign-in link.</div>
+              <div style="display:flex;gap:8px">
+                <input value="{{ syncInput }}" onInput="{{ onSyncInput }}" type="email" placeholder="you@email.com" style="flex:1;padding:10px 13px;border-radius:11px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.14);color:#f3f3f5;font-size:13.5px" />
+                <button onClick="{{ sendMagicLink }}" style="padding:10px 16px;border-radius:11px;background:linear-gradient(180deg,#7fc0ff,#2E90E0);border:none;color:#08243c;font-weight:700;cursor:pointer;font-size:13px;white-space:nowrap">{{ syncSendLabel }}</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ syncMsg }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size:11.5px;color:#9ccdff;margin-top:10px">{{ syncMsg }}</div>
+            </sc-if>
+          </div>
+        </sc-if>
+
         <div style="padding:16px;border-radius:14px;background:rgba(232,200,119,.06);border:1px solid rgba(199,154,68,.18);margin-bottom:16px">
           <div style="display:flex;align-items:flex-start;gap:10px">
             <span style="font-size:16px">⚠</span>
-            <div style="font-size:12.5px;color:#d8cfa8;line-height:1.5">Your data lives only in this browser. Download a backup regularly — clearing browser data erases your collection, decks and games.</div>
+            <div style="font-size:12.5px;color:#d8cfa8;line-height:1.5">{{ localOnlyMsg }}</div>
           </div>
         </div>
 
@@ -1027,15 +1079,16 @@
 class Component extends DCLogic {
   state = {
     loading: true, ready: false, dataFatal: null, dataWarning: null, view: 'overview',
-    q: '', inks: [], types: [], sets: [], setMenuOpen: false, sort: 'value', collMode: 'owned', inkable: 'all', cost: 'all', page: 0,
+    q: '', inks: [], types: [], sets: [], rarities: [], setMenuOpen: false, sort: 'value', collMode: 'owned', inkable: 'all', cost: 'all', page: 0,
     priceOwnedOnly: true,
     selectedCard: null, selectedDeck: null,
     deckEdit: false, deckSearch: '', logMatchOpen: false, matchResult: 'win', matchInks: [],
     bInks: [], bCost: 'all', bSets: [], bSetMenu: false, bSort: 'cost-asc', bGroup: 'none', bSize: 5, bOwnedOnly: false,
     newDeckOpen: false, newDeckName: '', newDeckInks: [], newDeckFmt: 'core',
     importDeckOpen: false, importDeckName: '', importDeckText: '', importDeckFmt: 'core',
-    collection: {}, decks: [], matches: [], overrides: {}, displayName: 'Illumineer',
+    collection: {}, decks: [], matches: [], overrides: {}, wishlist: {}, displayName: 'Illumineer',
     activeUser: 'luiscredie', profileMenuOpen: false, settingsOpen: false, lastSaved: null,
+    syncEnabled: false, syncStatus: 'off', syncEmail: null, syncUser: null, syncLast: null, syncMsg: null, syncInput: '',
     lang: 'en',
     toast: null,
   };
@@ -1044,7 +1097,8 @@ class Component extends DCLogic {
     en: {
       overview:'Overview', collection:'Collection', prices:'Prices', decks:'Decks',
       sub_overview:'Welcome back, {name}', sub_collection:'Every card in the multiverse — yours highlighted', sub_prices:'Market values across your collection', sub_decks:'Your archived builds & analytics', sub_deck:'Deck Analytics',
-      search:'Search 3,400+ cards…', have:'Owned', missing:'Missing', all:'All', allCards:'All cards',
+      search:'Search 3,400+ cards…', have:'Owned', missing:'Missing', wishlist:'Wishlist', all:'All', allCards:'All cards',
+      valueHistory:'Collection value over time', valueHistoryHint:'Value history builds automatically as prices update. Check back after the next price refresh.',
       export:'Export', import:'Import', cards:'cards', prev:'‹ Prev', next:'Next ›',
       newDeck:'+ New Deck', importDeck:'↑ Import', createDeck:'Create', cancel:'Cancel', format:'Format',
       inkable:'Inkable', uninkable:'Uninkable', cost:'Cost', allSets:'All sets',
@@ -1065,7 +1119,8 @@ class Component extends DCLogic {
     pt: {
       overview:'Visão Geral', collection:'Coleção', prices:'Preços', decks:'Decks',
       sub_overview:'Bem-vindo de volta, {name}', sub_collection:'Todas as cartas do multiverso — as suas em destaque', sub_prices:'Valores de mercado da sua coleção', sub_decks:'Seus decks arquivados e análises', sub_deck:'Análise do Deck',
-      search:'Buscar 3.400+ cartas…', have:'Tenho', missing:'Faltando', all:'Todas', allCards:'Todas as cartas',
+      search:'Buscar 3.400+ cartas…', have:'Tenho', missing:'Faltando', wishlist:'Lista de Desejos', all:'Todas', allCards:'Todas as cartas',
+      valueHistory:'Valor da coleção ao longo do tempo', valueHistoryHint:'O histórico de valor é criado automaticamente conforme os preços atualizam. Volte após a próxima atualização de preços.',
       export:'Exportar', import:'Importar', cards:'cartas', prev:'‹ Anterior', next:'Próxima ›',
       newDeck:'+ Novo Deck', importDeck:'↑ Importar', createDeck:'Criar', cancel:'Cancelar', format:'Formato',
       inkable:'Inkável', uninkable:'Não-inkável', cost:'Custo', allSets:'Todos os sets',
@@ -1127,7 +1182,75 @@ class Component extends DCLogic {
     const data = await this.loadUser(active);
     this.setState({ loading:false, ready:true, activeUser:active, lang, dataWarning:data.userDataWarning||boot.warning||null, ...data });
     if (boot.hashJobs && boot.hashJobs.length) this.verifyHashes(boot.hashJobs);
+    this.recordPriceSnapshot();
+    this.initSync();
   }
+
+  // ---------- M5: collection value history ----------
+  collectionValueNow(){ let value=0,cards=0; const coll=this.state.collection||{}; for(const id in coll){ const c=this.byId[id]; if(!c) continue; const e=coll[id]; const n=e.n||0,f=e.f||0; value+=this.priceOr0(c)*n+(this.foilPrice(c)??this.priceOr0(c))*f; cards+=n+f; } return {value:Math.round(value*100)/100, cards}; }
+  histKey(){ return 'inkwell_pricehist_'+this.state.activeUser; }
+  loadHist(){ try{ const s=localStorage.getItem(this.histKey()); const a=s?JSON.parse(s):[]; return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+  recordPriceSnapshot(){
+    if(!this.prices || !Object.keys(this.prices).length) return;
+    const date = this.pricesDate || new Date().toISOString().slice(0,10);
+    const {value, cards} = this.collectionValueNow();
+    let hist = this.loadHist();
+    const i = hist.findIndex(p=>p.date===date);
+    const pt = {date, value, cards};
+    if(i>=0) hist[i]=pt; else hist.push(pt);
+    hist.sort((a,b)=>a.date<b.date?-1:1);
+    if(hist.length>400) hist=hist.slice(hist.length-400);
+    try{ localStorage.setItem(this.histKey(), JSON.stringify(hist)); }catch(e){}
+    this._hist=hist;
+  }
+
+  // ---------- M4: Supabase auth + cross-device sync ----------
+  SYNC_TABLE = 'inkwell_profiles';
+  async initSync(){
+    let cfg=null;
+    try { const r=await fetch('sync-config.json',{cache:'no-cache'}); if(r.ok) cfg=await r.json(); } catch(e){}
+    if(!cfg || !cfg.url || !cfg.anon_key){ this.setState({syncEnabled:false, syncStatus:'off'}); return; }
+    if(!(window.supabase && window.supabase.createClient)){ this.setState({syncEnabled:false, syncStatus:'off', syncMsg:'Sync library failed to load.'}); return; }
+    try { this.sb = window.supabase.createClient(cfg.url, cfg.anon_key, {auth:{persistSession:true, autoRefreshToken:true}}); }
+    catch(e){ this.setState({syncEnabled:false, syncStatus:'off'}); return; }
+    this.setState({syncEnabled:true, syncStatus:'signed_out'});
+    try {
+      const { data:{ session } } = await this.sb.auth.getSession();
+      if(session && session.user) await this.onSignedIn(session.user);
+      this.sb.auth.onAuthStateChange((_evt, sess)=>{ if(sess && sess.user){ this.onSignedIn(sess.user); } else { this.setState({syncStatus:'signed_out', syncUser:null, syncEmail:null}); } });
+    } catch(e){}
+  }
+  sendMagicLink = ()=>{ const email=(this.state.syncInput||'').trim(); if(!this.sb||!email){ this.showToast('Enter your email'); return; } this.setState({syncStatus:'sending'}); const redirectTo=(location.href.split('#')[0]); this.sb.auth.signInWithOtp({email, options:{emailRedirectTo:redirectTo}}).then(({error})=>{ if(error){ this.setState({syncStatus:'signed_out', syncMsg:error.message}); this.showToast('Sign-in failed'); } else { this.setState({syncStatus:'link_sent', syncMsg:'Check '+email+' for your sign-in link.'}); } }); };
+  signOutSync = ()=>{ if(!this.sb) return; this.sb.auth.signOut().then(()=>{ this.setState({syncStatus:'signed_out', syncUser:null, syncEmail:null, syncMsg:'Signed out.'}); }); };
+  async onSignedIn(user){
+    this.setState({syncStatus:'syncing', syncUser:user.id, syncEmail:user.email, syncMsg:null});
+    try { await this.reconcile(this.state.activeUser); }
+    catch(e){ this.setState({syncStatus:'error', syncMsg:'Sync error: '+(e&&e.message||e)}); return; }
+    this.setState({syncStatus:'synced', syncLast:Date.now()});
+  }
+  localTs(){ return Date.parse(this.userPayload().saved_at)||0; }
+  async pullRemote(profile){ const { data, error } = await this.sb.from(this.SYNC_TABLE).select('data,updated_at,schema').eq('profile', profile).eq('user_id', this.state.syncUser).maybeSingle(); if(error) throw error; return data; }
+  async pushRemote(profile){ const payload=this.userPayload(); const row={ user_id:this.state.syncUser, profile, data:payload, schema:this.USER_SCHEMA, updated_at:new Date().toISOString() }; const { error } = await this.sb.from(this.SYNC_TABLE).upsert(row, {onConflict:'user_id,profile'}); if(error) throw error; }
+  async reconcile(profile){
+    if(!this.sb || !this.state.syncUser) return;
+    const remote = await this.pullRemote(profile);
+    const localTs = Date.parse((this.loadLocal()&&this.loadLocal().saved_at)||0)||0;
+    if(remote && remote.data){
+      const remoteTs = Date.parse(remote.updated_at)||0;
+      if(remoteTs > localTs){
+        const m = this.migrateUser(remote.data, profile);
+        this.setState({ collection:m.collection, decks:m.decks, matches:m.matches, overrides:m.overrides, wishlist:m.wishlist }, ()=>{ try{ localStorage.setItem('inkwell_user_'+profile, JSON.stringify(this.userPayload())); }catch(e){} });
+        this.showToast('Pulled latest from cloud');
+      } else if(localTs > remoteTs){
+        await this.pushRemote(profile);
+      }
+    } else {
+      await this.pushRemote(profile);
+    }
+  }
+  queueSync(){ if(!this.sb || this.state.syncStatus==='off' || !this.state.syncUser) return; clearTimeout(this._syncT); this._syncT=setTimeout(()=>{ this.setState({syncStatus:'syncing'}); this.pushRemote(this.state.activeUser).then(()=>this.setState({syncStatus:'synced', syncLast:Date.now()})).catch(e=>this.setState({syncStatus:'error', syncMsg:String(e&&e.message||e)})); }, 1400); }
+  syncNow = ()=>{ if(!this.sb || !this.state.syncUser){ this.showToast('Sign in to sync'); return; } this.setState({syncStatus:'syncing'}); this.reconcile(this.state.activeUser).then(()=>this.setState({syncStatus:'synced', syncLast:Date.now(), syncMsg:'Synced.'})).catch(e=>this.setState({syncStatus:'error', syncMsg:String(e&&e.message||e)})); };
+  onSyncInput = (e)=>this.setState({syncInput:e.target.value});
 
   async bootData(){
     let man = await this.fetchJson('data-manifest.json');
@@ -1153,7 +1276,7 @@ class Component extends DCLogic {
       if (pRes.fatal) return { fatal:pRes.fatal };
       const norm = this.priceMap(pRes.data);
       if (norm.error) return { fatal:'Prices file is in raw pipeline format — the app expects the compact prices schema. Re-run the pipeline export.' };
-      prices = norm.map; priceSource = pRes.data.source||'';
+      prices = norm.map; priceSource = pRes.data.source||''; this.pricesDate = (pRes.data.generated_at||'').slice(0,10) || null;
     } else { warning = 'No prices artifact in manifest.'; }
     // optional artifacts
     let aliases=null, validation=null, ptOverlay=null;
@@ -1181,7 +1304,7 @@ class Component extends DCLogic {
     if (!c.ok || !c.data || !Array.isArray(c.data.cards)) return { fatal:'Could not load cards.json.' };
     let prices={}, priceSource='', warning='Running without data manifest (legacy mode).';
     const p = await this.fetchJson('prices.json');
-    if (p.ok && p.data){ const norm=this.priceMap(p.data); if(norm.error){ warning='Prices file is in raw format and was ignored.'; } else { prices=norm.map; priceSource=p.data.source||''; } }
+    if (p.ok && p.data){ const norm=this.priceMap(p.data); if(norm.error){ warning='Prices file is in raw format and was ignored.'; } else { prices=norm.map; priceSource=p.data.source||''; this.pricesDate=(p.data.generated_at||'').slice(0,10)||null; } }
     return { cards:c.data.cards||[], sets:c.data.sets||[], image_base_path:c.data.image_base_path, prices, priceSource, aliases:null, validation:null, warning, hashJobs:[] };
   }
 
@@ -1203,7 +1326,7 @@ class Component extends DCLogic {
     try { const s = localStorage.getItem('inkwell_user_'+id); if (s) user = JSON.parse(s); } catch(e){}
     if (!user && meta.seed) { try { const r = await fetch(meta.seed); if (r.ok) user = await r.json(); } catch(e){} }
     const m = this.migrateUser(user, id);
-    return { collection:m.collection, decks:m.decks, matches:m.matches, overrides:m.overrides, displayName: meta.name || m.display_name || id, userDataWarning:m.warning||null };
+    return { collection:m.collection, decks:m.decks, matches:m.matches, overrides:m.overrides, wishlist:m.wishlist, displayName: meta.name || m.display_name || id, userDataWarning:m.warning||null };
   }
 
   // ---------- M2: user-data schema versioning + migrations ----------
@@ -1223,18 +1346,19 @@ class Component extends DCLogic {
     d.decks = Array.isArray(d.decks) ? d.decks : [];
     d.matches = Array.isArray(d.matches) ? d.matches : [];
     d.overrides = (d.overrides && typeof d.overrides==='object') ? d.overrides : {};
+    d.wishlist = (d.wishlist && typeof d.wishlist==='object') ? d.wishlist : {};
     d.warning = warning;
     return d;
   }
-  userPayload(){ return { _schema:this.USER_SCHEMA, saved_at:new Date().toISOString(), app_version:this.APP_VERSION, collection:this.state.collection, decks:this.state.decks, matches:this.state.matches, overrides:this.state.overrides, display_name:this.state.displayName }; }
+  userPayload(){ return { _schema:this.USER_SCHEMA, saved_at:new Date().toISOString(), app_version:this.APP_VERSION, collection:this.state.collection, decks:this.state.decks, matches:this.state.matches, overrides:this.state.overrides, wishlist:this.state.wishlist, display_name:this.state.displayName }; }
 
-  switchUser = (id)=>{ if(id===this.state.activeUser){ this.setState({profileMenuOpen:false}); return; } this.saveLocal(); this.loadUser(id).then(data=>{ try{ localStorage.setItem('inkwell_active_user', id); }catch(e){} this.setState({ activeUser:id, profileMenuOpen:false, view:'overview', selectedDeck:null, selectedCard:null, ...data, dataWarning:data.userDataWarning||this.state.dataWarning }, ()=>this.showToast('Switched to '+data.displayName)); }); };
+  switchUser = (id)=>{ if(id===this.state.activeUser){ this.setState({profileMenuOpen:false}); return; } this.saveLocal(); this.loadUser(id).then(data=>{ try{ localStorage.setItem('inkwell_active_user', id); }catch(e){} this.setState({ activeUser:id, profileMenuOpen:false, view:'overview', selectedDeck:null, selectedCard:null, ...data, dataWarning:data.userDataWarning||this.state.dataWarning }, ()=>{ this.showToast('Switched to '+data.displayName); this.recordPriceSnapshot(); if(this.sb && this.state.syncUser){ this.setState({syncStatus:'syncing'}); this.reconcile(id).then(()=>this.setState({syncStatus:'synced', syncLast:Date.now()})).catch(e=>this.setState({syncStatus:'error', syncMsg:String(e&&e.message||e)})); } }); }); };
 
   loadLocal(){ try { const s = localStorage.getItem('inkwell_user_'+this.state.activeUser); return s?this.migrateUser(JSON.parse(s), this.state.activeUser):null; } catch(e){ return null; } }
-  saveLocal(){ try { const payload = JSON.stringify(this.userPayload()); const key='inkwell_user_'+this.state.activeUser; localStorage.setItem(key, payload); localStorage.setItem('inkwell_backup_'+this.state.activeUser, JSON.stringify({ ts:Date.now(), schema:this.USER_SCHEMA, data:payload })); this.setState({lastSaved:Date.now()}); } catch(e){} }
-  fullExport = ()=>{ const payload={ schema:'inkwell', _schema:this.USER_SCHEMA, app_version:this.APP_VERSION, user:this.state.activeUser, display_name:this.state.displayName, exported_at:new Date().toISOString(), collection:this.state.collection, decks:this.state.decks, matches:this.state.matches, overrides:this.state.overrides }; const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='inkwell-'+this.state.activeUser+'-backup.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); this.showToast('Backup downloaded'); };
+  saveLocal(){ try { const payload = JSON.stringify(this.userPayload()); const key='inkwell_user_'+this.state.activeUser; localStorage.setItem(key, payload); localStorage.setItem('inkwell_backup_'+this.state.activeUser, JSON.stringify({ ts:Date.now(), schema:this.USER_SCHEMA, data:payload })); this.setState({lastSaved:Date.now()}); this.recordPriceSnapshot(); this.queueSync(); } catch(e){} }
+  fullExport = ()=>{ const payload={ schema:'inkwell', _schema:this.USER_SCHEMA, app_version:this.APP_VERSION, user:this.state.activeUser, display_name:this.state.displayName, exported_at:new Date().toISOString(), collection:this.state.collection, decks:this.state.decks, matches:this.state.matches, overrides:this.state.overrides, wishlist:this.state.wishlist }; const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='inkwell-'+this.state.activeUser+'-backup.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); this.showToast('Backup downloaded'); };
   triggerFullImport = ()=>{ if(this._fimp) this._fimp.click(); };
-  fullImport = (e)=>{ const file=e.target&&e.target.files&&e.target.files[0]; if(!file) return; const rd=new FileReader(); rd.onload=()=>{ try{ const j=this.migrateUser(JSON.parse(String(rd.result)), this.state.activeUser); this.setState({ collection:j.collection, decks:j.decks, matches:j.matches, overrides:j.overrides, dataWarning:j.warning||this.state.dataWarning }, ()=>{ this.saveLocal(); this.showToast('Backup restored'); }); }catch(err){ this.showToast('Invalid backup file'); } }; rd.readAsText(file); e.target.value=''; };
+  fullImport = (e)=>{ const file=e.target&&e.target.files&&e.target.files[0]; if(!file) return; const rd=new FileReader(); rd.onload=()=>{ try{ const j=this.migrateUser(JSON.parse(String(rd.result)), this.state.activeUser); this.setState({ collection:j.collection, decks:j.decks, matches:j.matches, overrides:j.overrides, wishlist:j.wishlist, dataWarning:j.warning||this.state.dataWarning }, ()=>{ this.saveLocal(); this.showToast('Backup restored'); }); }catch(err){ this.showToast('Invalid backup file'); } }; rd.readAsText(file); e.target.value=''; };
   setFimpRef = (el)=>{ this._fimp=el; };
   inkableOf(card){ if(!card) return null; const o=this.state.overrides&&this.state.overrides[card.card_id]; if(o&&typeof o.inkable==='number') return o.inkable; return (typeof card.inkable==='number')?card.inkable:null; }
   setInkable(cardId, val){ const ov={...(this.state.overrides||{})}; const card=this.byId[cardId]; if(card && card.inkable===val){ if(ov[cardId]){ delete ov[cardId].inkable; if(!Object.keys(ov[cardId]).length) delete ov[cardId]; } } else { ov[cardId]={...(ov[cardId]||{}),inkable:val}; } this.setState({overrides:ov},()=>{ this.saveLocal(); this.showToast(val===1?'Marked inkable':'Marked uninkable'); }); }
@@ -1271,6 +1395,8 @@ class Component extends DCLogic {
   fmtOrDash(v){ return v==null ? '—' : this.fmt(v); }
   ownedOf(id){ const e=this.state.collection[id]; return e?{n:e.n||0,f:e.f||0}:{n:0,f:0}; }
   isOwned(id){ const o=this.ownedOf(id); return o.n>0||o.f>0; }
+  isWishlisted(id){ return !!(this.state.wishlist && this.state.wishlist[id]); }
+  toggleWishlist(id){ const w={...(this.state.wishlist||{})}; if(w[id]) delete w[id]; else w[id]=1; this.setState({wishlist:w}, ()=>this.saveLocal()); }
   printingsOf(card){ if(!card) return []; this.buildNameIndex(); const k=this.nameKey(card.name_en); return (this._byName&&this._byName[k])||[card]; }
   ownedAcross(card){ let n=0,f=0; const seen={}; for(const c of this.printingsOf(card)){ if(seen[c.card_id]) continue; seen[c.card_id]=1; const o=this.ownedOf(c.card_id); n+=o.n; f+=o.f; } return {n,f}; }
   chgColor(v){ return v>0.05?'#5fd07f':v<-0.05?'#ff7a86':'#8a8a92'; }
@@ -1373,6 +1499,8 @@ class Component extends DCLogic {
     let arr = this.cards.filter(c=>{
       if(st.collMode==='owned' && !this.isOwned(c.card_id)) return false;
       if(st.collMode==='missing' && this.isOwned(c.card_id)) return false;
+      if(st.collMode==='wishlist' && !this.isWishlisted(c.card_id)) return false;
+      if(st.rarities && st.rarities.length && !st.rarities.includes(c.rarity)) return false;
       if(st.sets.length && !st.sets.includes(c.set_code)) return false;
       if(st.inks.length){ const l=this.inkList(c); if(!l.some(i=>st.inks.includes(i))) return false; }
       if(st.types.length){ const ct=this.cardTypes(c); if(!st.types.some(t=>ct.includes(t))) return false; }
@@ -1526,6 +1654,17 @@ class Component extends DCLogic {
     V.switchProfileLabel=this.t('switchProfile'); V.backupSettingsLabel=this.t('backupSettings');
     V.openSettings=()=>this.setState({settingsOpen:true,profileMenuOpen:false});
     V.closeSettings=()=>this.setState({settingsOpen:false});
+    // ---- M4 sync UI ----
+    V.syncOn=st.syncEnabled;
+    V.syncSignedIn=st.syncEnabled && !!st.syncUser;
+    V.syncSignedOut=st.syncEnabled && !st.syncUser;
+    V.syncEmail=st.syncEmail; V.syncInput=st.syncInput; V.onSyncInput=this.onSyncInput;
+    V.sendMagicLink=this.sendMagicLink; V.signOutSync=this.signOutSync; V.syncNow=this.syncNow;
+    V.syncSendLabel=st.syncStatus==='sending'?'Sending…':'Send link';
+    V.syncMsg=st.syncMsg;
+    const SB={ off:['#8a8a92','rgba(255,255,255,.08)','Off'], signed_out:['#c8c8cc','rgba(255,255,255,.08)','Not signed in'], link_sent:['#e6c15a','rgba(230,193,90,.16)','Link sent'], sending:['#e6c15a','rgba(230,193,90,.16)','Sending'], syncing:['#7fc0ff','rgba(46,144,224,.18)','Syncing…'], synced:['#5fd07f','rgba(95,208,127,.16)','Synced'], error:['#ff8a96','rgba(226,59,78,.16)','Error'] };
+    const sb=SB[st.syncStatus]||SB.off; V.syncBadgeColor=sb[0]; V.syncBadgeBg=sb[1]; V.syncBadge=sb[2];
+    V.localOnlyMsg = (st.syncEnabled && st.syncUser) ? 'Also kept in this browser. Download a backup anytime for a portable copy.' : 'Your data lives only in this browser. Download a backup regularly — clearing browser data erases your collection, decks and games.';
     V.settingsOpen=st.settingsOpen;
     V.fullExport=this.fullExport; V.triggerFullImport=this.triggerFullImport; V.fullImport=this.fullImport; V.setFimpRef=this.setFimpRef;
     V.exportCollection=this.exportCollection; V.exportOverrides=this.exportOverrides;
@@ -1592,8 +1731,10 @@ class Component extends DCLogic {
       V.setMenuLabel=st.sets.length?(st.sets.length+' set'+(st.sets.length>1?'s':'')):this.t('allSets'); V.allSetsLabel=this.t('allSets');
       V.clearSets=()=>this.setState({sets:[],page:0});
       V.sort=st.sort; V.onSort=(e)=>this.setState({sort:e.target.value});
-      const modes=[['owned',this.t('have')],['missing',this.t('missing')],['all',this.t('all')]];
+      const modes=[['owned',this.t('have')],['missing',this.t('missing')],['wishlist',this.t('wishlist')],['all',this.t('all')]];
       V.collModes=modes.map(([m,label])=>({label,_go:()=>this.setState({collMode:m,page:0}),_style:this.chipStyle(st.collMode===m)}));
+      const RAR=[['L','Legendary'],['E','Enchanted'],['SR','Super Rare'],['R','Rare'],['U','Uncommon'],['C','Common']];
+      V.rarityChips=RAR.map(([code,label])=>({label:(this.RARITY[code]&&this.RARITY[code].l)||label,color:(this.RARITY[code]&&this.RARITY[code].c)||'#9a9aa2',_toggle:()=>this.toggleArr('rarities',code),_style:this.chipStyle((st.rarities||[]).includes(code))}));
       V.exportCollection=this.exportCollection; V.triggerImport=this.triggerImport; V.importCollection=this.importCollection; V.setImpRef=this.setImpRef;
       const all=this.filtered(); V.resultCount=all.length.toLocaleString('en-US');
       const pages=Math.max(1,Math.ceil(all.length/this.PAGE_SIZE)); const page=Math.min(st.page,pages-1);
@@ -1607,9 +1748,9 @@ class Component extends DCLogic {
       const acqPriced=st.collMode==='missing'?all.filter(c=>this.hasRealPrice(c)).length:0;
       V.showAcquire=st.collMode==='missing'; V.acquireCost=this.fmt(acquire); V.acquireSub=this.t('withPrice',{n:acqPriced});
       V.prevPage=()=>this.setState({page:Math.max(0,page-1)}); V.nextPage=()=>this.setState({page:Math.min(pages-1,page+1)});
-      V.clearFilters=()=>this.setState({inks:[],types:[],sets:[],q:'',collMode:'all',inkable:'all',cost:'all',page:0});
+      V.clearFilters=()=>this.setState({inks:[],types:[],sets:[],rarities:[],q:'',collMode:'all',inkable:'all',cost:'all',page:0});
       V.accent='#b79bff';
-      V.pageCards=all.slice(page*this.PAGE_SIZE,(page+1)*this.PAGE_SIZE).map(c=>{ const o=this.ownedOf(c.card_id); const owned=o.n+o.f>0; const cv=this.cardView(c); return { name:c.name_en, cost:c.ink_cost==null?'–':c.ink_cost, ink:cv.ink, _local:cv._local, _remote:cv._remote, rarityColor:cv.rarityColor, price:this.fmtOrDash(this.price(c)), owned, notOwned:!owned&&st.collMode==='all', ownedQty:o.n+o.f, foilTag:o.f>0?'✦':'', _open:()=>this.openCard(c.card_id) }; });
+      V.pageCards=all.slice(page*this.PAGE_SIZE,(page+1)*this.PAGE_SIZE).map(c=>{ const o=this.ownedOf(c.card_id); const owned=o.n+o.f>0; const cv=this.cardView(c); const wished=this.isWishlisted(c.card_id); return { name:c.name_en, cost:c.ink_cost==null?'–':c.ink_cost, ink:cv.ink, _local:cv._local, _remote:cv._remote, rarityColor:cv.rarityColor, price:this.fmtOrDash(this.price(c)), owned, notOwned:!owned&&st.collMode==='all', ownedQty:o.n+o.f, foilTag:o.f>0?'✦':'', wishIcon:wished?'★':'☆', wishColor:wished?'#e0c15a':'#c8c8cc', _wish:(e)=>{ e.stopPropagation(); this.toggleWishlist(c.card_id); }, _open:()=>this.openCard(c.card_id) }; });
     }
 
     // ---- PRICES ----
@@ -1619,6 +1760,19 @@ class Component extends DCLogic {
       const pool=basePool.filter(c=>this.hasRealPrice(c));
       const unpriced=basePool.length-pool.length;
       V.priceKpis=[ {label:this.t('totalValue'),value:this.fmt(value)}, {label:this.t('cardsPriced'),value:pool.length.toLocaleString('en-US')}, {label:this.t('noPrice'),value:unpriced.toLocaleString('en-US')} ];
+      // ---- M5 value history ----
+      const hist=(this._hist&&this._hist.length)?this._hist:this.loadHist();
+      V.histTitle=this.t('valueHistory'); V.histHint=this.t('valueHistoryHint');
+      if(hist && hist.length>=2){
+        V.histHas=true; V.histEmpty=false;
+        const vals=hist.map(p=>p.value); const mn=Math.min(...vals), mx=Math.max(...vals), rg=(mx-mn)||1; const N=hist.length;
+        const xy=hist.map((p,i)=>[ (N===1?50:(i/(N-1)*100)), (32 - ((p.value-mn)/rg)*30) + 1 ]);
+        V.histLine=xy.map(p=>p[0].toFixed(2)+','+p[1].toFixed(2)).join(' ');
+        V.histArea='0,34 '+xy.map(p=>p[0].toFixed(2)+','+p[1].toFixed(2)).join(' ')+' 100,34';
+        const first=hist[0].value, last=hist[N-1].value, diff=last-first; const pct=first?Math.round(diff/first*1000)/10:0;
+        V.histChg=(diff>=0?'+':'')+this.fmt(diff)+' ('+(pct>=0?'+':'')+pct+'%)'; V.histChgColor=this.chgColor(diff);
+        V.histFirst=hist[0].date; V.histLast=hist[N-1].date;
+      } else { V.histHas=false; V.histEmpty=true; }
       V.colCard=this.t('colCard'); V.colOwned=this.t('colOwned'); V.colPrice=this.t('colPrice'); V.colRange=this.t('colRange'); V.colFoil=this.t('colFoil');
       V.priceOwnedLabel=st.priceOwnedOnly?this.t('ownedOnly'):this.t('allCards'); V.priceOwnedBtnStyle=this.chipStyle(st.priceOwnedOnly);
       V.togglePriceOwned=()=>this.setState({priceOwnedOnly:!st.priceOwnedOnly,page:0});
