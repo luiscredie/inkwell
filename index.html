@@ -1050,6 +1050,20 @@
               </div>
             </div>
             <div style="font-size:10.5px;color:#6f6f78;margin-top:12px;font-family:'JetBrains Mono'"><sc-if value="{{ cm.ligaUrl }}" hint-placeholder-val="{{ false }}"><a href="{{ cm.ligaUrl }}" target="_blank" rel="noopener" style="color:#8ab4ff">{{ cm.priceSrc }} ↗</a></sc-if><sc-if value="{{ cm.noLiga }}" hint-placeholder-val="{{ true }}">{{ cm.priceSrc }}</sc-if></div>
+            <sc-if value="{{ cm.histHas }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.07)">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+                  <span style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#8a8a92">{{ cm.histLabel }}</span>
+                  <span style="font-family:'JetBrains Mono';font-size:12px;color:{{ cm.histChgColor }}">{{ cm.histChg }}</span>
+                </div>
+                <svg viewBox="0 0 100 34" preserveAspectRatio="none" style="width:100%;height:64px;overflow:visible">
+                  <defs><linearGradient id="chgrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#8ab4ff" stop-opacity="0.3"></stop><stop offset="100%" stop-color="#8ab4ff" stop-opacity="0"></stop></linearGradient></defs>
+                  <polygon points="{{ cm.histArea }}" fill="url(#chgrad)"></polygon>
+                  <polyline points="{{ cm.histLine }}" fill="none" stroke="#8ab4ff" stroke-width="1.6" vector-effect="non-scaling-stroke"></polyline>
+                </svg>
+                <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:10.5px;color:#7c7c85;font-family:'JetBrains Mono'"><span>{{ cm.histFirst }}</span><span>{{ cm.histLast }}</span></div>
+              </div>
+            </sc-if>
           </div>
 
           <sc-if value="{{ cm.hasVariants }}" hint-placeholder-val="{{ false }}">
@@ -1244,7 +1258,7 @@ class Component extends DCLogic {
       overview:'Overview', collection:'Collection', prices:'Prices', decks:'Decks',
       sub_overview:'Welcome back, {name}', sub_collection:'Every card in the multiverse — yours highlighted', sub_prices:'Market values across your collection', sub_decks:'Your archived builds & analytics', sub_deck:'Deck Analytics',
       search:'Search 3,400+ cards…', have:'Owned', missing:'Missing', wishlist:'Wishlist', all:'All', allCards:'All cards',
-      valueHistory:'Collection value over time', valueHistoryHint:'Value history builds automatically as prices update. Check back after the next price refresh.',
+      valueHistory:'Collection value over time', valueHistoryHint:'Value history builds automatically as prices update. Check back after the next price refresh.', priceHistory:'Price history',
       aiCoach:'✦ AI Coach', aiCoachTitle:'AI Coach', coachLoading:'Analyzing your deck…', coachErr:'Coaching failed — please try again.', coachUnavail:'AI Coach runs inside the Inkwell app host and is unavailable on this deployment.', coachDisclaimer:'AI-generated guidance — verify against current meta and card text.',
       export:'Export', import:'Import', cards:'cards', prev:'‹ Prev', next:'Next ›',
       newDeck:'+ New Deck', importDeck:'↑ Import', createDeck:'Create', cancel:'Cancel', format:'Format',
@@ -1268,7 +1282,7 @@ class Component extends DCLogic {
       overview:'Visão Geral', collection:'Coleção', prices:'Preços', decks:'Decks',
       sub_overview:'Bem-vindo de volta, {name}', sub_collection:'Todas as cartas do multiverso — as suas em destaque', sub_prices:'Valores de mercado da sua coleção', sub_decks:'Seus decks arquivados e análises', sub_deck:'Análise do Deck',
       search:'Buscar 3.400+ cartas…', have:'Tenho', missing:'Faltando', wishlist:'Lista de Desejos', all:'Todas', allCards:'Todas as cartas',
-      valueHistory:'Valor da coleção ao longo do tempo', valueHistoryHint:'O histórico de valor é criado automaticamente conforme os preços atualizam. Volte após a próxima atualização de preços.',
+      valueHistory:'Valor da coleção ao longo do tempo', valueHistoryHint:'O histórico de valor é criado automaticamente conforme os preços atualizam. Volte após a próxima atualização de preços.', priceHistory:'Histórico de preço',
       aiCoach:'✦ Treinador IA', aiCoachTitle:'Treinador IA', coachLoading:'Analisando seu deck…', coachErr:'Falha na análise — tente novamente.', coachUnavail:'O Treinador IA roda dentro do app Inkwell e não está disponível neste site.', coachDisclaimer:'Orientação gerada por IA — confira com o meta atual e o texto das cartas.',
       export:'Exportar', import:'Importar', cards:'cartas', prev:'‹ Anterior', next:'Próxima ›',
       newDeck:'+ Novo Deck', importDeck:'↑ Importar', createDeck:'Criar', cancel:'Cancelar', format:'Formato',
@@ -1343,6 +1357,19 @@ class Component extends DCLogic {
   histNL(p){ if(!p) return null; if(p.nl!=null) return p.nl; if(p.n!=null) return p.n; if(p.normal) return p.normal.low!=null?p.normal.low:(p.normal.average!=null?p.normal.average:null); if(p.minimum_price_brl!=null) return p.minimum_price_brl; return null; }
   histFL(p, fallback){ if(!p) return fallback; if(p.fl!=null) return p.fl; if(p.f!=null) return p.f; if(p.foil) return p.foil.low!=null?p.foil.low:(p.foil.average!=null?p.foil.average:fallback); return fallback; }
   valueAtPrices(pmap){ let v=0; const coll=this.state.collection||{}; for(const id in coll){ const p=pmap[id]; if(!p) continue; const e=coll[id]; const nn=this.histNL(p); const ff=this.histFL(p, nn); if(nn!=null) v+=nn*(e.n||0); if(ff!=null) v+=ff*(e.f||0); } return Math.round(v*100)/100; }
+  cardHistory(card){
+    // Per-card price curve from the pipeline price-history artifact (lowest-first), across all printings.
+    const art=this.priceHistoryArtifact; if(!art||!card) return [];
+    const series = Array.isArray(art.series)?art.series : (Array.isArray(art.history)?art.history : null); if(!series) return [];
+    const ids=(this.printingsOf?this.printingsOf(card):[card]).map(c=>c.card_id);
+    const pts=[];
+    for(const snap of series){ if(!snap||!snap.date) continue; const pm=snap.prices||snap.prices_by_liga_id; if(!pm) continue;
+      let best=null; for(const id of ids){ const p=pm[id]; const v=this.histNL(p); if(v!=null && (best==null || v<best)) best=v; }
+      if(best!=null) pts.push({date:snap.date, value:best});
+    }
+    pts.sort((a,b)=>a.date<b.date?-1:1);
+    return pts;
+  }
   mergedHistory(){
     const map={}; for(const p of this.loadHist()){ if(p&&p.date) map[p.date]={date:p.date,value:p.value,cards:p.cards}; }
     const art=this.priceHistoryArtifact;
@@ -2235,7 +2262,16 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       const vlist=this.variantsOf(c);
       const variants=vlist.map(vc=>{ const vcv=this.cardView(vc); const active=vc.card_id===c.card_id; return { label:this.variantLabel(vc), num:vc.card_number, ink:vcv.ink, imgEl:vcv._local?React.createElement('img',{src:vcv._local,'data-remote':vcv._remote,onError:window.imgError,style:{width:'100%',height:'100%',objectFit:'cover',display:'block'}}):null, _pick:()=>this.switchVariant(c.card_id,vc.card_id), _style:'background:none;border:2px solid '+(active?'#b79bff':'transparent')+';border-radius:9px;padding:3px;cursor:pointer' }; });
       const _ink=this.inkableOf(c); const _isOverride=!!(this.state.overrides&&this.state.overrides[c.card_id]&&typeof this.state.overrides[c.card_id].inkable==='number');
-      V.cm={ name:c.name_en, ink:cv.ink, hasVariants:vlist.length>1, variants,
+      const chp=this.cardHistory(c);
+      let chH={histHas:false};
+      if(chp.length>=2){
+        const vals=chp.map(p=>p.value); const mn=Math.min(...vals),mx=Math.max(...vals),rg=(mx-mn)||1; const N=chp.length;
+        const xy=chp.map((p,i)=>[(N===1?50:(i/(N-1)*100)),(32-((p.value-mn)/rg)*30)+1]);
+        const line=xy.map(p=>p[0].toFixed(2)+','+p[1].toFixed(2)).join(' ');
+        const first=chp[0].value,last=chp[N-1].value,diff=last-first,pct=first?Math.round(diff/first*1000)/10:0;
+        chH={ histHas:true, histLabel:this.t('priceHistory'), histLine:line, histArea:'0,34 '+line+' 100,34', histChg:(diff>=0?'+':'')+this.fmt(diff)+' ('+(pct>=0?'+':'')+pct+'%)', histChgColor:this.chgColor(diff), histFirst:chp[0].date, histLast:chp[N-1].date };
+      }
+      V.cm={ name:c.name_en, ink:cv.ink, hasVariants:vlist.length>1, variants, ...chH,
         inkableVal:_ink, inkableOverridden:_isOverride,
         inkStyle:_ink===1?'flex:1;padding:9px;border-radius:10px;cursor:pointer;font-size:12.5px;font-weight:700;border:1px solid #5fd07f;background:rgba(95,208,127,.16);color:#5fd07f;display:inline-flex;align-items:center;justify-content:center;gap:6px':'flex:1;padding:9px;border-radius:10px;cursor:pointer;font-size:12.5px;font-weight:600;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#9a9aa2;display:inline-flex;align-items:center;justify-content:center;gap:6px',
         uninkStyle:_ink===0?'flex:1;padding:9px;border-radius:10px;cursor:pointer;font-size:12.5px;font-weight:700;border:1px solid #ff7a86;background:rgba(255,122,134,.16);color:#ff7a86;display:inline-flex;align-items:center;justify-content:center;gap:6px':'flex:1;padding:9px;border-radius:10px;cursor:pointer;font-size:12.5px;font-weight:600;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#9a9aa2;display:inline-flex;align-items:center;justify-content:center;gap:6px',
