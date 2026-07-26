@@ -51,7 +51,7 @@
     .ink-build-split{grid-template-columns:1fr!important}
     .ink-build-list{position:static!important;max-height:none!important}
     .ink-card-modal{grid-template-columns:1fr!important;max-height:92vh!important}
-    .ink-card-modal > div:first-child{max-height:34vh!important;min-height:180px!important}
+    .ink-card-modal > div:first-child{max-width:62%!important;margin:0 auto!important}
     .ink-card-modal > div:last-child{padding:20px 18px!important}
     .ink-mobile-profile{display:flex!important}
   }
@@ -1005,7 +1005,7 @@
   <sc-if value="{{ cardOpen }}" hint-placeholder-val="{{ false }}">
     <div onClick="{{ closeCard }}" style="position:fixed;inset:0;z-index:100;background:rgba(5,5,7,.72);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:24px;animation:ink-fade .2s both">
       <div onClick="{{ stop }}" class="ink-sc ink-card-modal" style="width:min(760px,100%);max-height:90vh;overflow-y:auto;overflow-x:hidden;display:grid;grid-template-columns:300px 1fr;gap:0;background:#121216;border:1px solid rgba(255,255,255,.1);border-radius:22px;animation:ink-pop .28s both">
-        <div style="background:{{ cm.ink }};position:relative;min-height:100%">
+        <div style="background:{{ cm.ink }};position:relative;align-self:start;aspect-ratio:734/1024;width:100%;overflow:hidden">
           <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;text-align:center;font-family:'Bricolage Grotesque';font-weight:700;font-size:18px;background:{{ cm.ink }}">{{ cm.name }}</div>
           {{ cm.imgEl }}
         </div>
