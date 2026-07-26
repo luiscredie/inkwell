@@ -20,6 +20,7 @@
   a:hover{color:#cbb8ff}
   input,button,select,textarea{font-family:inherit}
   button{color:inherit}
+  input,textarea,select{color:#f3f3f5}
   input:focus,select:focus,textarea:focus{outline:none}
   #ink-scroll::-webkit-scrollbar,.ink-sc::-webkit-scrollbar{width:10px;height:10px}
   #ink-scroll::-webkit-scrollbar-thumb,.ink-sc::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:8px;border:3px solid transparent;background-clip:padding-box}
@@ -480,7 +481,6 @@
             <div style="padding:22px;border-radius:18px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);margin-bottom:22px;animation:ink-pop .25s both">
               <h3 style="font-family:'Bricolage Grotesque';font-weight:700;font-size:16px;margin-bottom:6px">{{ importDeckTitleLabel }}</h3>
                <p style="font-size:12.5px;color:#8a8a92;margin-bottom:14px">{{ importDeckHint }}</p>
-              <input value="{{ importDeckName }}" onInput="{{ onImportDeckName }}" placeholder="{{ deckNameOptPh }}" style="width:100%;padding:11px 14px;border-radius:11px;background:rgba(0,0,0,.3);bn> — one card per line. Colors are detected automatically.</p>
               <input value="{{ importDeckName }}" onInput="{{ onImportDeckName }}" placeholder="Deck name (optional)" style="width:100%;padding:11px 14px;border-radius:11px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.12);color:#f3f3f5;font-size:14px;margin-bottom:12px" />
               <textarea value="{{ importDeckText }}" onInput="{{ onImportDeckText }}" placeholder="4 Dumbo - Ninth Wonder of the Universe (9-45)&#10;4 Demona - Scourge of the Wyvern Clan (10-55)&#10;…" style="width:100%;min-height:180px;padding:12px 14px;border-radius:11px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.12);color:#f3f3f5;font-size:13px;font-family:'JetBrains Mono';line-height:1.5;resize:vertical;margin-bottom:14px"></textarea>
               <div style="font-size:12px;color:#8a8a92;margin-bottom:9px">{{ formatLabel }}</div>
@@ -1231,7 +1231,7 @@ class Component extends DCLogic {
 
   // ---------- M1: data contract (see DATA_CONTRACT.md) ----------
   APP_VERSION = '1.4.0';
-  SUPPORTED = { manifest:[1], cards:[3], cards_pt:[1], prices:[2], aliases:[1], validation:[1], price_history:[1] };
+  SUPPORTED = { manifest:[1], cards:[3], cards_pt:[1], prices:[2,3,4], aliases:[1], validation:[1], price_history:[1] };
   LEGACY = { cards:2, prices:1 };            // pre-contract files still deployed today
   dataRoot = '';                              // dir of data-manifest.json (paths resolve here)
   aliases = null; validationReport = null; ptOverlay = null; manifestMode = false;
@@ -1292,6 +1292,7 @@ class Component extends DCLogic {
   async initSync(){
     let cfg=null;
     try { const r=await fetch('sync-config.json',{cache:'no-cache'}); if(r.ok) cfg=await r.json(); } catch(e){}
+    if(cfg && cfg.coach_endpoint){ this.coachEndpoint=cfg.coach_endpoint; this.coachAnonKey=cfg.anon_key||''; }
     if(!cfg || !cfg.url || !cfg.anon_key){ this.setState({syncEnabled:false, syncStatus:'off'}); return; }
     if(!(window.supabase && window.supabase.createClient)){ this.setState({syncEnabled:false, syncStatus:'off', syncMsg:'Sync library failed to load.'}); return; }
     try { this.sb = window.supabase.createClient(cfg.url, cfg.anon_key, {auth:{persistSession:true, autoRefreshToken:true}}); }
@@ -1336,7 +1337,31 @@ class Component extends DCLogic {
   onSyncInput = (e)=>this.setState({syncInput:e.target.value});
 
   // ---------- M6: AI Coach ----------
-  coachAvailable(){ return !!(window.claude && typeof window.claude.complete==='function'); }
+  coachAvailable(){ return !!(window.claude && typeof window.claude.complete==='function') || !!this.coachEndpoint; }
+  async coachComplete(prompt){
+    if(window.claude && typeof window.claude.complete==='function'){
+      return await window.claude.complete({ model:'claude-sonnet-4-5', max_tokens:1400, messages:[{role:'user', content:prompt}] });
+    }
+    if(this.coachEndpoint){
+      const headers={'Content-Type':'application/json'};
+      try{ if(this.sb){ const { data:{ session } } = await this.sb.auth.getSession(); if(session&&session.access_token) headers['Authorization']='Bearer '+session.access_token; } }catch(e){}
+      if(this.coachAnonKey){ headers['apikey']=this.coachAnonKey; }
+      const r=await fetch(this.coachEndpoint,{method:'POST',headers,body:JSON.stringify({prompt})});
+      if(!r.ok){ let m=''; try{ m=(await r.json()).error||''; }catch(e){} throw new Error(m||('HTTP '+r.status)); }
+      const j=await r.json(); return j.text||j.completion||'';
+    }
+    throw new Error('no coach backend');
+  }
+  runCoach = ()=>{
+    const deck=this.deckById(this.state.selectedDeck); if(!deck) return;
+    if(!this.coachAvailable()){ this.setState({coachDeck:deck.id, coachErr:this.t('coachUnavail'), coachText:null, coachLoading:false}); return; }
+    const cache=this._coachCache&&this._coachCache[deck.id];
+    if(cache){ this.setState({coachDeck:deck.id, coachText:cache, coachErr:null, coachLoading:false}); return; }
+    this.setState({coachDeck:deck.id, coachLoading:true, coachErr:null, coachText:null});
+    this.coachComplete(this.buildCoachPrompt(deck))
+      .then(txt=>{ this._coachCache=this._coachCache||{}; this._coachCache[deck.id]=txt; if(this.state.selectedDeck===deck.id) this.setState({coachText:txt, coachLoading:false}); })
+      .catch(e=>{ if(this.state.selectedDeck===deck.id) this.setState({coachErr:this.t('coachErr'), coachLoading:false}); });
+  };
   buildCoachPrompt(deck){
     const entries=this.deckEntries(deck); const total=this.deckCount(deck);
     const buckets=[0,0,0,0,0,0,0,0]; for(const e of entries){ const cost=Math.min(7,Math.max(0,(typeof e.card.ink_cost==='number'?e.card.ink_cost:0))); buckets[cost]+=e.count; }
@@ -1365,16 +1390,6 @@ Give your answer in these sections, each starting with the exact header line fol
 ## Mulligan guidance
 Only reference plausible Lorcana cards (prefer cards already in the list). Keep each section to 1-3 sentences or short bullets.`;
   }
-  runCoach = ()=>{
-    const deck=this.deckById(this.state.selectedDeck); if(!deck) return;
-    if(!this.coachAvailable()){ this.setState({coachDeck:deck.id, coachErr:this.t('coachUnavail'), coachText:null, coachLoading:false}); return; }
-    const cache=this._coachCache&&this._coachCache[deck.id];
-    if(cache){ this.setState({coachDeck:deck.id, coachText:cache, coachErr:null, coachLoading:false}); return; }
-    this.setState({coachDeck:deck.id, coachLoading:true, coachErr:null, coachText:null});
-    window.claude.complete({ model:'claude-sonnet-4-5', max_tokens:1400, messages:[{role:'user', content:this.buildCoachPrompt(deck)}] })
-      .then(txt=>{ this._coachCache=this._coachCache||{}; this._coachCache[deck.id]=txt; if(this.state.selectedDeck===deck.id) this.setState({coachText:txt, coachLoading:false}); })
-      .catch(e=>{ if(this.state.selectedDeck===deck.id) this.setState({coachErr:this.t('coachErr'), coachLoading:false}); });
-  };
   closeCoach = ()=>this.setState({coachDeck:null, coachText:null, coachErr:null, coachLoading:false});
   parseCoach(txt){ if(!txt) return []; const blocks=[]; const lines=String(txt).split('\n'); let cur={head:'',body:''}; for(const ln of lines){ const h=ln.match(/^#{1,4}\s+(.+)/)||ln.match(/^\*\*(.+?)\*\*\s*$/); if(h){ if(cur.head||cur.body.trim()) blocks.push(cur); cur={head:h[1].trim(),body:''}; } else { cur.body+=(cur.body?'\n':'')+ln; } } if(cur.head||cur.body.trim()) blocks.push(cur); return blocks.map(b=>({head:b.head,body:b.body.trim()})); }
 
@@ -1410,6 +1425,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     if (files.validation){ const v=await this.loadArtifact('validation', files.validation, schema.validation, dir, hashJobs, false); if(!v.fatal && v.data) validation=v.data; }
     if (files.cards_pt){ const p=await this.loadArtifact('cards_pt', files.cards_pt, schema.cards_pt, dir, hashJobs, false); if(!p.fatal && p.data){ ptOverlay=p.data; this.ptOverlay=p.data; } }
     if (files.price_history){ const ph=await this.loadArtifact('price_history', files.price_history, schema.price_history, dir, hashJobs, false); if(!ph.fatal && ph.data) this.priceHistoryArtifact=ph.data; }
+    if(this._deployWarn) warning=(warning?warning+' ':'')+this._deployWarn;
     return { cards:cRes.data.cards||[], sets:cRes.data.sets||[], image_base_path:cRes.data.image_base_path, prices, priceSource, aliases, validation, warning, hashJobs };
   }
 
@@ -1419,7 +1435,12 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     if (!res.ok){ return required?{fatal:'Could not load required "'+type+'" artifact ('+url+').', fetchFailed:true}:{}; }
     const data = res.data;
     // self-describing check: artifact.schema_version must equal manifest.schema[type]
-    if (typeof manifestSchema==='number' && data.schema_version !== manifestSchema){ const msg='Deployment mismatch: '+type+'.json is v'+data.schema_version+' but manifest expects v'+manifestSchema+'. Redeploy data.'; return required?{fatal:msg}:{}; }
+    // self-describing check: artifact.schema_version vs manifest.schema[type].
+    // If the file schema is one the app supports, a manifest that disagrees is just stale → warn, don't block.
+    if (typeof manifestSchema==='number' && data.schema_version !== manifestSchema){
+      if (this.supports(type, data.schema_version)){ this._deployWarn = (this._deployWarn?this._deployWarn+' ':'')+(type+'.json is v'+data.schema_version+' but manifest says v'+manifestSchema+' (manifest is stale).'); }
+      else { const msg='Deployment mismatch: '+type+'.json is v'+data.schema_version+' but manifest expects v'+manifestSchema+'. Redeploy data.'; return required?{fatal:msg}:{}; }
+    }
     if (!this.supports(type, data.schema_version)){ const msg='Unsupported '+type+' schema v'+data.schema_version+'. Update the app.'; return required?{fatal:msg}:{}; }
     if (entry.sha256) hashJobs.push({ url, expected:entry.sha256, type });
     return { data };
@@ -1506,7 +1527,22 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
   rng(seed){ let a=seed>>>0; return ()=>{ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
   priceMap(pj){
     if(!pj) return {map:{}};
-    if(pj.prices && typeof pj.prices==='object') return {map:pj.prices};   // compact canonical
+    const num=v=>(typeof v==='number'&&isFinite(v))?Math.round(v*100)/100:null;
+    const src = (pj.prices_by_liga_id && typeof pj.prices_by_liga_id==='object') ? pj.prices_by_liga_id : null;
+    const verbose = src && Object.values(src).some(p=>p&&(p.normal!==undefined||p.foil!==undefined));
+    if(pj.schema_version>=3 || verbose){
+      // v3/v4 pipeline shape: per-card {normal:{low,average,high}, foil:{...}, minimum_price_brl}
+      if(!src) return {error:'raw'};
+      const map={};
+      for(const id in src){ const p=src[id]; if(!p||typeof p!=='object') continue; const e={};
+        if(p.normal){ const lo=num(p.normal.low),av=num(p.normal.average),hi=num(p.normal.high); if(lo!=null)e.nl=lo; if(av!=null)e.n=av; if(hi!=null)e.nh=hi; }
+        if(p.foil){ const lo=num(p.foil.low),av=num(p.foil.average),hi=num(p.foil.high); if(lo!=null)e.fl=lo; if(av!=null)e.f=av; if(hi!=null)e.fh=hi; }
+        if(e.nl==null&&e.n==null&&p.minimum_price_brl!=null){ const m=num(p.minimum_price_brl); if(m!=null){ e.nl=m; e.n=m; } }
+        if(Object.keys(e).length) map[id]=e;
+      }
+      return {map};
+    }
+    if(pj.prices && typeof pj.prices==='object') return {map:pj.prices};   // compact canonical v2
     if(pj.prices_by_liga_id) return {error:'raw'};                          // must be normalized by pipeline
     return {map:{}};
   }
