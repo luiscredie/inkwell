@@ -1,0 +1,974 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-27T03:42:23.471578+00:00",
+  "top_100_most_expensive": [
+    {
+      "id": "DLPC1-4-C2",
+      "name": "Simba - Pride Protector",
+      "edition": "DLPC1",
+      "number": "4-C2",
+      "minimum_price_brl": 6999.9
+    },
+    {
+      "id": "DLPC1-2-C1",
+      "name": "Let It Go",
+      "edition": "DLPC1",
+      "number": "2-C1",
+      "minimum_price_brl": 2999.9
+    },
+    {
+      "id": "DLPC1-14-P2",
+      "name": "Scar - Heartless Hunter (Store Championship)",
+      "edition": "DLPC1",
+      "number": "14-P2",
+      "minimum_price_brl": 989.9
+    },
+    {
+      "id": "DLPC1-3-C2",
+      "name": "Mulan - Charging Ahead (Foil)",
+      "edition": "DLPC1",
+      "number": "3-C2",
+      "minimum_price_brl": 850.0
+    },
+    {
+      "id": "DLPC1-7-P2",
+      "name": "Mirabel Madrigal - Family Gatherer (Store Championship)",
+      "edition": "DLPC1",
+      "number": "7-P2",
+      "minimum_price_brl": 850.0
+    },
+    {
+      "id": "DLPC1-10-C2",
+      "name": "Let It Go (Disney Lorcana Challenge)",
+      "edition": "DLPC1",
+      "number": "10-C2",
+      "minimum_price_brl": 790.0
+    },
+    {
+      "id": "DLPC1-1-C1",
+      "name": "Dragon Fire",
+      "edition": "DLPC1",
+      "number": "1-C1",
+      "minimum_price_brl": 700.0
+    },
+    {
+      "id": "DLPC1-3-DIS",
+      "name": "Stitch - Rock Star",
+      "edition": "DLPC1",
+      "number": "3-DIS",
+      "minimum_price_brl": 700.0
+    },
+    {
+      "id": "DLPC1-6-C2",
+      "name": "Elsa - Ice Maker",
+      "edition": "DLPC1",
+      "number": "6-C2",
+      "minimum_price_brl": 700.0
+    },
+    {
+      "id": "DLPC1-8-C2",
+      "name": "Simba - Pride Protector",
+      "edition": "DLPC1",
+      "number": "8-C2",
+      "minimum_price_brl": 700.0
+    },
+    {
+      "id": "DLPC1-8-C1",
+      "name": "Kuzco - Temperamental Emperor",
+      "edition": "DLPC1",
+      "number": "8-C1",
+      "minimum_price_brl": 690.0
+    },
+    {
+      "id": "DLPC1-4-DIS",
+      "name": "Maleficent - Exultant Spellcaster",
+      "edition": "DLPC1",
+      "number": "4-DIS",
+      "minimum_price_brl": 600.0
+    },
+    {
+      "id": "DLPC1-5-P3",
+      "name": "Maleficent - Monstrous Dragon (Store Championship)",
+      "edition": "DLPC1",
+      "number": "5-P3",
+      "minimum_price_brl": 599.5
+    },
+    {
+      "id": "DLPC1-1-C2",
+      "name": "Pegasus - Gift for Hercules",
+      "edition": "DLPC1",
+      "number": "1-C2",
+      "minimum_price_brl": 589.9
+    },
+    {
+      "id": "D100-18",
+      "name": "Mickey Mouse - Friendly Face (Alternate Art)",
+      "edition": "D100",
+      "number": "18",
+      "minimum_price_brl": 549.9
+    },
+    {
+      "id": "D100-19",
+      "name": "Elsa - Gloves Off (Alternate Art)",
+      "edition": "D100",
+      "number": "19",
+      "minimum_price_brl": 450.0
+    },
+    {
+      "id": "D100-21",
+      "name": "Stitch - Abomination (Alternate Art)",
+      "edition": "D100",
+      "number": "21",
+      "minimum_price_brl": 380.0
+    },
+    {
+      "id": "DLPC1-1-DIS",
+      "name": "Rapunzel - Appreciative Artist",
+      "edition": "DLPC1",
+      "number": "1-DIS",
+      "minimum_price_brl": 350.0
+    },
+    {
+      "id": "DLPC1-2-DIS",
+      "name": "Donald Duck - Pie Slinger",
+      "edition": "DLPC1",
+      "number": "2-DIS",
+      "minimum_price_brl": 300.0
+    },
+    {
+      "id": "D100-22",
+      "name": "Maleficent - Uninvited (Alternate Art)",
+      "edition": "D100",
+      "number": "22",
+      "minimum_price_brl": 299.9
+    },
+    {
+      "id": "DLPC1-7-C2",
+      "name": "Mulan - Charging Ahead",
+      "edition": "DLPC1",
+      "number": "7-C2",
+      "minimum_price_brl": 269.9
+    },
+    {
+      "id": "DLPC1-12-P3",
+      "name": "The Queen - Mirror Seeker",
+      "edition": "DLPC1",
+      "number": "12-P3",
+      "minimum_price_brl": 255.0
+    },
+    {
+      "id": "D100-23",
+      "name": "Maui - Demigod (Alternate Art)",
+      "edition": "D100",
+      "number": "23",
+      "minimum_price_brl": 250.0
+    },
+    {
+      "id": "DLPC1-10-C1",
+      "name": "A Whole New World",
+      "edition": "DLPC1",
+      "number": "10-C1",
+      "minimum_price_brl": 249.9
+    },
+    {
+      "id": "DLPC1-8-P1",
+      "name": "Mickey Mouse - Detective",
+      "edition": "DLPC1",
+      "number": "8-P1",
+      "minimum_price_brl": 180.0
+    },
+    {
+      "id": "DLPC1-6-P3",
+      "name": "Elsa - The Fifth Spirit",
+      "edition": "DLPC1",
+      "number": "6-P3",
+      "minimum_price_brl": 144.99
+    },
+    {
+      "id": "DLPC1-1-P3",
+      "name": "Dumbo - The Flying Elephant",
+      "edition": "DLPC1",
+      "number": "1-P3",
+      "minimum_price_brl": 144.9
+    },
+    {
+      "id": "DLPC1-11-P3",
+      "name": "Tinker Bell - Giant Fairy",
+      "edition": "DLPC1",
+      "number": "11-P3",
+      "minimum_price_brl": 130.0
+    },
+    {
+      "id": "DLPC1-8-P3",
+      "name": "Strength of a Raging Fire",
+      "edition": "DLPC1",
+      "number": "8-P3",
+      "minimum_price_brl": 72.9
+    },
+    {
+      "id": "DLPC1-8-P2",
+      "name": "Stitch - Alien Buccaneer (Stitch Collector's Gift Set Promo)",
+      "edition": "DLPC1",
+      "number": "8-P2",
+      "minimum_price_brl": 50.0
+    },
+    {
+      "id": "DLPC1-12-P2",
+      "name": "Minnie Mouse - Pirate Lookout",
+      "edition": "DLPC1",
+      "number": "12-P2",
+      "minimum_price_brl": 39.9
+    },
+    {
+      "id": "DLPC1-14-P1",
+      "name": "Cinderella - Knight in Training",
+      "edition": "DLPC1",
+      "number": "14-P1",
+      "minimum_price_brl": 39.9
+    },
+    {
+      "id": "DLPC1-16-P1",
+      "name": "Minnie Mouse - Wide-Eyed Diver",
+      "edition": "DLPC1",
+      "number": "16-P1",
+      "minimum_price_brl": 39.9
+    },
+    {
+      "id": "DLPC1-4-P3",
+      "name": "Maleficent - Monstrous Dragon (Store Championship Participant)",
+      "edition": "DLPC1",
+      "number": "4-P3",
+      "minimum_price_brl": 30.0
+    },
+    {
+      "id": "DLPC1-2-P3",
+      "name": "Alice - Accidentally Adrift",
+      "edition": "DLPC1",
+      "number": "2-P3",
+      "minimum_price_brl": 27.0
+    },
+    {
+      "id": "DLPC1-7-P3",
+      "name": "Cursed Merfolk - Ursula's Handiwork",
+      "edition": "DLPC1",
+      "number": "7-P3",
+      "minimum_price_brl": 25.0
+    },
+    {
+      "id": "DLPC1-10-P1",
+      "name": "Yzma - Alchemist",
+      "edition": "DLPC1",
+      "number": "10-P1",
+      "minimum_price_brl": 24.9
+    },
+    {
+      "id": "DLPC1-13-P2",
+      "name": "Wasabi - Methodical Engineer",
+      "edition": "DLPC1",
+      "number": "13-P2",
+      "minimum_price_brl": 23.9
+    },
+    {
+      "id": "DLPC1-15-P1",
+      "name": "Bucky - Squirrel Squeak Tutor",
+      "edition": "DLPC1",
+      "number": "15-P1",
+      "minimum_price_brl": 19.9
+    },
+    {
+      "id": "DLPC1-9-P3",
+      "name": "Sisu - Daring Visitor",
+      "edition": "DLPC1",
+      "number": "9-P3",
+      "minimum_price_brl": 15.25
+    },
+    {
+      "id": "DLPC1-3-P3",
+      "name": "The Queen - Conceited Ruler",
+      "edition": "DLPC1",
+      "number": "3-P3",
+      "minimum_price_brl": 14.9
+    },
+    {
+      "id": "DLPC1-10-P2",
+      "name": "Rescue Rangers Away!",
+      "edition": "DLPC1",
+      "number": "10-P2",
+      "minimum_price_brl": 8.99
+    },
+    {
+      "id": "DLPC1-5-P2",
+      "name": "Chicha - Dedicated Mother",
+      "edition": "DLPC1",
+      "number": "5-P2",
+      "minimum_price_brl": 8.0
+    },
+    {
+      "id": "DLPC1-11-P2",
+      "name": "Honey Lemon - Chemical Genius",
+      "edition": "DLPC1",
+      "number": "11-P2",
+      "minimum_price_brl": 8.0
+    }
+  ],
+  "biggest_gainers": [
+    {
+      "id": "D100-22",
+      "name": "Maleficent - Uninvited (Alternate Art)",
+      "from": 149.9,
+      "to": 299.9,
+      "change_brl": 150.0,
+      "change_pct": 100.07
+    },
+    {
+      "id": "DLPC1-12-P3",
+      "name": "The Queen - Mirror Seeker",
+      "from": 140.0,
+      "to": 255.0,
+      "change_brl": 115.0,
+      "change_pct": 82.14
+    },
+    {
+      "id": "DLPC1-8-P3",
+      "name": "Strength of a Raging Fire",
+      "from": 59.9,
+      "to": 72.9,
+      "change_brl": 13.0,
+      "change_pct": 21.7
+    },
+    {
+      "id": "D100-21",
+      "name": "Stitch - Abomination (Alternate Art)",
+      "from": 360.0,
+      "to": 380.0,
+      "change_brl": 20.0,
+      "change_pct": 5.56
+    },
+    {
+      "id": "D100-19",
+      "name": "Elsa - Gloves Off (Alternate Art)",
+      "from": 450.0,
+      "to": 450.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "D100-23",
+      "name": "Maui - Demigod (Alternate Art)",
+      "from": 250.0,
+      "to": 250.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-1-C1",
+      "name": "Dragon Fire",
+      "from": 700.0,
+      "to": 700.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-1-C2",
+      "name": "Pegasus - Gift for Hercules",
+      "from": 589.9,
+      "to": 589.9,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-1-DIS",
+      "name": "Rapunzel - Appreciative Artist",
+      "from": 350.0,
+      "to": 350.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-1-P3",
+      "name": "Dumbo - The Flying Elephant",
+      "from": 144.9,
+      "to": 144.9,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-2-C1",
+      "name": "Let It Go",
+      "from": 2999.9,
+      "to": 2999.9,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-2-DIS",
+      "name": "Donald Duck - Pie Slinger",
+      "from": 300.0,
+      "to": 300.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-3-C2",
+      "name": "Mulan - Charging Ahead (Foil)",
+      "from": 850.0,
+      "to": 850.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-3-DIS",
+      "name": "Stitch - Rock Star",
+      "from": 700.0,
+      "to": 700.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-3-P3",
+      "name": "The Queen - Conceited Ruler",
+      "from": 14.9,
+      "to": 14.9,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-4-C2",
+      "name": "Simba - Pride Protector",
+      "from": 6999.9,
+      "to": 6999.9,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-4-P3",
+      "name": "Maleficent - Monstrous Dragon (Store Championship Participant)",
+      "from": 30.0,
+      "to": 30.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-5-P2",
+      "name": "Chicha - Dedicated Mother",
+      "from": 8.0,
+      "to": 8.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-5-P3",
+      "name": "Maleficent - Monstrous Dragon (Store Championship)",
+      "from": 599.5,
+      "to": 599.5,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-6-C2",
+      "name": "Elsa - Ice Maker",
+      "from": 700.0,
+      "to": 700.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-6-P3",
+      "name": "Elsa - The Fifth Spirit",
+      "from": 144.99,
+      "to": 144.99,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-7-C2",
+      "name": "Mulan - Charging Ahead",
+      "from": 269.9,
+      "to": 269.9,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-7-P3",
+      "name": "Cursed Merfolk - Ursula's Handiwork",
+      "from": 25.0,
+      "to": 25.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-8-C1",
+      "name": "Kuzco - Temperamental Emperor",
+      "from": 690.0,
+      "to": 690.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-8-C2",
+      "name": "Simba - Pride Protector",
+      "from": 700.0,
+      "to": 700.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-8-P2",
+      "name": "Stitch - Alien Buccaneer (Stitch Collector's Gift Set Promo)",
+      "from": 50.0,
+      "to": 50.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-9-P1",
+      "name": "Heihei - Boat Snack",
+      "from": 40.0,
+      "to": 40.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-9-P3",
+      "name": "Sisu - Daring Visitor",
+      "from": 15.25,
+      "to": 15.25,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-10-C1",
+      "name": "A Whole New World",
+      "from": 249.9,
+      "to": 249.9,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-10-C2",
+      "name": "Let It Go (Disney Lorcana Challenge)",
+      "from": 790.0,
+      "to": 790.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-10-P1",
+      "name": "Yzma - Alchemist",
+      "from": 24.9,
+      "to": 24.9,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-10-P2",
+      "name": "Rescue Rangers Away!",
+      "from": 8.99,
+      "to": 8.99,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-11-P2",
+      "name": "Honey Lemon - Chemical Genius",
+      "from": 8.0,
+      "to": 8.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-11-P3",
+      "name": "Tinker Bell - Giant Fairy",
+      "from": 130.0,
+      "to": 130.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-12-P2",
+      "name": "Minnie Mouse - Pirate Lookout",
+      "from": 39.9,
+      "to": 39.9,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-14-P1",
+      "name": "Cinderella - Knight in Training",
+      "from": 39.9,
+      "to": 39.9,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-15-P1",
+      "name": "Bucky - Squirrel Squeak Tutor",
+      "from": 19.9,
+      "to": 19.9,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-16-P1",
+      "name": "Minnie Mouse - Wide-Eyed Diver",
+      "from": 39.9,
+      "to": 39.9,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-14-P2",
+      "name": "Scar - Heartless Hunter (Store Championship)",
+      "from": 990.0,
+      "to": 989.9,
+      "change_brl": -0.1,
+      "change_pct": -0.01
+    },
+    {
+      "id": "DLPC1-2-P3",
+      "name": "Alice - Accidentally Adrift",
+      "from": 28.0,
+      "to": 27.0,
+      "change_brl": -1.0,
+      "change_pct": -3.57
+    },
+    {
+      "id": "DLPC1-13-P2",
+      "name": "Wasabi - Methodical Engineer",
+      "from": 24.9,
+      "to": 23.9,
+      "change_brl": -1.0,
+      "change_pct": -4.02
+    }
+  ],
+  "biggest_losers": [
+    {
+      "id": "DLPC1-13-P2",
+      "name": "Wasabi - Methodical Engineer",
+      "from": 24.9,
+      "to": 23.9,
+      "change_brl": -1.0,
+      "change_pct": -4.02
+    },
+    {
+      "id": "DLPC1-2-P3",
+      "name": "Alice - Accidentally Adrift",
+      "from": 28.0,
+      "to": 27.0,
+      "change_brl": -1.0,
+      "change_pct": -3.57
+    },
+    {
+      "id": "DLPC1-14-P2",
+      "name": "Scar - Heartless Hunter (Store Championship)",
+      "from": 990.0,
+      "to": 989.9,
+      "change_brl": -0.1,
+      "change_pct": -0.01
+    },
+    {
+      "id": "D100-19",
+      "name": "Elsa - Gloves Off (Alternate Art)",
+      "from": 450.0,
+      "to": 450.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "D100-23",
+      "name": "Maui - Demigod (Alternate Art)",
+      "from": 250.0,
+      "to": 250.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-1-C1",
+      "name": "Dragon Fire",
+      "from": 700.0,
+      "to": 700.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-1-C2",
+      "name": "Pegasus - Gift for Hercules",
+      "from": 589.9,
+      "to": 589.9,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-1-DIS",
+      "name": "Rapunzel - Appreciative Artist",
+      "from": 350.0,
+      "to": 350.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-1-P3",
+      "name": "Dumbo - The Flying Elephant",
+      "from": 144.9,
+      "to": 144.9,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-2-C1",
+      "name": "Let It Go",
+      "from": 2999.9,
+      "to": 2999.9,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-2-DIS",
+      "name": "Donald Duck - Pie Slinger",
+      "from": 300.0,
+      "to": 300.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-3-C2",
+      "name": "Mulan - Charging Ahead (Foil)",
+      "from": 850.0,
+      "to": 850.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-3-DIS",
+      "name": "Stitch - Rock Star",
+      "from": 700.0,
+      "to": 700.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-3-P3",
+      "name": "The Queen - Conceited Ruler",
+      "from": 14.9,
+      "to": 14.9,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-4-C2",
+      "name": "Simba - Pride Protector",
+      "from": 6999.9,
+      "to": 6999.9,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-4-P3",
+      "name": "Maleficent - Monstrous Dragon (Store Championship Participant)",
+      "from": 30.0,
+      "to": 30.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-5-P2",
+      "name": "Chicha - Dedicated Mother",
+      "from": 8.0,
+      "to": 8.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-5-P3",
+      "name": "Maleficent - Monstrous Dragon (Store Championship)",
+      "from": 599.5,
+      "to": 599.5,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-6-C2",
+      "name": "Elsa - Ice Maker",
+      "from": 700.0,
+      "to": 700.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-6-P3",
+      "name": "Elsa - The Fifth Spirit",
+      "from": 144.99,
+      "to": 144.99,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-7-C2",
+      "name": "Mulan - Charging Ahead",
+      "from": 269.9,
+      "to": 269.9,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-7-P3",
+      "name": "Cursed Merfolk - Ursula's Handiwork",
+      "from": 25.0,
+      "to": 25.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-8-C1",
+      "name": "Kuzco - Temperamental Emperor",
+      "from": 690.0,
+      "to": 690.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-8-C2",
+      "name": "Simba - Pride Protector",
+      "from": 700.0,
+      "to": 700.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-8-P2",
+      "name": "Stitch - Alien Buccaneer (Stitch Collector's Gift Set Promo)",
+      "from": 50.0,
+      "to": 50.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-9-P1",
+      "name": "Heihei - Boat Snack",
+      "from": 40.0,
+      "to": 40.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-9-P3",
+      "name": "Sisu - Daring Visitor",
+      "from": 15.25,
+      "to": 15.25,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-10-C1",
+      "name": "A Whole New World",
+      "from": 249.9,
+      "to": 249.9,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-10-C2",
+      "name": "Let It Go (Disney Lorcana Challenge)",
+      "from": 790.0,
+      "to": 790.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-10-P1",
+      "name": "Yzma - Alchemist",
+      "from": 24.9,
+      "to": 24.9,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-10-P2",
+      "name": "Rescue Rangers Away!",
+      "from": 8.99,
+      "to": 8.99,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-11-P2",
+      "name": "Honey Lemon - Chemical Genius",
+      "from": 8.0,
+      "to": 8.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-11-P3",
+      "name": "Tinker Bell - Giant Fairy",
+      "from": 130.0,
+      "to": 130.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-12-P2",
+      "name": "Minnie Mouse - Pirate Lookout",
+      "from": 39.9,
+      "to": 39.9,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-14-P1",
+      "name": "Cinderella - Knight in Training",
+      "from": 39.9,
+      "to": 39.9,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-15-P1",
+      "name": "Bucky - Squirrel Squeak Tutor",
+      "from": 19.9,
+      "to": 19.9,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-16-P1",
+      "name": "Minnie Mouse - Wide-Eyed Diver",
+      "from": 39.9,
+      "to": 39.9,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "D100-21",
+      "name": "Stitch - Abomination (Alternate Art)",
+      "from": 360.0,
+      "to": 380.0,
+      "change_brl": 20.0,
+      "change_pct": 5.56
+    },
+    {
+      "id": "DLPC1-8-P3",
+      "name": "Strength of a Raging Fire",
+      "from": 59.9,
+      "to": 72.9,
+      "change_brl": 13.0,
+      "change_pct": 21.7
+    },
+    {
+      "id": "DLPC1-12-P3",
+      "name": "The Queen - Mirror Seeker",
+      "from": 140.0,
+      "to": 255.0,
+      "change_brl": 115.0,
+      "change_pct": 82.14
+    },
+    {
+      "id": "D100-22",
+      "name": "Maleficent - Uninvited (Alternate Art)",
+      "from": 149.9,
+      "to": 299.9,
+      "change_brl": 150.0,
+      "change_pct": 100.07
+    }
+  ]
+}
