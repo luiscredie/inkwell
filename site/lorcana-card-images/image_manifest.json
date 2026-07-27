@@ -5806,14 +5806,14 @@
     "display_name": "Pocahontas - Peacekeeper (Iconic)",
     "image_file": "images/Pocahontas_-_Peacekeeper_(Iconic)__LOR11-241.jpg",
     "image_url": "https://ravensburger.cloud/ci/lorcana_en_set11_241_c48adafb4cb6e87c73caa08720550175c978c839/card",
-    "status": "downloaded",
+    "status": "skipped",
     "sha256": "eeb1f9d0bf4e5f48c41adc73e4133da933b109a4728dd6fe73761ba8cacc67a3"
   },
   "LOR11-242": {
     "display_name": "Moana - Curious Explorer (Iconic)",
     "image_file": "images/Moana_-_Curious_Explorer_(Iconic)__LOR11-242.jpg",
     "image_url": "https://ravensburger.cloud/ci/lorcana_en_set11_242_d36ee48dfb107513b7db72d5ab318c0dd542b58a/card",
-    "status": "downloaded",
+    "status": "skipped",
     "sha256": "2d31e1d0e023fba6845ea47b15e1b33506827c129f33556524b5b3baac9d775e"
   },
   "LOR11-25": {
@@ -7682,14 +7682,14 @@
     "display_name": "Buzz Lightyear - Jungle Ranger (Iconic)",
     "image_file": "images/Buzz_Lightyear_-_Jungle_Ranger_(Iconic)__LOR12-241.jpg",
     "image_url": "https://ravensburger.cloud/ci/lorcana_en_set12_241_559b96824c7e1bc8ca0cac221eed38e2a89f0aa1/card",
-    "status": "downloaded",
+    "status": "skipped",
     "sha256": "13e6167052c87ce5c6b5df5a992256c42fa62487b5214aa8e7cf1c50924fae3b"
   },
   "LOR12-242": {
     "display_name": "Merida - Formidable Archer (Iconic)",
     "image_file": "images/Merida_-_Formidable_Archer_(Iconic)__LOR12-242.jpg",
     "image_url": "https://ravensburger.cloud/ci/lorcana_en_set12_242_8495fac30ca0449150a7d301fbcbe71cc92e5979/card",
-    "status": "downloaded",
+    "status": "skipped",
     "sha256": "cfee9e1064c3075aacfafcd98eaffee6183c6c4f55674bb31c8da4c3cd828189"
   },
   "LOR12-25": {
@@ -22891,10 +22891,10 @@
   },
   "LOR9-242": {
     "display_name": "Mickey Mouse - Brave Little Prince (Iconic)",
-    "image_file": "",
-    "image_url": "",
-    "status": "official_not_found",
-    "sha256": ""
+    "image_file": "images/Mickey_Mouse_-_Brave_Little_Prince_(Iconic)__LOR9-242.jpg",
+    "image_url": "https://cards.lorcast.io/card/digital/full/crd_4d10d4cd91454ff389318fd9a19a879f.jpg?1755541640",
+    "status": "skipped",
+    "sha256": "b5b4723a4cc1a4cdf5ffadc5780f396b6df355410b69f42a0283a65f86717fce"
   },
   "LOR9-25": {
     "display_name": "Look at this Family",
@@ -24024,7 +24024,7 @@
     "sha256": "21335ecfd140aaf19378fe8c17112ca369c3bd3d2befe221888bdb33e48b5b6f"
   },
   "Q2-32": {
-    "display_name": "Deepwell Labyrinth",
+    "display_name": "Deepwell Labyrinth - Mystifying Halls",
     "image_file": "",
     "image_url": "",
     "status": "official_not_found",

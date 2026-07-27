@@ -1,0 +1,9 @@
+{
+  "valid": {
+    "data-manifest.json": {"manifest_version":1,"generated_at":"2026-07-26T00:00:00Z","schema":{"cards":3,"prices":2,"cards_pt":1,"price_history":1},"artifacts":{"cards":{"path":"data/cards.json"},"prices":{"path":"data/prices.json"},"cards_pt":{"path":"data/cards.pt.json","optional":true},"price_history":{"path":"data/price-history.json","optional":true}}},
+    "data/cards.json": {"schema_version":3,"generated_at":"z","image_base_path":"images/","cards":[{"card_id":"LOR9-45","name_en":"Dumbo","card_type":"Character","abilities":[{"ability_id":"LOR9-45-A1","type":"keyword"}]}]},
+    "data/prices.json": {"schema_version":2,"generated_at":"z","currency":"BRL","prices":{"LOR9-45":{"n":503,"nl":440}}},
+    "data/cards.pt.json": {"schema_version":1,"generated_at":"z","cards":{"LOR9-45":{"ability_count":1,"abilities":[{"ability_id":"LOR9-45-A1","text":"PT"}]}}},
+    "data/price-history.json": {"schema_version":1,"generated_at":"z","series":[{"date":"2026-07-26","prices":{"LOR9-45":{"nl":440}}}]}
+  }
+}

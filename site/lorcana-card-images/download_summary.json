@@ -1,0 +1,21 @@
+{
+  "generated_at": "2026-07-27T03:15:37.642546+00:00",
+  "source_file": "C:\\Users\\luisc\\OneDrive\\Desktop\\inkwell\\site\\data\\cards.json",
+  "catalog_csv": null,
+  "source_type": "json",
+  "naming": "name",
+  "total": 3442,
+  "counts": {
+    "official_not_found": 282,
+    "skipped": 3160
+  },
+  "official_fallback": {
+    "resolved": 0,
+    "unresolved": 0
+  },
+  "ligalorcana_fallback": {
+    "resolved": 0,
+    "unresolved": 0,
+    "blocked": false
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "inkwell-release-checks",
+  "version": "1.5.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:contract": "node tools/validate.test.mjs",
+    "test:imgfallback": "node tools/imgfallback.test.mjs",
+    "test:py": "python3 -m unittest tools/test_validate_release.py tools/test_card_art_validator.py",
+    "validate": "python3 tools/validate_release.py --root . --quick",
+    "smoke": "playwright test tools/smoke.spec.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.47.0"
+  }
+}
