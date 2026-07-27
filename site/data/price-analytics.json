@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-07-27T03:42:23.471578+00:00",
+  "generated_at": "2026-07-27T03:42:38.129044+00:00",
   "top_100_most_expensive": [
     {
       "id": "DLPC1-4-C2",
@@ -288,6 +288,13 @@
       "edition": "DLPC1",
       "number": "3-P3",
       "minimum_price_brl": 14.9
+    },
+    {
+      "id": "DLPC1-17-P1",
+      "name": "Robin Hood - Capable Fighter",
+      "edition": "DLPC1",
+      "number": "17-P1",
+      "minimum_price_brl": 11.0
     },
     {
       "id": "DLPC1-10-P2",
@@ -617,6 +624,14 @@
       "change_pct": 0.0
     },
     {
+      "id": "DLPC1-17-P1",
+      "name": "Robin Hood - Capable Fighter",
+      "from": 11.0,
+      "to": 11.0,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
       "id": "DLPC1-14-P2",
       "name": "Scar - Heartless Hunter (Store Championship)",
       "from": 990.0,
@@ -935,6 +950,14 @@
       "name": "Minnie Mouse - Wide-Eyed Diver",
       "from": 39.9,
       "to": 39.9,
+      "change_brl": 0.0,
+      "change_pct": 0.0
+    },
+    {
+      "id": "DLPC1-17-P1",
+      "name": "Robin Hood - Capable Fighter",
+      "from": 11.0,
+      "to": 11.0,
       "change_brl": 0.0,
       "change_pct": 0.0
     },

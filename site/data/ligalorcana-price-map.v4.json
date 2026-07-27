@@ -1,14 +1,14 @@
 {
   "schema_version": 4,
   "source": "LigaLorcana.com.br",
-  "generated_at": "2026-07-27T03:42:23.426534+00:00",
+  "generated_at": "2026-07-27T03:42:38.081700+00:00",
   "currency": "BRL",
   "summary": {
-    "exact_printings": 95,
-    "exact_with_normal_price": 44,
+    "exact_printings": 98,
+    "exact_with_normal_price": 45,
     "exact_with_foil_price": 4,
-    "base_cards_with_legacy_prices": 95,
-    "legacy_mapped_printings": 95,
+    "base_cards_with_legacy_prices": 98,
+    "legacy_mapped_printings": 98,
     "unresolved": 0
   },
   "prices_by_liga_id": {
@@ -2103,6 +2103,70 @@
       "status": "no_price",
       "checked_at": "2026-07-27T03:42:19.374713+00:00",
       "source_url": "https://www.ligalorcana.com.br/?card=Elsa+-+Queen+Regent%2816-P2%29&ed=DLPC1&num=16-P2&view=cards%2Fcard"
+    },
+    "DLPC1-16-P3": {
+      "liga_id": "DLPC1-16-P3",
+      "database_id": "DLPC1-16-P3",
+      "name": "Daisy Duck - Pirate Captain (Disney Cruise Promo)",
+      "catalog_name": "Daisy Duck - Pirate Captain (Disney Cruise Promo)",
+      "edition": "DLPC1",
+      "number": "16-P3",
+      "printing_type": "promo",
+      "printing_label": "Promo",
+      "match_status": "matched",
+      "match_note": null,
+      "legacy_match_status": "matched",
+      "rarity": "Promo",
+      "normal": null,
+      "foil": null,
+      "minimum_price_brl": null,
+      "status": "no_price",
+      "checked_at": "2026-07-27T03:42:23.474117+00:00",
+      "source_url": "https://www.ligalorcana.com.br/?card=Daisy+Duck+-+Pirate+Captain+%28Disney+Cruise+Promo%29%2816-P3%29&ed=DLPC1&num=16-P3&view=cards%2Fcard"
+    },
+    "DLPC1-16-P4": {
+      "liga_id": "DLPC1-16-P4",
+      "database_id": "DLPC1-16-P4",
+      "name": "Rapunzel - Escaping the Tower (Top 8)",
+      "catalog_name": "Rapunzel - Escaping the Tower (Top 8)",
+      "edition": "DLPC1",
+      "number": "16-P4",
+      "printing_type": "regular",
+      "printing_label": "Regular",
+      "match_status": "matched",
+      "match_note": null,
+      "legacy_match_status": "matched",
+      "rarity": "Promo",
+      "normal": null,
+      "foil": null,
+      "minimum_price_brl": null,
+      "status": "no_price",
+      "checked_at": "2026-07-27T03:42:28.288077+00:00",
+      "source_url": "https://www.ligalorcana.com.br/?card=Rapunzel+-+Escaping+the+Tower+%28Top+8%29%2816-P4%29&ed=DLPC1&num=16-P4&view=cards%2Fcard"
+    },
+    "DLPC1-17-P1": {
+      "liga_id": "DLPC1-17-P1",
+      "database_id": "DLPC1-17-P1",
+      "name": "Robin Hood - Capable Fighter",
+      "catalog_name": "Robin Hood - Capable Fighter",
+      "edition": "DLPC1",
+      "number": "17-P1",
+      "printing_type": "regular",
+      "printing_label": "Regular",
+      "match_status": "matched",
+      "match_note": null,
+      "legacy_match_status": "matched",
+      "rarity": "Promo",
+      "normal": {
+        "low": 11.0,
+        "average": 11.0,
+        "high": 11.0
+      },
+      "foil": null,
+      "minimum_price_brl": 11.0,
+      "status": "ok",
+      "checked_at": "2026-07-27T03:42:33.479054+00:00",
+      "source_url": "https://www.ligalorcana.com.br/?card=Robin+Hood+-+Capable+Fighter%2817-P1%29&ed=DLPC1&num=17-P1&view=cards%2Fcard"
     }
   },
   "prices": {
@@ -5804,6 +5868,113 @@
         "status": "no_price",
         "checked_at": "2026-07-27T03:42:19.374713+00:00",
         "source_url": "https://www.ligalorcana.com.br/?card=Elsa+-+Queen+Regent%2816-P2%29&ed=DLPC1&num=16-P2&view=cards%2Fcard"
+      }
+    },
+    "DLPC1-16-P3": {
+      "card_db_key": "DLPC1-16-P3",
+      "base_name": "Daisy Duck - Pirate Captain (Disney Cruise Promo)",
+      "printings": [
+        {
+          "liga_id": "DLPC1-16-P3",
+          "database_id": "DLPC1-16-P3",
+          "name": "Daisy Duck - Pirate Captain (Disney Cruise Promo)",
+          "edition": "DLPC1",
+          "number": "16-P3",
+          "printing_type": "promo",
+          "printing_label": "Promo",
+          "match_status": "matched",
+          "normal": null,
+          "foil": null,
+          "minimum_price_brl": null,
+          "status": "no_price",
+          "checked_at": "2026-07-27T03:42:23.474117+00:00",
+          "source_url": "https://www.ligalorcana.com.br/?card=Daisy+Duck+-+Pirate+Captain+%28Disney+Cruise+Promo%29%2816-P3%29&ed=DLPC1&num=16-P3&view=cards%2Fcard"
+        }
+      ],
+      "regular": null
+    },
+    "DLPC1-16-P4": {
+      "card_db_key": "DLPC1-16-P4",
+      "base_name": "Rapunzel - Escaping the Tower (Top 8)",
+      "printings": [
+        {
+          "liga_id": "DLPC1-16-P4",
+          "database_id": "DLPC1-16-P4",
+          "name": "Rapunzel - Escaping the Tower (Top 8)",
+          "edition": "DLPC1",
+          "number": "16-P4",
+          "printing_type": "regular",
+          "printing_label": "Regular",
+          "match_status": "matched",
+          "normal": null,
+          "foil": null,
+          "minimum_price_brl": null,
+          "status": "no_price",
+          "checked_at": "2026-07-27T03:42:28.288077+00:00",
+          "source_url": "https://www.ligalorcana.com.br/?card=Rapunzel+-+Escaping+the+Tower+%28Top+8%29%2816-P4%29&ed=DLPC1&num=16-P4&view=cards%2Fcard"
+        }
+      ],
+      "regular": {
+        "liga_id": "DLPC1-16-P4",
+        "database_id": "DLPC1-16-P4",
+        "name": "Rapunzel - Escaping the Tower (Top 8)",
+        "edition": "DLPC1",
+        "number": "16-P4",
+        "printing_type": "regular",
+        "printing_label": "Regular",
+        "match_status": "matched",
+        "normal": null,
+        "foil": null,
+        "minimum_price_brl": null,
+        "status": "no_price",
+        "checked_at": "2026-07-27T03:42:28.288077+00:00",
+        "source_url": "https://www.ligalorcana.com.br/?card=Rapunzel+-+Escaping+the+Tower+%28Top+8%29%2816-P4%29&ed=DLPC1&num=16-P4&view=cards%2Fcard"
+      }
+    },
+    "DLPC1-17-P1": {
+      "card_db_key": "DLPC1-17-P1",
+      "base_name": "Robin Hood - Capable Fighter",
+      "printings": [
+        {
+          "liga_id": "DLPC1-17-P1",
+          "database_id": "DLPC1-17-P1",
+          "name": "Robin Hood - Capable Fighter",
+          "edition": "DLPC1",
+          "number": "17-P1",
+          "printing_type": "regular",
+          "printing_label": "Regular",
+          "match_status": "matched",
+          "normal": {
+            "low": 11.0,
+            "average": 11.0,
+            "high": 11.0
+          },
+          "foil": null,
+          "minimum_price_brl": 11.0,
+          "status": "ok",
+          "checked_at": "2026-07-27T03:42:33.479054+00:00",
+          "source_url": "https://www.ligalorcana.com.br/?card=Robin+Hood+-+Capable+Fighter%2817-P1%29&ed=DLPC1&num=17-P1&view=cards%2Fcard"
+        }
+      ],
+      "regular": {
+        "liga_id": "DLPC1-17-P1",
+        "database_id": "DLPC1-17-P1",
+        "name": "Robin Hood - Capable Fighter",
+        "edition": "DLPC1",
+        "number": "17-P1",
+        "printing_type": "regular",
+        "printing_label": "Regular",
+        "match_status": "matched",
+        "normal": {
+          "low": 11.0,
+          "average": 11.0,
+          "high": 11.0
+        },
+        "foil": null,
+        "minimum_price_brl": 11.0,
+        "status": "ok",
+        "checked_at": "2026-07-27T03:42:33.479054+00:00",
+        "source_url": "https://www.ligalorcana.com.br/?card=Robin+Hood+-+Capable+Fighter%2817-P1%29&ed=DLPC1&num=17-P1&view=cards%2Fcard"
       }
     }
   },
