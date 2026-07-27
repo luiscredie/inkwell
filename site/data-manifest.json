@@ -1,6 +1,6 @@
 {
   "manifest_version": 1,
-  "generated_at": "2026-07-27T03:42:38.081700+00:00",
+  "generated_at": "2026-07-27T14:03:35.465531+00:00",
   "min_app_version": "1.4.0",
   "schema": {
     "cards": 3,
@@ -23,8 +23,8 @@
     },
     "prices": {
       "path": "data/prices.json",
-      "sha256": "284a04499dcb4430f1a680244785058883a340528e501c1af1389152720d6edc",
-      "bytes": 2363
+      "sha256": "aea9ecc990749cf9405f6e36a8df07f8361e302fc5a729ff02d56a208b586624",
+      "bytes": 210922
     },
     "aliases": {
       "path": "data/aliases.json",
@@ -38,14 +38,14 @@
     },
     "price_history": {
       "path": "data/price-history.json",
-      "sha256": "466bee25ca14a2ae9c57b83e578c43521cad7d99b34a371cc3b4f48674a099e1",
-      "bytes": 212549
+      "sha256": "91ef7828002126eb968d8a5b84a0ebce367e29992561fe37eb9bfccd297ff7fe",
+      "bytes": 421108
     }
   },
   "counts": {
     "cards": 3442,
     "pt_overlay_cards": 3442,
-    "priced_cards": 46
+    "priced_cards": 3257
   },
   "price_legend": {
     "n": "normal_average",
