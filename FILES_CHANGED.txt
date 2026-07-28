@@ -1,0 +1,54 @@
+M1P code-only — files changed
+
+site/index.html
+    app (canonical entry); Overview player-first, price movers, portfolio optimizer, match center, learn
+Inkwell.dc.html
+    byte-identical working mirror of site/index.html
+tools/price-movers.test.mjs
+    NEW canonical: price movers pure fn, 12 cases
+tools/deck-allocation.test.mjs
+    canonical: portfolio optimizer, 18 cases
+tools/match-center.test.mjs
+    NEW canonical: match center contract + behavior, 12 cases
+tools/ui-contract.test.mjs
+    static UI contracts, 24 checks (+Overview order, movers, Home optimizer)
+tools/imgfallback.test.mjs
+    image-fallback identity regression, 7 cases
+tools/validate.test.mjs
+    data-contract JS fixtures
+tools/validate_release.py
+    Python release validator (data-contract + card-art)
+tools/validate_card_art.py
+    card-art validator (M0I)
+tools/test_validate_release.py
+    Python release fixtures (8)
+tools/test_card_art_validator.py
+    card-art fixtures (3)
+tools/test_ligalorcana_price_agent_daily_v4.py
+    price-agent recovery suite (6)
+tools/ligalorcana_price_agent_daily_v4.py
+    price agent v4 (external data producer)
+tools/smoke.spec.mjs
+    Playwright smoke (Overview order, movers, modal, boundaries)
+tools/SMOKE.md
+    manual smoke checklist
+tools/fixtures/contract.json
+    deterministic contract fixtures
+.github/workflows/validate.yml
+    CI: JS+Python fixtures, validator, smoke
+package.json
+    npm scripts + Playwright dep
+playwright.config.mjs
+    Playwright config (serves site/)
+M1P_HANDOFF.md
+    this handoff
+
+Global generated-data contract impact: NONE.
+User persistence contract impact: ADDITIVE (targetCopies default 1, portfolioPriority default 0, activeDeckId per-profile). Idempotent migration; unknown fields preserved; existing profiles isolated & not reset; export/import round-trips.
+Migrations: additive+idempotent only.
+Canonical tests written: price-movers(12), match-center(12); updated deck-allocation(18), ui-contract(24).
+Canonical tests executed (JS, sandbox): ui-contract 24/24, price-movers 12/12, deck-allocation 18/18, match-center 12/12, imgfallback 7/7.
+Not executed: node validate.test.mjs; all Python; Playwright (no runner).
+No tests removed or weakened.
+No generated data included (site/data/**, data-manifest.json, lorcana-card-images/**, site/users/** excluded).
+site/ remains the deploy root. No deploy/push performed.

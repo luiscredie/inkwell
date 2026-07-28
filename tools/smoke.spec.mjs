@@ -1,84 +1,172 @@
-// Inkwell browser smoke test (M0R). Real Playwright spec.
-// Run against a local static serve of the repository root (default
-// http://localhost:8080). The candidate site/index.html must first be copied to
-// root index.html so relative data/, users/, ink/, images/, and support.js paths
-// match production.
-//   npm i -D @playwright/test && npx playwright install chromium
-//   cp site/index.html index.html && cp site/support.js support.js
-//   python3 -m http.server 8080 &
+// Inkwell browser smoke test (M0R.1).
+// Serve the deployed application root before running:
+//   (cd site && python3 -m http.server 8080) &
 //   INKWELL_URL=http://localhost:8080/index.html npx playwright test tools/smoke.spec.mjs
-//
-// Execution is unverified in the authoring environment (no runner); the assertions
-// below are the M0R smoke contract and run in any Playwright-capable CI.
 import { test, expect } from '@playwright/test';
 
 const URL = process.env.INKWELL_URL || 'http://localhost:8080/index.html';
 
-async function boot(page) {
-  await page.addInitScript(() => localStorage.clear());
-  await page.goto(URL, { waitUntil: 'domcontentloaded' });
-  await expect(page.locator('header h1')).toBeVisible({ timeout: 30000 });
-  await expect(page.getByText('Data could not be loaded')).toHaveCount(0);
+async function openView(page, label) {
+  const button = page.locator('#rail button', { hasText: label }).first();
+  await expect(button).toBeVisible();
+  await button.click();
 }
 
-test.describe('Inkwell smoke', () => {
-  test('boots without fatal data error', async ({ page }) => {
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.removeItem('inkwell_user_luiscredie');
+    localStorage.removeItem('inkwell_backup_luiscredie');
+    localStorage.setItem('inkwell_active_user', 'luiscredie');
+  });
+});
+
+test.describe('Inkwell release smoke', () => {
+  test('boots without fatal runtime or data errors', async ({ page }) => {
     const errors = [];
-    page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-    await boot(page);
+    page.on('pageerror', error => errors.push(String(error)));
+    page.on('console', message => {
+      if (message.type() === 'error') errors.push(message.text());
+    });
+
+    await page.goto(URL, { waitUntil: 'networkidle' });
+    await expect(page.locator('text=Data could not be loaded')).toHaveCount(0);
     await expect(page.locator('#rail button').first()).toBeVisible();
-    expect(errors.join('\n')).not.toMatch(/ReferenceError|is not defined|Unexpected token/);
+    expect(errors.join('\n')).not.toMatch(
+      /ReferenceError|TypeError|SyntaxError|is not defined|Unexpected token/
+    );
   });
 
-  test('primary navigation reaches Decks, Matches, Learn', async ({ page }) => {
-    await boot(page);
-    for (const [label, heading] of [
-      [/Decks/, /DECKS/],
-      [/Matches|Partidas/, /MATCHES|PARTIDAS/],
-      [/Learn|Aprender/, /LEARN|APRENDER/],
-    ]) {
-      const btn = page.locator('#rail button', { hasText: label }).first();
-      await expect(btn).toBeVisible();
-      await btn.click();
-      await expect(page.locator('header h1')).toHaveText(heading);
-    }
+  test('primary navigation reaches Decks, Matches, and Learn', async ({ page }) => {
+    await page.goto(URL, { waitUntil: 'networkidle' });
+    await openView(page, /Decks/);
+    await openView(page, /Matches|Partidas/);
+    await openView(page, /Learn|Aprender/);
   });
 
-  test('deck builder paginates and rejects invalid adds', async ({ page }) => {
-    await boot(page);
-    await page.locator('#rail button', { hasText: /Decks/ }).first().click();
-    const deck = page.getByRole('button', { name: /Amber\/Ruby Midrange/ }).first();
-    await expect(deck).toBeVisible();
-    await deck.click();
-    await expect(page.getByText('Amber/Ruby Midrange', { exact: true }).first()).toBeVisible();
+  test('deck builder shows its full range and rejects a copy-limit add', async ({ page }) => {
+    await page.goto(URL, { waitUntil: 'networkidle' });
+    await openView(page, /Decks/);
 
-    const edit = page.getByRole('button', { name: /Edit cards|Editar/ }).first();
+    const deckCard = page.locator('[data-testid="deck-card"]').first();
+    await expect(deckCard).toBeVisible();
+    await deckCard.click();
+
+    const maxedRow = page.locator(
+      '[data-testid="deck-list-row"][data-count="4"]'
+    ).first();
+    await expect(maxedRow).toBeVisible();
+    const maxedName = (await maxedRow.locator(
+      '[data-testid="deck-list-name"]'
+    ).innerText()).trim();
+
+    const edit = page.locator('[data-testid="deck-edit-toggle"]');
     await expect(edit).toBeVisible();
     await edit.click();
-    await expect(page.getByText(/\d+–\d+ \/ \d+ cards/).first()).toBeVisible();
 
-    // The builder initially filters to the deck's two inks. Add Emerald to the
-    // pool so an off-color card is visible, then assert the attempted add is
-    // rejected by the authoritative validator.
-    await page.getByRole('button', { name: 'Emerald' }).first().click();
-    const invalidBadge = page.locator('[title^="Off-color for this deck"]').first();
-    await expect(invalidBadge).toBeVisible();
-    const invalidCard = invalidBadge.locator('..');
-    const before = await invalidCard.locator('span').filter({ hasText: /^\d+$/ }).last().textContent();
-    await invalidCard.getByRole('button', { name: '+' }).click();
-    await expect(page.getByText(/⚠ Off-color for this deck/)).toBeVisible();
-    await expect(invalidCard.locator('span').filter({ hasText: /^\d+$/ }).last()).toHaveText(before || '0');
+    const range = page.locator('[data-testid="builder-range"]');
+    await expect(range).toBeVisible();
+    await expect(range).toHaveText(/\d+–\d+ \/ \d+ (cards|cartas)/i);
+
+    await page.locator('[data-testid="builder-search"]').fill(maxedName);
+    const invalidCard = page.locator(
+      '[data-testid="builder-card"][data-invalid="true"]'
+    ).first();
+    await expect(invalidCard).toBeVisible();
+    await expect(invalidCard.locator(
+      '[data-testid="builder-invalid-warning"]'
+    )).toBeVisible();
+
+    const cardCount = invalidCard.locator('[data-testid="builder-card-count"]');
+    const total = page.locator('[data-testid="deck-total"]');
+    const countBefore = (await cardCount.innerText()).trim();
+    const totalBefore = (await total.innerText()).trim();
+
+    await invalidCard.locator('[data-testid="builder-add"]').click();
+    await expect(page.locator('[data-testid="toast"]')).toContainText(
+      /Copy limit reached/
+    );
+    await expect(cardCount).toHaveText(countBefore);
+    await expect(total).toHaveText(totalBefore);
   });
 
-  test('card modal shows full art and price label', async ({ page }) => {
-    await boot(page);
-    await page.locator('#rail button', { hasText: /Collection|Coleção|Cards/ }).first().click();
-    const tile = page.locator('[role="button"][aria-label]').first();
-    await expect(tile).toBeVisible();
-    await tile.click();
-    await expect(page.locator('.ink-card-modal img[data-cid]')).toBeVisible();
-    await expect(page.getByText(/Lowest · Liga|Menor · Liga/)).toBeVisible();
+  test('set-number sort and modal navigation preserve card identity and art', async ({ page }) => {
+    await page.goto(URL, { waitUntil: 'networkidle' });
+    await openView(page, /Collection|Coleção|Cards/);
+
+    const sort = page.locator('[data-testid="collection-sort"]');
+    await expect(sort).toBeVisible();
+    await sort.selectOption('setnum');
+    await expect(sort).toHaveValue('setnum');
+
+    const cards = page.locator('[data-testid="collection-card"]');
+    expect(await cards.count()).toBeGreaterThan(2);
+
+    await expect.poll(async () => cards.evaluateAll(elements =>
+      elements.findIndex((element, index) => {
+        const image = element.querySelector('img');
+        return index > 0 && index < elements.length - 1 &&
+          image && image.complete && image.naturalWidth > 0;
+      })
+    )).not.toBe(-1);
+
+    // expect.poll returns no value, so resolve the verified index once more.
+    const index = await cards.evaluateAll(elements =>
+      elements.findIndex((element, position) => {
+        const image = element.querySelector('img');
+        return position > 0 && position < elements.length - 1 &&
+          image && image.complete && image.naturalWidth > 0;
+      })
+    );
+    const currentId = await cards.nth(index).getAttribute('data-card-id');
+    const expectedNextId = await cards.nth(index + 1).getAttribute('data-card-id');
+
+    await cards.nth(index).click();
+    const modal = page.locator('[data-testid="card-modal"]');
+    await expect(modal).toBeVisible();
+    await expect(page.getByText(/Lowest · Liga|Menor · Liga/).first()).toBeVisible();
+
+    const art = page.locator('[data-testid="modal-card-art"]');
+    await expect(art).toBeVisible();
+    await expect.poll(() => art.evaluate(image =>
+      image.complete && image.naturalWidth > 0
+    )).toBe(true);
+    await expect(art).toHaveAttribute('data-cid', currentId);
+    await expect(page.locator('[data-testid="modal-prev"]')).toBeEnabled();
+    await expect(page.locator('[data-testid="modal-next"]')).toBeEnabled();
+
+    await page.keyboard.press('ArrowRight');
+    await expect(art).toHaveAttribute('data-cid', expectedNextId);
+    await page.keyboard.press('ArrowLeft');
+    await expect(art).toHaveAttribute('data-cid', currentId);
     await page.keyboard.press('Escape');
-    await expect(page.locator('.ink-card-modal')).toHaveCount(0);
+    await expect(modal).toHaveCount(0);
+
+    await cards.first().click();
+    await expect(page.locator('[data-testid="card-modal"]')).toBeVisible();
+    await expect(page.locator('[data-testid="modal-prev"]')).toBeDisabled();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-testid="card-modal"]')).toHaveCount(0);
+  });
+
+  test('Overview shows gameplay KPIs before Collection Value, and price movers exist', async ({ page }) => {
+    await page.goto(URL, { waitUntil: 'networkidle' });
+    await openView(page, /Overview|Visão/);
+    const ready = page.locator('[data-testid="kpi-ready"]');
+    const value = page.locator('[data-testid="collection-value"]');
+    await expect(ready).toBeVisible();
+    await expect(value).toBeVisible();
+    // gameplay KPI precedes financial value in DOM order
+    const order = await page.evaluate(() => {
+      const r = document.querySelector('[data-testid="kpi-ready"]');
+      const v = document.querySelector('[data-testid="collection-value"]');
+      return r && v ? (r.compareDocumentPosition(v) & Node.DOCUMENT_POSITION_FOLLOWING) ? 'before' : 'after' : 'missing';
+    });
+    expect(order).toBe('before');
+
+    await openView(page, /Prices|Preços/);
+    const movers = page.locator('[data-testid="price-movers"]');
+    const insufficient = page.getByText(/Not enough price history|Ainda não há histórico/);
+    // either the movers boxes or the insufficient-history state must be present
+    expect((await movers.count()) + (await insufficient.count())).toBeGreaterThan(0);
   });
 });

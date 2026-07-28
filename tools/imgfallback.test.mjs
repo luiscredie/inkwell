@@ -26,18 +26,43 @@ el.dataset.cid = 'B'; el.dataset.local = 'B_local'; el.dataset.remote = 'B_remot
 win.imgError({ target: el }); ck('B identity reset → tries B remote', el.src === 'B_remote' && el.style.display === '' && el._ph.style.display === 'none');
 win.imgLoad({ target: el }); ck('B remote loads → visible, no placeholder', el.style.display === '' && el._ph.style.display === 'none');
 
-const templateImages = [...html.matchAll(/<img[^>]+data-local="\{\{ [cr]\._local \}\}"[^>]+data-remote="\{\{ [cr]\._remote \}\}"[^>]+data-cid="\{\{ [cr]\.cid \}\}"[^>]+onLoad="\{\{ imgLoad \}\}"/g)];
-ck('collection/builder/deck templates carry full image identity', templateImages.length === 3);
+const templateImages = [...html.matchAll(
+  /<img src="\{\{ [cr]\._local \}\}"[^>]+>/g
+)].map(match => match[0]);
+ck('all template card images carry identity + onLoad',
+  templateImages.length === 3 &&
+  templateImages.every(tag =>
+    tag.includes('data-local=') &&
+    tag.includes('data-remote=') &&
+    tag.includes('data-cid=') &&
+    tag.includes('onError=') &&
+    tag.includes('onLoad=')
+  )
+);
 
-const variantStart = html.indexOf('const variants=vlist.map');
-const variantEnd = html.indexOf('V.cm=', variantStart);
-const variantCode = html.slice(variantStart, variantEnd);
-ck('variant thumbnails carry full image identity',
-  variantCode.includes("'data-local':vcv._local") &&
-  variantCode.includes("'data-remote':vcv._remote") &&
-  variantCode.includes("'data-cid':vc.card_id"));
-ck('variant thumbnails reset on successful load',
-  variantCode.includes('onLoad:window.imgLoad'));
+const variantStart = html.indexOf('const variants=');
+const variantBlock = html.slice(variantStart, variantStart + 1000);
+ck('variant thumbnails carry keyed identity + onLoad',
+  variantStart >= 0 &&
+  variantBlock.includes('key:vc.card_id') &&
+  variantBlock.includes("'data-local':vcv._local") &&
+  variantBlock.includes("'data-remote':vcv._remote") &&
+  variantBlock.includes("'data-cid':vc.card_id") &&
+  variantBlock.includes('onError:window.imgError') &&
+  variantBlock.includes('onLoad:window.imgLoad')
+);
+
+const modalStart = html.indexOf("imgEl: cv._local ?");
+const modalBlock = html.slice(modalStart, modalStart + 900);
+ck('modal art carries keyed identity + onLoad',
+  modalStart >= 0 &&
+  modalBlock.includes('key:c.card_id') &&
+  modalBlock.includes("'data-local':cv._local") &&
+  modalBlock.includes("'data-remote':cv._remote") &&
+  modalBlock.includes("'data-cid':c.card_id") &&
+  modalBlock.includes('onError:window.imgError') &&
+  modalBlock.includes('onLoad:window.imgLoad')
+);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

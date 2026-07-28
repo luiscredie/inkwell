@@ -4,26 +4,44 @@ on:
     branches: [ main ]
   pull_request:
 jobs:
-  validate:
+  js:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Data-contract fixtures (JS)
+      - name: Data-contract fixtures
         run: node tools/validate.test.mjs
       - name: Image-fallback identity regression
         run: node tools/imgfallback.test.mjs
-      - name: Data-contract fixtures (Python)
-        run: python3 -m unittest tools/test_validate_release.py
-      - name: Card-art validator unit tests
-        run: python3 -m unittest tools/test_card_art_validator.py
-      - name: Release validator (published artifacts)
-        run: python3 tools/validate_release.py --root . --quick
+      - name: UI contract
+        run: node tools/ui-contract.test.mjs
+      - name: Price movers
+        run: node tools/price-movers.test.mjs
+      - name: Deck allocation optimizer
+        run: node tools/deck-allocation.test.mjs
+      - name: Match center
+        run: node tools/match-center.test.mjs
+      - name: Match center R3 integration
+        run: node tools/match-center-r3.test.mjs
+      - name: Match center legacy core
+        run: node tools/match-center-legacy-core.test.cjs
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Release validator fixtures
+        run: python -m unittest tools/test_validate_release.py
+      - name: Card-art validator fixtures
+        run: python -m unittest tools/test_card_art_validator.py
+      - name: Price-agent recovery suite
+        run: python -m unittest tools/test_ligalorcana_price_agent_daily_v4.py
+      - name: Release validator against site/
+        run: python tools/validate_release.py --root site --quick
   smoke:
     runs-on: ubuntu-latest
     steps:
@@ -33,11 +51,7 @@ jobs:
           node-version: '20'
       - name: Install Playwright
         run: npm i -D @playwright/test && npx playwright install --with-deps chromium
-      - name: Stage candidate and serve production tree
-        run: |
-          cp site/index.html index.html
-          cp site/support.js support.js
-          python3 -m http.server 8080 > /tmp/inkwell-http.log 2>&1 &
-          sleep 2
+      - name: Serve site
+        run: (cd site && python3 -m http.server 8080 &) && sleep 2
       - name: Browser smoke
         run: INKWELL_URL=http://localhost:8080/index.html npx playwright test tools/smoke.spec.mjs

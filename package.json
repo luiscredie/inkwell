@@ -6,8 +6,15 @@
   "scripts": {
     "test:contract": "node tools/validate.test.mjs",
     "test:imgfallback": "node tools/imgfallback.test.mjs",
-    "test:py": "python3 -m unittest tools/test_validate_release.py tools/test_card_art_validator.py",
-    "validate": "python3 tools/validate_release.py --root . --quick",
+    "test:ui-contract": "node tools/ui-contract.test.mjs",
+    "test:price-movers": "node tools/price-movers.test.mjs",
+    "test:deck-allocation": "node tools/deck-allocation.test.mjs",
+    "test:match-center": "node tools/match-center.test.mjs",
+    "test:match-center-r3": "node tools/match-center-r3.test.mjs",
+    "test:match-center-core": "node tools/match-center-legacy-core.test.cjs",
+    "test:js": "node tools/validate.test.mjs && node tools/imgfallback.test.mjs && node tools/ui-contract.test.mjs && node tools/price-movers.test.mjs && node tools/deck-allocation.test.mjs && node tools/match-center.test.mjs && node tools/match-center-r3.test.mjs && node tools/match-center-legacy-core.test.cjs",
+    "test:py": "python3 -m unittest tools/test_validate_release.py tools/test_card_art_validator.py tools/test_ligalorcana_price_agent_daily_v4.py",
+    "validate": "python3 tools/validate_release.py --root site --quick",
     "smoke": "playwright test tools/smoke.spec.mjs"
   },
   "devDependencies": {

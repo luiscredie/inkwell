@@ -1,32 +1,48 @@
-# Inkwell browser smoke test (M0R)
+# Inkwell release smoke contract
 
-Minimal load-and-navigate checks to run before deploy. The automated subset is
-in `tools/smoke.spec.mjs`. It must be served from the repository root after the
-candidate `site/index.html` is staged as root `index.html`; otherwise relative
-`data/`, `users/`, `ink/`, `images/`, and `support.js` paths do not match
-production.
+`site/` is the deployed application root.
 
-## Load
-1. App boots with no console errors; no red "Data could not be loaded" screen.
-2. In manifest mode, no amber data-warning banner (or only an expected one).
+## Automated Playwright coverage
 
-## Player loop
-3. Home shows the "Now Playing" hero with a legality badge and one next action.
-4. Decks → open a deck → legality badge matches card count / copy rules.
-5. Deck builder: adding an off-color/over-limit card is REJECTED (not briefly added).
-6. Matches: log a game; it appears and updates the deck record.
-7. Learn: open a lesson; complete it; progress persists after reload.
+`tools/smoke.spec.mjs` must fail when a required surface is absent. It contains
+no conditional existence skips and covers:
 
-## Data surfaces
-8. Prices view: value-history chart renders (>=2 valid snapshots) or an honest empty state.
-9. Card modal: full card image, price labelled "Lowest · Liga", per-card price curve.
-10. Settings → Data Health: shows cards, errors, warnings, missing prices/images,
-    translations, stale/checksum rows, last data update.
+1. Boot without fatal JavaScript or data errors.
+2. Navigation to Decks, Matches, and Learn.
+3. Seeded deck availability.
+4. Deck-builder `X–Y / Z` range.
+5. Copy-limit rejection without changing card or deck totals.
+6. Set-number sort selection.
+7. Modal art loaded with `naturalWidth > 0`.
+8. Price label `Lowest · Liga` / `Menor · Liga`.
+9. Exact one-card ArrowRight/ArrowLeft movement.
+10. Previous disabled at the first result.
+11. Escape closes the modal.
 
-## Cross-cutting
-11. Switch EN/PT — no layout overflow; strings translated.
-12. Mobile width (375px): bottom nav, profile switcher, log match, no horizontal scroll.
-13. Keyboard: Tab reaches card tiles + wishlist; Escape closes modals; focus visible.
+Run from the repository root after serving `site/`:
+
+```bash
+INKWELL_URL=http://localhost:8080/index.html npx playwright test tools/smoke.spec.mjs
+```
+
+## Manual release checks
+
+1. Home shows Now Playing, legality, and a useful next action.
+2. Adding an off-color or rotated card is rejected before mutation.
+3. Matches can be logged and update deck results.
+4. Learn completion persists after reload.
+5. Price history renders with two or more dated runs, or shows an honest empty
+   state.
+6. Data Health reports checksums, staleness, price/art/PT coverage, and update
+   timestamps.
+7. EN/PT switching does not overflow.
+8. At 375px, navigation and profile switching work without horizontal scroll.
+9. Keyboard focus is visible and reaches cards and wishlist controls.
+10. The Collection native sort popup is dark on Windows Edge/Chromium. If the
+    browser ignores native option colors, replace it with an accessible custom
+    menu in the later UX lane.
 
 ## Pass criteria
-All 13 pass; the release validator (`python3 tools/validate_release.py`) exits 0.
+
+All automated checks, the relevant manual checks, and
+`python3 tools/validate_release.py --root site --quick` must pass before deploy.
