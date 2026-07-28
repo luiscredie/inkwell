@@ -654,7 +654,11 @@
     let turn = 0;
     let activePlayer = null;
     const lore = {1:0, 2:0};
+    const ink = {1:0, 2:0};
+    const chars = {1:[], 2:[]};   // characters currently in play, by display name
     const events = [];
+    const addChar=(p,name)=>{ if(!name) return; name=name.trim(); if(!chars[p].includes(name)) chars[p].push(name); };
+    const removeChar=(name)=>{ if(!name) return; name=name.trim(); for(const p of [1,2]){ const i=chars[p].indexOf(name); if(i>=0){ chars[p].splice(i,1); return; } } };
     for(const line of lines){
       let match = line.match(/^--- Turn (\d+) ---$/);
       if(match) turn = Number(match[1]);
@@ -664,18 +668,29 @@
       const player = explicitPlayer ? Number(explicitPlayer[1]) : activePlayer;
       const loreArrow = line.match(/\[LORE\][^\d]*?(\d+) -> (\d+)/);
       if(loreArrow && player) lore[player] = Number(loreArrow[2]);
+      // board mutations
+      let mm;
+      if(mm=line.match(/^Player (\d) added (.+?) to ink$/)) ink[Number(mm[1])]++;
+      if(mm=line.match(/^Player (\d) played (.+?) \(cost/)) addChar(Number(mm[1]), mm[2]);
+      if(mm=line.match(/^Player (\d) shifted (.+?) onto (.+?) \(/)) { addChar(Number(mm[1]), mm[2]); removeChar(mm[3]); }
+      if(mm=line.match(/^(.+?) was banished$/)) removeChar(mm[1]);
+      const type = classifyReplayLine(line);
       events.push({
         index: events.length,
         turn,
         player: player || null,
-        type: classifyReplayLine(line),
+        type,
         text: line,
-        lore: {1:lore[1], 2:lore[2]}
+        lore: {1:lore[1], 2:lore[2]},
+        board: {
+          1:{ink:ink[1], lore:lore[1], chars:chars[1].slice()},
+          2:{ink:ink[2], lore:lore[2], chars:chars[2].slice()}
+        }
       });
     }
     return {
-      schema_version: 1,
-      fidelity: "event_timeline",
+      schema_version: 2,
+      fidelity: "event_timeline_with_board",
       exact_board_state: false,
       events
     };
