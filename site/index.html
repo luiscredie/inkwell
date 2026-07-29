@@ -2271,6 +2271,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
   bannedIn(card, fmt){ const r=this.fmtRules(fmt); if(!r) return false; const ids=r.banned_card_ids||[]; const names=r.banned_full_names||[]; return (card.card_id&&ids.includes(card.card_id)) || names.map(n=>String(n).toLowerCase()).includes(this.baseName(card.name_en)); }
   fmtLabel(f){ return f==='infinity'?'Infinity':'Core'; }
   legalInFormat(card, fmt){ if(fmt==='infinity'||!fmt) return true; if(this.bannedIn(card,fmt)) return false; const sets=this.legalSets(fmt); return this.printingsOf(card).some(p=>sets.includes(p.set_code)); }
+  maxInks(fmt){ const r=this.fmtRules(fmt); return (r&&typeof r.maximum_inks==='number')?r.maximum_inks:2; }
   validForDeck(card, deck, forAdd=false){ if(!card) return {ok:false,reason:'Unknown card'};
     const inks=this.inkList(card); const colors=(deck.colors||[]).filter(Boolean);
     if(colors.length && inks.length && !inks.every(i=>colors.includes(i))) return {ok:false,reason:'Off-color for this deck ('+inks.join('/')+')'};
@@ -2419,6 +2420,9 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     for(const k in byName){ const lim=this.copyLimitFor(repCard[k], deck.format); if(byName[k]>lim){ reasons.push((repCard[k]?repCard[k].name_en:k)+': '+byName[k]+' copies (max '+lim+' across reprints)'); } }
     const minSz=this.minDeckSize(deck.format);
     if(total<minSz) reasons.push(total+'/'+minSz+' cards');
+    const usedInks=new Set(); for(const e of entries){ for(const i of this.inkList(e.card)) usedInks.add(i); }
+    const maxI=this.maxInks(deck.format);
+    if(usedInks.size>maxI) reasons.push(usedInks.size+' inks (max '+maxI+')');
     const uniqReasons=[...new Set(reasons)];
     return { legal: total>=minSz && uniqReasons.length===0, total, reasons:uniqReasons, badIds:bad };
   }
