@@ -1,0 +1,1117 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-29T15:00:00Z",
+  "format": "core",
+  "dataset_status": "current_community_seed",
+  "selection_policy": {
+    "complete_decklists_only": true,
+    "minimum_cards": 60,
+    "rotation": {
+      "legal_sets": [
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "reject_sets_8_and_below": true,
+      "allow_older_card_if_reprinted_in_legal_sets": true,
+      "identity": "canonical_card_name"
+    },
+    "evidence_labels": {
+      "community_popular": "Popularity signal only; not tournament proof.",
+      "tournament_result": "Requires event, date, placement and player count.",
+      "ranked_result": "Requires queue, season, record and sample size."
+    }
+  },
+  "sources": [
+    {
+      "name": "Dreamborn.ink",
+      "url": "https://dreamborn.ink/decks?archetype=&format=&sort=popular",
+      "role": "complete_community_decklists_and_popularity"
+    },
+    {
+      "name": "Duels.ink",
+      "url": "https://duels.ink/release-notes",
+      "role": "rotation_and_ranked_season_context"
+    }
+  ],
+  "decks": [
+    {
+      "deck_id": "dreamborn-XkCUFj05nlk14zYqeOEI",
+      "name": "Set 13 - Toys",
+      "creator": "Inkkery",
+      "updated_at": "2026-07-28T14:05:00Z",
+      "format": "core",
+      "inks": [
+        "Amber",
+        "Emerald"
+      ],
+      "archetypes": [
+        "Aggro",
+        "Combo"
+      ],
+      "source_url": "https://dreamborn.ink/decks/XkCUFj05nlk14zYqeOEI",
+      "source_type": "community_popular",
+      "evidence": {
+        "likes": 921,
+        "views": 53600,
+        "tournament_result": null
+      },
+      "confidence": {
+        "level": "community_reference",
+        "score": 0.66
+      },
+      "work_in_progress": true,
+      "strategy": {
+        "en": {
+          "tagline": "Amber/Emerald Toys aggro that develops a wide board and converts Toy synergies into fast lore.",
+          "how_to_play": "Curve out with low-cost Toys, keep several questing threats in play, and use the higher-cost friendship payoffs to sustain pressure. Challenge only when it protects the race or removes a key opposing engine.",
+          "mulligan": "Keep a playable one-to-three-cost curve, enough inkables, and at least two early characters.",
+          "difficulty": "beginner"
+        },
+        "pt": {
+          "tagline": "Aggro de Brinquedos Âmbar/Esmeralda que abre a mesa e transforma sinergias em lore rapidamente.",
+          "how_to_play": "Desenvolva Brinquedos baratos em curva, mantenha várias ameaças aventurando e use as cartas de amizade mais caras para sustentar a pressão. Desafie somente para proteger a corrida ou remover uma peça central adversária.",
+          "mulligan": "Mantenha curva jogável de custo 1 a 3, tintáveis suficientes e pelo menos dois personagens iniciais.",
+          "difficulty": "iniciante"
+        }
+      },
+      "cards": [
+        {
+          "card_name": "Woody - Waiting for a Friend",
+          "canonical_key": "woody - waiting for a friend",
+          "quantity": 4,
+          "card_ids": [
+            "LOR12-205",
+            "LOR12-3"
+          ],
+          "rotation": {
+            "available_sets": [
+              12
+            ],
+            "legal_reprint_sets": [
+              12
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Aurora - Holding Court",
+          "canonical_key": "aurora - holding court",
+          "quantity": 4,
+          "card_ids": [
+            "LOR9-206",
+            "LOR9-6"
+          ],
+          "rotation": {
+            "available_sets": [
+              9
+            ],
+            "legal_reprint_sets": [
+              9
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "RC - Remote-Controlled Car",
+          "canonical_key": "rc - remote-controlled car",
+          "quantity": 4,
+          "card_ids": [
+            "LOR12-77"
+          ],
+          "rotation": {
+            "available_sets": [
+              12
+            ],
+            "legal_reprint_sets": [
+              12
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Alien - True Believer",
+          "canonical_key": "alien - true believer",
+          "quantity": 4,
+          "card_ids": [
+            "LOR12-229",
+            "LOR12-83"
+          ],
+          "rotation": {
+            "available_sets": [
+              12
+            ],
+            "legal_reprint_sets": [
+              12
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Mike Wazowski - Heroic Climber",
+          "canonical_key": "mike wazowski - heroic climber",
+          "quantity": 4,
+          "card_ids": [
+            "LOR13-18",
+            "LOR13-226"
+          ],
+          "rotation": {
+            "available_sets": [
+              13
+            ],
+            "legal_reprint_sets": [
+              13
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Rex - Protective Dinosaur",
+          "canonical_key": "rex - protective dinosaur",
+          "quantity": 4,
+          "card_ids": [
+            "LOR12-10",
+            "LOR12-206"
+          ],
+          "rotation": {
+            "available_sets": [
+              12
+            ],
+            "legal_reprint_sets": [
+              12
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Grandmother Willow - Ancient Advisor",
+          "canonical_key": "grandmother willow - ancient advisor",
+          "quantity": 4,
+          "card_ids": [
+            "LOR11-13",
+            "LOR11-206"
+          ],
+          "rotation": {
+            "available_sets": [
+              11
+            ],
+            "legal_reprint_sets": [
+              11
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Buzz Lightyear - Space Ranger",
+          "canonical_key": "buzz lightyear - space ranger",
+          "quantity": 3,
+          "card_ids": [
+            "DLPC1-57-P3",
+            "LOR12-211",
+            "LOR12-76"
+          ],
+          "rotation": {
+            "available_sets": [
+              12
+            ],
+            "legal_reprint_sets": [
+              12
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Bullseye - Loyal Horse",
+          "canonical_key": "bullseye - loyal horse",
+          "quantity": 4,
+          "card_ids": [
+            "LOR12-17"
+          ],
+          "rotation": {
+            "available_sets": [
+              12
+            ],
+            "legal_reprint_sets": [
+              12
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Jessie - Lively Cowgirl",
+          "canonical_key": "jessie - lively cowgirl",
+          "quantity": 4,
+          "card_ids": [
+            "LOR12-20",
+            "LOR12-223"
+          ],
+          "rotation": {
+            "available_sets": [
+              12
+            ],
+            "legal_reprint_sets": [
+              12
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Lenny - Toy Binoculars",
+          "canonical_key": "lenny - toy binoculars",
+          "quantity": 3,
+          "card_ids": [
+            "DLPC1-49-P3",
+            "LOR12-79"
+          ],
+          "rotation": {
+            "available_sets": [
+              12
+            ],
+            "legal_reprint_sets": [
+              12
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Woody - Helping a Friend",
+          "canonical_key": "woody - helping a friend",
+          "quantity": 2,
+          "card_ids": [
+            "LOR13-1"
+          ],
+          "rotation": {
+            "available_sets": [
+              13
+            ],
+            "legal_reprint_sets": [
+              13
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Elinor - Renowned Diplomat",
+          "canonical_key": "elinor - renowned diplomat",
+          "quantity": 4,
+          "card_ids": [
+            "LOR12-86"
+          ],
+          "rotation": {
+            "available_sets": [
+              12
+            ],
+            "legal_reprint_sets": [
+              12
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Woody - Jungle Guide",
+          "canonical_key": "woody - jungle guide",
+          "quantity": 4,
+          "card_ids": [
+            "DLPC1-53-P3",
+            "DLPC1-54-P3",
+            "LOR12-15"
+          ],
+          "rotation": {
+            "available_sets": [
+              12
+            ],
+            "legal_reprint_sets": [
+              12
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Woody & Buzz Lightyear - Best Buddies",
+          "canonical_key": "woody & buzz lightyear - best buddies",
+          "quantity": 4,
+          "card_ids": [
+            "LOR13-228",
+            "LOR13-28"
+          ],
+          "rotation": {
+            "available_sets": [
+              13
+            ],
+            "legal_reprint_sets": [
+              13
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "You've Got a Friend in Me",
+          "canonical_key": "you've got a friend in me",
+          "quantity": 4,
+          "card_ids": [
+            "LOR12-225",
+            "LOR12-30"
+          ],
+          "rotation": {
+            "available_sets": [
+              12
+            ],
+            "legal_reprint_sets": [
+              12
+            ],
+            "legal": true
+          }
+        }
+      ],
+      "card_count": 60,
+      "rotation": {
+        "format": "core_post_rotation",
+        "legal_sets": [
+          9,
+          10,
+          11,
+          12,
+          13
+        ],
+        "reprints_allowed": true,
+        "legal": true,
+        "illegal_cards": []
+      }
+    },
+    {
+      "deck_id": "dreamborn-RClT9438Xbm8BoOAO7Jl",
+      "name": "Set 13 - Amber Ruby Boost",
+      "creator": "Inkkery",
+      "updated_at": "2026-07-28T14:03:00Z",
+      "format": "core",
+      "inks": [
+        "Amber",
+        "Ruby"
+      ],
+      "archetypes": [
+        "Combo",
+        "Control"
+      ],
+      "source_url": "https://dreamborn.ink/decks/RClT9438Xbm8BoOAO7Jl",
+      "source_type": "community_popular",
+      "evidence": {
+        "likes": 343,
+        "views": 19500,
+        "tournament_result": null
+      },
+      "confidence": {
+        "level": "community_reference",
+        "score": 0.63
+      },
+      "work_in_progress": true,
+      "strategy": {
+        "en": {
+          "tagline": "Amber/Ruby Boost midrange that recycles characters, controls tempo, and converts repeated plays into value.",
+          "how_to_play": "Build the discard and action setup, reuse efficient characters, and sequence Boost lines to gain cards without surrendering the board. Preserve removal for opposing engines and use the late curve to close.",
+          "mulligan": "Look for early characters, a stable ink curve, and Diary or another repeatable value engine.",
+          "difficulty": "intermediate"
+        },
+        "pt": {
+          "tagline": "Midrange Boost Âmbar/Rubi que recicla personagens, controla o ritmo e gera valor com jogadas repetidas.",
+          "how_to_play": "Prepare o descarte e as ações, reutilize personagens eficientes e organize as sequências de Boost para comprar cartas sem perder a mesa. Guarde remoções para os motores adversários e feche com o topo da curva.",
+          "mulligan": "Procure personagens iniciais, curva de tinta estável e o Diário ou outro motor recorrente de valor.",
+          "difficulty": "intermediário"
+        }
+      },
+      "cards": [
+        {
+          "card_name": "Hercules - Spectral Demigod",
+          "canonical_key": "hercules - spectral demigod",
+          "quantity": 4,
+          "card_ids": [
+            "LOR11-117",
+            "LOR11-214"
+          ],
+          "rotation": {
+            "available_sets": [
+              11
+            ],
+            "legal_reprint_sets": [
+              11
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Scrooge McDuck - Ghostly Ebenezer",
+          "canonical_key": "scrooge mcduck - ghostly ebenezer",
+          "quantity": 4,
+          "card_ids": [
+            "LOR11-104"
+          ],
+          "rotation": {
+            "available_sets": [
+              11
+            ],
+            "legal_reprint_sets": [
+              11
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Liquidator - Iced Over",
+          "canonical_key": "liquidator - iced over",
+          "quantity": 4,
+          "card_ids": [
+            "LOR11-111"
+          ],
+          "rotation": {
+            "available_sets": [
+              11
+            ],
+            "legal_reprint_sets": [
+              11
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Aladdin - Barreling Through",
+          "canonical_key": "aladdin - barreling through",
+          "quantity": 4,
+          "card_ids": [
+            "LOR10-123",
+            "LOR10-216"
+          ],
+          "rotation": {
+            "available_sets": [
+              10
+            ],
+            "legal_reprint_sets": [
+              10
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Gaston - Superior Archer",
+          "canonical_key": "gaston - superior archer",
+          "quantity": 4,
+          "card_ids": [
+            "LOR13-15"
+          ],
+          "rotation": {
+            "available_sets": [
+              13
+            ],
+            "legal_reprint_sets": [
+              13
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "The Horned King - Merciless Master",
+          "canonical_key": "the horned king - merciless master",
+          "quantity": 1,
+          "card_ids": [
+            "LOR13-22"
+          ],
+          "rotation": {
+            "available_sets": [
+              13
+            ],
+            "legal_reprint_sets": [
+              13
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Sulley - The New Boss",
+          "canonical_key": "sulley - the new boss",
+          "quantity": 3,
+          "card_ids": [
+            "DLPC1-58-P3",
+            "LOR13-24"
+          ],
+          "rotation": {
+            "available_sets": [
+              13
+            ],
+            "legal_reprint_sets": [
+              13
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Sulley & Boo - Scare Buddies",
+          "canonical_key": "sulley & boo - scare buddies",
+          "quantity": 2,
+          "card_ids": [
+            "LOR13-229",
+            "LOR13-29"
+          ],
+          "rotation": {
+            "available_sets": [
+              13
+            ],
+            "legal_reprint_sets": [
+              13
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Copper - On the Scent",
+          "canonical_key": "copper - on the scent",
+          "quantity": 2,
+          "card_ids": [
+            "LOR11-107"
+          ],
+          "rotation": {
+            "available_sets": [
+              11
+            ],
+            "legal_reprint_sets": [
+              11
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Olaf - Snowman of Action",
+          "canonical_key": "olaf - snowman of action",
+          "quantity": 3,
+          "card_ids": [
+            "LOR11-122"
+          ],
+          "rotation": {
+            "available_sets": [
+              11
+            ],
+            "legal_reprint_sets": [
+              11
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Maleficent - Monstrous Dragon",
+          "canonical_key": "maleficent - monstrous dragon",
+          "quantity": 4,
+          "card_ids": [
+            "D23-5",
+            "DLPC1-4-P3",
+            "DLPC1-5-P3",
+            "LOR1-113",
+            "LOR9-108"
+          ],
+          "rotation": {
+            "available_sets": [
+              1,
+              9
+            ],
+            "legal_reprint_sets": [
+              9
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Besties, Assemble!",
+          "canonical_key": "besties, assemble!",
+          "quantity": 4,
+          "card_ids": [
+            "LOR13-34"
+          ],
+          "rotation": {
+            "available_sets": [
+              13
+            ],
+            "legal_reprint_sets": [
+              13
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Ohana Means Family",
+          "canonical_key": "ohana means family",
+          "quantity": 2,
+          "card_ids": [
+            "LOR11-224",
+            "LOR11-32"
+          ],
+          "rotation": {
+            "available_sets": [
+              11
+            ],
+            "legal_reprint_sets": [
+              11
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "The Horseman Strikes!",
+          "canonical_key": "the horseman strikes!",
+          "quantity": 3,
+          "card_ids": [
+            "DLPC1-20-P3",
+            "LOR10-207",
+            "LOR10-29"
+          ],
+          "rotation": {
+            "available_sets": [
+              10
+            ],
+            "legal_reprint_sets": [
+              10
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Red Alert",
+          "canonical_key": "red alert",
+          "quantity": 4,
+          "card_ids": [
+            "LOR13-135"
+          ],
+          "rotation": {
+            "available_sets": [
+              13
+            ],
+            "legal_reprint_sets": [
+              13
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Raging Storm",
+          "canonical_key": "raging storm",
+          "quantity": 4,
+          "card_ids": [
+            "LOR11-225",
+            "LOR11-28"
+          ],
+          "rotation": {
+            "available_sets": [
+              11
+            ],
+            "legal_reprint_sets": [
+              11
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Webby's Diary",
+          "canonical_key": "webby's diary",
+          "quantity": 4,
+          "card_ids": [
+            "LOR10-31"
+          ],
+          "rotation": {
+            "available_sets": [
+              10
+            ],
+            "legal_reprint_sets": [
+              10
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Scrooge's Counting House - Ebenezer's Office",
+          "canonical_key": "scrooge's counting house - ebenezer's office",
+          "quantity": 4,
+          "card_ids": [
+            "LOR11-134"
+          ],
+          "rotation": {
+            "available_sets": [
+              11
+            ],
+            "legal_reprint_sets": [
+              11
+            ],
+            "legal": true
+          }
+        }
+      ],
+      "card_count": 60,
+      "rotation": {
+        "format": "core_post_rotation",
+        "legal_sets": [
+          9,
+          10,
+          11,
+          12,
+          13
+        ],
+        "reprints_allowed": true,
+        "legal": true,
+        "illegal_cards": []
+      }
+    },
+    {
+      "deck_id": "dreamborn-ebx86CFs27aCMNLX3SII",
+      "name": "Set 13 - Amber Amethyst",
+      "creator": "Inkkery",
+      "updated_at": "2026-07-28T14:06:00Z",
+      "format": "core",
+      "inks": [
+        "Amber",
+        "Amethyst"
+      ],
+      "archetypes": [
+        "Midrange"
+      ],
+      "source_url": "https://dreamborn.ink/decks/ebx86CFs27aCMNLX3SII",
+      "source_type": "community_popular",
+      "evidence": {
+        "likes": 249,
+        "views": 18300,
+        "tournament_result": null
+      },
+      "confidence": {
+        "level": "community_reference",
+        "score": 0.61
+      },
+      "work_in_progress": true,
+      "strategy": {
+        "en": {
+          "tagline": "Amber/Amethyst super-midrange built around efficient bodies, strength-based interaction, and durable value.",
+          "how_to_play": "Develop strong characters on curve, use strength-based removal to preserve board advantage, and turn resilient threats into lore. The deck rewards choosing whether each character should quest, challenge, or become ink.",
+          "mulligan": "Keep a smooth early curve, sufficient inkables, and avoid hands with too many five-plus-cost cards.",
+          "difficulty": "intermediate"
+        },
+        "pt": {
+          "tagline": "Super-midrange Âmbar/Ametista com corpos eficientes, interação baseada em força e valor duradouro.",
+          "how_to_play": "Desenvolva personagens fortes em curva, use remoções baseadas em força para preservar a vantagem de mesa e transforme ameaças resistentes em lore. A lista recompensa decidir corretamente entre aventurar, desafiar ou colocar cada carta na tinta.",
+          "mulligan": "Mantenha uma curva inicial suave, tintáveis suficientes e evite mãos com muitas cartas de custo 5 ou mais.",
+          "difficulty": "intermediário"
+        }
+      },
+      "cards": [
+        {
+          "card_name": "Eilonwy - Princess of Llyr",
+          "canonical_key": "eilonwy - princess of llyr",
+          "quantity": 4,
+          "card_ids": [
+            "LOR10-7"
+          ],
+          "rotation": {
+            "available_sets": [
+              10
+            ],
+            "legal_reprint_sets": [
+              10
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Luisa Madrigal - Pushing Through",
+          "canonical_key": "luisa madrigal - pushing through",
+          "quantity": 4,
+          "card_ids": [
+            "LOR12-62"
+          ],
+          "rotation": {
+            "available_sets": [
+              12
+            ],
+            "legal_reprint_sets": [
+              12
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Hamm - Piggy Bank",
+          "canonical_key": "hamm - piggy bank",
+          "quantity": 4,
+          "card_ids": [
+            "LOR12-11"
+          ],
+          "rotation": {
+            "available_sets": [
+              12
+            ],
+            "legal_reprint_sets": [
+              12
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Grandmother Willow - Ancient Advisor",
+          "canonical_key": "grandmother willow - ancient advisor",
+          "quantity": 4,
+          "card_ids": [
+            "LOR11-13",
+            "LOR11-206"
+          ],
+          "rotation": {
+            "available_sets": [
+              11
+            ],
+            "legal_reprint_sets": [
+              11
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Cheshire Cat - Inexplicable",
+          "canonical_key": "cheshire cat - inexplicable",
+          "quantity": 4,
+          "card_ids": [
+            "LOR10-60"
+          ],
+          "rotation": {
+            "available_sets": [
+              10
+            ],
+            "legal_reprint_sets": [
+              10
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Agustin Madrigal - Exceptionally Kind",
+          "canonical_key": "agustin madrigal - exceptionally kind",
+          "quantity": 4,
+          "card_ids": [
+            "LOR12-6"
+          ],
+          "rotation": {
+            "available_sets": [
+              12
+            ],
+            "legal_reprint_sets": [
+              12
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Isis Vanderchill - Ice Queen of St. Canard",
+          "canonical_key": "isis vanderchill - ice queen of st. canard",
+          "quantity": 4,
+          "card_ids": [
+            "LOR11-38"
+          ],
+          "rotation": {
+            "available_sets": [
+              11
+            ],
+            "legal_reprint_sets": [
+              11
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Dumbo - Ninth Wonder of the Universe",
+          "canonical_key": "dumbo - ninth wonder of the universe",
+          "quantity": 4,
+          "card_ids": [
+            "LOR9-228",
+            "LOR9-45"
+          ],
+          "rotation": {
+            "available_sets": [
+              9
+            ],
+            "legal_reprint_sets": [
+              9
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Gaston - Superior Archer",
+          "canonical_key": "gaston - superior archer",
+          "quantity": 4,
+          "card_ids": [
+            "LOR13-15"
+          ],
+          "rotation": {
+            "available_sets": [
+              13
+            ],
+            "legal_reprint_sets": [
+              13
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Luisa Madrigal - Confident Climber",
+          "canonical_key": "luisa madrigal - confident climber",
+          "quantity": 2,
+          "card_ids": [
+            "LOR12-227",
+            "LOR12-60"
+          ],
+          "rotation": {
+            "available_sets": [
+              12
+            ],
+            "legal_reprint_sets": [
+              12
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Hades - Looking for a Deal",
+          "canonical_key": "hades - looking for a deal",
+          "quantity": 4,
+          "card_ids": [
+            "LOR10-242",
+            "LOR10-56"
+          ],
+          "rotation": {
+            "available_sets": [
+              10
+            ],
+            "legal_reprint_sets": [
+              10
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Demona - Scourge of the Wyvern Clan",
+          "canonical_key": "demona - scourge of the wyvern clan",
+          "quantity": 4,
+          "card_ids": [
+            "LOR10-227",
+            "LOR10-55"
+          ],
+          "rotation": {
+            "available_sets": [
+              10
+            ],
+            "legal_reprint_sets": [
+              10
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Ohana Means Family",
+          "canonical_key": "ohana means family",
+          "quantity": 2,
+          "card_ids": [
+            "LOR11-224",
+            "LOR11-32"
+          ],
+          "rotation": {
+            "available_sets": [
+              11
+            ],
+            "legal_reprint_sets": [
+              11
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "The Horseman Strikes!",
+          "canonical_key": "the horseman strikes!",
+          "quantity": 3,
+          "card_ids": [
+            "DLPC1-20-P3",
+            "LOR10-207",
+            "LOR10-29"
+          ],
+          "rotation": {
+            "available_sets": [
+              10
+            ],
+            "legal_reprint_sets": [
+              10
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "World's Greatest Criminal Mind",
+          "canonical_key": "world's greatest criminal mind",
+          "quantity": 4,
+          "card_ids": [
+            "LOR2-31",
+            "LOR9-30"
+          ],
+          "rotation": {
+            "available_sets": [
+              2,
+              9
+            ],
+            "legal_reprint_sets": [
+              9
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "Junior Woodchuck Guidebook",
+          "canonical_key": "junior woodchuck guidebook",
+          "quantity": 4,
+          "card_ids": [
+            "LOR10-66"
+          ],
+          "rotation": {
+            "available_sets": [
+              10
+            ],
+            "legal_reprint_sets": [
+              10
+            ],
+            "legal": true
+          }
+        },
+        {
+          "card_name": "The Black Cauldron",
+          "canonical_key": "the black cauldron",
+          "quantity": 1,
+          "card_ids": [
+            "LOR10-225",
+            "LOR10-32"
+          ],
+          "rotation": {
+            "available_sets": [
+              10
+            ],
+            "legal_reprint_sets": [
+              10
+            ],
+            "legal": true
+          }
+        }
+      ],
+      "card_count": 60,
+      "rotation": {
+        "format": "core_post_rotation",
+        "legal_sets": [
+          9,
+          10,
+          11,
+          12,
+          13
+        ],
+        "reprints_allowed": true,
+        "legal": true,
+        "illegal_cards": []
+      }
+    }
+  ],
+  "rejected_decks": []
+}

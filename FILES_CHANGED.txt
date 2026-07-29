@@ -1,12 +1,10 @@
-M1.6.1 — Player Trust Hotfix (code-only delta on da786668 + Visual Replay v2)
+Visual-replay canonical test fix (code-only delta)
 
 CHANGED:
-  site/index.html   +cardByName() prototype method (fixes replay TypeError); +10 portfolio i18n keys + chrome keys (buy/wantOwn/type labels/owned/all/close) EN+PT; Advisor: removed duplicate deckStatus render, fixed have field, buy-list now uses canonical purchasesToUnlockNext + Shared Cards block (sharedConflicts).
+  site/index.html   deckById(id) now defensive: guards missing/non-array state.decks, returns null (predicate d=>d.id===id unchanged). youPlayerOf safe for missing state/decks/unknown id/no deck_id (returns neutral 1).
   Inkwell.dc.html   byte-identical mirror.
-  tools/i18n-contract.test.mjs   NEW — enumerates this.t() keys, fails on any EN/PT gap or raw-key render.
-  tools/visual-replay.test.mjs   canonical (now runs; 11/11 with cardByName defined).
-  package.json      +test:i18n, +test:replay, test:all includes both.
+  tools/visual-replay.test.mjs   fixture state.decks:[]; +3 missing-state regression assertions. No existing assertion removed/weakened.
 
-EXECUTED (sandbox JS): parse OK; i18n-contract PASS (252 keys, EN=PT=297, 0 raw); visual-replay 11/11.
-NOT EXECUTED (no runner): Python unittest suites, validate_release.py --root site, Playwright smoke.
-Decks sourced only from active user's state.decks. No generated data touched. No deploy/push.
+EXECUTED (sandbox JS, canonical logic): visual-replay 14/14 passed, 0 failed. Mirror byte-identical.
+NOT EXECUTED (no runner): node tools/visual-replay.test.mjs, npm run test:all, Python, Playwright.
+No generated data. No deploy/push.

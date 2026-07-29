@@ -17,7 +17,7 @@ c.cards = [
 c.byId = {}; for (const x of c.cards) c.byId[x.card_id] = x;
 c._byName = {}; for (const x of c.cards) { const k = x.name_en.toLowerCase().replace(/\s*\(.*?\)\s*/g, '').trim(); (c._byName[k] = c._byName[k] || []).push(x); }
 for (const m of ['nameKey', 'cardByName', 'buildNameIndex', 'cardKeywordMods', 'simulateReplay', 'youPlayerOf', 'deckById']) c[m] = Component.prototype[m];
-c.state = {};
+c.state = { decks: [] };
 
 let pass = 0, fail = 0;
 const ck = (n, cond) => { cond ? pass++ : fail++; console.log((cond ? '✓ ' : '✗ ') + n); };
@@ -63,10 +63,22 @@ lu = sim3.S[1].board.find(x => x.name === 'Luisa Madrigal - Pushing Through');
 ck('mod grey off owner turn', lu.mods[0].active === false);
 
 // perspective: youPlayerOf via deck card ownership
-c.state = {};
+c.state = { decks: [] };
 const you = c.youPlayerOf({ deck_id: 'd1', raw_log: 'Player 2 played Luisa Madrigal - Pushing Through (cost 1)\nPlayer 1 played Aurora - Holding Court (cost 1)' });
 c.deckById = () => ({ id: 'd1', cards: { 'L': 4 } });
 ck('youPlayerOf detects you=2 from deck cards', c.youPlayerOf({ deck_id: 'd1', raw_log: 'Player 2 played Luisa Madrigal - Pushing Through (cost 1)' }) === 2);
+
+// regression: missing state / decks / deck_id must not throw, returns neutral default
+const cSafe = Object.create(Component.prototype);
+for (const m of ['nameKey', 'cardByName', 'buildNameIndex', 'youPlayerOf', 'deckById']) cSafe[m] = Component.prototype[m];
+cSafe.cards = c.cards; cSafe.byId = c.byId; cSafe._byName = c._byName;
+cSafe.state = undefined;
+let threw = false, res;
+try { res = cSafe.youPlayerOf({ deck_id: 'x', raw_log: 'Player 1 played Aurora - Holding Court (cost 1)' }); } catch (e) { threw = true; }
+ck('youPlayerOf survives missing state (no throw, neutral)', !threw && res === 1);
+cSafe.state = { decks: [] };
+ck('youPlayerOf survives empty decks + unknown id', cSafe.youPlayerOf({ deck_id: 'nope', raw_log: 'Player 1 played X' }) === 1);
+ck('youPlayerOf survives match without deck_id', cSafe.youPlayerOf({ raw_log: 'Player 1 played X' }) === 1);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

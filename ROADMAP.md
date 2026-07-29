@@ -4,6 +4,40 @@ Atualizado em 2026-07-28. Raiz canônica de publicação: `site/`.
 Entrada canônica: `site/index.html`. `Inkwell.dc.html` é apenas um espelho
 byte a byte para desenvolvimento.
 
+## M1.7 — Advisor explicável (DONE, code)
+Três blocos: Monte agora (deckStatus + targetCopies 0–10), Cartas compartilhadas
+(sharedConflicts com have/demanda/decisão), Próximo deck (purchasesToUnlockNext
+canônico). Simulação "Priorizar este deck" (transiente, confirm/reset — não
+persiste até confirmar). "Adicionar faltantes à wishlist". EN/PT completos.
+
+## M1.8 — Meta Scout (SCOPED, blocked on data)
+App consome artefato opcional `site/data/meta-decks.json` (schema_version,
+generated_at, format, source_url/type, event/placement/record, deck_id/archetype/
+inks, cartas canônicas, sample_size/confidence, how_to_play, mulligan_guide,
+early/mid/late, strengths/weaknesses, difficulty, budget_band). Nova aba "Meta"
+(decks recomendados, NÃO seed em state.decks). Por deck: comparação com coleção
+(tenho X/60, faltantes, custo, legalidade, overlap com decks salvos, montável-agora).
+Selo Comprovado-em-torneio (InkDecks) vs Popular (Dreamborn). Sem win-rate sem
+numerador+denominador+fonte. BLOQUEADO: pipeline precisa gerar meta-decks.json +
+entrada no manifest (sha256/bytes). App não faz scraping em runtime.
+
+## M1.9 — Player Academy (SCOPED)
+Iniciantes: primeira-partida guiada, mulligan trainer (usa deck ativo, gera mãos,
+explica manter por curva/inkability/plano), glossário contextual (já existe base),
+saúde do deck (curva, % tintável, custo médio, tipos, risco de mão travada em
+linguagem simples), "por que esta carta?" (papel: início/remoção/compra/
+finalizador/sinergia). Intermediários: deck vs referência, plano de matchup,
+revisão pós-partida guiada, treinos de decisão, meta pessoal, upgrade de maior
+impacto (usa optimizer). Tudo derivado de state.decks + cards; sem dados externos.
+
+## M2.0 — Replay Fidelity v3 (BLOCKED on sample logs)
+Instâncias por carta (cópias repetidas), zonas separadas personagem/item/local,
+STR/WILL vivos + modificadores temporários das linhas de stat do log, sing exert,
+faces de tinta na ink row, dano por instância/jogador, "mostrar info oculta"
+(off por default), incerteza explícita (exact_board_state:false, "Resultado
+registrado" em vez de vitória inferida). BLOQUEADO: precisa de logs de exemplo
+com linhas STR/WILL/sing/stat-change antes de escrever o parser.
+
 ## Regras congeladas
 
 - Não criar `index.html` na raiz do repositório.
@@ -194,3 +228,12 @@ Status: **DEFERIDO**.
 4. fazer um único deploy 1.5.1;
 5. iniciar Replay v3 com logs reais;
 6. seguir qualidade contínua e produto.
+
+
+## Visual Replay v2 delta (after deployed release da786668)
+Reapplied on top of authoritative commit da786668 as a code-only delta.
+- simulateReplay(events,idx): board-state reconstruction — both players' hands (revealed for training), ink total+exerted, drying, exert (90° rotate), damage counters, keyword modifiers active/grey by turn.
+- youPlayerOf(match): you=bottom perspective from saved-deck card ownership (state.decks only; no seed decks).
+- Fullscreen replay overlay + prev/play/next controls, cleanup via stopReplayTimer.
+- exact_board_state:false preserved; imported-log fidelity untouched; Match Center importer/coach/filters/duplicate-protection/legacy unchanged.
+- Tests: tools/visual-replay.test.mjs (11 cases). Byte-identical site/index.html ⇄ Inkwell.dc.html.

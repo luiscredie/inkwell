@@ -680,6 +680,7 @@
                     <span style="font-family:'JetBrains Mono';font-weight:700;font-size:13px;min-width:14px;text-align:center">{{ d.tc }}</span>
                     <button onClick="{{ d._inc }}" style="width:24px;height:24px;border-radius:7px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#e8e8ec;cursor:pointer;font-size:14px;line-height:1">+</button>
                   </span>
+                  <button onClick="{{ d._sim }}" title="{{ d.simLabel }}" style="padding:5px 10px;border-radius:8px;background:rgba(138,92,246,.14);border:1px solid rgba(138,92,246,.3);color:#c9a6ff;cursor:pointer;font-size:11.5px;white-space:nowrap">{{ d.simLabel }}</button>
                   <button onClick="{{ d._pin }}" title="{{ d.pinLabel }}" aria-label="{{ d.pinLabel }}" style="{{ d.pinStyle }}">{{ d.pinIcon }}</button>
                 </div>
               </sc-for>
@@ -709,6 +710,16 @@
                   </div>
                 </sc-for>
               </div>
+            </sc-if>
+            <sc-if value="{{ adv.simActive }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;gap:10px;padding:11px 16px;border-radius:12px;background:rgba(138,92,246,.1);border:1px solid rgba(138,92,246,.3);margin-bottom:12px">
+                <span style="flex:1;font-size:12.5px;color:#c9a6ff">{{ adv.simBannerLabel }}</span>
+                <button onClick="{{ adv._confirmSim }}" style="padding:6px 14px;border-radius:9px;background:#8a5cf6;border:none;color:#fff;font-weight:700;cursor:pointer;font-size:12px">{{ adv.confirmLabel }}</button>
+                <button onClick="{{ adv._resetSim }}" style="padding:6px 12px;border-radius:9px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#d8d8dc;cursor:pointer;font-size:12px">{{ adv.resetLabel }}</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ adv.hasMissingWish }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ adv._addWish }}" style="width:100%;padding:10px;border-radius:11px;background:rgba(232,200,119,.1);border:1px solid rgba(199,154,68,.3);color:#e0c15a;cursor:pointer;font-size:13px;font-weight:600;margin-bottom:8px">☆ {{ adv.wishLabel }}</button>
             </sc-if>
           </sc-if>
 
@@ -934,6 +945,21 @@
               </div>
             </sc-for>
           </div>
+
+          <sc-if value="{{ dd.health.hasWarnings }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:18px 20px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);margin-bottom:22px">
+              <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+                <span style="font-family:'Bricolage Grotesque';font-weight:700;font-size:15px">{{ dd.health.title }}</span>
+                <span style="font-family:'JetBrains Mono';font-weight:800;font-size:18px;color:{{ dd.health.scoreColor }}">{{ dd.health.score }}</span>
+                <span style="font-size:11.5px;color:#8a8a92;font-family:'JetBrains Mono'">{{ dd.health.inkableLabel }} {{ dd.health.inkablePct }}% · {{ dd.health.avgLabel }} {{ dd.health.avgCost }}</span>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px">
+                <sc-for list="{{ dd.health.warnings }}" as="w" hint-placeholder-count="1">
+                  <span style="font-size:11.5px;padding:3px 9px;border-radius:8px;background:rgba(230,193,90,.12);border:1px solid rgba(230,193,90,.28);color:#e6c15a">{{ w }}</span>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
 
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:22px">
             <div style="padding:22px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)">
@@ -1597,7 +1623,7 @@ class Component extends DCLogic {
     bInks: [], bCost: 'all', bSets: [], bSetMenu: false, bSort: 'cost-asc', bGroup: 'none', bSize: 5, bOwnedOnly: false, bPage: 0,
     newDeckOpen: false, newDeckName: '', newDeckInks: [], newDeckFmt: 'core',
     importDeckOpen: false, importDeckName: '', importDeckText: '', importDeckFmt: 'core',
-    advisorMode: 'all', lesson: null, learnDone: {}, activeDeckId: null, moversExpanded: false,
+    advisorMode: 'all', advSimPriority: null, lesson: null, learnDone: {}, activeDeckId: null, moversExpanded: false,
     collection: {}, decks: [], matches: [], overrides: {}, wishlist: {}, displayName: 'Illumineer',
     activeUser: 'luiscredie', profileMenuOpen: false, settingsOpen: false, lastSaved: null,
     syncEnabled: false, syncStatus: 'off', syncEmail: null, syncUser: null, syncLast: null, syncMsg: null, syncInput: '',
@@ -1634,7 +1660,7 @@ class Component extends DCLogic {
       mcReplayFullscreen:'Fullscreen replay',mcOpponent:'Opponent',mcYou:'You', mcDeckFilter:'Filter by deck', mcResultFilter:'Filter by result', mcDateFilter:'Filter by date', mcAllResults:'All results', mcAllDates:'All dates', mcLast7:'Last 7 days', mcLast30:'Last 30 days', mcImportTitle:'Import game log', mcChooseDeck:'Choose a saved deck', mcRawPlaceholder:'Paste the raw game log…', mcParseLog:'Parse log', mcSavedDeckHint:'Uses the selected deck saved in your profile.', mcPreviewLabel:'Review before saving', mcDuplicate:'This log matches a saved game from this deck.', mcSaveImported:'Save imported match', mcCancel:'Cancel', mcManualToggle:'No log? Record a manual result', mcMatchDetail:'Match detail', mcCloseDetail:'Close match detail', mcCondition:'Condition', mcPlanScore:'Plan score', mcReplay:'Event replay', mcReplayReset:'Reset replay', mcReplayPrev:'Previous event', mcReplayPlay:'Play or pause replay', mcReplayNext:'Next event', mcReplayLimit:'Timeline replays logged events and lore; it does not reconstruct unknown board state.', mcNoReplay:'This manual match has no replay timeline.', mcImported:'Imported log', mcManual:'Manual', mcEngineMissing:'Match parser is unavailable', mcParseFailed:'Could not parse this log', mcDuplicateConfirm:'Duplicate found — click save again to confirm.',
       nowPlaying:'Now Playing', legality:'Legality', last10:'Last 10', switchDeck:'Switch deck:', stSetup:'Setup needed', stIllegal:'Legality issue', stMissing:'Missing cards', stReady:'Ready to play', stPlay:'In rotation', na_finishDeck:'Finish deck', na_fixLegality:'Fix legality', na_viewMissing:'View missing cards', na_logFirst:'Log first match', na_review:'Review / log match', setActive:'Set as active', activeDeck:'✓ Active deck',
       advisorBtn:'Deck Advisor', advisorSub:'Can you build your decks from your collection?',
-      activeDeckSet:'Active deck set', optimizedPlan:'Optimized Plan', recommendedPlan:'Recommended Plan', physicalCopies:'Physical copies', pinPriority:'Pin priority', portfolioAllOk:'All requested decks are buildable at once.', portfolioExcluded:'Excluded from plan', portfolioHead:'{b} of {n} decks buildable at once', portfolioMissing:'{n} cards short across the portfolio', portfolioNofM:'{a} of {b} buildable', buyLabel:'Buy', buyExt:'Buy ↗', wantOwn:'want {want} · own {own}', sharedCardsTitle:'Shared cards', typeCharacters:'Characters', typeActions:'Actions', typeSongs:'Songs', typeItems:'Items', typeLocations:'Locations', typeOther:'Other', ownedFilter:'✓ Owned', allFilter:'All', allSetsFilter:'All sets', closeLabel:'Close', advAll:'All at once', advEach:'One at a time', advEachNote:'Each deck built on its own, drawing from your full collection (rebuild between events).', advNoDecks:'Add some decks first, then the advisor can plan your copies.', advAllOk:'All decks buildable at once', advAllShort:'{n} extra copies needed', advAllOkSub:'Your {n} decks share no card beyond what you own — sleeve them all simultaneously.', advAllShortSub:'Buy these to have every deck fully built at the same time — {v} total.', advBuildable:'buildable together', advBlocked:'shares copies', advComplete:'100% owned', advNeedN:'need {n} more',
+      activeDeckSet:'Active deck set', optimizedPlan:'Optimized Plan', recommendedPlan:'Recommended Plan', physicalCopies:'Physical copies', pinPriority:'Pin priority', portfolioAllOk:'All requested decks are buildable at once.', portfolioExcluded:'Excluded from plan', portfolioHead:'{b} of {n} decks buildable at once', portfolioMissing:'{n} cards short across the portfolio', portfolioNofM:'{a} of {b} buildable', buyLabel:'Buy', buyExt:'Buy ↗', wantOwn:'want {want} · own {own}', sharedCardsTitle:'Shared cards', simPrioritize:'Prioritize', simActive:'Prioritizing', simBanner:'Simulating priority — plan not saved yet.', simConfirm:'Confirm', simReset:'Reset', addMissingWish:'Add missing to wishlist', deckHealthTitle:'Deck health', inkablePctLabel:'inkable', avgCostLabel:'avg cost', deckHealthOk:'Healthy ✓', dh_lowInkable:'Low inkable ratio — you may struggle for ink', dh_slowStart:'Few 1–2 cost plays — slow starts', dh_topHeavy:'High average cost — top-heavy curve', dh_fewCharacters:'Few characters — thin board presence', dh_under60:'Under 60 cards — not tournament legal', typeCharacters:'Characters', typeActions:'Actions', typeSongs:'Songs', typeItems:'Items', typeLocations:'Locations', typeOther:'Other', ownedFilter:'✓ Owned', allFilter:'All', allSetsFilter:'All sets', closeLabel:'Close', advAll:'All at once', advEach:'One at a time', advEachNote:'Each deck built on its own, drawing from your full collection (rebuild between events).', advNoDecks:'Add some decks first, then the advisor can plan your copies.', advAllOk:'All decks buildable at once', advAllShort:'{n} extra copies needed', advAllOkSub:'Your {n} decks share no card beyond what you own — sleeve them all simultaneously.', advAllShortSub:'Buy these to have every deck fully built at the same time — {v} total.', advBuildable:'buildable together', advBlocked:'shares copies', advComplete:'100% owned', advNeedN:'need {n} more',
       missingCards:"Cards you're missing", ownEvery:'You own every card ✓', decklist:'Decklist', matchHistory:'Match History', logGame:'Log game', editCards:'Edit cards', doneEditing:'Done editing', delete:'Delete', manaCurve:'Mana Curve', cardTypes:'Card Types', raritySpread:'Rarity Spread',
       totalLore:'Total Lore', deckValue:'Deck Value', winRate:'Win Rate', games:'Games', inCollection:'In Collection',
       importBtn:'↑ Import', newDeckBtn:'+ New Deck', allDecks:'All decks', allDecksBack:'‹ All decks', cards2:'Cards', tournamentLegal:'Tournament legal', cardsOf60:'{n}/60 cards', noNotes:'No notes yet.', logGameBtn:'Log game', deleteBtn:'Delete', addCards:'Add cards', searchCardsPh:'Search cards by name…', size:'Size', perRow:'{n} / row', noGamesLogged:'No games logged yet.', clickPlus:'Click + on cards to add them.', copiesToComplete:'{n} copies · {v} to complete', need:'need', buy:'Buy ↗', haveOf:'have {h} of {c}',
@@ -1667,7 +1693,7 @@ class Component extends DCLogic {
       mcReplayFullscreen:'Replay em tela cheia',mcOpponent:'Oponente',mcYou:'Você', mcDeckFilter:'Filtrar por deck', mcResultFilter:'Filtrar por resultado', mcDateFilter:'Filtrar por data', mcAllResults:'Todos os resultados', mcAllDates:'Todas as datas', mcLast7:'Últimos 7 dias', mcLast30:'Últimos 30 dias', mcImportTitle:'Importar log da partida', mcChooseDeck:'Escolha um deck salvo', mcRawPlaceholder:'Cole o log bruto da partida…', mcParseLog:'Analisar log', mcSavedDeckHint:'Usa o deck selecionado salvo no seu perfil.', mcPreviewLabel:'Revise antes de salvar', mcDuplicate:'Este log corresponde a uma partida já salva neste deck.', mcSaveImported:'Salvar partida importada', mcCancel:'Cancelar', mcManualToggle:'Sem log? Registre um resultado manual', mcMatchDetail:'Detalhes da partida', mcCloseDetail:'Fechar detalhes da partida', mcCondition:'Condição', mcPlanScore:'Aderência ao plano', mcReplay:'Replay de eventos', mcReplayReset:'Reiniciar replay', mcReplayPrev:'Evento anterior', mcReplayPlay:'Reproduzir ou pausar', mcReplayNext:'Próximo evento', mcReplayLimit:'A timeline reproduz eventos e lore registrados; não reconstrói estados desconhecidos da mesa.', mcNoReplay:'Esta partida manual não possui timeline.', mcImported:'Log importado', mcManual:'Manual', mcEngineMissing:'O analisador de partidas não está disponível', mcParseFailed:'Não foi possível analisar este log', mcDuplicateConfirm:'Duplicata encontrada — clique novamente para confirmar.',
       nowPlaying:'Jogando Agora', legality:'Legalidade', last10:'Últimas 10', switchDeck:'Trocar deck:', stSetup:'Precisa montar', stIllegal:'Problema de legalidade', stMissing:'Faltam cartas', stReady:'Pronto para jogar', stPlay:'Em rotação', na_finishDeck:'Terminar deck', na_fixLegality:'Corrigir legalidade', na_viewMissing:'Ver cartas que faltam', na_logFirst:'Registrar 1ª partida', na_review:'Revisar / registrar', setActive:'Definir como ativo', activeDeck:'✓ Deck ativo',
       advisorBtn:'Consultor de Decks', advisorSub:'Você consegue montar seus decks com sua coleção?',
-      activeDeckSet:'Deck ativo definido', optimizedPlan:'Plano otimizado', recommendedPlan:'Plano recomendado', physicalCopies:'Cópias físicas', pinPriority:'Fixar prioridade', portfolioAllOk:'Todos os decks solicitados são montáveis ao mesmo tempo.', portfolioExcluded:'Excluído do plano', portfolioHead:'{b} de {n} decks montáveis ao mesmo tempo', portfolioMissing:'Faltam {n} cartas no portfólio', portfolioNofM:'{a} de {b} montáveis', buyLabel:'Comprar', buyExt:'Comprar ↗', wantOwn:'quer {want} · tem {own}', sharedCardsTitle:'Cartas compartilhadas', typeCharacters:'Personagens', typeActions:'Ações', typeSongs:'Canções', typeItems:'Itens', typeLocations:'Locais', typeOther:'Outros', ownedFilter:'✓ Possuídas', allFilter:'Todas', allSetsFilter:'Todos os sets', closeLabel:'Fechar', advAll:'Todos ao mesmo tempo', advEach:'Um de cada vez', advEachNote:'Cada deck montado sozinho, usando sua coleção inteira (remontando entre eventos).', advNoDecks:'Adicione decks primeiro para o consultor planejar suas cópias.', advAllOk:'Todos os decks montáveis ao mesmo tempo', advAllShort:'{n} cópias extras necessárias', advAllOkSub:'Seus {n} decks não dividem cartas além do que você tem — monte todos ao mesmo tempo.', advAllShortSub:'Compre estas para ter todos os decks montados simultaneamente — {v} no total.', advBuildable:'montável junto', advBlocked:'divide cópias', advComplete:'100% na coleção', advNeedN:'faltam {n}',
+      activeDeckSet:'Deck ativo definido', optimizedPlan:'Plano otimizado', recommendedPlan:'Plano recomendado', physicalCopies:'Cópias físicas', pinPriority:'Fixar prioridade', portfolioAllOk:'Todos os decks solicitados são montáveis ao mesmo tempo.', portfolioExcluded:'Excluído do plano', portfolioHead:'{b} de {n} decks montáveis ao mesmo tempo', portfolioMissing:'Faltam {n} cartas no portfólio', portfolioNofM:'{a} de {b} montáveis', buyLabel:'Comprar', buyExt:'Comprar ↗', wantOwn:'quer {want} · tem {own}', sharedCardsTitle:'Cartas compartilhadas', simPrioritize:'Priorizar', simActive:'Priorizando', simBanner:'Simulando prioridade — plano ainda não salvo.', simConfirm:'Confirmar', simReset:'Redefinir', addMissingWish:'Adicionar faltantes à wishlist', deckHealthTitle:'Saúde do deck', inkablePctLabel:'tintável', avgCostLabel:'custo médio', deckHealthOk:'Saudável ✓', dh_lowInkable:'Poucas cartas tintáveis — pode faltar tinta', dh_slowStart:'Poucas jogadas de custo 1–2 — início lento', dh_topHeavy:'Custo médio alto — curva pesada', dh_fewCharacters:'Poucos personagens — presença fraca na mesa', dh_under60:'Menos de 60 cartas — fora do formato', typeCharacters:'Personagens', typeActions:'Ações', typeSongs:'Canções', typeItems:'Itens', typeLocations:'Locais', typeOther:'Outros', ownedFilter:'✓ Possuídas', allFilter:'Todas', allSetsFilter:'Todos os sets', closeLabel:'Fechar', advAll:'Todos ao mesmo tempo', advEach:'Um de cada vez', advEachNote:'Cada deck montado sozinho, usando sua coleção inteira (remontando entre eventos).', advNoDecks:'Adicione decks primeiro para o consultor planejar suas cópias.', advAllOk:'Todos os decks montáveis ao mesmo tempo', advAllShort:'{n} cópias extras necessárias', advAllOkSub:'Seus {n} decks não dividem cartas além do que você tem — monte todos ao mesmo tempo.', advAllShortSub:'Compre estas para ter todos os decks montados simultaneamente — {v} no total.', advBuildable:'montável junto', advBlocked:'divide cópias', advComplete:'100% na coleção', advNeedN:'faltam {n}',
       missingCards:'Cartas que faltam', ownEvery:'Você tem todas as cartas ✓', decklist:'Decklist', matchHistory:'Histórico de Partidas', logGame:'Registrar', editCards:'Editar cartas', doneEditing:'Concluir', delete:'Excluir', manaCurve:'Curva de Mana', cardTypes:'Tipos de Carta', raritySpread:'Raridades',
       totalLore:'Lore Total', deckValue:'Valor do Deck', winRate:'Vitórias', games:'Jogos', inCollection:'Na Coleção',
       importBtn:'↑ Importar', newDeckBtn:'+ Novo Deck', allDecks:'Todos os decks', allDecksBack:'‹ Todos os decks', cards2:'Cartas', tournamentLegal:'Legal para torneio', cardsOf60:'{n}/60 cartas', noNotes:'Sem notas ainda.', logGameBtn:'Registrar jogo', deleteBtn:'Excluir', addCards:'Adicionar cartas', searchCardsPh:'Buscar cartas por nome…', size:'Tamanho', perRow:'{n} / linha', noGamesLogged:'Nenhum jogo registrado ainda.', clickPlus:'Clique + nas cartas para adicioná-las.', copiesToComplete:'{n} cópias · {v} para completar', need:'faltam', buy:'Comprar ↗', haveOf:'tem {h} de {c}',
@@ -2344,6 +2370,49 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
   // Canonical physical inventory from collection (normal+foil pooled, reprints merged by name key).
   portfolioInventory(){ const inv={}; const coll=this.state.collection||{}; for(const id in coll){ const c=this.byId[id]; if(!c) continue; const k=this.nameKey(c.name_en); inv[k]=(inv[k]||0)+(coll[id].n||0)+(coll[id].f||0); } return inv; }
   deckNeeds(deck){ const needs={}; for(const [id,ct] of Object.entries(deck.cards||{})){ const c=this.byId[id]; if(!c) continue; const k=this.nameKey(c.name_en); needs[k]=(needs[k]||0)+ct; } return needs; }
+  // ---- M1.9 Player Academy engines (pure; from state.decks + cards, no external data) ----
+  deckHealth(deck){
+    const entries=this.deckEntries(deck); const total=this.deckCount(deck);
+    if(!total) return {total:0, inkablePct:0, avgCost:0, curve:[], typeMix:{}, warnings:[], score:0};
+    let inkable=0, costSum=0; const curve=[0,0,0,0,0,0,0,0]; const typeMix={};
+    for(const e of entries){ const c=e.card, n=e.count;
+      if(this.inkableOf(c)===1) inkable+=n;
+      const cost=(typeof c.ink_cost==='number')?c.ink_cost:0; costSum+=cost*n;
+      curve[Math.min(7,cost)]+=n;
+      const disp=this.cardTypes(c).includes('Song')?'Song':(c.card_type||'?'); typeMix[disp]=(typeMix[disp]||0)+n;
+    }
+    const inkablePct=Math.round(inkable/total*100);
+    const avgCost=Math.round(costSum/total*10)/10;
+    const early=curve[1]+curve[2]; const chars=typeMix['Character']||0;
+    const warnings=[];
+    if(inkablePct<60) warnings.push('lowInkable');
+    if(early<8) warnings.push('slowStart');
+    if(avgCost>4) warnings.push('topHeavy');
+    if(chars<20) warnings.push('fewCharacters');
+    if(total<60) warnings.push('under60');
+    let score=100; score-=warnings.length*12; if(score<0)score=0;
+    return {total, inkablePct, avgCost, curve, typeMix, warnings, score, early, chars};
+  }
+  cardRole(card){
+    if(!card) return 'tech';
+    const t=card.card_type, lore=card.lore||0, cost=(typeof card.ink_cost==='number')?card.ink_cost:0;
+    const txt=((card.abilities||[]).map(a=>(a.name||'')+' '+(a.text||a.effect||a.reminder_text||'')).join(' ')||'').toLowerCase();
+    if(t==='Action'||t==='Song'){ if(/banish|damage|deal|remove/.test(txt)) return 'removal'; if(/draw|search/.test(txt)) return 'draw'; return 'tech'; }
+    if(/draw a card|draw \d/.test(txt)) return 'draw';
+    if(/banish|deal \d+ damage/.test(txt)) return 'removal';
+    if(cost<=2) return 'early';
+    if(lore>=3||cost>=6) return 'finisher';
+    if(/whenever|while|gains|other characters/.test(txt)) return 'synergy';
+    return 'midrange';
+  }
+  mulliganHand(deck){
+    const pool=[]; for(const [id,ct] of Object.entries(deck.cards||{})){ const c=this.byId[id]; if(!c) continue; for(let i=0;i<ct;i++) pool.push(c); }
+    for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=pool[i]; pool[i]=pool[j]; pool[j]=t; }
+    const hand=pool.slice(0,7);
+    return hand.map(c=>{ const cost=(typeof c.ink_cost==='number')?c.ink_cost:0; const ink=this.inkableOf(c)===1; const keep=(cost<=3)||ink;
+      return { name:c.name_en, cost, inkable:ink, role:this.cardRole(c), keep,
+        advice: cost<=2 ? 'earlyPlay' : (ink ? 'inkFuel' : (cost>=6 ? 'tooExpensive' : 'situational')) }; });
+  }
   learnData(){
     const pt=this.state.lang==='pt';
     const T=(en,br)=>pt?br:en;
@@ -2419,7 +2488,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
   inkIconEl(name, size){ const s=size||18; return React.createElement('img',{src:this.inkIcon(name),alt:'',style:{width:s+'px',height:s+'px',display:'block'}}); }
   ligaUrl(card){ return 'https://www.ligalorcana.com.br/?view=cards%2Fcard&card='+encodeURIComponent(card.name_en||'').replace(/%20/g,'+')+'&tipo=1'; }
   setOrder(code){ const m=String(code).match(/^([A-Za-z]+)(\d+)?$/); const pre=m?m[1]:code; const num=m&&m[2]?+m[2]:0; const grp={LOR:0,Q:1,DLPC:2,D:3}[pre]!=null?{LOR:0,Q:1,DLPC:2,D:3}[pre]:9; return grp*1000+num; }
-  deckById(id){ return this.state.decks.find(d=>d.id===id); }
+  deckById(id){ const decks=(this.state && Array.isArray(this.state.decks)) ? this.state.decks : []; return decks.find(d=>d.id===id) || null; }
   deckEntries(deck){ if(!deck) return []; return Object.entries(deck.cards||{}).map(([id,ct])=>({card:this.byId[id],count:ct})).filter(x=>x.card); }
   deckCount(deck){ return this.deckEntries(deck).reduce((s,e)=>s+e.count,0); }
   deckValue(deck){ return this.deckEntries(deck).reduce((s,e)=>s+this.priceOr0(e.card)*e.count,0); }
@@ -2922,7 +2991,9 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       V.advNoDecks=st.decks.length===0; V.advNoDecksMsg=this.t('advNoDecks');
       // M1P-B portfolio optimizer
       const inv=this.portfolioInventory();
-      const pDecks=(st.decks||[]).map(d=>({id:d.id, targetCopies:(typeof d.targetCopies==='number'?d.targetCopies:1), priority:(typeof d.portfolioPriority==='number'?d.portfolioPriority:0), needs:this.deckNeeds(d)}));
+      // M1.7 priority simulation: transient override, not persisted until confirmed.
+      const simP=st.advSimPriority;
+      const pDecks=(st.decks||[]).map(d=>({id:d.id, targetCopies:(typeof d.targetCopies==='number'?d.targetCopies:1), priority:(simP&&simP===d.id)?999:(typeof d.portfolioPriority==='number'?d.portfolioPriority:0), needs:this.deckNeeds(d)}));
       const P=Component.computeDeckPortfolioPlan(inv, pDecks, {budget:200000});
       const nameById={}; for(const d of st.decks) nameById[d.id]=d.name;
       const keyToCard={}; for(const c of this.cards){ const k=this.nameKey(c.name_en); if(!keyToCard[k]||this.priceOr0(c)<this.priceOr0(keyToCard[k])) keyToCard[k]=c; }
@@ -2952,7 +3023,17 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
           pinIcon:((typeof d.portfolioPriority==='number'?d.portfolioPriority:0)>0)?'★':'☆', pinLabel:this.t('pinPriority'), pinStyle:'width:26px;height:26px;border-radius:7px;margin-left:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:'+(((typeof d.portfolioPriority==='number'?d.portfolioPriority:0)>0)?'#e0c15a':'#8a8a92')+';cursor:pointer;font-size:13px',
           _pin:()=>this.setDeckField(d.id,'portfolioPriority',((typeof d.portfolioPriority==='number'?d.portfolioPriority:0)>0)?0:5),
           _dec:()=>this.setDeckField(d.id,'targetCopies',Math.max(0,tc-1)),
-          _inc:()=>this.setDeckField(d.id,'targetCopies',Math.min(10,tc+1)) }; });
+          _inc:()=>this.setDeckField(d.id,'targetCopies',Math.min(10,tc+1)),
+          simActive:st.advSimPriority===d.id, simLabel:st.advSimPriority===d.id?this.t('simActive'):this.t('simPrioritize'),
+          _sim:()=>this.setState({advSimPriority:st.advSimPriority===d.id?null:d.id}) }; });
+      V.adv.simActive=!!st.advSimPriority;
+      V.adv.simBannerLabel=this.t('simBanner');
+      V.adv.confirmLabel=this.t('simConfirm'); V.adv.resetLabel=this.t('simReset');
+      V.adv._confirmSim=()=>{ if(st.advSimPriority){ this.setDeckField(st.advSimPriority,'portfolioPriority',5); this.setState({advSimPriority:null}); this.showToast(this.t('activeDeckSet')); } };
+      V.adv._resetSim=()=>this.setState({advSimPriority:null});
+      V.adv.hasMissingWish=(P.purchasesToUnlockNext||[]).length>0;
+      V.adv.wishLabel=this.t('addMissingWish');
+      V.adv._addWish=()=>{ const w={...(st.wishlist||{})}; let n=0; for(const p of (P.purchasesToUnlockNext||[])){ const c=cardForKey(p.card); if(c){ w[c.card_id]=1; n++; } } this.setState({wishlist:w},()=>this.saveLocal()); this.showToast(this.t('addMissingWish')+' ('+n+')'); };
       V.colCard=this.t('colCard'); V.colPrice=this.t('colPrice'); V.sharedCardsTitle=this.t('sharedCardsTitle');
     }
 
@@ -2985,6 +3066,10 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
           {label:this.t('winRate'),value:wr===null?'—':wr+'%',color:this.wrColor(wr||0)},
           {label:this.t('games'),value:ms.length,color:'#f3f3f5'},
         ];
+        { const H=this.deckHealth(deck); const scoreColor=H.score>=80?'#5fd07f':H.score>=50?'#e6c15a':'#ff7a86';
+          V.dd.health={ score:H.score, scoreColor, inkablePct:H.inkablePct, avgCost:H.avgCost,
+            warnings:H.warnings.map(w=>this.t('dh_'+w)), hasWarnings:H.warnings.length>0, ok:H.warnings.length===0,
+            title:this.t('deckHealthTitle'), inkableLabel:this.t('inkablePctLabel'), avgLabel:this.t('avgCostLabel'), okLabel:this.t('deckHealthOk') }; }
         const buckets=[0,0,0,0,0,0,0,0]; const bseg=[{},{},{},{},{},{},{},{}]; const inkTot={};
         for(const e of entries){ const cost=Math.min(7,Math.max(0,(typeof e.card.ink_cost==='number'?e.card.ink_cost:0))); buckets[cost]+=e.count; const inks=this.inkList(e.card); const key=inks.length?inks[0]:'—'; bseg[cost][key]=(bseg[cost][key]||0)+e.count; inkTot[key]=(inkTot[key]||0)+e.count; }
         const bmax=Math.max(1,...buckets);
