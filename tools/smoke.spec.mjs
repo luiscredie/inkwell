@@ -23,7 +23,7 @@ test.beforeEach(async ({ page }) => {
         name: 'Smoke Deck',
         colors: ['Sapphire'],
         format: 'core',
-        cards: { 'LOR9-45': 4 },
+        cards: {},
         notes: '',
         targetCopies: 1,
         portfolioPriority: 0,
@@ -75,29 +75,38 @@ test.describe('Inkwell release smoke', () => {
     await expect(edit).toBeVisible();
     await edit.click();
 
-    const maxedRow = page.locator(
-      '[data-testid="deck-list-row"][data-count="4"]'
-    ).first();
-    await expect(maxedRow).toBeVisible();
-    const maxedName = (await maxedRow.locator(
-      '[data-testid="deck-list-name"]'
-    ).innerText()).trim();
-
     const range = page.locator('[data-testid="builder-range"]');
     await expect(range).toBeVisible();
     await expect(range).toHaveText(/\d+–\d+ \/ \d+/);
 
-    await page.locator('[data-testid="builder-search"]').fill(maxedName);
-    const invalidCard = page.locator(
-      '[data-testid="builder-card"][data-invalid="true"]'
+    // Build the copy-limit state from a card the current production dataset
+    // declares legal for this deck. This avoids coupling the smoke fixture to a
+    // specific printing or to future Core rotation changes.
+    const candidate = page.locator(
+      '[data-testid="builder-card"][data-invalid="false"]'
     ).first();
+    await expect(candidate).toBeVisible();
+    const candidateId = await candidate.getAttribute('data-card-id');
+    expect(candidateId).toBeTruthy();
+
+    const invalidCard = page.locator(
+      `[data-testid="builder-card"][data-card-id="${candidateId}"]`
+    );
+    const cardCount = invalidCard.locator('[data-testid="builder-card-count"]');
+    const total = page.locator('[data-testid="deck-total"]');
+    await expect(cardCount).toHaveText('0');
+
+    for (let copies = 1; copies <= 4; copies += 1) {
+      await invalidCard.locator('[data-testid="builder-add"]').click();
+      await expect(cardCount).toHaveText(String(copies));
+    }
+
+    await expect(invalidCard).toHaveAttribute('data-invalid', 'true');
     await expect(invalidCard).toBeVisible();
     await expect(invalidCard.locator(
       '[data-testid="builder-invalid-warning"]'
     )).toBeVisible();
 
-    const cardCount = invalidCard.locator('[data-testid="builder-card-count"]');
-    const total = page.locator('[data-testid="deck-total"]');
     const countBefore = (await cardCount.innerText()).trim();
     const totalBefore = (await total.innerText()).trim();
 
