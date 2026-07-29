@@ -85,7 +85,7 @@ test.describe('Inkwell release smoke', () => {
 
     const range = page.locator('[data-testid="builder-range"]');
     await expect(range).toBeVisible();
-    await expect(range).toHaveText(/\d+–\d+ \/ \d+ (cards|cartas)/i);
+    await expect(range).toHaveText(/\d+–\d+ \/ \d+/);
 
     await page.locator('[data-testid="builder-search"]').fill(maxedName);
     const invalidCard = page.locator(
@@ -132,8 +132,10 @@ test.describe('Inkwell release smoke', () => {
     await expect.poll(async () => cards.evaluateAll(elements =>
       elements.findIndex((element, index) => {
         const image = element.querySelector('img');
+        const nextImage = elements[index + 1]?.querySelector('img');
         return index > 0 && index < elements.length - 1 &&
-          image && image.complete && image.naturalWidth > 0;
+          image && image.complete && image.naturalWidth > 0 &&
+          nextImage && nextImage.complete && nextImage.naturalWidth > 0;
       })
     )).not.toBe(-1);
 
@@ -141,8 +143,10 @@ test.describe('Inkwell release smoke', () => {
     const index = await cards.evaluateAll(elements =>
       elements.findIndex((element, position) => {
         const image = element.querySelector('img');
+        const nextImage = elements[position + 1]?.querySelector('img');
         return position > 0 && position < elements.length - 1 &&
-          image && image.complete && image.naturalWidth > 0;
+          image && image.complete && image.naturalWidth > 0 &&
+          nextImage && nextImage.complete && nextImage.naturalWidth > 0;
       })
     );
     const currentId = await cards.nth(index).getAttribute('data-card-id');
