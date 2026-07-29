@@ -71,6 +71,10 @@ test.describe('Inkwell release smoke', () => {
     await expect(deckCard).toBeVisible();
     await deckCard.click();
 
+    const edit = page.locator('[data-testid="deck-edit-toggle"]');
+    await expect(edit).toBeVisible();
+    await edit.click();
+
     const maxedRow = page.locator(
       '[data-testid="deck-list-row"][data-count="4"]'
     ).first();
@@ -78,10 +82,6 @@ test.describe('Inkwell release smoke', () => {
     const maxedName = (await maxedRow.locator(
       '[data-testid="deck-list-name"]'
     ).innerText()).trim();
-
-    const edit = page.locator('[data-testid="deck-edit-toggle"]');
-    await expect(edit).toBeVisible();
-    await edit.click();
 
     const range = page.locator('[data-testid="builder-range"]');
     await expect(range).toBeVisible();
@@ -117,6 +117,14 @@ test.describe('Inkwell release smoke', () => {
     await expect(sort).toBeVisible();
     await sort.selectOption('setnum');
     await expect(sort).toHaveValue('setnum');
+
+    // Collection defaults to Owned. The seeded smoke profile intentionally owns
+    // one card, so switch to All before testing cross-card modal navigation.
+    const allMode = page.locator(
+      '[data-testid="collection-sort"] + div button'
+    ).filter({ hasText: /^(All|Todos)$/ }).first();
+    await expect(allMode).toBeVisible();
+    await allMode.click();
 
     const cards = page.locator('[data-testid="collection-card"]');
     expect(await cards.count()).toBeGreaterThan(2);
