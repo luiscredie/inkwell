@@ -1,95 +1,12 @@
-INKWELL 1.5.1 RECONCILED RELEASE OVERLAY
+M1.6.1 — Player Trust Hotfix (code-only delta on da786668 + Visual Replay v2)
 
-CANONICAL FILES
-site/index.html
-Inkwell.dc.html
-site/support.js
-site/match-center-engine.js
+CHANGED:
+  site/index.html   +cardByName() prototype method (fixes replay TypeError); +10 portfolio i18n keys + chrome keys (buy/wantOwn/type labels/owned/all/close) EN+PT; Advisor: removed duplicate deckStatus render, fixed have field, buy-list now uses canonical purchasesToUnlockNext + Shared Cards block (sharedConflicts).
+  Inkwell.dc.html   byte-identical mirror.
+  tools/i18n-contract.test.mjs   NEW — enumerates this.t() keys, fails on any EN/PT gap or raw-key render.
+  tools/visual-replay.test.mjs   canonical (now runs; 11/11 with cardByName defined).
+  package.json      +test:i18n, +test:replay, test:all includes both.
 
-TOOLS / TESTS
-tools/validate-release.mjs
-tools/validate.test.mjs
-tools/validate_release.py
-tools/validate_card_art.py
-tools/test_validate_release.py
-tools/test_card_art_validator.py
-tools/ligalorcana_price_agent_daily_v4.py
-tools/test_ligalorcana_price_agent_daily_v4.py
-tools/imgfallback.test.mjs
-tools/ui-contract.test.mjs
-tools/price-movers.test.mjs
-tools/deck-allocation.test.mjs
-tools/match-center.test.mjs
-tools/match-center-r3.test.mjs
-tools/match-center-legacy-core.test.cjs
-tools/legality.test.mjs
-tools/smoke.spec.mjs
-tools/SMOKE.md
-tools/fixtures/contract.json
-tools/refine_cards_pt.py
-tools/test_refine_cards_pt.py
-tools/refresh_data_manifest.py
-tools/test_refresh_data_manifest.py
-
-DATA SNAPSHOT
-site/data-manifest.json
-site/data/cards.json
-site/data/cards.pt.json
-site/data/prices.json
-site/data/price-history.json
-site/data/aliases.json
-site/data/validation-report.json
-
-AUTOMATION
-.github/workflows/validate.yml
-.github/workflows/deploy-pages.yml
-package.json
-package-lock.json
-playwright.config.mjs
-
-DOCUMENTATION
-M1P_HANDOFF.md
-FILES_CHANGED.txt
-RECONCILIATION_REVIEW.md
-USER_ACTIONS_AT_RETURN.md
-ROADMAP.md
-LEGALITY_CONTRACT.md
-PT_TRANSLATION_GUIDE.md
-translation-report.json
-FINAL_RELEASE_INSTRUCTIONS.md
-
-RECONCILIATION FIXES
-- restored missing tools/validate-release.mjs
-- activeDeckId restored by local profile load
-- activeDeckId restored by full import
-- activeDeckId and learnDone restored by cloud pull
-- invalid/deleted active deck IDs normalized
-- duplicate delMatch implementation removed
-- match deletion retains replay/timer cleanup
-- regression checks added
-- stale handoff/test counts corrected
-- Pages deployment now uploads site/ as the artifact root after green CI
-- roadmap reconciled with live 2026-07-28 data and post-release work
-- legality ported without the delta's unrelated Replay/regressions
-- invalid deck imports blocked before persistence
-- PT-BR overlay integrated with a regenerated matching manifest
-- deterministic Playwright profile no longer depends on public user data
-
-EXECUTED
-- JavaScript complete matrix: PASS
-- legality engine: 25/25 PASS
-- Python unit matrix: 26/26 PASS
-- mirror byte comparison: PASS
-- final packaged data validation: PASS (card-art tree excluded)
-
-NOT EXECUTED
-- Playwright browser smoke
-- production validate_release.py --root site
-
-EXCLUDED
-site/lorcana-card-images/**
-site/users/**
-node_modules/**
-
-No deploy or push was performed.
-site/ remains the deployment root.
+EXECUTED (sandbox JS): parse OK; i18n-contract PASS (252 keys, EN=PT=297, 0 raw); visual-replay 11/11.
+NOT EXECUTED (no runner): Python unittest suites, validate_release.py --root site, Playwright smoke.
+Decks sourced only from active user's state.decks. No generated data touched. No deploy/push.

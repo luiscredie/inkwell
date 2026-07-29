@@ -687,27 +687,29 @@
             <sc-if value="{{ adv.hasShort }}" hint-placeholder-val="{{ false }}">
               <div style="border-radius:16px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);overflow:hidden;margin-bottom:20px">
                 <div style="display:grid;grid-template-columns:1fr 70px 90px 60px;gap:10px;padding:12px 18px;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#7c7c85;border-bottom:1px solid rgba(255,255,255,.06);font-weight:600">
-                  <span>{{ colCard }}</span><span style="text-align:center">Buy</span><span style="text-align:right">{{ colPrice }}</span><span></span>
+                  <span>{{ colCard }}</span><span style="text-align:center">{{ buyLabel }}</span><span style="text-align:right">{{ colPrice }}</span><span></span>
                 </div>
                 <sc-for list="{{ adv.short }}" as="r" hint-placeholder-count="4">
                   <div style="display:grid;grid-template-columns:1fr 70px 90px 60px;gap:10px;align-items:center;padding:11px 18px;border-bottom:1px solid rgba(255,255,255,.04)">
-                    <span style="min-width:0"><span style="display:block;font-size:13px;color:#e8e8ec;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.name }}</span><span style="font-size:11px;color:#7c7c85">want {{ r.need }} · own {{ r.have }}</span></span>
+                    <span style="min-width:0"><span style="display:block;font-size:13px;color:#e8e8ec;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.name }}</span><span style="font-size:11px;color:#7c7c85">{{ r.wantOwn }}</span></span>
                     <span style="text-align:center;font-family:'JetBrains Mono';font-weight:700;color:#ff9aa4">+{{ r.buy }}</span>
                     <span style="text-align:right;font-family:'JetBrains Mono';font-size:13px">{{ r.cost }}</span>
-                    <a href="{{ r.liga }}" target="_blank" rel="noopener" style="text-align:right;font-size:12px;color:#8ab4ff">Buy ↗</a>
+                    <a href="{{ r.liga }}" target="_blank" rel="noopener" style="text-align:right;font-size:12px;color:#8ab4ff">{{ buyExt }}</a>
                   </div>
                 </sc-for>
               </div>
             </sc-if>
-            <div style="display:flex;flex-direction:column;gap:8px">
-              <sc-for list="{{ adv.deckStatus }}" as="d" hint-placeholder-count="2">
-                <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)">
-                  <span style="font-size:15px">{{ d.mark }}</span>
-                  <span style="flex:1;min-width:0;font-weight:600;font-size:14px">{{ d.name }}</span>
-                  <span style="font-size:12.5px;color:{{ d.color }};font-family:'JetBrains Mono'">{{ d.label }}</span>
-                </div>
-              </sc-for>
-            </div>
+            <sc-if value="{{ adv.hasConflicts }}" hint-placeholder-val="{{ false }}">
+              <div style="border-radius:16px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);overflow:hidden;margin-bottom:8px">
+                <div style="padding:11px 18px;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#7c7c85;border-bottom:1px solid rgba(255,255,255,.06);font-weight:600">{{ sharedCardsTitle }}</div>
+                <sc-for list="{{ adv.conflicts }}" as="cf" hint-placeholder-count="2">
+                  <div style="padding:11px 18px;border-bottom:1px solid rgba(255,255,255,.04)">
+                    <div style="display:flex;justify-content:space-between;gap:10px"><span style="font-size:13px;color:#e8e8ec;font-weight:600">{{ cf.name }}</span><span style="font-size:12px;color:#a8a8b0;font-family:'JetBrains Mono'">{{ cf.have }} / {{ cf.demanded }}</span></div>
+                    <div style="font-size:11.5px;color:#7c7c85;margin-top:3px">{{ cf.decks }} · {{ cf.decision }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
           </sc-if>
 
           <sc-if value="{{ advIsEach }}" hint-placeholder-val="{{ false }}">
@@ -808,6 +810,7 @@
                     <button onClick="{{ mc._replayPrev }}" aria-label="{{ mcReplayPrev }}" disabled="{{ mc.detail.atStart }}" style="{{ mc.replayButtonStyle }}">‹</button>
                     <button data-testid="replay-play" onClick="{{ mc._replayToggle }}" aria-label="{{ mcReplayPlay }}" style="{{ mc.replayPlayStyle }}">{{ mc.detail.playIcon }}</button>
                     <button onClick="{{ mc._replayNext }}" aria-label="{{ mcReplayNext }}" disabled="{{ mc.detail.atEnd }}" style="{{ mc.replayButtonStyle }}">›</button>
+                    <button data-testid="replay-fullscreen" onClick="{{ mc.detail._fullscreen }}" aria-label="{{ mc.detail.fullscreenLabel }}" style="{{ mc.replayButtonStyle }}">⛶</button>
                   </div>
                   <div style="font-size:10.5px;color:#6f6f78;margin-top:8px">{{ mcReplayLimit }}</div>
                 </div>
@@ -1508,6 +1511,74 @@
     </div>
   </sc-if>
 
+  <sc-if value="{{ replayFullOpen }}" hint-placeholder-val="{{ false }}">
+    <div data-testid="replay-fullscreen-overlay" style="position:fixed;inset:0;z-index:140;background:#0a0810;display:flex;flex-direction:column;animation:ink-fade .2s both">
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 20px;border-bottom:1px solid rgba(255,255,255,.08)">
+        <span style="font-family:'Bricolage Grotesque';font-weight:800;font-size:15px">{{ rf.title }}</span>
+        <span style="font-size:12px;color:#8a8a92;font-family:'JetBrains Mono'">{{ rf.progress }}</span>
+        <span style="flex:1"></span>
+        <button onClick="{{ rf._close }}" aria-label="Close" style="background:rgba(255,255,255,.08);border:none;color:#e8e8ec;width:34px;height:34px;border-radius:9px;cursor:pointer;font-size:16px">×</button>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;min-height:0;position:relative">
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-start;gap:8px;padding:12px 24px;background:linear-gradient(180deg,rgba(120,90,160,.34),rgba(90,70,130,.14))">
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="font-family:'Bricolage Grotesque';font-weight:800;font-size:34px;min-width:44px;text-align:center">{{ rf.oppLore }}</span>
+            <div><div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#c8bcda">{{ mcOpponent }}</div><div style="font-size:10.5px;color:#a99ec4;font-family:'JetBrains Mono';margin-top:2px">◈ {{ rf.oppInkExert }}/{{ rf.oppInk }} · ✋ {{ rf.oppHandCount }}</div></div>
+          </div>
+          <div style="display:flex;gap:4px;min-height:38px;align-items:flex-start">
+            <sc-for list="{{ rf.oppHand }}" as="h" hint-placeholder-count="4">
+              <div style="width:28px;aspect-ratio:734/1024;border-radius:4px;overflow:hidden;background:{{ h.ink }};opacity:.92">{{ h.imgEl }}</div>
+            </sc-for>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;min-height:92px;align-content:flex-start">
+            <sc-for list="{{ rf.opp }}" as="c" hint-placeholder-count="3">
+              <div style="position:relative;width:62px">
+                <div style="width:62px;aspect-ratio:734/1024;border-radius:8px;overflow:hidden;background:{{ c.ink }};box-shadow:0 4px 14px rgba(0,0,0,.5);transition:transform .2s;{{ c.tileStyle }}">{{ c.imgEl }}</div>
+                <sc-if value="{{ c.drying }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:3px;left:3px;font-size:8px;padding:1px 4px;border-radius:4px;background:rgba(0,0,0,.7);color:#9be6ff">💧</span></sc-if>
+                <sc-if value="{{ c.damage }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:3px;right:3px;font-size:9px;font-weight:700;padding:1px 5px;border-radius:5px;background:#e23b4e;color:#fff">-{{ c.damage }}</span></sc-if>
+                <div style="display:flex;flex-wrap:wrap;gap:2px;margin-top:2px"><sc-for list="{{ c.mods }}" as="md"><span style="font-size:7.5px;padding:1px 3px;border-radius:3px;background:{{ md.bg }};color:{{ md.color }}">{{ md.label }}</span></sc-for></div>
+              </div>
+            </sc-for>
+            <sc-if value="{{ rf.oppEmpty }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:#9a8fb0;align-self:center">—</span></sc-if>
+          </div>
+        </div>
+        <div style="padding:8px 24px;background:#0e0b16;border-top:1px solid rgba(255,255,255,.08);border-bottom:1px solid rgba(255,255,255,.08);text-align:center">
+          <span style="font-family:'JetBrains Mono';font-size:13px;color:#e8e8ec">{{ rf.eventText }}</span>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:8px;padding:12px 24px;background:linear-gradient(180deg,rgba(200,160,90,.16),rgba(170,130,70,.1))">
+          <div style="display:flex;flex-wrap:wrap;gap:8px;min-height:92px;align-content:flex-end">
+            <sc-for list="{{ rf.you }}" as="c" hint-placeholder-count="3">
+              <div style="position:relative;width:62px">
+                <div style="width:62px;aspect-ratio:734/1024;border-radius:8px;overflow:hidden;background:{{ c.ink }};box-shadow:0 4px 14px rgba(0,0,0,.5);transition:transform .2s;{{ c.tileStyle }}">{{ c.imgEl }}</div>
+                <sc-if value="{{ c.drying }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:3px;left:3px;font-size:8px;padding:1px 4px;border-radius:4px;background:rgba(0,0,0,.7);color:#9be6ff">💧</span></sc-if>
+                <sc-if value="{{ c.damage }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:3px;right:3px;font-size:9px;font-weight:700;padding:1px 5px;border-radius:5px;background:#e23b4e;color:#fff">-{{ c.damage }}</span></sc-if>
+                <div style="display:flex;flex-wrap:wrap;gap:2px;margin-top:2px"><sc-for list="{{ c.mods }}" as="md"><span style="font-size:7.5px;padding:1px 3px;border-radius:3px;background:{{ md.bg }};color:{{ md.color }}">{{ md.label }}</span></sc-for></div>
+              </div>
+            </sc-for>
+            <sc-if value="{{ rf.youEmpty }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:#c0a878;align-self:center">—</span></sc-if>
+          </div>
+          <div style="display:flex;gap:4px;min-height:38px;align-items:flex-end">
+            <sc-for list="{{ rf.youHand }}" as="h" hint-placeholder-count="4">
+              <div style="width:34px;aspect-ratio:734/1024;border-radius:5px;overflow:hidden;background:{{ h.ink }};box-shadow:0 2px 8px rgba(0,0,0,.4)">{{ h.imgEl }}</div>
+            </sc-for>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="font-family:'Bricolage Grotesque';font-weight:800;font-size:34px;min-width:44px;text-align:center">{{ rf.youLore }}</span>
+            <div><div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#d8c49a">{{ mcYou }}</div><div style="font-size:10.5px;color:#c0a878;font-family:'JetBrains Mono';margin-top:2px">◈ {{ rf.youInkExert }}/{{ rf.youInk }} · ✋ {{ rf.youHandCount }}</div></div>
+          </div>
+        </div>
+        <sc-if value="{{ rf.showVictory }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;background:rgba(5,5,8,.4)"><span style="font-family:'Cinzel Decorative',serif;font-weight:900;font-size:64px;color:{{ rf.victoryColor }};text-shadow:0 6px 30px rgba(0,0,0,.7)">{{ rf.victoryText }}</span></div>
+        </sc-if>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 20px;border-top:1px solid rgba(255,255,255,.08)">
+        <button onClick="{{ rf._prev }}" disabled="{{ rf.atStart }}" style="width:40px;height:38px;border-radius:9px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#ddd;cursor:pointer;font-size:16px">‹</button>
+        <button onClick="{{ rf._toggle }}" style="min-width:52px;height:38px;border-radius:9px;background:linear-gradient(180deg,#f4dd9a,#c79a44);border:none;color:#2a2118;font-weight:800;cursor:pointer;font-size:15px">{{ rf.playIcon }}</button>
+        <button onClick="{{ rf._next }}" disabled="{{ rf.atEnd }}" style="width:40px;height:38px;border-radius:9px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#ddd;cursor:pointer;font-size:16px">›</button>
+      </div>
+    </div>
+  </sc-if>
+
   <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
     <div data-testid="toast" style="position:fixed;bottom:28px;left:50%;transform:translateX(-50%);z-index:200;padding:12px 22px;border-radius:13px;background:#1c1c22;border:1px solid rgba(255,255,255,.14);box-shadow:0 12px 40px rgba(0,0,0,.5);font-size:14px;font-weight:500;animation:ink-pop .25s both">{{ toast }}</div>
   </sc-if>
@@ -1522,7 +1593,7 @@ class Component extends DCLogic {
     priceOwnedOnly: true,
     selectedCard: null, selectedDeck: null,
     deckEdit: false, deckSearch: '', logMatchOpen: false, matchResult: 'win', matchInks: [], matchLogDeck: null,
-    matchRaw: '', matchParsed: null, matchDuplicateConfirm: false, selectedMatch: null, replayIndex: 0, replayPlaying: false, matchResultFilter: 'all', matchDateFilter: 'all',
+    matchRaw: '', matchParsed: null, matchDuplicateConfirm: false, selectedMatch: null, replayIndex: 0, replayPlaying: false, replayFull: false, matchResultFilter: 'all', matchDateFilter: 'all',
     bInks: [], bCost: 'all', bSets: [], bSetMenu: false, bSort: 'cost-asc', bGroup: 'none', bSize: 5, bOwnedOnly: false, bPage: 0,
     newDeckOpen: false, newDeckName: '', newDeckInks: [], newDeckFmt: 'core',
     importDeckOpen: false, importDeckName: '', importDeckText: '', importDeckFmt: 'core',
@@ -1560,9 +1631,10 @@ class Component extends DCLogic {
       kpiReady:'Ready to Play', kpiNear:'{n} near complete', kpiNoDecks:'No decks yet', kpiMatchAct:'Match Activity', kpiNoGames:'No games logged', kpiCollProg:'Collection Progress', emptyDash:'—',
       moversTitle:'Price Movers', gainersTitle:'Biggest Gainers', losersTitle:'Biggest Losers', noMovers:'No movers in this period', moversNoHistory:'Not enough price history yet — check back after the next price update.', perLatest:'Latest', finishNormal:'normal', finishFoil:'foil', viewMore:'View more', viewLess:'View less',
       logGame:'+ Log game', viewAllMatches:'View all matches', win:'Win', loss:'Loss', vsInks:'vs inks:', saveGame:'Save game', gameLogged:'Game logged', needDeckFirst:'Create a deck first',
-      mcDeckFilter:'Filter by deck', mcResultFilter:'Filter by result', mcDateFilter:'Filter by date', mcAllResults:'All results', mcAllDates:'All dates', mcLast7:'Last 7 days', mcLast30:'Last 30 days', mcImportTitle:'Import game log', mcChooseDeck:'Choose a saved deck', mcRawPlaceholder:'Paste the raw game log…', mcParseLog:'Parse log', mcSavedDeckHint:'Uses the selected deck saved in your profile.', mcPreviewLabel:'Review before saving', mcDuplicate:'This log matches a saved game from this deck.', mcSaveImported:'Save imported match', mcCancel:'Cancel', mcManualToggle:'No log? Record a manual result', mcMatchDetail:'Match detail', mcCloseDetail:'Close match detail', mcCondition:'Condition', mcPlanScore:'Plan score', mcReplay:'Event replay', mcReplayReset:'Reset replay', mcReplayPrev:'Previous event', mcReplayPlay:'Play or pause replay', mcReplayNext:'Next event', mcReplayLimit:'Timeline replays logged events and lore; it does not reconstruct unknown board state.', mcNoReplay:'This manual match has no replay timeline.', mcImported:'Imported log', mcManual:'Manual', mcEngineMissing:'Match parser is unavailable', mcParseFailed:'Could not parse this log', mcDuplicateConfirm:'Duplicate found — click save again to confirm.',
+      mcReplayFullscreen:'Fullscreen replay',mcOpponent:'Opponent',mcYou:'You', mcDeckFilter:'Filter by deck', mcResultFilter:'Filter by result', mcDateFilter:'Filter by date', mcAllResults:'All results', mcAllDates:'All dates', mcLast7:'Last 7 days', mcLast30:'Last 30 days', mcImportTitle:'Import game log', mcChooseDeck:'Choose a saved deck', mcRawPlaceholder:'Paste the raw game log…', mcParseLog:'Parse log', mcSavedDeckHint:'Uses the selected deck saved in your profile.', mcPreviewLabel:'Review before saving', mcDuplicate:'This log matches a saved game from this deck.', mcSaveImported:'Save imported match', mcCancel:'Cancel', mcManualToggle:'No log? Record a manual result', mcMatchDetail:'Match detail', mcCloseDetail:'Close match detail', mcCondition:'Condition', mcPlanScore:'Plan score', mcReplay:'Event replay', mcReplayReset:'Reset replay', mcReplayPrev:'Previous event', mcReplayPlay:'Play or pause replay', mcReplayNext:'Next event', mcReplayLimit:'Timeline replays logged events and lore; it does not reconstruct unknown board state.', mcNoReplay:'This manual match has no replay timeline.', mcImported:'Imported log', mcManual:'Manual', mcEngineMissing:'Match parser is unavailable', mcParseFailed:'Could not parse this log', mcDuplicateConfirm:'Duplicate found — click save again to confirm.',
       nowPlaying:'Now Playing', legality:'Legality', last10:'Last 10', switchDeck:'Switch deck:', stSetup:'Setup needed', stIllegal:'Legality issue', stMissing:'Missing cards', stReady:'Ready to play', stPlay:'In rotation', na_finishDeck:'Finish deck', na_fixLegality:'Fix legality', na_viewMissing:'View missing cards', na_logFirst:'Log first match', na_review:'Review / log match', setActive:'Set as active', activeDeck:'✓ Active deck',
-      advisorBtn:'Deck Advisor', advisorSub:'Can you build your decks from your collection?', advAll:'All at once', advEach:'One at a time', advEachNote:'Each deck built on its own, drawing from your full collection (rebuild between events).', advNoDecks:'Add some decks first, then the advisor can plan your copies.', advAllOk:'All decks buildable at once', advAllShort:'{n} extra copies needed', advAllOkSub:'Your {n} decks share no card beyond what you own — sleeve them all simultaneously.', advAllShortSub:'Buy these to have every deck fully built at the same time — {v} total.', advBuildable:'buildable together', advBlocked:'shares copies', advComplete:'100% owned', advNeedN:'need {n} more',
+      advisorBtn:'Deck Advisor', advisorSub:'Can you build your decks from your collection?',
+      activeDeckSet:'Active deck set', optimizedPlan:'Optimized Plan', recommendedPlan:'Recommended Plan', physicalCopies:'Physical copies', pinPriority:'Pin priority', portfolioAllOk:'All requested decks are buildable at once.', portfolioExcluded:'Excluded from plan', portfolioHead:'{b} of {n} decks buildable at once', portfolioMissing:'{n} cards short across the portfolio', portfolioNofM:'{a} of {b} buildable', buyLabel:'Buy', buyExt:'Buy ↗', wantOwn:'want {want} · own {own}', sharedCardsTitle:'Shared cards', typeCharacters:'Characters', typeActions:'Actions', typeSongs:'Songs', typeItems:'Items', typeLocations:'Locations', typeOther:'Other', ownedFilter:'✓ Owned', allFilter:'All', allSetsFilter:'All sets', closeLabel:'Close', advAll:'All at once', advEach:'One at a time', advEachNote:'Each deck built on its own, drawing from your full collection (rebuild between events).', advNoDecks:'Add some decks first, then the advisor can plan your copies.', advAllOk:'All decks buildable at once', advAllShort:'{n} extra copies needed', advAllOkSub:'Your {n} decks share no card beyond what you own — sleeve them all simultaneously.', advAllShortSub:'Buy these to have every deck fully built at the same time — {v} total.', advBuildable:'buildable together', advBlocked:'shares copies', advComplete:'100% owned', advNeedN:'need {n} more',
       missingCards:"Cards you're missing", ownEvery:'You own every card ✓', decklist:'Decklist', matchHistory:'Match History', logGame:'Log game', editCards:'Edit cards', doneEditing:'Done editing', delete:'Delete', manaCurve:'Mana Curve', cardTypes:'Card Types', raritySpread:'Rarity Spread',
       totalLore:'Total Lore', deckValue:'Deck Value', winRate:'Win Rate', games:'Games', inCollection:'In Collection',
       importBtn:'↑ Import', newDeckBtn:'+ New Deck', allDecks:'All decks', allDecksBack:'‹ All decks', cards2:'Cards', tournamentLegal:'Tournament legal', cardsOf60:'{n}/60 cards', noNotes:'No notes yet.', logGameBtn:'Log game', deleteBtn:'Delete', addCards:'Add cards', searchCardsPh:'Search cards by name…', size:'Size', perRow:'{n} / row', noGamesLogged:'No games logged yet.', clickPlus:'Click + on cards to add them.', copiesToComplete:'{n} copies · {v} to complete', need:'need', buy:'Buy ↗', haveOf:'have {h} of {c}',
@@ -1592,9 +1664,10 @@ class Component extends DCLogic {
       kpiReady:'Pronto para Jogar', kpiNear:'{n} quase completos', kpiNoDecks:'Nenhum deck ainda', kpiMatchAct:'Atividade de Partidas', kpiNoGames:'Nenhuma partida', kpiCollProg:'Progresso da Coleção', emptyDash:'—',
       moversTitle:'Maiores Variações', gainersTitle:'Maiores Altas', losersTitle:'Maiores Quedas', noMovers:'Sem variações neste período', moversNoHistory:'Ainda não há histórico suficiente — volte após a próxima atualização de preços.', perLatest:'Última', finishNormal:'normal', finishFoil:'foil', viewMore:'Ver mais', viewLess:'Ver menos',
       logGame:'+ Registrar partida', viewAllMatches:'Ver todas as partidas', win:'Vitória', loss:'Derrota', vsInks:'vs inks:', saveGame:'Salvar partida', gameLogged:'Partida registrada', needDeckFirst:'Crie um deck primeiro',
-      mcDeckFilter:'Filtrar por deck', mcResultFilter:'Filtrar por resultado', mcDateFilter:'Filtrar por data', mcAllResults:'Todos os resultados', mcAllDates:'Todas as datas', mcLast7:'Últimos 7 dias', mcLast30:'Últimos 30 dias', mcImportTitle:'Importar log da partida', mcChooseDeck:'Escolha um deck salvo', mcRawPlaceholder:'Cole o log bruto da partida…', mcParseLog:'Analisar log', mcSavedDeckHint:'Usa o deck selecionado salvo no seu perfil.', mcPreviewLabel:'Revise antes de salvar', mcDuplicate:'Este log corresponde a uma partida já salva neste deck.', mcSaveImported:'Salvar partida importada', mcCancel:'Cancelar', mcManualToggle:'Sem log? Registre um resultado manual', mcMatchDetail:'Detalhes da partida', mcCloseDetail:'Fechar detalhes da partida', mcCondition:'Condição', mcPlanScore:'Aderência ao plano', mcReplay:'Replay de eventos', mcReplayReset:'Reiniciar replay', mcReplayPrev:'Evento anterior', mcReplayPlay:'Reproduzir ou pausar', mcReplayNext:'Próximo evento', mcReplayLimit:'A timeline reproduz eventos e lore registrados; não reconstrói estados desconhecidos da mesa.', mcNoReplay:'Esta partida manual não possui timeline.', mcImported:'Log importado', mcManual:'Manual', mcEngineMissing:'O analisador de partidas não está disponível', mcParseFailed:'Não foi possível analisar este log', mcDuplicateConfirm:'Duplicata encontrada — clique novamente para confirmar.',
+      mcReplayFullscreen:'Replay em tela cheia',mcOpponent:'Oponente',mcYou:'Você', mcDeckFilter:'Filtrar por deck', mcResultFilter:'Filtrar por resultado', mcDateFilter:'Filtrar por data', mcAllResults:'Todos os resultados', mcAllDates:'Todas as datas', mcLast7:'Últimos 7 dias', mcLast30:'Últimos 30 dias', mcImportTitle:'Importar log da partida', mcChooseDeck:'Escolha um deck salvo', mcRawPlaceholder:'Cole o log bruto da partida…', mcParseLog:'Analisar log', mcSavedDeckHint:'Usa o deck selecionado salvo no seu perfil.', mcPreviewLabel:'Revise antes de salvar', mcDuplicate:'Este log corresponde a uma partida já salva neste deck.', mcSaveImported:'Salvar partida importada', mcCancel:'Cancelar', mcManualToggle:'Sem log? Registre um resultado manual', mcMatchDetail:'Detalhes da partida', mcCloseDetail:'Fechar detalhes da partida', mcCondition:'Condição', mcPlanScore:'Aderência ao plano', mcReplay:'Replay de eventos', mcReplayReset:'Reiniciar replay', mcReplayPrev:'Evento anterior', mcReplayPlay:'Reproduzir ou pausar', mcReplayNext:'Próximo evento', mcReplayLimit:'A timeline reproduz eventos e lore registrados; não reconstrói estados desconhecidos da mesa.', mcNoReplay:'Esta partida manual não possui timeline.', mcImported:'Log importado', mcManual:'Manual', mcEngineMissing:'O analisador de partidas não está disponível', mcParseFailed:'Não foi possível analisar este log', mcDuplicateConfirm:'Duplicata encontrada — clique novamente para confirmar.',
       nowPlaying:'Jogando Agora', legality:'Legalidade', last10:'Últimas 10', switchDeck:'Trocar deck:', stSetup:'Precisa montar', stIllegal:'Problema de legalidade', stMissing:'Faltam cartas', stReady:'Pronto para jogar', stPlay:'Em rotação', na_finishDeck:'Terminar deck', na_fixLegality:'Corrigir legalidade', na_viewMissing:'Ver cartas que faltam', na_logFirst:'Registrar 1ª partida', na_review:'Revisar / registrar', setActive:'Definir como ativo', activeDeck:'✓ Deck ativo',
-      advisorBtn:'Consultor de Decks', advisorSub:'Você consegue montar seus decks com sua coleção?', advAll:'Todos ao mesmo tempo', advEach:'Um de cada vez', advEachNote:'Cada deck montado sozinho, usando sua coleção inteira (remontando entre eventos).', advNoDecks:'Adicione decks primeiro para o consultor planejar suas cópias.', advAllOk:'Todos os decks montáveis ao mesmo tempo', advAllShort:'{n} cópias extras necessárias', advAllOkSub:'Seus {n} decks não dividem cartas além do que você tem — monte todos ao mesmo tempo.', advAllShortSub:'Compre estas para ter todos os decks montados simultaneamente — {v} no total.', advBuildable:'montável junto', advBlocked:'divide cópias', advComplete:'100% na coleção', advNeedN:'faltam {n}',
+      advisorBtn:'Consultor de Decks', advisorSub:'Você consegue montar seus decks com sua coleção?',
+      activeDeckSet:'Deck ativo definido', optimizedPlan:'Plano otimizado', recommendedPlan:'Plano recomendado', physicalCopies:'Cópias físicas', pinPriority:'Fixar prioridade', portfolioAllOk:'Todos os decks solicitados são montáveis ao mesmo tempo.', portfolioExcluded:'Excluído do plano', portfolioHead:'{b} de {n} decks montáveis ao mesmo tempo', portfolioMissing:'Faltam {n} cartas no portfólio', portfolioNofM:'{a} de {b} montáveis', buyLabel:'Comprar', buyExt:'Comprar ↗', wantOwn:'quer {want} · tem {own}', sharedCardsTitle:'Cartas compartilhadas', typeCharacters:'Personagens', typeActions:'Ações', typeSongs:'Canções', typeItems:'Itens', typeLocations:'Locais', typeOther:'Outros', ownedFilter:'✓ Possuídas', allFilter:'Todas', allSetsFilter:'Todos os sets', closeLabel:'Fechar', advAll:'Todos ao mesmo tempo', advEach:'Um de cada vez', advEachNote:'Cada deck montado sozinho, usando sua coleção inteira (remontando entre eventos).', advNoDecks:'Adicione decks primeiro para o consultor planejar suas cópias.', advAllOk:'Todos os decks montáveis ao mesmo tempo', advAllShort:'{n} cópias extras necessárias', advAllOkSub:'Seus {n} decks não dividem cartas além do que você tem — monte todos ao mesmo tempo.', advAllShortSub:'Compre estas para ter todos os decks montados simultaneamente — {v} no total.', advBuildable:'montável junto', advBlocked:'divide cópias', advComplete:'100% na coleção', advNeedN:'faltam {n}',
       missingCards:'Cartas que faltam', ownEvery:'Você tem todas as cartas ✓', decklist:'Decklist', matchHistory:'Histórico de Partidas', logGame:'Registrar', editCards:'Editar cartas', doneEditing:'Concluir', delete:'Excluir', manaCurve:'Curva de Mana', cardTypes:'Tipos de Carta', raritySpread:'Raridades',
       totalLore:'Lore Total', deckValue:'Valor do Deck', winRate:'Vitórias', games:'Jogos', inCollection:'Na Coleção',
       importBtn:'↑ Importar', newDeckBtn:'+ Novo Deck', allDecks:'Todos os decks', allDecksBack:'‹ Todos os decks', cards2:'Cartas', tournamentLegal:'Legal para torneio', cardsOf60:'{n}/60 cartas', noNotes:'Sem notas ainda.', logGameBtn:'Registrar jogo', deleteBtn:'Excluir', addCards:'Adicionar cartas', searchCardsPh:'Buscar cartas por nome…', size:'Tamanho', perRow:'{n} / linha', noGamesLogged:'Nenhum jogo registrado ainda.', clickPlus:'Clique + nas cartas para adicioná-las.', copiesToComplete:'{n} cópias · {v} para completar', need:'faltam', buy:'Comprar ↗', haveOf:'tem {h} de {c}',
@@ -2378,6 +2451,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
   triggerImport = ()=>{ if(this._imp) this._imp.click(); };
   nameKey(n){ return String(n||'').toLowerCase().replace(/\s*\(.*?\)\s*/g,'').trim(); }
   buildNameIndex(){ if(this._byName) return; this._byName={}; for(const c of this.cards){ const k=this.nameKey(c.name_en); (this._byName[k]=this._byName[k]||[]).push(c); } }
+  cardByName(n){ this.buildNameIndex(); const a=this._byName[this.nameKey(n)]; return (a&&a[0])||null; }
   aliasKey(n){ return String(n||'').toLowerCase().replace(/\([^)]*\)/g,' ').replace(/[^a-z0-9]+/g,' ').trim(); }
   buildAliasIndex(){ if(this._aliasIdx!==undefined) return; this._aliasIdx=null; const a=this.aliases; const map=a&&a.aliases; if(!map||typeof map!=='object') return; this._aliasIdx={}; for(const k in map){ const ids=map[k]; const id=Array.isArray(ids)?ids[0]:ids; if(id) this._aliasIdx[this.aliasKey(k)]=Array.isArray(ids)?ids:[ids]; } }
   resolveCsvCard(setNum, cardNum, name){
@@ -2463,6 +2537,43 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     this.setState({matches:[...this.state.matches,m],matchParsed:null,matchRaw:'',matchDuplicateConfirm:false,selectedMatch:m.id,logMatchOpen:false,replayIndex:0,replayPlaying:false},()=>{this.saveLocal();this.showToast(this.t('gameLogged'));});
   };
   stopReplayTimer(){ if(this._replayTimer){ clearInterval(this._replayTimer); this._replayTimer=null; } }
+  replayFullOpen = ()=>this.setState({replayFull:true});
+  replayFullClose = ()=>{ this.stopReplayTimer(); this.setState({replayFull:false,replayPlaying:false}); };
+  cardKeywordMods(name){ const c=this.cardByName(name); if(!c||!Array.isArray(c.abilities)) return []; return c.abilities.filter(a=>a.type==='keyword').map(a=>({label:(a.name||'')+(a.parameter?(' '+a.parameter):'')})); }
+  youPlayerOf(match){
+    if(match && (match.youPlayer===1||match.youPlayer===2)) return match.youPlayer;
+    const deck=match&&this.deckById(match.deck_id); const raw=match&&(match.raw_log||match.raw); if(!deck||!raw) return 1;
+    const deckNames=new Set(Object.keys(deck.cards||{}).map(id=>this.byId[id]&&this.nameKey(this.byId[id].name_en)).filter(Boolean));
+    const score={1:0,2:0}; const re=/^Player (\d) (?:played|added|drew) (.+?)(?: \(cost| to ink|$)/gm; let m;
+    while(m=re.exec(raw)){ const k=this.nameKey(m[2]); if(deckNames.has(k)) score[+m[1]]++; }
+    return score[2]>score[1]?2:1;
+  }
+  simulateReplay(events, idx){
+    const S={1:{hand:[],inkTotal:0,inkExert:0,lore:0,board:[]},2:{hand:[],inkTotal:0,inkExert:0,lore:0,board:[]}};
+    let active=null;
+    const findChar=(p,n)=>{ n=n.trim(); for(const q of[p,p===1?2:1]){ const f=S[q].board.find(x=>x.name===n); if(f) return f; } return null; };
+    const rmHand=(p,n)=>{ n=n.trim(); const i=S[p].hand.indexOf(n); if(i>=0) S[p].hand.splice(i,1); };
+    const isBoard=(n)=>{ const c=this.cardByName(n); if(!c) return true; return ['Character','Location','Item'].includes(c.card_type); };
+    const splitList=(s)=>s.split(/,(?![^(]*\))/).map(x=>x.trim()).filter(Boolean);
+    for(let i=0;i<=idx && i<events.length;i++){ const t=(events[i]&&events[i].text)||''; let m;
+      if(m=t.match(/^Player (\d)'s starting hand: (.+)$/)){ S[+m[1]].hand=splitList(m[2]); continue; }
+      if(m=t.match(/^Player (\d) mulliganed \d+ cards?: (.+?)\. Drew: (.+)$/)){ const p=+m[1]; for(const n of splitList(m[2])) rmHand(p,n); S[p].hand=S[p].hand.concat(splitList(m[3])); continue; }
+      if(m=t.match(/^Player (\d)'s turn begins$/)){ active=+m[1]; S[active].inkExert=0; for(const ch of S[active].board){ ch.exerted=false; ch.drying=false; } continue; }
+      if(m=t.match(/^Player (\d) drew (\d+) cards?: (.+)$/)){ S[+m[1]].hand=S[+m[1]].hand.concat(splitList(m[3])); continue; }
+      if(m=t.match(/^Player (\d) drew (.+)$/)){ const p=+m[1], n=m[2].trim(); S[p].hand.push(/^a card$/.test(n)?'?':n); continue; }
+      if(m=t.match(/^Player (\d) added (.+?) to ink$/)){ const p=+m[1]; rmHand(p,m[2]); S[p].inkTotal++; continue; }
+      if(m=t.match(/^Player (\d) played (.+?) \(cost (\d+)/)){ const p=+m[1], n=m[2].trim(), cost=+m[3]; rmHand(p,n); S[p].inkExert=Math.min(S[p].inkTotal,S[p].inkExert+cost); if(isBoard(n)&&!findChar(p,n)) S[p].board.push({name:n,drying:true,exerted:false,damage:0,mods:this.cardKeywordMods(n)}); continue; }
+      if(m=t.match(/^Player (\d) shifted (.+?) onto (.+?) \(/)){ const p=+m[1]; rmHand(p,m[2]); const base=findChar(p,m[3]); if(base){ base.name=m[2].trim(); base.drying=false; base.mods=this.cardKeywordMods(m[2]); } else S[p].board.push({name:m[2].trim(),drying:false,exerted:false,damage:0,mods:this.cardKeywordMods(m[2])}); continue; }
+      if(m=t.match(/^Player (\d) quested with (.+?) \(/)){ const ch=findChar(+m[1],m[2]); if(ch) ch.exerted=true; const lm=t.match(/(\d+) -> (\d+)/); if(lm) S[+m[1]].lore=+lm[2]; continue; }
+      if(m=t.match(/^Player (\d) (?:challenged .+ with|sang .+ with) (.+?)(?: \||$)/)){ const ch=findChar(+m[1],m[2].replace(/ \|.*$/,'')); if(ch) ch.exerted=true; }
+      if(m=t.match(/dealt (\d+) dmg to (.+?) \(/)){ const ch=findChar(1,m[2]); if(ch) ch.damage+=+m[1]; }
+      if(m=t.match(/took (\d+) dmg/)){ const cm=t.match(/challenged .+ with (.+?) \|/); if(cm){ const ch=findChar(1,cm[1]); if(ch) ch.damage+=+m[1]; } }
+      if(m=t.match(/^(.+?) was banished$/)){ const n=m[1].trim(); for(const q of[1,2]){ const i2=S[q].board.findIndex(x=>x.name===n); if(i2>=0){ S[q].board.splice(i2,1); break; } } }
+      const lm=t.match(/\[LORE\][^\d]*?(\d+) -> (\d+)/); if(lm){ const pm=t.match(/^Player (\d)/); const p=pm?+pm[1]:active; if(p) S[p].lore=+lm[2]; }
+    }
+    for(const p of[1,2]) for(const ch of S[p].board) ch.mods=(ch.mods||[]).map(md=>({label:md.label,active:p===active}));
+    return {S, active};
+  }
   openMatch = (id)=>{ this.stopReplayTimer(); this.setState({selectedMatch:id,replayIndex:0,replayPlaying:false}); };
   closeMatch = ()=>{ this.stopReplayTimer(); this.setState({selectedMatch:null,replayIndex:0,replayPlaying:false}); };
   replayStep = (delta)=>{
@@ -2605,7 +2716,23 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       const preview=p?{title:(p.outcome_code==='W'?this.t('win'):this.t('loss'))+' · '+p.myLore+'–'+p.oppLore,meta:((this.deckById(p.deck_id)||{}).name||'—')+' · '+(p.archetype||'?'),score:p.planScore?(p.planScore.score+' · '+p.planScore.label):'—',scoreColor:p.planScore&&p.planScore.score>=80?'#5fd07f':p.planScore&&p.planScore.score>=50?'#e6c15a':'#ff7a86',condition:(pcond&&pcond.primary)||'—',summary:(p.coach&&p.coach.summary)||'',duplicate:!!p.isDuplicateOfId}:null;
       const selected=this.selectedMatchObj(); let detail=null;
       if(selected){ const d=this.deckById(selected.deck_id), ev=selected.replay&&Array.isArray(selected.replay.events)?selected.replay.events:[], idx=Math.max(0,Math.min(ev.length-1,st.replayIndex||0)), e=ev[idx]||null, cond=selected.result==='win'?selected.winCondition:selected.lossCondition, ps=selected.planScore;
-        detail={title:(d?d.name:'—')+' · '+(selected.result==='win'?this.t('win'):this.t('loss')),meta:(selected.date||'')+' · vs '+((selected.opponent_inks||[]).join('/')||selected.archetype||'?'),condition:(cond&&cond.primary)||'—',score:ps?(ps.score+' · '+ps.label):'—',scoreColor:ps&&ps.score>=80?'#5fd07f':ps&&ps.score>=50?'#e6c15a':'#ff7a86',summary:(selected.coach&&selected.coach.summary)||selected.notes||'',hasReplay:ev.length>0,noReplay:!ev.length,progress:ev.length?((idx+1)+' / '+ev.length):'',eventMeta:e?('T'+e.turn+' · '+e.type+(e.player?' · P'+e.player:'')):'',eventText:e?e.text:'',lore:e?('Lore · P1 '+e.lore[1]+' · P2 '+e.lore[2]):'',atStart:idx<=0,atEnd:idx>=ev.length-1,playIcon:st.replayPlaying?'Ⅱ':'▶'}; }
+        detail={title:(d?d.name:'—')+' · '+(selected.result==='win'?this.t('win'):this.t('loss')),meta:(selected.date||'')+' · vs '+((selected.opponent_inks||[]).join('/')||selected.archetype||'?'),condition:(cond&&cond.primary)||'—',score:ps?(ps.score+' · '+ps.label):'—',scoreColor:ps&&ps.score>=80?'#5fd07f':ps&&ps.score>=50?'#e6c15a':'#ff7a86',summary:(selected.coach&&selected.coach.summary)||selected.notes||'',hasReplay:ev.length>0,noReplay:!ev.length,progress:ev.length?((idx+1)+' / '+ev.length):'',eventMeta:e?('T'+e.turn+' · '+e.type+(e.player?' · P'+e.player:'')):'',eventText:e?e.text:'',lore:e?('Lore · P1 '+e.lore[1]+' · P2 '+e.lore[2]):'',atStart:idx<=0,atEnd:idx>=ev.length-1,playIcon:st.replayPlaying?'Ⅱ':'▶',_fullscreen:this.replayFullOpen,fullscreenLabel:this.t('mcReplayFullscreen')}; }
+      // ---- Visual Replay v2 fullscreen board (identity-scoped, exact_board_state:false) ----
+      V.replayFullOpen=st.replayFull && !!selected && (selected.replay&&Array.isArray(selected.replay.events)?selected.replay.events.length:0)>0;
+      V.mcReplayFullscreen=this.t('mcReplayFullscreen'); V.mcOpponent=this.t('mcOpponent'); V.mcYou=this.t('mcYou');
+      if(V.replayFullOpen){ const ev2=selected.replay.events, idx2=Math.max(0,Math.min(ev2.length-1,st.replayIndex||0)), d2=this.deckById(selected.deck_id);
+        const e2=ev2[idx2]||{}; const yp=this.youPlayerOf(selected), op=yp===1?2:1;
+        const sim=this.simulateReplay(ev2, idx2); const SS=sim.S;
+        const hl=(name)=>e2.text&&e2.text.indexOf(name)>=0;
+        const tile=(ch)=>{ const name=ch.name; const card=this.cardByName(name); const cv=card?this.cardView(card):null; return { name, ink:cv?cv.ink:'#2a2a30', tileStyle:(ch.exerted?'transform:rotate(90deg) scale(.82);':'')+(hl(name)?'box-shadow:0 0 0 2px #e0c15a;':''), exerted:!!ch.exerted, drying:!!ch.drying, damage:ch.damage||0, mods:(ch.mods||[]).map(md=>({label:md.label, bg:md.active?'rgba(224,193,90,.22)':'rgba(255,255,255,.06)', color:md.active?'#e0c15a':'#7c7c85'})), imgEl: cv&&cv._local ? React.createElement('img',{key:name,src:cv._local,'data-local':cv._local,'data-remote':cv._remote,'data-cid':card.card_id,onError:window.imgError,onLoad:window.imgLoad,style:{width:'100%',height:'100%',objectFit:'cover',display:'block'}}) : React.createElement('div',{style:{padding:'4px',fontSize:'8px',color:'#fff',lineHeight:1.1}}, name) }; };
+        const handTile=(name)=>{ if(name==='?') return {ink:'#1a1622', imgEl:React.createElement('div',{style:{width:'100%',height:'100%',background:'repeating-linear-gradient(135deg,#231a33,#231a33 4px,#2e2340 4px,#2e2340 8px)'}})}; const card=this.cardByName(name); const cv=card?this.cardView(card):null; return { name, ink:cv?cv.ink:'#2a2a30', imgEl: cv&&cv._local ? React.createElement('img',{key:name,src:cv._local,'data-local':cv._local,'data-remote':cv._remote,'data-cid':card.card_id,onError:window.imgError,onLoad:window.imgLoad,style:{width:'100%',height:'100%',objectFit:'cover',display:'block'}}) : React.createElement('div',{style:{padding:'3px',fontSize:'7px',color:'#fff',lineHeight:1.1}}, name) }; };
+        const won=selected.result==='win';
+        V.rf={ title:(d2?d2.name:'—'), progress:(idx2+1)+' / '+ev2.length, _close:this.replayFullClose, _prev:()=>this.replayStep(-1), _next:()=>this.replayStep(1), _toggle:this.replayToggle, playIcon:st.replayPlaying?'Ⅱ':'▶', atStart:idx2<=0, atEnd:idx2>=ev2.length-1,
+          oppLore:SS[op].lore, oppInk:SS[op].inkTotal, oppInkExert:SS[op].inkExert, youLore:SS[yp].lore, youInk:SS[yp].inkTotal, youInkExert:SS[yp].inkExert,
+          opp:SS[op].board.map(tile), you:SS[yp].board.map(tile), oppEmpty:SS[op].board.length===0, youEmpty:SS[yp].board.length===0,
+          oppHand:SS[op].hand.map(handTile), youHand:SS[yp].hand.map(handTile), oppHandCount:SS[op].hand.length, youHandCount:SS[yp].hand.length,
+          eventText:e2.text||'', showVictory:idx2>=ev2.length-1, victoryText:won?this.t('win').toUpperCase():this.t('loss').toUpperCase(), victoryColor:won?'#e0c15a':'#ff8a96' };
+      }
       V.mc={total:rows.length,wr:wr==null?'—':wr+'%',wrColor:this.wrColor(wr||0),record:rows.length?(w10+'–'+(last10.length-w10)):'—',
         filter:f,_onFilter:(e)=>{this.stopReplayTimer();this.setState({matchFilter:e.target.value,selectedMatch:null,replayPlaying:false});},
         resultFilter:rf,_onResultFilter:(e)=>{this.stopReplayTimer();this.setState({matchResultFilter:e.target.value,selectedMatch:null,replayPlaying:false});},
@@ -2798,11 +2925,8 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       const pDecks=(st.decks||[]).map(d=>({id:d.id, targetCopies:(typeof d.targetCopies==='number'?d.targetCopies:1), priority:(typeof d.portfolioPriority==='number'?d.portfolioPriority:0), needs:this.deckNeeds(d)}));
       const P=Component.computeDeckPortfolioPlan(inv, pDecks, {budget:200000});
       const nameById={}; for(const d of st.decks) nameById[d.id]=d.name;
-      // buy-to-unlock: cheapest missing across not-yet-built instances (first unmet instance per deck)
-      const buy={};
-      for(const d of st.decks){ const pd=P.perDeck[d.id]; if(!pd) continue; const firstMiss=(pd.missingByInstance||[])[0]; if(!firstMiss) continue; for(const k in firstMiss){ buy[k]=(buy[k]||0)+firstMiss[k]; } }
       const keyToCard={}; for(const c of this.cards){ const k=this.nameKey(c.name_en); if(!keyToCard[k]||this.priceOr0(c)<this.priceOr0(keyToCard[k])) keyToCard[k]=c; }
-      const buyRows=Object.keys(buy).map(k=>{ const c=keyToCard[k]; return {name:c?c.name_en:k, buy:buy[k], unit:c?this.priceOr0(c):0, id:c?c.card_id:null}; }).sort((a,b)=>b.buy-a.buy||b.unit-a.unit).slice(0,12);
+      const cardForKey=(k)=>keyToCard[k]||null;
       V.adv={};
       V.adv.optimal=P.optimal; V.adv.planLabel=P.optimal?this.t('optimizedPlan'):this.t('recommendedPlan');
       const allBuilt=P.decksBuildable>=P.decksRequested && P.decksRequested>0;
@@ -2812,8 +2936,14 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       V.adv.headColor=allBuilt?'#5fd07f':'#e6c15a';
       V.adv.headline=this.t('portfolioHead',{b:P.decksBuildable,n:P.decksRequested});
       V.adv.subline=P.missingUnits>0?this.t('portfolioMissing',{n:P.missingUnits}):this.t('portfolioAllOk');
-      V.adv.hasShort=buyRows.length>0;
-      V.adv.short=buyRows.map(r=>({name:r.name, need:r.buy, have:'', buy:r.buy, cost:this.fmt(r.buy*r.unit), liga:r.id?this.ligaUrl(this.byId[r.id]):''}));
+      // Purchases: use the optimizer's canonical purchasesToUnlockNext (no separate recompose).
+      const purch=(P.purchasesToUnlockNext||[]);
+      V.adv.hasShort=purch.length>0;
+      V.adv.nextDeckName=P.nextBestDeck?(nameById[P.nextBestDeck]||''):'';
+      V.adv.short=purch.map(p=>{ const c=cardForKey(p.card); const unit=c?this.priceOr0(c):0; const own=(this.portfolioInventory()[p.card]||0); return {name:c?c.name_en:p.card, need:p.count, buy:p.count, wantOwn:this.t('wantOwn',{want:p.count,own:own}), cost:this.fmt(p.count*unit), liga:c?this.ligaUrl(c):''}; });
+      // Shared conflicts: cards demanded by 2+ decks beyond inventory, with allocation + decision.
+      V.adv.hasConflicts=(P.sharedConflicts||[]).length>0;
+      V.adv.conflicts=(P.sharedConflicts||[]).map(sc=>{ const c=cardForKey(sc.card); const deckNames=Object.keys(sc.decks||{}).map(id=>nameById[id]||id); const allocEntries=(P.allocations||[]).filter(a=>{ const pd=P.perDeck[a.deckId]; return pd; }); return { name:c?c.name_en:sc.card, have:sc.have, demanded:sc.demanded, decks:deckNames.join(', '), decision:this.t('portfolioMissing',{n:Math.max(0,sc.demanded-sc.have)}) }; });
       V.adv.deckStatus=st.decks.map(d=>{ const pd=P.perDeck[d.id]; const tc=(typeof d.targetCopies==='number'?d.targetCopies:1);
         const built=pd?pd.built:0; const ok=pd?pd.buildable:false; const excl=tc===0;
         return { name:d.name, mark:excl?'—':(ok?'✅':(built>0?'🟡':'🔴')), color:excl?'#6f6f78':(ok?'#5fd07f':'#e6c15a'),
@@ -2823,7 +2953,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
           _pin:()=>this.setDeckField(d.id,'portfolioPriority',((typeof d.portfolioPriority==='number'?d.portfolioPriority:0)>0)?0:5),
           _dec:()=>this.setDeckField(d.id,'targetCopies',Math.max(0,tc-1)),
           _inc:()=>this.setDeckField(d.id,'targetCopies',Math.min(10,tc+1)) }; });
-      V.colCard=this.t('colCard'); V.colPrice=this.t('colPrice');
+      V.colCard=this.t('colCard'); V.colPrice=this.t('colPrice'); V.sharedCardsTitle=this.t('sharedCardsTitle');
     }
 
     // ---- DECK DETAIL ----
@@ -2941,11 +3071,11 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
           size:st.bSize, sizeLabel:st.bSize+' / row', onSize:(e)=>this.setState({bSize:+e.target.value}), gridCols:`repeat(${st.bSize},1fr)`,
           inkChips:this.INK_ORDER.map(ink=>({label:ink,iconEl:this.inkIconEl(ink,22),_toggle:()=>{this.toggleArr('bInks',ink);this.setState({bPage:0});},_style:this.chipStyleSm(st.bInks.includes(ink),this.INK[ink])})),
           costChips:[['all','All'],['0','0'],['1','1'],['2','2'],['3','3'],['4','4'],['5','5'],['6','6'],['7','7'],['8','8'],['9','9'],['10','10+']].map(([v,label])=>({label,_toggle:()=>this.setState({bCost:v,page:0,bPage:0}),_style:this.chipStyleSm(st.bCost===v)})),
-          setLabel:st.bSets.length?(st.bSets.length+' sets'):'All sets', setMenu:st.bSetMenu, toggleSetMenu:()=>this.setState({bSetMenu:!st.bSetMenu}), clearSets:()=>this.setState({bSets:[]}),
+          setLabel:st.bSets.length?(st.bSets.length+' sets'):this.t('allSetsFilter'), setMenu:st.bSetMenu, toggleSetMenu:()=>this.setState({bSetMenu:!st.bSetMenu}), clearSets:()=>this.setState({bSets:[]}),
           setOptions:setsPresent.map(o=>({name:o.name,check:st.bSets.includes(o.code)?'✓':'',checkBg:st.bSets.includes(o.code)?'#b79bff':'transparent',_toggle:()=>{this.toggleArr('bSets',o.code);this.setState({bPage:0});}})),
           sort:st.bSort, onSort:(e)=>this.setState({bSort:e.target.value,bPage:0}),
           group:st.bGroup, onGroup:(e)=>this.setState({bGroup:e.target.value,bPage:0}),
-          ownedLabel:st.bOwnedOnly?'✓ Owned':'All', ownedStyle:this.chipStyleSm(st.bOwnedOnly), toggleOwned:()=>this.setState({bOwnedOnly:!st.bOwnedOnly,bPage:0}),
+          ownedLabel:st.bOwnedOnly?this.t('ownedFilter'):this.t('allFilter'), ownedStyle:this.chipStyleSm(st.bOwnedOnly), toggleOwned:()=>this.setState({bOwnedOnly:!st.bOwnedOnly,bPage:0}),
           count:pool.length, groups, empty:capped.length===0, rangeFrom:rangeFrom, rangeTo:rangeTo, rangeTotal:bTotal, page:bPage+1, pages:bPages, hasPager:bPages>1, prevPage:()=>this.setState({bPage:Math.max(0,bPage-1)}), nextPage:()=>this.setState({bPage:Math.min(bPages-1,bPage+1)}),
         };
         // match log — canonical workflow lives in Matches; deck detail links there preselected
