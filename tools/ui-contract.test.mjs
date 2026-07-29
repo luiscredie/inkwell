@@ -4,10 +4,11 @@
 import { readFile } from 'node:fs/promises';
 
 const read = relative => readFile(new URL(relative, import.meta.url), 'utf8');
-const [html, smoke, workflow, packageText] = await Promise.all([
+const [html, smoke, workflow, deployWorkflow, packageText] = await Promise.all([
   read('../site/index.html'),
   read('./smoke.spec.mjs'),
   read('../.github/workflows/validate.yml'),
+  read('../.github/workflows/deploy-pages.yml'),
   read('../package.json'),
 ]);
 const packageJson = JSON.parse(packageText);
@@ -74,7 +75,7 @@ check(
 check(
   'all deck add paths validate copy limits before mutation',
   html.includes('validForDeck(card, deck, forAdd=false)') &&
-    html.includes("reason:'Copy limit reached ('+limit+' across reprints)'") &&
+    html.includes("fail('COPY_LIMIT','Copy limit reached ('+limit+' across reprints)'") &&
     html.includes('validForDeck(card,deck,true)') &&
     html.includes('_inc:()=>this.tryAddToDeck(e.card,deck)') &&
     html.includes('const v=this.validForDeck(c,deck,true)')
@@ -88,6 +89,14 @@ check(
   'workflow validates and serves site as the deploy root',
   workflow.includes('validate_release.py --root site --quick') &&
     workflow.includes('(cd site && python3 -m http.server 8080 &)')
+);
+check(
+  'Pages deploy waits for green CI and publishes site as the artifact root',
+  deployWorkflow.includes('workflows: ["Inkwell release checks"]') &&
+    deployWorkflow.includes("github.event.workflow_run.conclusion == 'success'") &&
+    deployWorkflow.includes('uses: actions/upload-pages-artifact@v3') &&
+    deployWorkflow.includes('path: site') &&
+    deployWorkflow.includes('test ! -f index.html')
 );
 check(
   'browser smoke contains no conditional existence skips',
@@ -138,6 +147,31 @@ check(
 );
 check('browser smoke covers Overview order and price movers', smoke.includes('kpi-ready') && smoke.includes('collection-value') && smoke.includes('price-movers'));
 check('Player Home consumes the portfolio optimizer (not independent readiness)', html.includes('Component.computeDeckPortfolioPlan(invH, pDecksH') && html.includes('buildable=PH.decksBuildable'));
+check(
+  'activeDeckId loads, imports, and syncs with the profile',
+  html.includes('activeDeckId:m.activeDeckId||null') &&
+    html.includes('activeDeckId:j.activeDeckId||null') &&
+    html.includes('activeDeckId:this.state.activeDeckId||null') &&
+    html.includes('learnDone:m.learnDone, activeDeckId:m.activeDeckId||null')
+);
+check(
+  'activeDeckId is normalized when its deck is missing or deleted',
+  html.includes("!d.decks.some(dk=>dk.id===d.activeDeckId)") &&
+    html.includes("this.state.activeDeckId===id?((decks[0]||{}).id||null)")
+);
+check(
+  'Match deletion has one cleanup-aware implementation',
+  html.split('delMatch(id){').length - 1 === 1 &&
+    html.includes('if(this.state.selectedMatch===id) this.closeMatch()')
+);
+check(
+  'legality uses structured issues and blocks invalid imports before save',
+  html.includes("add('MAX_INKS'") &&
+    html.includes('issues:[{code:') &&
+    html.includes('const blockers=this.importBlockers(deck)') &&
+    html.indexOf('const blockers=this.importBlockers(deck)') <
+      html.indexOf('this.setState({decks:[...st.decks,deck]', html.indexOf('importDeck = ()=>'))
+);
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);

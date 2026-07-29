@@ -1,26 +1,90 @@
-# M1P Handoff (final reconciliation)
+# M1P-R final handoff — reconciled review build
 
-Canonical entry: site/index.html (mirror Inkwell.dc.html, byte-identical, 284774 bytes). No deploy/push. Generated data never edited by code.
+Canonical entry: `site/index.html`. `Inkwell.dc.html` is a byte-identical
+working mirror. `site/` remains the only deploy root.
 
-## Checkpoint status
-- A Overview player-first + Price Movers: CODE DONE. Release BLOCKED on external data.
-- B Deck Portfolio Optimizer: CODE DONE. Pure Component.computeDeckPortfolioPlan(inventory,decks,{budget}). Exact branch-and-bound when instances<=12 (optimal=true, "Optimized Plan"); greedy fallback otherwise (optimal=false, "Recommended Plan"). Normal user portfolios (<=12 physical instances) are EXACT; fallback triggers above 12 instances or >200000 ops.
-- C Match Center: CODE DONE. Canonical log workflow in Matches (log form + deck selector + all/deck filter); deck detail keeps summary + Log/View-All opening Matches preselected by deck_id. Existing importer/replay/coach live in Matches deck-scoped detail; not duplicated in deck detail.
-- D Learn + Player Home: CODE DONE. 5 bilingual Learn tracks + glossary + official links; Player Home now consumes the PORTFOLIO OPTIMIZER (PH.decksBuildable / PH.nearComplete), not independent readiness. activeDeckId profile-scoped.
+## Status
 
-## User/profile persistence contract (ADDITIVE)
-- New persisted deck fields: targetCopies (0-10, default 1; 0 excludes without delete), portfolioPriority (default 0).
-- activeDeckId persisted per profile under localStorage key inkwell_activedeck_<user> (separate from user JSON).
-- Location: deck objects inside the per-profile user object (localStorage inkwell_user_<user> + Supabase row).
-- Migration migrateUser(): idempotent — sets defaults only when missing; preserves unknown fields; existing decks/profiles never reset; runs to USER_SCHEMA and stamps _schema so it does not re-run.
-- Import/export: fullExport/fullImport round-trip the new fields; importing an old profile applies defaults safely.
-- Global generated-data contract: UNCHANGED.
+- R1 release validation: complete. `tools/validate-release.mjs` is included and
+  the complete JS command runs.
+- R2 portfolio optimizer: complete. Shared inventory is not double-counted,
+  target copies and priority are persisted, and the seven explicit result
+  fields are present.
+- R3 Match Center: complete. It uses only decks saved in the active user's
+  profile. Import, deterministic coaching and event-timeline replay are
+  integrated in Matches.
+- R4 active deck persistence: complete after reconciliation. `activeDeckId`
+  loads locally, imports/exports, synchronizes remotely, migrates from the
+  legacy key and is normalized when a deck is missing/deleted.
+- R5 price movers: complete. Latest/1d/7d/30d, Normal/Foil and View more/View
+  less are present.
+- Pages deploy root: corrected by `.github/workflows/deploy-pages.yml`. It
+  publishes `site/` as the Pages artifact only after the release-check workflow
+  succeeds.
+- Legality engine: complete. Rules are data-driven, structured issues are
+  returned, hard-invalid imports are blocked before persistence, and incomplete
+  deck drafts remain allowed.
+- PT-BR overlay: integrated with its matching regenerated manifest.
 
-## Canonical tests EXECUTED here (JS, sandbox)
-ui-contract 24/24 · price-movers 12/12 · deck-allocation 18/18 · match-center 12/12 · imgfallback 7/7 · parse OK · mirror byte-identical.
+## Corrections made during independent reconciliation
 
-## NOT EXECUTED (no runner)
-node validate.test.mjs; python test_ligalorcana_price_agent_daily_v4.py (6); python test_validate_release.py (8); python test_card_art_validator.py (3); python validate_release.py --root site; Playwright smoke.
+The received ZIP was not release-ready. This build fixes:
 
-## Release blocker (external data, todo 44)
-Deployed prices.json is schema 2 but manifest declares 4, with sha256/bytes mismatch; price-history.json unchecksummed; newest snapshot 07-26. Correct deploy contract: prices.json schema 2, price-history.json schema 1, manifest declares those, checksum+bytes match, history includes 2026-07-27. Do NOT hand-edit generated files.
+1. missing `tools/validate-release.mjs`, which made `npm run test:js` and CI fail;
+2. `loadUser()` omitting persisted `activeDeckId`;
+3. full import omitting `activeDeckId`;
+4. remote reconciliation omitting `learnDone` and `activeDeckId`;
+5. deletion of the active deck leaving a stale ID;
+6. two `delMatch()` definitions, where the second silently removed replay
+   cleanup;
+7. stale test assertions and handoff counts.
+8. the legality delta's unrequested Replay code and two restored regressions
+   were rejected; only the validated legality changes were ported;
+9. the original legality test did not exercise import persistence, so the
+   import path and regression suite were completed here.
+
+## Executed against this exact build
+
+- release-contract JS: 9/9
+- image fallback: 7/7
+- UI contract: 29/29
+- price movers: 12/12
+- deck allocation: 19/19
+- Match Center base: 12/12
+- Match Center R3: 12/12
+- Match Center legacy core: 14 assertions
+- legality engine: 25/25
+- Python unit suites: 26/26
+- `site/index.html` / `Inkwell.dc.html`: byte-identical
+- final data snapshot: PASS with 3,442 cards, 3,300 priced IDs, 3
+  price-history snapshots and 3,442 PT-BR overlays
+
+## Not executed
+
+- Playwright browser smoke.
+- full card-art validation against the production image tree
+
+## Data and translation
+
+The final release package includes the coherent six-file data snapshot plus the
+revised PT-BR overlay. `site/data-manifest.json` was regenerated by the included
+tool; do not restore an older manifest after extraction.
+
+Translation evidence: 3,442 cards, 3,646 abilities, 2,679 improved texts,
+6/6 unit tests and no automatically flagged editorial findings.
+
+## Deployment-path finding
+
+At review time `/inkwell/` returned 404 while `/inkwell/site/` returned 200.
+After merging, select `Settings → Pages → Build and deployment → GitHub
+Actions` once. The new workflow will publish the contents of `site/` at
+`/inkwell/`.
+
+## Deployment verdict
+
+Code package: ready for final browser/data validation.
+
+Production data gate: clear for the final packaged snapshot.
+
+Production deploy: still waits for the Pages-source setting, green GitHub
+Actions/Playwright and full card-art validation.

@@ -16,7 +16,7 @@ ck('4 Matches hosts log form', html.includes('mc._logToggle') && html.includes('
 ck('5 saveMatch guards missing deck', html.includes("this.t('needDeckFirst')"));
 ck('6 saveMatch keeps deck_id', html.includes('deck_id:deckId'));
 ck('7 unique id (time+random)', html.includes("'m'+Date.now().toString(36)+Math.floor(Math.random()"));
-ck('8 delMatch by id only', html.includes('delMatch(id){') && html.includes('this.state.matches.filter(m=>m.id!==id)'));
+ck('8 delMatch by id only and cleans selected replay', html.split('delMatch(id){').length - 1 === 1 && html.includes('if(this.state.selectedMatch===id) this.closeMatch()') && html.includes('this.state.matches.filter(m=>m.id!==id)'));
 ck('9 matches filtered by deck_id', html.includes('all.filter(m=>m.deck_id===f)'));
 
 // Behavioral: emulate the reducer-ish operations on a match array.

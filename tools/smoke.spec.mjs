@@ -14,7 +14,27 @@ async function openView(page, label) {
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
-    localStorage.removeItem('inkwell_user_luiscredie');
+    const profile = {
+      _schema: 2,
+      display_name: 'Smoke Test',
+      collection: { 'LOR9-45': { n: 4, f: 0 } },
+      decks: [{
+        id: 'smoke-deck',
+        name: 'Smoke Deck',
+        colors: ['Sapphire'],
+        format: 'core',
+        cards: { 'LOR9-45': 4 },
+        notes: '',
+        targetCopies: 1,
+        portfolioPriority: 0,
+      }],
+      matches: [],
+      overrides: {},
+      wishlist: {},
+      learnDone: {},
+      activeDeckId: 'smoke-deck',
+    };
+    localStorage.setItem('inkwell_user_luiscredie', JSON.stringify(profile));
     localStorage.removeItem('inkwell_backup_luiscredie');
     localStorage.setItem('inkwell_active_user', 'luiscredie');
   });

@@ -1555,7 +1555,7 @@ class Component extends DCLogic {
       cardsTotal:'{n} cards total', ofInDb:'of {n} in database', shinyPulls:'shiny pulls', gamesLogged:'{n} games logged', byCopiesOwned:'by copies owned', ownedSingles:'owned singles', wr:'WR', noGamesYet:'No games logged yet.',
       character:'Character', action:'Action', song:'Song', item:'Item', location:'Location', page:'page', sortValue:'Sort: Value', sortCost:'Sort: Cost', sortName:'Sort: Name', sortRarity:'Sort: Rarity', sortLore:'Sort: Lore', sortSetNum:'Sort: Set number', prevCard:'Previous card', nextCard:'Next card',
       colCard:'Card', colOwned:'Owned', colPrice:'Price', colRange:'Range (low–high)', colFoil:'Foil', source:'source', noPrices:'no prices.json loaded', totalValue:'Total Value', cardsPriced:'Cards Priced', noPrice:'No Price', ownedOnly:'✓ Owned only', withPrice:'{n} with price',
-      archiveBuilds:'Archive your builds and dive into per-deck analytics.', createDeckTitle:'Create a deck', deckName:'Deck name', chooseInks:'Choose up to 2 inks', create:'Create', importDeckTitle:'Import a deck', importDeckHint:'Paste a list — one card per line. Colors are detected automatically.', deckNameOpt:'Deck name (optional)', noDecksTitle:'No decks yet', noDecksSub:'Create your first build to unlock analytics.', kCards:'cards', kWinRate:'win rate', kValue:'value', kOwnedPct:'% owned',
+      archiveBuilds:'Archive your builds and dive into per-deck analytics.', createDeckTitle:'Create a deck', deckName:'Deck name', chooseInks:'Choose up to {n} inks', create:'Create', importDeckTitle:'Import a deck', importDeckHint:'Paste a list — one card per line. Colors are detected automatically.', importBlocked:'Import blocked', deckNameOpt:'Deck name (optional)', noDecksTitle:'No decks yet', noDecksSub:'Create your first build to unlock analytics.', kCards:'cards', kWinRate:'win rate', kValue:'value', kOwnedPct:'% owned',
       inkDist:'Ink Distribution', mostValuable:'Most Valuable', recentGames:'Recent Games', setCompletion:'Set Completion',
       kpiReady:'Ready to Play', kpiNear:'{n} near complete', kpiNoDecks:'No decks yet', kpiMatchAct:'Match Activity', kpiNoGames:'No games logged', kpiCollProg:'Collection Progress', emptyDash:'—',
       moversTitle:'Price Movers', gainersTitle:'Biggest Gainers', losersTitle:'Biggest Losers', noMovers:'No movers in this period', moversNoHistory:'Not enough price history yet — check back after the next price update.', perLatest:'Latest', finishNormal:'normal', finishFoil:'foil', viewMore:'View more', viewLess:'View less',
@@ -1587,7 +1587,7 @@ class Component extends DCLogic {
       cardsTotal:'{n} cartas no total', ofInDb:'de {n} no banco', shinyPulls:'cartas brilhantes', gamesLogged:'{n} jogos registrados', byCopiesOwned:'por cópias que possui', ownedSingles:'cartas que possui', wr:'Vit.', noGamesYet:'Nenhum jogo registrado ainda.',
       character:'Personagem', action:'Ação', song:'Canção', item:'Item', location:'Localização', page:'página', sortValue:'Ordenar: Valor', sortCost:'Ordenar: Custo', sortName:'Ordenar: Nome', sortRarity:'Ordenar: Raridade', sortLore:'Ordenar: Lore', sortSetNum:'Ordenar: Número no set', prevCard:'Carta anterior', nextCard:'Próxima carta',
       colCard:'Carta', colOwned:'Possui', colPrice:'Preço', colRange:'Faixa (min–max)', colFoil:'Foil', source:'fonte', noPrices:'prices.json não carregado', totalValue:'Valor Total', cardsPriced:'Cartas com Preço', noPrice:'Sem Preço', ownedOnly:'✓ Só que possuo', withPrice:'{n} com preço',
-      archiveBuilds:'Arquive seus decks e veja análises detalhadas.', createDeckTitle:'Criar um deck', deckName:'Nome do deck', chooseInks:'Escolha até 2 inks', create:'Criar', importDeckTitle:'Importar um deck', importDeckHint:'Cole uma lista — uma carta por linha. As cores são detectadas automaticamente.', deckNameOpt:'Nome do deck (opcional)', noDecksTitle:'Nenhum deck ainda', noDecksSub:'Crie seu primeiro deck para desbloquear as análises.', kCards:'cartas', kWinRate:'vitórias', kValue:'valor', kOwnedPct:'% na coleção',
+      archiveBuilds:'Arquive seus decks e veja análises detalhadas.', createDeckTitle:'Criar um deck', deckName:'Nome do deck', chooseInks:'Escolha até {n} inks', create:'Criar', importDeckTitle:'Importar um deck', importDeckHint:'Cole uma lista — uma carta por linha. As cores são detectadas automaticamente.', importBlocked:'Importação bloqueada', deckNameOpt:'Nome do deck (opcional)', noDecksTitle:'Nenhum deck ainda', noDecksSub:'Crie seu primeiro deck para desbloquear as análises.', kCards:'cartas', kWinRate:'vitórias', kValue:'valor', kOwnedPct:'% na coleção',
       inkDist:'Distribuição de Ink', mostValuable:'Mais Valiosas', recentGames:'Partidas Recentes', setCompletion:'Conclusão de Sets',
       kpiReady:'Pronto para Jogar', kpiNear:'{n} quase completos', kpiNoDecks:'Nenhum deck ainda', kpiMatchAct:'Atividade de Partidas', kpiNoGames:'Nenhuma partida', kpiCollProg:'Progresso da Coleção', emptyDash:'—',
       moversTitle:'Maiores Variações', gainersTitle:'Maiores Altas', losersTitle:'Maiores Quedas', noMovers:'Sem variações neste período', moversNoHistory:'Ainda não há histórico suficiente — volte após a próxima atualização de preços.', perLatest:'Última', finishNormal:'normal', finishFoil:'foil', viewMore:'Ver mais', viewLess:'Ver menos',
@@ -1787,7 +1787,7 @@ class Component extends DCLogic {
       const remoteTs = Date.parse(remote.updated_at)||0;
       if(remoteTs > localTs){
         const m = this.migrateUser(remote.data, profile);
-        this.setState({ collection:m.collection, decks:m.decks, matches:m.matches, overrides:m.overrides, wishlist:m.wishlist }, ()=>{ try{ localStorage.setItem('inkwell_user_'+profile, JSON.stringify(this.userPayload())); }catch(e){} });
+        this.setState({ collection:m.collection, decks:m.decks, matches:m.matches, overrides:m.overrides, wishlist:m.wishlist, learnDone:m.learnDone, activeDeckId:m.activeDeckId||null }, ()=>{ try{ localStorage.setItem('inkwell_user_'+profile, JSON.stringify(this.userPayload())); }catch(e){} });
         this.showToast('Pulled latest from cloud');
       } else if(localTs > remoteTs){
         await this.pushRemote(profile);
@@ -1941,7 +1941,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     try { const s = localStorage.getItem('inkwell_user_'+id); if (s) user = JSON.parse(s); } catch(e){}
     if (!user && meta.seed) { try { const r = await fetch(meta.seed); if (r.ok) user = await r.json(); } catch(e){} }
     const m = this.migrateUser(user, id);
-    return { collection:m.collection, decks:m.decks, matches:m.matches, overrides:m.overrides, wishlist:m.wishlist, learnDone:m.learnDone, displayName: meta.name || m.display_name || id, userDataWarning:m.warning||null };
+    return { collection:m.collection, decks:m.decks, matches:m.matches, overrides:m.overrides, wishlist:m.wishlist, learnDone:m.learnDone, activeDeckId:m.activeDeckId||null, displayName: meta.name || m.display_name || id, userDataWarning:m.warning||null };
   }
 
   // ---------- M2: user-data schema versioning + migrations ----------
@@ -1970,6 +1970,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     d.learnDone = (d.learnDone && typeof d.learnDone==='object') ? d.learnDone : {};
     d.activeDeckId = (typeof d.activeDeckId==='string' && d.activeDeckId) ? d.activeDeckId : null;
     if(!d.activeDeckId){ try{ const leg=localStorage.getItem('inkwell_activedeck_'+id); if(leg) d.activeDeckId=leg; }catch(e){} }
+    if(d.activeDeckId && !d.decks.some(dk=>dk.id===d.activeDeckId)) d.activeDeckId=null;
     d.warning = warning;
     return d;
   }
@@ -1981,7 +1982,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
   saveLocal(){ try { const payload = JSON.stringify(this.userPayload()); const key='inkwell_user_'+this.state.activeUser; localStorage.setItem(key, payload); localStorage.setItem('inkwell_backup_'+this.state.activeUser, JSON.stringify({ ts:Date.now(), schema:this.USER_SCHEMA, data:payload })); this.setState({lastSaved:Date.now()}); this.recordPriceSnapshot(); this.queueSync(); } catch(e){} }
   fullExport = ()=>{ const payload={ schema:'inkwell', _schema:this.USER_SCHEMA, app_version:this.APP_VERSION, user:this.state.activeUser, display_name:this.state.displayName, exported_at:new Date().toISOString(), collection:this.state.collection, decks:this.state.decks, matches:this.state.matches, overrides:this.state.overrides, wishlist:this.state.wishlist, learnDone:this.state.learnDone, activeDeckId:this.state.activeDeckId||null }; const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='inkwell-'+this.state.activeUser+'-backup.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); this.showToast('Backup downloaded'); };
   triggerFullImport = ()=>{ if(this._fimp) this._fimp.click(); };
-  fullImport = (e)=>{ const file=e.target&&e.target.files&&e.target.files[0]; if(!file) return; const rd=new FileReader(); rd.onload=()=>{ try{ const j=this.migrateUser(JSON.parse(String(rd.result)), this.state.activeUser); this.setState({ collection:j.collection, decks:j.decks, matches:j.matches, overrides:j.overrides, wishlist:j.wishlist, learnDone:j.learnDone, dataWarning:j.warning||this.state.dataWarning }, ()=>{ this.saveLocal(); this.showToast('Backup restored'); }); }catch(err){ this.showToast('Invalid backup file'); } }; rd.readAsText(file); e.target.value=''; };
+  fullImport = (e)=>{ const file=e.target&&e.target.files&&e.target.files[0]; if(!file) return; const rd=new FileReader(); rd.onload=()=>{ try{ const j=this.migrateUser(JSON.parse(String(rd.result)), this.state.activeUser); this.setState({ collection:j.collection, decks:j.decks, matches:j.matches, overrides:j.overrides, wishlist:j.wishlist, learnDone:j.learnDone, activeDeckId:j.activeDeckId||null, dataWarning:j.warning||this.state.dataWarning }, ()=>{ this.saveLocal(); this.showToast('Backup restored'); }); }catch(err){ this.showToast('Invalid backup file'); } }; rd.readAsText(file); e.target.value=''; };
   setFimpRef = (el)=>{ this._fimp=el; };
   inkableOf(card){ if(!card) return null; const o=this.state.overrides&&this.state.overrides[card.card_id]; if(o&&typeof o.inkable==='number') return o.inkable; return (typeof card.inkable==='number')?card.inkable:null; }
   setInkable(cardId, val){ const ov={...(this.state.overrides||{})}; const card=this.byId[cardId]; if(card && card.inkable===val){ if(ov[cardId]){ delete ov[cardId].inkable; if(!Object.keys(ov[cardId]).length) delete ov[cardId]; } } else { ov[cardId]={...(ov[cardId]||{}),inkable:val}; } this.setState({overrides:ov},()=>{ this.saveLocal(); this.showToast(val===1?'Marked inkable':'Marked uninkable'); }); }
@@ -2169,20 +2170,26 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
   legalSets(fmt){ const r=this.fmtRules(fmt); return (r&&Array.isArray(r.legal_sets)&&r.legal_sets.length)?r.legal_sets:this.CORE_SETS; }
   legalityRevision(fmt){ const r=this.fmtRules(fmt); return r&&r.effective_from?r.effective_from:null; }
   minDeckSize(fmt){ const r=this.fmtRules(fmt); return (r&&r.minimum_deck_size)||60; }
+  maxInks(fmt){ const r=this.fmtRules(fmt); const n=r&&(r.maximum_ink_colors!=null?r.maximum_ink_colors:r.maximum_inks); return Number.isInteger(n)&&n>0?n:2; }
   bannedIn(card, fmt){ const r=this.fmtRules(fmt); if(!r) return false; const ids=r.banned_card_ids||[]; const names=r.banned_full_names||[]; return (card.card_id&&ids.includes(card.card_id)) || names.map(n=>String(n).toLowerCase()).includes(this.baseName(card.name_en)); }
   fmtLabel(f){ return f==='infinity'?'Infinity':'Core'; }
   legalInFormat(card, fmt){ if(fmt==='infinity'||!fmt) return true; if(this.bannedIn(card,fmt)) return false; const sets=this.legalSets(fmt); return this.printingsOf(card).some(p=>sets.includes(p.set_code)); }
-  validForDeck(card, deck, forAdd=false){ if(!card) return {ok:false,reason:'Unknown card'};
+  validForDeck(card, deck, forAdd=false){ const fail=(code,reason,id)=>({ok:false,code,reason,card_id:id||null}); if(!card) return fail('UNKNOWN_CARD','Unknown card',null);
     const inks=this.inkList(card); const colors=(deck.colors||[]).filter(Boolean);
-    if(colors.length && inks.length && !inks.every(i=>colors.includes(i))) return {ok:false,reason:'Off-color for this deck ('+inks.join('/')+')'};
-    if(!this.legalInFormat(card, deck.format)) return {ok:false,reason:'Rotated — not legal in '+this.fmtLabel(deck.format)};
+    if(colors.length && inks.length && !inks.every(i=>colors.includes(i))) return fail('OFF_COLOR','Off-color for this deck ('+inks.join('/')+')',card.card_id);
+    const usedInks=new Set(colors);
+    for(const [id,count] of Object.entries(deck.cards||{})){ if(!count) continue; const existing=this.byId[id]; if(existing) for(const ink of this.inkList(existing)) usedInks.add(ink); }
+    for(const ink of inks) usedInks.add(ink);
+    const maxI=this.maxInks(deck.format);
+    if(usedInks.size>maxI) return fail('MAX_INKS','Ink limit reached ('+usedInks.size+'; max '+maxI+')',card.card_id);
+    if(!this.legalInFormat(card, deck.format)) return fail('ROTATED','Rotated — not legal in '+this.fmtLabel(deck.format),card.card_id);
     if(forAdd){
       const name=this.nameKey(card.name_en); let copies=0;
       for(const [id,count] of Object.entries(deck.cards||{})){ const existing=this.byId[id]; if(existing&&this.nameKey(existing.name_en)===name) copies+=(count||0); }
       const limit=this.copyLimitFor(card,deck.format);
-      if(copies>=limit) return {ok:false,reason:'Copy limit reached ('+limit+' across reprints)'};
+      if(copies>=limit) return fail('COPY_LIMIT','Copy limit reached ('+limit+' across reprints)',card.card_id);
     }
-    return {ok:true,reason:''};
+    return {ok:true,code:null,reason:'',card_id:null};
   }
   copyLimitFor(card, fmt){ const r=this.fmtRules(fmt); if(r&&r.copy_limit_overrides){ const o=r.copy_limit_overrides[this.baseName(card&&card.name_en)]; if(o!=null) return o; } if(card && this.baseName(card.name_en)==='dalmatian puppy - tail wagger') return 99; return (r&&r.default_copy_limit)||4; }
   // Shared deck-readiness model — single source for Home, deck cards, deck detail.
@@ -2307,22 +2314,27 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
   setDeckField(id, field, value){ const decks=(this.state.decks||[]).map(d=>d.id===id?{...d,[field]:value}:d); this.setState({decks},()=>this.saveLocal()); }
   // Authoritative deck legality — used by badge, imports, coach, advisor.
   validateDeck(deck){
-    if(!deck) return {legal:false, total:0, reasons:['Unknown deck']};
+    if(!deck) return {legal:false,total:0,reasons:['Unknown deck'],badIds:[],issues:[{code:'UNKNOWN_DECK',message:'Unknown deck',card_id:null}]};
     const entries=this.deckEntries(deck); const total=this.deckCount(deck);
-    const colors=(deck.colors||[]).filter(Boolean); const reasons=[]; const bad=[];
+    const colors=(deck.colors||[]).filter(Boolean); const reasons=[]; const bad=[]; const issues=[];
+    const add=(code,message,card_id)=>{ reasons.push(message); if(card_id) bad.push(card_id); issues.push({code,message,card_id:card_id||null}); };
     const byName={}, repCard={};
     for(const e of entries){ const k=this.nameKey(e.card.name_en); byName[k]=(byName[k]||0)+e.count; if(!repCard[k]) repCard[k]=e.card; }
     for(const e of entries){
       const inks=this.inkList(e.card);
-      if(colors.length && inks.length && !inks.every(i=>colors.includes(i))){ reasons.push(e.card.name_en+' is off-color'); bad.push(e.card.card_id); }
-      if(!this.legalInFormat(e.card, deck.format)){ reasons.push(e.card.name_en+' is rotated'); bad.push(e.card.card_id); }
+      if(colors.length && inks.length && !inks.every(i=>colors.includes(i))) add('OFF_COLOR',e.card.name_en+' is off-color',e.card.card_id);
+      if(!this.legalInFormat(e.card, deck.format)) add('ROTATED',e.card.name_en+' is rotated',e.card.card_id);
     }
-    for(const k in byName){ const lim=this.copyLimitFor(repCard[k], deck.format); if(byName[k]>lim){ reasons.push((repCard[k]?repCard[k].name_en:k)+': '+byName[k]+' copies (max '+lim+' across reprints)'); } }
+    for(const k in byName){ const lim=this.copyLimitFor(repCard[k],deck.format); if(byName[k]>lim) add('COPY_LIMIT',(repCard[k]?repCard[k].name_en:k)+': '+byName[k]+' copies (max '+lim+' across reprints)',repCard[k]?repCard[k].card_id:null); }
     const minSz=this.minDeckSize(deck.format);
-    if(total<minSz) reasons.push(total+'/'+minSz+' cards');
+    if(total<minSz) add('MIN_SIZE',total+'/'+minSz+' cards',null);
+    const usedInks=new Set(colors); for(const e of entries){ for(const ink of this.inkList(e.card)) usedInks.add(ink); }
+    const maxI=this.maxInks(deck.format);
+    if(usedInks.size>maxI) add('MAX_INKS',usedInks.size+' inks (max '+maxI+')',null);
     const uniqReasons=[...new Set(reasons)];
-    return { legal: total>=minSz && uniqReasons.length===0, total, reasons:uniqReasons, badIds:bad };
+    return {legal:total>=minSz&&uniqReasons.length===0,total,reasons:uniqReasons,badIds:[...new Set(bad)],issues};
   }
+  importBlockers(deck){ return (this.validateDeck(deck).issues||[]).filter(i=>i.code!=='MIN_SIZE'); }
   cardTypes(c){ const t=c.card_type; if(t==='Song') return ['Action','Song']; if(t==='Action' && /song/i.test(String(c.classification||''))) return ['Action','Song']; return t?[t]:[]; }
   matchCost(cost, f){ if(f==='all') return true; if(f==='10') return cost>=10; return cost===+f; }
   baseName(n){ return String(n||'').replace(/\s*\(.*?\)\s*/g,'').trim().toLowerCase(); }
@@ -2406,7 +2418,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     if((cur.n||0)===0 && (cur.f||0)===0) delete coll[id]; else coll[id]=cur;
     this.setState({collection:coll}, ()=>this.saveLocal());
   }
-  createDeck = ()=>{ const st=this.state; if(!st.newDeckName.trim()){ this.showToast('Name your deck first'); return; } const id='deck-'+Date.now().toString(36); const deck={id,name:st.newDeckName.trim(),colors:st.newDeckInks.slice(0,2),format:st.newDeckFmt,cards:{},notes:'',created_at:new Date().toISOString().slice(0,10)}; this.setState({decks:[...st.decks,deck],newDeckOpen:false,newDeckName:'',newDeckInks:[],newDeckFmt:'core',view:'deckDetail',selectedDeck:id,deckEdit:true,bInks:deck.colors.slice(),bCost:'all',bSets:[],bGroup:'none'},()=>this.saveLocal()); };
+  createDeck = ()=>{ const st=this.state; if(!st.newDeckName.trim()){ this.showToast('Name your deck first'); return; } const id='deck-'+Date.now().toString(36); const deck={id,name:st.newDeckName.trim(),colors:st.newDeckInks.slice(0,this.maxInks(st.newDeckFmt)),format:st.newDeckFmt,cards:{},notes:'',created_at:new Date().toISOString().slice(0,10)}; this.setState({decks:[...st.decks,deck],newDeckOpen:false,newDeckName:'',newDeckInks:[],newDeckFmt:'core',view:'deckDetail',selectedDeck:id,deckEdit:true,bInks:deck.colors.slice(),bCost:'all',bSets:[],bGroup:'none'},()=>this.saveLocal()); };
   importDeck = ()=>{ const st=this.state; const text=st.importDeckText||''; if(!text.trim()){ this.showToast('Paste a decklist first'); return; }
     if(!this.byNumIdx){ this.byNumIdx={}; for(const c of this.cards) this.byNumIdx[c.set_code+'|'+String(c.card_number)]=c; }
     const cards={}; let matched=0, unresolved=0; const inkTally={};
@@ -2421,12 +2433,14 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       for(const ink of this.inkList(c)) inkTally[ink]=(inkTally[ink]||0)+qty;
     }
     if(!matched){ this.showToast('No cards matched — check the format'); return; }
-    const colors=Object.entries(inkTally).sort((a,b)=>b[1]-a[1]).slice(0,2).map(x=>x[0]);
+    const colors=Object.entries(inkTally).sort((a,b)=>b[1]-a[1]).slice(0,this.maxInks(st.importDeckFmt)).map(x=>x[0]);
     const id='deck-'+Date.now().toString(36); const name=st.importDeckName.trim()||'Imported deck';
     const deck={id,name,colors,format:st.importDeckFmt,cards,notes:'',created_at:new Date().toISOString().slice(0,10)};
+    const blockers=this.importBlockers(deck);
+    if(blockers.length){ const first=blockers[0]; this.showToast(this.t('importBlocked')+' · '+first.message+(blockers.length>1?' · +'+(blockers.length-1):'')); return; }
     this.setState({decks:[...st.decks,deck],importDeckOpen:false,importDeckName:'',importDeckText:'',importDeckFmt:'core',view:'deckDetail',selectedDeck:id,deckEdit:false},()=>{ this.saveLocal(); this.showToast('Deck imported · '+matched+' cards'+(unresolved?' · '+unresolved+' unmatched':'')); });
   };
-  deleteDeck = ()=>{ const id=this.state.selectedDeck; this.setState({decks:this.state.decks.filter(d=>d.id!==id),matches:this.state.matches.filter(m=>m.deck_id!==id),view:'decks',selectedDeck:null},()=>{this.saveLocal();this.showToast('Deck deleted');}); };
+  deleteDeck = ()=>{ const id=this.state.selectedDeck, decks=this.state.decks.filter(d=>d.id!==id); const activeDeckId=this.state.activeDeckId===id?((decks[0]||{}).id||null):this.state.activeDeckId; this.setState({decks,matches:this.state.matches.filter(m=>m.deck_id!==id),activeDeckId,view:'decks',selectedDeck:null},()=>{this.saveLocal();this.showToast('Deck deleted');}); };
   deckDelta(cardId, delta){ const decks=this.state.decks.map(d=>{ if(d.id!==this.state.selectedDeck) return d; const cards={...d.cards}; const card=this.byId[cardId]; const limit=card?this.copyLimitFor(card,d.format):4; const nv=Math.min(limit,Math.max(0,(cards[cardId]||0)+delta)); if(nv===0) delete cards[cardId]; else cards[cardId]=nv; return {...d,cards}; }); this.setState({decks},()=>this.saveLocal()); }
   matchEngine(){ return (typeof window!=='undefined'&&window.INKWELL_MATCH_LEGACY)||null; }
   selectedMatchObj(){ return (this.state.matches||[]).find(m=>m.id===this.state.selectedMatch)||null; }
@@ -2470,7 +2484,6 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
   saveMatch = ()=>{ const st=this.state; const deckId=st.matchLogDeck||st.selectedDeck||(st.matchFilter&&st.matchFilter!=='all'?st.matchFilter:null)||((st.decks[0]||{}).id); if(!deckId){ this.showToast(this.t('needDeckFirst')||'Create a deck first'); return; } const m={id:'m'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),deck_id:deckId,result:st.matchResult,opponent_inks:st.matchInks.slice(),date:new Date().toISOString().slice(0,10)}; this.setState({matches:[...st.matches,m],logMatchOpen:false,matchInks:[]},()=>{this.saveLocal();this.showToast(this.t('gameLogged')||'Game logged');}); };
   delMatch(id){ if(this.state.selectedMatch===id) this.closeMatch(); this.setState({matches:this.state.matches.filter(m=>m.id!==id)},()=>this.saveLocal()); }
   openMatches(deckId){ this.stopReplayTimer(); this.setState({view:'matches', matchFilter:deckId||'all', matchLogDeck:deckId||null, logMatchOpen:false, selectedMatch:null, replayPlaying:false}); }
-  delMatch(id){ this.setState({matches:this.state.matches.filter(m=>m.id!==id)},()=>this.saveLocal()); }
 
   toggleArr(key,val){ const a=this.state[key]; const na=a.includes(val)?a.filter(x=>x!==val):[...a,val]; this.setState({[key]:na, page:0}); }
   chipStyle(active, hex){ const base='padding:8px 14px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;border:1px solid '; return active?`${base}${hex||'#b79bff'};background:${hex?hex:'#b79bff'}22;color:${hex||'#cbb8ff'}`:`${base}rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#9a9aa2`; }
@@ -2751,7 +2764,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     if(V.isDecks){
       V.accent='#b79bff';
       V.newDeckOpen=st.newDeckOpen; V.newDeckToggle=()=>this.setState({newDeckOpen:!st.newDeckOpen,importDeckOpen:false}); V.newDeckName=st.newDeckName; V.onNewDeckName=(e)=>this.setState({newDeckName:e.target.value});
-      V.newDeckInkChips=this.INK_ORDER.map(ink=>({label:ink,_toggle:()=>{ const a=st.newDeckInks; const na=a.includes(ink)?a.filter(x=>x!==ink):(a.length>=2?a:[...a,ink]); this.setState({newDeckInks:na}); },_style:this.chipStyle(st.newDeckInks.includes(ink),this.INK[ink])}));
+      V.newDeckInkChips=this.INK_ORDER.map(ink=>({label:ink,_toggle:()=>{ const a=st.newDeckInks, max=this.maxInks(st.newDeckFmt); const na=a.includes(ink)?a.filter(x=>x!==ink):(a.length>=max?a:[...a,ink]); this.setState({newDeckInks:na}); },_style:this.chipStyle(st.newDeckInks.includes(ink),this.INK[ink])}));
       V.createDeck=this.createDeck;
       V.importBtnLabel=this.t('importBtn'); V.newDeckBtnLabel=this.t('newDeckBtn');
       V.importDeckOpen=st.importDeckOpen; V.importDeckToggle=()=>this.setState({importDeckOpen:!st.importDeckOpen,newDeckOpen:false});
@@ -2763,7 +2776,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       V.noDecks=st.decks.length===0;
       V.deckCards=st.decks.map(d=>{ const inks=(d.colors||[]).filter(Boolean); const ms=this.deckMatches(d.id); const wr=this.winRate(ms); const grad=inks.length?`linear-gradient(120deg,${inks.map(i=>this.INK[i]||'#333').join(',')})`:'linear-gradient(120deg,#333,#555)'; const entries=this.deckEntries(d); const total=this.deckCount(d); let owned=0; for(const e of entries){ const o=this.ownedOf(e.card.card_id); owned+=Math.min(o.n+o.f,e.count); } const pct=total?Math.round(owned/total*100):0; return { name:d.name, inks:inks.map(i=>({name:i,iconEl:this.inkIconEl(i,15)})), count:this.deckCount(d), wr:wr===null?'—':wr+'%', wrColor:this.wrColor(wr||0), value:this.fmt(this.deckValue(d)), ownedPct:pct+'%', ownedPctColor:pct>=100?'#5fd07f':pct>=60?'#e6c15a':'#ff7a86', gradient:grad, _open:()=>this.openDeck(d.id) }; });
       V.kCards=this.t('kCards'); V.kWinRate=this.t('kWinRate'); V.kValue=this.t('kValue'); V.kOwnedPct=this.t('kOwnedPct');
-      V.archiveBuilds=this.t('archiveBuilds'); V.createDeckTitle=this.t('createDeckTitle'); V.deckNamePh=this.t('deckName'); V.chooseInksLabel=this.t('chooseInks'); V.createLabel=this.t('create'); V.cancelLabel=this.t('cancel'); V.formatLabel=this.t('format');
+      V.archiveBuilds=this.t('archiveBuilds'); V.createDeckTitle=this.t('createDeckTitle'); V.deckNamePh=this.t('deckName'); V.chooseInksLabel=this.t('chooseInks',{n:this.maxInks(st.newDeckFmt)}); V.createLabel=this.t('create'); V.cancelLabel=this.t('cancel'); V.formatLabel=this.t('format');
       V.importDeckTitleLabel=this.t('importDeckTitle'); V.importDeckHint=this.t('importDeckHint'); V.deckNameOptPh=this.t('deckNameOpt');
       V.noDecksTitle=this.t('noDecksTitle'); V.noDecksSub=this.t('noDecksSub');
       V.openAdvisor=()=>this.setState({view:'advisor'}); V.advisorBtnLabel=this.t('advisorBtn');
