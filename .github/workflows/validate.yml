@@ -29,6 +29,12 @@ jobs:
         run: node tools/match-center-legacy-core.test.cjs
       - name: Legality engine
         run: node tools/legality.test.mjs
+      - name: Translation contract
+        run: node tools/i18n-contract.test.mjs
+      - name: Visual replay
+        run: node tools/visual-replay.test.mjs
+      - name: Sync and safe-import contract
+        run: node tools/sync-import-contract.test.mjs
   python:
     runs-on: ubuntu-latest
     steps:

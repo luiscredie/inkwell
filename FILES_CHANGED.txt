@@ -1,10 +1,13 @@
-M2.0 — Replay Fidelity v3 (code-only delta on M1.9 baseline)
+M .github/workflows/validate.yml
+M Inkwell.dc.html
+M ROADMAP.md
+M package.json
+M site/index.html
+A M2_1_HANDOFF.md
+A SUPABASE_SETUP.md
+A supabase/inkwell_profiles.sql
+A tools/sync-import-contract.test.mjs
 
-CHANGED:
-  site/index.html   simulateReplay v3: per-instance tracking (iid), separate zones char/item/location, live STR/WILL + temp buff, sing exert, per-instance damage + WILL update, banish-on-challenge and standalone banish, You/Opponent + Player N grammar, free-undo rollback. Fullscreen overlay: STR/WILL badges, item/location zone rows, hidden-info toggle (opponent hand masked by default), "Estimated reconstruction" label. +state replayShowHidden. +i18n mcShowHidden/mcEstimated (EN+PT).
-  Inkwell.dc.html   byte-identical mirror.
-  tools/visual-replay.test.mjs   +9 v3 cases (instances, zones, banish-on-challenge, per-instance dmg, undo, You-grammar) — 23 total.
-
-EXECUTED (sandbox JS, canonical file logic): visual-replay 23/23 passed. Parse OK. i18n EN=PT, 0 missing/raw. Mirror byte-identical.
-NOT EXECUTED (no runner): node tools/visual-replay.test.mjs, npm run test:all, Python, Playwright.
-exact_board_state:false preserved; opponent hidden info off by default. Decks only from state.decks. No generated data. No deploy/push.
+Generated data included: NO
+site/ remains the deployment root: YES
+Deploy or push performed: NO

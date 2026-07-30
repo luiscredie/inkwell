@@ -229,6 +229,31 @@ Status: **DEFERIDO**.
 5. iniciar Replay v3 com logs reais;
 6. seguir qualidade contínua e produto.
 
+## M2.1 — Account Sync & Import Safety
+
+Status: **CÓDIGO CONCLUÍDO; INSTALAÇÃO DO SUPABASE PENDENTE**.
+
+- sincronização existente endurecida com revisão otimista;
+- conflito entre dispositivos não sobrescreve silenciosamente o perfil local;
+- snapshot local de conflito preservado;
+- schema, função atômica e políticas RLS em
+  `supabase/inkwell_profiles.sql`;
+- instruções operacionais em `SUPABASE_SETUP.md`;
+- estados e mensagens de sync em EN/PT;
+- importação de coleção agora abre prévia e não altera dados antes da
+  confirmação;
+- modo padrão: mesclagem segura pelo maior valor;
+- modos adicionais: somar quantidades ou substituir explicitamente;
+- snapshot local automático antes de aplicar qualquer importação;
+- teste canônico `tools/sync-import-contract.test.mjs` com 8 contratos.
+
+Gate para produção:
+
+1. executar o SQL no painel Supabase;
+2. conferir a URL de redirecionamento do GitHub Pages;
+3. testar a mesma conta em dois navegadores;
+4. executar Playwright após o deploy.
+
 
 ## Visual Replay v2 delta (after deployed release da786668)
 Reapplied on top of authoritative commit da786668 as a code-only delta.
