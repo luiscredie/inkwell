@@ -46,6 +46,8 @@ jobs:
         run: python -m unittest tools/test_validate_release.py
       - name: Card-art validator fixtures
         run: python -m unittest tools/test_card_art_validator.py
+      - name: Image-agent recovery suite
+        run: python -m unittest tools/test_lorcana_image_agent.py
       - name: Price-agent recovery suite
         run: python -m unittest tools/test_ligalorcana_price_agent_daily_v4.py
       - name: PT-BR translation suite

@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode, urlparse
+from urllib.parse import urlencode, urljoin, urlparse
 from urllib.request import Request, urlopen
 
 
@@ -119,7 +119,30 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--no-official-fallback", action="store_true",
-        help="Não procurar URLs ausentes na Disney nem na LigaLorcana",
+        help="Não procurar URLs ausentes na galeria oficial Disney",
+    )
+    parser.add_argument(
+        "--no-liga-fallback", action="store_true",
+        help="Após a Disney, não procurar as imagens restantes na LigaLorcana",
+    )
+    parser.add_argument(
+        "--manifest", type=Path,
+        help=(
+            "Manifesto existente; padrão: "
+            "<output>/image_manifest.json"
+        ),
+    )
+    parser.add_argument(
+        "--all-cards", dest="missing_only", action="store_false",
+        help=(
+            "Processa todo o catálogo. Por padrão, lê o manifesto e trabalha "
+            "somente em entradas sem arquivo local válido"
+        ),
+    )
+    parser.set_defaults(missing_only=True)
+    parser.add_argument(
+        "--liga-delay", type=float, default=0.65,
+        help="Intervalo entre páginas da LigaLorcana, em segundos (padrão: 0.65)",
     )
     parser.add_argument(
         "--naming", choices=("auto", "id", "readable", "name"), default="auto",
@@ -138,6 +161,13 @@ def parse_args() -> argparse.Namespace:
         "--show-paths", action="store_true",
         help="Mostra os caminhos resolvidos e encerra sem baixar imagens",
     )
+    parser.add_argument(
+        "--repair-paths-only", action="store_true",
+        help=(
+            "Reconciliará cards.json com arquivos válidos do manifesto e "
+            "encerrará sem consultar ou baixar imagens"
+        ),
+    )
     args = parser.parse_args()
     root = detect_project_root(args.project_root)
     args.project_root = root
@@ -146,6 +176,9 @@ def parse_args() -> argparse.Namespace:
     )
     args.output = resolve_cli_path(
         args.output, root / "site" / "lorcana-card-images"
+    )
+    args.manifest = resolve_cli_path(
+        args.manifest, args.output / "image_manifest.json"
     )
     if args.catalog_csv is not None:
         args.catalog_csv = args.catalog_csv.expanduser().resolve()
@@ -271,6 +304,53 @@ def read_rows(
     if limit is not None:
         rows = rows[: max(0, limit)]
     return rows, source_type
+
+
+def read_existing_manifest(path: Path) -> dict[str, dict]:
+    if not path.is_file():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"Manifesto de imagens inválido: {path}: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError(f"Manifesto de imagens deve ser um objeto: {path}")
+    return {
+        str(card_id): entry
+        for card_id, entry in payload.items()
+        if isinstance(entry, dict)
+    }
+
+
+def manifest_local_image_ok(entry: dict | None, output: Path) -> bool:
+    if not isinstance(entry, dict):
+        return False
+    image_file = str(entry.get("image_file") or "").strip()
+    if not image_file:
+        return False
+    try:
+        candidate = (output / image_file).resolve()
+        candidate.relative_to(output.resolve())
+    except (OSError, ValueError):
+        return False
+    return looks_like_image(candidate)
+
+
+def rows_needing_art(
+    rows: list[dict[str, str]],
+    manifest: dict[str, dict],
+    output: Path,
+) -> list[dict[str, str]]:
+    pending = []
+    for row in rows:
+        entry = manifest.get(row[ID_COLUMN])
+        if manifest_local_image_ok(entry, output):
+            continue
+        # Reuse a previously discovered URL when only the local file vanished.
+        if not row.get(URL_COLUMN) and isinstance(entry, dict):
+            row[URL_COLUMN] = str(entry.get("image_url") or "").strip()
+        pending.append(row)
+    return pending
 
 
 def product_slug(name: str) -> str:
@@ -417,26 +497,66 @@ def liga_card_url(row: dict[str, str]) -> str:
     return f"{LIGA_SITE}?{urlencode(params)}"
 
 
+def liga_image_candidates(html: str, row: dict[str, str]) -> list[str]:
+    candidates = [
+        html_meta_content(html, "og:image"),
+        html_meta_content(html, "twitter:image"),
+    ]
+    expected = normalize_match_text(row[NAME_COLUMN])
+    for tag in re.findall(r"<img\b[^>]*>", html, flags=re.IGNORECASE):
+        normalized_tag = normalize_match_text(tag)
+        src_match = re.search(
+            r'(?:src|data-src|data-original)=["\']([^"\']+)["\']',
+            tag,
+            flags=re.IGNORECASE,
+        )
+        if not src_match:
+            continue
+        src = html_lib.unescape(src_match.group(1).strip())
+        path = urlparse(src).path.lower()
+        if expected in normalized_tag or any(
+            marker in path for marker in ("/cards/", "/card/", "/lorcana/")
+        ):
+            candidates.append(urljoin(LIGA_SITE, src))
+    result = []
+    seen = set()
+    for candidate in candidates:
+        candidate = html_lib.unescape(str(candidate or "").strip())
+        if not candidate:
+            continue
+        candidate = urljoin(LIGA_SITE, candidate)
+        lowered = candidate.lower()
+        if not candidate.startswith(("https://", "http://")):
+            continue
+        if any(token in lowered for token in (
+            "logo", "favicon", "banner", "avatar", "social-share", "default"
+        )):
+            continue
+        if candidate not in seen:
+            seen.add(candidate)
+            result.append(candidate)
+    return result
+
+
 def liga_image_from_page(html: str, row: dict[str, str]) -> str:
     title = html_meta_content(html, "og:title")
-    image = html_meta_content(html, "og:image")
-    if not title or not image:
+    if not title:
         return ""
     expected_name = normalize_match_text(row[NAME_COLUMN])
     actual_title = normalize_match_text(title)
-    # O título precisa conter o nome completo; set e número já fazem parte da URL.
+    number = normalize_match_text(row.get(NUMBER_COLUMN, ""))
+    # A Liga repete nomes em vários sets. Exigimos nome completo e número no
+    # título retornado; ed/num também são enviados na URL da consulta.
     if expected_name not in actual_title:
         return ""
-    lowered_image = image.lower()
-    if any(token in lowered_image for token in (
-        "logo", "favicon", "banner", "avatar", "social-share", "default"
-    )):
+    if number and not re.search(rf"(?:^|\s){re.escape(number)}(?:\s|$)", actual_title):
         return ""
-    return image if image.startswith(("https://", "http://")) else ""
+    candidates = liga_image_candidates(html, row)
+    return candidates[0] if candidates else ""
 
 
 def resolve_missing_from_liga(
-    rows: list[dict[str, str]], timeout: float
+    rows: list[dict[str, str]], timeout: float, delay: float = 0.65
 ) -> tuple[int, int, bool]:
     missing = [row for row in rows if not row[URL_COLUMN]]
     resolved = 0
@@ -467,7 +587,7 @@ def resolve_missing_from_liga(
             LOG.debug("LigaLorcana %s: %s", row[ID_COLUMN], exc)
         if position % 25 == 0:
             LOG.info("LigaLorcana: %d/%d consultas", position, len(missing))
-        time.sleep(0.35)
+        time.sleep(max(0.0, delay))
     unresolved = sum(not row[URL_COLUMN] for row in rows)
     LOG.info(
         "Fallback LigaLorcana: %d URL(s) encontrada(s), %d não encontrada(s)",
@@ -594,8 +714,9 @@ def update_json_card(
     card = card_index.get(result.database_id)
     if card is None:
         return False
-    # image_base_path já é "images/"; por isso armazenamos apenas o arquivo.
-    card["image_file"] = Path(result.image_file).name
+    # Canonical contract: both cards.json and image_manifest.json store paths
+    # relative to lorcana-card-images/, including the images/ prefix.
+    card["image_file"] = result.image_file
     if result.image_url:
         card["image_url"] = result.image_url
         hostname = (urlparse(result.image_url).hostname or "").lower()
@@ -609,6 +730,37 @@ def update_json_card(
     return True
 
 
+def reconcile_json_from_manifest(
+    payload: dict | None,
+    card_index: dict[str, dict],
+    manifest: dict[str, dict],
+    output: Path,
+) -> int:
+    """Repair cards.json paths from validated manifest entries without downloads."""
+    if payload is None:
+        return 0
+    changed = 0
+    for card_id, card in card_index.items():
+        entry = manifest.get(card_id)
+        if not manifest_local_image_ok(entry, output):
+            continue
+        image_file = str(entry.get("image_file") or "").strip()
+        image_url = str(entry.get("image_url") or "").strip()
+        source = str(entry.get("source") or "").strip()
+        if card.get("image_file") != image_file:
+            card["image_file"] = image_file
+            changed += 1
+        if image_url and card.get("image_url") != image_url:
+            card["image_url"] = image_url
+            changed += 1
+        if source and card.get("image_source") != source:
+            card["image_source"] = source
+            changed += 1
+    if changed:
+        payload["images_updated_at"] = datetime.now(timezone.utc).isoformat()
+    return changed
+
+
 def write_csv(path: Path, results: Iterable[Result]) -> None:
     temporary = path.with_suffix(path.suffix + ".tmp")
     fields = list(Result.__dataclass_fields__)
@@ -619,6 +771,54 @@ def write_csv(path: Path, results: Iterable[Result]) -> None:
     os.replace(temporary, path)
 
 
+def merge_manifest_results(
+    all_rows: list[dict[str, str]],
+    existing_manifest: dict[str, dict],
+    results: list[Result],
+    output: Path,
+) -> tuple[dict[str, dict], list[Result]]:
+    merged_manifest = dict(existing_manifest)
+    for result in results:
+        hostname = (urlparse(result.image_url).hostname or "").lower()
+        source = (
+            "ligalorcana"
+            if "ligalorcana" in hostname or "ligapokemon" in hostname
+            else "disney_ravensburger" if result.image_url else ""
+        )
+        merged_manifest[result.database_id] = {
+            "display_name": result.display_name,
+            "image_file": result.image_file,
+            "image_url": result.image_url,
+            "status": result.status,
+            "sha256": result.sha256,
+            "source": source,
+        }
+
+    ordered_manifest = {}
+    merged_results = []
+    for row in all_rows:
+        card_id = row[ID_COLUMN]
+        entry = merged_manifest.get(card_id, {})
+        ordered_manifest[card_id] = entry
+        image_file = str(entry.get("image_file") or "")
+        image_path = output / image_file if image_file else None
+        merged_results.append(Result(
+            database_id=card_id,
+            display_name=str(entry.get("display_name") or row[NAME_COLUMN]),
+            image_url=str(entry.get("image_url") or ""),
+            image_file=image_file,
+            status=str(entry.get("status") or "not_found"),
+            bytes=image_path.stat().st_size if image_path and image_path.is_file() else 0,
+            sha256=str(entry.get("sha256") or ""),
+        ))
+    # --limit is a diagnostic option and must never truncate the published
+    # manifest. Preserve entries outside the selected catalog slice.
+    for card_id, entry in merged_manifest.items():
+        if card_id not in ordered_manifest:
+            ordered_manifest[card_id] = entry
+    return ordered_manifest, merged_results
+
+
 def main() -> int:
     args = parse_args()
     if args.show_paths:
@@ -626,6 +826,8 @@ def main() -> int:
             "project_root": str(args.project_root),
             "source_file": str(args.source_file),
             "output": str(args.output),
+            "manifest": str(args.manifest),
+            "missing_only": args.missing_only,
             "catalog_csv": str(args.catalog_csv) if args.catalog_csv else None,
         }, ensure_ascii=False, indent=2))
         return 0
@@ -637,10 +839,31 @@ def main() -> int:
     if args.retries < 0 or args.timeout <= 0:
         raise ValueError("--retries deve ser >= 0 e --timeout deve ser > 0")
 
+    output = args.output.resolve()
     rows, source_type = read_rows(args.source_file, args.catalog_csv, args.limit)
+    all_rows = rows
+    existing_manifest = read_existing_manifest(args.manifest)
+    if args.missing_only:
+        rows = rows_needing_art(rows, existing_manifest, output)
+        LOG.info(
+            "Modo recuperação: %d pendente(s) de %d cartas no manifesto",
+            len(rows), len(all_rows),
+        )
     json_payload, json_card_index = prepare_json_update(
         args.source_file, enabled=not args.no_update_json
     )
+    reconciled = reconcile_json_from_manifest(
+        json_payload, json_card_index, existing_manifest, output
+    )
+    if reconciled and json_payload is not None:
+        atomic_write_json(args.source_file, json_payload)
+        LOG.info(
+            "cards.json reconciliado com o manifesto: %d campo(s) corrigido(s)",
+            reconciled,
+        )
+    if args.repair_paths_only:
+        LOG.info("Reparo concluído; nenhum download solicitado.")
+        return 0
     lookup_payload = json_payload
     if lookup_payload is None and args.source_file.suffix.lower() == ".json":
         with args.source_file.open("r", encoding="utf-8-sig") as handle:
@@ -656,14 +879,15 @@ def main() -> int:
         official_resolved, official_unresolved = resolve_missing_from_official(
             rows, lookup_payload, args.timeout
         )
-        if official_unresolved:
-            liga_resolved, liga_unresolved, liga_blocked = resolve_missing_from_liga(
-                rows, args.timeout
-            )
+    else:
+        official_unresolved = sum(not row[URL_COLUMN] for row in rows)
+    if official_unresolved and not args.no_liga_fallback:
+        liga_resolved, liga_unresolved, liga_blocked = resolve_missing_from_liga(
+            rows, args.timeout, args.liga_delay
+        )
     naming = args.naming
     if naming == "auto":
         naming = "name" if source_type == "json" else "id"
-    output = args.output.resolve()
     images_dir = output / "images"
     images_dir.mkdir(parents=True, exist_ok=True)
     LOG.info("Base: %d cartas | Saída: %s", len(rows), output)
@@ -706,24 +930,21 @@ def main() -> int:
     for result in results:
         counts[result.status] = counts.get(result.status, 0) + 1
 
-    write_csv(output / "image_manifest.csv", results)
-    atomic_write_json(output / "image_manifest.json", {
-        result.database_id: {
-            "display_name": result.display_name,
-            "image_file": result.image_file,
-            "image_url": result.image_url,
-            "status": result.status,
-            "sha256": result.sha256,
-        }
-        for result in results
-    })
+    # Never discard healthy entries merely because this run processed only
+    # the missing subset.
+    ordered_manifest, merged_results = merge_manifest_results(
+        all_rows, existing_manifest, results, output
+    )
+    write_csv(output / "image_manifest.csv", merged_results)
+    atomic_write_json(args.manifest, ordered_manifest)
     atomic_write_json(output / "download_summary.json", {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "source_file": str(args.source_file.resolve()),
         "catalog_csv": str(args.catalog_csv.resolve()) if args.catalog_csv else None,
         "source_type": source_type,
         "naming": naming,
-        "total": len(results),
+        "catalog_total": len(all_rows),
+        "processed": len(results),
         "counts": counts,
         "official_fallback": {
             "resolved": official_resolved,

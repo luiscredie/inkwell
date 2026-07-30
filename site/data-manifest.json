@@ -1,6 +1,6 @@
 {
   "manifest_version": 1,
-  "generated_at": "2026-07-29T08:21:15.992892+00:00",
+  "generated_at": "2026-07-30T03:34:19.142596+00:00",
   "min_app_version": "1.4.0",
   "schema": {
     "cards": 3,
@@ -13,8 +13,8 @@
   "artifacts": {
     "cards": {
       "path": "data/cards.json",
-      "sha256": "bcae85ffcbb1b278efa10b3e3f8ee8fc4544888237f612740b0847c18f1e91c7",
-      "bytes": 3941956
+      "sha256": "b151865013cdb1bb05f66a1bb01670cbbe5fdcfd454fa84d0b3882720ca09904",
+      "bytes": 4971791
     },
     "cards_pt": {
       "path": "data/cards.pt.json",
