@@ -80,5 +80,38 @@ cSafe.state = { decks: [] };
 ck('youPlayerOf survives empty decks + unknown id', cSafe.youPlayerOf({ deck_id: 'nope', raw_log: 'Player 1 played X' }) === 1);
 ck('youPlayerOf survives match without deck_id', cSafe.youPlayerOf({ raw_log: 'Player 1 played X' }) === 1);
 
+// ---- v3: per-instance, zones, You/Opponent grammar, undo, banish-on-challenge ----
+const c3 = Object.create(Component.prototype);
+c3.cards = [
+  { card_id: 'A', name_en: 'Aurora - Holding Court', card_type: 'Character', ink_cost: 1, strength: 1, willpower: 3, lore: 1, abilities: [] },
+  { card_id: 'G', name_en: 'Guidebook', card_type: 'Item', ink_cost: 2, abilities: [] },
+  { card_id: 'N', name_en: 'Lantern', card_type: 'Location', ink_cost: 3, willpower: 6, abilities: [] },
+  { card_id: 'M', name_en: 'Mickey - Brave', card_type: 'Character', ink_cost: 4, strength: 3, willpower: 4, lore: 2, abilities: [{ type: 'keyword', name: 'Challenger', parameter: '+2' }] },
+];
+c3.byId = {}; for (const x of c3.cards) c3.byId[x.card_id] = x;
+c3._byName = {}; for (const x of c3.cards) { const k = x.name_en.toLowerCase().replace(/\s*\(.*?\)\s*/g, '').trim(); (c3._byName[k] = c3._byName[k] || []).push(x); }
+for (const m of ['nameKey', 'cardByName', 'buildNameIndex', 'cardKeywordMods', 'simulateReplay', 'inkList']) c3[m] = Component.prototype[m];
+c3.state = { decks: [] };
+const z = c3.simulateReplay([
+  { text: "You's turn begins" }, { text: 'You added Aurora - Holding Court to ink' },
+  { text: 'You played Aurora - Holding Court (cost 1)' }, { text: 'You played Aurora - Holding Court (cost 1)' },
+  { text: 'You played Guidebook (cost 2)' }, { text: 'You played Lantern (cost 3)' },
+], 5);
+ck('v3 two instances of same character', z.S[1].chars.filter(x => x.name === 'Aurora - Holding Court').length === 2);
+ck('v3 distinct instance ids', z.S[1].chars[0].iid !== z.S[1].chars[1].iid);
+ck('v3 item zone separate', z.S[1].items.length === 1 && z.S[1].items[0].name === 'Guidebook');
+ck('v3 location zone separate', z.S[1].locations.length === 1);
+ck('v3 exact_board_state false', z.exact === false);
+ck('v3 You maps to player 1', z.active === 1);
+const zc = c3.simulateReplay([
+  { text: "You's turn begins" }, { text: 'You added Mickey - Brave to ink' }, { text: 'You played Mickey - Brave (cost 4)' },
+  { text: "Opponent's turn begins" }, { text: 'Opponent added Aurora - Holding Court to ink' }, { text: 'Opponent played Aurora - Holding Court (cost 1)' },
+  { text: "You's turn begins" },
+  { text: 'You challenged Aurora - Holding Court with Mickey - Brave | 3 [STRENGTH] dealt 3 dmg to Aurora - Holding Court (3/3 [WILLPOWER] - banished!), took 1 dmg' },
+], 7);
+ck('v3 banish-on-challenge removes defender', zc.S[2].chars.length === 0);
+ck('v3 attacker takes per-instance damage', zc.S[1].chars[0].damage === 1);
+ck('v3 free-undo rolls back ink', c3.simulateReplay([{ text: "You's turn begins" }, { text: 'You added Aurora - Holding Court to ink' }, { text: 'You took back their action (free undo)' }], 2).S[1].inkTotal === 0);
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);
