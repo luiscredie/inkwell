@@ -210,4 +210,40 @@ test.describe('Inkwell release smoke', () => {
     // either the movers boxes or the insufficient-history state must be present
     expect((await movers.count()) + (await insufficient.count())).toBeGreaterThan(0);
   });
+  test('V4 portfolio advisor plan and shared cards', async ({ page }) => {
+    // Deterministic fixture: fresh CI browser context; seed the active profile with a
+    // guaranteed shared-card conflict (1 owned copy, two decks needing 2 each).
+    await page.addInitScript(() => {
+      const user = {
+        _schema: 2,
+        collection: { 'LOR9-45': { n: 1, f: 0 } },
+        decks: [
+          { id: 'v4a', name: 'V4 Fixture A', colors: ['Amber'], format: 'core', cards: { 'LOR9-45': 2 }, targetCopies: 1 },
+          { id: 'v4b', name: 'V4 Fixture B', colors: ['Amber'], format: 'core', cards: { 'LOR9-45': 2 }, targetCopies: 1 },
+        ],
+        matches: [], overrides: {}, wishlist: {}, learnDone: {},
+      };
+      localStorage.setItem('inkwell_active_user', 'luiscredie');
+      localStorage.setItem('inkwell_user_luiscredie', JSON.stringify(user));
+    });
+    await page.goto(URL, { waitUntil: 'networkidle' });
+    await page.locator('#rail button', { hasText: /Decks/ }).first().click();
+    const adv = page.locator('button', { hasText: /Deck Advisor|Consultor/ }).first();
+    await expect(adv).toBeVisible();
+    await adv.click();
+    // plan summary present, raw keys absent
+    await expect(page.getByText(/Deck portfolio plan|Plano para seus decks/)).toBeVisible();
+    // targetCopies control is mandatory
+    const plus = page.locator('button', { hasText: '+' }).first();
+    await expect(plus).toBeVisible();
+    await plus.click();
+    // shared cards section with the seeded conflict listing both decks
+    const shared = page.getByText(/Shared cards|Cartas compartilhadas/).first();
+    await expect(shared).toBeVisible();
+    await expect(page.getByText('V4 Fixture A').first()).toBeVisible();
+    await expect(page.getByText('V4 Fixture B').first()).toBeVisible();
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText).not.toMatch(/portfolioHead|portfolioMissing|undefined|NaN|\[object Object\]/);
+  });
+
 });
