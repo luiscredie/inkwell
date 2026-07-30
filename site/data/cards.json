@@ -603,8 +603,8 @@
       "name_en": "Rapunzel - Appreciative Artist",
       "rarity": "P",
       "color": "S",
-      "image_file": null,
-      "image_url": null,
+      "image_file": "images/Rapunzel_-_Appreciative_Artist__DLPC1-1-DIS.jpg",
+      "image_url": "https://repositorio.sbrauble.com/arquivos/in/lorcana/7/696e7fa06003f-bk6xd-sypl7-265bcc69d0439e7bf813b38466b2fd40.jpg",
       "ink_cost": 5,
       "ink_color": "Sapphire",
       "card_type": "Character",
@@ -624,7 +624,8 @@
           "effect": "Perceptive Partner: While you have a character named Pascal in play, this character gains Ward. (Opponents can't choose them except to challenge.)",
           "ability_id": "DLPC1-1-DIS-A1"
         }
-      ]
+      ],
+      "image_source": "disney_ravensburger"
     },
     {
       "card_id": "DLPC1-1-P2",
@@ -826,8 +827,8 @@
       "name_en": "Mickey Mouse - True Friend (Disney Cruise Promo)",
       "rarity": "P",
       "color": "A",
-      "image_file": null,
-      "image_url": null,
+      "image_file": "images/Mickey_Mouse_-_True_Friend_(Disney_Cruise_Promo)__DLPC1-10-P3.jpg",
+      "image_url": "https://repositorio.sbrauble.com/arquivos/in/lorcana/7/696e802d47a4f-rica5-v58ey-265bcc69d0439e7bf813b38466b2fd40.jpg",
       "ink_cost": 3,
       "ink_color": "Amber",
       "card_type": "Character",
@@ -838,7 +839,8 @@
       "lore": 2,
       "ability_text": null,
       "tags": "character; quester",
-      "abilities": []
+      "abilities": [],
+      "image_source": "disney_ravensburger"
     },
     {
       "card_id": "DLPC1-10-P4",
@@ -1111,8 +1113,8 @@
       "name_en": "Tigger - Hunny Barbarian",
       "rarity": "P",
       "color": "R",
-      "image_file": null,
-      "image_url": null,
+      "image_file": "images/Tigger_-_Hunny_Barbarian__DLPC1-12-P4.jpg",
+      "image_url": "https://repositorio.sbrauble.com/arquivos/in/lorcana/7/6a3ae35f3cc41-21slv-orwxs-265bcc69d0439e7bf813b38466b2fd40.jpg",
       "ink_cost": 1,
       "ink_color": "Ruby",
       "card_type": "Character",
@@ -1132,7 +1134,8 @@
           "reminder_text": "This character can't quest and must challenge each turn if able.",
           "ability_id": "DLPC1-12-P4-A1"
         }
-      ]
+      ],
+      "image_source": "disney_ravensburger"
     },
     {
       "card_id": "DLPC1-13-P1",
@@ -1203,8 +1206,8 @@
       "name_en": "Mickey Mouse - Pirate Captain (Disney Cruise Promo)",
       "rarity": "P",
       "color": "R",
-      "image_file": null,
-      "image_url": null,
+      "image_file": "images/Mickey_Mouse_-_Pirate_Captain_(Disney_Cruise_Promo)__DLPC1-13-P3.jpg",
+      "image_url": "https://repositorio.sbrauble.com/arquivos/in/lorcana/7/696e804abd187-c89gv-dhslc-265bcc69d0439e7bf813b38466b2fd40.jpg",
       "ink_cost": 5,
       "ink_color": "Ruby",
       "card_type": "Character",
@@ -1225,7 +1228,8 @@
           "effect": "(You may pay 3 {i} to play this on top of one of your characters named Mickey Mouse.) Mariner's Might: Whenever this character quests, chosen Pirate character gets +2 {s} and gains “This character takes no damage from challenges” this turn.",
           "ability_id": "DLPC1-13-P3-A1"
         }
-      ]
+      ],
+      "image_source": "disney_ravensburger"
     },
     {
       "card_id": "DLPC1-14-P1",
@@ -1265,8 +1269,8 @@
       "name_en": "Scar - Heartless Hunter (Store Championship)",
       "rarity": "P",
       "color": "R",
-      "image_file": null,
-      "image_url": null,
+      "image_file": "images/Scar_-_Heartless_Hunter_(Store_Championship)__DLPC1-14-P2.jpg",
+      "image_url": "https://repositorio.sbrauble.com/arquivos/in/lorcana/7/696e804dd1056-smrjc-zyhnx-265bcc69d0439e7bf813b38466b2fd40.jpg",
       "ink_cost": 5,
       "ink_color": "Ruby",
       "card_type": "Character",
@@ -1286,7 +1290,8 @@
           "effect": "- When you play this character, deal 2 damage to chosen character of yours to deal 2 damage to another chosen character.",
           "ability_id": "DLPC1-14-P2-A1"
         }
-      ]
+      ],
+      "image_source": "disney_ravensburger"
     },
     {
       "card_id": "DLPC1-14-P3",
@@ -1295,8 +1300,8 @@
       "name_en": "Goofy - Expert Shipwright (Disney Cruise Promo)",
       "rarity": "P",
       "color": "M",
-      "image_file": null,
-      "image_url": null,
+      "image_file": "images/Goofy_-_Expert_Shipwright_(Disney_Cruise_Promo)__DLPC1-14-P3.jpg",
+      "image_url": "https://repositorio.sbrauble.com/arquivos/in/lorcana/7/696e804f664c5-bitnr-eht4d-265bcc69d0439e7bf813b38466b2fd40.jpg",
       "ink_cost": 5,
       "ink_color": "Emerald",
       "card_type": "Character",
@@ -1316,7 +1321,8 @@
           "effect": "(Opponents can't choose this character except to challenge.) Clever Design: Whenever this character quests, chosen character gains Ward until the start of your next turn.",
           "ability_id": "DLPC1-14-P3-A1"
         }
-      ]
+      ],
+      "image_source": "disney_ravensburger"
     },
     {
       "card_id": "DLPC1-15-P1",
@@ -1356,8 +1362,8 @@
       "name_en": "Mickey Mouse - True Friend",
       "rarity": "P",
       "color": "A",
-      "image_file": null,
-      "image_url": null,
+      "image_file": "images/Mickey_Mouse_-_True_Friend__DLPC1-15-P2.jpg",
+      "image_url": "https://repositorio.sbrauble.com/arquivos/in/lorcana/7/696e80526f703-jok4e-4dplm-265bcc69d0439e7bf813b38466b2fd40.jpg",
       "ink_cost": 3,
       "ink_color": "Amber",
       "card_type": "Character",
@@ -1368,7 +1374,8 @@
       "lore": 2,
       "ability_text": null,
       "tags": "character; quester",
-      "abilities": []
+      "abilities": [],
+      "image_source": "disney_ravensburger"
     },
     {
       "card_id": "DLPC1-15-P3",
@@ -1377,8 +1384,8 @@
       "name_en": "Donald Duck - Buccaneer (Disney Cruise Promo)",
       "rarity": "P",
       "color": "T",
-      "image_file": null,
-      "image_url": null,
+      "image_file": "images/Donald_Duck_-_Buccaneer_(Disney_Cruise_Promo)__DLPC1-15-P3.jpg",
+      "image_url": "https://repositorio.sbrauble.com/arquivos/in/lorcana/7/696e8054055e9-ldbo5-e3ojw-265bcc69d0439e7bf813b38466b2fd40.jpg",
       "ink_cost": 4,
       "ink_color": "Steel",
       "card_type": "Character",
@@ -1398,7 +1405,8 @@
           "effect": "Boarding Party: During your turn, whenever this character banishes a character in a challenge, your other characters get +1 {l} this turn.",
           "ability_id": "DLPC1-15-P3-A1"
         }
-      ]
+      ],
+      "image_source": "disney_ravensburger"
     },
     {
       "card_id": "DLPC1-15-P4",
@@ -1407,8 +1415,8 @@
       "name_en": "Rapunzel - Escaping the Tower (Participation Card)",
       "rarity": "P",
       "color": "M",
-      "image_file": null,
-      "image_url": null,
+      "image_file": "images/Rapunzel_-_Escaping_the_Tower_(Participation_Card)__DLPC1-15-P4.jpg",
+      "image_url": "https://repositorio.sbrauble.com/arquivos/in/lorcana/7/6a3c24b343ca7-ln8rh-65fec-265bcc69d0439e7bf813b38466b2fd40.jpg",
       "ink_cost": 1,
       "ink_color": "Emerald",
       "card_type": "Character",
@@ -1428,7 +1436,8 @@
           "effect": "The Call of Adventure Once during your turn, you may discard a card to give this character +1 and Evasive until the start of your next turn. ( Only characters with Evasive can challenge them. )",
           "ability_id": "DLPC1-15-P4-A1"
         }
-      ]
+      ],
+      "image_source": "disney_ravensburger"
     },
     {
       "card_id": "DLPC1-16-P1",
@@ -1476,8 +1485,8 @@
       "name_en": "Elsa - Queen Regent",
       "rarity": "P",
       "color": "E",
-      "image_file": null,
-      "image_url": null,
+      "image_file": "images/Elsa_-_Queen_Regent__DLPC1-16-P2.jpg",
+      "image_url": "https://repositorio.sbrauble.com/arquivos/in/lorcana/7/696e805cd5cc0-9mhoq-y2ubq-265bcc69d0439e7bf813b38466b2fd40.jpg",
       "ink_cost": 4,
       "ink_color": "Amethyst",
       "card_type": "Character",
@@ -1488,7 +1497,8 @@
       "lore": 1,
       "ability_text": null,
       "tags": "character; fighter",
-      "abilities": []
+      "abilities": [],
+      "image_source": "disney_ravensburger"
     },
     {
       "card_id": "DLPC1-16-P3",
@@ -107575,5 +107585,5 @@
       ]
     }
   ],
-  "images_updated_at": "2026-07-30T03:34:04.981673+00:00"
+  "images_updated_at": "2026-07-30T03:35:10.131448+00:00"
 }

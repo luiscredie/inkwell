@@ -1,22 +1,22 @@
 {
-  "generated_at": "2026-07-30T03:30:23.557189+00:00",
+  "generated_at": "2026-07-30T03:35:10.875256+00:00",
   "source_file": "C:\\Users\\luisc\\OneDrive\\Desktop\\inkwell\\site\\data\\cards.json",
   "catalog_csv": null,
   "source_type": "json",
   "naming": "name",
   "catalog_total": 3442,
-  "processed": 282,
+  "processed": 269,
   "counts": {
-    "downloaded": 13,
-    "official_not_found": 269
+    "downloaded": 10,
+    "official_not_found": 259
   },
   "official_fallback": {
     "resolved": 0,
-    "unresolved": 282
+    "unresolved": 269
   },
   "ligalorcana_fallback": {
-    "resolved": 13,
-    "unresolved": 269,
+    "resolved": 10,
+    "unresolved": 259,
     "blocked": true
   }
 }

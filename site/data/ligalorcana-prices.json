@@ -2,7 +2,7 @@
   "schema_version": 8,
   "source": "LigaLorcana.com.br",
   "price_type": "marketplace_sale_price",
-  "generated_at": "2026-07-30T03:34:56.304355+00:00",
+  "generated_at": "2026-07-30T03:35:05.901921+00:00",
   "currency": "BRL",
   "summary": {
     "catalog_total": 3438,
@@ -12,11 +12,11 @@
     "errors": 6,
     "run": {
       "requested": 3438,
-      "fetched": 132,
+      "fetched": 134,
       "skipped_fresh": 0,
       "errors_this_run": 0,
       "http_429": 1,
-      "elapsed_seconds": 800.4
+      "elapsed_seconds": 810.0
     }
   },
   "cards": [
@@ -3786,7 +3786,7 @@
       "foil": null,
       "minimum_price_brl": null,
       "status": "no_price",
-      "checked_at": "2026-07-29T03:28:35.777661+00:00",
+      "checked_at": "2026-07-30T03:34:56.430330+00:00",
       "extraction_method": "marketplace-no-data",
       "error": null,
       "database_id": "DLPC1-30-P1",
@@ -3816,7 +3816,7 @@
       "foil": null,
       "minimum_price_brl": 13.5,
       "status": "ok",
-      "checked_at": "2026-07-29T03:28:40.552846+00:00",
+      "checked_at": "2026-07-30T03:35:01.142274+00:00",
       "extraction_method": "marketplace-table-dom-strict",
       "error": null,
       "database_id": "DLPC1-30-P2",
