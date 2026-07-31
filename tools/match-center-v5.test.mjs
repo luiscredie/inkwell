@@ -58,5 +58,41 @@ ck('V5 detail exposes action and evidence',html.includes('{{ mc.detail.nextActio
 ck('V5 match rows expose lore, score, condition, and replay',html.includes('{{ m.lore }}')&&html.includes('{{ m.score }}')&&html.includes('{{ m.condition }}')&&html.includes('{{ m.hasReplay }}'));
 ck('V5 does not add a persisted data field',!html.includes('matchCenterInsights:this.state')&&!html.includes('practiceCode:this.state'));
 
+ck('fullscreen replay buttons use top-level runtime handlers',
+  html.includes('onClick="{{ replayFsClose }}"')&&
+  html.includes('onClick="{{ replayFsPrev }}"')&&
+  html.includes('onClick="{{ replayFsToggle }}"')&&
+  html.includes('onClick="{{ replayFsNext }}"')&&
+  html.includes('onClick="{{ replayFsToggleHidden }}"'));
+ck('fullscreen replay controls have stable browser targets',
+  ['replay-fullscreen-close','replay-fullscreen-prev','replay-fullscreen-play','replay-fullscreen-next','replay-hidden-toggle']
+    .every(id=>html.includes(`data-testid="${id}"`)));
+ck('fullscreen replay opens at the first event and binds keyboard once',
+  html.includes("replayFull:true,replayIndex:0,replayPlaying:false")&&
+  html.includes("if(!this._replayFullKeyBound)")&&
+  html.includes("this.unbindReplayFullKeys();"));
+ck('fullscreen victory layer cannot intercept controls',html.includes('pointer-events:none;background:rgba(5,5,8,.4)'));
+
+const logic=(html.match(/<script type="text\/x-dc"[^>]*data-dc-script[^>]*>([\s\S]*?)<\/script>/)||[])[1];
+if(!logic) throw new Error('component logic not found');
+class LogicStub { constructor(){ this.state={}; } }
+const Component=new Function('DCLogic','React',logic+'\n;return Component;')(LogicStub,{createElement(){return null;}});
+const c=new Component();
+const listeners=new Set();
+const oldDocument=globalThis.document;
+globalThis.document={addEventListener(type,fn){if(type==='keydown')listeners.add(fn);},removeEventListener(type,fn){if(type==='keydown')listeners.delete(fn);}};
+c.state={matches:[{id:'r1',replay:{events:[{text:'one'},{text:'two'}]}}],selectedMatch:'r1',replayIndex:1,replayPlaying:false,replayFull:false,replayShowHidden:false};
+c.setState=(patch,cb)=>{ const p=typeof patch==='function'?patch(c.state):patch; c.state={...c.state,...p}; if(cb)cb(); };
+c.replayFullOpen();
+ck('fullscreen open resets a replay parked at its last event',c.state.replayFull===true&&c.state.replayIndex===0);
+ck('fullscreen key listener is scoped and never duplicated',listeners.size===1&&(c.bindReplayFullKeys(),listeners.size===1));
+c.replayStep(1);
+ck('fullscreen next advances the selected replay',c.state.replayIndex===1);
+c.replayFullToggleHidden();
+ck('fullscreen hidden-info control changes state',c.state.replayShowHidden===true);
+c.replayFullClose();
+ck('fullscreen close stops playback and removes its key listener',c.state.replayFull===false&&c.state.replayPlaying===false&&listeners.size===0);
+globalThis.document=oldDocument;
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if(fail) process.exit(1);
