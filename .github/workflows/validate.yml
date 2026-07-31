@@ -21,6 +21,8 @@ jobs:
         run: node tools/price-movers.test.mjs
       - name: Deck allocation optimizer
         run: node tools/deck-allocation.test.mjs
+      - name: Deck portfolio advisor
+        run: node tools/deck-portfolio-v4.test.mjs
       - name: Match center
         run: node tools/match-center.test.mjs
       - name: Match center R3 integration

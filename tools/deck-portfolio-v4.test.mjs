@@ -81,5 +81,16 @@ ck('14 canonical fields', ['completedDeckInstances', 'allocations', 'missingUnit
   ck('+1 copy reduces missing by 1 net unit', P1.missingUnits - P2.missingUnits === 1);
 }
 
+// Advisor decision contract: recommend one next deck instance, not the entire portfolio deficit.
+{
+  const P = plan({ X: 1 }, [{ id: 'A', targetCopies: 2, needs: { X: 2 } }]);
+  ck('next target is one deck instance', P.nextBestDeck && P.nextBestDeck.instance === 1 && P.nextBestDeck.missing === 1);
+  ck('next purchase list unlocks one instance only', P.purchasesToUnlockNext.length === 1 && P.purchasesToUnlockNext[0].buy === 1);
+}
+ck('advisor summary uses next-target deficit', html.includes("portfolioNextNamed',{n:P.nextBestDeck.missing"));
+ck('portfolio headline keys are unique per language', (html.match(/portfolioHead:/g) || []).length === 2);
+ck('shared allocation status is card-specific', html.includes("status:this.t('sharedAllocation',{allocated:r.alloc,need:r.need})"));
+ck('shared conflicts are collapsed by default', html.includes('allConflicts.slice(0,6)'));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);
