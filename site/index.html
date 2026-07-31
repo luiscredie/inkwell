@@ -1440,6 +1440,30 @@
     </div>
   </sc-if>
 
+  <sc-if value="{{ importPreviewOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ cancelCollectionImport }}" style="position:fixed;inset:0;z-index:125;background:rgba(5,5,7,.78);backdrop-filter:blur(9px);display:flex;align-items:center;justify-content:center;padding:24px">
+      <div onClick="{{ stop }}" role="dialog" aria-modal="true" aria-labelledby="import-preview-title" style="width:min(560px,100%);background:#141019;border:1px solid rgba(183,155,255,.28);border-radius:20px;padding:26px;box-shadow:0 24px 80px rgba(0,0,0,.65)">
+        <div style="display:flex;justify-content:space-between;gap:16px">
+          <div><h2 id="import-preview-title" style="font-family:'Bricolage Grotesque';font-size:22px">{{ importPreviewTitle }}</h2><div style="font-size:12px;color:#8a8a92;margin-top:4px">{{ importPreviewFile }}</div></div>
+          <button onClick="{{ cancelCollectionImport }}" aria-label="{{ cancelLabel }}" style="width:32px;height:32px;border-radius:9px;background:rgba(255,255,255,.06);border:none;color:#ddd;cursor:pointer">×</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:20px 0">
+          <div style="padding:12px;border-radius:12px;background:rgba(255,255,255,.05)"><div style="font-size:11px;color:#888">{{ importUniqueLabel }}</div><b style="font-family:'JetBrains Mono'">{{ importUnique }}</b></div>
+          <div style="padding:12px;border-radius:12px;background:rgba(255,255,255,.05)"><div style="font-size:11px;color:#888">{{ normalLabel }}</div><b style="font-family:'JetBrains Mono'">{{ importNormal }}</b></div>
+          <div style="padding:12px;border-radius:12px;background:rgba(255,255,255,.05)"><div style="font-size:11px;color:#888">Foil</div><b style="font-family:'JetBrains Mono'">{{ importFoil }}</b></div>
+        </div>
+        <sc-if value="{{ importHasUnresolved }}" hint-placeholder-val="{{ false }}"><div style="padding:10px 12px;border-radius:10px;background:rgba(230,193,90,.1);color:#e6c15a;font-size:12px;margin-bottom:14px">{{ importUnresolved }}</div></sc-if>
+        <div style="font-size:12px;font-weight:700;margin-bottom:8px">{{ importModeTitle }}</div>
+        <div style="display:grid;gap:8px"><sc-for list="{{ importModes }}" as="m"><button onClick="{{ m._pick }}" style="{{ m._style }}"><span style="font-weight:700">{{ m.title }}</span><span style="font-size:11.5px;color:#aaa">{{ m.desc }}</span></button></sc-for></div>
+        <sc-if value="{{ importReplaceWarning }}" hint-placeholder-val="{{ false }}"><div style="margin-top:12px;padding:11px;border-radius:10px;background:rgba(226,59,78,.1);color:#ff9aa4;font-size:12px">{{ importReplaceWarningText }}</div></sc-if>
+        <div style="display:flex;gap:10px;margin-top:20px">
+          <button onClick="{{ cancelCollectionImport }}" style="flex:1;padding:11px;border-radius:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#ddd;cursor:pointer">{{ cancelLabel }}</button>
+          <button onClick="{{ applyCollectionImport }}" style="flex:1;padding:11px;border-radius:11px;background:linear-gradient(180deg,#c4a8ff,#8e67d8);border:none;color:#160d24;font-weight:800;cursor:pointer">{{ importApplyLabel }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
   <sc-if value="{{ settingsOpen }}" hint-placeholder-val="{{ false }}">
     <div onClick="{{ closeSettings }}" style="position:fixed;inset:0;z-index:120;background:rgba(5,5,7,.72);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:24px;animation:ink-fade .2s both">
       <div onClick="{{ stop }}" class="ink-sc" style="width:min(520px,100%);max-height:88vh;overflow-y:auto;background:#141019;border:1px solid rgba(199,154,68,.2);border-radius:20px;padding:26px 26px 24px;animation:ink-pop .26s both">
@@ -1671,7 +1695,8 @@ class Component extends DCLogic {
     advisorMode: 'all', advSimPriority: null, lesson: null, learnDone: {}, activeDeckId: null, moversExpanded: false,
     collection: {}, decks: [], matches: [], overrides: {}, wishlist: {}, displayName: 'Illumineer',
     activeUser: 'luiscredie', profileMenuOpen: false, settingsOpen: false, lastSaved: null,
-    syncEnabled: false, syncStatus: 'off', syncEmail: null, syncUser: null, syncLast: null, syncMsg: null, syncInput: '',
+    syncEnabled: false, syncStatus: 'off', syncEmail: null, syncUser: null, syncLast: null, syncMsg: null, syncInput: '', syncRevision: 0,
+    importPreview: null, importMode: 'merge-max',
     coachDeck: null, coachLoading: false, coachErr: null, coachText: null,
     lang: 'en',
     toast: null,
@@ -1688,6 +1713,8 @@ class Component extends DCLogic {
       dhCards:'Cards', dhErrors:'Errors', dhWarnings:'Warnings', dhMissPrice:'Missing prices', dhMissImg:'Missing images', dhMissPt:'Missing PT', dhNoPt:'no PT', dhChecksum:'Checksum', dhArtifacts:'Artifacts', dhUpdated:'Last data update', dhChkOk:'✓ verified', dhChkFail:'⚠ mismatch', dhStale:'⚠ manifest stale', dhFresh:'✓ current',
       aiCoach:'✦ AI Coach', aiCoachTitle:'AI Coach', coachLoading:'Analyzing your deck…', coachErr:'Coaching failed — please try again.', coachUnavail:'AI Coach runs inside the Inkwell app host and is unavailable on this deployment.', coachDisclaimer:'AI-generated guidance — verify against current meta and card text.',
       export:'Export', import:'Import', cards:'cards', prev:'‹ Prev', next:'Next ›',
+      syncTitle:'Cloud Sync', syncSignedAs:'Signed in as {email}. Your collection, decks and matches sync across devices.', syncNowLabel:'Sync now', syncSignOut:'Sign out', syncIntro:'Sign in by email to back up and sync your collection, decks and matches across devices.', syncSend:'Send link', syncSending:'Sending…', syncOff:'Off', syncNotSigned:'Not signed in', syncLinkSent:'Link sent', syncSyncing:'Syncing…', syncSynced:'Synced', syncError:'Error', syncConflictBadge:'Conflict', syncEnterEmail:'Enter your email', syncSignInFailed:'Sign-in failed', syncCheckEmail:'Check {email} for your sign-in link.', syncSignedOutMsg:'Signed out.', syncSignInFirst:'Sign in to sync', syncSyncedMsg:'Synced.', syncPulled:'Pulled latest from cloud', syncMissingTable:'Cloud database is not configured. Run supabase/inkwell_profiles.sql.', syncPermissionError:'Cloud permissions are not configured correctly.', syncConflict:'Another device changed this profile. Your local version was preserved as a conflict snapshot; sync again after reviewing it.', syncLocalBackup:'Also kept in this browser. Download a backup anytime for a portable copy.', syncLocalOnly:'Your data lives only in this browser. Sign in to sync it across devices and download regular backups.',
+      importPreviewTitle:'Review collection import', importUnique:'Unique cards', importModeTitle:'How should this file be applied?', importMergeMax:'Safe merge', importMergeMaxDesc:'Keep the highest quantity from your collection or this file. Existing cards are never removed.', importMergeSum:'Add quantities', importMergeSumDesc:'Add imported quantities to what you already own.', importReplace:'Replace collection', importReplaceDesc:'Use only the imported file and remove other cards.', importReplaceWarning:'Replace is destructive. A rollback snapshot will be saved in this browser.', importApply:'Apply import', importUnresolved:'{n} rows could not be matched and will not be imported.', importNoMatches:'No matching cards found', importFailed:'Import failed — check the file format', importApplied:'Import complete · {n} unique cards',
       newDeck:'+ New Deck', importDeck:'↑ Import', createDeck:'Create', cancel:'Cancel', format:'Format',
       inkable:'Inkable', uninkable:'Uninkable', cost:'Cost', allSets:'All sets',
       welcome:'Welcome, {name}', emptyMsg:'Your codex is empty. Import your collection from Dreamborn, or start building a deck — everything is tracked privately in your profile.',
@@ -1721,6 +1748,8 @@ class Component extends DCLogic {
       dhCards:'Cartas', dhErrors:'Erros', dhWarnings:'Avisos', dhMissPrice:'Sem preço', dhMissImg:'Sem imagem', dhMissPt:'Sem PT', dhNoPt:'sem PT', dhChecksum:'Checksum', dhArtifacts:'Artefatos', dhUpdated:'Última atualização', dhChkOk:'✓ verificado', dhChkFail:'⚠ divergência', dhStale:'⚠ manifesto desatualizado', dhFresh:'✓ atual',
       aiCoach:'✦ Treinador IA', aiCoachTitle:'Treinador IA', coachLoading:'Analisando seu deck…', coachErr:'Falha na análise — tente novamente.', coachUnavail:'O Treinador IA roda dentro do app Inkwell e não está disponível neste site.', coachDisclaimer:'Orientação gerada por IA — confira com o meta atual e o texto das cartas.',
       export:'Exportar', import:'Importar', cards:'cartas', prev:'‹ Anterior', next:'Próxima ›',
+      syncTitle:'Sincronização na nuvem', syncSignedAs:'Conectado como {email}. Sua coleção, decks e partidas sincronizam entre dispositivos.', syncNowLabel:'Sincronizar agora', syncSignOut:'Sair', syncIntro:'Entre por e-mail para salvar e sincronizar sua coleção, decks e partidas entre dispositivos.', syncSend:'Enviar link', syncSending:'Enviando…', syncOff:'Desativada', syncNotSigned:'Não conectado', syncLinkSent:'Link enviado', syncSyncing:'Sincronizando…', syncSynced:'Sincronizado', syncError:'Erro', syncConflictBadge:'Conflito', syncEnterEmail:'Digite seu e-mail', syncSignInFailed:'Falha ao entrar', syncCheckEmail:'Confira em {email} o link para entrar.', syncSignedOutMsg:'Sessão encerrada.', syncSignInFirst:'Entre para sincronizar', syncSyncedMsg:'Sincronizado.', syncPulled:'Dados mais recentes baixados da nuvem', syncMissingTable:'O banco da nuvem não está configurado. Execute supabase/inkwell_profiles.sql.', syncPermissionError:'As permissões da nuvem não estão configuradas corretamente.', syncConflict:'Outro dispositivo alterou este perfil. Sua versão local foi preservada como cópia de conflito; revise e sincronize novamente.', syncLocalBackup:'Também mantido neste navegador. Baixe um backup quando quiser uma cópia portátil.', syncLocalOnly:'Seus dados estão apenas neste navegador. Entre para sincronizá-los entre dispositivos e baixe backups regularmente.',
+      importPreviewTitle:'Revisar importação da coleção', importUnique:'Cartas únicas', importModeTitle:'Como este arquivo deve ser aplicado?', importMergeMax:'Mesclagem segura', importMergeMaxDesc:'Mantém a maior quantidade entre sua coleção e o arquivo. Cartas existentes nunca são removidas.', importMergeSum:'Somar quantidades', importMergeSumDesc:'Soma as quantidades importadas ao que você já possui.', importReplace:'Substituir coleção', importReplaceDesc:'Usa apenas o arquivo importado e remove as outras cartas.', importReplaceWarning:'Substituir é destrutivo. Uma cópia para restauração será salva neste navegador.', importApply:'Aplicar importação', importUnresolved:'{n} linhas não foram identificadas e não serão importadas.', importNoMatches:'Nenhuma carta correspondente encontrada', importFailed:'Falha na importação — confira o formato do arquivo', importApplied:'Importação concluída · {n} cartas únicas',
       newDeck:'+ Novo Deck', importDeck:'↑ Importar', createDeck:'Criar', cancel:'Cancelar', format:'Formato',
       inkable:'Inkável', uninkable:'Não-inkável', cost:'Custo', allSets:'Todos os sets',
       welcome:'Bem-vindo, {name}', emptyMsg:'Seu códice está vazio. Importe sua coleção do Dreamborn ou comece a montar um deck — tudo fica salvo de forma privada no seu perfil.',
@@ -1912,36 +1941,66 @@ class Component extends DCLogic {
       this.sb.auth.onAuthStateChange((_evt, sess)=>{ if(sess && sess.user){ this.onSignedIn(sess.user); } else { this.setState({syncStatus:'signed_out', syncUser:null, syncEmail:null}); } });
     } catch(e){}
   }
-  sendMagicLink = ()=>{ const email=(this.state.syncInput||'').trim(); if(!this.sb||!email){ this.showToast('Enter your email'); return; } this.setState({syncStatus:'sending'}); const redirectTo=(location.href.split('#')[0]); this.sb.auth.signInWithOtp({email, options:{emailRedirectTo:redirectTo}}).then(({error})=>{ if(error){ this.setState({syncStatus:'signed_out', syncMsg:error.message}); this.showToast('Sign-in failed'); } else { this.setState({syncStatus:'link_sent', syncMsg:'Check '+email+' for your sign-in link.'}); } }); };
-  signOutSync = ()=>{ if(!this.sb) return; this.sb.auth.signOut().then(()=>{ this.setState({syncStatus:'signed_out', syncUser:null, syncEmail:null, syncMsg:'Signed out.'}); }); };
+  syncErrorMessage(e){
+    const code=String(e&&e.code||'');
+    const raw=String(e&&e.message||e||'');
+    if(code==='42P01') return this.t('syncMissingTable');
+    if(code==='42501') return this.t('syncPermissionError');
+    if(code==='40001'||/revision_conflict/i.test(raw)) return this.t('syncConflict');
+    return raw;
+  }
+  preserveSyncConflict(profile){
+    try {
+      const key='inkwell_conflict_'+profile+'_'+Date.now();
+      localStorage.setItem(key, JSON.stringify(this.userPayload()));
+      localStorage.setItem('inkwell_conflict_latest_'+profile, key);
+    } catch(e){}
+  }
+  sendMagicLink = ()=>{ const email=(this.state.syncInput||'').trim(); if(!this.sb||!email){ this.showToast(this.t('syncEnterEmail')); return; } this.setState({syncStatus:'sending'}); const redirectTo=(location.href.split('#')[0]); this.sb.auth.signInWithOtp({email, options:{emailRedirectTo:redirectTo}}).then(({error})=>{ if(error){ this.setState({syncStatus:'signed_out', syncMsg:error.message}); this.showToast(this.t('syncSignInFailed')); } else { this.setState({syncStatus:'link_sent', syncMsg:this.t('syncCheckEmail',{email})}); } }); };
+  signOutSync = ()=>{ if(!this.sb) return; this.sb.auth.signOut().then(()=>{ this.setState({syncStatus:'signed_out', syncUser:null, syncEmail:null, syncRevision:0, syncMsg:this.t('syncSignedOutMsg')}); }); };
   async onSignedIn(user){
-    this.setState({syncStatus:'syncing', syncUser:user.id, syncEmail:user.email, syncMsg:null});
+    await new Promise(resolve=>this.setState({syncStatus:'syncing', syncUser:user.id, syncEmail:user.email, syncMsg:null},resolve));
     try { await this.reconcile(this.state.activeUser); }
-    catch(e){ this.setState({syncStatus:'error', syncMsg:'Sync error: '+(e&&e.message||e)}); return; }
+    catch(e){ this.setState({syncStatus:'error', syncMsg:this.syncErrorMessage(e)}); return; }
     this.setState({syncStatus:'synced', syncLast:Date.now()});
   }
   localTs(){ return Date.parse(this.userPayload().saved_at)||0; }
-  async pullRemote(profile){ const { data, error } = await this.sb.from(this.SYNC_TABLE).select('data,updated_at,schema').eq('profile', profile).eq('user_id', this.state.syncUser).maybeSingle(); if(error) throw error; return data; }
-  async pushRemote(profile){ const payload=this.userPayload(); const row={ user_id:this.state.syncUser, profile, data:payload, schema:this.USER_SCHEMA, updated_at:new Date().toISOString() }; const { error } = await this.sb.from(this.SYNC_TABLE).upsert(row, {onConflict:'user_id,profile'}); if(error) throw error; }
+  async pullRemote(profile){ const { data, error } = await this.sb.from(this.SYNC_TABLE).select('data,updated_at,schema,revision').eq('profile', profile).eq('user_id', this.state.syncUser).maybeSingle(); if(error) throw error; return data; }
+  async pushRemote(profile, expectedRevision){
+    const payload=this.userPayload();
+    const revision=Number.isFinite(expectedRevision)?expectedRevision:(this.state.syncRevision||0);
+    const { data, error } = await this.sb.rpc('sync_inkwell_profile',{p_profile:profile,p_data:payload,p_schema:this.USER_SCHEMA,p_expected_revision:revision});
+    if(error){
+      if(error.code==='40001'||/revision_conflict/i.test(String(error.message||''))){
+        this.preserveSyncConflict(profile);
+        this.setState({syncStatus:'conflict',syncMsg:this.t('syncConflict')});
+      }
+      throw error;
+    }
+    const row=Array.isArray(data)?data[0]:data;
+    if(row&&row.revision!=null) this.setState({syncRevision:+row.revision||0});
+    return row;
+  }
   async reconcile(profile){
     if(!this.sb || !this.state.syncUser) return;
     const remote = await this.pullRemote(profile);
     const localTs = Date.parse((this.loadLocal()&&this.loadLocal().saved_at)||0)||0;
     if(remote && remote.data){
+      const revision=+remote.revision||0;
       const remoteTs = Date.parse(remote.updated_at)||0;
       if(remoteTs > localTs){
         const m = this.migrateUser(remote.data, profile);
-        this.setState({ collection:m.collection, decks:m.decks, matches:m.matches, overrides:m.overrides, wishlist:m.wishlist, learnDone:m.learnDone, activeDeckId:m.activeDeckId||null }, ()=>{ try{ localStorage.setItem('inkwell_user_'+profile, JSON.stringify(this.userPayload())); }catch(e){} });
-        this.showToast('Pulled latest from cloud');
+        this.setState({ collection:m.collection, decks:m.decks, matches:m.matches, overrides:m.overrides, wishlist:m.wishlist, learnDone:m.learnDone, activeDeckId:m.activeDeckId||null, syncRevision:revision }, ()=>{ try{ localStorage.setItem('inkwell_user_'+profile, JSON.stringify(this.userPayload())); }catch(e){} });
+        this.showToast(this.t('syncPulled'));
       } else if(localTs > remoteTs){
-        await this.pushRemote(profile);
-      }
+        await this.pushRemote(profile,revision);
+      } else this.setState({syncRevision:revision});
     } else {
-      await this.pushRemote(profile);
+      await this.pushRemote(profile,0);
     }
   }
-  queueSync(){ if(!this.sb || this.state.syncStatus==='off' || !this.state.syncUser) return; clearTimeout(this._syncT); this._syncT=setTimeout(()=>{ this.setState({syncStatus:'syncing'}); this.pushRemote(this.state.activeUser).then(()=>this.setState({syncStatus:'synced', syncLast:Date.now()})).catch(e=>this.setState({syncStatus:'error', syncMsg:String(e&&e.message||e)})); }, 1400); }
-  syncNow = ()=>{ if(!this.sb || !this.state.syncUser){ this.showToast('Sign in to sync'); return; } this.setState({syncStatus:'syncing'}); this.reconcile(this.state.activeUser).then(()=>this.setState({syncStatus:'synced', syncLast:Date.now(), syncMsg:'Synced.'})).catch(e=>this.setState({syncStatus:'error', syncMsg:String(e&&e.message||e)})); };
+  queueSync(){ if(!this.sb || this.state.syncStatus==='off' || !this.state.syncUser) return; clearTimeout(this._syncT); this._syncT=setTimeout(()=>{ this.setState({syncStatus:'syncing'}); this.pushRemote(this.state.activeUser).then(()=>this.setState({syncStatus:'synced', syncLast:Date.now(),syncMsg:this.t('syncSyncedMsg')})).catch(e=>{ if(this.state.syncStatus!=='conflict') this.setState({syncStatus:'error', syncMsg:this.syncErrorMessage(e)}); }); }, 1400); }
+  syncNow = ()=>{ if(!this.sb || !this.state.syncUser){ this.showToast(this.t('syncSignInFirst')); return; } this.setState({syncStatus:'syncing'}); this.reconcile(this.state.activeUser).then(()=>this.setState({syncStatus:'synced', syncLast:Date.now(), syncMsg:this.t('syncSyncedMsg')})).catch(e=>{ if(this.state.syncStatus!=='conflict') this.setState({syncStatus:'error', syncMsg:this.syncErrorMessage(e)}); }); };
   onSyncInput = (e)=>this.setState({syncInput:e.target.value});
 
   // ---------- M6: AI Coach ----------
@@ -2584,6 +2643,12 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     if(name){ this.buildNameIndex(); const arr=this._byName[this.nameKey(name)]; if(arr&&arr.length){ if(setNum){ const code='LOR'+parseInt(setNum,10); return arr.find(x=>x.set_code===code)||arr[0]; } return arr[0]; } }
     return null;
   }
+  static mergeCollections(existing,incoming,mode){
+    const clean=(src)=>{ const out={}; for(const id in (src||{})){ const n=Math.max(0,parseInt(src[id]&&src[id].n)||0), f=Math.max(0,parseInt(src[id]&&src[id].f)||0); if(n||f) out[id]={n,f}; } return out; };
+    const base=mode==='replace'?{}:clean(existing), next=clean(incoming);
+    for(const id in next){ const a=base[id]||{n:0,f:0}, b=next[id]; base[id]=mode==='merge-sum'?{n:a.n+b.n,f:a.f+b.f}:{n:Math.max(a.n,b.n),f:Math.max(a.f,b.f)}; }
+    return base;
+  }
   importCollection = (e)=>{ const file=e.target&&e.target.files&&e.target.files[0]; if(!file) return; const rd=new FileReader(); rd.onload=()=>{ try{
     const txt=String(rd.result); const coll={}; let matched=0, unresolved=0;
     if(!this.byNumIdx){ this.byNumIdx={}; for(const c of this.cards) this.byNumIdx[c.set_code+'|'+String(c.card_number)]=c; }
@@ -2602,9 +2667,22 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
         for(let i=start;i<lines.length;i++){ const p=this.parseCsvLine(lines[i]); const id=(p[iId>=0?iId:0]||'').trim(); if(!this.byId[id]){ if(id) unresolved++; continue; } const n=parseInt(p[iN>=0?iN:p.length-2])||0, f=parseInt(p[iF>=0?iF:p.length-1])||0; add(id,n,f); matched++; }
       }
     }
-    if(!Object.keys(coll).length){ this.showToast('No matching cards found'); return; }
-    this.setState({collection:coll},()=>{ this.saveLocal(); this.showToast('Imported '+Object.keys(coll).length+' cards'+(unresolved?' · '+unresolved+' unmatched':'')); });
-  }catch(err){ console.error(err); this.showToast('Import failed — check file format'); } }; rd.readAsText(file); e.target.value=''; };
+    if(!Object.keys(coll).length){ this.showToast(this.t('importNoMatches')); return; }
+    const normal=Object.values(coll).reduce((s,x)=>s+(x.n||0),0), foil=Object.values(coll).reduce((s,x)=>s+(x.f||0),0);
+    this.setState({importPreview:{collection:coll,fileName:file.name,matched,unresolved,unique:Object.keys(coll).length,normal,foil},importMode:'merge-max'});
+  }catch(err){ console.error(err); this.showToast(this.t('importFailed')); } }; rd.readAsText(file); e.target.value=''; };
+  setImportMode=(mode)=>this.setState({importMode:mode});
+  cancelCollectionImport=()=>this.setState({importPreview:null});
+  applyCollectionImport=()=>{
+    const p=this.state.importPreview; if(!p) return;
+    try {
+      const key='inkwell_preimport_'+this.state.activeUser+'_'+Date.now();
+      localStorage.setItem(key,JSON.stringify({created_at:new Date().toISOString(),collection:this.state.collection,source:p.fileName}));
+      localStorage.setItem('inkwell_preimport_latest_'+this.state.activeUser,key);
+    } catch(e){}
+    const collection=Component.mergeCollections(this.state.collection,p.collection,this.state.importMode);
+    this.setState({collection,importPreview:null},()=>{ this.saveLocal(); this.showToast(this.t('importApplied',{n:Object.keys(collection).length})); });
+  };
   setImpRef = (el)=>{ this._imp=el; };
   setQty(id, field, delta){
     const coll={...this.state.collection}; const cur=coll[id]?{...coll[id]}:{n:0,f:0};
@@ -2776,12 +2854,24 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     V.syncSignedOut=st.syncEnabled && !st.syncUser;
     V.syncEmail=st.syncEmail; V.syncInput=st.syncInput; V.onSyncInput=this.onSyncInput;
     V.sendMagicLink=this.sendMagicLink; V.signOutSync=this.signOutSync; V.syncNow=this.syncNow;
-    V.syncSendLabel=st.syncStatus==='sending'?'Sending…':'Send link';
+    V.syncTitle=this.t('syncTitle'); V.syncSignedAs=this.t('syncSignedAs',{email:st.syncEmail||''}); V.syncNowLabel=this.t('syncNowLabel'); V.syncSignOut=this.t('syncSignOut'); V.syncIntro=this.t('syncIntro');
+    V.syncSendLabel=st.syncStatus==='sending'?this.t('syncSending'):this.t('syncSend');
     V.syncMsg=st.syncMsg;
-    const SB={ off:['#8a8a92','rgba(255,255,255,.08)','Off'], signed_out:['#c8c8cc','rgba(255,255,255,.08)','Not signed in'], link_sent:['#e6c15a','rgba(230,193,90,.16)','Link sent'], sending:['#e6c15a','rgba(230,193,90,.16)','Sending'], syncing:['#7fc0ff','rgba(46,144,224,.18)','Syncing…'], synced:['#5fd07f','rgba(95,208,127,.16)','Synced'], error:['#ff8a96','rgba(226,59,78,.16)','Error'] };
+    const SB={ off:['#8a8a92','rgba(255,255,255,.08)',this.t('syncOff')], signed_out:['#c8c8cc','rgba(255,255,255,.08)',this.t('syncNotSigned')], link_sent:['#e6c15a','rgba(230,193,90,.16)',this.t('syncLinkSent')], sending:['#e6c15a','rgba(230,193,90,.16)',this.t('syncSending')], syncing:['#7fc0ff','rgba(46,144,224,.18)',this.t('syncSyncing')], synced:['#5fd07f','rgba(95,208,127,.16)',this.t('syncSynced')], conflict:['#ffbf69','rgba(255,191,105,.16)',this.t('syncConflictBadge')], error:['#ff8a96','rgba(226,59,78,.16)',this.t('syncError')] };
     const sb=SB[st.syncStatus]||SB.off; V.syncBadgeColor=sb[0]; V.syncBadgeBg=sb[1]; V.syncBadge=sb[2];
-    V.localOnlyMsg = (st.syncEnabled && st.syncUser) ? 'Also kept in this browser. Download a backup anytime for a portable copy.' : 'Your data lives only in this browser. Download a backup regularly — clearing browser data erases your collection, decks and games.';
+    V.localOnlyMsg = (st.syncEnabled && st.syncUser) ? this.t('syncLocalBackup') : this.t('syncLocalOnly');
     V.settingsOpen=st.settingsOpen;
+    const ip=st.importPreview;
+    V.importPreviewOpen=!!ip; V.importPreviewTitle=this.t('importPreviewTitle'); V.importPreviewFile=ip?ip.fileName:''; V.importUniqueLabel=this.t('importUnique');
+    V.importUnique=ip?ip.unique:0; V.importNormal=ip?ip.normal:0; V.importFoil=ip?ip.foil:0; V.importHasUnresolved=!!(ip&&ip.unresolved);
+    V.importUnresolved=ip?this.t('importUnresolved',{n:ip.unresolved}):''; V.importModeTitle=this.t('importModeTitle');
+    V.importModes=[
+      {id:'merge-max',title:this.t('importMergeMax'),desc:this.t('importMergeMaxDesc')},
+      {id:'merge-sum',title:this.t('importMergeSum'),desc:this.t('importMergeSumDesc')},
+      {id:'replace',title:this.t('importReplace'),desc:this.t('importReplaceDesc')}
+    ].map(m=>({...m,_pick:()=>this.setImportMode(m.id),_style:'display:flex;flex-direction:column;gap:3px;text-align:left;padding:11px 13px;border-radius:11px;cursor:pointer;border:1px solid '+(st.importMode===m.id?'#b79bff':'rgba(255,255,255,.1)')+';background:'+(st.importMode===m.id?'rgba(183,155,255,.13)':'rgba(255,255,255,.04)')+';color:#eee'}));
+    V.importReplaceWarning=st.importMode==='replace'; V.importReplaceWarningText=this.t('importReplaceWarning'); V.importApplyLabel=this.t('importApply');
+    V.cancelCollectionImport=this.cancelCollectionImport; V.applyCollectionImport=this.applyCollectionImport; V.cancelLabel=this.t('cancel'); V.normalLabel=this.t('normal');
     V.fullExport=this.fullExport; V.triggerFullImport=this.triggerFullImport; V.fullImport=this.fullImport; V.setFimpRef=this.setFimpRef;
     V.exportCollection=this.exportCollection; V.exportOverrides=this.exportOverrides;
     V.lastSavedLabel=st.lastSaved?('Saved '+new Date(st.lastSaved).toLocaleTimeString()):'Auto-saves to this browser';
