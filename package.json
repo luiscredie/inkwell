@@ -11,6 +11,7 @@
     "test:deck-allocation": "node tools/deck-allocation.test.mjs",
     "test:deck-portfolio-v4": "node tools/deck-portfolio-v4.test.mjs",
     "test:match-center": "node tools/match-center.test.mjs",
+    "test:match-center-v5": "node tools/match-center-v5.test.mjs",
     "test:match-center-r3": "node tools/match-center-r3.test.mjs",
     "test:match-center-core": "node tools/match-center-legacy-core.test.cjs",
     "test:legality": "node tools/legality.test.mjs",
@@ -23,7 +24,7 @@
     "test:i18n": "node tools/i18n-contract.test.mjs",
     "test:replay": "node tools/visual-replay.test.mjs",
     "test:sync-import": "node tools/sync-import-contract.test.mjs",
-    "test:all": "node tools/validate.test.mjs && node tools/imgfallback.test.mjs && node tools/ui-contract.test.mjs && node tools/price-movers.test.mjs && node tools/deck-allocation.test.mjs && node tools/deck-portfolio-v4.test.mjs && node tools/match-center.test.mjs && node tools/legality.test.mjs && node tools/i18n-contract.test.mjs && node tools/visual-replay.test.mjs && node tools/sync-import-contract.test.mjs"
+    "test:all": "node tools/validate.test.mjs && node tools/imgfallback.test.mjs && node tools/ui-contract.test.mjs && node tools/price-movers.test.mjs && node tools/deck-allocation.test.mjs && node tools/deck-portfolio-v4.test.mjs && node tools/match-center.test.mjs && node tools/match-center-v5.test.mjs && node tools/legality.test.mjs && node tools/i18n-contract.test.mjs && node tools/visual-replay.test.mjs && node tools/sync-import-contract.test.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.47.0"

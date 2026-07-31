@@ -210,6 +210,29 @@ test.describe('Inkwell release smoke', () => {
     // either the movers boxes or the insufficient-history state must be present
     expect((await movers.count()) + (await insufficient.count())).toBeGreaterThan(0);
   });
+  test('V5 Match Center turns saved matches into an actionable practice plan', async ({ page }) => {
+    await page.addInitScript(() => {
+      const loss=(id,date,reason,lore=8)=>({id,date,deck_id:'v5deck',result:'loss',source:'imported_log',myLore:lore,oppLore:20,archetype:'Toys',planScore:{score:55},lossCondition:{primary:reason},firstQuestMyTurn:4,removedByMe:1,replay:{events:[{turn:1,type:'PLAY',player:1,text:'Fixture event',lore:{1:0,2:0}}]}});
+      const win=(id,date)=>({id,date,deck_id:'v5deck',result:'win',source:'imported_log',myLore:20,oppLore:12,archetype:'Toys',planScore:{score:82},winCondition:{primary:'Steady lore clock'},firstQuestMyTurn:2,removedByMe:2,replay:{events:[]}});
+      const user={_schema:2,display_name:'V5 Smoke',collection:{},decks:[{id:'v5deck',name:'V5 Training Deck',colors:['Amber'],format:'core',cards:{},targetCopies:1,portfolioPriority:0}],
+        matches:[loss('v5l1','2026-07-30','Out-raced by aggro'),win('v5w1','2026-07-29'),loss('v5l2','2026-07-28','Out-raced by aggro'),win('v5w2','2026-07-27')],
+        overrides:{},wishlist:{},learnDone:{},activeDeckId:'v5deck'};
+      localStorage.setItem('inkwell_active_user','luiscredie');
+      localStorage.setItem('inkwell_user_luiscredie',JSON.stringify(user));
+    });
+    await page.goto(URL,{waitUntil:'networkidle'});
+    await openView(page,/Matches|Partidas/);
+    await expect(page.locator('[data-testid="match-practice"]')).toBeVisible();
+    await expect(page.locator('[data-testid="match-practice"]')).toContainText(/Out-raced by aggro|Perdeu a corrida para aggro/);
+    await expect(page.locator('[data-testid="match-trend"]')).toBeVisible();
+    await expect(page.locator('[data-testid="match-deck-performance"]')).toContainText('V5 Training Deck');
+    await expect(page.locator('[data-testid="match-history"]')).toContainText(/55\/100|82\/100/);
+    await page.locator('[data-testid="match-practice-action"]').click();
+    const detail=page.locator('[data-testid="match-detail"]');
+    await expect(detail).toBeVisible();
+    await expect(detail).toContainText(/Next-game action|Ação para a próxima partida/);
+    await expect(detail).toContainText(/Evidence from this game|Evidências desta partida/);
+  });
   test('V4 portfolio advisor plan and shared cards', async ({ page }) => {
     // Deterministic fixture: fresh CI browser context; seed the active profile with a
     // guaranteed shared-card conflict (1 owned copy, two decks needing 2 each).

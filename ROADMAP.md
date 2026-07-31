@@ -4,6 +4,27 @@ Atualizado em 2026-07-28. Raiz canônica de publicação: `site/`.
 Entrada canônica: `site/index.html`. `Inkwell.dc.html` é apenas um espelho
 byte a byte para desenvolvimento.
 
+## M3V V5 — Match Center visual e coaching (DONE, code)
+
+O Match Center passa de histórico técnico para ciclo de melhoria do jogador,
+sem novo schema e sem IA obrigatória:
+
+- “Próximo treino” derivado das cinco partidas mais recentes;
+- padrões recorrentes de derrota, aderência ao plano, início da corrida de lore
+  e dificuldade para fechar tratados como sinais separados;
+- forma recente (últimas cinco versus cinco anteriores), sequência atual,
+  média de aderência e cobertura de logs detalhados;
+- desempenho por deck salvo, sempre identificado por `deck_id`;
+- histórico enriquecido com placar de lore, condição, nota e disponibilidade
+  de replay;
+- revisão de partida com ação concreta e fatos observáveis, sem apresentar
+  inferência como certeza;
+- conteúdo completo em EN/PT e layout responsivo;
+- função pura `computeMatchCenterInsights()` e suíte canônica V5.
+
+Persistência, importador, replay, sincronização e formato de partidas não foram
+alterados. Recomendações são recalculadas a partir de `state.matches`.
+
 ## M1.7 — Advisor explicável (DONE, code)
 Três blocos: Monte agora (deckStatus + targetCopies 0–10), Cartas compartilhadas
 (sharedConflicts com have/demanda/decisão), Próximo deck (purchasesToUnlockNext

@@ -83,6 +83,34 @@
     .ink-mobile-profile{display:flex!important}
   }
   .ink-mobile-profile{display:none}
+  /* M3V V5 — Match Center: evidence-first coaching, no new data contract */
+  .mc-shell{max-width:1180px!important}
+  .mc-practice{position:relative;overflow:hidden;padding:24px;border-radius:var(--r-xl);background:
+    radial-gradient(110% 160% at 100% 0%,rgba(155,114,207,.24),transparent 58%),
+    linear-gradient(145deg,rgba(199,154,68,.12),rgba(18,16,22,.96));border:1px solid var(--outline-strong);box-shadow:var(--elev-1)}
+  .mc-practice:after{content:"";position:absolute;right:-60px;bottom:-95px;width:220px;height:220px;border-radius:50%;border:1px solid rgba(183,155,255,.15);pointer-events:none}
+  .mc-practice-row{display:flex;align-items:flex-end;justify-content:space-between;gap:18px}
+  .mc-eyebrow{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#d8b96d;font-weight:700}
+  .mc-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .mc-kpi{padding:15px 17px;border-radius:var(--r-md);background:rgba(255,255,255,.035);border:1px solid var(--outline)}
+  .mc-insights{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:12px}
+  .mc-panel{padding:18px;border-radius:var(--r-lg);background:rgba(255,255,255,.025);border:1px solid var(--outline)}
+  .mc-deck-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.055)}
+  .mc-deck-row:last-child{border-bottom:0}
+  .mc-match-row{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:13px;align-items:center;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.055);transition:background var(--dur-fast)}
+  .mc-match-row:hover{background:rgba(255,255,255,.025)}
+  .mc-fact-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px}
+  .mc-trend-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+  .mc-action-card{padding:15px;border-radius:var(--r-md);background:rgba(95,208,127,.065);border:1px solid rgba(95,208,127,.2)}
+  @media(max-width:860px){
+    .mc-practice{padding:18px}
+    .mc-practice-row{align-items:flex-start;flex-direction:column}
+    .mc-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .mc-trend-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .mc-insights{grid-template-columns:1fr}
+    .mc-match-row{grid-template-columns:34px minmax(0,1fr);padding:13px 12px}
+    .mc-match-row>.mc-row-end{grid-column:2;justify-self:start}
+  }
 </style>
 <script>
   window.imgError = function(e){ var el=e.target; var d=el.dataset||{};
@@ -786,12 +814,23 @@
 
         <!-- ================= MATCHES ================= -->
         <sc-if value="{{ isMatches }}" hint-placeholder-val="{{ false }}">
-        <div class="ink-view" style="max-width:1000px;margin:0 auto">
+        <div class="ink-view mc-shell" style="margin:0 auto">
+          <section data-testid="match-practice" class="mc-practice" style="margin-bottom:14px">
+            <div class="mc-eyebrow">{{ mcPracticeLabel }}</div>
+            <div class="mc-practice-row" style="margin-top:8px;position:relative;z-index:1">
+              <div style="max-width:720px">
+                <h2 style="font-family:var(--font-title);font-size:clamp(21px,3vw,31px);line-height:1.12;color:{{ mc.practice.tone }}">{{ mc.practice.title }}</h2>
+                <p class="ink-copy" style="font-size:13.5px;line-height:1.6;color:#bdb5c8;margin-top:8px">{{ mc.practice.body }}</p>
+              </div>
+              <button data-testid="match-practice-action" onClick="{{ mc.practice._open }}" style="flex-shrink:0;padding:11px 17px;border-radius:11px;background:linear-gradient(180deg,#f4dd9a,#c79a44);border:0;color:#23180a;font-weight:800;cursor:pointer">{{ mc.practice.button }} →</button>
+            </div>
+          </section>
           <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:20px">
-            <div style="display:flex;gap:14px">
-              <div style="padding:16px 20px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)"><div style="font-family:'JetBrains Mono';font-weight:800;font-size:22px">{{ mc.total }}</div><div style="font-size:11px;color:#8a8a92;margin-top:2px">{{ mcGames }}</div></div>
-              <div style="padding:16px 20px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)"><div style="font-family:'JetBrains Mono';font-weight:800;font-size:22px;color:{{ mc.wrColor }}">{{ mc.wr }}</div><div style="font-size:11px;color:#8a8a92;margin-top:2px">{{ mcWinRate }}</div></div>
-              <div style="padding:16px 20px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)"><div style="font-family:'JetBrains Mono';font-weight:800;font-size:22px">{{ mc.record }}</div><div style="font-size:11px;color:#8a8a92;margin-top:2px">{{ mcLast10 }}</div></div>
+            <div class="mc-kpis" style="flex:1;min-width:min(100%,560px)">
+              <div class="mc-kpi"><div style="font-family:var(--font-mono);font-weight:800;font-size:22px">{{ mc.total }}</div><div style="font-size:11px;color:#8a8a92;margin-top:2px">{{ mcGames }}</div></div>
+              <div class="mc-kpi"><div style="font-family:var(--font-mono);font-weight:800;font-size:22px;color:{{ mc.wrColor }}">{{ mc.wr }}</div><div style="font-size:11px;color:#8a8a92;margin-top:2px">{{ mcWinRate }}</div></div>
+              <div class="mc-kpi"><div style="font-family:var(--font-mono);font-weight:800;font-size:22px">{{ mc.record }}</div><div style="font-size:11px;color:#8a8a92;margin-top:2px">{{ mcLast10 }}</div></div>
+              <div class="mc-kpi"><div style="font-family:var(--font-mono);font-weight:800;font-size:18px">{{ mc.streak }}</div><div style="font-size:11px;color:#8a8a92;margin-top:5px">{{ mcCurrentStreak }}</div></div>
             </div>
             <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
               <select value="{{ mc.filter }}" onChange="{{ mc._onFilter }}" aria-label="{{ mcDeckFilterLabel }}" style="padding:9px 12px;border-radius:11px;background:#17171d;border:1px solid rgba(255,255,255,.1);color:#f3f3f5;font-size:13px">
@@ -806,6 +845,31 @@
               </select>
               <button onClick="{{ mc._logToggle }}" style="padding:9px 16px;border-radius:11px;background:{{ accent }};border:none;color:#0a0a0c;font-weight:700;cursor:pointer;font-size:13px">{{ mc.logLabel }}</button>
             </div>
+          </div>
+          <div class="mc-insights" style="margin-bottom:16px">
+            <section data-testid="match-trend" class="mc-panel">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:13px">
+                <h3 style="font-family:var(--font-title);font-size:16px">{{ mcTrendTitle }}</h3>
+                <span style="font-size:11px;font-weight:700;color:{{ mc.trend.deltaColor }}">{{ mc.trend.state }} · {{ mc.trend.delta }}</span>
+              </div>
+              <div class="mc-trend-grid">
+                <div><div style="font-family:var(--font-mono);font-size:18px;font-weight:800">{{ mc.trend.recent }}</div><div style="font-size:10px;color:#7c7c85">{{ mcRecentFive }}</div></div>
+                <div><div style="font-family:var(--font-mono);font-size:18px;font-weight:800">{{ mc.trend.previous }}</div><div style="font-size:10px;color:#7c7c85">{{ mcPreviousFive }}</div></div>
+                <div><div style="font-family:var(--font-mono);font-size:18px;font-weight:800">{{ mc.trend.plan }}</div><div style="font-size:10px;color:#7c7c85">{{ mcPlanAverage }}</div></div>
+                <div><div style="font-family:var(--font-mono);font-size:18px;font-weight:800">{{ mc.trend.coverage }}</div><div style="font-size:10px;color:#7c7c85">{{ mcImportedCoverage }}</div></div>
+              </div>
+            </section>
+            <section data-testid="match-deck-performance" class="mc-panel">
+              <h3 style="font-family:var(--font-title);font-size:16px;margin-bottom:6px">{{ mcDeckPerformance }}</h3>
+              <sc-for list="{{ mc.deckPerformance }}" as="d" hint-placeholder-count="3">
+                <div class="mc-deck-row">
+                  <button onClick="{{ d._filter }}" title="{{ d.filterLabel }}" style="min-width:0;background:none;border:0;color:#ece8f2;text-align:left;cursor:pointer;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ d.name }}</button>
+                  <span style="font-size:10.5px;color:#7c7c85">{{ d.record }}</span>
+                  <span style="font-family:var(--font-mono);font-weight:800;color:{{ d.color }}">{{ d.wr }}</span>
+                </div>
+              </sc-for>
+              <sc-if value="{{ mc.empty }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px;color:#7c7c85;padding-top:8px">{{ mcNoDeckPerformance }}</div></sc-if>
+            </section>
           </div>
           <sc-if value="{{ mc.logOpen }}" hint-placeholder-val="{{ false }}">
             <div data-testid="match-importer" style="padding:18px 20px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);margin-bottom:16px;animation:ink-pop .2s both">
@@ -853,7 +917,18 @@
                 <div style="padding:12px;border-radius:11px;background:rgba(0,0,0,.18)"><div style="font-size:10px;color:#8a8a92">{{ mcCondition }}</div><div style="font-weight:700;font-size:13px;margin-top:4px">{{ mc.detail.condition }}</div></div>
                 <div style="padding:12px;border-radius:11px;background:rgba(0,0,0,.18)"><div style="font-size:10px;color:#8a8a92">{{ mcPlanScore }}</div><div style="font-family:'JetBrains Mono';font-weight:800;font-size:17px;color:{{ mc.detail.scoreColor }};margin-top:3px">{{ mc.detail.score }}</div></div>
               </div>
-              <div style="font-size:13px;line-height:1.55;color:#d2d2d8;margin-top:13px">{{ mc.detail.summary }}</div>
+              <div class="mc-action-card" style="margin-top:12px">
+                <div class="mc-eyebrow" style="color:#7edb98">{{ mcNextAction }}</div>
+                <div class="ink-copy" style="font-size:13px;line-height:1.55;color:#e1e6e2;margin-top:5px">{{ mc.detail.nextAction }}</div>
+              </div>
+              <div style="margin-top:14px">
+                <div style="font-size:11px;font-weight:700;color:#aaa1b7;margin-bottom:7px">{{ mcEvidence }}</div>
+                <div class="mc-fact-grid">
+                  <sc-for list="{{ mc.detail.facts }}" as="f" hint-placeholder-count="4">
+                    <div style="padding:10px 11px;border-radius:10px;background:rgba(0,0,0,.16);border:1px solid rgba(255,255,255,.05)"><div style="font-size:9.5px;color:#77717f;text-transform:uppercase;letter-spacing:.08em">{{ f.label }}</div><div style="font-family:var(--font-mono);font-size:12px;color:#ddd8e5;margin-top:4px">{{ f.value }}</div></div>
+                  </sc-for>
+                </div>
+              </div>
               <sc-if value="{{ mc.detail.hasReplay }}" hint-placeholder-val="{{ false }}">
                 <div style="margin-top:16px;padding-top:15px;border-top:1px solid rgba(255,255,255,.08)">
                   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px"><div style="font-weight:700;font-size:14px">{{ mcReplay }}</div><div style="font-family:'JetBrains Mono';font-size:11px;color:#8a8a92">{{ mc.detail.progress }}</div></div>
@@ -875,12 +950,20 @@
               <sc-if value="{{ mc.detail.noReplay }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:#7c7c85;margin-top:13px">{{ mcNoReplay }}</div></sc-if>
             </section>
           </sc-if>
-          <div style="border-radius:16px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);overflow:hidden">
+          <div data-testid="match-history" style="border-radius:16px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);overflow:hidden">
             <sc-for list="{{ mc.rows }}" as="m" hint-placeholder-count="6">
-              <div style="display:flex;align-items:center;gap:13px;padding:12px 18px;border-bottom:1px solid rgba(255,255,255,.04)">
-                <div style="width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;font-family:'JetBrains Mono';background:{{ m.badgeBg }};color:{{ m.badgeColor }}">{{ m.wl }}</div>
-                <button onClick="{{ m._open }}" style="flex:1;min-width:0;text-align:left;background:none;border:none;cursor:pointer;color:#e8e8ec;padding:0" style-hover="color:#fff"><span style="display:block;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ m.deck }}</span><span style="font-size:11.5px;color:#7c7c85">vs {{ m.opp }} · {{ m.date }}</span></button>
-                <button onClick="{{ m._del }}" style="background:none;border:none;color:#5a5a62;cursor:pointer;font-size:16px" style-hover="color:#ff8a96">×</button>
+              <div class="mc-match-row">
+                <div style="width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;font-family:var(--font-mono);background:{{ m.badgeBg }};color:{{ m.badgeColor }}">{{ m.wl }}</div>
+                <button onClick="{{ m._open }}" aria-label="{{ m.reviewLabel }}" style="min-width:0;text-align:left;background:none;border:none;cursor:pointer;color:#e8e8ec;padding:0">
+                  <span style="display:flex;gap:8px;align-items:center;min-width:0"><b style="font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ m.deck }}</b><span style="font-family:var(--font-mono);font-size:11px;color:{{ m.badgeColor }}">{{ m.lore }}</span></span>
+                  <span style="display:block;font-size:11.5px;color:#9a93ad;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px">{{ m.condition }}</span>
+                  <span style="font-size:10.5px;color:#68636f">vs {{ m.opp }} · {{ m.date }} · {{ m.source }}</span>
+                </button>
+                <div class="mc-row-end" style="display:flex;align-items:center;gap:9px">
+                  <span style="font-family:var(--font-mono);font-size:11px;color:#a99ec4">{{ m.score }}</span>
+                  <sc-if value="{{ m.hasReplay }}" hint-placeholder-val="{{ false }}"><span title="{{ mcReplay }}" style="font-size:12px;color:#8ab4ff">▶</span></sc-if>
+                  <button onClick="{{ m._del }}" aria-label="{{ deleteLabel }}" style="width:32px;height:32px;background:none;border:none;color:#5a5a62;cursor:pointer;font-size:16px" style-hover="color:#ff8a96">×</button>
+                </div>
               </div>
             </sc-for>
             <sc-if value="{{ mc.empty }}" hint-placeholder-val="{{ true }}">
@@ -1737,6 +1820,11 @@ class Component extends DCLogic {
       moversTitle:'Price Movers', gainersTitle:'Biggest Gainers', losersTitle:'Biggest Losers', noMovers:'No movers in this period', moversNoHistory:'Not enough price history yet — check back after the next price update.', perLatest:'Latest', finishNormal:'normal', finishFoil:'foil', viewMore:'View more', viewLess:'View less',
       logGame:'+ Log game', viewAllMatches:'View all matches', win:'Win', loss:'Loss', vsInks:'vs inks:', saveGame:'Save game', gameLogged:'Game logged', needDeckFirst:'Create a deck first',
       mcReplayFullscreen:'Fullscreen replay',mcOpponent:'Opponent',mcYou:'You', mcShowHidden:'Show hidden info', mcEstimated:'Estimated reconstruction', mcDeckFilter:'Filter by deck', mcResultFilter:'Filter by result', mcDateFilter:'Filter by date', mcAllResults:'All results', mcAllDates:'All dates', mcLast7:'Last 7 days', mcLast30:'Last 30 days', mcImportTitle:'Import game log', mcChooseDeck:'Choose a saved deck', mcRawPlaceholder:'Paste the raw game log…', mcParseLog:'Parse log', mcSavedDeckHint:'Uses the selected deck saved in your profile.', mcPreviewLabel:'Review before saving', mcDuplicate:'This log matches a saved game from this deck.', mcSaveImported:'Save imported match', mcCancel:'Cancel', mcManualToggle:'No log? Record a manual result', mcMatchDetail:'Match detail', mcCloseDetail:'Close match detail', mcCondition:'Condition', mcPlanScore:'Plan score', mcReplay:'Event replay', mcReplayReset:'Reset replay', mcReplayPrev:'Previous event', mcReplayPlay:'Play or pause replay', mcReplayNext:'Next event', mcReplayLimit:'Timeline replays logged events and lore; it does not reconstruct unknown board state.', mcNoReplay:'This manual match has no replay timeline.', mcImported:'Imported log', mcManual:'Manual', mcEngineMissing:'Match parser is unavailable', mcParseFailed:'Could not parse this log', mcDuplicateConfirm:'Duplicate found — click save again to confirm.',
+      mcPracticeLabel:'Next practice', mcPracticeFirst:'Log your first real match', mcPracticeFirstBody:'Import a game log to unlock evidence-based coaching, replay, and progress trends.', mcPracticeRecurring:'Train against {condition}', mcPracticeRecurringBody:'This pattern appeared in {n} of your five most recent matches.', mcPracticePlan:'Rehearse your deck plan', mcPracticePlanBody:'Your recent average plan score is {score}. Review the opening targets before the next game.', mcPracticeClock:'Start the lore clock earlier', mcPracticeClockBody:'{n} recent losses ended before your deck established meaningful lore pressure.', mcPracticeClose:'Practice closing from ahead', mcPracticeCloseBody:'You reached 15+ lore in {n} recent losses but did not finish.', mcPracticeLoss:'Review the latest loss', mcPracticeLossBody:'You are on a {n}-loss streak. Find one decision to change before the next queue.', mcPracticeRepeat:'Protect the winning pattern', mcPracticeRepeatBody:'You won {n} of the last five. Review what repeated before changing the deck.', mcPracticeLatest:'Review one match with intent', mcPracticeLatestBody:'Open the latest detailed match and choose one specific adjustment for the next game.', mcReviewMatch:'Review match', mcStartImport:'Import first match',
+      mcTrendTitle:'Recent form', mcRecentFive:'Last 5', mcPreviousFive:'Previous 5', mcPlanAverage:'Plan average', mcImportedCoverage:'Detailed logs', mcNoPlanData:'No plan score', mcCurrentStreak:'Current streak', mcWinStreak:'{n} wins', mcLossStreak:'{n} losses', mcTrendUp:'Improving', mcTrendDown:'Falling', mcTrendFlat:'Stable', mcDeckPerformance:'Performance by saved deck', mcDeckSample:'{w}–{l} · {n} games', mcFilterDeck:'Show these matches', mcNoDeckPerformance:'Log matches to compare your saved decks.',
+      mcEvidence:'Evidence from this game', mcNextAction:'Next-game action', mcLoreResult:'Lore score', mcMatchup:'Matchup', mcSource:'Source', mcFirstQuest:'First quest', mcRemoved:'Opposing cards removed', mcUnknown:'Not captured', mcReplayAvailable:'Replay available', mcOpenReview:'Open review',
+      mcCondNeverClock:'Lore clock never started', mcCondTooControl:'Too much control, not enough questing', mcCondAggro:'Out-raced by aggro', mcCondEvasive:'Out-raced by evasives', mcCondControl:'Out-removed by control', mcCondLocations:'Locations generated uncontested lore', mcCondCombo:'Key sequence never came online', mcCondMulligan:'Slow opening after mulligan', mcCondClose:'Could not close after stabilizing', mcCondFlood:'No threats developed', mcCondReview:'Needs manual review', mcCondConcede:'Opponent conceded while behind', mcCondComboWin:'Combo payoff', mcCondBoardLore:'Board control converted to lore', mcCondFastLore:'Fast lore race', mcCondSteadyLore:'Steady lore clock', mcCondRemoval:'Removal lock', mcCondPassiveLore:'Passive lore plan', mcCondGrind:'Resource grind',
+      mcActionQuestEarly:'In the next game, prioritize the earliest safe quest instead of trading every character.', mcActionQuestSafe:'After stabilizing the board, convert at least one ready character into lore each turn.', mcActionStabilize:'Mulligan for early bodies and preserve your first efficient answer for their tempo turn.', mcActionEvasive:'Identify your reachable evasive answer before the game and race when interaction is unavailable.', mcActionSecondWave:'Do not commit every key threat at once; make the first wave draw removal.', mcActionLocations:'Pressure location enablers early or commit to a faster lore race.', mcActionMulliganKey:'Mulligan toward the deck’s key setup card and a playable ink curve.', mcActionOpening:'Keep a hand that produces a meaningful play in the first two turns.', mcActionClose:'When you reach 15 lore, prioritize the shortest closing line over extra value.', mcActionCurve:'Review the opening curve and inkable ratio before changing individual cards.', mcActionRepeat:'Repeat the line that produced this win; change only one variable at a time.', mcActionReview:'Use the replay to mark the first turn where a different choice was realistic.',
       nowPlaying:'Now Playing', legality:'Legality', last10:'Last 10', switchDeck:'Switch deck:', stSetup:'Setup needed', stIllegal:'Legality issue', stMissing:'Missing cards', stReady:'Ready to play', stPlay:'In rotation', na_finishDeck:'Finish deck', na_fixLegality:'Fix legality', na_viewMissing:'View missing cards', na_logFirst:'Log first match', na_review:'Review / log match', setActive:'Set as active', activeDeck:'✓ Active deck',
       advisorBtn:'Deck Advisor', advisorSub:'Can you build your decks from your collection?',
       activeDeckSet:'Active deck set', optimizedPlan:'Optimized Plan', recommendedPlan:'Recommended Plan', physicalCopies:'Physical copies', pinPriority:'Pin priority', portfolioImpactUnlocks:'+1 copy completes {n} more deck copy(ies)', portfolioImpactReduces:'+1 copy reduces total missing by {n}', portfolioHead:'With your collection, you can build {b} of the {n} selected deck copies at the same time.', portfolioMissing:'{n} total missing copies across the portfolio.', portfolioNextNamed:'Next easiest — {deckName} · {n} additional card(s).', portfolioTotalMissing:'{n} total missing copies across every selected deck.', portfolioPlanTitle:'Deck portfolio plan', portfolioModeHint:'Optimized = exact best plan. Recommended = a good plan found within limits.', portfolioAllOk:'All requested decks are buildable at once.', portfolioExcluded:'Excluded from plan', portfolioNofM:'{a} of {b} buildable', buyLabel:'Buy', buyExt:'Buy ↗', purchaseDetail:'Needs {need} · allocated {allocated} · buy {buy}', sharedCardsTitle:'Shared cards', sharedCardsSummary:'{n} card identities are contested between decks.', sharedAllocation:'{allocated}/{need} allocated', sharedShowMore:'Show all {n}', sharedShowLess:'Show fewer', simPrioritize:'Prioritize', simActive:'Prioritizing', simBanner:'Simulating priority — plan not saved yet.', simConfirm:'Confirm', simReset:'Reset', addMissingWish:'Add missing to wishlist', deckHealthTitle:'Deck health', inkablePctLabel:'inkable', avgCostLabel:'avg cost', deckHealthOk:'Healthy ✓', dh_lowInkable:'Low inkable ratio — you may struggle for ink', dh_slowStart:'Few 1–2 cost plays — slow starts', dh_topHeavy:'High average cost — top-heavy curve', dh_fewCharacters:'Few characters — thin board presence', dh_under60:'Under 60 cards — not tournament legal', typeCharacters:'Characters', typeActions:'Actions', typeSongs:'Songs', typeItems:'Items', typeLocations:'Locations', typeOther:'Other', ownedFilter:'✓ Owned', allFilter:'All', allSetsFilter:'All sets', closeLabel:'Close', advAll:'All at once', advEach:'One at a time', advEachNote:'Each deck built on its own, drawing from your full collection (rebuild between events).', advNoDecks:'Add some decks first, then the advisor can plan your copies.', advAllOk:'All decks buildable at once', advAllShort:'{n} extra copies needed', advAllOkSub:'Your {n} decks share no card beyond what you own — sleeve them all simultaneously.', advAllShortSub:'Buy these to have every deck fully built at the same time — {v} total.', advBuildable:'buildable together', advBlocked:'needs shared cards', advComplete:'100% owned', advNeedN:'need {n} more',
@@ -1772,6 +1860,11 @@ class Component extends DCLogic {
       moversTitle:'Maiores Variações', gainersTitle:'Maiores Altas', losersTitle:'Maiores Quedas', noMovers:'Sem variações neste período', moversNoHistory:'Ainda não há histórico suficiente — volte após a próxima atualização de preços.', perLatest:'Última', finishNormal:'normal', finishFoil:'foil', viewMore:'Ver mais', viewLess:'Ver menos',
       logGame:'+ Registrar partida', viewAllMatches:'Ver todas as partidas', win:'Vitória', loss:'Derrota', vsInks:'vs inks:', saveGame:'Salvar partida', gameLogged:'Partida registrada', needDeckFirst:'Crie um deck primeiro',
       mcReplayFullscreen:'Replay em tela cheia',mcOpponent:'Oponente',mcYou:'Você', mcShowHidden:'Mostrar info oculta', mcEstimated:'Reconstrução estimada', mcDeckFilter:'Filtrar por deck', mcResultFilter:'Filtrar por resultado', mcDateFilter:'Filtrar por data', mcAllResults:'Todos os resultados', mcAllDates:'Todas as datas', mcLast7:'Últimos 7 dias', mcLast30:'Últimos 30 dias', mcImportTitle:'Importar log da partida', mcChooseDeck:'Escolha um deck salvo', mcRawPlaceholder:'Cole o log bruto da partida…', mcParseLog:'Analisar log', mcSavedDeckHint:'Usa o deck selecionado salvo no seu perfil.', mcPreviewLabel:'Revise antes de salvar', mcDuplicate:'Este log corresponde a uma partida já salva neste deck.', mcSaveImported:'Salvar partida importada', mcCancel:'Cancelar', mcManualToggle:'Sem log? Registre um resultado manual', mcMatchDetail:'Detalhes da partida', mcCloseDetail:'Fechar detalhes da partida', mcCondition:'Condição', mcPlanScore:'Aderência ao plano', mcReplay:'Replay de eventos', mcReplayReset:'Reiniciar replay', mcReplayPrev:'Evento anterior', mcReplayPlay:'Reproduzir ou pausar', mcReplayNext:'Próximo evento', mcReplayLimit:'A timeline reproduz eventos e lore registrados; não reconstrói estados desconhecidos da mesa.', mcNoReplay:'Esta partida manual não possui timeline.', mcImported:'Log importado', mcManual:'Manual', mcEngineMissing:'O analisador de partidas não está disponível', mcParseFailed:'Não foi possível analisar este log', mcDuplicateConfirm:'Duplicata encontrada — clique novamente para confirmar.',
+      mcPracticeLabel:'Próximo treino', mcPracticeFirst:'Registre sua primeira partida real', mcPracticeFirstBody:'Importe um log para liberar treino com evidências, replay e tendências de evolução.', mcPracticeRecurring:'Treine contra {condition}', mcPracticeRecurringBody:'Esse padrão apareceu em {n} das suas cinco partidas mais recentes.', mcPracticePlan:'Ensaie o plano do deck', mcPracticePlanBody:'Sua aderência média recente foi {score}. Revise os objetivos da abertura antes da próxima partida.', mcPracticeClock:'Comece a corrida de lore mais cedo', mcPracticeClockBody:'{n} derrotas recentes terminaram antes de o deck estabelecer pressão relevante de lore.', mcPracticeClose:'Treine como fechar quando está à frente', mcPracticeCloseBody:'Você chegou a 15+ de lore em {n} derrotas recentes, mas não encerrou.', mcPracticeLoss:'Revise a derrota mais recente', mcPracticeLossBody:'Você está em uma sequência de {n} derrotas. Escolha uma decisão para mudar antes da próxima partida.', mcPracticeRepeat:'Proteja o padrão vencedor', mcPracticeRepeatBody:'Você venceu {n} das últimas cinco. Revise o que se repetiu antes de alterar o deck.', mcPracticeLatest:'Revise uma partida com intenção', mcPracticeLatestBody:'Abra a partida detalhada mais recente e escolha um ajuste específico para o próximo jogo.', mcReviewMatch:'Revisar partida', mcStartImport:'Importar primeira partida',
+      mcTrendTitle:'Forma recente', mcRecentFive:'Últimas 5', mcPreviousFive:'5 anteriores', mcPlanAverage:'Média do plano', mcImportedCoverage:'Logs detalhados', mcNoPlanData:'Sem nota de plano', mcCurrentStreak:'Sequência atual', mcWinStreak:'{n} vitórias', mcLossStreak:'{n} derrotas', mcTrendUp:'Evoluindo', mcTrendDown:'Em queda', mcTrendFlat:'Estável', mcDeckPerformance:'Desempenho por deck salvo', mcDeckSample:'{w}–{l} · {n} partidas', mcFilterDeck:'Mostrar estas partidas', mcNoDeckPerformance:'Registre partidas para comparar seus decks salvos.',
+      mcEvidence:'Evidências desta partida', mcNextAction:'Ação para a próxima partida', mcLoreResult:'Placar de lore', mcMatchup:'Confronto', mcSource:'Origem', mcFirstQuest:'Primeiro quest', mcRemoved:'Cartas adversárias removidas', mcUnknown:'Não registrado', mcReplayAvailable:'Replay disponível', mcOpenReview:'Abrir revisão',
+      mcCondNeverClock:'A corrida de lore não começou', mcCondTooControl:'Controle demais, quest insuficiente', mcCondAggro:'Perdeu a corrida para aggro', mcCondEvasive:'Perdeu a corrida para evasivos', mcCondControl:'Teve a mesa removida pelo controle', mcCondLocations:'Locais geraram lore sem contestação', mcCondCombo:'A sequência principal não funcionou', mcCondMulligan:'Abertura lenta após o mulligan', mcCondClose:'Não conseguiu fechar após estabilizar', mcCondFlood:'Não desenvolveu ameaças', mcCondReview:'Precisa de revisão manual', mcCondConcede:'Oponente concedeu em desvantagem', mcCondComboWin:'Finalização pelo combo', mcCondBoardLore:'Controle da mesa convertido em lore', mcCondFastLore:'Corrida rápida de lore', mcCondSteadyLore:'Pressão constante de lore', mcCondRemoval:'Controle por remoções', mcCondPassiveLore:'Plano de lore passivo', mcCondGrind:'Disputa de recursos',
+      mcActionQuestEarly:'Na próxima partida, priorize o primeiro quest seguro em vez de trocar todos os personagens.', mcActionQuestSafe:'Depois de estabilizar a mesa, converta ao menos um personagem pronto em lore por turno.', mcActionStabilize:'Faça mulligan por presença inicial e preserve sua primeira resposta eficiente para o turno de pressão adversário.', mcActionEvasive:'Identifique antes da partida sua resposta para evasivos e aceite correr quando não houver interação.', mcActionSecondWave:'Não coloque todas as ameaças principais de uma vez; faça a primeira leva atrair as remoções.', mcActionLocations:'Pressione cedo os personagens que ajudam locais ou assuma uma corrida de lore mais rápida.', mcActionMulliganKey:'Faça mulligan buscando a carta de preparação central e uma curva de tinta jogável.', mcActionOpening:'Mantenha uma mão que produza uma jogada relevante nos dois primeiros turnos.', mcActionClose:'Ao chegar a 15 de lore, priorize a linha mais curta para fechar em vez de valor extra.', mcActionCurve:'Revise a curva inicial e a proporção de cartas tintáveis antes de trocar cartas individuais.', mcActionRepeat:'Repita a linha que produziu a vitória e altere apenas uma variável por vez.', mcActionReview:'Use o replay para marcar o primeiro turno em que uma escolha diferente era realmente possível.',
       nowPlaying:'Jogando Agora', legality:'Legalidade', last10:'Últimas 10', switchDeck:'Trocar deck:', stSetup:'Precisa montar', stIllegal:'Problema de legalidade', stMissing:'Faltam cartas', stReady:'Pronto para jogar', stPlay:'Em rotação', na_finishDeck:'Terminar deck', na_fixLegality:'Corrigir legalidade', na_viewMissing:'Ver cartas que faltam', na_logFirst:'Registrar 1ª partida', na_review:'Revisar / registrar', setActive:'Definir como ativo', activeDeck:'✓ Deck ativo',
       advisorBtn:'Consultor de Decks', advisorSub:'Você consegue montar seus decks com sua coleção?',
       activeDeckSet:'Deck ativo definido', optimizedPlan:'Plano otimizado', recommendedPlan:'Plano recomendado', physicalCopies:'Cópias físicas', pinPriority:'Fixar prioridade', portfolioImpactUnlocks:'+1 cópia completa mais {n} cópia(s) de deck', portfolioImpactReduces:'+1 cópia reduz o total de faltas em {n}', portfolioHead:'Com sua coleção, você consegue montar {b} das {n} cópias de decks selecionadas ao mesmo tempo.', portfolioMissing:'{n} cópias faltantes no total no portfólio.', portfolioNextNamed:'Próximo mais fácil — {deckName} · faltam {n} carta(s).', portfolioTotalMissing:'{n} cópias faltantes no total entre todos os decks selecionados.', portfolioPlanTitle:'Plano para seus decks', portfolioModeHint:'Otimizado = melhor plano exato. Recomendado = um bom plano encontrado dentro dos limites.', portfolioAllOk:'Todos os decks solicitados são montáveis ao mesmo tempo.', portfolioExcluded:'Excluído do plano', portfolioNofM:'{a} de {b} montáveis', buyLabel:'Comprar', buyExt:'Comprar ↗', purchaseDetail:'Precisa {need} · alocadas {allocated} · comprar {buy}', sharedCardsTitle:'Cartas compartilhadas', sharedCardsSummary:'{n} cartas disputadas entre os decks.', sharedAllocation:'{allocated}/{need} alocadas', sharedShowMore:'Ver todas ({n})', sharedShowLess:'Ver menos', simPrioritize:'Priorizar', simActive:'Priorizando', simBanner:'Simulando prioridade — plano ainda não salvo.', simConfirm:'Confirmar', simReset:'Redefinir', addMissingWish:'Adicionar faltantes à wishlist', deckHealthTitle:'Saúde do deck', inkablePctLabel:'tintável', avgCostLabel:'custo médio', deckHealthOk:'Saudável ✓', dh_lowInkable:'Poucas cartas tintáveis — pode faltar tinta', dh_slowStart:'Poucas jogadas de custo 1–2 — início lento', dh_topHeavy:'Custo médio alto — curva pesada', dh_fewCharacters:'Poucos personagens — presença fraca na mesa', dh_under60:'Menos de 60 cartas — fora do formato', typeCharacters:'Personagens', typeActions:'Ações', typeSongs:'Canções', typeItems:'Itens', typeLocations:'Locais', typeOther:'Outros', ownedFilter:'✓ Possuídas', allFilter:'Todas', allSetsFilter:'Todos os sets', closeLabel:'Fechar', advAll:'Todos ao mesmo tempo', advEach:'Um de cada vez', advEachNote:'Cada deck montado sozinho, usando sua coleção inteira (remontando entre eventos).', advNoDecks:'Adicione decks primeiro para o consultor planejar suas cópias.', advAllOk:'Todos os decks montáveis ao mesmo tempo', advAllShort:'{n} cópias extras necessárias', advAllOkSub:'Seus {n} decks não dividem cartas além do que você tem — monte todos ao mesmo tempo.', advAllShortSub:'Compre estas para ter todos os decks montados simultaneamente — {v} no total.', advBuildable:'montável junto', advBlocked:'precisa de cartas compartilhadas', advComplete:'100% na coleção', advNeedN:'faltam {n}',
@@ -2374,6 +2467,74 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
   }
   collNum(v){ const m=String(v==null?'':v).match(/\d+/); return m?parseInt(m[0],10):999999; }
 
+  // V5 Match Center analytics — pure, deterministic, and schema-additive.
+  static computeMatchCenterInsights(matches, decks){
+    const ms=(Array.isArray(matches)?matches:[]).slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||String(b.id||'').localeCompare(String(a.id||'')));
+    const ds=Array.isArray(decks)?decks:[], deckNames={}; ds.forEach(d=>{ if(d&&d.id) deckNames[d.id]=d.name||'—'; });
+    const isWin=m=>m&&(m.result==='win'||m.result==='W'||m.outcome_code==='W');
+    const pct=a=>a.length?Math.round(a.filter(isWin).length/a.length*100):null;
+    const recent=ms.slice(0,5), previous=ms.slice(5,10), recentWr=pct(recent), previousWr=pct(previous);
+    let streak=0, streakResult=null;
+    if(ms.length){ streakResult=isWin(ms[0])?'win':'loss'; for(const m of ms){ if((isWin(m)?'win':'loss')!==streakResult) break; streak++; } }
+    const planValues=recent.map(m=>m&&m.planScore&&Number(m.planScore.score)).filter(Number.isFinite);
+    const averagePlan=planValues.length?Math.round(planValues.reduce((a,b)=>a+b,0)/planValues.length):null;
+    const imported=ms.filter(m=>m&&m.source==='imported_log').length;
+    const losses=recent.filter(m=>!isWin(m)), lossCounts={};
+    losses.forEach(m=>{ const c=m&&m.lossCondition&&m.lossCondition.primary; if(c) lossCounts[c]=(lossCounts[c]||0)+1; });
+    const recurring=Object.entries(lossCounts).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]))[0]||null;
+    const slowClock=losses.filter(m=>Number(m.myLore)<5).length;
+    const closeLoss=losses.filter(m=>Number(m.myLore)>=15).length;
+    let practiceCode='first_match', practiceCondition='', practiceCount=0;
+    if(ms.length){
+      if(recurring&&recurring[1]>=2){ practiceCode='recurring_loss'; practiceCondition=recurring[0]; practiceCount=recurring[1]; }
+      else if(averagePlan!=null&&averagePlan<60){ practiceCode='plan_execution'; }
+      else if(slowClock>=2){ practiceCode='start_clock'; practiceCount=slowClock; }
+      else if(closeLoss>=2){ practiceCode='close_game'; practiceCount=closeLoss; }
+      else if(streakResult==='loss'&&streak>=2){ practiceCode='review_loss'; practiceCount=streak; }
+      else if(recent.length>=4&&recent.filter(isWin).length>=4){ practiceCode='repeat_win'; practiceCount=recent.filter(isWin).length; }
+      else practiceCode='review_latest';
+    }
+    const target=(practiceCode==='recurring_loss'&&recurring?losses.find(m=>m&&m.lossCondition&&m.lossCondition.primary===recurring[0]):null)||losses[0]||ms[0]||null;
+    const perDeck={};
+    ms.forEach(m=>{ const id=m.deck_id||'unknown'; if(!perDeck[id]) perDeck[id]={id,name:deckNames[id]||'—',games:0,wins:0,recent:[]}; const x=perDeck[id]; x.games++; if(isWin(m)) x.wins++; if(x.recent.length<5) x.recent.push(m); });
+    const deckStats=Object.values(perDeck).map(x=>({...x,wr:Math.round(x.wins/x.games*100),recentWr:pct(x.recent)})).sort((a,b)=>b.games-a.games||b.wr-a.wr||a.name.localeCompare(b.name));
+    return { total:ms.length,recentWr,previousWr,trend:(recentWr!=null&&previousWr!=null)?recentWr-previousWr:null,streak,streakResult,averagePlan,imported,importedPct:ms.length?Math.round(imported/ms.length*100):0,
+      practiceCode,practiceCondition,practiceCount,targetMatchId:target&&target.id||null,deckStats };
+  }
+  matchConditionLabel(raw){
+    const map={
+      'Never built a lore clock':this.t('mcCondNeverClock'),'Too much control, not enough questing':this.t('mcCondTooControl'),'Out-raced by aggro':this.t('mcCondAggro'),
+      'Out-raced by evasives':this.t('mcCondEvasive'),'Out-removed by control':this.t('mcCondControl'),'Locations ticked me out':this.t('mcCondLocations'),
+      'Combo never came online':this.t('mcCondCombo'),'Bad mulligan / slow start':this.t('mcCondMulligan'),'Could not close after stabilizing':this.t('mcCondClose'),
+      'Flooded / drew no threats':this.t('mcCondFlood'),'Unknown / manual review':this.t('mcCondReview'),'Opponent conceded behind':this.t('mcCondConcede'),
+      'Combo payoff':this.t('mcCondComboWin'),'Board control into lore':this.t('mcCondBoardLore'),'Fast lore race':this.t('mcCondFastLore'),
+      'Steady lore clock':this.t('mcCondSteadyLore'),'Removal lock':this.t('mcCondRemoval'),'Location/passive lore':this.t('mcCondPassiveLore'),'Resource grind':this.t('mcCondGrind')
+    };
+    return map[raw]||raw||'—';
+  }
+  matchPracticeCopy(ins){
+    const c=this.matchConditionLabel(ins.practiceCondition);
+    if(ins.practiceCode==='first_match') return {title:this.t('mcPracticeFirst'),body:this.t('mcPracticeFirstBody'),tone:'#b79bff'};
+    if(ins.practiceCode==='recurring_loss') return {title:this.t('mcPracticeRecurring',{condition:c}),body:this.t('mcPracticeRecurringBody',{n:ins.practiceCount}),tone:'#ff9aa4'};
+    if(ins.practiceCode==='plan_execution') return {title:this.t('mcPracticePlan'),body:this.t('mcPracticePlanBody',{score:ins.averagePlan}),tone:'#e6c15a'};
+    if(ins.practiceCode==='start_clock') return {title:this.t('mcPracticeClock'),body:this.t('mcPracticeClockBody',{n:ins.practiceCount}),tone:'#ff9aa4'};
+    if(ins.practiceCode==='close_game') return {title:this.t('mcPracticeClose'),body:this.t('mcPracticeCloseBody',{n:ins.practiceCount}),tone:'#e6c15a'};
+    if(ins.practiceCode==='review_loss') return {title:this.t('mcPracticeLoss'),body:this.t('mcPracticeLossBody',{n:ins.practiceCount}),tone:'#ff9aa4'};
+    if(ins.practiceCode==='repeat_win') return {title:this.t('mcPracticeRepeat'),body:this.t('mcPracticeRepeatBody',{n:ins.practiceCount}),tone:'#5fd07f'};
+    return {title:this.t('mcPracticeLatest'),body:this.t('mcPracticeLatestBody'),tone:'#8ab4ff'};
+  }
+  matchNextAction(match){
+    const cond=match&&match.lossCondition&&match.lossCondition.primary;
+    const map={
+      'Never built a lore clock':this.t('mcActionQuestEarly'),'Too much control, not enough questing':this.t('mcActionQuestSafe'),'Out-raced by aggro':this.t('mcActionStabilize'),
+      'Out-raced by evasives':this.t('mcActionEvasive'),'Out-removed by control':this.t('mcActionSecondWave'),'Locations ticked me out':this.t('mcActionLocations'),
+      'Combo never came online':this.t('mcActionMulliganKey'),'Bad mulligan / slow start':this.t('mcActionOpening'),'Could not close after stabilizing':this.t('mcActionClose'),
+      'Flooded / drew no threats':this.t('mcActionCurve')
+    };
+    if(match&&(match.result==='win'||match.result==='W')) return this.t('mcActionRepeat');
+    return map[cond]||this.t('mcActionReview');
+  }
+
   // ---------- deck helpers ----------
   CORE_SETS = ['LOR7','LOR8','LOR9','LOR10','LOR11','LOR12','LOR13','Q2','DLPC2'];
   fmtRules(fmt){ const d=this.legalityData; if(d&&d.formats&&d.formats[fmt]) return d.formats[fmt]; return null; }
@@ -2942,6 +3103,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       const rf=st.matchResultFilter||'all'; if(rf!=='all') rows=rows.filter(m=>m.result===rf);
       const df=st.matchDateFilter||'all'; if(df!=='all'){ const cut=Date.now()-(+df)*864e5; rows=rows.filter(m=>Date.parse(m.date||0)>=cut); }
       const wr=this.winRate(rows); const last10=rows.slice(0,10); const w10=last10.filter(m=>m.result==='win').length;
+      const insight=Component.computeMatchCenterInsights(rows,st.decks), practice=this.matchPracticeCopy(insight);
       V.mcGames=this.t('games'); V.mcWinRate=this.t('winRate'); V.mcLast10=this.t('last10'); V.mcAllDecks=this.t('allDecks'); V.mcEmpty=this.t('noGamesLogged');
       V.winLabel=this.t('win')||'Win'; V.lossLabel=this.t('loss')||'Loss'; V.vsInksLabel=this.t('vsInks')||'vs inks:'; V.saveGameLabel=this.t('saveGame')||'Save game';
       V.mcDeckFilterLabel=this.t('mcDeckFilter'); V.mcResultFilterLabel=this.t('mcResultFilter'); V.mcDateFilterLabel=this.t('mcDateFilter');
@@ -2949,15 +3111,24 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       V.mcImportTitle=this.t('mcImportTitle'); V.mcChooseDeck=this.t('mcChooseDeck'); V.mcRawPlaceholder=this.t('mcRawPlaceholder'); V.mcParseLog=this.t('mcParseLog'); V.mcSavedDeckHint=this.t('mcSavedDeckHint');
       V.mcPreviewLabel=this.t('mcPreviewLabel'); V.mcDuplicate=this.t('mcDuplicate'); V.mcSaveImported=this.t('mcSaveImported'); V.mcCancel=this.t('mcCancel'); V.mcManualToggle=this.t('mcManualToggle');
       V.mcMatchDetail=this.t('mcMatchDetail'); V.mcCloseDetail=this.t('mcCloseDetail'); V.mcCondition=this.t('mcCondition'); V.mcPlanScore=this.t('mcPlanScore'); V.mcReplay=this.t('mcReplay'); V.mcReplayReset=this.t('mcReplayReset'); V.mcReplayPrev=this.t('mcReplayPrev'); V.mcReplayPlay=this.t('mcReplayPlay'); V.mcReplayNext=this.t('mcReplayNext'); V.mcReplayLimit=this.t('mcReplayLimit'); V.mcNoReplay=this.t('mcNoReplay');
+      V.mcPracticeLabel=this.t('mcPracticeLabel'); V.mcTrendTitle=this.t('mcTrendTitle'); V.mcRecentFive=this.t('mcRecentFive'); V.mcPreviousFive=this.t('mcPreviousFive'); V.mcPlanAverage=this.t('mcPlanAverage'); V.mcImportedCoverage=this.t('mcImportedCoverage'); V.mcCurrentStreak=this.t('mcCurrentStreak'); V.mcDeckPerformance=this.t('mcDeckPerformance'); V.mcNoDeckPerformance=this.t('mcNoDeckPerformance');
+      V.mcEvidence=this.t('mcEvidence'); V.mcNextAction=this.t('mcNextAction'); V.mcOpenReview=this.t('mcOpenReview');
+      V.deleteLabel=this.t('delete');
       V.setMatchWin=()=>this.setState({matchResult:'win'}); V.setMatchLoss=()=>this.setState({matchResult:'loss'});
       V.matchWinStyle=this.chipStyle(st.matchResult==='win','#37B36B'); V.matchLossStyle=this.chipStyle(st.matchResult==='loss','#E23B4E');
       V.oppInkChips=this.INK_ORDER.map(ink=>({label:ink,_toggle:()=>this.toggleArr('matchInks',ink),_style:this.chipStyle(st.matchInks.includes(ink),this.INK[ink])}));
       V.saveMatch=this.saveMatch; V.accent='#b79bff';
       const p=st.matchParsed, pcond=p?(p.outcome_code==='W'?p.winCondition:p.lossCondition):null;
-      const preview=p?{title:(p.outcome_code==='W'?this.t('win'):this.t('loss'))+' · '+p.myLore+'–'+p.oppLore,meta:((this.deckById(p.deck_id)||{}).name||'—')+' · '+(p.archetype||'?'),score:p.planScore?(p.planScore.score+' · '+p.planScore.label):'—',scoreColor:p.planScore&&p.planScore.score>=80?'#5fd07f':p.planScore&&p.planScore.score>=50?'#e6c15a':'#ff7a86',condition:(pcond&&pcond.primary)||'—',summary:(p.coach&&p.coach.summary)||'',duplicate:!!p.isDuplicateOfId}:null;
+      const preview=p?{title:(p.outcome_code==='W'?this.t('win'):this.t('loss'))+' · '+p.myLore+'–'+p.oppLore,meta:((this.deckById(p.deck_id)||{}).name||'—')+' · '+(p.archetype||'?'),score:p.planScore?(p.planScore.score+'/100'):'—',scoreColor:p.planScore&&p.planScore.score>=80?'#5fd07f':p.planScore&&p.planScore.score>=50?'#e6c15a':'#ff7a86',condition:this.matchConditionLabel(pcond&&pcond.primary),summary:this.matchNextAction(p),duplicate:!!p.isDuplicateOfId}:null;
       const selected=this.selectedMatchObj(); let detail=null;
       if(selected){ const d=this.deckById(selected.deck_id), ev=selected.replay&&Array.isArray(selected.replay.events)?selected.replay.events:[], idx=Math.max(0,Math.min(ev.length-1,st.replayIndex||0)), e=ev[idx]||null, cond=selected.result==='win'?selected.winCondition:selected.lossCondition, ps=selected.planScore;
-        detail={title:(d?d.name:'—')+' · '+(selected.result==='win'?this.t('win'):this.t('loss')),meta:(selected.date||'')+' · vs '+((selected.opponent_inks||[]).join('/')||selected.archetype||'?'),condition:(cond&&cond.primary)||'—',score:ps?(ps.score+' · '+ps.label):'—',scoreColor:ps&&ps.score>=80?'#5fd07f':ps&&ps.score>=50?'#e6c15a':'#ff7a86',summary:(selected.coach&&selected.coach.summary)||selected.notes||'',hasReplay:ev.length>0,noReplay:!ev.length,progress:ev.length?((idx+1)+' / '+ev.length):'',eventMeta:e?('T'+e.turn+' · '+e.type+(e.player?' · P'+e.player:'')):'',eventText:e?e.text:'',lore:e?('Lore · P1 '+e.lore[1]+' · P2 '+e.lore[2]):'',atStart:idx<=0,atEnd:idx>=ev.length-1,playIcon:st.replayPlaying?'Ⅱ':'▶',_fullscreen:this.replayFullOpen,fullscreenLabel:this.t('mcReplayFullscreen')}; }
+        const matchup=(selected.opponent_inks||[]).join('/')||selected.archetype||this.t('mcUnknown');
+        detail={title:(d?d.name:'—')+' · '+(selected.result==='win'?this.t('win'):this.t('loss')),meta:(selected.date||'')+' · '+matchup,condition:this.matchConditionLabel(cond&&cond.primary),score:ps?(ps.score+'/100'):'—',scoreColor:ps&&ps.score>=80?'#5fd07f':ps&&ps.score>=50?'#e6c15a':'#ff7a86',
+          nextAction:this.matchNextAction(selected),facts:[
+            {label:this.t('mcLoreResult'),value:(selected.myLore!=null&&selected.oppLore!=null)?(selected.myLore+'–'+selected.oppLore):this.t('mcUnknown')},
+            {label:this.t('mcMatchup'),value:matchup},{label:this.t('mcFirstQuest'),value:selected.firstQuestMyTurn!=null?('T'+selected.firstQuestMyTurn):this.t('mcUnknown')},
+            {label:this.t('mcRemoved'),value:selected.removedByMe!=null?String(selected.removedByMe):this.t('mcUnknown')}
+          ],hasReplay:ev.length>0,noReplay:!ev.length,progress:ev.length?((idx+1)+' / '+ev.length):'',eventMeta:e?('T'+e.turn+' · '+e.type+(e.player?' · P'+e.player:'')):'',eventText:e?e.text:'',lore:e?('Lore · P1 '+e.lore[1]+' · P2 '+e.lore[2]):'',atStart:idx<=0,atEnd:idx>=ev.length-1,playIcon:st.replayPlaying?'Ⅱ':'▶',_fullscreen:this.replayFullOpen,fullscreenLabel:this.t('mcReplayFullscreen')}; }
       // ---- Visual Replay v2 fullscreen board (identity-scoped, exact_board_state:false) ----
       V.replayFullOpen=st.replayFull && !!selected && (selected.replay&&Array.isArray(selected.replay.events)?selected.replay.events.length:0)>0;
       V.mcReplayFullscreen=this.t('mcReplayFullscreen'); V.mcOpponent=this.t('mcOpponent'); V.mcYou=this.t('mcYou');
@@ -2979,7 +3150,13 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
           oppHand:SS[op].hand.map(n=>handTile(n,hideOpp)), youHand:SS[yp].hand.map(n=>handTile(n,false)), oppHandCount:SS[op].hand.length, youHandCount:SS[yp].hand.length,
           eventText:e2.text||'', showVictory:idx2>=ev2.length-1, victoryText:won?this.t('win').toUpperCase():this.t('loss').toUpperCase(), victoryColor:won?'#e0c15a':'#ff8a96' };
       }
+      const trendLabel=insight.trend==null?'—':((insight.trend>0?'+':'')+insight.trend+' pp');
+      const trendState=insight.trend==null?this.t('mcTrendFlat'):insight.trend>0?this.t('mcTrendUp'):insight.trend<0?this.t('mcTrendDown'):this.t('mcTrendFlat');
       V.mc={total:rows.length,wr:wr==null?'—':wr+'%',wrColor:this.wrColor(wr||0),record:rows.length?(w10+'–'+(last10.length-w10)):'—',
+        streak:insight.streak?(insight.streakResult==='win'?this.t('mcWinStreak',{n:insight.streak}):this.t('mcLossStreak',{n:insight.streak})):'—',
+        practice:{title:practice.title,body:practice.body,tone:practice.tone,button:insight.total?this.t('mcReviewMatch'):this.t('mcStartImport'),_open:insight.total&&insight.targetMatchId?()=>this.openMatch(insight.targetMatchId):()=>this.setState({logMatchOpen:true})},
+        trend:{recent:insight.recentWr==null?'—':insight.recentWr+'%',previous:insight.previousWr==null?'—':insight.previousWr+'%',delta:trendLabel,state:trendState,deltaColor:insight.trend>0?'#5fd07f':insight.trend<0?'#ff8a96':'#8a8a92',plan:insight.averagePlan==null?this.t('mcNoPlanData'):insight.averagePlan+'/100',coverage:insight.importedPct+'%'},
+        deckPerformance:insight.deckStats.slice(0,4).map(x=>({name:x.name,wr:x.wr+'%',record:this.t('mcDeckSample',{w:x.wins,l:x.games-x.wins,n:x.games}),color:this.wrColor(x.wr),_filter:()=>{this.stopReplayTimer();this.setState({matchFilter:x.id,selectedMatch:null,replayPlaying:false});},filterLabel:this.t('mcFilterDeck')})),
         filter:f,_onFilter:(e)=>{this.stopReplayTimer();this.setState({matchFilter:e.target.value,selectedMatch:null,replayPlaying:false});},
         resultFilter:rf,_onResultFilter:(e)=>{this.stopReplayTimer();this.setState({matchResultFilter:e.target.value,selectedMatch:null,replayPlaying:false});},
         dateFilter:df,_onDateFilter:(e)=>{this.stopReplayTimer();this.setState({matchDateFilter:e.target.value,selectedMatch:null,replayPlaying:false});},
@@ -2991,7 +3168,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
         detailOpen:!!detail,detail,_closeDetail:this.closeMatch,_replayReset:this.replayReset,_replayPrev:()=>this.replayStep(-1),_replayNext:()=>this.replayStep(1),_replayToggle:this.replayToggle,
         replayButtonStyle:'width:36px;height:34px;border-radius:9px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#ddd;cursor:pointer',replayPlayStyle:'min-width:46px;height:34px;border-radius:9px;background:#b79bff;border:none;color:#10091c;font-weight:800;cursor:pointer',
         empty:rows.length===0,
-        rows:rows.map(m=>{const d=this.deckById(m.deck_id),win=m.result==='win';return {wl:win?'W':'L',badgeBg:win?'rgba(95,208,127,.16)':'rgba(255,122,134,.16)',badgeColor:win?'#5fd07f':'#ff7a86',deck:d?d.name:'—',opp:(m.opponent_inks||[]).join('/')||m.archetype||'?',date:m.date,source:m.source==='imported_log'?this.t('mcImported'):this.t('mcManual'),sourceColor:m.source==='imported_log'?'#b79bff':'#7c7c85',_open:()=>this.openMatch(m.id),_del:()=>this.delMatch(m.id)};})};
+        rows:rows.map(m=>{const d=this.deckById(m.deck_id),win=m.result==='win',cond=win?m.winCondition:m.lossCondition,ps=m.planScore&&Number(m.planScore.score);return {wl:win?'W':'L',badgeBg:win?'rgba(95,208,127,.16)':'rgba(255,122,134,.16)',badgeColor:win?'#5fd07f':'#ff7a86',deck:d?d.name:'—',opp:(m.opponent_inks||[]).join('/')||m.archetype||'?',date:m.date,source:m.source==='imported_log'?this.t('mcImported'):this.t('mcManual'),sourceColor:m.source==='imported_log'?'#b79bff':'#7c7c85',condition:this.matchConditionLabel(cond&&cond.primary),lore:(m.myLore!=null&&m.oppLore!=null)?(m.myLore+'–'+m.oppLore):'',score:Number.isFinite(ps)?ps+'/100':'',hasReplay:!!(m.replay&&Array.isArray(m.replay.events)&&m.replay.events.length),reviewLabel:this.t('mcOpenReview'),_open:()=>this.openMatch(m.id),_del:()=>this.delMatch(m.id)};})};
     }
     const isEmpty=Object.keys(st.collection).length===0 && st.decks.length===0;
     V.onboarding=st.view==='overview' && isEmpty;

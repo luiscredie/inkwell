@@ -25,6 +25,8 @@ jobs:
         run: node tools/deck-portfolio-v4.test.mjs
       - name: Match center
         run: node tools/match-center.test.mjs
+      - name: Match center V5
+        run: node tools/match-center-v5.test.mjs
       - name: Match center R3 integration
         run: node tools/match-center-r3.test.mjs
       - name: Match center legacy core
