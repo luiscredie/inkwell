@@ -1,11 +1,25 @@
-V4 — Deck Portfolio Advisor Redesign (code-only delta, correction pass + mandatory smoke)
+V5 REPLAY FULLSCREEN HOTFIX
 
-CHANGED:
-  site/index.html   Optimizer: ADDITIVE cardAllocations ledger {inventory, allocated:[{deckId,instance,need,allocated}], deficits:[{deckId,instance,need,short}]} from the ACTUAL chosen plan (exact + greedy fallback). Advisor UI: plan summary (portfolioHead/portfolioMissing traduzidos; nextBestDeck.deckId resolve nome; compras usam p.buy — sem undefined/NaN); "Cartas compartilhadas" consome cardAllocations direto (linhas por instância, sufixo #N com targetCopies>1); impacto +1 cópia calculado por identidade (rerun determinístico: desbloqueia/reduz/nenhum); simulação de prioridade + wishlist (M1.7); tokens V1.
-  Inkwell.dc.html   mirror byte-idêntico.
-  tools/deck-portfolio-v4.test.mjs   suíte canônica 24 casos (regressões: shape {card,buy}, nextBestDeck objeto, zero compras, missingUnits=3, sem dupla alocação, soma<=inventário, ledger por instância, impacto marginal +1).
-  tools/smoke.spec.mjs   cenário V4 OBRIGATÓRIO: fixture determinístico via addInitScript (perfil semeado com conflito garantido LOR9-45 1x vs 2 decks x2), sem if(count)/catch/fallback; asserta resumo, targetCopies, Cartas compartilhadas com ambos os decks, ausência de portfolioHead/portfolioMissing/undefined/NaN/[object Object].
+CHANGED
+- site/index.html
+- Inkwell.dc.html (byte-identical mirror)
+- tools/match-center-v5.test.mjs
+- tools/smoke.spec.mjs
 
-EXECUTADOS (sandbox, lógica canônica): deck-portfolio-v4 24/24; visual-contract 18/18; check ui-contract "no conditional existence skips" agora passa (regex reavaliada); parse OK; i18n EN=PT limpo; mirror byte-idêntico.
-NOT EXECUTED (sem runner): node tools/deck-portfolio-v4.test.mjs (Node real), npm run test:all, suítes Python, validate_release.py, Playwright.
-Nenhum dado gerado alterado. Sem deploy/push. site/ é a raiz de deploy.
+EXECUTED
+- node tools/match-center-v5.test.mjs: 30 passed, 0 failed
+- node tools/ui-contract.test.mjs: 29 passed, 0 failed
+- node --check tools/smoke.spec.mjs: PASS
+- site/index.html and Inkwell.dc.html: byte-identical
+
+CI CORRECTION
+- Fullscreen replay reuses the existing guarded modal keyboard listener.
+- Exactly one document keydown listener remains in the application.
+
+NOT EXECUTED IN PACKAGE ENVIRONMENT
+- Playwright browser smoke (requires installed Chromium)
+- Python release validator (requires the complete repository data tree)
+
+DATA
+- No site/data/** files included or modified.
+- No generated prices, history, manifest, images, or user data included.

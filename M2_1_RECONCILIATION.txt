@@ -1,0 +1,36 @@
+INKWELL M2.1 RECONCILIATION
+Base: 87954a422c4d0052a7a2e405a369c20200592006
+Donor reference: 9c9da34444d53436f427386713ea46a9e860b848
+
+REPLACE
+- site/index.html
+- Inkwell.dc.html
+
+RESTORED
+- Safe collection import preview before mutation.
+- merge-max, merge-sum, and explicitly destructive replace modes.
+- Pre-import rollback snapshot in localStorage.
+- Revision compare-and-swap for Supabase cloud sync.
+- Conflict snapshot preservation.
+- Complete EN/PT strings for import and cloud sync.
+
+PRESERVED
+- Current V4 advisor, replay, legality, Match Center, translations, and deploy-root layout.
+- site/index.html and Inkwell.dc.html are byte-identical.
+- No generated data, manifest, images, SQL, or configuration files changed.
+
+EXECUTED
+- npm run test:all
+- Result: all suites passed, including sync-import 8/8.
+
+NOT EXECUTED IN THIS PACKAGE BUILD
+- Python release/data validators.
+- Playwright browser smoke.
+
+AFTER COPYING
+1. node .\tools\sync-import-contract.test.mjs
+2. npm.cmd run test:all
+3. npx.cmd playwright test "tools/smoke.spec.mjs"
+4. python .\tools\validate_release.py --root .\site --quick
+
+Do not copy any data files from another snapshot. Do not create a root index.html.

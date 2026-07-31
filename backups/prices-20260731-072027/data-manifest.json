@@ -1,0 +1,58 @@
+{
+  "manifest_version": 1,
+  "generated_at": "2026-07-31T00:05:05.778867+00:00",
+  "min_app_version": "1.4.0",
+  "schema": {
+    "cards": 3,
+    "cards_pt": 1,
+    "prices": 2,
+    "aliases": 1,
+    "validation": 1,
+    "price_history": 1
+  },
+  "artifacts": {
+    "cards": {
+      "path": "data/cards.json",
+      "sha256": "5030cc729e389ffc2a936d53e97c40315f744580c556344b949d46c6a89a7617",
+      "bytes": 4866416
+    },
+    "cards_pt": {
+      "path": "data/cards.pt.json",
+      "sha256": "14811f229e0202fff433023c0a54013c11479cb53aab701ea1f8372021606837",
+      "bytes": 1567121
+    },
+    "prices": {
+      "path": "data/prices.json",
+      "sha256": "d83ef262137eb2a4a1f71192daec270037dd557254561253f9ecd866fbdffc23",
+      "bytes": 212258
+    },
+    "aliases": {
+      "path": "data/aliases.json",
+      "sha256": "35ef8e434b0d11b30fe695a76f5317e8e78dc77136bc26253111f818cff84c1b",
+      "bytes": 386588
+    },
+    "validation": {
+      "path": "data/validation-report.json",
+      "sha256": "e2092a6cf70511b33695efcccbbac91422dc35533d3d7481befab436b8f96a1d",
+      "bytes": 35026
+    },
+    "price_history": {
+      "path": "data/price-history.json",
+      "sha256": "0eae29949ab7638608a4a9f89debc01ccc11760a528464fe5bdee685a857d1c8",
+      "bytes": 1057471
+    }
+  },
+  "counts": {
+    "cards": 3442,
+    "pt_overlay_cards": 3442,
+    "priced_cards": 3300
+  },
+  "price_legend": {
+    "n": "normal_average",
+    "nl": "normal_low",
+    "nh": "normal_high",
+    "f": "foil_average",
+    "fl": "foil_low",
+    "fh": "foil_high"
+  }
+}
