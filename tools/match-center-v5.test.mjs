@@ -67,10 +67,11 @@ ck('fullscreen replay buttons use top-level runtime handlers',
 ck('fullscreen replay controls have stable browser targets',
   ['replay-fullscreen-close','replay-fullscreen-prev','replay-fullscreen-play','replay-fullscreen-next','replay-hidden-toggle']
     .every(id=>html.includes(`data-testid="${id}"`)));
-ck('fullscreen replay opens at the first event and binds keyboard once',
+ck('fullscreen replay opens at the first event and reuses the guarded keyboard path',
   html.includes("replayFull:true,replayIndex:0,replayPlaying:false")&&
-  html.includes("if(!this._replayFullKeyBound)")&&
-  html.includes("this.unbindReplayFullKeys();"));
+  html.includes("()=>this.bindModalKeys()")&&
+  html.includes("if(this.state.replayFull)")&&
+  !html.includes("_replayFullKeyBound"));
 ck('fullscreen victory layer cannot intercept controls',html.includes('pointer-events:none;background:rgba(5,5,8,.4)'));
 
 const logic=(html.match(/<script type="text\/x-dc"[^>]*data-dc-script[^>]*>([\s\S]*?)<\/script>/)||[])[1];
@@ -85,9 +86,12 @@ c.state={matches:[{id:'r1',replay:{events:[{text:'one'},{text:'two'}]}}],selecte
 c.setState=(patch,cb)=>{ const p=typeof patch==='function'?patch(c.state):patch; c.state={...c.state,...p}; if(cb)cb(); };
 c.replayFullOpen();
 ck('fullscreen open resets a replay parked at its last event',c.state.replayFull===true&&c.state.replayIndex===0);
-ck('fullscreen key listener is scoped and never duplicated',listeners.size===1&&(c.bindReplayFullKeys(),listeners.size===1));
+ck('fullscreen reuses the single scoped key listener without duplication',listeners.size===1&&(c.bindModalKeys(),listeners.size===1));
 c.replayStep(1);
 ck('fullscreen next advances the selected replay',c.state.replayIndex===1);
+c.state.replayIndex=0;
+c._modalKeyHandler({key:'ArrowRight',preventDefault(){}});
+ck('shared keyboard handler advances fullscreen replay',c.state.replayIndex===1);
 c.replayFullToggleHidden();
 ck('fullscreen hidden-info control changes state',c.state.replayShowHidden===true);
 c.replayFullClose();
