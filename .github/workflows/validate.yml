@@ -43,6 +43,8 @@ jobs:
         run: node tools/sync-import-contract.test.mjs
       - name: Import audit and data health contract
         run: node tools/data-health-contract.test.mjs
+      - name: Shared cards and portfolio contract
+        run: node tools/shared-cards-contract.test.mjs
   python:
     runs-on: ubuntu-latest
     steps:

@@ -668,6 +668,65 @@
             </div>
           </sc-if>
 
+          <sc-if value="{{ smHas }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-bottom:22px;padding:18px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07)">
+              <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+                <div style="flex:1;min-width:200px">
+                  <div style="font-family:'Bricolage Grotesque';font-weight:800;font-size:16px">{{ smTitle }}</div>
+                  <div style="font-size:12.5px;color:{{ smSummaryColor }};margin-top:3px">{{ smSummary }}</div>
+                </div>
+                <button onClick="{{ smToggleAll }}" style="padding:7px 12px;border-radius:9px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#b8b8c0;font-size:11.5px;cursor:pointer;min-height:36px">{{ smAllLabel }}</button>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <sc-for list="{{ smDecks }}" as="sd" hint-placeholder-count="2">
+                  <div style="border-radius:12px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02);overflow:hidden">
+                    <button onClick="{{ sd._toggle }}" style="width:100%;display:flex;align-items:center;gap:11px;padding:11px 13px;background:none;border:none;color:#e8e8ec;cursor:pointer;text-align:left;min-height:44px">
+                      <span style="color:#8a8a92;font-size:11px;width:12px;flex-shrink:0">{{ sd.caret }}</span>
+                      <span style="flex:1;min-width:0;font-weight:700;font-size:13.5px">{{ sd.name }}</span>
+                      <span style="font-size:11px;padding:3px 8px;border-radius:7px;background:{{ sd.badgeBg }};color:{{ sd.badgeColor }};flex-shrink:0">{{ sd.badge }}</span>
+                    </button>
+                    <sc-if value="{{ sd.open }}" hint-placeholder-val="{{ false }}">
+                      <div style="border-top:1px solid rgba(255,255,255,.06)">
+                        <sc-if value="{{ sd.empty }}" hint-placeholder-val="{{ false }}">
+                          <div style="padding:12px 14px;font-size:12.5px;color:#6f6f78">{{ sd.emptyMsg }}</div>
+                        </sc-if>
+                        <sc-for list="{{ sd.rows }}" as="r" hint-placeholder-count="3">
+                          <div style="border-bottom:1px solid rgba(255,255,255,.04);background:{{ r.rowBg }}">
+                            <button onClick="{{ r._toggle }}" style="width:100%;display:flex;align-items:center;gap:10px;padding:9px 14px;background:none;border:none;color:#d8d8dc;cursor:pointer;text-align:left;min-height:44px">
+                              <span style="color:{{ r.markColor }};flex-shrink:0;width:12px;font-size:12px">{{ r.mark }}</span>
+                              <span style="flex:1;min-width:0;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.name }}</span>
+                              <span style="font-size:11px;color:#8a8a92;font-family:'JetBrains Mono';flex-shrink:0">{{ r.alloc }}</span>
+                              <sc-if value="{{ r.contested }}" hint-placeholder-val="{{ false }}">
+                                <span style="font-size:10.5px;color:#a89250;flex-shrink:0">{{ r.sharedWith }}</span>
+                              </sc-if>
+                            </button>
+                            <sc-if value="{{ r.open }}" hint-placeholder-val="{{ false }}">
+                              <div style="padding:2px 14px 12px 36px;display:flex;flex-direction:column;gap:6px">
+                                <sc-for list="{{ r.competitors }}" as="cp" hint-placeholder-count="2">
+                                  <div style="display:flex;align-items:center;gap:9px;font-size:12px">
+                                    <span style="color:{{ cp.markColor }};width:12px;flex-shrink:0">{{ cp.mark }}</span>
+                                    <span style="flex:1;min-width:0;color:#c8c8cc">{{ cp.deck }}</span>
+                                    <span style="color:#8a8a92;font-family:'JetBrains Mono';font-size:11px">{{ cp.status }}</span>
+                                  </div>
+                                </sc-for>
+                                <sc-if value="{{ r.hasRec }}" hint-placeholder-val="{{ false }}">
+                                  <div style="margin-top:4px;padding:9px 11px;border-radius:9px;background:rgba(183,155,255,.09);border:1px solid rgba(183,155,255,.2)">
+                                    <div style="font-size:12px;color:#cbb6ff;font-weight:700">{{ r.recText }}</div>
+                                    <div style="font-size:11.5px;color:#9a9aa2;margin-top:2px">{{ r.recWhy }}</div>
+                                  </div>
+                                </sc-if>
+                              </div>
+                            </sc-if>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px">
             <sc-for list="{{ deckCards }}" as="d" hint-placeholder-count="2">
               <button data-testid="deck-card" onClick="{{ d._open }}" style="text-align:left;background:linear-gradient(160deg,rgba(255,255,255,.05),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:0;cursor:pointer;overflow:hidden" style-hover="border-color:rgba(255,255,255,.18)">
@@ -1848,6 +1907,7 @@ class Component extends DCLogic {
     syncEnabled: false, syncStatus: 'off', syncEmail: null, syncUser: null, syncLast: null, syncMsg: null, syncInput: '', syncRevision: 0,
     importPreview: null, importMode: 'merge-max',
     importRowsOpen: false, importResult: null, priceAlertDismissed: false, dhTechOpen: false,
+    sharedOpenDeck: null, sharedOpenRow: null, sharedAllCards: false,
     coachDeck: null, coachLoading: false, coachErr: null, coachText: null,
     lang: 'en',
     toast: null,
@@ -1871,6 +1931,7 @@ class Component extends DCLogic {
       importRowsShow:'Show rows', importRowsHide:'Hide rows', importRowsNote:'These rows were skipped. Everything else is still imported.', importAudit:'Download audit',
       importDoneTitle:'Import complete', importDoneSub:'{n} cards in your collection · saved on this device', importNew:'New cards', importIncreased:'Increased', importSkipped:'Skipped', importRollbackNote:'A snapshot of your collection from before this import is kept on this device.', importDone:'Done',
       rsn_unknown_id:'unknown id', rsn_no_match:'no match', rsn_bad_row:'empty row',
+      smTitle:'Shared cards', smSummaryShort:'{n} cards are short across your decks', smSummaryShared:'{n} cards are shared between decks', smSummaryClear:'No deck is competing for copies', smShowAll:'Show all cards', smOnlyShared:'Only shared cards', smNeed:'Needs', smGets:'Gets', smSharedWith:'shared with {n}', smDeckShort:'{n} short', smDeckShared:'{n} shared', smDeckClear:'all covered', smNoShared:'This deck shares no cards with another deck.', smRecommend:'Give these copies to {deckName}', sharedWhyPinned:'You pinned it as a priority.', sharedWhyCompletes:'It finishes with these copies; the other deck is short on more than this card.', sharedWhySatisfied:'These copies complete it outright.', sharedWhyFewest:'It needs the fewest copies to get there.',
       newDeck:'+ New Deck', importDeck:'↑ Import', createDeck:'Create', cancel:'Cancel', format:'Format',
       inkable:'Inkable', uninkable:'Uninkable', cost:'Cost', allSets:'All sets',
       welcome:'Welcome, {name}', emptyMsg:'Your codex is empty. Import your collection from Dreamborn, or start building a deck — everything is tracked privately in your profile.',
@@ -1916,6 +1977,7 @@ class Component extends DCLogic {
       importRowsShow:'Ver linhas', importRowsHide:'Ocultar linhas', importRowsNote:'Estas linhas foram ignoradas. Todo o restante é importado.', importAudit:'Baixar auditoria',
       importDoneTitle:'Importação concluída', importDoneSub:'{n} cartas na sua coleção · salvo neste dispositivo', importNew:'Cartas novas', importIncreased:'Aumentadas', importSkipped:'Ignoradas', importRollbackNote:'Um instantâneo da sua coleção anterior a esta importação fica guardado neste dispositivo.', importDone:'Concluir',
       rsn_unknown_id:'id desconhecido', rsn_no_match:'sem correspondência', rsn_bad_row:'linha vazia',
+      smTitle:'Cartas compartilhadas', smSummaryShort:'{n} cartas faltam entre seus decks', smSummaryShared:'{n} cartas são compartilhadas entre decks', smSummaryClear:'Nenhum deck está disputando cópias', smShowAll:'Ver todas as cartas', smOnlyShared:'Só compartilhadas', smNeed:'Precisa', smGets:'Recebe', smSharedWith:'dividida com {n}', smDeckShort:'{n} faltando', smDeckShared:'{n} dividida(s)', smDeckClear:'tudo coberto', smNoShared:'Este deck não divide nenhuma carta com outro deck.', smRecommend:'Destine estas cópias ao {deckName}', sharedWhyPinned:'Você o marcou como prioridade.', sharedWhyCompletes:'Ele fica completo com estas cópias; o outro deck tem mais faltas além desta carta.', sharedWhySatisfied:'Estas cópias o completam de imediato.', sharedWhyFewest:'É o que precisa de menos cópias para fechar.',
       newDeck:'+ Novo Deck', importDeck:'↑ Importar', createDeck:'Criar', cancel:'Cancelar', format:'Formato',
       inkable:'Inkável', uninkable:'Não-inkável', cost:'Custo', allSets:'Todos os sets',
       welcome:'Bem-vindo, {name}', emptyMsg:'Seu códice está vazio. Importe sua coleção do Dreamborn ou comece a montar um deck — tudo fica salvo de forma privada no seu perfil.',
@@ -2757,6 +2819,93 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
   // Canonical physical inventory from collection (normal+foil pooled, reprints merged by name key).
   portfolioInventory(){ const inv={}; const coll=this.state.collection||{}; for(const id in coll){ const c=this.byId[id]; if(!c) continue; const k=this.nameKey(c.name_en); inv[k]=(inv[k]||0)+(coll[id].n||0)+(coll[id].f||0); } return inv; }
   deckNeeds(deck){ const needs={}; for(const [id,ct] of Object.entries(deck.cards||{})){ const c=this.byId[id]; if(!c) continue; const k=this.nameKey(c.name_en); needs[k]=(needs[k]||0)+ct; } return needs; }
+  // ---- M2.3 shared card matrix (deck-first; reads the optimizer's own allocation) ----
+  sharedMatrix(){
+    const st=this.state; const decks=st.decks||[];
+    if(!decks.length) return { decks:[], contestedTotal:0, shortTotal:0, empty:true };
+    const inv=this.portfolioInventory();
+    const pDecks=decks.map(d=>({ id:d.id, targetCopies:(typeof d.targetCopies==='number'?d.targetCopies:1),
+      priority:(typeof d.portfolioPriority==='number'?d.portfolioPriority:0), needs:this.deckNeeds(d) }));
+    const P=Component.computeDeckPortfolioPlan(inv,pDecks,{budget:200000});
+    const nameById={},nameTotals={},nameSeen={};
+    for(const d of decks) nameTotals[d.name]=(nameTotals[d.name]||0)+1;
+    for(const d of decks){ nameSeen[d.name]=(nameSeen[d.name]||0)+1; nameById[d.id]=nameTotals[d.name]>1?(d.name+' · '+nameSeen[d.name]):d.name; }
+    const keyToCard={}; for(const c of this.cards){ const k=this.nameKey(c.name_en); if(!keyToCard[k]||this.priceOr0(c)<this.priceOr0(keyToCard[k])) keyToCard[k]=c; }
+    const CAall=P.cardAllocations||{};
+    const needsBy={}; for(const d of decks) needsBy[d.id]=this.deckNeeds(d);
+    const sharers={}; for(const d of decks){ for(const k in needsBy[d.id]) (sharers[k]=sharers[k]||[]).push(d.id); }
+    const prioOf=(id)=>{ const d=decks.find(x=>x.id===id); return (d&&typeof d.portfolioPriority==='number')?d.portfolioPriority:0; };
+    // per deck-instance groups straight from the optimizer, with a defensive fallback
+    const groups=(k)=>{
+      const CA=CAall[k]; if(!CA) return null;
+      const by={};
+      for(const a of (CA.allocated||[])){ const g=a.deckId+'#'+a.instance; by[g]=by[g]||{deckId:a.deckId,instance:a.instance,need:0,alloc:0,short:0}; by[g].alloc+=a.allocated||0; by[g].need=Math.max(by[g].need,a.need||0); }
+      for(const x of (CA.deficits||[])){ const g=x.deckId+'#'+x.instance; by[g]=by[g]||{deckId:x.deckId,instance:x.instance,need:0,alloc:0,short:0}; by[g].short+=x.short||0; by[g].need=Math.max(by[g].need,x.need||0); }
+      return Object.values(by);
+    };
+    let contestedTotal=0, shortTotal=0;
+    const out=decks.map(d=>{
+      const rows=[]; let deckContested=0, deckShort=0;
+      for(const k of Object.keys(needsBy[d.id])){
+        const c=keyToCard[k]||null;
+        const owned=(CAall[k]&&typeof CAall[k].inventory==='number')?CAall[k].inventory:(inv[k]||0);
+        const gs=groups(k);
+        let need=0, alloc=0, short=0, demandTotal=0, mine=[];
+        if(gs){
+          mine=gs.filter(g=>g.deckId===d.id);
+          for(const g of gs) demandTotal+=g.need;
+          for(const g of mine){ need+=g.need; alloc+=g.alloc; short+=g.short; }
+        } else {
+          need=needsBy[d.id][k]||0;
+          for(const id of (sharers[k]||[])) demandTotal+=(needsBy[id][k]||0);
+          alloc=Math.min(owned,need); short=Math.max(0,need-alloc);
+        }
+        const others=(sharers[k]||[]).filter(id=>id!==d.id);
+        const contested=others.length>0;
+        const scarce=demandTotal>owned;
+        if(contested) deckContested++;
+        if(short>0) deckShort++;
+        // competitors, for the reverse path
+        const competitors=others.map(id=>{
+          const og=gs?gs.filter(g=>g.deckId===id):null;
+          const on=og?og.reduce((s,g)=>s+g.need,0):(needsBy[id][k]||0);
+          const oa=og?og.reduce((s,g)=>s+g.alloc,0):0;
+          const os=og?og.reduce((s,g)=>s+g.short,0):0;
+          return { deck:nameById[id]||id, need:on, alloc:oa, short:os,
+            status:this.t('sharedAllocation',{allocated:oa,need:on}),
+            mark:(os===0&&on>0)?'✓':(oa>0?'△':'×'),
+            markColor:(os===0&&on>0)?'#5fd07f':(oa>0?'#e6c15a':'#ff8a96') };
+        });
+        // recommendation: who the plan gives the copies to, and why
+        let recDeck='', recWhy='';
+        if(contested&&scarce&&gs){
+          const byDeck={};
+          for(const g of gs){ byDeck[g.deckId]=byDeck[g.deckId]||{alloc:0,short:0,need:0}; byDeck[g.deckId].alloc+=g.alloc; byDeck[g.deckId].short+=g.short; byDeck[g.deckId].need+=g.need; }
+          const ranked=Object.entries(byDeck).sort((a,b)=>(b[1].alloc-a[1].alloc)||(a[1].short-b[1].short)||(prioOf(b[0])-prioOf(a[0])));
+          const win=ranked[0];
+          if(win){
+            recDeck=nameById[win[0]]||win[0];
+            const pdw=P.perDeck&&P.perDeck[win[0]];
+            if(prioOf(win[0])>0) recWhy=this.t('sharedWhyPinned');
+            else if(pdw&&pdw.buildable) recWhy=this.t('sharedWhyCompletes');
+            else if(byDeck[win[0]].short===0) recWhy=this.t('sharedWhySatisfied');
+            else recWhy=this.t('sharedWhyFewest');
+          }
+        }
+        rows.push({ key:k, name:c?c.name_en:k, cid:c?c.card_id:'',
+          owned, need, alloc, short, demandTotal, contested, scarce,
+          state:short>0?'short':(contested?'shared':'ok'),
+          competitors, hasCompetitors:competitors.length>0,
+          recDeck, recWhy, hasRec:!!recDeck });
+      }
+      rows.sort((a,b)=>(b.short-a.short)||(b.contested-a.contested)||a.name.localeCompare(b.name));
+      contestedTotal+=deckContested; shortTotal+=deckShort;
+      return { id:d.id, name:nameById[d.id]||d.name, rows, cardCount:rows.length,
+        contested:deckContested, short:deckShort,
+        buildable:!!(P.perDeck&&P.perDeck[d.id]&&P.perDeck[d.id].buildable) };
+    });
+    return { decks:out, contestedTotal, shortTotal, empty:false };
+  }
   // ---- M1.9 Player Academy engines (pure; from state.decks + cards, no external data) ----
   deckHealth(deck){
     const entries=this.deckEntries(deck); const total=this.deckCount(deck);
@@ -3378,7 +3527,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
           record:ms.length?(w+'–'+(last10.length-w)):'—',
           missingText:rd.missingCopies>0?(rd.missingCopies+' · '+this.fmt(rd.missingMarketValue)):'0',
           actionLabel:this.t('na_'+rd.nextAction), _act:act,
-          hasDeckSwitch:st.decks.length>1, others:st.decks.filter(d=>d.id!==ad.id).slice(0,4).map(d=>({name:d.name,_pick:()=>this.setActiveDeck(d.id)})) };
+          hasDeckSwitch:st.decks.length>1, others:st.decks.filter(d=>d.id!==ad.id).map(d=>({name:d.name,_pick:()=>this.setActiveDeck(d.id)})) };
       }
       let uniq=0,totCards=0,foils=0,value=0;
       for(const [id,e] of Object.entries(st.collection)){ const c=this.byId[id]; if(!c) continue; const n=e.n||0,f=e.f||0; if(n+f>0) uniq++; totCards+=n+f; foils+=f; value+=this.priceOr0(c)*n+(this.foilPrice(c)??this.priceOr0(c))*f; }
@@ -3507,6 +3656,38 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       V.importDeckFmtChips=[['core','Core'],['infinity','Infinity']].map(([f,label])=>({label,_toggle:()=>this.setState({importDeckFmt:f}),_style:this.chipStyle(st.importDeckFmt===f)}));
       V.newDeckFmtChips=[['core','Core'],['infinity','Infinity']].map(([f,label])=>({label,_toggle:()=>this.setState({newDeckFmt:f}),_style:this.chipStyle(st.newDeckFmt===f)}));
       V.noDecks=st.decks.length===0;
+      { const SM=this.sharedMatrix();
+        V.smHas=!SM.empty && SM.decks.length>0;
+        V.smTitle=this.t('smTitle');
+        V.smSummary=SM.shortTotal>0?this.t('smSummaryShort',{n:SM.shortTotal}):(SM.contestedTotal>0?this.t('smSummaryShared',{n:SM.contestedTotal}):this.t('smSummaryClear'));
+        V.smSummaryColor=SM.shortTotal>0?'#ff8a96':(SM.contestedTotal>0?'#e6c15a':'#5fd07f');
+        V.smAllLabel=this.t(st.sharedAllCards?'smOnlyShared':'smShowAll');
+        V.smToggleAll=()=>this.setState({sharedAllCards:!st.sharedAllCards});
+        V.smNeedLabel=this.t('smNeed'); V.smOwnedLabel=this.t('colOwned'); V.smGetsLabel=this.t('smGets');
+        V.smDecks=SM.decks.map(d=>{
+          const open=st.sharedOpenDeck===d.id;
+          const rows=(st.sharedAllCards?d.rows:d.rows.filter(r=>r.contested));
+          return { name:d.name, cardCount:d.cardCount,
+            badge:d.short>0?this.t('smDeckShort',{n:d.short}):(d.contested>0?this.t('smDeckShared',{n:d.contested}):this.t('smDeckClear')),
+            badgeColor:d.short>0?'#ff8a96':(d.contested>0?'#e6c15a':'#5fd07f'),
+            badgeBg:d.short>0?'rgba(226,59,78,.14)':(d.contested>0?'rgba(230,193,90,.14)':'rgba(95,208,127,.12)'),
+            open, caret:open?'▾':'▸',
+            _toggle:()=>this.setState({sharedOpenDeck:open?null:d.id,sharedOpenRow:null}),
+            empty:rows.length===0, emptyMsg:this.t('smNoShared'),
+            rows:rows.map(r=>{
+              const rk=d.id+'|'+r.key; const ro=st.sharedOpenRow===rk;
+              return { name:r.name, owned:r.owned, need:r.need,
+                alloc:this.t('sharedAllocation',{allocated:r.alloc,need:r.need}),
+                mark:r.state==='short'?'×':(r.state==='shared'?'△':'✓'),
+                markColor:r.state==='short'?'#ff8a96':(r.state==='shared'?'#e6c15a':'#5fd07f'),
+                rowBg:r.state==='short'?'rgba(226,59,78,.07)':(r.contested?'rgba(230,193,90,.05)':'transparent'),
+                contested:r.contested, sharedWith:r.contested?this.t('smSharedWith',{n:r.competitors.length}):'',
+                open:ro, _toggle:()=>this.setState({sharedOpenRow:ro?null:rk}),
+                competitors:r.competitors, hasRec:r.hasRec,
+                recText:r.hasRec?this.t('smRecommend',{deckName:r.recDeck}):'', recWhy:r.recWhy };
+            }) };
+        });
+      }
       V.deckCards=st.decks.map(d=>{ const inks=(d.colors||[]).filter(Boolean); const ms=this.deckMatches(d.id); const wr=this.winRate(ms); const grad=inks.length?`linear-gradient(120deg,${inks.map(i=>this.INK[i]||'#333').join(',')})`:'linear-gradient(120deg,#333,#555)'; const entries=this.deckEntries(d); const total=this.deckCount(d); let owned=0; for(const e of entries){ const o=this.ownedOf(e.card.card_id); owned+=Math.min(o.n+o.f,e.count); } const pct=total?Math.round(owned/total*100):0; return { name:d.name, inks:inks.map(i=>({name:i,iconEl:this.inkIconEl(i,15)})), count:this.deckCount(d), wr:wr===null?'—':wr+'%', wrColor:this.wrColor(wr||0), value:this.fmt(this.deckValue(d)), ownedPct:pct+'%', ownedPctColor:pct>=100?'#5fd07f':pct>=60?'#e6c15a':'#ff7a86', gradient:grad, _open:()=>this.openDeck(d.id) }; });
       V.kCards=this.t('kCards'); V.kWinRate=this.t('kWinRate'); V.kValue=this.t('kValue'); V.kOwnedPct=this.t('kOwnedPct');
       V.archiveBuilds=this.t('archiveBuilds'); V.createDeckTitle=this.t('createDeckTitle'); V.deckNamePh=this.t('deckName'); V.chooseInksLabel=this.t('chooseInks',{n:this.maxInks(st.newDeckFmt)}); V.createLabel=this.t('create'); V.cancelLabel=this.t('cancel'); V.formatLabel=this.t('format');

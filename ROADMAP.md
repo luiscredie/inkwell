@@ -510,3 +510,55 @@ antes de commitar.
 
 Restaurar o gate antes de abrir para qualquer pessoa de fora. Enquanto estiver
 desacoplado, um push com regressão vai ao ar em segundos e a CI só avisa depois.
+
+## M2.3 — Shared Cards & Portfolio UX (2026-08-05)
+
+Entregue no working copy. Formato escolhido pelo usuário: deck-first, todas as
+cartas de cada deck, contestadas destacadas, dentro da view de Decks, com
+recomendação de para qual deck as cópias devem ir.
+
+### Bug do overview corrigido primeiro
+
+Relato do usuário: "in overview it does not show all decks". Causa encontrada na
+linha do card **Now Playing**: `others: st.decks.filter(...).slice(0,4)` — o
+seletor "Switch deck" cortava em 4 silenciosamente, sem indicar que havia mais.
+Com 5+ decks, os excedentes simplesmente não existiam na interface. O `slice`
+foi removido; a lista mostra todos os outros decks.
+
+### Motor
+
+`sharedMatrix()` lê a alocação do próprio otimizador (`cardAllocations`) em vez
+de recalcular a disputa — a mesma disciplina do V4. Por deck devolve todas as
+cartas com cópias possuídas, necessidade, alocado, faltante, demanda total entre
+decks, se é contestada, se é escassa, os concorrentes e a recomendação.
+
+Recomendação apenas quando há disputa real (demanda > estoque). O deck escolhido
+é o que o plano de fato favorece, e o motivo é derivado do estado do plano:
+prioridade fixada, fecha com estas cópias, completa de imediato, ou precisa de
+menos cópias. Onde há cópias para todos, nenhuma recomendação é dada — não existe
+decisão a tomar.
+
+### Caminho inverso
+
+Decisão minha (o usuário deixou em aberto): cada carta contestada é um botão na
+lista do deck; abrir mostra os decks concorrentes com alocado/necessário e a
+recomendação. Não usei tooltip — em toque não existe hover, e a informação é
+densa demais para caber em um.
+
+Padrão: um deck aberto por vez e uma carta aberta por vez, para não montar
+centenas de linhas no DOM. Por padrão a lista mostra só as compartilhadas;
+"Ver todas as cartas" abre o inventário completo do deck.
+
+### Verificação
+
+- `tools/shared-cards-contract.test.mjs`, nova, 23 asserções, 23/23 executadas
+  aqui (motor extraído por casamento de chaves e executado de verdade com o
+  otimizador real): disputa 4 vs 4 aloca exatamente 4 e deixa um deck curto,
+  prioridade fixada muda o recomendado, compartilhada com estoque suficiente
+  nunca vira curta nem gera recomendação, decks homônimos ficam distinguíveis,
+  reprints fundem numa identidade, ordenação põe faltantes no topo;
+- `visual-contract` 18/18, paridade EN/PT em 490 chaves;
+- espelho byte a byte; `sc-if` 124/124, `sc-for` 88/88;
+- `test:all` e o job `js` da CI em 17 suítes cada, sem divergência.
+
+Não executado aqui: `npm run verify` e Playwright.

@@ -1,33 +1,81 @@
-INKWELL — extract over repo root, then:
+INKWELL — M2.3 Shared Cards & Portfolio UX
+
+Extract over your repo root. Paths already match. Then:
 
   npm run verify
-  git add -A && git commit -m "Simplify deploy: push-triggered Pages, one verify command"
+  git add -A && git commit -m "M2.3: deck-first shared card matrix, reverse path, allocation recommendation"
   git push
 
-That is the whole flow now. Push deploys.
+MERGE, DO NOT REPLACE. site/ holds only index.html here; your site/data/**,
+images, support.js, match-center-engine.js, sync-config.json and
+data-manifest.json must stay.
 
-WHAT IS IN HERE
+────────────────────────────────────────────────────────────
+YOUR BUG, FIXED FIRST
 
-  .github/workflows/deploy-pages.yml   deploys on push to main (no longer waits
-                                       for the checks workflow; old gate is
-                                       commented out in the file if you want it
-                                       back)
-  package.json                         npm run verify = test:all + test:py + validate
-                                       test:all raised from 14 to 16 suites so it
-                                       now matches CI exactly
-                                       legacy "test:js" removed (it covered 9 of 16
-                                       and gave a misleading green)
-  ROADMAP.md, github.md                records
+"in overview it does not show all decks."
 
-WHY test:all GREW INSTEAD OF SHRINKING
+Found it. The Now Playing card's deck switcher read:
 
-You asked to simplify, not to check less. Before this, test:all ran 14 suites
-while CI ran 16 — so a local pass could still be a broken build. Now that deploy
-happens on push, your local run is the last thing that looks at the code before
-players do. One command, full coverage, no second list to remember.
+    others: st.decks.filter(d => d.id !== ad.id).slice(0,4)
 
-KEPT: the "Verify deploy root" step in the deploy workflow. One second, and it is
-what stops a structurally broken root going live as a 404.
+It silently truncated at four with no indication more existed. With five or more
+decks, the rest simply were not in the interface. The slice is gone; every other
+deck is listed. The test asserts the slice cannot come back.
 
-REMEMBER: restore the gate in deploy-pages.yml before outside people use the site.
-Right now a push with a regression is live in seconds.
+────────────────────────────────────────────────────────────
+WHAT M2.3 ADDS
+
+Deck-first, in the Decks view, above the deck grid. One collapsible block per
+deck. Each block lists that deck's cards with owned copies, allocation, and a
+mark: ✓ covered, △ shared, × short. Contested rows are tinted; short rows sort to
+the top. Default shows only shared cards; "Show all cards" opens the deck's full
+inventory.
+
+RECOMMENDATION — only where there is a real conflict (demand exceeds stock). The
+named deck is the one the plan actually favours, and the reason is read off the
+plan state: you pinned it, it finishes with these copies, these copies complete it
+outright, or it needs the fewest copies. Where there are enough copies for
+everyone, no recommendation appears — there is no decision to make, and inventing
+one would be noise.
+
+REVERSE PATH — you left this to me. Each contested card is a button; opening it
+lists the competing decks with allocated/needed, plus the recommendation. Not a
+tooltip: touch has no hover, and the content is too dense for one.
+
+One deck and one card open at a time, deliberately. A five-deck, 60-card
+portfolio would otherwise build hundreds of rows into the DOM on every render.
+
+The engine reads the optimizer's own cardAllocations rather than re-deriving
+contention — same discipline as V4, so the matrix can never disagree with the
+plan shown in the Advisor.
+
+────────────────────────────────────────────────────────────
+VERIFIED HERE
+
+tools/shared-cards-contract.test.mjs — 23 assertions, 23/23. The engine was
+lifted by brace matching and run against the real optimizer, not grepped:
+  - 4 copies owned, two decks wanting 4 each: exactly 4 allocated, exactly one
+    deck short, allocation never exceeds inventory
+  - pinning a deck changes who is recommended, and the reason says so
+  - shared-but-sufficient never reports short and never recommends
+  - two decks named the same stay distinguishable in the UI
+  - reprints of one card pool into a single identity row
+  - short rows sort first
+  - no-decks returns an explicit empty result instead of crashing
+
+visual-contract 18/18, EN/PT parity across 490 keys, mirror byte-identical,
+sc-if 124/124, sc-for 88/88.
+test:all and the CI js job are both at 17 suites with no drift.
+
+NOT VERIFIED HERE: rendered output. site/data/** is absent from the authoring
+environment so the app cannot boot. npm run verify + the Playwright smoke close
+that.
+
+────────────────────────────────────────────────────────────
+WHAT I DID NOT DO
+
+No cost-to-resolve figure on the recommendation. You said "suggest which deck
+should get the copies and why", and the Advisor already owns purchase costs — a
+second price surface here would be a second place to keep correct. Say the word
+if you want it inline.
