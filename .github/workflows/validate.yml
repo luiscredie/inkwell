@@ -37,6 +37,8 @@ jobs:
         run: node tools/i18n-contract.test.mjs
       - name: Visual replay
         run: node tools/visual-replay.test.mjs
+      - name: Visual and foundation contract
+        run: node tools/visual-contract.test.mjs
       - name: Sync and safe-import contract
         run: node tools/sync-import-contract.test.mjs
   python:

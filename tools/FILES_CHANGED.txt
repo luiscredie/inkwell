@@ -1,0 +1,12 @@
+NEW tools/ligalorcana_price_agent_daily_v5.py
+NEW tools/test_ligalorcana_price_agent_daily_v5.py
+
+No generated data is included.
+No existing v4 file is deleted or overwritten by the package itself.
+
+Executed validation:
+- Python compile: PASS
+- Unit tests: 11/11 PASS
+- --show-paths: PASS
+- --help option contract: PASS
+

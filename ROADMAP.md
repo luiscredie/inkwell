@@ -283,3 +283,40 @@ Reapplied on top of authoritative commit da786668 as a code-only delta.
 - Fullscreen replay overlay + prev/play/next controls, cleanup via stopReplayTimer.
 - exact_board_state:false preserved; imported-log fidelity untouched; Match Center importer/coach/filters/duplicate-protection/legacy unchanged.
 - Tests: tools/visual-replay.test.mjs (11 cases). Byte-identical site/index.html ⇄ Inkwell.dc.html.
+
+## Sincronização do working copy com o main (2026-08-05)
+
+O working copy de autoria estava atrasado em relação ao `main`. O `site/index.html`
+local era o checkpoint V4-COMPLETE (pré-M2.1) e não continha `mergeCollections`,
+prévia de importação nem o compare-and-swap de revisão do sync.
+
+Ação executada: `main` (tree `f2a61d93be4d`) foi trazido para o working copy.
+
+- `site/index.html` e `Inkwell.dc.html` substituídos pela versão M2.1 e verificados
+  byte a byte entre si;
+- suítes JS faltantes restauradas: `sync-import-contract.test.mjs` e
+  `match-center-v5.test.mjs`;
+- `package.json`, workflows, `ROADMAP.md`, handoffs M2.1, `SUPABASE_SETUP.md`,
+  `supabase/inkwell_profiles.sql` e `docs/INKWELL_PRODUCT_AUDIT_M2_1.md` alinhados;
+- nenhum arquivo gerado (`site/data/**`, `data-manifest.json`, imagens, preços,
+  dados de usuário) foi tocado;
+- nenhum `index.html` criado na raiz.
+
+Correção de defeito encontrada na auditoria: `npm run test:py` apontava para
+`tools/test_lorcana_price_agent_daily_v4.py`, que não existe. Corrigido para
+`tools/test_ligalorcana_price_agent_daily_v4.py`, o mesmo arquivo que a CI já usa.
+
+`tools/visual-contract.test.mjs` (M3V V1) não existia na CI nem no `test:all`.
+Suas 18 asserções foram verificadas contra o `index.html` M2.1 desta sincronização:
+18/18 passam (tokens únicos, reduced-motion, focus-ring, alvos de 44 px, guarda de
+overflow, paridade EN/PT em 446 chaves, 398 chaves usadas todas presentes, nenhuma
+chave crua de portfolio renderizada, espelho byte a byte). A suíte foi promovida
+para `npm run test:all` e para o job `js` do `validate.yml`.
+
+Integridade do arquivo confirmada após a cópia: `mergeCollections` na linha 2827,
+`mulliganHand` 2699, `simulateReplay` 2931 e `deckHealth` 3471 — as mesmas do
+`main`. A diferença de 1.062 bytes contra o GitHub é apenas de fim de linha
+(o working copy está todo em LF); nenhum conteúdo foi perdido.
+
+Nada do working copy anterior precisava subir para o `main`: o M2.1 já havia sido
+reconciliado sobre o V4 no repositório.
