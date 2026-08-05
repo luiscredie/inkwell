@@ -107590,10 +107590,10 @@
     "inkable": {
       "primary_source": "Disney/Ravensburger official card catalog export",
       "fallback_source": "https://api.lorcast.com/v0",
-      "synced_at": "2026-08-05T01:10:07.698491+00:00",
+      "synced_at": "2026-08-05T01:18:48.805445+00:00",
       "agent_version": "1.0.0",
       "matched": 2979,
-      "corrected": 758,
+      "corrected": 0,
       "unmatched_count": 192,
       "name_mismatch_count": 0,
       "source_counts": {
