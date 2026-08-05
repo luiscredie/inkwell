@@ -45,6 +45,8 @@ jobs:
         run: node tools/data-health-contract.test.mjs
       - name: Shared cards and portfolio contract
         run: node tools/shared-cards-contract.test.mjs
+      - name: Meta advisor contract
+        run: node tools/meta-advisor-contract.test.mjs
   python:
     runs-on: ubuntu-latest
     steps:

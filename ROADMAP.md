@@ -562,3 +562,73 @@ centenas de linhas no DOM. Por padrão a lista mostra só as compartilhadas;
 - `test:all` e o job `js` da CI em 17 suítes cada, sem divergência.
 
 Não executado aqui: `npm run verify` e Playwright.
+
+## M2.4 — Meta-to-Collection Advisor (2026-08-05)
+
+Entregue no working copy, dentro da view de Decks, conforme escolhido.
+
+### Restrição encontrada nos dados, antes de construir
+
+`site/data/meta-decks.json` não contém nenhum dado de torneio. São 3 listas, todas
+`source_type: "community_popular"`, com `tournament_result: null`, confiança
+0,61–0,66 rotulada `community_reference` e as três marcadas
+`work_in_progress: true`. A própria política do arquivo diz: sinal de
+popularidade, não prova de torneio.
+
+Então a seção não usa linguagem de tier nem "melhores decks". Chama-se "Listas
+populares da comunidade", e um aviso fixo declara que não há resultados de torneio
+nestes dados. O aviso só desaparece se algum deck passar a ter
+`tournament_result` — há teste para isso.
+
+O arquivo também não está no `data-manifest.json`, portanto não é verificado por
+checksum como os outros artefatos. É carregado como opcional e nunca fatal, por
+dois caminhos (`data/meta-decks.json` e `meta-decks.json`), sem `loadArtifact`.
+
+### O que a seção faz
+
+Cobertura por lista contra a coleção real (reprints somados por identidade, foils
+contam, posse acima do exigido não infla a porcentagem), custo para completar com
+os preços do próprio app, contagem de cartas sem preço em vez de tratá-las como
+zero, sobreposição com o deck do usuário que mais compartilha cartas, e a lista do
+que falta com custo por linha.
+
+Substituições saem apenas de cartas que o usuário possui, casando ink, custo e
+tipo, no máximo duas por carta, com a ressalva visível de que não são equivalentes
+de estratégia. Sem candidata possuída, nenhuma sugestão — melhor vazio que chute.
+
+### Decisões que ficaram comigo
+
+**Ação:** somente adicionar as faltantes à lista de desejos. Copiar uma lista para
+os decks do usuário criaria um deck que ele não montou e que entraria no
+otimizador de portfólio — mudaria silenciosamente o plano do Advisor e a matriz de
+cartas compartilhadas do M2.3. A wishlist é reversível e não afeta cálculo nenhum.
+Nunca remove entradas existentes.
+
+**WIP:** exibidos, com selo "em construção". Esconder 3 de 3 listas deixaria a
+seção vazia.
+
+### Bug de i18n encontrado no caminho
+
+Valores em inglês como `'How to play:'` e `'You own instead:'` fazem o extrator de
+chaves das suítes de i18n interpretar `play` e `instead` como chaves do dicionário,
+gerando falha falsa de paridade EN/PT. Os rótulos passaram a não ter dois-pontos
+internos (o template já os apresenta como cabeçalho). Vale como regra ao adicionar
+strings: não usar `palavra:` dentro de um valor.
+
+### Verificação
+
+- `tools/meta-advisor-contract.test.mjs`, nova, 32 asserções, 32/32 executadas
+  aqui com o motor extraído e rodado de verdade;
+- `shared-cards` 23/23 e `data-health` 26/26 reexecutadas sem regressão;
+- `visual-contract` 18/18, paridade EN/PT em 512 chaves;
+- espelho byte a byte; `sc-if` 132/132, `sc-for` 91/91;
+- `test:all` e CI em 18 suítes cada, sem divergência.
+
+Não executado aqui: `npm run verify` e Playwright.
+
+### Limite honesto desta entrega
+
+Não há ingestão semanal automática. O dataset é um seed manual de 29/07. Para o
+M2.4 completo como descrito na auditoria, falta um agente que atualize o arquivo
+e o registre no `data-manifest.json` — aí a seção passa a ter frescor verificável,
+como os preços têm hoje.

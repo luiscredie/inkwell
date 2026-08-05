@@ -3,7 +3,7 @@ branch: main
 path: site
 
 ## Last sync
-date: 2026-08-05T01:58:00Z
+date: 2026-08-05T02:18:00Z
 branch head: main (post-deploy; visual-contract suite committed, CI green)
 
 ### Updated in this project
@@ -17,6 +17,7 @@ branch head: main (post-deploy; visual-contract suite committed, CI green)
 - Wired the v5 python suite into `test:py` and CI, and added the repo's first `.gitignore`.
 - Flagged 3 files committed by `git add .` that need `git rm --cached`.
 - Supplied the missing `tools/visual-contract.test.mjs`; confirmed on main. CI green, M0-M2.1 deployed.
+- Built M2.4 (meta list coverage, cost-to-complete, substitutions, deck overlap) + 32/32 suite; no tier language, since the data has no tournament results.
 - Built M2.3 (deck-first shared card matrix, reverse path, allocation recommendation) + 23/23 contract suite; fixed the overview deck switcher truncating at 4.
 - Decoupled Pages deploy from the checks workflow (reversible; gate commented in-file) and removed the stale `test:js` script.
 - M2.2 pushed and deployed; both HTML files aligned at identical line offsets on main.
@@ -32,4 +33,5 @@ branch head: main (post-deploy; visual-contract suite committed, CI green)
 | Runtime support | `site/support.js` |
 | Cloud sync schema | `supabase/inkwell_profiles.sql`, `site/sync-config.json` |
 | Price collection | `tools/ligalorcana_price_agent_daily_v4.py`, `tools/ligalorcana_price_agent_daily_v5.py`, `site/data/prices.json`, `site/data-manifest.json` |
+| Meta lists | `site/data/meta-decks.json` (optional, not in data-manifest) |
 | Roadmap / audit | `ROADMAP.md`, `docs/INKWELL_PRODUCT_AUDIT_M2_1.md`, `M2_1_HANDOFF.md` |

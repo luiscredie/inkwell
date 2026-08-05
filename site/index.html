@@ -727,6 +727,96 @@
             </div>
           </sc-if>
 
+          <sc-if value="{{ mtHas }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-bottom:22px;padding:18px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07)">
+              <div style="margin-bottom:14px">
+                <div style="font-family:'Bricolage Grotesque';font-weight:800;font-size:16px">{{ mtTitle }}</div>
+                <div style="font-size:12.5px;color:#8a8a92;margin-top:3px">{{ mtSub }} · {{ mtSources }}</div>
+                <sc-if value="{{ mtShowEvidenceNote }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-top:9px;padding:9px 12px;border-radius:10px;background:rgba(230,193,90,.08);border:1px solid rgba(230,193,90,.2);color:#d9bb63;font-size:11.5px">{{ mtEvidenceNote }}</div>
+                </sc-if>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <sc-for list="{{ mtDecks }}" as="mt" hint-placeholder-count="3">
+                  <div style="border-radius:12px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02);overflow:hidden">
+                    <button onClick="{{ mt._toggle }}" style="width:100%;display:flex;align-items:center;gap:12px;padding:12px 13px;background:none;border:none;color:#e8e8ec;cursor:pointer;text-align:left;min-height:44px">
+                      <span style="color:#8a8a92;font-size:11px;width:12px;flex-shrink:0">{{ mt.caret }}</span>
+                      <span style="flex:1;min-width:0">
+                        <span style="display:block;font-weight:700;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ mt.name }}</span>
+                        <span style="display:block;font-size:11px;color:#8a8a92;margin-top:2px">{{ mt.inks }} · {{ mt.archetypes }}</span>
+                      </span>
+                      <span style="flex-shrink:0;text-align:right">
+                        <span style="display:block;font-family:'JetBrains Mono';font-size:13px;color:{{ mt.barColor }}">{{ mt.pct }}</span>
+                        <span style="display:block;font-size:10.5px;color:#8a8a92">{{ mt.missingLabel }}</span>
+                      </span>
+                    </button>
+                    <sc-if value="{{ mt.open }}" hint-placeholder-val="{{ false }}">
+                      <div style="border-top:1px solid rgba(255,255,255,.06);padding:14px">
+                        <div style="font-size:12.5px;color:#c8c8cc;margin-bottom:12px">{{ mt.tagline }}</div>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+                          <span style="font-size:11px;padding:3px 9px;border-radius:7px;background:rgba(255,255,255,.05);color:#a8a8b0">{{ mt.evidence }}</span>
+                          <span style="font-size:11px;padding:3px 9px;border-radius:7px;background:rgba(255,255,255,.05);color:#a8a8b0">{{ mt.confidence }}</span>
+                          <sc-if value="{{ mt.wip }}" hint-placeholder-val="{{ false }}">
+                            <span style="font-size:11px;padding:3px 9px;border-radius:7px;background:rgba(230,193,90,.14);color:#e6c15a">{{ mt.wipLabel }}</span>
+                          </sc-if>
+                          <sc-if value="{{ mt.illegal }}" hint-placeholder-val="{{ false }}">
+                            <span style="font-size:11px;padding:3px 9px;border-radius:7px;background:rgba(226,59,78,.16);color:#ff8a96">{{ mt.illegalLabel }}</span>
+                          </sc-if>
+                        </div>
+                        <div style="display:flex;gap:9px;flex-wrap:wrap;margin-bottom:14px">
+                          <div style="flex:1;min-width:120px;padding:10px 12px;border-radius:11px;background:rgba(255,255,255,.04)">
+                            <div style="font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;color:#8a8a92">{{ mt.coverage }}</div>
+                            <div style="height:5px;border-radius:3px;background:rgba(255,255,255,.08);margin-top:8px;overflow:hidden"><div style="height:100%;width:{{ mt.pct }};background:{{ mt.barColor }}"></div></div>
+                          </div>
+                          <div style="flex:1;min-width:120px;padding:10px 12px;border-radius:11px;background:rgba(255,255,255,.04)">
+                            <div style="font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;color:#8a8a92">{{ mt.costLabel }}</div>
+                            <div style="font-family:'JetBrains Mono';font-size:15px;margin-top:4px">{{ mt.cost }}</div>
+                            <sc-if value="{{ mt.hasUnpriced }}" hint-placeholder-val="{{ false }}">
+                              <div style="font-size:10.5px;color:#a89250;margin-top:2px">{{ mt.unpriced }}</div>
+                            </sc-if>
+                          </div>
+                        </div>
+                        <div style="font-size:12px;color:{{ mt.overlapColor }};margin-bottom:14px">{{ mt.overlap }}</div>
+                        <sc-if value="{{ mt.hasMissing }}" hint-placeholder-val="{{ false }}">
+                          <div style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#8a8a92;margin-bottom:8px">{{ mt.missingTitle }}</div>
+                          <div class="ink-sc" style="max-height:240px;overflow-y:auto;border-radius:11px;border:1px solid rgba(255,255,255,.07)">
+                            <sc-for list="{{ mt.missing }}" as="mm" hint-placeholder-count="3">
+                              <div style="padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.04)">
+                                <div style="display:flex;align-items:center;gap:10px">
+                                  <span style="font-family:'JetBrains Mono';font-size:11.5px;color:#e6c15a;flex-shrink:0">{{ mm.need }}/{{ mm.of }}</span>
+                                  <span style="flex:1;min-width:0;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ mm.name }}</span>
+                                  <span style="font-family:'JetBrains Mono';font-size:11.5px;color:#8a8a92;flex-shrink:0">{{ mm.lineCost }}</span>
+                                </div>
+                                <sc-if value="{{ mm.hasSubs }}" hint-placeholder-val="{{ false }}">
+                                  <div style="font-size:11px;color:#9a9aa2;margin-top:4px;padding-left:34px">{{ mt.subsLabel }} · <sc-for list="{{ mm.subs }}" as="sv" hint-placeholder-count="1"><span style="color:#c8c8cc">{{ sv }}</span></sc-for></div>
+                                </sc-if>
+                              </div>
+                            </sc-for>
+                          </div>
+                          <div style="font-size:11px;color:#6f6f78;margin-top:7px">{{ mt.subsNote }}</div>
+                          <div style="display:flex;gap:9px;margin-top:13px;flex-wrap:wrap">
+                            <button onClick="{{ mt._wishlist }}" style="padding:10px 13px;border-radius:11px;background:rgba(183,155,255,.14);border:1px solid rgba(183,155,255,.28);color:#cbb6ff;font-size:12px;cursor:pointer;min-height:44px">{{ mt.wishlistLabel }}</button>
+                            <a href="{{ mt.url }}" target="_blank" rel="noopener" style="padding:10px 13px;border-radius:11px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#b8b8c0;font-size:12px;text-decoration:none;display:flex;align-items:center;min-height:44px">{{ mt.openLabel }}</a>
+                          </div>
+                        </sc-if>
+                        <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;gap:11px">
+                          <div>
+                            <div style="font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:#8a8a92;margin-bottom:3px">{{ mt.howToLabel }}</div>
+                            <div style="font-size:12px;color:#a8a8b0">{{ mt.howTo }}</div>
+                          </div>
+                          <div>
+                            <div style="font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:#8a8a92;margin-bottom:3px">{{ mt.mulliganLabel }}</div>
+                            <div style="font-size:12px;color:#a8a8b0">{{ mt.mulligan }}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px">
             <sc-for list="{{ deckCards }}" as="d" hint-placeholder-count="2">
               <button data-testid="deck-card" onClick="{{ d._open }}" style="text-align:left;background:linear-gradient(160deg,rgba(255,255,255,.05),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:0;cursor:pointer;overflow:hidden" style-hover="border-color:rgba(255,255,255,.18)">
@@ -1908,6 +1998,7 @@ class Component extends DCLogic {
     importPreview: null, importMode: 'merge-max',
     importRowsOpen: false, importResult: null, priceAlertDismissed: false, dhTechOpen: false,
     sharedOpenDeck: null, sharedOpenRow: null, sharedAllCards: false,
+    metaOpenDeck: null,
     coachDeck: null, coachLoading: false, coachErr: null, coachText: null,
     lang: 'en',
     toast: null,
@@ -1932,6 +2023,7 @@ class Component extends DCLogic {
       importDoneTitle:'Import complete', importDoneSub:'{n} cards in your collection · saved on this device', importNew:'New cards', importIncreased:'Increased', importSkipped:'Skipped', importRollbackNote:'A snapshot of your collection from before this import is kept on this device.', importDone:'Done',
       rsn_unknown_id:'unknown id', rsn_no_match:'no match', rsn_bad_row:'empty row',
       smTitle:'Shared cards', smSummaryShort:'{n} cards are short across your decks', smSummaryShared:'{n} cards are shared between decks', smSummaryClear:'No deck is competing for copies', smShowAll:'Show all cards', smOnlyShared:'Only shared cards', smNeed:'Needs', smGets:'Gets', smSharedWith:'shared with {n}', smDeckShort:'{n} short', smDeckShared:'{n} shared', smDeckClear:'all covered', smNoShared:'This deck shares no cards with another deck.', smRecommend:'Give these copies to {deckName}', sharedWhyPinned:'You pinned it as a priority.', sharedWhyCompletes:'It finishes with these copies; the other deck is short on more than this card.', sharedWhySatisfied:'These copies complete it outright.', sharedWhyFewest:'It needs the fewest copies to get there.',
+      mtTitle:'Popular community lists', mtSub:'{n} lists · updated {d}', mtEvidence:'Popularity signal only. This data carries no tournament results, so treat these as reference lists, not a proven meta.', mtEvidenceLine:'{likes} likes · {views} views', mtConfidence:'confidence {n}%', mtWip:'work in progress', mtIllegal:'not legal in the current rotation', mtCoverage:'You own {have} of {total} cards', mtMissingUnits:'{n} missing', mtComplete:'complete', mtCost:'Cost to complete', mtUnpriced:'{n} without a price', mtOverlap:'Shares {n} cards with your {deckName}', mtNoOverlap:'Shares nothing with your decks yet', mtMissingTitle:'What you are missing', mtSubs:'Owned alternatives', mtSubsNote:'Substitutions match ink, cost and type only. They are not strategy equivalents — read the list before swapping.', mtWishlist:'Add missing to wishlist', mtWishlistDone:'{n} cards added to your wishlist', mtOpen:'Open source list', mtHowTo:'How to play', mtMulligan:'Mulligan',
       newDeck:'+ New Deck', importDeck:'↑ Import', createDeck:'Create', cancel:'Cancel', format:'Format',
       inkable:'Inkable', uninkable:'Uninkable', cost:'Cost', allSets:'All sets',
       welcome:'Welcome, {name}', emptyMsg:'Your codex is empty. Import your collection from Dreamborn, or start building a deck — everything is tracked privately in your profile.',
@@ -1978,6 +2070,7 @@ class Component extends DCLogic {
       importDoneTitle:'Importação concluída', importDoneSub:'{n} cartas na sua coleção · salvo neste dispositivo', importNew:'Cartas novas', importIncreased:'Aumentadas', importSkipped:'Ignoradas', importRollbackNote:'Um instantâneo da sua coleção anterior a esta importação fica guardado neste dispositivo.', importDone:'Concluir',
       rsn_unknown_id:'id desconhecido', rsn_no_match:'sem correspondência', rsn_bad_row:'linha vazia',
       smTitle:'Cartas compartilhadas', smSummaryShort:'{n} cartas faltam entre seus decks', smSummaryShared:'{n} cartas são compartilhadas entre decks', smSummaryClear:'Nenhum deck está disputando cópias', smShowAll:'Ver todas as cartas', smOnlyShared:'Só compartilhadas', smNeed:'Precisa', smGets:'Recebe', smSharedWith:'dividida com {n}', smDeckShort:'{n} faltando', smDeckShared:'{n} dividida(s)', smDeckClear:'tudo coberto', smNoShared:'Este deck não divide nenhuma carta com outro deck.', smRecommend:'Destine estas cópias ao {deckName}', sharedWhyPinned:'Você o marcou como prioridade.', sharedWhyCompletes:'Ele fica completo com estas cópias; o outro deck tem mais faltas além desta carta.', sharedWhySatisfied:'Estas cópias o completam de imediato.', sharedWhyFewest:'É o que precisa de menos cópias para fechar.',
+      mtTitle:'Listas populares da comunidade', mtSub:'{n} listas · atualizado em {d}', mtEvidence:'Apenas sinal de popularidade. Estes dados não têm resultados de torneio, então trate as listas como referência, não como meta comprovada.', mtEvidenceLine:'{likes} curtidas · {views} visualizações', mtConfidence:'confiança {n}%', mtWip:'em construção', mtIllegal:'ilegal na rotação atual', mtCoverage:'Você tem {have} de {total} cartas', mtMissingUnits:'{n} faltando', mtComplete:'completo', mtCost:'Custo para completar', mtUnpriced:'{n} sem preço', mtOverlap:'Divide {n} cartas com seu {deckName}', mtNoOverlap:'Ainda não divide nada com seus decks', mtMissingTitle:'O que está faltando', mtSubs:'Alternativas que você tem', mtSubsNote:'As substituições combinam apenas ink, custo e tipo. Não são equivalentes de estratégia — leia a lista antes de trocar.', mtWishlist:'Adicionar faltantes à lista de desejos', mtWishlistDone:'{n} cartas adicionadas à sua lista de desejos', mtOpen:'Abrir lista original', mtHowTo:'Como jogar', mtMulligan:'Mulligan',
       newDeck:'+ Novo Deck', importDeck:'↑ Importar', createDeck:'Criar', cancel:'Cancelar', format:'Formato',
       inkable:'Inkável', uninkable:'Não-inkável', cost:'Custo', allSets:'Todos os sets',
       welcome:'Bem-vindo, {name}', emptyMsg:'Seu códice está vazio. Importe sua coleção do Dreamborn ou comece a montar um deck — tudo fica salvo de forma privada no seu perfil.',
@@ -2021,6 +2114,7 @@ class Component extends DCLogic {
   prices = {};
   priceSource = '';
   priceFailure = null;                        // M2.2: 'fetch' | 'schema' | 'absent'
+  metaDecks = null;                           // M2.4: optional, never hash-gated, never fatal
   PRICE_STALE_DAYS = 3;
 
   // ---------- M1: data contract (see DATA_CONTRACT.md) ----------
@@ -2340,6 +2434,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     if (files.cards_pt){ const p=await this.loadArtifact('cards_pt', files.cards_pt, schema.cards_pt, dir, hashJobs, false); if(!p.fatal && p.data){ ptOverlay=p.data; this.ptOverlay=p.data; } }
     if (files.price_history){ const ph=await this.loadArtifact('price_history', files.price_history, schema.price_history, dir, hashJobs, false); if(!ph.fatal && ph.data) this.priceHistoryArtifact=ph.data; }
     if (files.legality){ const lg=await this.loadArtifact('legality', files.legality, schema.legality, dir, hashJobs, false); if(!lg.fatal && lg.data && lg.data.formats) this.legalityData=lg.data; }
+    await this.loadMetaDecks();
     if(this._deployWarn) warning=(warning?warning+' ':'')+this._deployWarn;
     return { cards:cRes.data.cards||[], sets:cRes.data.sets||[], image_base_path:cRes.data.image_base_path, prices, priceSource, aliases, validation, warning, hashJobs };
   }
@@ -2369,6 +2464,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     const p = await this.fetchJson('prices.json');
     if (!p.ok || !p.data){ this.priceFailure='fetch'; }
     if (p.ok && p.data){ const norm=this.priceMap(p.data); if(norm.error){ this.priceFailure='schema'; } else { prices=norm.map; priceSource=p.data.source||''; this.pricesDate=(p.data.generated_at||'').slice(0,10)||null; } }
+    await this.loadMetaDecks();
     return { cards:c.data.cards||[], sets:c.data.sets||[], image_base_path:c.data.image_base_path, prices, priceSource, aliases:null, validation:null, warning, hashJobs:[] };
   }
 
@@ -2819,6 +2915,86 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
   // Canonical physical inventory from collection (normal+foil pooled, reprints merged by name key).
   portfolioInventory(){ const inv={}; const coll=this.state.collection||{}; for(const id in coll){ const c=this.byId[id]; if(!c) continue; const k=this.nameKey(c.name_en); inv[k]=(inv[k]||0)+(coll[id].n||0)+(coll[id].f||0); } return inv; }
   deckNeeds(deck){ const needs={}; for(const [id,ct] of Object.entries(deck.cards||{})){ const c=this.byId[id]; if(!c) continue; const k=this.nameKey(c.name_en); needs[k]=(needs[k]||0)+ct; } return needs; }
+  // ---- M2.4 meta lists vs collection ----
+  async loadMetaDecks(){
+    for(const p of ['data/meta-decks.json','meta-decks.json']){
+      try{ const r=await this.fetchJson(p); if(r.ok&&r.data&&Array.isArray(r.data.decks)){ this.metaDecks=r.data; return; } }catch(e){}
+    }
+  }
+  metaCardFor(entry){
+    for(const id of (entry.card_ids||[])){ const c=this.byId[id]; if(c) return c; }
+    return this.cardByName(entry.card_name||entry.canonical_key||'');
+  }
+  wishlistMetaMissing=(deckId)=>{
+    const cov=this.metaCoverage(); if(!cov) return;
+    const d=cov.decks.find(x=>x.id===deckId); if(!d) return;
+    const w={...(this.state.wishlist||{})}; let n=0;
+    for(const m of d.missing){ if(m.cid&&!w[m.cid]){ w[m.cid]=1; n++; } }
+    this.setState({wishlist:w},()=>{ this.saveLocal(); this.showToast(this.t('mtWishlistDone',{n})); });
+  };
+  metaCoverage(){
+    const md=this.metaDecks; if(!md||!Array.isArray(md.decks)||!md.decks.length) return null;
+    const inv=this.portfolioInventory();
+    const lang=this.state.lang==='pt'?'pt':'en';
+    // owned pool for substitution suggestions, grouped by ink + cost + type
+    const subPool={};
+    for(const id in (this.state.collection||{})){
+      const c=this.byId[id]; if(!c) continue;
+      const k=(this.inkList(c)[0]||'?')+'|'+((typeof c.ink_cost==='number')?c.ink_cost:-1)+'|'+(c.type||'?');
+      (subPool[k]=subPool[k]||[]).push(c);
+    }
+    const myDecks=(this.state.decks||[]).map(d=>({name:d.name, keys:new Set(Object.keys(this.deckNeeds(d)))}));
+    const decks=md.decks.map(D=>{
+      let total=0, have=0, cost=0, missingUnits=0, unpriced=0;
+      const missing=[];
+      for(const e of (D.cards||[])){
+        const qty=e.quantity||0; total+=qty;
+        const c=this.metaCardFor(e);
+        const key=c?this.nameKey(c.name_en):String(e.canonical_key||'').toLowerCase();
+        const own=Math.min(qty, inv[key]||0);
+        have+=own;
+        const short=qty-own;
+        if(short>0){
+          missingUnits+=short;
+          const unit=c?this.priceOr0(c):0;
+          if(c&&!this.hasRealPrice(c)) unpriced++;
+          cost+=unit*short;
+          const subs=[];
+          if(c){
+            const k=(this.inkList(c)[0]||'?')+'|'+((typeof c.ink_cost==='number')?c.ink_cost:-1)+'|'+(c.type||'?');
+            for(const s of (subPool[k]||[])){ if(s.card_id===c.card_id) continue; if(this.nameKey(s.name_en)===key) continue; subs.push(s.name_en); if(subs.length>=2) break; }
+          }
+          missing.push({ name:c?c.name_en:(e.card_name||e.canonical_key), cid:c?c.card_id:'',
+            need:short, of:qty, owned:own, price:this.fmtOrDash(c?this.price(c):null),
+            lineCost:this.fmt(unit*short), subs, hasSubs:subs.length>0,
+            liga:c?this.ligaUrl(c):'', legal:!(e.rotation&&e.rotation.legal===false) });
+        }
+      }
+      missing.sort((a,b)=>(b.need-a.need)||a.name.localeCompare(b.name));
+      const keys=new Set((D.cards||[]).map(e=>{ const c=this.metaCardFor(e); return c?this.nameKey(c.name_en):String(e.canonical_key||'').toLowerCase(); }));
+      let bestOverlap=null;
+      for(const d of myDecks){ let n=0; for(const k of keys) if(d.keys.has(k)) n++;
+        if(n>0&&(!bestOverlap||n>bestOverlap.n)) bestOverlap={name:d.name,n}; }
+      const ev=D.evidence||{}; const conf=D.confidence||{};
+      const str=(D.strategy&&(D.strategy[lang]||D.strategy.en))||{};
+      return {
+        id:D.deck_id, name:D.name, creator:D.creator||'', inks:(D.inks||[]).join(' / '),
+        archetypes:(D.archetypes||[]).join(' · '), url:D.source_url||'',
+        tagline:str.tagline||'', howTo:str.how_to_play||'', mulligan:str.mulligan||'', difficulty:str.difficulty||'',
+        evidenceKind:D.source_type||'', likes:ev.likes||0, views:ev.views||0,
+        hasTournament:!!ev.tournament_result,
+        confLevel:conf.level||'', confScore:(typeof conf.score==='number')?Math.round(conf.score*100):null,
+        wip:!!D.work_in_progress,
+        total, have, missingUnits, pct: total?Math.round(have/total*100):0,
+        cost, unpriced, missing, cardCount:D.card_count||total,
+        legal:!(D.rotation&&D.rotation.legal===false),
+        overlapName:bestOverlap?bestOverlap.name:'', overlapCount:bestOverlap?bestOverlap.n:0
+      };
+    });
+    decks.sort((a,b)=>b.pct-a.pct);
+    return { decks, generatedAt:(md.generated_at||'').slice(0,10),
+      anyTournament:decks.some(d=>d.hasTournament), sources:(md.sources||[]).map(s=>s.name).join(' · ') };
+  }
   // ---- M2.3 shared card matrix (deck-first; reads the optimizer's own allocation) ----
   sharedMatrix(){
     const st=this.state; const decks=st.decks||[];
@@ -3656,6 +3832,41 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       V.importDeckFmtChips=[['core','Core'],['infinity','Infinity']].map(([f,label])=>({label,_toggle:()=>this.setState({importDeckFmt:f}),_style:this.chipStyle(st.importDeckFmt===f)}));
       V.newDeckFmtChips=[['core','Core'],['infinity','Infinity']].map(([f,label])=>({label,_toggle:()=>this.setState({newDeckFmt:f}),_style:this.chipStyle(st.newDeckFmt===f)}));
       V.noDecks=st.decks.length===0;
+      { const cov=this.metaCoverage();
+        V.mtHas=!!cov;
+        if(cov){
+          V.mtTitle=this.t('mtTitle');
+          V.mtSub=this.t('mtSub',{n:cov.decks.length,d:cov.generatedAt||'—'});
+          V.mtEvidenceNote=cov.anyTournament?'':this.t('mtEvidence');
+          V.mtShowEvidenceNote=!cov.anyTournament;
+          V.mtSources=cov.sources;
+          V.mtDecks=cov.decks.map(d=>{
+            const open=st.metaOpenDeck===d.id;
+            return { name:d.name, creator:d.creator, inks:d.inks, archetypes:d.archetypes, url:d.url,
+              tagline:d.tagline, howTo:d.howTo, mulligan:d.mulligan,
+              difficulty:d.difficulty, hasDifficulty:!!d.difficulty,
+              howToLabel:this.t('mtHowTo'), mulliganLabel:this.t('mtMulligan'),
+              pct:d.pct+'%', pctNum:d.pct,
+              barColor:d.pct>=90?'#5fd07f':(d.pct>=60?'#e6c15a':'#ff8a96'),
+              coverage:this.t('mtCoverage',{have:d.have,total:d.total}),
+              missingLabel:d.missingUnits>0?this.t('mtMissingUnits',{n:d.missingUnits}):this.t('mtComplete'),
+              costLabel:this.t('mtCost'), cost:this.fmt(d.cost),
+              unpriced:d.unpriced>0?this.t('mtUnpriced',{n:d.unpriced}):'',
+              hasUnpriced:d.unpriced>0,
+              evidence:(d.likes||d.views)?this.t('mtEvidenceLine',{likes:d.likes.toLocaleString('en-US'),views:d.views.toLocaleString('en-US')}):'',
+              confidence:d.confScore!=null?this.t('mtConfidence',{n:d.confScore}):'',
+              wip:d.wip, wipLabel:this.t('mtWip'),
+              illegal:!d.legal, illegalLabel:this.t('mtIllegal'),
+              overlap:d.overlapCount>0?this.t('mtOverlap',{deckName:d.overlapName,n:d.overlapCount}):this.t('mtNoOverlap'),
+              overlapColor:d.overlapCount>0?'#b79bff':'#6f6f78',
+              open, caret:open?'▾':'▸', _toggle:()=>this.setState({metaOpenDeck:open?null:d.id}),
+              missing:d.missing, hasMissing:d.missing.length>0,
+              missingTitle:this.t('mtMissingTitle'), subsLabel:this.t('mtSubs'), subsNote:this.t('mtSubsNote'),
+              wishlistLabel:this.t('mtWishlist'), _wishlist:()=>this.wishlistMetaMissing(d.id),
+              openLabel:this.t('mtOpen') };
+          });
+        }
+      }
       { const SM=this.sharedMatrix();
         V.smHas=!SM.empty && SM.decks.length>0;
         V.smTitle=this.t('smTitle');
