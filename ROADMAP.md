@@ -320,3 +320,39 @@ Integridade do arquivo confirmada após a cópia: `mergeCollections` na linha 28
 
 Nada do working copy anterior precisava subir para o `main`: o M2.1 já havia sido
 reconciliado sobre o V4 no repositório.
+
+## Limpeza pós-push (2026-08-05)
+
+O push que trouxe a correção do gate também carregou o pacote do price agent v5.
+Três arquivos entraram por `git add .` e não deveriam estar versionados — o
+próprio `tools/INSTALL_PRICE_AGENT_V5.md` instrui a não commitar o backup:
+
+- `site/data/ligalorcana-prices.before-v5.json` — backup local do cache bruto;
+- `tools/__pycache__/ligalorcana_price_agent_daily_v5.cpython-314.pyc` — artefato
+  de build;
+- `ligalorcana-access-headers.txt` — captura de uma resposta 403 do Cloudflare na
+  raiz do repositório. Não contém credenciais (são cabeçalhos de resposta do
+  servidor: nonce de CSP e CF-RAY), mas é material de depuração na raiz de deploy.
+
+O repositório não tinha `.gitignore`. Foi criado, cobrindo `__pycache__/`,
+`test-results/`, `node_modules/`, `site/data/*.before-*.json` e
+`*-access-headers.txt`.
+
+As 11 asserções de `tools/test_ligalorcana_price_agent_daily_v5.py` estavam
+versionadas mas fora do `test:py` e do job `python` da CI — a mesma lacuna que o
+`visual-contract` tinha. Ambos foram ligados ao gate.
+
+### Estado do refresh de preços
+
+Os artefatos derivados **não** foram republicados neste push: `site/data/prices.json`
+e `site/data/price-history.json` não mudaram, e `site/data-manifest.json` continua
+consistente com eles (prices sha256 `90f89f83…`, 211.996 bytes, 3.302 IDs com preço).
+Mudaram apenas caches intermediários do agente (`ligalorcana-prices.json`,
+`card-price-map.json`, `ligalorcana-price-map.v4.json`, `price-analytics.json`),
+que não constam do manifesto.
+
+Isso é o comportamento correto do v5: o disjuntor abriu em 401/403 consecutivos e o
+agente se recusou a publicar com registros de erro no cache. Consequência prática:
+**os preços do site seguem os da validação anterior; o refresh não terminou.**
+Rodar `--resume-status` e só publicar quando `remaining_today` for zero e não
+houver registros `error`.
