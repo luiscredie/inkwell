@@ -3,8 +3,8 @@ branch: main
 path: site
 
 ## Last sync
-date: 2026-08-05T00:52:30Z
-branch head: main (1 commit after tree f2a61d93be4d)
+date: 2026-08-05T01:34:00Z
+branch head: main (post-deploy; visual-contract suite committed, CI green)
 
 ### Updated in this project
 - Audited remote `main` against the local working copy (read-only; no files imported).
@@ -16,6 +16,10 @@ branch head: main (1 commit after tree f2a61d93be4d)
 - Reviewed the push that landed those changes: the 4 intended files are correct; the same commit also carried the price-agent v5 package.
 - Wired the v5 python suite into `test:py` and CI, and added the repo's first `.gitignore`.
 - Flagged 3 files committed by `git add .` that need `git rm --cached`.
+- Supplied the missing `tools/visual-contract.test.mjs`; confirmed on main. CI green, M0-M2.1 deployed.
+- Built M2.2 (import audit, rejected-row report, Data Health, prices no longer fatal) + `tools/data-health-contract.test.mjs` (26/26).
+- Supabase schema installed; M2.1 cloud sync live (conflict path not yet exercised).
+- Re-read `sync-import-contract.test.mjs`: its `0 failed` line is cosmetic only, not a broken gate (node:assert throws, exit is non-zero).
 
 ## Screen map
 | Area | Repo files |

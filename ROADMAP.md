@@ -356,3 +356,105 @@ agente se recusou a publicar com registros de erro no cache. Consequência prát
 **os preços do site seguem os da validação anterior; o refresh não terminou.**
 Rodar `--resume-status` e só publicar quando `remaining_today` for zero e não
 houver registros `error`.
+
+## Deploy concluído (2026-08-05)
+
+`tools/visual-contract.test.mjs` foi commitado e a CI ficou verde. M0 a M2.1 estão
+publicados. R0.2 fechado.
+
+Retratação: o `0 failed` fixo em `sync-import-contract.test.mjs` não é um gate
+decorativo. A suíte usa `node:assert/strict`, cujo throw não é capturado — o node
+sai com código diferente de zero e a CI falha. O efeito real é apenas cosmético:
+ela para na primeira falha e não imprime resumo. Sem ação necessária.
+
+### Pendências para a próxima sessão
+
+Bloqueio funcional restante:
+- ~~rodar `supabase/inkwell_profiles.sql`~~ — feito em 2026-08-05, sync funcionando;
+- `git rm --cached` nos 3 arquivos do pacote de limpeza;
+- refresh de preços incompleto (disjuntor v5 aberto): rodar `--resume-status`.
+
+Próximo build: M2.2 (Data Health + `import-audit.json`) ou M2.3 (Shared Card Matrix
+e caminho inverso card->decks). M2.3 reforça o diferencial; M2.2 fecha o último
+risco de perda de dados.
+
+## Sync ativo (2026-08-05)
+
+`inkwell_profiles.sql` executado; o sync responde no ar. M2.1 deixa de estar inerte.
+
+Pendente de confirmação: o teste de aceitação de duas máquinas (item 1d de
+`NEXT_STEPS.md`). O caminho felizinho estar funcionando não exercita o
+`revision_conflict` — que é justamente a parte que protege a coleção do jogador e
+que nunca rodou contra um banco real. Verificar também `rowsecurity = true`: a
+chave publishable no `sync-config.json` só é segura com RLS ligado.
+
+## M2.2 — Import Safety & Data Health (2026-08-05)
+
+Entregue no working copy. Escopo confirmado pelo usuário: as três partes.
+
+### Preços nunca bloqueiam o app
+
+Era o defeito mais grave desta área. Em `bootManifest`, um `prices.json` em
+formato bruto retornava `{fatal}` e a tela de erro substituía o app inteiro —
+coleção, decks, legalidade e partidas ficavam inacessíveis por causa de um preço.
+Agora a falha degrada: `priceFailure` recebe `'fetch'`, `'schema'` ou
+`'absent'`, os preços aparecem como indisponíveis e todo o resto continua
+funcionando. `bootLegacy` segue a mesma postura. `cards.json` continua fatal —
+sem cartas não há app.
+
+### Frescor de preços em linguagem de jogador
+
+`priceHealth()` classifica em `fresh` / `stale` / `unavailable` / `unknown`,
+com `PRICE_STALE_DAYS = 3`. A tarja âmbar aparece só quando há algo a dizer,
+nomeia a data ("Prices are from 2 Aug and may be out of date"), afirma que o resto
+está atual, e leva ao painel de detalhes. É dispensável. A view de Preços passa a
+mostrar `fonte · as of <data>`.
+
+Isto responde diretamente ao que aconteceu no refresh do v5: os preços estavam
+parados e só era possível descobrir lendo o cache do agente. Um jogador não tem
+esse acesso.
+
+### Auditoria de importação
+
+`buildImportAudit` produz `inkwell-import-audit/1` com modo de mesclagem, arquivo
+de origem, timestamp, contagens (criadas / aumentadas / inalteradas / rejeitadas),
+tamanho da coleção antes e depois, `before`/`incoming`/`after` por carta, as
+linhas rejeitadas com motivo, e a chave do snapshot de rollback. O download é
+oferecido em toda importação: um dry-run na prévia (`-dryrun`, `applied:false`) e
+o registro aplicado no painel de resultado que substituiu o toast.
+
+### Linhas não reconhecidas
+
+Os três caminhos de descarte incrementavam um contador. Agora registram
+`{where, raw, reason}` — `unknown_id`, `no_match`, `bad_row` — exibidos numa
+lista expansível na prévia e incluídos na auditoria. A importação não é bloqueada:
+o resto entra e as linhas ignoradas ficam para revisão.
+
+### Saúde dos dados
+
+Painel sempre visível em Ajustes com três linhas em linguagem simples (preços,
+cartas no banco, cartas na coleção). O relatório do pipeline — hashes, erros,
+warnings — fica atrás de "Detalhes técnicos", recolhido por padrão.
+
+### Verificação
+
+- `tools/data-health-contract.test.mjs`, nova, 26 asserções, 26/26 executadas
+  neste ambiente (a lógica foi extraída do `index.html` e executada de fato:
+  classificação de frescor nos limites, matemática do audit, imutabilidade das
+  coleções, cobertura dos caminhos de rejeição);
+- `visual-contract` 18/18, incluindo paridade EN/PT agora em 472 chaves;
+- espelho `Inkwell.dc.html` byte a byte;
+- `sc-if` 118/118 e `sc-for` 85/85 balanceados; contrato M2.1 intacto
+  (CAS de revisão, snapshot pré-importação, prévia antes de mutação).
+
+Não executado aqui (sem runner): `npm run test:all`, `test:py`, Playwright,
+`validate_release.py`.
+
+Nenhum dado gerado foi tocado.
+
+### O que M2.2 não inclui
+
+O painel de saúde relata o que o app consegue observar do lado do cliente. Não
+expõe estado do agente de preços (disjuntor, `remaining_today`) — isso vive na
+máquina que roda o agente, não no navegador. Se quiser isso visível no site, o
+agente precisa publicar um pequeno artefato de status no `data-manifest`.

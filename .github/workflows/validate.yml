@@ -41,6 +41,8 @@ jobs:
         run: node tools/visual-contract.test.mjs
       - name: Sync and safe-import contract
         run: node tools/sync-import-contract.test.mjs
+      - name: Import audit and data health contract
+        run: node tools/data-health-contract.test.mjs
   python:
     runs-on: ubuntu-latest
     steps:

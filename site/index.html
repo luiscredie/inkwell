@@ -197,6 +197,13 @@
           <button onClick="{{ dismissWarning }}" style="background:none;border:none;color:#e6c15a;cursor:pointer;font-size:15px;line-height:1">×</button>
         </div>
       </sc-if>
+      <sc-if value="{{ priceAlert }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 18px;background:rgba(230,193,90,.08);border-bottom:1px solid rgba(230,193,90,.2);color:#d9bb63;font-size:12.5px">
+          <span aria-hidden="true">◷</span><span style="flex:1">{{ priceAlert }}</span>
+          <button onClick="{{ openDataHealth }}" style="background:rgba(230,193,90,.14);border:1px solid rgba(230,193,90,.28);color:#e6c15a;border-radius:8px;padding:4px 10px;font-size:11.5px;cursor:pointer;min-height:28px">{{ dhOpenLabel }}</button>
+          <button onClick="{{ dismissPriceAlert }}" style="background:none;border:none;color:#d9bb63;cursor:pointer;font-size:15px;line-height:1">×</button>
+        </div>
+      </sc-if>
       <header style="position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:16px;padding:18px 30px;background:rgba(11,9,16,.82);backdrop-filter:blur(16px);border-bottom:1px solid rgba(199,154,68,.12)">
         <div style="min-width:0;flex-shrink:0">
           <h1 style="font-family:'Cinzel Decorative','Bricolage Grotesque',serif;font-weight:700;font-size:23px;letter-spacing:.4px;line-height:1.1;background:linear-gradient(180deg,#f9ecc4,#d4af5a);-webkit-background-clip:text;background-clip:text;color:transparent">{{ pageTitle }}</h1>
@@ -1542,13 +1549,54 @@
           <div style="padding:12px;border-radius:12px;background:rgba(255,255,255,.05)"><div style="font-size:11px;color:#888">{{ normalLabel }}</div><b style="font-family:'JetBrains Mono'">{{ importNormal }}</b></div>
           <div style="padding:12px;border-radius:12px;background:rgba(255,255,255,.05)"><div style="font-size:11px;color:#888">Foil</div><b style="font-family:'JetBrains Mono'">{{ importFoil }}</b></div>
         </div>
-        <sc-if value="{{ importHasUnresolved }}" hint-placeholder-val="{{ false }}"><div style="padding:10px 12px;border-radius:10px;background:rgba(230,193,90,.1);color:#e6c15a;font-size:12px;margin-bottom:14px">{{ importUnresolved }}</div></sc-if>
+        <sc-if value="{{ importHasUnresolved }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:10px 12px;border-radius:10px;background:rgba(230,193,90,.1);color:#e6c15a;font-size:12px;margin-bottom:14px;display:flex;flex-direction:column;gap:9px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="flex:1">{{ importUnresolved }}</span>
+              <button onClick="{{ toggleImportRows }}" style="background:rgba(230,193,90,.16);border:1px solid rgba(230,193,90,.3);color:#e6c15a;border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;min-height:28px;flex-shrink:0">{{ importRowsToggleLabel }}</button>
+            </div>
+            <sc-if value="{{ importRowsOpen }}" hint-placeholder-val="{{ false }}">
+              <div class="ink-sc" style="max-height:152px;overflow-y:auto;border-radius:9px;border:1px solid rgba(230,193,90,.2);background:rgba(0,0,0,.28)">
+                <sc-for list="{{ importRejects }}" as="r" hint-placeholder-count="3">
+                  <div style="display:flex;gap:9px;padding:6px 10px;border-bottom:1px solid rgba(255,255,255,.05);font-size:11.5px;font-family:'JetBrains Mono'">
+                    <span style="color:#8a8a92;flex-shrink:0;width:34px">{{ r.where }}</span>
+                    <span style="color:#e2e2e6;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis">{{ r.raw }}</span>
+                    <span style="color:#c8a94a;flex-shrink:0">{{ r.reason }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="font-size:11px;color:#a89250">{{ importRowsNote }}</div>
+            </sc-if>
+          </div>
+        </sc-if>
         <div style="font-size:12px;font-weight:700;margin-bottom:8px">{{ importModeTitle }}</div>
         <div style="display:grid;gap:8px"><sc-for list="{{ importModes }}" as="m"><button onClick="{{ m._pick }}" style="{{ m._style }}"><span style="font-weight:700">{{ m.title }}</span><span style="font-size:11.5px;color:#aaa">{{ m.desc }}</span></button></sc-for></div>
         <sc-if value="{{ importReplaceWarning }}" hint-placeholder-val="{{ false }}"><div style="margin-top:12px;padding:11px;border-radius:10px;background:rgba(226,59,78,.1);color:#ff9aa4;font-size:12px">{{ importReplaceWarningText }}</div></sc-if>
-        <div style="display:flex;gap:10px;margin-top:20px">
-          <button onClick="{{ cancelCollectionImport }}" style="flex:1;padding:11px;border-radius:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#ddd;cursor:pointer">{{ cancelLabel }}</button>
-          <button onClick="{{ applyCollectionImport }}" style="flex:1;padding:11px;border-radius:11px;background:linear-gradient(180deg,#c4a8ff,#8e67d8);border:none;color:#160d24;font-weight:800;cursor:pointer">{{ importApplyLabel }}</button>
+        <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap">
+          <button onClick="{{ downloadPreviewAudit }}" style="padding:11px 13px;border-radius:11px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:#b8b8c0;cursor:pointer;font-size:12px;min-height:44px">↓ {{ importAuditLabel }}</button>
+          <button onClick="{{ cancelCollectionImport }}" style="flex:1;min-width:96px;padding:11px;border-radius:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#ddd;cursor:pointer;min-height:44px">{{ cancelLabel }}</button>
+          <button onClick="{{ applyCollectionImport }}" style="flex:1;min-width:96px;padding:11px;border-radius:11px;background:linear-gradient(180deg,#c4a8ff,#8e67d8);border:none;color:#160d24;font-weight:800;cursor:pointer;min-height:44px">{{ importApplyLabel }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ importResultOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeImportResult }}" style="position:fixed;inset:0;z-index:126;background:rgba(5,5,7,.78);backdrop-filter:blur(9px);display:flex;align-items:center;justify-content:center;padding:24px">
+      <div onClick="{{ stop }}" role="dialog" aria-modal="true" aria-labelledby="import-result-title" style="width:min(500px,100%);background:#141019;border:1px solid rgba(95,208,127,.26);border-radius:20px;padding:26px;box-shadow:0 24px 80px rgba(0,0,0,.65)">
+        <h2 id="import-result-title" style="font-family:'Bricolage Grotesque';font-size:22px">{{ importDoneTitle }}</h2>
+        <div style="font-size:12.5px;color:#8a8a92;margin-top:4px">{{ importDoneSub }}</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:20px 0">
+          <sc-for list="{{ importResultStats }}" as="s" hint-placeholder-count="3">
+            <div style="padding:12px;border-radius:12px;background:rgba(255,255,255,.05)"><div style="font-size:11px;color:#888">{{ s.label }}</div><b style="font-family:'JetBrains Mono'">{{ s.value }}</b></div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ importHasRollback }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:10px 12px;border-radius:10px;background:rgba(95,208,127,.08);color:#7fd39a;font-size:11.5px;margin-bottom:16px">{{ importRollbackNote }}</div>
+        </sc-if>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button onClick="{{ downloadImportAudit }}" style="flex:1;min-width:150px;padding:11px;border-radius:11px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:#ddd;cursor:pointer;font-size:12.5px;min-height:44px">↓ {{ importAuditLabel }}</button>
+          <button onClick="{{ closeImportResult }}" style="flex:1;min-width:110px;padding:11px;border-radius:11px;background:linear-gradient(180deg,#c4a8ff,#8e67d8);border:none;color:#160d24;font-weight:800;cursor:pointer;min-height:44px">{{ importDoneLabel }}</button>
         </div>
       </div>
     </div>
@@ -1633,10 +1681,19 @@
           <div style="font-size:12.5px;color:#6f6f78;padding:4px 0">No inkable/art corrections yet. Edit a card to add one.</div>
         </sc-if>
 
-        <sc-if value="{{ hasReport }}" hint-placeholder-val="{{ false }}">
-          <div style="height:1px;background:rgba(255,255,255,.08);margin:20px 0"></div>
+        <div style="height:1px;background:rgba(255,255,255,.08);margin:20px 0"></div>
+        <div style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#8a8a92;margin-bottom:10px">{{ dhTitle }}</div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
+          <sc-for list="{{ dhRows }}" as="d" hint-placeholder-count="3">
+            <div style="display:flex;justify-content:space-between;gap:12px;font-size:12.5px;padding:8px 11px;border-radius:9px;background:rgba(255,255,255,.03)"><span style="color:#8a8a92">{{ d.label }}</span><span style="color:{{ d.color }};font-family:'JetBrains Mono';font-size:11.5px;text-align:right">{{ d.value }}</span></div>
+          </sc-for>
+        </div>
+        <button onClick="{{ toggleDhTech }}" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#b8b8c0;border-radius:9px;padding:7px 11px;font-size:11.5px;cursor:pointer;min-height:32px">{{ dhTechLabel }}</button>
+
+        <sc-if value="{{ reportOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="height:1px;background:rgba(255,255,255,.08);margin:16px 0"></div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-            <span style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#8a8a92">Data health</span>
+            <span style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#8a8a92">Pipeline report</span>
             <span style="font-size:11px;color:#7c7c85;font-family:'JetBrains Mono'">{{ reportDate }}</span>
           </div>
           <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
@@ -1665,6 +1722,9 @@
           <sc-if value="{{ reportClean }}" hint-placeholder-val="{{ true }}">
             <div style="font-size:12.5px;color:#5fd07f;padding:4px 0">✓ No issues reported by the data pipeline.</div>
           </sc-if>
+        </sc-if>
+        <sc-if value="{{ noReportTech }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:12.5px;color:#6f6f78;padding:10px 0 0">No pipeline validation report was published with this build.</div>
         </sc-if>
       </div>
     </div>
@@ -1787,6 +1847,7 @@ class Component extends DCLogic {
     activeUser: 'luiscredie', profileMenuOpen: false, settingsOpen: false, lastSaved: null,
     syncEnabled: false, syncStatus: 'off', syncEmail: null, syncUser: null, syncLast: null, syncMsg: null, syncInput: '', syncRevision: 0,
     importPreview: null, importMode: 'merge-max',
+    importRowsOpen: false, importResult: null, priceAlertDismissed: false, dhTechOpen: false,
     coachDeck: null, coachLoading: false, coachErr: null, coachText: null,
     lang: 'en',
     toast: null,
@@ -1805,6 +1866,11 @@ class Component extends DCLogic {
       export:'Export', import:'Import', cards:'cards', prev:'‹ Prev', next:'Next ›',
       syncTitle:'Cloud Sync', syncSignedAs:'Signed in as {email}. Your collection, decks and matches sync across devices.', syncNowLabel:'Sync now', syncSignOut:'Sign out', syncIntro:'Sign in by email to back up and sync your collection, decks and matches across devices.', syncSend:'Send link', syncSending:'Sending…', syncOff:'Off', syncNotSigned:'Not signed in', syncLinkSent:'Link sent', syncSyncing:'Syncing…', syncSynced:'Synced', syncError:'Error', syncConflictBadge:'Conflict', syncEnterEmail:'Enter your email', syncSignInFailed:'Sign-in failed', syncCheckEmail:'Check {email} for your sign-in link.', syncSignedOutMsg:'Signed out.', syncSignInFirst:'Sign in to sync', syncSyncedMsg:'Synced.', syncPulled:'Pulled latest from cloud', syncMissingTable:'Cloud database is not configured. Run supabase/inkwell_profiles.sql.', syncPermissionError:'Cloud permissions are not configured correctly.', syncConflict:'Another device changed this profile. Your local version was preserved as a conflict snapshot; sync again after reviewing it.', syncLocalBackup:'Also kept in this browser. Download a backup anytime for a portable copy.', syncLocalOnly:'Your data lives only in this browser. Sign in to sync it across devices and download regular backups.',
       importPreviewTitle:'Review collection import', importUnique:'Unique cards', importModeTitle:'How should this file be applied?', importMergeMax:'Safe merge', importMergeMaxDesc:'Keep the highest quantity from your collection or this file. Existing cards are never removed.', importMergeSum:'Add quantities', importMergeSumDesc:'Add imported quantities to what you already own.', importReplace:'Replace collection', importReplaceDesc:'Use only the imported file and remove other cards.', importReplaceWarning:'Replace is destructive. A rollback snapshot will be saved in this browser.', importApply:'Apply import', importUnresolved:'{n} rows could not be matched and will not be imported.', importNoMatches:'No matching cards found', importFailed:'Import failed — check the file format', importApplied:'Import complete · {n} unique cards',
+      pricesStaleAlert:'Prices are from {d} and may be out of date. Everything else is current.', pricesUnavailAlert:'Prices are unavailable right now. Your collection, decks and matches work normally.', pricesUnavailShort:'unavailable', pricesAsOf:'as of {d}',
+      dhTitle:'Data health', dhOpen:'Details', dhTech:'Technical details', dhHide:'Hide technical details', dhPriceStatus:'Prices', dhCollection:'Cards in your collection', dhFreshDays:'{n} days old', dhToday:'updated today',
+      importRowsShow:'Show rows', importRowsHide:'Hide rows', importRowsNote:'These rows were skipped. Everything else is still imported.', importAudit:'Download audit',
+      importDoneTitle:'Import complete', importDoneSub:'{n} cards in your collection · saved on this device', importNew:'New cards', importIncreased:'Increased', importSkipped:'Skipped', importRollbackNote:'A snapshot of your collection from before this import is kept on this device.', importDone:'Done',
+      rsn_unknown_id:'unknown id', rsn_no_match:'no match', rsn_bad_row:'empty row',
       newDeck:'+ New Deck', importDeck:'↑ Import', createDeck:'Create', cancel:'Cancel', format:'Format',
       inkable:'Inkable', uninkable:'Uninkable', cost:'Cost', allSets:'All sets',
       welcome:'Welcome, {name}', emptyMsg:'Your codex is empty. Import your collection from Dreamborn, or start building a deck — everything is tracked privately in your profile.',
@@ -1845,6 +1911,11 @@ class Component extends DCLogic {
       export:'Exportar', import:'Importar', cards:'cartas', prev:'‹ Anterior', next:'Próxima ›',
       syncTitle:'Sincronização na nuvem', syncSignedAs:'Conectado como {email}. Sua coleção, decks e partidas sincronizam entre dispositivos.', syncNowLabel:'Sincronizar agora', syncSignOut:'Sair', syncIntro:'Entre por e-mail para salvar e sincronizar sua coleção, decks e partidas entre dispositivos.', syncSend:'Enviar link', syncSending:'Enviando…', syncOff:'Desativada', syncNotSigned:'Não conectado', syncLinkSent:'Link enviado', syncSyncing:'Sincronizando…', syncSynced:'Sincronizado', syncError:'Erro', syncConflictBadge:'Conflito', syncEnterEmail:'Digite seu e-mail', syncSignInFailed:'Falha ao entrar', syncCheckEmail:'Confira em {email} o link para entrar.', syncSignedOutMsg:'Sessão encerrada.', syncSignInFirst:'Entre para sincronizar', syncSyncedMsg:'Sincronizado.', syncPulled:'Dados mais recentes baixados da nuvem', syncMissingTable:'O banco da nuvem não está configurado. Execute supabase/inkwell_profiles.sql.', syncPermissionError:'As permissões da nuvem não estão configuradas corretamente.', syncConflict:'Outro dispositivo alterou este perfil. Sua versão local foi preservada como cópia de conflito; revise e sincronize novamente.', syncLocalBackup:'Também mantido neste navegador. Baixe um backup quando quiser uma cópia portátil.', syncLocalOnly:'Seus dados estão apenas neste navegador. Entre para sincronizá-los entre dispositivos e baixe backups regularmente.',
       importPreviewTitle:'Revisar importação da coleção', importUnique:'Cartas únicas', importModeTitle:'Como este arquivo deve ser aplicado?', importMergeMax:'Mesclagem segura', importMergeMaxDesc:'Mantém a maior quantidade entre sua coleção e o arquivo. Cartas existentes nunca são removidas.', importMergeSum:'Somar quantidades', importMergeSumDesc:'Soma as quantidades importadas ao que você já possui.', importReplace:'Substituir coleção', importReplaceDesc:'Usa apenas o arquivo importado e remove as outras cartas.', importReplaceWarning:'Substituir é destrutivo. Uma cópia para restauração será salva neste navegador.', importApply:'Aplicar importação', importUnresolved:'{n} linhas não foram identificadas e não serão importadas.', importNoMatches:'Nenhuma carta correspondente encontrada', importFailed:'Falha na importação — confira o formato do arquivo', importApplied:'Importação concluída · {n} cartas únicas',
+      pricesStaleAlert:'Os preços são de {d} e podem estar desatualizados. O restante está atual.', pricesUnavailAlert:'Os preços estão indisponíveis agora. Sua coleção, decks e partidas funcionam normalmente.', pricesUnavailShort:'indisponível', pricesAsOf:'de {d}',
+      dhTitle:'Saúde dos dados', dhOpen:'Detalhes', dhTech:'Detalhes técnicos', dhHide:'Ocultar detalhes técnicos', dhPriceStatus:'Preços', dhCollection:'Cartas na sua coleção', dhFreshDays:'{n} dias atrás', dhToday:'atualizado hoje',
+      importRowsShow:'Ver linhas', importRowsHide:'Ocultar linhas', importRowsNote:'Estas linhas foram ignoradas. Todo o restante é importado.', importAudit:'Baixar auditoria',
+      importDoneTitle:'Importação concluída', importDoneSub:'{n} cartas na sua coleção · salvo neste dispositivo', importNew:'Cartas novas', importIncreased:'Aumentadas', importSkipped:'Ignoradas', importRollbackNote:'Um instantâneo da sua coleção anterior a esta importação fica guardado neste dispositivo.', importDone:'Concluir',
+      rsn_unknown_id:'id desconhecido', rsn_no_match:'sem correspondência', rsn_bad_row:'linha vazia',
       newDeck:'+ Novo Deck', importDeck:'↑ Importar', createDeck:'Criar', cancel:'Cancelar', format:'Formato',
       inkable:'Inkável', uninkable:'Não-inkável', cost:'Custo', allSets:'Todos os sets',
       welcome:'Bem-vindo, {name}', emptyMsg:'Seu códice está vazio. Importe sua coleção do Dreamborn ou comece a montar um deck — tudo fica salvo de forma privada no seu perfil.',
@@ -1887,6 +1958,8 @@ class Component extends DCLogic {
   base = 'images/';
   prices = {};
   priceSource = '';
+  priceFailure = null;                        // M2.2: 'fetch' | 'schema' | 'absent'
+  PRICE_STALE_DAYS = 3;
 
   // ---------- M1: data contract (see DATA_CONTRACT.md) ----------
   APP_VERSION = '1.4.1';
@@ -2186,15 +2259,18 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       if (cRes.fetchFailed){ const leg = await this.bootLegacy(); if (!leg.fatal){ leg.warning = 'Data manifest is published but its files could not be loaded — running on the older root data. Finish deploying the data/ folder.'; return leg; } }
       return { fatal:cRes.fatal };
     }
-    // prices (required for the app to be useful; block if declared but broken)
+    // M2.2: a price failure is never fatal. Prices degrade to "unavailable";
+    // collection, decks, legality and matches keep working.
     let prices={}, priceSource='', warning=null;
     if (files.prices){
-      const pRes = await this.loadArtifact('prices', files.prices, schema.prices, dir, hashJobs, true);
-      if (pRes.fatal) return { fatal:pRes.fatal };
-      const norm = this.priceMap(pRes.data);
-      if (norm.error) return { fatal:'Prices file is in raw pipeline format — the app expects the compact prices schema. Re-run the pipeline export.' };
-      prices = norm.map; priceSource = pRes.data.source||''; this.pricesDate = (pRes.data.generated_at||'').slice(0,10) || null;
-    } else { warning = 'No prices artifact in manifest.'; }
+      const pRes = await this.loadArtifact('prices', files.prices, schema.prices, dir, hashJobs, false);
+      if (pRes.fatal){ this.priceFailure='fetch'; }
+      else {
+        const norm = this.priceMap(pRes.data);
+        if (norm.error){ this.priceFailure='schema'; }
+        else { prices = norm.map; priceSource = pRes.data.source||''; this.pricesDate = (pRes.data.generated_at||'').slice(0,10) || null; }
+      }
+    } else { this.priceFailure='absent'; }
     // optional artifacts
     let aliases=null, validation=null, ptOverlay=null;
     if (files.aliases){ const a=await this.loadArtifact('aliases', files.aliases, schema.aliases, dir, hashJobs, false); if(!a.fatal && a.data) aliases=a.data; }
@@ -2229,7 +2305,8 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     if (!c.ok || !c.data || !Array.isArray(c.data.cards)) return { fatal:'Could not load cards.json.' };
     let prices={}, priceSource='', warning='Running without data manifest (legacy mode).';
     const p = await this.fetchJson('prices.json');
-    if (p.ok && p.data){ const norm=this.priceMap(p.data); if(norm.error){ warning='Prices file is in raw format and was ignored.'; } else { prices=norm.map; priceSource=p.data.source||''; this.pricesDate=(p.data.generated_at||'').slice(0,10)||null; } }
+    if (!p.ok || !p.data){ this.priceFailure='fetch'; }
+    if (p.ok && p.data){ const norm=this.priceMap(p.data); if(norm.error){ this.priceFailure='schema'; } else { prices=norm.map; priceSource=p.data.source||''; this.pricesDate=(p.data.generated_at||'').slice(0,10)||null; } }
     return { cards:c.data.cards||[], sets:c.data.sets||[], image_base_path:c.data.image_base_path, prices, priceSource, aliases:null, validation:null, warning, hashJobs:[] };
   }
 
@@ -2334,6 +2411,25 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
   }
   normalizePrices(pj){ const r=this.priceMap(pj); return r.error?{}:r.map; }
   pd(card){ return (card && this.prices && this.prices[card.card_id]) || null; }
+  priceAgeDays(){ if(!this.pricesDate) return null; const t=Date.parse(this.pricesDate+'T00:00:00Z'); if(isNaN(t)) return null; return Math.max(0,Math.floor((Date.now()-t)/86400000)); }
+  priceHealth(){
+    if(this.priceFailure) return { state:'unavailable', days:null };
+    if(!this.pricesDate) return { state:'unknown', days:null };
+    const d=this.priceAgeDays();
+    return { state:(d!=null && d>=this.PRICE_STALE_DAYS)?'stale':'fresh', days:d };
+  }
+  priceDateLabel(){
+    if(!this.pricesDate) return '—';
+    try{ return new Date(this.pricesDate+'T00:00:00Z').toLocaleDateString(this.state.lang==='pt'?'pt-BR':'en-US',{day:'numeric',month:'short',timeZone:'UTC'}); }catch(e){ return this.pricesDate; }
+  }
+  downloadJson(name,obj){
+    try{
+      const b=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'});
+      const u=URL.createObjectURL(b); const a=document.createElement('a');
+      a.href=u; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(u),1500);
+    }catch(e){ this.showToast(this.t('importFailed')); }
+  }
   hasRealPrice(card){ const p=this.pd(card); return !!(p&&(p.n!=null||p.nl!=null||p.f!=null||p.fl!=null)); }
   price(card){ const p=this.pd(card); if(!p) return null; return p.nl!=null ? p.nl : (p.n!=null ? p.n : null); }
   foilPrice(card){ const p=this.pd(card); if(!p) return null; return p.fl!=null ? p.fl : (p.f!=null ? p.f : null); }
@@ -2831,10 +2927,10 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     return base;
   }
   importCollection = (e)=>{ const file=e.target&&e.target.files&&e.target.files[0]; if(!file) return; const rd=new FileReader(); rd.onload=()=>{ try{
-    const txt=String(rd.result); const coll={}; let matched=0, unresolved=0;
+    const txt=String(rd.result); const coll={}; let matched=0; const rejects=[];
     if(!this.byNumIdx){ this.byNumIdx={}; for(const c of this.cards) this.byNumIdx[c.set_code+'|'+String(c.card_number)]=c; }
     const add=(id,n,f)=>{ if(!id) return; const cur=coll[id]||{n:0,f:0}; cur.n+=n||0; cur.f+=f||0; coll[id]=cur; };
-    if(/\.json$/i.test(file.name)){ const j=JSON.parse(txt); const src=j.collection||j; for(const id in src){ if(this.byId[id]){ const e2=src[id]; add(id,e2.n||0,e2.f||0); matched++; } else unresolved++; } }
+    if(/\.json$/i.test(file.name)){ const j=JSON.parse(txt); const src=j.collection||j; for(const id in src){ if(this.byId[id]){ const e2=src[id]; add(id,e2.n||0,e2.f||0); matched++; } else rejects.push({where:'json', raw:String(id).slice(0,60), reason:'unknown_id'}); } }
     else {
       const lines=txt.split(/\r?\n/).filter(l=>l.trim()); if(!lines.length){ this.showToast('Empty file'); return; }
       const head=lines[0].toLowerCase(); const cols=this.parseCsvLine(lines[0]).map(h=>h.trim().toLowerCase());
@@ -2842,27 +2938,66 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       const ci=(names)=>{ for(const n of names){ const i=cols.indexOf(n); if(i>=0) return i; } return -1; };
       if(dream){
         const iSet=ci(['set number']), iNum=ci(['card number']), iVar=ci(['variant','finish']), iCnt=ci(['count','quantity','qty']), iName=ci(['name']);
-        for(let i=1;i<lines.length;i++){ const p=this.parseCsvLine(lines[i]); if(p.length<2) continue; const c=this.resolveCsvCard(p[iSet], p[iNum], iName>=0?p[iName]:''); if(!c){ unresolved++; continue; } const cnt=parseInt(p[iCnt])||0; const foil=/foil/i.test((p[iVar]||'')); add(c.card_id, foil?0:cnt, foil?cnt:0); matched++; }
+        for(let i=1;i<lines.length;i++){ const p=this.parseCsvLine(lines[i]); if(p.length<2) continue; const c=this.resolveCsvCard(p[iSet], p[iNum], iName>=0?p[iName]:''); if(!c){ rejects.push({where:String(i+1), raw:[p[iSet],p[iNum],iName>=0?p[iName]:''].filter(Boolean).join(' · ').slice(0,60)||'(empty)', reason:'no_match'}); continue; } const cnt=parseInt(p[iCnt])||0; const foil=/foil/i.test((p[iVar]||'')); add(c.card_id, foil?0:cnt, foil?cnt:0); matched++; }
       } else {
         const iId=ci(['card_id','id']), iN=ci(['normal','n']), iF=ci(['foil','f']), start=(iId>=0||/card_id/.test(head))?1:0;
-        for(let i=start;i<lines.length;i++){ const p=this.parseCsvLine(lines[i]); const id=(p[iId>=0?iId:0]||'').trim(); if(!this.byId[id]){ if(id) unresolved++; continue; } const n=parseInt(p[iN>=0?iN:p.length-2])||0, f=parseInt(p[iF>=0?iF:p.length-1])||0; add(id,n,f); matched++; }
+        for(let i=start;i<lines.length;i++){ const p=this.parseCsvLine(lines[i]); const id=(p[iId>=0?iId:0]||'').trim(); if(!this.byId[id]){ if(id) rejects.push({where:String(i+1), raw:id.slice(0,60), reason:'unknown_id'}); else rejects.push({where:String(i+1), raw:'(empty)', reason:'bad_row'}); continue; } const n=parseInt(p[iN>=0?iN:p.length-2])||0, f=parseInt(p[iF>=0?iF:p.length-1])||0; add(id,n,f); matched++; }
       }
     }
     if(!Object.keys(coll).length){ this.showToast(this.t('importNoMatches')); return; }
     const normal=Object.values(coll).reduce((s,x)=>s+(x.n||0),0), foil=Object.values(coll).reduce((s,x)=>s+(x.f||0),0);
-    this.setState({importPreview:{collection:coll,fileName:file.name,matched,unresolved,unique:Object.keys(coll).length,normal,foil},importMode:'merge-max'});
+    this.setState({importPreview:{collection:coll,fileName:file.name,matched,unresolved:rejects.length,rejects,unique:Object.keys(coll).length,normal,foil},importMode:'merge-max',importRowsOpen:false});
   }catch(err){ console.error(err); this.showToast(this.t('importFailed')); } }; rd.readAsText(file); e.target.value=''; };
   setImportMode=(mode)=>this.setState({importMode:mode});
-  cancelCollectionImport=()=>this.setState({importPreview:null});
+  cancelCollectionImport=()=>this.setState({importPreview:null,importRowsOpen:false});
+  toggleImportRows=()=>this.setState({importRowsOpen:!this.state.importRowsOpen});
+  closeImportResult=()=>this.setState({importResult:null});
+  buildImportAudit(p,before,after,mode,snapKey){
+    const rows=[]; let created=0, increased=0, unchanged=0;
+    for(const id in p.collection){
+      const b=before[id]||{n:0,f:0}, a=after[id]||{n:0,f:0};
+      const c=this.byId[id];
+      if(!before[id]) created++; else if((a.n+a.f)>(b.n+b.f)) increased++; else unchanged++;
+      rows.push({ card_id:id, name:(c&&c.name_en)||null, set_code:(c&&c.set_code)||null,
+        before:{n:b.n||0,f:b.f||0}, incoming:{n:p.collection[id].n||0,f:p.collection[id].f||0}, after:{n:a.n||0,f:a.f||0} });
+    }
+    return {
+      schema:'inkwell-import-audit/1', app_version:this.APP_VERSION,
+      imported_at:new Date().toISOString(), user:this.state.activeUser,
+      source_file:p.fileName, merge_mode:mode,
+      summary:{ rows_accepted:rows.length, rows_rejected:(p.rejects||[]).length,
+        cards_created:created, cards_increased:increased, cards_unchanged:unchanged,
+        collection_size_before:Object.keys(before).length, collection_size_after:Object.keys(after).length },
+      rollback:{ snapshot_key:snapKey||null,
+        note:'Restore this key from localStorage on this device to undo the import.' },
+      accepted:rows, rejected:(p.rejects||[]).slice(0,2000)
+    };
+  }
+  downloadImportAudit=()=>{
+    const a=this.state.importResult; if(!a) return;
+    this.downloadJson('import-audit-'+a.imported_at.slice(0,10)+'.json',a);
+  };
+  downloadPreviewAudit=()=>{
+    const p=this.state.importPreview; if(!p) return;
+    const after=Component.mergeCollections(this.state.collection,p.collection,this.state.importMode);
+    const a=this.buildImportAudit(p,this.state.collection,after,this.state.importMode,null);
+    a.schema='inkwell-import-audit/1-dryrun'; a.applied=false;
+    this.downloadJson('import-audit-preview.json',a);
+  };
   applyCollectionImport=()=>{
     const p=this.state.importPreview; if(!p) return;
+    let snapKey=null;
     try {
       const key='inkwell_preimport_'+this.state.activeUser+'_'+Date.now();
       localStorage.setItem(key,JSON.stringify({created_at:new Date().toISOString(),collection:this.state.collection,source:p.fileName}));
       localStorage.setItem('inkwell_preimport_latest_'+this.state.activeUser,key);
+      snapKey=key;
     } catch(e){}
-    const collection=Component.mergeCollections(this.state.collection,p.collection,this.state.importMode);
-    this.setState({collection,importPreview:null},()=>{ this.saveLocal(); this.showToast(this.t('importApplied',{n:Object.keys(collection).length})); });
+    const before=this.state.collection;
+    const collection=Component.mergeCollections(before,p.collection,this.state.importMode);
+    const audit=this.buildImportAudit(p,before,collection,this.state.importMode,snapKey);
+    audit.applied=true;
+    this.setState({collection,importPreview:null,importRowsOpen:false,importResult:audit},()=>{ this.saveLocal(); });
   };
   setImpRef = (el)=>{ this._imp=el; };
   setQty(id, field, delta){
@@ -3043,10 +3178,36 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     const sb=SB[st.syncStatus]||SB.off; V.syncBadgeColor=sb[0]; V.syncBadgeBg=sb[1]; V.syncBadge=sb[2];
     V.localOnlyMsg = (st.syncEnabled && st.syncUser) ? this.t('syncLocalBackup') : this.t('syncLocalOnly');
     V.settingsOpen=st.settingsOpen;
+    const ph=this.priceHealth();
+    V.priceAlert='';
+    if(!st.priceAlertDismissed){
+      if(ph.state==='unavailable') V.priceAlert=this.t('pricesUnavailAlert');
+      else if(ph.state==='stale') V.priceAlert=this.t('pricesStaleAlert',{d:this.priceDateLabel()});
+    }
+    V.dismissPriceAlert=()=>this.setState({priceAlertDismissed:true});
+    V.openDataHealth=()=>this.setState({settingsOpen:true,dhTechOpen:false,priceAlertDismissed:true});
+    V.dhOpenLabel=this.t('dhOpen');
     const ip=st.importPreview;
     V.importPreviewOpen=!!ip; V.importPreviewTitle=this.t('importPreviewTitle'); V.importPreviewFile=ip?ip.fileName:''; V.importUniqueLabel=this.t('importUnique');
     V.importUnique=ip?ip.unique:0; V.importNormal=ip?ip.normal:0; V.importFoil=ip?ip.foil:0; V.importHasUnresolved=!!(ip&&ip.unresolved);
     V.importUnresolved=ip?this.t('importUnresolved',{n:ip.unresolved}):''; V.importModeTitle=this.t('importModeTitle');
+    V.importRowsOpen=st.importRowsOpen; V.toggleImportRows=this.toggleImportRows;
+    V.importRowsToggleLabel=this.t(st.importRowsOpen?'importRowsHide':'importRowsShow');
+    V.importRowsNote=this.t('importRowsNote');
+    V.importRejects=(ip&&ip.rejects?ip.rejects:[]).slice(0,300).map(r=>({where:r.where,raw:r.raw,reason:this.t('rsn_'+r.reason)}));
+    V.importAuditLabel=this.t('importAudit'); V.downloadPreviewAudit=this.downloadPreviewAudit;
+    const ir=st.importResult;
+    V.importResultOpen=!!ir; V.importDoneTitle=this.t('importDoneTitle');
+    V.importDoneSub=ir?this.t('importDoneSub',{n:ir.summary.collection_size_after}):'';
+    V.importResultStats=ir?[
+      {label:this.t('importNew'),value:ir.summary.cards_created},
+      {label:this.t('importIncreased'),value:ir.summary.cards_increased},
+      {label:this.t('importSkipped'),value:ir.summary.rows_rejected}
+    ]:[];
+    V.importRollbackNote=ir&&ir.rollback.snapshot_key?this.t('importRollbackNote'):'';
+    V.importHasRollback=!!(ir&&ir.rollback.snapshot_key);
+    V.downloadImportAudit=this.downloadImportAudit; V.closeImportResult=this.closeImportResult;
+    V.importDoneLabel=this.t('importDone');
     V.importModes=[
       {id:'merge-max',title:this.t('importMergeMax'),desc:this.t('importMergeMaxDesc')},
       {id:'merge-sum',title:this.t('importMergeSum'),desc:this.t('importMergeSumDesc')},
@@ -3062,8 +3223,19 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     V.corrections=corr; V.correctionCount=corr.length; V.hasCorrections=corr.length>0; V.noCorrections=corr.length===0;
     V.clearCorrections=()=>{ this.setState({overrides:{}},()=>{ this.saveLocal(); this.showToast('Corrections cleared'); }); };
     // ---- M7 validation report ----
+    V.dhTitle=this.t('dhTitle');
+    V.dhTechLabel=this.t(st.dhTechOpen?'dhHide':'dhTech');
+    V.toggleDhTech=()=>this.setState({dhTechOpen:!st.dhTechOpen});
+    V.dhRows=[
+      {label:this.t('dhPriceStatus'), value:(ph.state==='unavailable'?this.t('pricesUnavailShort')
+        :ph.state==='unknown'?'—'
+        :(ph.days===0?this.t('dhToday'):this.t('dhFreshDays',{n:ph.days}))+' · '+this.priceDateLabel()),
+       color:(ph.state==='unavailable'?'#ff9aa4':ph.state==='stale'?'#e6c15a':'#5fd07f')},
+      {label:this.t('dhCards'), value:(this.cards?this.cards.length.toLocaleString('en-US'):'—'), color:'#d8d8dc'},
+      {label:this.t('dhCollection'), value:Object.keys(st.collection||{}).length.toLocaleString('en-US'), color:'#d8d8dc'}
+    ];
     const rep=this.validationReport;
-    V.hasReport=!!rep;
+    V.hasReport=!!rep; V.reportOpen=!!rep&&st.dhTechOpen; V.noReportTech=!rep&&st.dhTechOpen;
     if(rep){
       const errs=Array.isArray(rep.errors)?rep.errors:[]; const warns=Array.isArray(rep.warnings)?rep.warnings:[];
       V.reportDate=(rep.generated_at||'').slice(0,10);
@@ -3311,7 +3483,9 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       V.colCard=this.t('colCard'); V.colOwned=this.t('colOwned'); V.colPrice=this.t('colPrice'); V.colRange=this.t('colRange'); V.colFoil=this.t('colFoil');
       V.priceOwnedLabel=st.priceOwnedOnly?this.t('ownedOnly'):this.t('allCards'); V.priceOwnedBtnStyle=this.chipStyle(st.priceOwnedOnly);
       V.togglePriceOwned=()=>this.setState({priceOwnedOnly:!st.priceOwnedOnly,page:0});
-      V.priceNote=this.priceSource?(this.t('source')+' · '+this.priceSource):this.t('noPrices');
+      V.priceNote=this.priceSource
+        ? (this.t('source')+' · '+this.priceSource+(this.pricesDate?' · '+this.t('pricesAsOf',{d:this.priceDateLabel()}):''))
+        : (this.priceFailure?this.t('pricesUnavailAlert'):this.t('noPrices'));
       const arr=pool.slice().sort((a,b)=>this.priceOr0(b)-this.priceOr0(a));
       const pages=Math.max(1,Math.ceil(arr.length/this.PAGE_SIZE)); const page=Math.min(st.page,pages-1);
       V.pageLabel=`${page+1} / ${pages}`; V.pageLabelShort=V.pageLabel; V.prevLabel=this.t('prev'); V.nextLabel=this.t('next');
