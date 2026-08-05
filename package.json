@@ -15,19 +15,19 @@
     "test:match-center-r3": "node tools/match-center-r3.test.mjs",
     "test:match-center-core": "node tools/match-center-legacy-core.test.cjs",
     "test:legality": "node tools/legality.test.mjs",
-    "test:js": "node tools/validate.test.mjs && node tools/imgfallback.test.mjs && node tools/ui-contract.test.mjs && node tools/price-movers.test.mjs && node tools/deck-allocation.test.mjs && node tools/match-center.test.mjs && node tools/match-center-r3.test.mjs && node tools/match-center-legacy-core.test.cjs && node tools/legality.test.mjs",
     "test:translation": "python3 -m unittest tools/test_refine_cards_pt.py",
     "test:price-agent-v5": "python3 -m unittest tools/test_ligalorcana_price_agent_daily_v5.py",
     "test:manifest": "python3 -m unittest tools/test_refresh_data_manifest.py",
     "test:py": "python3 -m unittest tools/test_validate_release.py tools/test_card_art_validator.py tools/test_ligalorcana_price_agent_daily_v4.py tools/test_ligalorcana_price_agent_daily_v5.py tools/test_lorcana_image_agent.py tools/test_refine_cards_pt.py tools/test_refresh_data_manifest.py",
     "validate": "python3 tools/validate_release.py --root site --quick",
+    "verify": "npm run test:all && npm run test:py && npm run validate",
     "smoke": "playwright test tools/smoke.spec.mjs",
     "test:i18n": "node tools/i18n-contract.test.mjs",
     "test:replay": "node tools/visual-replay.test.mjs",
     "test:visual-contract": "node tools/visual-contract.test.mjs",
     "test:data-health": "node tools/data-health-contract.test.mjs",
     "test:sync-import": "node tools/sync-import-contract.test.mjs",
-    "test:all": "node tools/validate.test.mjs && node tools/imgfallback.test.mjs && node tools/ui-contract.test.mjs && node tools/price-movers.test.mjs && node tools/deck-allocation.test.mjs && node tools/deck-portfolio-v4.test.mjs && node tools/match-center.test.mjs && node tools/match-center-v5.test.mjs && node tools/legality.test.mjs && node tools/i18n-contract.test.mjs && node tools/visual-replay.test.mjs && node tools/visual-contract.test.mjs && node tools/sync-import-contract.test.mjs && node tools/data-health-contract.test.mjs"
+    "test:all": "node tools/validate.test.mjs && node tools/imgfallback.test.mjs && node tools/ui-contract.test.mjs && node tools/price-movers.test.mjs && node tools/deck-allocation.test.mjs && node tools/deck-portfolio-v4.test.mjs && node tools/match-center.test.mjs && node tools/match-center-v5.test.mjs && node tools/match-center-r3.test.mjs && node tools/match-center-legacy-core.test.cjs && node tools/legality.test.mjs && node tools/i18n-contract.test.mjs && node tools/visual-replay.test.mjs && node tools/visual-contract.test.mjs && node tools/sync-import-contract.test.mjs && node tools/data-health-contract.test.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.47.0"

@@ -1,62 +1,33 @@
-INKWELL — M2.2 deployment package
+INKWELL — extract over repo root, then:
 
-Extract the CONTENTS of inkwell-m2_2/ over your repo root. Paths already match.
-
-  git status          # confirm only the files below changed
-  npm run test:all
-  npm run test:py
-  npx playwright test tools/smoke.spec.mjs
-  python tools/validate_release.py --root site --quick
-  git add -A && git commit -m "M2.2: import audit, unrecognized-rows report, Data Health; prices no longer fatal"
+  npm run verify
+  git add -A && git commit -m "Simplify deploy: push-triggered Pages, one verify command"
   git push
 
-MERGE, DO NOT REPLACE — site/ contains only index.html here. Your site/data/**,
-site/images/**, site/support.js, site/match-center-engine.js, site/sync-config.json
-and data-manifest.json are untouched and must stay. Extracting over the top is
-safe; deleting your site/ folder first is not.
+That is the whole flow now. Push deploys.
 
-FILES IN THIS PACKAGE
+WHAT IS IN HERE
 
-  site/index.html                             M2.2 app
-  Inkwell.dc.html                             byte-identical mirror (enforced by test)
-  tools/data-health-contract.test.mjs          new, 26 assertions
-  tools/visual-contract.test.mjs               unchanged, included so the tree is complete
-  package.json                                 test:data-health added; both suites in test:all
-  .github/workflows/validate.yml               two new steps in the js job
-  .gitignore                                   in case the earlier cleanup commit missed it
-  ROADMAP.md                                   M2.2 record
-  github.md                                    sync receipt
-  NEXT_STEPS.md                                Supabase / cleanup / price-refresh instructions
+  .github/workflows/deploy-pages.yml   deploys on push to main (no longer waits
+                                       for the checks workflow; old gate is
+                                       commented out in the file if you want it
+                                       back)
+  package.json                         npm run verify = test:all + test:py + validate
+                                       test:all raised from 14 to 16 suites so it
+                                       now matches CI exactly
+                                       legacy "test:js" removed (it covered 9 of 16
+                                       and gave a misleading green)
+  ROADMAP.md, github.md                records
 
-If your shell hides dotfiles when copying, note that .github/ and .gitignore are
-in here. Verify with:  ls -a
+WHY test:all GREW INSTEAD OF SHRINKING
 
-WHAT CHANGED IN THE APP
+You asked to simplify, not to check less. Before this, test:all ran 14 suites
+while CI ran 16 — so a local pass could still be a broken build. Now that deploy
+happens on push, your local run is the last thing that looks at the code before
+players do. One command, full coverage, no second list to remember.
 
-  1. A price failure no longer replaces the app with a fatal screen. Prices show
-     as unavailable; collection, decks, legality and matches keep working.
-     cards.json is still fatal.
-  2. Amber strip when prices are 3+ days old or unavailable — names the date,
-     says the rest is current, dismissible, links to details.
-  3. import-audit.json download on every import: merge mode, source, timestamp,
-     per-card before/incoming/after, rejected rows with reasons, rollback key.
-     Dry-run version available from the preview before applying.
-  4. Unrecognized rows are listed with reasons instead of counted. Import is
-     never blocked.
-  5. Data Health panel in Settings: three plain-language rows, pipeline report
-     collapsed behind "Technical details".
+KEPT: the "Verify deploy root" step in the deploy workflow. One second, and it is
+what stops a structurally broken root going live as a 404.
 
-VERIFIED HERE
-  data-health-contract 26/26 (logic extracted and executed, not grepped)
-  visual-contract 18/18, EN/PT parity across 472 keys
-  mirror byte-identical, sc-if 118/118, sc-for 85/85
-  M2.1 contract intact: revision CAS, pre-import snapshot, preview-before-mutation
-
-NOT VERIFIED HERE
-  The new dialogs rendered in a browser. site/data/** is absent from the authoring
-  environment, so the app cannot boot. The Playwright smoke run covers this.
-
-STILL PENDING, UNRELATED TO THIS PACKAGE
-  - git rm --cached on the 3 files from the earlier cleanup, if not done yet
-  - price refresh unfinished: python tools/ligalorcana_price_agent_daily_v5.py --resume-status
-  See NEXT_STEPS.md.
+REMEMBER: restore the gate in deploy-pages.yml before outside people use the site.
+Right now a push with a regression is live in seconds.

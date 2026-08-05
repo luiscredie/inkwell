@@ -1,11 +1,20 @@
 name: Deploy Inkwell to GitHub Pages
 
+# Deploys on every push to main, without waiting for "Inkwell release checks".
+# The checks workflow still runs and still reports — it just no longer gates.
+# To put the gate back, restore the workflow_run trigger and the conclusion
+# condition (see the block commented out below).
 on:
-  workflow_run:
-    workflows: ["Inkwell release checks"]
-    types: [completed]
+  push:
     branches: [main]
   workflow_dispatch:
+
+# on:
+#   workflow_run:
+#     workflows: ["Inkwell release checks"]
+#     types: [completed]
+#     branches: [main]
+#   workflow_dispatch:
 
 permissions:
   contents: read
@@ -18,19 +27,19 @@ concurrency:
 
 jobs:
   deploy:
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      github.event.workflow_run.conclusion == 'success'
+    # if: >-
+    #   github.event_name == 'workflow_dispatch' ||
+    #   github.event.workflow_run.conclusion == 'success'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Check out validated revision
+      - name: Check out revision
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
+      # Kept deliberately. This is not a test suite — it is the guard against
+      # publishing a structurally broken root, and it costs nothing.
       - name: Verify deploy root
         shell: bash
         run: |

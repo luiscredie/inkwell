@@ -458,3 +458,55 @@ O painel de saúde relata o que o app consegue observar do lado do cliente. Não
 expõe estado do agente de preços (disjuntor, `remaining_today`) — isso vive na
 máquina que roda o agente, não no navegador. Se quiser isso visível no site, o
 agente precisa publicar um pequeno artefato de status no `data-manifest`.
+
+## M2.2 no ar (2026-08-05)
+
+Publicado. `site/index.html` e `Inkwell.dc.html` no `main` com os mesmos offsets
+(1850, 2273, 2965, 2984), `package.json` e `validate.yml` com as duas suítes novas.
+
+Observação de manutenção: o script legado `test:js` do `package.json` é um
+agregado antigo e não inclui `deck-portfolio-v4`, `match-center-v5`, `i18n`,
+`visual-replay`, `visual-contract`, `sync-import` nem `data-health`. Quem rodar
+`test:js` esperando cobertura total recebe um verde enganoso. A CI e o `test:all`
+estão corretos. Sugestão: apagar `test:js` ou apontá-lo para `test:all`.
+
+### Pendências
+
+- `git rm --cached` nos 3 arquivos (se ainda não feito);
+- refresh de preços incompleto: `--resume-status`;
+- teste de conflito de revisão (item 1d de `NEXT_STEPS.md`, 30 s no SQL Editor);
+- próximo build: M2.3 (Shared Card Matrix + caminho inverso carta→decks).
+
+## Deploy desacoplado dos checks (2026-08-05)
+
+A pedido, com a confirmação de que ninguém externo está acessando o site.
+
+`deploy-pages.yml` passa a disparar em `push` para `main` em vez de esperar a
+conclusão de "Inkwell release checks". O gate `workflow_run` e a condição
+`conclusion == 'success'` ficaram comentados no próprio arquivo para reversão
+imediata.
+
+O workflow de checks continua rodando e reportando — só não bloqueia mais.
+
+Mantido de propósito: o passo **Verify deploy root**. Não é suíte de teste; é a
+guarda contra publicar uma raiz estruturalmente quebrada (`site/index.html`,
+`support.js`, `data-manifest.json` presentes e nenhum `index.html` na raiz) e
+custa nada.
+
+Também removido o script legado `test:js` do `package.json`, que era um agregado
+antigo cobrindo 9 de 16 suítes e dava verde enganoso.
+
+### Divergência resolvida
+
+`test:all` passou de 14 para 16 suítes, idêntico ao job `js` da CI:
+`match-center-r3.test.mjs` e `match-center-legacy-core.test.cjs` foram
+adicionadas. Com o deploy desacoplado o verde local é a única coisa olhada antes
+de publicar, então ele precisa ser igual ao da CI, não mais fraco.
+
+Adicionado `npm run verify` = `test:all` + `test:py` + `validate`. Um comando
+antes de commitar.
+
+### Ao voltar a ter usuários
+
+Restaurar o gate antes de abrir para qualquer pessoa de fora. Enquanto estiver
+desacoplado, um push com regressão vai ao ar em segundos e a CI só avisa depois.
