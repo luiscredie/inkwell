@@ -1,84 +1,100 @@
-INKWELL — M2.4 Meta-to-Collection Advisor
+INKWELL — M2.5 Practice Loop
 
 Extract over your repo root, then:
 
   npm run verify
-  git add -A && git commit -m "M2.4: meta list coverage, cost to complete, substitutions, deck overlap"
+  git add -A && git commit -m "M2.5: decision markers, matchup notebook, mulligan scoring, weekly goals"
   git push
 
 MERGE, DO NOT REPLACE. site/ holds only index.html here.
 
 ────────────────────────────────────────────────────────────
-WHAT I FOUND IN THE DATA BEFORE BUILDING
+ALL FIVE PIECES
 
-site/data/meta-decks.json has no tournament data at all. Three lists, all
-source_type "community_popular", every tournament_result null, confidence
-0.61-0.66 labelled community_reference, all three work_in_progress. The file's own
-selection_policy says it plainly: popularity signal, not tournament proof.
+1. DECISION MARKERS (Match Center)
+   matchMoments() segments the replay by turn and compares game state at the
+   start and end of each turn, using M2.0's own simulateReplay rather than a
+   second parser — so the markers can never disagree with the board you see.
 
-So there is no tier language anywhere in this section. It is called "Popular
-community lists", and a standing notice says the data carries no tournament
-results. That notice disappears only if a deck gains a real tournament_result —
-there is a test for exactly that, so it cannot rot into a lie.
+   Three labelled axes per turn:
+     Board  — change in characters and effective STR/WILL on both sides
+     Lore   — lore gained this turn, plus detection of the lead changing hands
+     Ink    — total cost played by each side
 
-The file is also NOT in data-manifest.json, so unlike prices and cards it is not
-checksum-verified. It loads as optional and never fatal, trying two paths, outside
-loadArtifact entirely. A missing file simply means the section does not appear.
+   A turn only becomes a moment when it crosses a threshold (4 board swing or a
+   2-character difference; 3 lore or a lead flip; 4 ink difference). Quiet turns
+   stay quiet.
 
-────────────────────────────────────────────────────────────
-WHAT THE SECTION DOES
+2. "3 MOMENTS TO REVIEW"
+   The three highest combined magnitude, re-sorted into turn order so the list
+   reads like the game happened rather than like a leaderboard. Each jumps the
+   replay to that exact turn.
 
-Per list, against your actual collection:
-  - coverage: reprints pooled by identity, foils counted, and owning MORE than a
-    list asks for does not inflate the percentage
-  - cost to complete, from your own price data, with cards that have no real
-    price counted and reported rather than silently treated as free
-  - what you are missing, per line, sorted by copies needed
-  - which of YOUR decks shares the most cards with the list
-  - substitutions drawn only from cards you own
+3. DESCRIPTIVE ONLY — as you asked
+   "Characters on the field — you -2, opponent 0." Never "you should have".
+   A standing note explains why: replay logs carry no hidden information, so
+   nothing here can judge what you were holding. There is a test that scans the
+   string block for prescriptive vocabulary in both languages.
 
-Substitutions match ink, cost and type, two at most, with the caveat shown next to
-them: they are not strategy equivalents. If you own nothing that matches, you get
-nothing — an empty result beats a guess.
+4. MATCHUP NOTEBOOK (Academy)
+   Keyed by opponent ink colours with the pairing sorted, so Amber/Steel and
+   Steel/Amber are one matchup, not two. Shows your record and win rate beside
+   the note field.
 
-────────────────────────────────────────────────────────────
-THE TWO YOU LEFT TO ME
+   A matchup you have written a note about but never played still appears —
+   dropping someone's writing because they have no games yet would be data loss.
+   With no games the win rate reads "—", never 0%.
 
-ACTION — wishlist only. I did not add "copy this list into my decks". That would
-create a deck you never built, and it would enter the portfolio optimizer, which
-would silently change both the Advisor's plan and the M2.3 shared-card matrix. The
-wishlist is reversible and feeds no calculation. It also never removes an existing
-entry.
+5. MULLIGAN LAB (Academy)
+   Reuses M1.9's mulliganHand and adds mulliganScore: plays by 3 ink, inkable
+   count, 6+ cost cards, average cost.
 
-WIP FLAG — shown, with a badge. Hiding work-in-progress would have hidden 3 of 3
-lists and left an empty section.
+   The score appears only AFTER you commit to keep or mulligan. Showing it first
+   would just be giving you the answer. The verdict is compared against your call
+   and the basis is on screen, with the caveat that it knows nothing about your
+   matchup or your plan.
 
-────────────────────────────────────────────────────────────
-AN i18n TRAP WORTH KNOWING ABOUT
+   A hand with early plays but nothing inkable is still a mulligan — tested.
 
-English values like 'How to play:' and 'You own instead:' make the i18n key
-extractor in your test suites read "play" and "instead" as dictionary keys, which
-produced a false EN/PT parity failure. I removed the inner colons (the template
-presents these as headings anyway). Rule for future strings: never put "word:"
-inside a translation value.
+6. WEEKLY GOALS (Academy)
+   Log 3 matches, review 2 replays, practise 5 opening hands. The week is keyed
+   to its Monday, so progress resets on its own — no cron, no expiry timestamp,
+   no server. Last week's progress is never counted toward this week.
+
+   Logging already counted itself; reviewing counts when you jump to a moment;
+   practising counts when you draw a hand.
+
+PERSISTENCE
+   matchupNotes and goalProgress were added to userPayload, to migrateUser with
+   defaults, and to BOTH load paths (local and cloud pull). Older payloads
+   without these fields load normally.
 
 ────────────────────────────────────────────────────────────
 VERIFIED HERE
 
-meta-advisor-contract   32/32   (engine lifted and executed, not grepped)
-shared-cards-contract   23/23   (re-run, no regression)
-data-health-contract    26/26   (re-run, no regression)
-visual-contract         18/18   EN/PT parity across 512 keys
-mirror byte-identical, sc-if 132/132, sc-for 91/91
-test:all and CI both at 18 suites, no drift
+practice-loop-contract  36/36  (engines lifted and executed against synthetic
+                                replays — lore flips, banishes, ink spikes,
+                                week-boundary resets, notebook aggregation)
+visual-contract         18/18  EN/PT parity across 560 keys
+mirror byte-identical, sc-if 141/141, sc-for 99/99
+test:all and CI both at 19 suites, no drift
 
-NOT VERIFIED HERE: rendered output — site/data/** is absent so the app cannot boot.
+One of my own assertions was wrong and the suite caught it: I claimed the first
+board moment favoured the opponent, but the turn you land a creature favours YOU
+— the loss is the turn after. The test now checks per turn.
+
+NOT VERIFIED HERE: rendered output. site/data/** is absent so the app cannot boot.
 npm run verify plus the Playwright smoke close that.
 
 ────────────────────────────────────────────────────────────
-THE HONEST LIMIT
+M2 IS NOW COMPLETE
 
-There is no weekly ingestion. The dataset is a manual seed dated 2026-07-29. For
-M2.4 as the audit describes it, you still need an agent that refreshes the file and
-registers it in data-manifest.json — then this section gets verifiable freshness,
-the same way prices do now, and the M2.2 staleness work would cover it too.
+M2.0 through M2.5 are all built. What remains on the roadmap is M2.6 (Beginner
+Journey), M2.7 (component library, full mobile pass, motion system, AA
+accessibility, performance budgets) and M3 (PWA, scanner, module extraction,
+telemetry).
+
+Still pending from earlier, unrelated to this package:
+  - git rm --cached on the 3 files from the cleanup delta, if not done
+  - price refresh unfinished: python tools/ligalorcana_price_agent_daily_v5.py --resume-status
+  - restore the deploy gate in deploy-pages.yml before outside people use the site

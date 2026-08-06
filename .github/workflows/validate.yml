@@ -47,6 +47,8 @@ jobs:
         run: node tools/shared-cards-contract.test.mjs
       - name: Meta advisor contract
         run: node tools/meta-advisor-contract.test.mjs
+      - name: Practice loop contract
+        run: node tools/practice-loop-contract.test.mjs
   python:
     runs-on: ubuntu-latest
     steps:

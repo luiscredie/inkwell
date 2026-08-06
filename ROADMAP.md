@@ -632,3 +632,81 @@ Não há ingestão semanal automática. O dataset é um seed manual de 29/07. Pa
 M2.4 completo como descrito na auditoria, falta um agente que atualize o arquivo
 e o registre no `data-manifest.json` — aí a seção passa a ter frescor verificável,
 como os preços têm hoje.
+
+## M2.5 — Practice Loop (2026-08-06)
+
+Entregue no working copy. O usuário escolheu as cinco partes, marcadores em
+"todos os três, cada um rotulado", tom "apenas descrever o que aconteceu",
+caderno chaveado por inks do oponente, e divisão Match Center / Academy.
+
+### Marcadores de decisão
+
+`matchMoments()` segmenta o replay por turno e compara o estado do jogo no início
+e no fim de cada turno, usando o próprio `simulateReplay` do M2.0 em vez de um
+segundo parser. Por turno avalia três eixos, cada um rotulado:
+
+- **Mesa** — variação de personagens e de STR/WILL efetivo dos dois lados;
+- **Lore** — variação de lore no turno, mais detecção de troca de liderança;
+- **Tinta gasta** — soma dos custos jogados por cada lado no turno.
+
+Só vira momento quando cruza um limiar (4 de swing de mesa ou 2 de diferença de
+personagens; 3 de lore ou uma troca de liderança; 4 de diferença de tinta).
+
+Os "3 momentos para revisar" são os de maior magnitude combinada, reordenados por
+turno — a lista lê como a partida aconteceu, não como um ranking. Cada um leva ao
+turno exato no replay.
+
+### Nada de conselho
+
+Conforme pedido, os textos só descrevem: "Personagens em mesa — você -2, oponente
+0". Há uma nota fixa explicando por quê: o log de replay não tem informação
+oculta, então não dá para julgar o que o jogador tinha na mão. Existe teste que
+varre o bloco de strings atrás de vocabulário prescritivo.
+
+### Caderno de confrontos
+
+Chaveado pela combinação de inks do oponente, com ordenação normalizada —
+Amber/Steel e Steel/Amber são o mesmo confronto. Mostra retrospecto e aproveitamento
+ao lado do campo de anotação. Um confronto com anotação mas sem partidas continua
+aparecendo: apagar a nota de alguém porque ele ainda não jogou aquilo seria perda
+de dado. Sem partidas o aproveitamento é "—", nunca 0%.
+
+### Laboratório de mulligan
+
+Reaproveita o `mulliganHand` do M1.9 e acrescenta `mulliganScore`: jogadas até 3
+de tinta, quantidade de inkáveis, cartas de custo 6+, custo médio. A nota só
+aparece **depois** que o jogador decide ficar ou mulligar — mostrar antes seria dar
+a resposta. O veredito é comparado com a escolha e a base do cálculo fica visível,
+com a ressalva de que ele não conhece o confronto nem o plano.
+
+Uma mão com jogadas iniciais mas sem nenhuma carta inkável continua sendo
+mulligan; há teste para isso.
+
+### Metas semanais
+
+Três metas: registrar 3 partidas, revisar 2 replays, treinar 5 mãos. A semana é
+chaveada pela segunda-feira, então o progresso zera sozinho — sem cron, sem
+timestamp de expiração. Progresso de semanas anteriores não é somado.
+
+Registrar partida já contava sozinho; revisar conta ao pular para um momento;
+treinar conta ao comprar uma mão.
+
+### Persistência
+
+`matchupNotes` e `goalProgress` entraram no `userPayload`, no `migrateUser` com
+default, e nos dois caminhos de carga (local e pull da nuvem). Payloads antigos
+sem esses campos carregam normalmente.
+
+### Verificação
+
+- `tools/practice-loop-contract.test.mjs`, nova, 36 asserções, 36/36 executadas
+  aqui com os motores extraídos e rodados de verdade contra replays sintéticos;
+- `visual-contract` 18/18, paridade EN/PT em 560 chaves;
+- espelho byte a byte; `sc-if` 141/141, `sc-for` 99/99;
+- `test:all` e CI em 19 suítes cada, sem divergência.
+
+Uma asserção minha estava errada e o teste pegou: eu afirmava que o primeiro
+momento de mesa favorecia o oponente, mas o turno em que você baixa a criatura
+favorece você — a perda é no turno seguinte. O teste passou a verificar por turno.
+
+Não executado aqui: `npm run verify` e Playwright.
