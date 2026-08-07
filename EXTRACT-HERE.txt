@@ -1,54 +1,67 @@
-INKWELL BRASIL — collector coin logo
+INKWELL BRASIL — V8: no serif, Core/Infinity filter
 
 Extract over your repo root, then:
 
   npm run verify
-  git add -A && git commit -m "Add collector coin logo, wire brand mark, onboarding and favicon"
+  git add -A && git commit -m "V8: drop Playfair for Plus Jakarta Sans, fix --font-mono, add Core/Infinity collection filter"
   git push
 
-FILES
-  site/index.html          brand mark, onboarding, favicon
-  Inkwell.dc.html          mirror
-  site/ink/logo-coin.png   NEW — 256x256, circular
-  ROADMAP.md               record
+────────────────────────────────────────────────────────────
+FONT
 
-WHAT I DID WITH THE ART
+"Atividade de Partidas" is a KPI label, and those render in Plus Jakarta Sans —
+the body/UI family. So the ask is: no serif. Playfair Display is gone entirely.
 
-Your 1024x1024 / 2.1 MB render became a 256x256 PNG: the flat outer border of the
-render is cropped away (3.5%) and a circular mask applied, so the coin sits on any
-surface without a square frame around it. 2.1 MB in a sidebar icon would have been
-the single heaviest asset on the page.
+--font-title and --font-serif now point at Plus Jakarta Sans, and Playfair is out
+of the Google Fonts link — one less request and four weights that would never be
+used. Zero "Playfair" and zero ",serif" left in the file.
 
-Placed in three spots:
-  - rail brand mark, 44px, beside the wordmark
-  - onboarding, 132px, with a shadow instead of the old gold glow (the coin is
-    already gold; the glow doubled up)
-  - FAVICON — the app had none at all
-
-No ink/logo.svg references remain.
-
-At 40-44px the engraved text is not legible. That is correct for a seal-style
-mark: the coin reads as gold and the wordmark beside it carries the name. I did
-not try to make the text readable at that size — it would need a simplified mark,
-which is a different piece of art.
+Large headings were compensated: a grotesque at 44-48px needs more weight and
+tighter tracking than a display serif at the same size, so those went from 700 to
+800 with letter-spacing -.03em. Without that they would have looked thin and
+loose where the serif used to carry them.
 
 ────────────────────────────────────────────────────────────
-SOMETHING ELSE WAS IN THAT FOLDER
+A BUG I INTRODUCED, FOUND AND FIXED
 
-The upload also contained a DESIGN.md for a DIFFERENT design system called
-"Digital Grimoire":
+In the V5 token retrofit, my replacement of 'JetBrains Mono' with var(--font-mono)
+also hit the token's OWN definition. It became:
 
-  primary        amethyst #f8d8ff   (vs the white primary now implemented)
-  background     radial gradient from void-depth #1a0a20 (vs flat #131313)
-  navigation     floating "orbital nav" pill bar (vs the sidebar)
-  gold           tertiary / value    (same role, at least)
+    --font-mono: var(--font-mono), monospace
 
-That contradicts Immortal Precision, which is what is built. Your message was one
-word — "logo" — so I added the logo and changed nothing else.
+which is self-referential. CSS throws the declaration away, so since V5 every
+tabular number in the app — match scores, replay log, prices, card IDs — has been
+falling back to the system's generic monospace instead of JetBrains Mono.
 
-If Digital Grimoire is the new direction, say so and I will treat it as its own
-piece of work: it replaces the palette, the background treatment and the
-navigation pattern, so it is not a tweak on top of what is there.
+No suite caught it. visual-contract checks that each token is DEFINED exactly
+once, not that its value is valid. Now:
 
-VERIFIED: all six suites still green — visual 18/18, i18n 9/9 (566 keys),
-practice-loop 36/36, meta-advisor 32/32, shared-cards 23/23, data-health 26/26.
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace
+
+Worth a glance at the replay log and price columns to confirm they look right
+again.
+
+────────────────────────────────────────────────────────────
+CORE / INFINITY FILTER
+
+Reuses legalInFormat(card,'core'), which already existed for deck validation and
+reads legality.json when published, with CORE_SETS as fallback.
+
+ONE DECISION TO CONFIRM. Infinity has no rotation, so a literal "Infinity" filter
+would match every card and filter nothing. I built the pair as a useful opposite:
+
+  Core      only cards legal in the current rotation
+  Infinity  only cards OUT of rotation — the ones that exist in Infinity alone
+
+Both chips toggle off to "all". Each carries a title tooltip saying exactly that,
+so the short label cannot mislead.
+
+If you meant Infinity literally — the whole pool, rotation ignored — it is a
+one-line change. Tell me which.
+
+────────────────────────────────────────────────────────────
+VERIFIED
+
+visual-contract 18/18 · i18n-contract 9/9 (578 keys EN and PT)
+practice-loop 36/36 · meta-advisor 32/32 · shared-cards 23/23 · data-health 26/26
+sc-if 139/139, sc-for 99/99, mirror byte-identical

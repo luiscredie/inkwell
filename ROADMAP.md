@@ -884,3 +884,118 @@ e desfaz a paleta atual.
 
 Verificação: as seis suítes seguem verdes (visual 18/18, i18n 9/9 com 566 chaves,
 practice 36, meta 32, shared 23, data-health 26).
+
+## M2.7 V7 — shell "Digital Grimoire" (2026-08-06)
+
+Terceira rodada de mockups. Antes de mexer, li o `DESIGN.md` novo: **é o mesmo
+"Immortal Precision"** já implementado, token por token. "Digital Grimoire" é o
+nome que o Stitch deu ao produto naqueles mocks, não um sistema visual novo.
+
+Consequência prática: a paleta e a tipografia não mudaram nada. O que mudou é o
+**shell**, e só isso foi refeito. (O `DESIGN.md` de um upload anterior era de fato
+um sistema ametista diferente; esse foi descartado.)
+
+### Rail orbital
+
+O sidebar de 248 px virou uma pílula de vidro flutuante de 86 px, fixa e centrada
+na vertical, com ícone e micro-rótulo por item. Mantive o `id="rail"` e as classes
+`.rail-nav` / `.rail-label` de propósito: todo o CSS responsivo que transforma o
+rail em barra inferior no mobile continua valendo, só precisou anular
+`transform` e `border-radius`.
+
+### Barra superior e título de página
+
+A marca (moeda + wordmark) saiu do rail e foi para a barra superior, junto de
+busca, idioma e perfil. O título da página saiu da barra e virou cabeçalho de
+conteúdo: sobrescrito em label-caps, Playfair 48/56, subtítulo em 18/28 — como
+"The Great Vault" e "Market Mystics" nos mockups.
+
+O avatar de perfil era `.ink-mobile-profile` (`display:none` no desktop) porque o
+perfil vivia no rodapé do rail. Com o rail reduzido a ícones, passou a aparecer
+sempre.
+
+### Bug pré-existente que o título grande expôs
+
+O mapa `titles` não tinha entrada para `advisor`, e a de `deckDetail` usava
+`sub_deck` com subtítulo vazio. Com o título em 23 px na barra isso passava
+despercebido; em 48 px no corpo, o Advisor apareceria escrito "Visão Geral".
+Corrigido: `deckDetail` mostra o nome do deck com subtítulo próprio, e `advisor`
+tem título e subtítulo.
+
+### Também
+
+Sobrescritos por seção (Painel, Acervo, Índice LigaLorcana, Construção, Registro
+de partidas, Prática) em EN e PT, e um radial discreto atrás do conteúdo — os
+screenshots têm essa profundidade, ainda que a spec descreva a Void como chapada.
+
+### Não feito, de propósito
+
+A pasta trouxe `three.js/code.html` e `shader/code.html`. São fundos animados.
+Não foram ligados: custam GPU contínua num app que já roda otimizador de
+portfólio e simulação de replay, e contradizem o "quiet power" da própria spec.
+Se quiser, entra como enfeite opcional e desligável, não como padrão.
+
+A barra superior dos mockups tem um CTA primário ("Summon Ink", "Sync Codex").
+Não inventei um: qual seria a ação primária por view é decisão de produto.
+
+### Verificação
+
+`visual-contract` 18/18, `i18n-contract` 9/9 (573 chaves EN e PT),
+`practice-loop` 36/36, `meta-advisor` 32/32, `shared-cards` 23/23,
+`data-health` 26/26. `sc-if` 139/139, `sc-for` 98/98, `<aside>` balanceado,
+espelho byte a byte.
+
+A queda de 141→139 em `sc-if` e 99→98 em `sc-for` é a remoção do bloco de perfil
+do rail, que continha dois `sc-if` e um `sc-for`. Confere.
+
+## V8 — tipografia sem serifa e filtro Core/Infinity (2026-08-06)
+
+### Fonte
+
+O usuário apontou "Atividade de Partidas" como a fonte que quer. Esse é o rótulo
+de um KPI, que renderiza em **Plus Jakarta Sans** — a família de corpo/UI. Ou
+seja: o pedido é tirar a serifa.
+
+Playfair Display saiu por completo. `--font-title` e `--font-serif` agora apontam
+para Plus Jakarta Sans, e a família foi removida do link do Google Fonts (menos
+uma requisição e quatro pesos que não seriam usados). Zero ocorrências de
+"Playfair" e zero de `,serif` restaram.
+
+Títulos grandes ganharam compensação: uma grotesca em 44–48 px precisa de mais
+peso e tracking mais fechado que uma serifa de display no mesmo tamanho, então
+esses passaram de 700 para 800 com `letter-spacing:-.03em`.
+
+### Bug que eu mesmo tinha introduzido, corrigido aqui
+
+No retrofit de tokens do V5, a substituição de `'JetBrains Mono'` por
+`var(--font-mono)` atingiu também a **própria definição** do token, que virou
+`--font-mono: var(--font-mono), monospace` — auto-referência. CSS descarta a
+declaração inválida, então desde o V5 todo número tabular do app (placar, replay,
+preços, IDs) caía na monoespaçada genérica do sistema em vez da JetBrains Mono.
+
+Nenhuma suíte pegou: o contrato visual verifica que os tokens estão definidos uma
+vez, não que o valor é válido. Corrigido para
+`'JetBrains Mono',ui-monospace,monospace`.
+
+### Filtro Core / Infinity na Coleção
+
+Reaproveita `legalInFormat(card,'core')`, que já existia para validação de deck e
+usa `legality.json` quando publicado, com `CORE_SETS` como fallback.
+
+Decisão que precisa de confirmação: **Infinity não tem rotação**, então um filtro
+"Infinity" literal casaria com todas as cartas e não filtraria nada. Implementei o
+par como oposto útil:
+
+- **Core** — só cartas legais na rotação atual;
+- **Infinity** — só cartas **fora** da rotação, isto é, que existem apenas no
+  Infinity.
+
+Os dois chips desligam para "todas". O `title` de cada um diz isso em texto, para
+o rótulo curto não enganar. Se preferir que "Infinity" signifique literalmente
+"todo o pool", é uma linha.
+
+### Verificação
+
+`visual-contract` 18/18, `i18n-contract` 9/9 (578 chaves EN e PT),
+`practice-loop` 36/36, `meta-advisor` 32/32, `shared-cards` 23/23,
+`data-health` 26/26. `sc-if` 139/139, `sc-for` 99/99, espelho byte a byte.
