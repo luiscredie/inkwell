@@ -24,9 +24,10 @@
     --ink-amber:#F59E0B; --ink-amethyst:#8B5CF6; --ink-emerald:#10B981; --ink-ruby:#EF4444; --ink-sapphire:#3B82F6; --ink-steel:#64748B;
     --accent:#ffffff; --accent-strong:#e2e2e2; --on-accent:#131313;
     --gold:#D4AF37; --gold-dim:#B8962E;   /* value/money only — never a UI action */
-    --surface-page:#131313; --surface-section:#1c1b1b; --surface-panel:#201f1f; --surface-card:#2a2a2a; --surface-modal:#201f1f;
+    --surface-page:#0a0c10; --surface-section:#1c1b1b; --surface-panel:#201f1f; --surface-card:#2a2a2a; --surface-modal:#201f1f;
     --surface-lowest:#0e0e0e; --surface-highest:#353534;
-    --glass-bg:rgba(39,39,42,.55); --glass-border:1px solid rgba(63,63,70,.5); --glass-blur:blur(20px);
+    --glass-bg:rgba(255,255,255,.03); --glass-border:1px solid rgba(255,255,255,.07); --glass-blur:blur(24px);
+    --amethyst:#8e5b9b;
     --text-primary:#e5e2e1; --text-secondary:#c4c7c8; --text-muted:#8e9192;
     --text-1:#e5e2e1; --text-2:#c4c7c8; --text-3:#8e9192; --text-4:#6b6e6f;
     --outline:rgba(63,63,70,.5); --outline-strong:rgba(255,255,255,.22);
@@ -60,6 +61,10 @@
   /* PT/long-label readability + no structural horizontal overflow */
   h1,h2,h3,h4{text-wrap:balance}
   p,.ink-copy{text-wrap:pretty}
+  html,body{background:var(--surface-page)}
+  #ink-shader{position:fixed;inset:0;z-index:0;display:block;width:100%;height:100%;pointer-events:none}
+  /* Performance mode, reduced motion and small screens all fall back to this. */
+  #ink-fallback{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(120% 80% at 20% 0%,rgba(142,91,155,.16),transparent 58%),radial-gradient(90% 70% at 85% 15%,rgba(212,175,55,.07),transparent 60%),var(--surface-page)}
   #ink-main{overflow-x:hidden}
   #ink-scroll{background:radial-gradient(1200px 700px at 50% -8%,rgba(255,255,255,.045),transparent 62%),radial-gradient(900px 600px at 88% 12%,rgba(212,175,55,.035),transparent 60%)}
   #ink-scroll::-webkit-scrollbar,.ink-sc::-webkit-scrollbar{width:10px;height:10px}
@@ -140,7 +145,17 @@
     el.style.display=''; var ph=el.parentElement&&el.parentElement.querySelector('[data-ph]'); if(ph) ph.style.display='none'; };
 </script>
 </helmet>
-<div id="app" style="display:flex;min-height:100vh;background:radial-gradient(130% 90% at 18% 0%,var(--surface-modal),var(--surface-page) 62%);color:var(--text-1);font-family:var(--font-sans),system-ui,sans-serif;font-size:15px;line-height:1.5">
+<sc-if value="{{ inkFxOn }}" hint-placeholder-val="{{ false }}">
+  <canvas id="ink-shader" ref="{{ setShaderRef }}" aria-hidden="true"></canvas>
+</sc-if>
+<sc-if value="{{ inkFxOff }}" hint-placeholder-val="{{ true }}">
+  <div id="ink-fallback" aria-hidden="true"></div>
+</sc-if>
+<button onClick="{{ togglePerf }}" title="{{ perfHint }}" style="position:fixed;right:18px;bottom:18px;z-index:60;display:flex;align-items:center;gap:8px;padding:9px 15px;border-radius:var(--r-pill);background:var(--glass-bg);backdrop-filter:var(--glass-blur);border:var(--glass-border);color:var(--text-3);font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;font-family:inherit;min-height:38px">
+  <span style="color:{{ perfDotColor }}">⚡</span>{{ perfLabel }}
+</button>
+
+<div id="app" style="display:flex;min-height:100vh;position:relative;z-index:1;background:transparent;color:var(--text-1);font-family:var(--font-sans),system-ui,sans-serif;font-size:15px;line-height:1.5">
 
   <aside id="rail" style="position:fixed;left:22px;top:50%;transform:translateY(-50%);z-index:40;width:86px;display:flex;flex-direction:column;padding:12px 8px;border-radius:var(--r-pill);background:var(--glass-bg);backdrop-filter:var(--glass-blur);border:var(--glass-border);box-shadow:var(--shadow-ink)">
     <nav class="rail-nav" style="display:flex;flex-direction:column;gap:4px">
@@ -188,7 +203,7 @@
       </sc-if>
       <header style="position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:16px;padding:16px 34px;background:rgba(19,19,19,.78);backdrop-filter:var(--glass-blur);border-bottom:1px solid var(--outline)">
         <div style="display:flex;align-items:center;gap:12px;min-width:0;flex-shrink:0">
-          <img src="ink/logo-coin.png" alt="Inkwell Brasil" style="width:40px;height:40px;display:block;border-radius:50%;flex-shrink:0" />
+          <img src="ink/logo-coin.png" alt="Inkwell Brasil" style="width:48px;height:48px;display:block;border-radius:50%;flex-shrink:0" />
           <div style="min-width:0">
             <div style="font-family:var(--font-title);font-weight:700;font-size:18px;line-height:1.15;color:var(--text-1);white-space:nowrap">Inkwell Brasil</div>
             <div style="font-size:10.5px;color:var(--text-4);margin-top:2px;white-space:nowrap">Seu lugar de Lorcana</div>
@@ -235,7 +250,7 @@
         <sc-if value="{{ isOverview }}" hint-placeholder-val="{{ true }}">
         <sc-if value="{{ onboarding }}" hint-placeholder-val="{{ false }}">
           <div class="ink-view" style="max-width:760px;margin:0 auto;text-align:center;padding:40px 20px 20px;animation:ink-fade .35s both">
-            <img src="ink/logo-coin.png" alt="" style="width:132px;height:132px;margin:0 auto 26px;display:block;border-radius:50%;box-shadow:0 18px 44px rgba(0,0,0,.6)" />
+            <img src="ink/logo-coin.png" alt="" style="width:min(400px,62vw);height:min(400px,62vw);margin:0 auto 30px;display:block;border-radius:50%;filter:drop-shadow(0 30px 80px rgba(212,175,55,.22))" />
             <h2 style="font-family:var(--font-title);font-weight:700;font-size:30px;background:linear-gradient(180deg,var(--gold),var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:12px">{{ obWelcome }}</h2>
             <p style="font-size:15px;color:var(--text-3);line-height:1.6;max-width:520px;margin:0 auto 30px">{{ obEmptyMsg }}</p>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;text-align:left">
@@ -2161,7 +2176,8 @@ class Component extends DCLogic {
     selectedCard: null, selectedDeck: null,
     deckEdit: false, deckSearch: '', logMatchOpen: false, matchResult: 'win', matchInks: [], matchLogDeck: null,
     fmtFilter: 'all',
-    collCols: (()=>{ try{ const v=parseInt(localStorage.getItem('inkwell_collcols'),10); return (v>=4&&v<=8)?v:4; }catch(e){ return 4; } })(),
+    perfMode: (()=>{ try{ return localStorage.getItem('inkwell_perf')==='1'; }catch(e){ return false; } })(),
+    collCols: (()=>{ try{ const v=parseInt(localStorage.getItem('inkwell_collcols'),10); return (v>=4&&v<=8)?v:5; }catch(e){ return 5; } })(),
     matchRaw: '', matchParsed: null, matchDuplicateConfirm: false, selectedMatch: null, replayIndex: 0, replayPlaying: false, replayFull: false, matchResultFilter: 'all', matchDateFilter: 'all',
     bInks: [], bCost: 'all', bSets: [], bSetMenu: false, bSort: 'cost-asc', bGroup: 'none', bSize: 5, bOwnedOnly: false, bPage: 0,
     newDeckOpen: false, newDeckName: '', newDeckInks: [], newDeckFmt: 'core',
@@ -2211,6 +2227,7 @@ class Component extends DCLogic {
       eb_overview:'Painel', eb_collection:'Acervo', eb_prices:'LigaLorcana index', eb_decks:'Construction', eb_matches:'Match log', eb_learn:'Practice', sub_deckDetail:'Build, validate and analyse this deck',
       fmtFilterLabel:'Format', fmtCore:'Core', fmtInfinity:'Infinity', fmtCoreHint:'Legal in the current Core rotation', fmtInfinityHint:'Out of rotation — playable only in Infinity',
       colsLabel:'Per row',
+      perfMode:'Perf mode', perfOn:'on', perfOff:'off', perfHintOff:'Living Ink background is running. Tap to switch to the static background.', perfHintOn:'Static background. Tap to turn the Living Ink shader back on.',
       newDeck:'+ New Deck', importDeck:'↑ Import', createDeck:'Create', cancel:'Cancel', format:'Format',
       inkable:'Inkable', uninkable:'Uninkable', cost:'Cost', allSets:'All sets',
       welcome:'Welcome, {name}', emptyMsg:'Your codex is empty. Import your collection from Dreamborn, or start building a deck — everything is tracked privately in your profile.',
@@ -2268,6 +2285,7 @@ class Component extends DCLogic {
       eb_overview:'Painel', eb_collection:'Acervo', eb_prices:'Índice LigaLorcana', eb_decks:'Construção', eb_matches:'Registro de partidas', eb_learn:'Prática', sub_deckDetail:'Monte, valide e analise este deck',
       fmtFilterLabel:'Formato', fmtCore:'Core', fmtInfinity:'Infinity', fmtCoreHint:'Legal na rotação Core atual', fmtInfinityHint:'Fora da rotação — jogável só no Infinity',
       colsLabel:'Por linha',
+      perfMode:'Modo perf', perfOn:'ligado', perfOff:'desligado', perfHintOff:'O fundo Living Ink está rodando. Toque para usar o fundo estático.', perfHintOn:'Fundo estático. Toque para religar o shader Living Ink.',
       newDeck:'+ Novo Deck', importDeck:'↑ Importar', createDeck:'Criar', cancel:'Cancelar', format:'Formato',
       inkable:'Inkável', uninkable:'Não-inkável', cost:'Custo', allSets:'Todos os sets',
       welcome:'Bem-vindo, {name}', emptyMsg:'Seu códice está vazio. Importe sua coleção do Dreamborn ou comece a montar um deck — tudo fica salvo de forma privada no seu perfil.',
@@ -2593,7 +2611,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
   closeCoach = ()=>this.setState({coachDeck:null, coachText:null, coachErr:null, coachLoading:false});
   parseCoach(txt){ if(!txt) return []; const blocks=[]; const lines=String(txt).split('\n'); let cur={head:'',body:''}; for(const ln of lines){ const h=ln.match(/^#{1,4}\s+(.+)/)||ln.match(/^\*\*(.+?)\*\*\s*$/); if(h){ if(cur.head||cur.body.trim()) blocks.push(cur); cur={head:h[1].trim(),body:''}; } else { cur.body+=(cur.body?'\n':'')+ln; } } if(cur.head||cur.body.trim()) blocks.push(cur); return blocks.map(b=>({head:b.head,body:b.body.trim()})); }
 
-  componentWillUnmount(){ this.unbindModalKeys(); }
+  componentWillUnmount(){ this.unbindModalKeys(); this.releaseInkShader(); }
 
   async bootData(){
     let man = await this.fetchJson('data-manifest.json');
@@ -3360,6 +3378,65 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     return { all:moments, top, turns:bounds.length };
   }
   signed(n){ return (n>0?'+':'')+n; }
+  // "Living Ink" background. The GLSL is the shader supplied with the design pack,
+  // unchanged. Effects are on by default (perf mode OFF), but reduced-motion and
+  // small screens force the CSS fallback regardless of the toggle.
+  inkFxAllowed(){
+    if(this.state.perfMode) return false;
+    try{
+      if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+      if(window.matchMedia('(max-width:860px)').matches) return false;
+    }catch(e){}
+    return true;
+  }
+  setShaderRef = (el)=>{
+    this._shaderEl=el;
+    if(el) this.startInkShader(el);
+    else this.releaseInkShader();
+  };
+  stopInkShader(){ if(this._inkRaf){ cancelAnimationFrame(this._inkRaf); this._inkRaf=null; } }
+  releaseInkShader(){ this.stopInkShader(); if(this._inkResize){ window.removeEventListener('resize',this._inkResize); this._inkResize=null; } }
+  startInkShader(canvas){
+    this.stopInkShader();
+    let gl=null;
+    try{ gl=canvas.getContext('webgl',{antialias:false,depth:false,alpha:false,powerPreference:'low-power'}); }catch(e){}
+    if(!gl){ this.setState({perfMode:true}); return; }   // no WebGL: fall back rather than show nothing
+    const vs='attribute vec2 a_position;varying vec2 v_texCoord;void main(){v_texCoord=a_position*0.5+0.5;gl_Position=vec4(a_position,0.0,1.0);}';
+    const fs='precision mediump float;uniform float u_time;uniform vec2 u_resolution;varying vec2 v_texCoord;'+
+      'void main(){vec2 uv=v_texCoord;float time=u_time*0.3;vec2 p=uv*3.0;'+
+      'for(float i=1.0;i<4.0;i++){p.x+=0.3/i*sin(i*3.0*p.y+time);p.y+=0.3/i*cos(i*3.0*p.x+time);}'+
+      'vec3 color1=vec3(0.039,0.047,0.063);vec3 color2=vec3(0.15,0.08,0.22);'+
+      'float intensity=0.5+0.5*sin(p.x+p.y);vec3 finalColor=mix(color1,color2,intensity*0.4);'+
+      'float sheen=pow(intensity,10.0)*0.1;finalColor+=sheen;gl_FragColor=vec4(finalColor,1.0);}';
+    const mk=(t,s)=>{ const o=gl.createShader(t); gl.shaderSource(o,s); gl.compileShader(o); return o; };
+    const prog=gl.createProgram();
+    gl.attachShader(prog,mk(gl.VERTEX_SHADER,vs)); gl.attachShader(prog,mk(gl.FRAGMENT_SHADER,fs));
+    gl.linkProgram(prog);
+    if(!gl.getProgramParameter(prog,gl.LINK_STATUS)){ this.setState({perfMode:true}); return; }
+    gl.useProgram(prog);
+    const buf=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+    const pos=gl.getAttribLocation(prog,'a_position');
+    gl.enableVertexAttribArray(pos); gl.vertexAttribPointer(pos,2,gl.FLOAT,false,0,0);
+    const uTime=gl.getUniformLocation(prog,'u_time'), uRes=gl.getUniformLocation(prog,'u_resolution');
+    // half-resolution: this is a slow-moving blur, nobody can see the difference
+    const size=()=>{ const d=Math.min(window.devicePixelRatio||1,1)*0.5;
+      const w=Math.max(2,Math.floor(window.innerWidth*d)), hh=Math.max(2,Math.floor(window.innerHeight*d));
+      if(canvas.width!==w||canvas.height!==hh){ canvas.width=w; canvas.height=hh; } gl.viewport(0,0,canvas.width,canvas.height); };
+    size();
+    this._inkResize=()=>size(); window.addEventListener('resize',this._inkResize);
+    const draw=(t)=>{
+      if(document.hidden){ this._inkRaf=requestAnimationFrame(draw); return; }  // don't burn GPU in a background tab
+      size();
+      if(uTime) gl.uniform1f(uTime,t*0.001);
+      if(uRes) gl.uniform2f(uRes,canvas.width,canvas.height);
+      gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+      this._inkRaf=requestAnimationFrame(draw);
+    };
+    this._inkRaf=requestAnimationFrame(draw);
+  }
+  togglePerf=()=>{ const v=!this.state.perfMode; try{ localStorage.setItem('inkwell_perf',v?'1':'0'); }catch(e){}
+    if(v) this.stopInkShader(); this.setState({perfMode:v}); };
   // Display sizes follow the STRING, not the slot: BRL runs past 12 characters
   // and a fixed 44px overflows the tile.
   fitSize(str, max, mid, min){ const n=String(str==null?'':str).length; return (n<=6?max:(n<=9?mid:min))+'px'; }
@@ -3953,6 +4030,11 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     const titles={learn:[this.t('learn'),this.t('sub_learn')],matches:[this.t('matches'),this.t('sub_matches')],overview:[this.t('overview'),this.t('sub_overview',{name:st.displayName})],collection:[this.t('collection'),this.t('sub_collection')],prices:[this.t('prices'),this.t('sub_prices')],decks:[this.t('decks'),this.t('sub_decks')],deckDetail:[(this.deckById(st.selectedDeck)||{}).name||this.t('decks'),this.t('sub_deckDetail')],advisor:[this.t('advisorBtn'),this.t('advisorSub')]};
     const eyebrows={overview:'eb_overview',collection:'eb_collection',prices:'eb_prices',decks:'eb_decks',deckDetail:'eb_decks',advisor:'eb_decks',matches:'eb_matches',learn:'eb_learn'};
     V.pageEyebrow=this.t(eyebrows[st.view]||'eb_overview');
+    { const on=this.inkFxAllowed();
+      V.inkFxOn=on; V.inkFxOff=!on; V.setShaderRef=this.setShaderRef; V.togglePerf=this.togglePerf;
+      V.perfLabel=this.t('perfMode')+': '+this.t(st.perfMode?'perfOn':'perfOff');
+      V.perfDotColor=st.perfMode?'var(--text-4)':'var(--gold)';
+      V.perfHint=this.t(st.perfMode?'perfHintOn':'perfHintOff'); }
     const t=titles[st.view]||titles.overview; V.pageTitle=t[0]; V.pageSub=t[1];
     V.lang=st.lang; V.setLangEn=()=>{ try{localStorage.setItem('inkwell_lang','en');}catch(e){} this.setState({lang:'en'}); }; V.setLangPt=()=>{ try{localStorage.setItem('inkwell_lang','pt');}catch(e){} this.setState({lang:'pt'}); };
     V.langEnStyle='padding:4px 9px;border-radius:7px;border:none;cursor:pointer;font-size:11px;font-weight:700;'+(st.lang==='en'?'background:rgba(199,154,68,.22);color:var(--warn)':'background:none;color:var(--text-4)');

@@ -1069,3 +1069,87 @@ Esconder o seletor onde ele não tem efeito é melhor que deixá-lo visível e i
 ### Verificação
 
 Seis suítes verdes, `sc-for` 100/100, espelho byte a byte.
+
+## V11 — Living Ink, modo performance e paleta do guia (2026-08-06)
+
+Chegou o `claude_implementation_instructions.md`. Implementado o que ele pede,
+com três desvios declarados.
+
+### Paleta
+
+Fundo para `#0a0c10`, vidro para `rgba(255,255,255,.03)` com blur 24 px, ametista
+`#8e5b9b` adicionada como acento. O `#app` deixou de pintar fundo próprio — agora
+é transparente sobre o shader.
+
+### Living Ink (shader)
+
+O GLSL é **o do pacote, sem alterações** na matemática. Só a cor de charcoal foi
+ajustada de `vec3(0.06,0.07,0.09)` para `vec3(0.039,0.047,0.063)`, que é o
+`#0a0c10` do próprio guia — o shader original vinha calibrado para `#0e0e0e` e
+destoaria da superfície.
+
+WebGL puro, sem dependência. Otimizações que não estavam no pedido mas são
+obrigatórias num app que também roda otimizador de portfólio:
+
+- render em **meia resolução** e DPR travado em 1 — é um borrão lento, ninguém vê
+  a diferença, e corta ~75% dos pixels;
+- `precision mediump` em vez de `highp`;
+- o loop **para quando a aba está em segundo plano** (`document.hidden`);
+- `powerPreference:'low-power'`;
+- `cancelAnimationFrame` e remoção do listener de resize quando o canvas some.
+
+### Modo performance
+
+Pílula no canto inferior direito, como no mock. Padrão **desligado** (efeitos
+ligados), conforme a spec. Persistido em `localStorage`.
+
+Três situações forçam o fundo estático **independente do toggle**:
+`prefers-reduced-motion`, telas ≤ 860 px, e ausência de WebGL. O último é
+importante: sem contexto WebGL o app cairia para um fundo preto vazio; agora liga
+o modo performance sozinho.
+
+O fallback não é uma cor chapada — são dois radiais (ametista e ouro) que mantêm a
+profundidade sem custo de GPU.
+
+### Também
+
+Densidade padrão da Coleção de 4 para **5** por linha (o guia pede 5–6). Moeda no
+header a 48 px e na tela de entrada a `min(400px,62vw)`, ambos conforme o guia.
+
+### Três desvios do guia
+
+**Fonte.** O guia pede "Inter ou uma sans-serif limpa estilo Apple". Ficou Plus
+Jakarta Sans, que atende à descrição e é exatamente a fonte que o usuário apontou
+como a que gosta ("Atividade de Partidas"). Trocar por Inter seria seguir a letra
+do documento contra a preferência declarada.
+
+**Three.js.** O vórtice 3D atrás da moeda não foi implementado. São ~600 KB de
+biblioteca para um elemento decorativo, num arquivo único que já tem 483 KB. O
+shader entrega a sensação de "artefato vivo" com zero dependências. Se o vórtice
+for essencial, entra — mas como carga sob demanda e só com o modo performance
+desligado.
+
+**Hero da landing.** O mock "Illuminary" é uma página de apresentação com título,
+descrição e dois CTAs. A Visão Geral do app é um painel de quem já entrou; pôr um
+hero de marketing acima empurraria os dados reais para baixo da dobra. A moeda em
+400 px foi para o **onboarding**, que é o momento de landing de verdade.
+
+### Bug pego na própria entrega
+
+Ao adicionar a limpeza do shader criei um **segundo `componentWillUnmount`** na
+classe. Em JS o último vence silenciosamente, então o
+`componentWillUnmount(){ this.unbindModalKeys(); }` que já existia deixaria de
+rodar — vazamento dos handlers de teclado dos modais a cada desmontagem.
+
+Corrigido: a limpeza do shader virou `releaseInkShader()` e o
+`componentWillUnmount` existente passou a chamá-la. Um só método de ciclo de vida.
+
+### Verificação
+
+Seis suítes verdes (584 chaves EN e PT). Shader conferido no arquivo: `void main`,
+loop e `gl_FragColor` intactos, chaves balanceadas. `sc-if` 142/142,
+`sc-for` 100/100, espelho byte a byte.
+
+Não visto rodando: sem `site/data/**` o app não inicia aqui, e WebGL não é
+exercitável neste ambiente. **O shader precisa de olho humano** — é a primeira
+coisa a checar, junto do toggle e do comportamento em aba de fundo.

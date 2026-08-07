@@ -1,37 +1,89 @@
-INKWELL BRASIL — V10: cards per row
+INKWELL BRASIL — V11: Living Ink shader, perf mode, guide palette
 
 Extract over your repo root, then:
 
   npm run verify
-  git add -A && git commit -m "V10: 4-8 cards per row on desktop, fixed 2 on mobile"
+  git add -A && git commit -m "V11: Living Ink WebGL background, performance toggle, guide palette"
   git push
 
-────────────────────────────────────────────────────────────
-WHAT CHANGED
-
-The grid was repeat(auto-fill, minmax(230px, 1fr)) — the column count was a
-consequence of window width, not a choice. It is now repeat(N, minmax(0,1fr)) with
-N from state, and a 4/5/6/7/8 selector sits next to the result count.
-
-minmax(0,1fr) rather than plain 1fr matters: with 1fr, each tile's minimum content
-width stops the column shrinking and the grid overflows to the right at 8 columns.
-
-The choice is saved to localStorage (inkwell_collcols) and read at startup, clamped
-to 4-8. It is deliberately NOT in userPayload — this is a per-screen preference,
-and syncing it would make your phone inherit the desktop's setting.
+CHECK THE SHADER FIRST. I cannot run WebGL here. It is the one thing in this
+package that needs your eyes before anything else.
 
 ────────────────────────────────────────────────────────────
-BREAKPOINTS
+FROM THE GUIDE
 
-  <= 860px      2 per row, tighter gutter, selector hidden
-  861-1240px    3 per row, selector hidden
-  > 1240px      your choice applies
+Palette   background #0a0c10, glass rgba(255,255,255,.03) + blur 24px,
+          amethyst #8e5b9b added as an accent. #app no longer paints its own
+          background — it is transparent over the shader.
 
-The middle band is a judgement call worth knowing about: 8 columns on a 1280px
-laptop would give ~130px tiles, too small to read the name or the Normal/Foil
-counts. Rather than let the selector produce an unusable result, it steps aside
-until there is room for it to mean something.
+Density   Collection default 4 -> 5 per row (guide asks 5-6).
 
-Hiding the control where it has no effect beats leaving it visible and inert.
+Logo      48px in the header, min(400px,62vw) on the entry screen.
 
-VERIFIED: all six suites green, sc-for 100/100, mirror byte-identical.
+LIVING INK
+The GLSL is the one shipped in the pack, maths untouched. I changed exactly one
+constant: charcoal from vec3(0.06,0.07,0.09) to vec3(0.039,0.047,0.063), which is
+the #0a0c10 the same guide specifies — the original was calibrated for #0e0e0e and
+would have sat visibly apart from the surface behind it.
+
+Plain WebGL, no dependency. Optimisations the guide did not ask for but that are
+not optional in an app also running a portfolio optimiser:
+
+  - renders at HALF RESOLUTION with DPR pinned to 1. It is a slow blur; nobody can
+    see the difference, and it cuts about 75% of the pixels.
+  - mediump instead of highp
+  - the loop STOPS when the tab is backgrounded (document.hidden)
+  - powerPreference: 'low-power'
+  - cancelAnimationFrame and resize-listener removal when the canvas unmounts
+
+PERFORMANCE MODE
+Bottom-right pill, as in the mock. Default OFF (effects on), per the spec,
+persisted to localStorage.
+
+Three conditions force the static background REGARDLESS of the toggle:
+prefers-reduced-motion, screens <= 860px, and no WebGL context. That last one
+matters — without it, a machine with WebGL disabled would get an empty black
+page instead of a background.
+
+The fallback is not a flat colour: two radials, amethyst and gold, keeping the
+depth at no GPU cost.
+
+────────────────────────────────────────────────────────────
+THREE DEVIATIONS, ALL DELIBERATE
+
+FONT. The guide says "Inter or a clean Apple-ish Sans-Serif". It is staying Plus
+Jakarta Sans, which fits that description and is the exact font you pointed at as
+the one you like ("Atividade de Partidas"). Following the document to the letter
+here would mean overriding your stated preference. Say the word if you want Inter.
+
+THREE.JS VORTEX. Not implemented. That is roughly 600KB of library for a
+decorative element, in a single file already at 483KB. The shader delivers the
+"living artifact" feel with zero dependencies. If the vortex is essential it can
+go in — but lazy-loaded, and only when perf mode is off.
+
+LANDING HERO. The "Illuminary" mock is a presentation page: title, description,
+two CTAs. The app's Overview is a dashboard for someone already signed in, and
+putting a marketing hero above it would push the real data below the fold. The
+400px coin went to ONBOARDING instead, which is the actual landing moment.
+
+────────────────────────────────────────────────────────────
+A BUG I CAUGHT IN THIS PACKAGE BEFORE SHIPPING IT
+
+Adding the shader cleanup gave the class a SECOND componentWillUnmount. In JS the
+last definition silently wins, so the existing
+componentWillUnmount(){ this.unbindModalKeys(); } would have stopped running —
+leaking modal keyboard handlers on every unmount.
+
+Fixed by naming the shader cleanup releaseInkShader() and calling it from the
+existing lifecycle method. One componentWillUnmount, both jobs.
+
+────────────────────────────────────────────────────────────
+VERIFIED
+
+All six suites green (584 keys EN and PT). Shader verified in-file: void main,
+the flow loop and gl_FragColor intact, braces balanced. sc-if 142/142,
+sc-for 100/100, mirror byte-identical.
+
+NOT VERIFIED: the shader running. No WebGL in this environment and the app cannot
+boot without site/data/**. Check the background, the toggle, and that the
+animation actually pauses when you switch tabs.
