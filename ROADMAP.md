@@ -1285,3 +1285,65 @@ espelho byte a byte. Restam no template apenas o slogan "Seu lugar de Lorcana"
 
 Não visto rodando. **O shader é a primeira coisa a conferir** — a correção é
 plausível mas não foi observada.
+
+## V14 — replay navegável, inkability e wishlist (2026-08-06)
+
+Três frentes pedidas. A pesquisa sobre replays de TCG digital confirmou o que o
+usuário já tinha escolhido no formulário: **linha do tempo arrastável com capítulos
+por turno**, marcadores clicáveis, e controle de velocidade — o padrão de player de
+vídeo, não de "próximo evento".
+
+### Replay
+
+Timeline com `<input type="range">` real sobre o índice de eventos, capítulos
+derivados de `replayChapters()` (um por turno, com faixa contígua), marcadores dos
+momentos do M2.5 como botões clicáveis, e velocidade 0,5× / 1× / 2×.
+
+Arrastar para o meio de um turno para a reprodução — o scrub e o timer não brigam.
+Mudar a velocidade durante a reprodução reinicia o timer na nova taxa em vez de
+esperar o tique antigo.
+
+### Três bugs reais, achados pelos testes
+
+**1. "Your turn begins" não era reconhecido.** O padrão aceitava `Player 1`,
+`You`, `You's` e `Opponent` — mas não **`Your`**, que é a forma que um log de
+verdade usa. Um replay assim ficava sem nenhum capítulo, e a timeline sem
+divisões. Corrigido nos três lugares que compartilham o padrão (capítulos,
+momentos, simulação) e a atribuição de jogador passou a aceitar qualquer forma que
+comece com "You".
+
+**2. Painel de inkability invisível em deck saudável.** O painel estava **dentro**
+do `sc-if` de avisos. Deck sem avisos, painel inexistente — exatamente o deck em
+que se quer confirmar que a proporção está boa. O card de saúde foi elevado para
+condição própria; os chips de aviso continuam condicionais, e deck limpo agora
+mostra uma linha positiva em vez de card vazio.
+
+**3. Tinta do oponente: calculada, nunca renderizada.** `oppInkPips` existia no
+`renderVals` e não aparecia no template. Pior: a linha do oponente mostrava
+`exerted/total` enquanto a sua mostrava `disponível/total` — o mesmo glifo com
+leituras opostas nos dois lados da mesa. Agora as duas linhas são idênticas: pips
+douradas e disponível/total.
+
+As pips também carregavam booleano onde o template esperava cor, então pintavam
+`background:true`.
+
+### Inkability
+
+Percentual inkável do deck com barra, contagem inkável/não-inkável e uma frase
+descritiva por faixa (≥55% ok, ≥45% limítrofe, abaixo disso provável perda de ink
+drop). Usa `inkableOf()`, que já respeita as correções do usuário.
+
+### Wishlist
+
+Preço-alvo por carta, com marcação quando o mercado cruza. Aceita vírgula decimal,
+arredonda a centavos, e recusa entrada inválida sem gravar NaN. Entradas antigas
+(valor `1`, sem alvo) continuam válidas — a wishlist legada não é perdida.
+
+### Verificação
+
+`tools/replay-ux-contract.test.mjs`, nova, **33/33 executadas aqui** com os motores
+extraídos por casamento de chaves. Suítes existentes: visual 18/18, i18n 9/9
+(639 chaves), practice 36, meta 32, shared 23, data-health 26. `test:all` e CI em
+20 suítes cada, sem divergência. Espelho byte a byte.
+
+Não visto rodando — sem `site/data/**` o app não inicia aqui.

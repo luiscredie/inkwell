@@ -1,71 +1,72 @@
-INKWELL BRASIL — V13: art-final review
+INKWELL BRASIL — V14: navigable replay, inkability, wishlist targets
 
 Extract over your repo root, then:
 
   npm run verify
-  git add -A && git commit -m "V13: fix Living Ink occlusion, card tile legibility, 41 untranslated strings, mobile overlap"
+  git add -A && git commit -m "V14: replay timeline with chapters, inkability panel, wishlist price targets"
   git push
 
 ────────────────────────────────────────────────────────────
-1. THE LIVING INK BACKGROUND — MY BUG
+REPLAY — VIDEO-PLAYER MODEL
 
-The shader was fine and running. #ink-scroll still carried a two-radial background
-left over from V7. The canvas is position:fixed at z-index:0 and #ink-scroll sits
-above it, so the content layer painted over the entire shader. I had cleared the
-background on #app but not on the scroller inside it.
+Researching how digital TCG clients present replays confirmed the choice you had
+already made on the form: a draggable timeline with per-turn chapters beats a
+next-event stepper. You cannot answer "what happened around turn 6" by clicking
+forty times.
 
-  #ink-scroll{background:transparent}
+  - real <input type="range"> over the event index
+  - turn chapters from replayChapters(), one per turn, contiguous ranges
+  - the M2.5 decision moments as clickable markers on the bar
+  - speed 0.5x / 1x / 2x
 
-One line. The lesson is worth keeping: moving to a global background means clearing
-EVERY intermediate layer, not just the root — any wrapper with its own background
-cancels everything beneath it.
+Dragging pauses playback, so the scrub and the timer never fight. Changing speed
+mid-playback restarts the timer at the new rate instead of waiting out the old tick.
 
-2. COLLECTION — THE CARD TEXT WAS COVERED
+────────────────────────────────────────────────────────────
+THREE REAL BUGS THE TESTS FOUND
 
-The glass footer sat ON TOP of the image, hiding the bottom third — which is
-exactly where a Lorcana card prints its name and rules text. There was also a dark
-gradient over the art purely so white text would have contrast.
+1. "Your turn begins" WAS NOT RECOGNISED
+   The turn pattern accepted "Player 1", "You", "You's" and "Opponent" — but not
+   "Your", which is the form a real log actually uses. Such a replay produced NO
+   chapters at all, leaving the timeline undivided. Fixed in all three places that
+   share the pattern (chapters, moments, simulation), and player attribution now
+   accepts any form starting with "You".
 
-Inverted. The art is now shown whole and unobstructed; name, counts and price moved
-BELOW the image. The gradient is gone — it existed to solve a problem that no
-longer exists.
+2. THE INKABILITY PANEL WAS INVISIBLE ON A HEALTHY DECK
+   It sat INSIDE the deck-warnings sc-if. No warnings meant no panel — precisely
+   the deck where you want to confirm the ratio is fine. The health card now has
+   its own condition; warning chips stay conditional, and a clean deck gets a
+   positive line instead of an empty card.
 
-Counts are now compact mono ("4  2 foil") instead of three labelled blocks. At 5-8
-columns there is no width for labels, and the glass footer forced a fixed height
-that cropped the card.
+3. OPPONENT INK: COMPUTED, NEVER RENDERED
+   oppInkPips existed in renderVals and appeared nowhere in the template. Worse,
+   the opponent row showed exerted/total while your row showed available/total —
+   the same glyph read in opposite directions on the two sides of the board. Both
+   rows are now identical: gold pips plus available-over-total.
 
-3. MIXED LANGUAGES
+   The pips also carried a boolean where the template wanted a colour, so they were
+   painting background:true.
 
-Swept the whole file. 41 English strings were showing while the app was in
-Portuguese:
+────────────────────────────────────────────────────────────
+INKABILITY
 
-  25 template literals   Cancel, No grouping, Sign out, Backup & Settings,
-                         Pipeline report, Reload, Win, Loss, ...
-  12 toasts              showToast('Backup downloaded'), 'Deck deleted',
-                         'No cards matched — check the format', ... — none of
-                         these ever went through this.t()
-   3 attributes          aria-label="Close" (×3), two title attributes
-   1 mixed sentence      "Signed in as <b>email</b>. Your profiles sync..."
+Inkable percentage with a bar, inkable/non-inkable counts, and one descriptive
+sentence per band (>=55% fine, >=45% borderline, below that missed ink drops are
+likely). Reads inkableOf(), which already honours your corrections.
 
-All now keyed in EN and PT. The dictionary went from 584 to 617 keys per language.
+WISHLIST
 
-Worth noting how they survived: i18n-contract checks parity and that used keys
-exist, but it cannot see text that was NEVER WIRED to the dictionary. That is the
-gap 41 strings lived in. The scan for literal text nodes and raw showToast strings
-is now part of how I check this file.
-
-4. MOBILE OVERLAP
-
-The performance pill was fixed bottom-right, directly on top of the bottom nav bar.
-Hidden below 860px — and on those screens the shader is force-disabled anyway, so
-the control had nothing to control.
+Per-card target price with a hit marker when the market crosses it. Accepts a
+decimal comma, rounds to cents, and refuses junk input rather than storing NaN.
+Legacy entries (plain 1, no target) keep working — no wishlist is lost.
 
 ────────────────────────────────────────────────────────────
 VERIFIED
 
-Six suites green, 617 keys EN and PT, sc-if 142/142, sc-for 100/100, mirror
-byte-identical. The only literals left in the template are the tagline "Seu lugar
-de Lorcana" (brand, not translatable) and three variable names inside holes.
+replay-ux-contract  33/33  (engines lifted by brace matching and executed)
+visual 18/18 · i18n 9/9 (639 keys) · practice 36 · meta 32 · shared 23 ·
+data-health 26 · test:all and CI both at 20 suites, no drift · mirror identical
 
-NOT VERIFIED: rendered output — no site/data/** here, so the app cannot boot.
-CHECK THE SHADER FIRST. The fix is sound in principle but I have not seen it.
+NOT VERIFIED: rendered output. No site/data/** here, so the app cannot boot.
+Worth checking by hand: drag the timeline, click a moment marker, and open a deck
+with no warnings to confirm the inkability panel now appears.

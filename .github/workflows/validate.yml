@@ -49,6 +49,8 @@ jobs:
         run: node tools/meta-advisor-contract.test.mjs
       - name: Practice loop contract
         run: node tools/practice-loop-contract.test.mjs
+      - name: Replay UX, inkability and wishlist contract
+        run: node tools/replay-ux-contract.test.mjs
   python:
     runs-on: ubuntu-latest
     steps:

@@ -506,6 +506,27 @@
             </div>
           </div>
 
+          <sc-if value="{{ wlShow }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-bottom:20px;padding:16px 18px;border-radius:var(--r-lg);background:var(--glass-bg);backdrop-filter:var(--glass-blur);border:var(--glass-border)">
+              <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+                <span style="font-weight:600;font-size:15px">{{ wlTitle }}</span>
+                <span style="font-size:12px;color:{{ wlSummaryColor }}">{{ wlSummary }}</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <sc-for list="{{ wlRows }}" as="w" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r-sm);background:{{ w.rowBg }}">
+                    <button onClick="{{ w._open }}" style="flex:1;min-width:0;text-align:left;background:none;border:none;padding:0;color:var(--text-1);font-size:12.5px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:inherit">{{ w.name }}</button>
+                    <sc-if value="{{ w.hasBadge }}" hint-placeholder-val="{{ false }}">
+                      <span style="font-size:10px;font-weight:600;color:{{ w.badgeColor }};flex-shrink:0">{{ w.badge }}</span>
+                    </sc-if>
+                    <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-2);flex-shrink:0;min-width:74px;text-align:right">{{ w.price }}</span>
+                    <input type="text" inputmode="decimal" value="{{ w.target }}" onChange="{{ w._onTarget }}" placeholder="{{ wlPlaceholder }}" aria-label="{{ wlTargetLabel }}" style="width:92px;flex-shrink:0;padding:6px 8px;border-radius:var(--r-sm);background:var(--surface-lowest);border:1px solid var(--outline);color:var(--text-1);font-size:11.5px;font-family:var(--font-mono);text-align:right" />
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
           <div class="ink-coll-grid" style="{{ collGridStyle }}">
             <sc-for list="{{ pageCards }}" as="c" hint-placeholder-count="8">
               <div data-testid="collection-card" data-card-id="{{ c.cid }}" onClick="{{ c._open }}" onKeyDown="{{ c._openKey }}" role="button" tabindex="0" aria-label="{{ c.openAria }}" style="background:none;border:none;padding:0;cursor:pointer;text-align:left;display:flex;flex-direction:column;transition:transform var(--dur-med)" style-hover="transform:translateY(-6px)">
@@ -1170,6 +1191,29 @@
               <sc-if value="{{ mc.detail.hasReplay }}" hint-placeholder-val="{{ false }}">
                 <div style="margin-top:16px;padding-top:15px;border-top:1px solid rgba(255,255,255,.08)">
                   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px"><div style="font-weight:700;font-size:14px">{{ mcReplay }}</div><div style="font-family:var(--font-mono);font-size:11px;color:var(--text-3)">{{ mc.detail.progress }}</div></div>
+                  <sc-if value="{{ tlHas }}" hint-placeholder-val="{{ false }}">
+                    <div style="margin-top:14px">
+                      <div style="position:relative;height:26px">
+                        <div style="position:absolute;left:0;right:0;top:11px;height:4px;border-radius:2px;background:rgba(255,255,255,.09)"></div>
+                        <div style="position:absolute;left:0;top:11px;height:4px;border-radius:2px;width:{{ tlPct }};background:var(--gold)"></div>
+                        <sc-for list="{{ tlChapters }}" as="ch" hint-placeholder-count="4">
+                          <button onClick="{{ ch._go }}" title="{{ ch.label }}" style="position:absolute;top:6px;left:{{ ch.left }};width:2px;height:14px;padding:0;border:none;background:{{ ch.color }};cursor:pointer;transform:translateX(-1px)"></button>
+                        </sc-for>
+                        <sc-for list="{{ tlMarkers }}" as="mk" hint-placeholder-count="2">
+                          <button onClick="{{ mk._go }}" title="{{ mk.title }}" aria-label="{{ mk.title }}" style="position:absolute;top:2px;left:{{ mk.left }};width:12px;height:12px;padding:0;border-radius:50%;border:2px solid var(--surface-page);background:var(--accent);cursor:pointer;transform:translateX(-6px)"></button>
+                        </sc-for>
+                        <input type="range" min="0" max="{{ tlMax }}" value="{{ tlValue }}" onChange="{{ tlSeek }}" aria-label="{{ mcReplay }}" style="position:absolute;left:0;right:0;top:0;width:100%;height:26px;margin:0;opacity:0;cursor:pointer" />
+                      </div>
+                      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px">
+                        <span style="font-family:var(--font-mono);font-size:10.5px;color:var(--text-4)">{{ tlNow }}/{{ tlTotal }}</span>
+                        <span style="flex:1"></span>
+                        <span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-4)">{{ tlSpeedLabel }}</span>
+                        <sc-for list="{{ tlSpeeds }}" as="sp" hint-placeholder-count="3">
+                          <button onClick="{{ sp._pick }}" style="{{ sp.style }}">{{ sp.label }}</button>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </sc-if>
                   <div data-testid="replay-event" style="min-height:64px;padding:13px;border-radius:11px;background:var(--surface-lowest);border:1px solid rgba(255,255,255,.08)">
                     <div style="font-size:10.5px;color:var(--text-3)">{{ mc.detail.eventMeta }}</div>
                     <div style="font-family:var(--font-mono);font-size:12px;line-height:1.5;color:var(--text-1);margin-top:5px">{{ mc.detail.eventText }}</div>
@@ -1410,13 +1454,28 @@
             </sc-for>
           </div>
 
-          <sc-if value="{{ dd.health.hasWarnings }}" hint-placeholder-val="{{ false }}">
+          <sc-if value="{{ dd.hasHealth }}" hint-placeholder-val="{{ false }}">
             <div style="padding:18px 20px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);margin-bottom:22px">
               <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
                 <span style="font-family:var(--font-title);font-weight:700;font-size:15px">{{ dd.health.title }}</span>
                 <span style="font-family:var(--font-mono);font-weight:800;font-size:18px;color:{{ dd.health.scoreColor }}">{{ dd.health.score }}</span>
-                <span style="font-size:11.5px;color:var(--text-3);font-family:var(--font-mono)">{{ dd.health.inkableLabel }} {{ dd.health.inkablePct }}% · {{ dd.health.avgLabel }} {{ dd.health.avgCost }}</span>
+                <span style="font-size:11.5px;color:var(--text-3);font-family:var(--font-mono)">{{ dd.health.avgLabel }} {{ dd.health.avgCost }}</span>
               </div>
+              <div style="margin:4px 0 14px;padding:13px 14px;border-radius:var(--r-md);background:var(--surface-lowest);border:1px solid var(--outline)">
+                <div style="display:flex;align-items:baseline;gap:9px;flex-wrap:wrap">
+                  <span style="font-size:12px;font-weight:600;color:var(--text-2)">{{ dd.ink.title }}</span>
+                  <span style="font-family:var(--font-mono);font-size:16px;font-weight:700;color:{{ dd.ink.color }}">{{ dd.ink.pctText }}</span>
+                  <span style="flex:1"></span>
+                  <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-3)">{{ dd.ink.inkableN }} {{ dd.ink.inkableLabel }} · {{ dd.ink.notN }} {{ dd.ink.notLabel }}</span>
+                </div>
+                <div style="height:6px;border-radius:3px;background:rgba(255,255,255,.08);margin-top:9px;overflow:hidden">
+                  <div style="height:100%;width:{{ dd.ink.barWidth }};background:{{ dd.ink.color }}"></div>
+                </div>
+                <div style="font-size:11px;font-weight:300;color:var(--text-4);margin-top:8px;line-height:1.5">{{ dd.ink.note }} {{ dd.ink.healthy }}</div>
+              </div>
+              <sc-if value="{{ dd.health.ok }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size:12px;color:var(--ok)">{{ dd.health.okLabel }}</div>
+              </sc-if>
               <div style="display:flex;flex-wrap:wrap;gap:6px">
                 <sc-for list="{{ dd.health.warnings }}" as="w" hint-placeholder-count="1">
                   <span style="font-size:11.5px;padding:3px 9px;border-radius:8px;background:rgba(230,193,90,.12);border:1px solid rgba(230,193,90,.28);color:var(--warn)">{{ w }}</span>
@@ -2092,7 +2151,13 @@
         <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-start;gap:8px;padding:12px 24px;background:linear-gradient(180deg,rgba(120,90,160,.34),rgba(90,70,130,.14))">
           <div style="display:flex;align-items:center;gap:12px">
             <span style="font-family:var(--font-title);font-weight:800;font-size:34px;min-width:44px;text-align:center">{{ rf.oppLore }}</span>
-            <div><div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#c8bcda">{{ mcOpponent }}</div><div style="font-size:10.5px;color:var(--text-3);font-family:var(--font-mono);margin-top:2px">◈ {{ rf.oppInkExert }}/{{ rf.oppInk }} · ✋ {{ rf.oppHandCount }}</div></div>
+            <div><div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#c8bcda">{{ mcOpponent }}</div><div style="display:flex;align-items:center;gap:7px;margin-top:4px">
+              <span style="display:flex;gap:2px">
+                <sc-for list="{{ rf.oppInkPips }}" as="p" hint-placeholder-count="4"><span style="width:5px;height:9px;border-radius:1px;background:{{ p.on }}"></span></sc-for>
+              </span>
+              <span style="font-family:var(--font-mono);font-size:10.5px;color:#c0a878">{{ rf.oppInkText }}</span>
+              <span style="font-family:var(--font-mono);font-size:10.5px;color:var(--text-3)">{{ rf.handLabel }} {{ rf.oppHandCount }}</span>
+            </div></div>
           </div>
           <div style="display:flex;gap:4px;min-height:38px;align-items:flex-start">
             <sc-for list="{{ rf.oppHand }}" as="h" hint-placeholder-count="4">
@@ -2103,7 +2168,7 @@
             <sc-for list="{{ rf.opp }}" as="c" hint-placeholder-count="3">
               <div style="position:relative;width:62px">
                 <div style="width:62px;aspect-ratio:734/1024;border-radius:8px;overflow:hidden;background:{{ c.ink }};box-shadow:0 4px 14px rgba(0,0,0,.5);transition:transform .2s;{{ c.tileStyle }}">{{ c.imgEl }}</div>
-                <sc-if value="{{ c.drying }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:3px;left:3px;font-size:8px;padding:1px 4px;border-radius:4px;background:rgba(0,0,0,.7);color:#9be6ff">💧</span></sc-if>
+                <span style="position:absolute;top:3px;left:3px;z-index:3;font-size:7.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:1px 4px;border-radius:4px;background:rgba(0,0,0,.66);color:{{ c.stateColor }}">{{ c.stateLabel }}</span>
                 <sc-if value="{{ c.damage }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:3px;right:3px;font-size:9px;font-weight:700;padding:1px 5px;border-radius:5px;background:#e23b4e;color:#fff">-{{ c.damage }}</span></sc-if>
                 <sc-if value="{{ c.hasStats }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;bottom:2px;left:2px;right:2px;display:flex;justify-content:space-between;font-size:8px;font-weight:700;font-family:var(--font-mono)"><span style="padding:0 3px;border-radius:3px;background:rgba(0,0,0,.75);color:{{ c.strColor }}">{{ c.str }}</span><span style="padding:0 3px;border-radius:3px;background:rgba(0,0,0,.75);color:#7ab8ff">{{ c.will }}</span></span></sc-if>
                 <div style="display:flex;flex-wrap:wrap;gap:2px;margin-top:2px"><sc-for list="{{ c.mods }}" as="md"><span style="font-size:7.5px;padding:1px 3px;border-radius:3px;background:{{ md.bg }};color:{{ md.color }}">{{ md.label }}</span></sc-for></div>
@@ -2121,7 +2186,7 @@
             <sc-for list="{{ rf.you }}" as="c" hint-placeholder-count="3">
               <div style="position:relative;width:62px">
                 <div style="width:62px;aspect-ratio:734/1024;border-radius:8px;overflow:hidden;background:{{ c.ink }};box-shadow:0 4px 14px rgba(0,0,0,.5);transition:transform .2s;{{ c.tileStyle }}">{{ c.imgEl }}</div>
-                <sc-if value="{{ c.drying }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:3px;left:3px;font-size:8px;padding:1px 4px;border-radius:4px;background:rgba(0,0,0,.7);color:#9be6ff">💧</span></sc-if>
+                <span style="position:absolute;top:3px;left:3px;z-index:3;font-size:7.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:1px 4px;border-radius:4px;background:rgba(0,0,0,.66);color:{{ c.stateColor }}">{{ c.stateLabel }}</span>
                 <sc-if value="{{ c.damage }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:3px;right:3px;font-size:9px;font-weight:700;padding:1px 5px;border-radius:5px;background:#e23b4e;color:#fff">-{{ c.damage }}</span></sc-if>
                 <sc-if value="{{ c.hasStats }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;bottom:2px;left:2px;right:2px;display:flex;justify-content:space-between;font-size:8px;font-weight:700;font-family:var(--font-mono)"><span style="padding:0 3px;border-radius:3px;background:rgba(0,0,0,.75);color:{{ c.strColor }}">{{ c.str }}</span><span style="padding:0 3px;border-radius:3px;background:rgba(0,0,0,.75);color:#7ab8ff">{{ c.will }}</span></span></sc-if>
                 <div style="display:flex;flex-wrap:wrap;gap:2px;margin-top:2px"><sc-for list="{{ c.mods }}" as="md"><span style="font-size:7.5px;padding:1px 3px;border-radius:3px;background:{{ md.bg }};color:{{ md.color }}">{{ md.label }}</span></sc-for></div>
@@ -2137,17 +2202,51 @@
           </div>
           <div style="display:flex;align-items:center;gap:12px">
             <span style="font-family:var(--font-title);font-weight:800;font-size:34px;min-width:44px;text-align:center">{{ rf.youLore }}</span>
-            <div><div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#d8c49a">{{ mcYou }}</div><div style="font-size:10.5px;color:#c0a878;font-family:var(--font-mono);margin-top:2px">◈ {{ rf.youInkExert }}/{{ rf.youInk }} · ✋ {{ rf.youHandCount }}</div></div>
+            <div><div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#d8c49a">{{ mcYou }}</div><div style="display:flex;align-items:center;gap:7px;margin-top:4px">
+              <span style="display:flex;gap:2px">
+                <sc-for list="{{ rf.youInkPips }}" as="p" hint-placeholder-count="4"><span style="width:5px;height:9px;border-radius:1px;background:{{ p.on }}"></span></sc-for>
+              </span>
+              <span style="font-family:var(--font-mono);font-size:10.5px;color:#c0a878">{{ rf.youInkText }}</span>
+              <span style="font-family:var(--font-mono);font-size:10.5px;color:var(--text-3)">{{ rf.handLabel }} {{ rf.youHandCount }}</span>
+            </div></div>
           </div>
         </div>
         <sc-if value="{{ rf.showVictory }}" hint-placeholder-val="{{ false }}">
           <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;background:rgba(5,5,8,.4)"><span style="font-family:var(--font-title);font-weight:900;font-size:64px;color:{{ rf.victoryColor }};text-shadow:0 6px 30px rgba(0,0,0,.7)">{{ rf.victoryText }}</span></div>
         </sc-if>
       </div>
-      <div style="position:relative;z-index:2;display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 20px;border-top:1px solid rgba(255,255,255,.08)">
+      <div style="position:relative;z-index:2;padding:12px 20px 14px;border-top:1px solid rgba(255,255,255,.08)">
+        <sc-if value="{{ rf.hasEvent }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:10px;padding:9px 13px;border-radius:var(--r-md);background:rgba(212,175,55,.08);border:1px solid rgba(212,175,55,.2);margin-bottom:11px">
+            <span style="font-family:var(--font-mono);font-size:10.5px;color:var(--gold);flex-shrink:0">{{ rf.eventTurn }}</span>
+            <span style="font-family:var(--font-mono);font-size:12.5px;color:var(--text-1);line-height:1.4">{{ rf.eventText }}</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ tlHas }}" hint-placeholder-val="{{ false }}">
+          <div style="position:relative;height:26px;margin-bottom:4px">
+            <div style="position:absolute;left:0;right:0;top:11px;height:4px;border-radius:2px;background:rgba(255,255,255,.09)"></div>
+            <div style="position:absolute;left:0;top:11px;height:4px;border-radius:2px;width:{{ tlPct }};background:var(--gold)"></div>
+            <sc-for list="{{ tlChapters }}" as="ch" hint-placeholder-count="4">
+              <button onClick="{{ ch._go }}" title="{{ ch.label }}" style="position:absolute;top:6px;left:{{ ch.left }};width:2px;height:14px;padding:0;border:none;background:{{ ch.color }};cursor:pointer;transform:translateX(-1px)"></button>
+            </sc-for>
+            <sc-for list="{{ tlMarkers }}" as="mk" hint-placeholder-count="2">
+              <button onClick="{{ mk._go }}" title="{{ mk.title }}" aria-label="{{ mk.title }}" style="position:absolute;top:2px;left:{{ mk.left }};width:12px;height:12px;padding:0;border-radius:50%;border:2px solid #0a0c10;background:var(--accent);cursor:pointer;transform:translateX(-6px)"></button>
+            </sc-for>
+            <input type="range" min="0" max="{{ tlMax }}" value="{{ tlValue }}" onChange="{{ tlSeek }}" aria-label="{{ mcReplay }}" style="position:absolute;left:0;right:0;top:0;width:100%;height:26px;margin:0;opacity:0;cursor:pointer" />
+          </div>
+        </sc-if>
+        <div style="display:flex;align-items:center;justify-content:center;gap:10px">
+        <span style="flex:1;display:flex;align-items:center;gap:6px">
+          <span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-4)">{{ tlSpeedLabel }}</span>
+          <sc-for list="{{ tlSpeeds }}" as="sp" hint-placeholder-count="3">
+            <button onClick="{{ sp._pick }}" style="{{ sp.style }}">{{ sp.label }}</button>
+          </sc-for>
+        </span>
         <button type="button" data-testid="replay-fullscreen-prev" onClick="{{ replayFsPrev }}" disabled="{{ rf.atStart }}" style="width:40px;height:38px;border-radius:9px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text-2);cursor:pointer;font-size:16px;opacity:{{ rf.prevOpacity }}">‹</button>
         <button type="button" data-testid="replay-fullscreen-play" onClick="{{ replayFsToggle }}" style="min-width:52px;height:38px;border-radius:9px;background:linear-gradient(180deg,var(--gold),var(--accent-strong));border:none;color:#2a2118;font-weight:800;cursor:pointer;font-size:15px">{{ rf.playIcon }}</button>
         <button type="button" data-testid="replay-fullscreen-next" onClick="{{ replayFsNext }}" disabled="{{ rf.atEnd }}" style="width:40px;height:38px;border-radius:9px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text-2);cursor:pointer;font-size:16px;opacity:{{ rf.nextOpacity }}">›</button>
+        <span style="flex:1"></span>
+        </div>
       </div>
     </div>
   </sc-if>
@@ -2169,7 +2268,7 @@ class Component extends DCLogic {
     fmtFilter: 'all',
     perfMode: (()=>{ try{ return localStorage.getItem('inkwell_perf')==='1'; }catch(e){ return false; } })(),
     collCols: (()=>{ try{ const v=parseInt(localStorage.getItem('inkwell_collcols'),10); return (v>=4&&v<=8)?v:5; }catch(e){ return 5; } })(),
-    matchRaw: '', matchParsed: null, matchDuplicateConfirm: false, selectedMatch: null, replayIndex: 0, replayPlaying: false, replayFull: false, matchResultFilter: 'all', matchDateFilter: 'all',
+    matchRaw: '', matchParsed: null, replaySpeed: 1, matchDuplicateConfirm: false, selectedMatch: null, replayIndex: 0, replayPlaying: false, replayFull: false, matchResultFilter: 'all', matchDateFilter: 'all',
     bInks: [], bCost: 'all', bSets: [], bSetMenu: false, bSort: 'cost-asc', bGroup: 'none', bSize: 5, bOwnedOnly: false, bPage: 0,
     newDeckOpen: false, newDeckName: '', newDeckInks: [], newDeckFmt: 'core',
     importDeckOpen: false, importDeckName: '', importDeckText: '', importDeckFmt: 'core',
@@ -2222,6 +2321,9 @@ class Component extends DCLogic {
       uiFatalTitle:'Data could not be loaded', uiReload:'Reload', grpNone:'No grouping', grpColor:'Group by ink', grpSet:'Group by set', noMatchFilters:'No cards match these filters.', logGameTitle:'Log a game', foilLower:'foil', backupSettings:'Backup & settings', cloudSync:'Cloud sync', signedInAs:'Signed in as', signOut:'Sign out', fullBackup:'Full profile backup', exportCollCsv:'Export collection CSV', yourCorrections:'Your data corrections', exportCorrCsv:'Export corrections CSV', clearLabel:'Clear', pipelineReport:'Pipeline report', noPipelineReport:'No pipeline validation report shipped with this build.',
       syncAcrossDevices:'Your profiles sync across devices automatically.', buyOnLiga:'Buy on LigaLorcana', closeLabel:'Close', exportCorrHint:'Export your inkable corrections',
       tBackupDown:'Backup downloaded', tBackupRestored:'Backup restored', tBackupInvalid:'That file is not a valid Inkwell backup', tNoCorrections:'No corrections to export', tArtUpdated:'Art updated', tCollExported:'Collection exported', tEmptyFile:'That file is empty', tNameDeck:'Name your deck first', tPasteDeck:'Paste a decklist first', tNoCardsMatched:'No cards matched — check the format', tDeckDeleted:'Deck deleted', tCorrCleared:'Corrections cleared',
+      wlTitle:'Wishlist', wlSummaryHit:'{n} at or below your target', wlSummaryNone:'{n} cards tracked', wlTarget:'Target', wlPrice:'Now', wlPlaceholder:'set a price', wlHit:'buy now', wlRemoveAria:'Remove from wishlist — ', wlAddAria:'Add to wishlist — ',
+      inkTitle:'Inkability', inkInkable:'Inkable', inkNotInkable:'Not inkable', inkNote:'Cards you can put into ink when you need the ink instead of the card.', inkHealthy:'A healthy deck usually keeps more than half its cards inkable.',
+      rpTurnShort:'T{n}', rpMomentAt:'Moment · turn {n}', rpSpeed:'Speed', rpInk:'Ink', rpHand:'Hand', rpReady:'ready', rpExerted:'exerted', rpDrying:'drying',
       newDeck:'+ New Deck', importDeck:'↑ Import', createDeck:'Create', cancel:'Cancel', format:'Format',
       inkable:'Inkable', uninkable:'Uninkable', cost:'Cost', allSets:'All sets',
       welcome:'Welcome, {name}', emptyMsg:'Your codex is empty. Import your collection from Dreamborn, or start building a deck — everything is tracked privately in your profile.',
@@ -2283,6 +2385,9 @@ class Component extends DCLogic {
       uiFatalTitle:'Não foi possível carregar os dados', uiReload:'Recarregar', grpNone:'Sem agrupamento', grpColor:'Agrupar por ink', grpSet:'Agrupar por set', noMatchFilters:'Nenhuma carta corresponde a estes filtros.', logGameTitle:'Registrar partida', foilLower:'foil', backupSettings:'Backup e ajustes', cloudSync:'Sincronização na nuvem', signedInAs:'Conectado como', signOut:'Sair', fullBackup:'Backup completo do perfil', exportCollCsv:'Exportar coleção em CSV', yourCorrections:'Suas correções de dados', exportCorrCsv:'Exportar correções em CSV', clearLabel:'Limpar', pipelineReport:'Relatório do pipeline', noPipelineReport:'Nenhum relatório de validação foi publicado com esta build.',
       syncAcrossDevices:'Seus perfis sincronizam entre dispositivos automaticamente.', buyOnLiga:'Comprar na LigaLorcana', closeLabel:'Fechar', exportCorrHint:'Exportar suas correções de inkável',
       tBackupDown:'Backup baixado', tBackupRestored:'Backup restaurado', tBackupInvalid:'Esse arquivo não é um backup válido do Inkwell', tNoCorrections:'Nenhuma correção para exportar', tArtUpdated:'Arte atualizada', tCollExported:'Coleção exportada', tEmptyFile:'Esse arquivo está vazio', tNameDeck:'Dê um nome ao deck primeiro', tPasteDeck:'Cole uma decklist primeiro', tNoCardsMatched:'Nenhuma carta reconhecida — confira o formato', tDeckDeleted:'Deck excluído', tCorrCleared:'Correções apagadas',
+      wlTitle:'Lista de desejos', wlSummaryHit:'{n} no seu preço-alvo ou abaixo', wlSummaryNone:'{n} cartas acompanhadas', wlTarget:'Alvo', wlPrice:'Agora', wlPlaceholder:'definir preço', wlHit:'comprar', wlRemoveAria:'Remover da lista — ', wlAddAria:'Adicionar à lista — ',
+      inkTitle:'Inkabilidade', inkInkable:'Inkável', inkNotInkable:'Não inkável', inkNote:'Cartas que você pode colocar na tinta quando precisa da tinta em vez da carta.', inkHealthy:'Um deck saudável costuma manter mais da metade das cartas inkáveis.',
+      rpTurnShort:'T{n}', rpMomentAt:'Momento · turno {n}', rpSpeed:'Velocidade', rpInk:'Tinta', rpHand:'Mão', rpReady:'pronto', rpExerted:'exercido', rpDrying:'secando',
       newDeck:'+ Novo Deck', importDeck:'↑ Importar', createDeck:'Criar', cancel:'Cancelar', format:'Formato',
       inkable:'Inkável', uninkable:'Não-inkável', cost:'Custo', allSets:'Todos os sets',
       welcome:'Bem-vindo, {name}', emptyMsg:'Seu códice está vazio. Importe sua coleção do Dreamborn ou comece a montar um deck — tudo fica salvo de forma privada no seu perfil.',
@@ -2722,6 +2827,8 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     d.matches = Array.isArray(d.matches) ? d.matches : [];
     d.overrides = (d.overrides && typeof d.overrides==='object') ? d.overrides : {};
     d.wishlist = (d.wishlist && typeof d.wishlist==='object') ? d.wishlist : {};
+    for(const k in d.wishlist){ const v=d.wishlist[k];
+      if(v!==1 && !(v && typeof v==='object' && typeof v.t==='number')) d.wishlist[k]=1; }
     // M1P-B additive deck fields (idempotent; preserve unknown fields)
     d.decks = d.decks.map(dk=>{ const o={...dk}; let tc=(typeof o.targetCopies==='number')?Math.floor(o.targetCopies):1; if(!isFinite(tc)||tc<0)tc=1; if(tc>10)tc=10; o.targetCopies=tc; if(typeof o.portfolioPriority!=='number'||!isFinite(o.portfolioPriority)) o.portfolioPriority=0; return o; });
     d.learnDone = (d.learnDone && typeof d.learnDone==='object') ? d.learnDone : {};
@@ -2815,6 +2922,24 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
   isOwned(id){ const o=this.ownedOf(id); return o.n>0||o.f>0; }
   isWishlisted(id){ return !!(this.state.wishlist && this.state.wishlist[id]); }
   toggleWishlist(id){ const w={...(this.state.wishlist||{})}; if(w[id]) delete w[id]; else w[id]=1; this.setState({wishlist:w}, ()=>this.saveLocal()); }
+  // Wishlist entries are 1 (legacy bookmark) or {t:<target BRL>}. Both stay truthy.
+  wishTarget(id){ const e=this.state.wishlist&&this.state.wishlist[id]; return (e&&typeof e==='object'&&typeof e.t==='number')?e.t:null; }
+  setWishTarget(id,raw){
+    const w={...(this.state.wishlist||{})};
+    const v=parseFloat(String(raw).replace(/[^0-9,.]/g,'').replace(',','.'));
+    if(!raw||isNaN(v)||v<=0) w[id]=1; else w[id]={t:Math.round(v*100)/100};
+    this.setState({wishlist:w},()=>this.saveLocal());
+  }
+  wishlistRows(){
+    const ids=Object.keys(this.state.wishlist||{});
+    return ids.map(id=>{
+      const c=this.byId[id]; if(!c) return null;
+      const price=this.priceOr0(c), target=this.wishTarget(id);
+      const hit=target!=null&&price>0&&price<=target;
+      const gap=(target!=null&&price>0)?Math.round((price-target)/target*100):null;
+      return { id, card:c, name:c.name_en, price, target, hit, gap };
+    }).filter(Boolean).sort((a,b)=>(b.hit-a.hit)||((a.gap==null?9999:a.gap)-(b.gap==null?9999:b.gap)));
+  }
   printingsOf(card){ if(!card) return []; this.buildNameIndex(); const k=this.nameKey(card.name_en); return (this._byName&&this._byName[k])||[card]; }
   ownedAcross(card){ let n=0,f=0; const seen={}; for(const c of this.printingsOf(card)){ if(seen[c.card_id]) continue; seen[c.card_id]=1; const o=this.ownedOf(c.card_id); n+=o.n; f+=o.f; } return {n,f}; }
   chgColor(v){ return v>0.05?'#5fd07f':v<-0.05?'#ff7a86':'#8a8a92'; }
@@ -3311,8 +3436,8 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     const bounds=[];
     for(let i=0;i<ev.length;i++){
       const t=(ev[i]&&ev[i].text)||'';
-      const m=t.match(/^(?:Player (\d)|(You|Opponent))(?:'s)? turn begins$/);
-      if(m) bounds.push({i, p:m[1]?+m[1]:(m[2]==='You'?1:2)});
+      const m=t.match(/^(?:Player (\d)|(You|Your|Opponent))(?:'s)? turn begins$/);
+      if(m) bounds.push({i, p:m[1]?+m[1]:(m[2]&&m[2].indexOf('You')===0?1:2)});
     }
     if(bounds.length<2) return null;
     const snap=(idx)=>{
@@ -3327,7 +3452,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       for(let i=from;i<=to&&i<ev.length;i++){
         const t=(ev[i]&&ev[i].text)||'';
         const m=t.match(/^(?:Player (\d)|(You|Opponent)) played .+? \(cost (\d+)/);
-        if(m){ const p=m[1]?+m[1]:(m[2]==='You'?1:2); out[p]+=+m[3]; }
+        if(m){ const p=m[1]?+m[1]:(m[2]&&m[2].indexOf('You')===0?1:2); out[p]+=+m[3]; }
       }
       return out;
     };
@@ -3375,6 +3500,23 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     return { all:moments, top, turns:bounds.length };
   }
   signed(n){ return (n>0?'+':'')+n; }
+  // Turn chapters for the scrubber. Pokémon TCG Live's replay reads as a video with
+  // chapter marks; the turn boundary is the only natural chapter a Lorcana log has.
+  replayChapters(events){
+    const ev=Array.isArray(events)?events:[];
+    const out=[];
+    for(let i=0;i<ev.length;i++){
+      const t=(ev[i]&&ev[i].text)||'';
+      const m=t.match(/^(?:Player (\d)|(You|Your|Opponent))(?:'s)? turn begins$/);
+      if(m) out.push({ index:i, player:m[1]?+m[1]:(m[2]&&m[2].indexOf('You')===0?1:2) });
+    }
+    return out.map((c,k)=>({ ...c, turn:k+1, end:(k+1<out.length?out[k+1].index-1:ev.length-1) }));
+  }
+  replaySeek = (i)=>{ this.stopReplayTimer(); this.setState({replayIndex:Math.max(0,i), replayPlaying:false}); };
+  replaySpeedSet = (v)=>{
+    this.setState({replaySpeed:v}, ()=>{ if(this.state.replayPlaying){ this.stopReplayTimer(); this._replayTimer=setInterval(()=>this.replayStep(1), this.replayTickMs()); } });
+  };
+  replayTickMs(){ const s=this.state.replaySpeed||1; return Math.round(850/s); }
   // "Living Ink" background. The GLSL is the shader supplied with the design pack,
   // unchanged. Effects are on by default (perf mode OFF), but reduced-motion and
   // small screens force the CSS fallback regardless of the toggle.
@@ -3519,7 +3661,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
   // ---- M1.9 Player Academy engines (pure; from state.decks + cards, no external data) ----
   deckHealth(deck){
     const entries=this.deckEntries(deck); const total=this.deckCount(deck);
-    if(!total) return {total:0, inkablePct:0, avgCost:0, curve:[], typeMix:{}, warnings:[], score:0};
+    if(!total) return {total:0, inkable:0, inkablePct:0, avgCost:0, curve:[], typeMix:{}, warnings:[], score:0};
     let inkable=0, costSum=0; const curve=[0,0,0,0,0,0,0,0]; const typeMix={};
     for(const e of entries){ const c=e.card, n=e.count;
       if(this.inkableOf(c)===1) inkable+=n;
@@ -3537,7 +3679,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     if(chars<20) warnings.push('fewCharacters');
     if(total<60) warnings.push('under60');
     let score=100; score-=warnings.length*12; if(score<0)score=0;
-    return {total, inkablePct, avgCost, curve, typeMix, warnings, score, early, chars};
+    return {total, inkable, inkablePct, avgCost, curve, typeMix, warnings, score, early, chars};
   }
   cardRole(card){
     if(!card) return 'tech';
@@ -3842,7 +3984,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       if(/took back their action|free undo/i.test(t)){ if(lastAction&&lastAction.undo) lastAction.undo(); lastAction=null; continue; }
       if(m=t.match(/^(?:Player (\d)|(You|Opponent))'s starting hand: (.+)$/)){ S[P(m[1]||m[2])].hand=splitList(m[3]); continue; }
       if(m=t.match(/^(?:Player (\d)|(You|Opponent)) mulliganed \d+ cards?: (.+?)\. Drew: (.+)$/)){ const p=P(m[1]||m[2]); for(const n of splitList(m[3])) rmHand(p,n); S[p].hand=S[p].hand.concat(splitList(m[4])); continue; }
-      if(m=t.match(/^(?:Player (\d)|(You|Opponent))(?:'s)? turn begins$/)){ active=P(m[1]||m[2]); S[active].inkExert=0; for(const ch of S[active].chars){ ch.exerted=false; ch.drying=false; } continue; }
+      if(m=t.match(/^(?:Player (\d)|(You|Your|Opponent))(?:'s)? turn begins$/)){ active=P(m[1]||m[2]); S[active].inkExert=0; for(const ch of S[active].chars){ ch.exerted=false; ch.drying=false; } continue; }
       if(m=t.match(/^(?:Player (\d)|(You|Opponent)) drew (\d+) cards?: (.+)$/)){ S[P(m[1]||m[2])].hand=S[P(m[1]||m[2])].hand.concat(splitList(m[4])); continue; }
       if(m=t.match(/^(?:Player (\d)|(You|Opponent)) drew (.+)$/)){ const p=P(m[1]||m[2]), n=m[3].trim(); S[p].hand.push(/^a card$/.test(n)?'?':n); continue; }
       if(m=t.match(/^(?:Player (\d)|(You|Opponent)) added (.+?) to ink$/)){ const p=P(m[1]||m[2]); rmHand(p,m[3]); S[p].inkTotal++; lastAction={undo:()=>{S[p].inkTotal--;S[p].hand.push(m[3].trim());}}; continue; }
@@ -3882,7 +4024,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     if(this.state.replayPlaying){ this.stopReplayTimer(); this.setState({replayPlaying:false}); return; }
     if((this.state.replayIndex||0)>=ev.length-1) this.setState({replayIndex:0});
     this.setState({replayPlaying:true}); this.stopReplayTimer();
-    this._replayTimer=setInterval(()=>this.replayStep(1),850);
+    this._replayTimer=setInterval(()=>this.replayStep(1),this.replayTickMs());
   };
   saveMatch = ()=>{ const st=this.state; const deckId=st.matchLogDeck||st.selectedDeck||(st.matchFilter&&st.matchFilter!=='all'?st.matchFilter:null)||((st.decks[0]||{}).id); if(!deckId){ this.showToast(this.t('needDeckFirst')||'Create a deck first'); return; } const m={id:'m'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),deck_id:deckId,result:st.matchResult,opponent_inks:st.matchInks.slice(),date:new Date().toISOString().slice(0,10)}; this.setState({matches:[...st.matches,m],logMatchOpen:false,matchInks:[]},()=>{this.saveLocal();this.showToast(this.t('gameLogged')||'Game logged');}); };
   delMatch(id){ if(this.state.selectedMatch===id) this.closeMatch(); this.setState({matches:this.state.matches.filter(m=>m.id!==id)},()=>this.saveLocal()); }
@@ -4150,13 +4292,41 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
           jumpLabel:this.t('pmJump') });
         V.pmMoments=MM?(st.momentsOpen?MM.all:MM.top).map(shape):[];
       }
+      { const evT=(selected&&selected.replay&&Array.isArray(selected.replay.events))?selected.replay.events:[];
+        const idxT=Math.max(0,Math.min(evT.length-1,st.replayIndex||0));
+        const chapters=this.replayChapters(evT);
+        const MMt=selected?this.matchMoments(selected):null;
+        const momentAt={}; if(MMt) for(const m of MMt.top) momentAt[m.index]=m;
+        const span=Math.max(1,evT.length-1);
+        V.tlHas=evT.length>1;
+        V.tlPct=Math.round(idxT/span*100)+'%';
+        V.tlNow=String(idxT+1); V.tlTotal=String(evT.length);
+        V.tlSeek=(e)=>{ const v=parseInt(e.target.value,10); if(!isNaN(v)) this.replaySeek(v); };
+        V.tlMax=String(Math.max(0,evT.length-1)); V.tlValue=String(idxT);
+        V.tlChapters=chapters.map(c=>({
+          label:this.t('rpTurnShort',{n:c.turn}),
+          left:Math.round(c.index/span*100)+'%',
+          active:idxT>=c.index&&idxT<=c.end,
+          color:(idxT>=c.index&&idxT<=c.end)?'var(--gold)':'var(--text-4)',
+          _go:()=>this.replaySeek(c.index) }));
+        V.tlMarkers=Object.keys(momentAt).map(k=>{ const m=momentAt[k]; const i=+k;
+          return { left:Math.round(i/span*100)+'%',
+            title:this.t('rpMomentAt',{n:m.turn})+' · '+m.kinds.map(x=>x.label).join(' · '),
+            _go:()=>{ this.replaySeek(i); if(selected) this.noteMatchReviewed(selected.id); } }; });
+        V.tlSpeeds=[0.5,1,2].map(v=>({ label:(v===0.5?'0,5':String(v))+'×', active:(st.replaySpeed||1)===v,
+          _pick:()=>this.replaySpeedSet(v),
+          style:'padding:5px 9px;border-radius:var(--r-pill);font-size:10.5px;font-weight:600;cursor:pointer;min-height:30px;border:1px solid '+((st.replaySpeed||1)===v?'rgba(212,175,55,.45)':'var(--outline)')+';background:'+((st.replaySpeed||1)===v?'rgba(212,175,55,.16)':'transparent')+';color:'+((st.replaySpeed||1)===v?'var(--gold)':'var(--text-3)') }));
+        V.tlSpeedLabel=this.t('rpSpeed');
+      }
       V.replayFullOpen=st.replayFull && !!selected && (selected.replay&&Array.isArray(selected.replay.events)?selected.replay.events.length:0)>0;
       V.mcReplayFullscreen=this.t('mcReplayFullscreen'); V.mcOpponent=this.t('mcOpponent'); V.mcYou=this.t('mcYou');
       if(V.replayFullOpen){ const ev2=selected.replay.events, idx2=Math.max(0,Math.min(ev2.length-1,st.replayIndex||0)), d2=this.deckById(selected.deck_id);
         const e2=ev2[idx2]||{}; const yp=this.youPlayerOf(selected), op=yp===1?2:1;
         const sim=this.simulateReplay(ev2, idx2); const SS=sim.S;
         const hl=(name)=>e2.text&&e2.text.indexOf(name)>=0;
-        const tile=(ch)=>{ const name=ch.name; const card=this.cardByName(name); const cv=card?this.cardView(card):null; const strv=(ch.tempStr?ch.tempStr:0)+(ch.str!=null?ch.str:0); return { name, ink:cv?cv.ink:'#2a2a30', tileStyle:(ch.exerted?'transform:rotate(90deg) scale(.82);':'')+(hl(name)?'box-shadow:0 0 0 2px var(--warn);':''), exerted:!!ch.exerted, drying:!!ch.drying, damage:ch.damage||0, hasStats:ch.str!=null||ch.will!=null, str:strv, strColor:ch.tempStr?'#5fd07f':'#ff8a72', will:ch.will!=null?ch.will:0, tempBuff:!!ch.tempStr, mods:(ch.mods||[]).map(md=>({label:md.label, bg:md.active?'rgba(224,193,90,.22)':'rgba(255,255,255,.06)', color:md.active?'#e0c15a':'#7c7c85'})), imgEl: cv&&cv._local ? React.createElement('img',{key:name,src:cv._local,'data-local':cv._local,'data-remote':cv._remote,'data-cid':card.card_id,onError:window.imgError,onLoad:window.imgLoad,style:{width:'100%',height:'100%',objectFit:'cover',display:'block'}}) : React.createElement('div',{style:{padding:'4px',fontSize:'8px',color:'#fff',lineHeight:1.1}}, name) }; };
+        const tile=(ch)=>{ const name=ch.name; const card=this.cardByName(name); const cv=card?this.cardView(card):null; const strv=(ch.tempStr?ch.tempStr:0)+(ch.str!=null?ch.str:0); return { name, ink:cv?cv.ink:'#2a2a30', tileStyle:(ch.exerted?'transform:rotate(90deg) scale(.82);opacity:.72;':'')+(hl(name)?'box-shadow:0 0 0 2px var(--warn);':''),
+            stateLabel:ch.drying?this.t('rpDrying'):(ch.exerted?this.t('rpExerted'):this.t('rpReady')),
+            stateColor:ch.drying?'var(--info)':(ch.exerted?'var(--text-4)':'var(--ok)'), exerted:!!ch.exerted, drying:!!ch.drying, damage:ch.damage||0, hasStats:ch.str!=null||ch.will!=null, str:strv, strColor:ch.tempStr?'#5fd07f':'#ff8a72', will:ch.will!=null?ch.will:0, tempBuff:!!ch.tempStr, mods:(ch.mods||[]).map(md=>({label:md.label, bg:md.active?'rgba(224,193,90,.22)':'rgba(255,255,255,.06)', color:md.active?'#e0c15a':'#7c7c85'})), imgEl: cv&&cv._local ? React.createElement('img',{key:name,src:cv._local,'data-local':cv._local,'data-remote':cv._remote,'data-cid':card.card_id,onError:window.imgError,onLoad:window.imgLoad,style:{width:'100%',height:'100%',objectFit:'cover',display:'block'}}) : React.createElement('div',{style:{padding:'4px',fontSize:'8px',color:'#fff',lineHeight:1.1}}, name) }; };
         const zTile=(ch)=>{ const card=this.cardByName(ch.name); const cv=card?this.cardView(card):null; return { name:ch.name, ink:cv?cv.ink:'#2a2a30', exerted:!!ch.exerted, imgEl: cv&&cv._local ? React.createElement('img',{key:ch.name,src:cv._local,'data-local':cv._local,'data-remote':cv._remote,'data-cid':card.card_id,onError:window.imgError,onLoad:window.imgLoad,style:{width:'100%',height:'100%',objectFit:'cover',display:'block'}}) : React.createElement('div',{style:{padding:'3px',fontSize:'7px',color:'#fff',lineHeight:1.1}}, ch.name) }; };
         const hideOpp=!st.replayShowHidden;
         const handTile=(name,masked)=>{ if(masked||name==='?') return {ink:'#1a1622', imgEl:React.createElement('div',{style:{width:'100%',height:'100%',background:'repeating-linear-gradient(135deg,#231a33,#231a33 4px,#2e2340 4px,#2e2340 8px)'}})}; const card=this.cardByName(name); const cv=card?this.cardView(card):null; return { name, ink:cv?cv.ink:'#2a2a30', imgEl: cv&&cv._local ? React.createElement('img',{key:name,src:cv._local,'data-local':cv._local,'data-remote':cv._remote,'data-cid':card.card_id,onError:window.imgError,onLoad:window.imgLoad,style:{width:'100%',height:'100%',objectFit:'cover',display:'block'}}) : React.createElement('div',{style:{padding:'3px',fontSize:'7px',color:'#fff',lineHeight:1.1}}, name) }; };
@@ -4169,7 +4339,14 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
           opp:SS[op].chars.map(tile), you:SS[yp].chars.map(tile), oppEmpty:SS[op].chars.length===0, youEmpty:SS[yp].chars.length===0,
           oppItems:(SS[op].items||[]).concat(SS[op].locations||[]).map(zTile), youItems:(SS[yp].items||[]).concat(SS[yp].locations||[]).map(zTile),
           oppHand:SS[op].hand.map(n=>handTile(n,hideOpp)), youHand:SS[yp].hand.map(n=>handTile(n,false)), oppHandCount:SS[op].hand.length, youHandCount:SS[yp].hand.length,
-          eventText:e2.text||'', showVictory:idx2>=ev2.length-1, victoryText:won?this.t('win').toUpperCase():this.t('loss').toUpperCase(), victoryColor:won?'#e0c15a':'#ff8a96' };
+          eventText:e2.text||'', eventTurn:e2.turn!=null?this.t('rpTurnShort',{n:e2.turn}):'',
+          eventKind:e2.type||'', hasEvent:!!e2.text,
+          oppInkPips:Array.from({length:Math.min(10,SS[op].inkTotal)},(_,i)=>({ on:i>=SS[op].inkExert?'var(--gold)':'rgba(255,255,255,.18)' })),
+          youInkPips:Array.from({length:Math.min(10,SS[yp].inkTotal)},(_,i)=>({ on:i>=SS[yp].inkExert?'var(--gold)':'rgba(255,255,255,.18)' })),
+          oppInkText:(SS[op].inkTotal-SS[op].inkExert)+'/'+SS[op].inkTotal,
+          youInkText:(SS[yp].inkTotal-SS[yp].inkExert)+'/'+SS[yp].inkTotal,
+          inkLabel:this.t('rpInk'), handLabel:this.t('rpHand'),
+          showVictory:idx2>=ev2.length-1, victoryText:won?this.t('win').toUpperCase():this.t('loss').toUpperCase(), victoryColor:won?'#e0c15a':'#ff8a96' };
       }
       const trendLabel=insight.trend==null?'—':((insight.trend>0?'+':'')+insight.trend+' pp');
       const trendState=insight.trend==null?this.t('mcTrendFlat'):insight.trend>0?this.t('mcTrendUp'):insight.trend<0?this.t('mcTrendDown'):this.t('mcTrendFlat');
@@ -4265,6 +4442,23 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       V.clearSets=()=>this.setState({sets:[],page:0});
       V.sort=st.sort; V.onSort=(e)=>this.setState({sort:e.target.value,page:0});
       const modes=[['owned',this.t('have')],['missing',this.t('missing')],['wishlist',this.t('wishlist')],['all',this.t('all')]];
+      { const WL=this.wishlistRows();
+        V.wlShow=st.collMode==='wishlist'&&WL.length>0;
+        V.wlTitle=this.t('wlTitle');
+        const hits=WL.filter(r=>r.hit).length;
+        V.wlSummary=hits>0?this.t('wlSummaryHit',{n:hits}):this.t('wlSummaryNone',{n:WL.length});
+        V.wlSummaryColor=hits>0?'var(--ok)':'var(--text-3)';
+        V.wlTargetLabel=this.t('wlTarget'); V.wlPriceLabel=this.t('wlPrice'); V.wlPlaceholder=this.t('wlPlaceholder');
+        V.wlRows=WL.map(r=>({
+          name:r.name,
+          price:r.price>0?this.fmt(r.price):'—',
+          target:r.target!=null?String(r.target).replace('.',','):'',
+          _onTarget:(e)=>this.setWishTarget(r.id,e.target.value),
+          hit:r.hit, badge:r.hit?this.t('wlHit'):(r.gap!=null?('+'+r.gap+'%'):''),
+          badgeColor:r.hit?'var(--ok)':'var(--text-4)',
+          hasBadge:r.hit||r.gap!=null,
+          rowBg:r.hit?'rgba(110,201,154,.08)':'transparent',
+          _open:()=>this.openCard(r.card) })); }
       V.collModes=modes.map(([m,label])=>({label,_go:()=>this.setState({collMode:m,page:0}),_style:this.chipStyle(st.collMode===m)}));
       const RAR=[['L','Legendary'],['E','Enchanted'],['SR','Super Rare'],['R','Rare'],['U','Uncommon'],['C','Common']];
       V.rarityChips=RAR.map(([code,label])=>({label:(this.RARITY[code]&&this.RARITY[code].l)||label,color:(this.RARITY[code]&&this.RARITY[code].c)||'#9a9aa2',_toggle:()=>this.toggleArr('rarities',code),_style:this.chipStyle((st.rarities||[]).includes(code))}));
@@ -4308,7 +4502,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
         V.colHasAny=(tn+tf)>0;
       }
       V.pageCards=all.slice(page*this.PAGE_SIZE,(page+1)*this.PAGE_SIZE).map(c=>{ const o=this.ownedOf(c.card_id); const owned=o.n+o.f>0; const cv=this.cardView(c); const wished=this.isWishlisted(c.card_id); const rk=c.rarity||'?'; const rr=this.RARITY[rk]||{};
-        return { name:c.name_en, sub:c.subtitle||c.version||'', hasSub:!!(c.subtitle||c.version), cid:c.card_id, cost:c.ink_cost==null?'–':c.ink_cost, ink:cv.ink, _local:cv._local, _remote:cv._remote, rarityColor:cv.rarityColor, rarityLabel:rr.l||rk, price:this.fmtOrDash(this.price(c)), owned, notOwned:!owned&&st.collMode==='all', ownedQty:o.n+o.f, nQty:'x'+(o.n||0), fQty:'x'+(o.f||0), fDim:(o.f>0?'var(--text-1)':'var(--text-4)'), foilTag:o.f>0?'✦':'', wishIcon:wished?'★':'☆', wishColor:wished?'#e0c15a':'#c8c8cc', wishAria:(wished?'Remove from wishlist: ':'Add to wishlist: ')+c.name_en, openAria:c.name_en, _wish:(e)=>{ e.stopPropagation(); this.toggleWishlist(c.card_id); }, _open:()=>this.openCard(c.card_id), _openKey:(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); this.openCard(c.card_id); } } }; });
+        return { name:c.name_en, sub:c.subtitle||c.version||'', hasSub:!!(c.subtitle||c.version), cid:c.card_id, cost:c.ink_cost==null?'–':c.ink_cost, ink:cv.ink, _local:cv._local, _remote:cv._remote, rarityColor:cv.rarityColor, rarityLabel:rr.l||rk, price:this.fmtOrDash(this.price(c)), owned, notOwned:!owned&&st.collMode==='all', ownedQty:o.n+o.f, nQty:'x'+(o.n||0), fQty:'x'+(o.f||0), fDim:(o.f>0?'var(--text-1)':'var(--text-4)'), foilTag:o.f>0?'✦':'', wishIcon:wished?'★':'☆', wishColor:wished?'#e0c15a':'#c8c8cc', wishAria:(wished?this.t('wlRemoveAria'):this.t('wlAddAria'))+c.name_en, openAria:c.name_en, _wish:(e)=>{ e.stopPropagation(); this.toggleWishlist(c.card_id); }, _open:()=>this.openCard(c.card_id), _openKey:(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); this.openCard(c.card_id); } } }; });
     }
 
     // ---- PRICES ----
@@ -4576,7 +4770,14 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
           {label:this.t('games'),value:ms.length,color:'#f3f3f5'},
         ];
         { const H=this.deckHealth(deck); const scoreColor=H.score>=80?'#5fd07f':H.score>=50?'#e6c15a':'#ff7a86';
-          V.dd.health={ score:H.score, scoreColor, inkablePct:H.inkablePct, avgCost:H.avgCost,
+          V.dd.ink={ title:this.t('inkTitle'),
+        pct:H.inkablePct, pctText:H.inkablePct+'%', barWidth:H.inkablePct+'%',
+        inkableLabel:this.t('inkInkable'), notLabel:this.t('inkNotInkable'),
+        inkableN:String(H.inkable), notN:String(Math.max(0,H.total-H.inkable)),
+        color:H.inkablePct>=55?'var(--ok)':(H.inkablePct>=45?'var(--warn)':'var(--err)'),
+        note:this.t('inkNote'), healthy:this.t('inkHealthy') };
+      V.dd.hasHealth=true;
+      V.dd.health={ score:H.score, scoreColor, inkablePct:H.inkablePct, avgCost:H.avgCost,
             warnings:H.warnings.map(w=>this.t('dh_'+w)), hasWarnings:H.warnings.length>0, ok:H.warnings.length===0,
             title:this.t('deckHealthTitle'), inkableLabel:this.t('inkablePctLabel'), avgLabel:this.t('avgCostLabel'), okLabel:this.t('deckHealthOk') }; }
         const buckets=[0,0,0,0,0,0,0,0]; const bseg=[{},{},{},{},{},{},{},{}]; const inkTot={};
