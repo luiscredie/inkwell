@@ -1,52 +1,37 @@
-INKWELL BRASIL — V9: big numbers no longer overflow
+INKWELL BRASIL — V10: cards per row
 
 Extract over your repo root, then:
 
   npm run verify
-  git add -A && git commit -m "V9: size display numerals to the string, split the Faltando tile"
+  git add -A && git commit -m "V10: 4-8 cards per row on desktop, fixed 2 on mobile"
   git push
 
 ────────────────────────────────────────────────────────────
-BOTH THINGS YOU SPOTTED HAVE ONE CAUSE
+WHAT CHANGED
 
-I sized the display numerals for the slot and not for the string. Brazilian
-currency runs long, and it broke in two places:
+The grid was repeat(auto-fill, minmax(230px, 1fr)) — the column count was a
+consequence of window width, not a choice. It is now repeat(N, minmax(0,1fr)) with
+N from state, and a 4/5/6/7/8 selector sits next to the result count.
 
-FALTANDO (Now Playing hero)
-  missingText concatenated two different units into one string — "4 · R$ 179,60" —
-  at 26px bold. It wrapped mid-value and left an orphan "4 ·" on the first line.
+minmax(0,1fr) rather than plain 1fr matters: with 1fr, each tile's minimum content
+width stops the column shrinking and the grid overflows to the right at 8 columns.
 
-VALOR DA COLEÇÃO (Overview KPI)
-  "R$ 11.732,60" at a fixed 44px inside a tile whose column floor was 210px. It
-  clipped at the "6".
-
-In both cases the number is the most important thing on the tile, and the number
-was the part you could not read.
+The choice is saved to localStorage (inkwell_collcols) and read at startup, clamped
+to 4-8. It is deliberately NOT in userPayload — this is a per-screen preference,
+and syncing it would make your phone inherit the desktop's setting.
 
 ────────────────────────────────────────────────────────────
-THE FIX
+BREAKPOINTS
 
-fitSize(str, max, mid, min) picks the size from the STRING LENGTH, not the slot:
-6 characters or fewer get the full size, up to 9 the middle, longer than that the
-smallest. Run against real values:
+  <= 860px      2 per row, tighter gutter, selector hidden
+  861-1240px    3 per row, selector hidden
+  > 1240px      your choice applies
 
-  4 · 67% · 2.047              44px
-  R$ 179,60                    34px
-  R$ 11.732,60                 27px
-  R$ 1.234.567,89              27px
+The middle band is a judgement call worth knowing about: 8 columns on a 1280px
+laptop would give ~130px tiles, too small to read the name or the Normal/Foil
+counts. Rather than let the selector produce an unusable result, it steps aside
+until there is room for it to mean something.
 
-Applied to the four Overview KPIs and the three Collection summary tiles, with
-overflow-wrap:anywhere as a backstop and the grid column floor raised 210 -> 248px.
+Hiding the control where it has no effect beats leaving it visible and inert.
 
-The Faltando tile now has three lines of its own: count at 26px, cost in gold mono
-at 12.5px, then the label. Two units, two lines.
-
-────────────────────────────────────────────────────────────
-STILL WORTH A LOOK
-
-Anywhere else currency renders at a large fixed size — the Market view and the
-Advisor — carries the same risk. I have not swept those yet; tell me if you see it
-and I will, or I can do it proactively.
-
-VERIFIED: all six suites green, fitSize executed here against seven real values,
-sc-if 140/140, sc-for 99/99, mirror byte-identical.
+VERIFIED: all six suites green, sc-for 100/100, mirror byte-identical.

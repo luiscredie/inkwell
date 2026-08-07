@@ -52,6 +52,7 @@
   .ink-sk{background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.09) 37%,rgba(255,255,255,.04) 63%);background-size:400px 100%;animation:ink-skeleton 1.2s ease-in-out infinite;border-radius:var(--r-md)}
   @media (prefers-reduced-motion: reduce){ .ink-sk{animation:none} }
   @media (max-width:1180px){ #ink-scroll{padding-left:34px} #rail{left:12px} }
+  @media (min-width:861px) and (max-width:1240px){ .ink-coll-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important} .ink-cols-toggle{display:none!important} }
   @media (max-width:860px){
     #rail .rail-nav button, #ink-main header button, .ink-tap{min-height:44px;min-width:44px}
     #ink-main header input{min-height:44px}
@@ -82,6 +83,8 @@
     #ink-main header h1{font-size:19px!important}
     #ink-main header > div:last-child{width:100%!important}
     .ink-view{max-width:100%!important}
+    .ink-coll-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}
+    .ink-cols-toggle{display:none!important}
     .ink-grid-2,.ink-grid-3{grid-template-columns:1fr!important}
     .ink-price-row{grid-template-columns:1fr auto!important;gap:6px 10px!important}
     .ink-price-row .ink-col-range{display:none!important}
@@ -475,13 +478,19 @@
 
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;font-size:13px;color:var(--text-3)">
             <span><b style="color:var(--text-1);font-family:var(--font-mono)">{{ resultCount }}</b> {{ resultCardsLabel }}{{ pageInfo }}</span>
-            <div style="display:flex;gap:8px">
+            <div style="display:flex;gap:8px;align-items:center">
+              <div class="ink-cols-toggle" style="display:flex;align-items:center;gap:6px;margin-right:6px">
+                <span style="font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--text-4)">{{ colsLabel }}</span>
+                <sc-for list="{{ colsOpts }}" as="o" hint-placeholder-count="5">
+                  <button onClick="{{ o._pick }}" style="{{ o._style }}">{{ o.n }}</button>
+                </sc-for>
+              </div>
               <button onClick="{{ prevPage }}" style="padding:7px 13px;border-radius:9px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:var(--text-2);cursor:pointer;font-size:13px">{{ prevLabel }}</button>
               <button onClick="{{ nextPage }}" style="padding:7px 13px;border-radius:9px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:var(--text-2);cursor:pointer;font-size:13px">{{ nextLabel }}</button>
             </div>
           </div>
 
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:var(--gutter)">
+          <div class="ink-coll-grid" style="{{ collGridStyle }}">
             <sc-for list="{{ pageCards }}" as="c" hint-placeholder-count="8">
               <div data-testid="collection-card" data-card-id="{{ c.cid }}" onClick="{{ c._open }}" onKeyDown="{{ c._openKey }}" role="button" tabindex="0" aria-label="{{ c.openAria }}" style="background:none;border:none;padding:0;cursor:pointer;text-align:left;display:block;transition:transform var(--dur-med)" style-hover="transform:translateY(-8px)">
                 <div style="position:relative;aspect-ratio:2.5/3.5;border-radius:var(--r-lg);overflow:hidden;background:var(--surface-container, var(--surface-panel));box-shadow:var(--shadow-ink);border:1px solid var(--outline)">
@@ -2152,6 +2161,7 @@ class Component extends DCLogic {
     selectedCard: null, selectedDeck: null,
     deckEdit: false, deckSearch: '', logMatchOpen: false, matchResult: 'win', matchInks: [], matchLogDeck: null,
     fmtFilter: 'all',
+    collCols: (()=>{ try{ const v=parseInt(localStorage.getItem('inkwell_collcols'),10); return (v>=4&&v<=8)?v:4; }catch(e){ return 4; } })(),
     matchRaw: '', matchParsed: null, matchDuplicateConfirm: false, selectedMatch: null, replayIndex: 0, replayPlaying: false, replayFull: false, matchResultFilter: 'all', matchDateFilter: 'all',
     bInks: [], bCost: 'all', bSets: [], bSetMenu: false, bSort: 'cost-asc', bGroup: 'none', bSize: 5, bOwnedOnly: false, bPage: 0,
     newDeckOpen: false, newDeckName: '', newDeckInks: [], newDeckFmt: 'core',
@@ -2200,6 +2210,7 @@ class Component extends DCLogic {
       colTotalTitle:'Total in collection', colNormal:'Normal', colFoil:'Foil', colValueShort:'Value', acquireTitle:'Cost to complete', noMatch:'No cards match', clearFilters:'Clear filters',
       eb_overview:'Painel', eb_collection:'Acervo', eb_prices:'LigaLorcana index', eb_decks:'Construction', eb_matches:'Match log', eb_learn:'Practice', sub_deckDetail:'Build, validate and analyse this deck',
       fmtFilterLabel:'Format', fmtCore:'Core', fmtInfinity:'Infinity', fmtCoreHint:'Legal in the current Core rotation', fmtInfinityHint:'Out of rotation — playable only in Infinity',
+      colsLabel:'Per row',
       newDeck:'+ New Deck', importDeck:'↑ Import', createDeck:'Create', cancel:'Cancel', format:'Format',
       inkable:'Inkable', uninkable:'Uninkable', cost:'Cost', allSets:'All sets',
       welcome:'Welcome, {name}', emptyMsg:'Your codex is empty. Import your collection from Dreamborn, or start building a deck — everything is tracked privately in your profile.',
@@ -2256,6 +2267,7 @@ class Component extends DCLogic {
       colTotalTitle:'Total na coleção', colNormal:'Normal', colFoil:'Foil', colValueShort:'Valor', acquireTitle:'Custo para completar', noMatch:'Nenhuma carta encontrada', clearFilters:'Limpar filtros',
       eb_overview:'Painel', eb_collection:'Acervo', eb_prices:'Índice LigaLorcana', eb_decks:'Construção', eb_matches:'Registro de partidas', eb_learn:'Prática', sub_deckDetail:'Monte, valide e analise este deck',
       fmtFilterLabel:'Formato', fmtCore:'Core', fmtInfinity:'Infinity', fmtCoreHint:'Legal na rotação Core atual', fmtInfinityHint:'Fora da rotação — jogável só no Infinity',
+      colsLabel:'Por linha',
       newDeck:'+ Novo Deck', importDeck:'↑ Importar', createDeck:'Criar', cancel:'Cancelar', format:'Formato',
       inkable:'Inkável', uninkable:'Não-inkável', cost:'Custo', allSets:'Todos os sets',
       welcome:'Bem-vindo, {name}', emptyMsg:'Seu códice está vazio. Importe sua coleção do Dreamborn ou comece a montar um deck — tudo fica salvo de forma privada no seu perfil.',
@@ -4176,6 +4188,10 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       V.fmtChips=[['core',this.t('fmtCore'),this.t('fmtCoreHint')],['infinity',this.t('fmtInfinity'),this.t('fmtInfinityHint')]]
         .map(([v,label,hint])=>({label,hint,_toggle:()=>this.setState({fmtFilter:st.fmtFilter===v?'all':v,page:0}),_style:this.chipStyle(st.fmtFilter===v)}));
       V.fmtFilterLabel=this.t('fmtFilterLabel');
+      V.colsLabel=this.t('colsLabel');
+      V.colsOpts=[4,5,6,7,8].map(n=>({ n:String(n), _pick:()=>{ try{ localStorage.setItem('inkwell_collcols',String(n)); }catch(e){} this.setState({collCols:n}); },
+        _style:'min-width:32px;padding:7px 9px;border-radius:var(--r-pill);border:1px solid '+(st.collCols===n?'var(--outline-strong)':'var(--outline)')+';background:'+(st.collCols===n?'rgba(255,255,255,.10)':'transparent')+';color:'+(st.collCols===n?'var(--text-1)':'var(--text-4)')+';cursor:pointer;font-size:12px;font-weight:600;font-family:inherit' }));
+      V.collGridStyle='display:grid;grid-template-columns:repeat('+st.collCols+',minmax(0,1fr));gap:var(--gutter)';
       V.exportCollection=this.exportCollection; V.triggerImport=this.triggerImport; V.importCollection=this.importCollection; V.setImpRef=this.setImpRef;
       const all=this.filtered(); V.resultCount=all.length.toLocaleString('en-US'); this._navIds=all.map(c=>c.card_id);
       const pages=Math.max(1,Math.ceil(all.length/this.PAGE_SIZE)); const page=Math.min(st.page,pages-1);

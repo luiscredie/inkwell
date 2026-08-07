@@ -1041,3 +1041,31 @@ As seis suítes verdes; `fitSize` executada aqui contra sete valores reais.
 
 Vale rever os outros lugares com moeda em corpo grande (Mercado, Advisor) — o
 mesmo risco existe onde ainda houver tamanho fixo.
+
+## V10 — colunas da Coleção (2026-08-06)
+
+Seletor de 4 a 8 cartas por linha no desktop, e 2 fixas no mobile.
+
+A grade era `repeat(auto-fill,minmax(230px,1fr))` — o número de colunas era
+consequência da largura da janela, não uma escolha. Agora é
+`repeat(N,minmax(0,1fr))` com N vindo do estado.
+
+O `minmax(0,1fr)` importa: com `1fr` puro, o conteúdo mínimo de cada tile impede
+a coluna de encolher e a grade estoura para a direita em 8 colunas.
+
+A preferência grava em `localStorage` (`inkwell_collcols`) e é lida na
+inicialização com clamp de 4–8. **Não entra no `userPayload`**: é ajuste de tela,
+por dispositivo — sincronizar isso faria o telefone herdar a escolha do desktop.
+
+### Faixas
+
+- **≤ 860 px** — 2 por linha, gutter menor, seletor escondido;
+- **861–1240 px** — 3 por linha, seletor escondido. Sem isso, 8 colunas num laptop
+  de 1280 px dariam tiles de ~130 px, ilegíveis;
+- **> 1240 px** — a escolha do usuário vale.
+
+Esconder o seletor onde ele não tem efeito é melhor que deixá-lo visível e inerte.
+
+### Verificação
+
+Seis suítes verdes, `sc-for` 100/100, espelho byte a byte.
