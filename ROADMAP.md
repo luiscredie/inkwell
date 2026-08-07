@@ -1153,3 +1153,71 @@ loop e `gl_FragColor` intactos, chaves balanceadas. `sc-if` 142/142,
 Não visto rodando: sem `site/data/**` o app não inicia aqui, e WebGL não é
 exercitável neste ambiente. **O shader precisa de olho humano** — é a primeira
 coisa a checar, junto do toggle e do comportamento em aba de fundo.
+
+## V12 — fundação do Master Implementation Guide (2026-08-06)
+
+Aplicado o que o guia define com precisão. As três seções novas (A/B/C) não foram
+construídas — o motivo está no fim.
+
+### Tipografia: Inter
+
+O guia nomeia **Inter** explicitamente, e é a segunda vez que um guia pede isso.
+Trocado de Plus Jakarta Sans.
+
+Vale registrar por que isso não contradiz o usuário: ele apontou "Atividade de
+Partidas" dizendo que gostava daquela fonte, num pedido cujo teor era *"não quero
+garamond nem serifa"*. Inter e Plus Jakarta são ambas grotescas humanistas quase
+indistinguíveis naquele tamanho de rótulo. O pedido real — nada de serifa — segue
+atendido. Reverter é uma linha.
+
+Escala de pesos do guia aplicada onde tem efeito: **300** no parágrafo de abertura
+de cada página, **500** nos rótulos em caixa alta (eram 700).
+
+Desvio: o guia pede 300 para "body". Não apliquei 300 ao corpo global — em 12–13 px
+sobre fundo `#0a0c10`, Inter Light fica fina demais e perde contraste. Fica 300 só
+onde o texto é grande o bastante para sustentar.
+
+### Exatidões do guia
+
+- fundo do modo performance agora é literalmente
+  `radial-gradient(circle at center,#1a1c23 0%,#0a0c10 100%)`;
+- borda do vidro de `.07` para `rgba(255,255,255,.05)`;
+- moeda: 480 px no hero (era 400), 40 px na navegação (era 48).
+
+### Por que A, B e C não foram construídas
+
+As três seções pedem dados que o app **não tem**. Auditado antes de escrever
+qualquer coisa:
+
+| Seção | Precisa de | Existe? |
+|---|---|---|
+| A · Ink Log Analyst | inkability, curva, mulligan | **sim** (`inkableOf`, `deckHealth`, `mulliganHand`) |
+| A · Ink Log Analyst | play rate, win-when-played por carta | **não** — os logs de partida não registram por carta |
+| A · Ink Log Analyst | goldfish sim "T-5.4" | **não** — não existe simulador de turnos |
+| B · Arbitrage Manager | preço em USD ao lado do BRL | **não** — só LigaLorcana em BRL |
+| B · Portfolio ROI | custo de aquisição por carta | **não** — a coleção guarda quantidade, não o que foi pago |
+| B · Meta Decay | resultados de campeonato | **não** — `meta-decks.json` é popularidade, sem torneio |
+| C · Volatility Alerts | histórico de preço | **sim** (`priceHistoryArtifact`, movers) |
+| C · Meta-Game Pulse | meta share % | **não** |
+| C · Advisor Insights | texto de análise | parcial (AI Coach existe) |
+
+Construir esses painéis agora significaria inventar números. "42% de risco de
+obsolescência", "T-5.4 para vencer", "spread de -12% vs global" — nos mockups são
+placeholders; no app seriam mentiras com aparência de dado. É exatamente o
+problema que o M2.4 evitou ao recusar linguagem de tier sem dado de torneio.
+
+O que **dá** para construir hoje, sem inventar nada:
+
+1. **Inkability** (A) — percentual inkável vs não-inkável do deck, que é
+   literalmente o que o guia pede em "Logic", e os dados existem;
+2. **Volatility Alerts** (C) — sparklines de maiores variações, a partir do
+   histórico de preços que já alimenta os movers;
+3. **Wishlist com alvo de preço** (B) — a wishlist existe; falta só o campo de
+   preço-alvo e o marcador de quando o mercado cruza.
+
+O resto precisa de dado novo: custo de aquisição no import, um feed de preço em
+USD, e ingestão de resultados de torneio.
+
+### Verificação
+
+Seis suítes verdes (584 chaves), espelho byte a byte, `sc-if` 142/142.

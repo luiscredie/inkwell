@@ -1,89 +1,78 @@
-INKWELL BRASIL — V11: Living Ink shader, perf mode, guide palette
+INKWELL BRASIL — V12: master guide foundation
 
 Extract over your repo root, then:
 
   npm run verify
-  git add -A && git commit -m "V11: Living Ink WebGL background, performance toggle, guide palette"
+  git add -A && git commit -m "V12: Inter, guide-exact perf background, glass border, logo scaling"
   git push
 
-CHECK THE SHADER FIRST. I cannot run WebGL here. It is the one thing in this
-package that needs your eyes before anything else.
+────────────────────────────────────────────────────────────
+APPLIED FROM THE MASTER GUIDE
+
+TYPOGRAPHY — Inter
+The guide names Inter explicitly, and that is now the second guide asking for it.
+Switched from Plus Jakarta Sans.
+
+Why this does not contradict you: you pointed at "Atividade de Partidas" and said
+you liked that font, in a message whose actual point was "no Garamond, no serif".
+Inter and Plus Jakarta are both humanist grotesques and are near-indistinguishable
+at that label size. The real request — no serif — still holds. One line to revert
+if you disagree.
+
+Weight scale applied where it does something: 300 on each page's lead paragraph,
+500 on uppercase labels (they were 700).
+
+One deviation: the guide says 300 for body. I did not apply that globally — at
+12-13px on #0a0c10, Inter Light goes thin and loses contrast. 300 is used only
+where the text is big enough to carry it.
+
+EXACT VALUES
+  perf-mode background is now literally
+    radial-gradient(circle at center,#1a1c23 0%,#0a0c10 100%)
+  glass border .07 -> rgba(255,255,255,.05)
+  coin: 480px in the hero (was 400), 40px in the nav (was 48)
 
 ────────────────────────────────────────────────────────────
-FROM THE GUIDE
+WHY I DID NOT BUILD SECTIONS A, B AND C
 
-Palette   background #0a0c10, glass rgba(255,255,255,.03) + blur 24px,
-          amethyst #8e5b9b added as an accent. #app no longer paints its own
-          background — it is transparent over the shader.
+I audited the data before writing any of them. Most of what those three screens
+display does not exist in this app:
 
-Density   Collection default 4 -> 5 per row (guide asks 5-6).
+  A · Ink Log Analyst
+      inkability, curve, mulligan .............. HAVE
+      per-card play rate / win-when-played ..... DO NOT — match logs are not
+                                                 recorded per card
+      goldfish simulator "T-5.4" ............... DO NOT — no turn simulator exists
 
-Logo      48px in the header, min(400px,62vw) on the entry screen.
+  B · Deck Strategy & Wishlist
+      arbitrage BRL vs USD ..................... DO NOT — only LigaLorcana, in BRL
+      portfolio ROI ............................ DO NOT — the collection stores
+                                                 quantities, not what you paid
+      meta decay / obsolescence risk ........... DO NOT — meta-decks.json is
+                                                 popularity, no tournament data
 
-LIVING INK
-The GLSL is the one shipped in the pack, maths untouched. I changed exactly one
-constant: charcoal from vec3(0.06,0.07,0.09) to vec3(0.039,0.047,0.063), which is
-the #0a0c10 the same guide specifies — the original was calibrated for #0e0e0e and
-would have sat visibly apart from the surface behind it.
+  C · Intelligence Hub
+      volatility alerts + sparklines ........... HAVE (price history, movers)
+      meta-game share % ........................ DO NOT
+      advisor insights ......................... PARTIAL (AI Coach exists)
 
-Plain WebGL, no dependency. Optimisations the guide did not ask for but that are
-not optional in an app also running a portfolio optimiser:
+Building those panels now would mean inventing numbers. "42% obsolescence risk",
+"T-5.4 average turn to win", "-12% spread vs global" are placeholders in a mockup;
+in the shipped app they would be lies wearing the costume of data. This is the same
+trap M2.4 avoided when it refused tier language without tournament results.
 
-  - renders at HALF RESOLUTION with DPR pinned to 1. It is a slow blur; nobody can
-    see the difference, and it cuts about 75% of the pixels.
-  - mediump instead of highp
-  - the loop STOPS when the tab is backgrounded (document.hidden)
-  - powerPreference: 'low-power'
-  - cancelAnimationFrame and resize-listener removal when the canvas unmounts
+WHAT I CAN BUILD NOW WITH NO INVENTION
 
-PERFORMANCE MODE
-Bottom-right pill, as in the mock. Default OFF (effects on), per the spec,
-persisted to localStorage.
+  1. Inkability panel (A) — inkable vs non-inkable percentage for a deck. This is
+     literally what the guide's own "Logic" line asks for, and the data is there.
+  2. Volatility alerts with sparklines (C) — from the price history already
+     feeding the movers list.
+  3. Wishlist with target price (B) — the wishlist exists; it needs a target field
+     and a marker for when the market crosses it.
 
-Three conditions force the static background REGARDLESS of the toggle:
-prefers-reduced-motion, screens <= 860px, and no WebGL context. That last one
-matters — without it, a machine with WebGL disabled would get an empty black
-page instead of a background.
+Everything else needs new data first: acquisition cost captured at import, a USD
+price feed, and tournament-result ingestion.
 
-The fallback is not a flat colour: two radials, amethyst and gold, keeping the
-depth at no GPU cost.
+Tell me which of the three to build, or which data source to wire up first.
 
-────────────────────────────────────────────────────────────
-THREE DEVIATIONS, ALL DELIBERATE
-
-FONT. The guide says "Inter or a clean Apple-ish Sans-Serif". It is staying Plus
-Jakarta Sans, which fits that description and is the exact font you pointed at as
-the one you like ("Atividade de Partidas"). Following the document to the letter
-here would mean overriding your stated preference. Say the word if you want Inter.
-
-THREE.JS VORTEX. Not implemented. That is roughly 600KB of library for a
-decorative element, in a single file already at 483KB. The shader delivers the
-"living artifact" feel with zero dependencies. If the vortex is essential it can
-go in — but lazy-loaded, and only when perf mode is off.
-
-LANDING HERO. The "Illuminary" mock is a presentation page: title, description,
-two CTAs. The app's Overview is a dashboard for someone already signed in, and
-putting a marketing hero above it would push the real data below the fold. The
-400px coin went to ONBOARDING instead, which is the actual landing moment.
-
-────────────────────────────────────────────────────────────
-A BUG I CAUGHT IN THIS PACKAGE BEFORE SHIPPING IT
-
-Adding the shader cleanup gave the class a SECOND componentWillUnmount. In JS the
-last definition silently wins, so the existing
-componentWillUnmount(){ this.unbindModalKeys(); } would have stopped running —
-leaking modal keyboard handlers on every unmount.
-
-Fixed by naming the shader cleanup releaseInkShader() and calling it from the
-existing lifecycle method. One componentWillUnmount, both jobs.
-
-────────────────────────────────────────────────────────────
-VERIFIED
-
-All six suites green (584 keys EN and PT). Shader verified in-file: void main,
-the flow loop and gl_FragColor intact, braces balanced. sc-if 142/142,
-sc-for 100/100, mirror byte-identical.
-
-NOT VERIFIED: the shader running. No WebGL in this environment and the app cannot
-boot without site/data/**. Check the background, the toggle, and that the
-animation actually pauses when you switch tabs.
+VERIFIED: six suites green (584 keys), mirror byte-identical, sc-if 142/142.
