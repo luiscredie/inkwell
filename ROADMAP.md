@@ -1221,3 +1221,67 @@ USD, e ingestão de resultados de torneio.
 ### Verificação
 
 Seis suítes verdes (584 chaves), espelho byte a byte, `sc-if` 142/142.
+
+## V13 — revisão de arte-final (2026-08-06)
+
+Quatro apontamentos do usuário. Todos corrigidos; um deles era um bug real que eu
+tinha introduzido.
+
+### 1. O Living Ink não aparecia — bug meu
+
+O shader estava correto e rodando. O que faltava: `#ink-scroll` ainda carregava
+um `background` com dois radiais, herdado do V7. Como o canvas é `position:fixed`
+em `z-index:0` e o `#ink-scroll` está acima, o conteúdo pintava por cima do
+shader inteiro. Eu tinha zerado o fundo do `#app`, mas não o do scroller.
+
+`#ink-scroll{background:transparent}`. Uma linha.
+
+Lição registrada: ao trocar para fundo global, não basta limpar o container raiz —
+qualquer camada intermediária com `background` própria anula tudo abaixo dela.
+
+### 2. Coleção: o texto da carta cobria a arte
+
+O rodapé de vidro ficava **sobre** a imagem, tampando o terço inferior — que é
+onde ficam nome e texto da carta impressos. Havia ainda um gradiente escuro por
+cima da arte só para o texto branco ter contraste.
+
+Invertido: a arte agora aparece inteira e limpa, e nome, quantidades e preço
+foram para **fora** da imagem, logo abaixo. O gradiente saiu junto — existia para
+resolver um problema que deixou de existir.
+
+Quantidades passaram a mono compacto (`4  2 foil`) em vez de três blocos
+rotulados. Numa grade de 5 a 8 colunas não há largura para rótulos, e o rodapé de
+vidro forçava altura fixa que cortava a carta.
+
+### 3. Idiomas misturados
+
+Varredura completa do arquivo: **41 strings em inglês** apareciam com o app em
+português.
+
+- 25 literais no template (Cancel, No grouping, Sign out, Backup & Settings,
+  Pipeline report, Reload…);
+- 12 toasts em `showToast('...')` — nunca passaram por `this.t()`;
+- 3 atributos (`aria-label="Close"`, dois `title`);
+- 1 frase com markup no meio ("Signed in as <b>email</b>...").
+
+Todas em chaves EN/PT. O dicionário foi de 584 para **617 chaves em cada idioma**.
+
+A varredura virou parte do processo: procurar nós de texto literais no template e
+`showToast` com string crua. O `i18n-contract` valida paridade e chaves usadas,
+mas não detecta texto que **nunca foi ligado** ao dicionário — foi assim que 41
+strings passaram.
+
+### 4. Sobreposição no mobile
+
+A pílula de performance ficava fixa no canto inferior direito, exatamente sobre a
+barra de navegação inferior. Escondida em telas ≤ 860 px — e, nessas telas, o
+shader já é desligado à força, então o controle não controlava nada mesmo.
+
+### Verificação
+
+Seis suítes verdes, 617 chaves EN e PT, `sc-if` 142/142, `sc-for` 100/100,
+espelho byte a byte. Restam no template apenas o slogan "Seu lugar de Lorcana"
+(nome da marca, não traduzível) e três nomes de variável em holes.
+
+Não visto rodando. **O shader é a primeira coisa a conferir** — a correção é
+plausível mas não foi observada.

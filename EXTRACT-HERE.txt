@@ -1,78 +1,71 @@
-INKWELL BRASIL — V12: master guide foundation
+INKWELL BRASIL — V13: art-final review
 
 Extract over your repo root, then:
 
   npm run verify
-  git add -A && git commit -m "V12: Inter, guide-exact perf background, glass border, logo scaling"
+  git add -A && git commit -m "V13: fix Living Ink occlusion, card tile legibility, 41 untranslated strings, mobile overlap"
   git push
 
 ────────────────────────────────────────────────────────────
-APPLIED FROM THE MASTER GUIDE
+1. THE LIVING INK BACKGROUND — MY BUG
 
-TYPOGRAPHY — Inter
-The guide names Inter explicitly, and that is now the second guide asking for it.
-Switched from Plus Jakarta Sans.
+The shader was fine and running. #ink-scroll still carried a two-radial background
+left over from V7. The canvas is position:fixed at z-index:0 and #ink-scroll sits
+above it, so the content layer painted over the entire shader. I had cleared the
+background on #app but not on the scroller inside it.
 
-Why this does not contradict you: you pointed at "Atividade de Partidas" and said
-you liked that font, in a message whose actual point was "no Garamond, no serif".
-Inter and Plus Jakarta are both humanist grotesques and are near-indistinguishable
-at that label size. The real request — no serif — still holds. One line to revert
-if you disagree.
+  #ink-scroll{background:transparent}
 
-Weight scale applied where it does something: 300 on each page's lead paragraph,
-500 on uppercase labels (they were 700).
+One line. The lesson is worth keeping: moving to a global background means clearing
+EVERY intermediate layer, not just the root — any wrapper with its own background
+cancels everything beneath it.
 
-One deviation: the guide says 300 for body. I did not apply that globally — at
-12-13px on #0a0c10, Inter Light goes thin and loses contrast. 300 is used only
-where the text is big enough to carry it.
+2. COLLECTION — THE CARD TEXT WAS COVERED
 
-EXACT VALUES
-  perf-mode background is now literally
-    radial-gradient(circle at center,#1a1c23 0%,#0a0c10 100%)
-  glass border .07 -> rgba(255,255,255,.05)
-  coin: 480px in the hero (was 400), 40px in the nav (was 48)
+The glass footer sat ON TOP of the image, hiding the bottom third — which is
+exactly where a Lorcana card prints its name and rules text. There was also a dark
+gradient over the art purely so white text would have contrast.
+
+Inverted. The art is now shown whole and unobstructed; name, counts and price moved
+BELOW the image. The gradient is gone — it existed to solve a problem that no
+longer exists.
+
+Counts are now compact mono ("4  2 foil") instead of three labelled blocks. At 5-8
+columns there is no width for labels, and the glass footer forced a fixed height
+that cropped the card.
+
+3. MIXED LANGUAGES
+
+Swept the whole file. 41 English strings were showing while the app was in
+Portuguese:
+
+  25 template literals   Cancel, No grouping, Sign out, Backup & Settings,
+                         Pipeline report, Reload, Win, Loss, ...
+  12 toasts              showToast('Backup downloaded'), 'Deck deleted',
+                         'No cards matched — check the format', ... — none of
+                         these ever went through this.t()
+   3 attributes          aria-label="Close" (×3), two title attributes
+   1 mixed sentence      "Signed in as <b>email</b>. Your profiles sync..."
+
+All now keyed in EN and PT. The dictionary went from 584 to 617 keys per language.
+
+Worth noting how they survived: i18n-contract checks parity and that used keys
+exist, but it cannot see text that was NEVER WIRED to the dictionary. That is the
+gap 41 strings lived in. The scan for literal text nodes and raw showToast strings
+is now part of how I check this file.
+
+4. MOBILE OVERLAP
+
+The performance pill was fixed bottom-right, directly on top of the bottom nav bar.
+Hidden below 860px — and on those screens the shader is force-disabled anyway, so
+the control had nothing to control.
 
 ────────────────────────────────────────────────────────────
-WHY I DID NOT BUILD SECTIONS A, B AND C
+VERIFIED
 
-I audited the data before writing any of them. Most of what those three screens
-display does not exist in this app:
+Six suites green, 617 keys EN and PT, sc-if 142/142, sc-for 100/100, mirror
+byte-identical. The only literals left in the template are the tagline "Seu lugar
+de Lorcana" (brand, not translatable) and three variable names inside holes.
 
-  A · Ink Log Analyst
-      inkability, curve, mulligan .............. HAVE
-      per-card play rate / win-when-played ..... DO NOT — match logs are not
-                                                 recorded per card
-      goldfish simulator "T-5.4" ............... DO NOT — no turn simulator exists
-
-  B · Deck Strategy & Wishlist
-      arbitrage BRL vs USD ..................... DO NOT — only LigaLorcana, in BRL
-      portfolio ROI ............................ DO NOT — the collection stores
-                                                 quantities, not what you paid
-      meta decay / obsolescence risk ........... DO NOT — meta-decks.json is
-                                                 popularity, no tournament data
-
-  C · Intelligence Hub
-      volatility alerts + sparklines ........... HAVE (price history, movers)
-      meta-game share % ........................ DO NOT
-      advisor insights ......................... PARTIAL (AI Coach exists)
-
-Building those panels now would mean inventing numbers. "42% obsolescence risk",
-"T-5.4 average turn to win", "-12% spread vs global" are placeholders in a mockup;
-in the shipped app they would be lies wearing the costume of data. This is the same
-trap M2.4 avoided when it refused tier language without tournament results.
-
-WHAT I CAN BUILD NOW WITH NO INVENTION
-
-  1. Inkability panel (A) — inkable vs non-inkable percentage for a deck. This is
-     literally what the guide's own "Logic" line asks for, and the data is there.
-  2. Volatility alerts with sparklines (C) — from the price history already
-     feeding the movers list.
-  3. Wishlist with target price (B) — the wishlist exists; it needs a target field
-     and a marker for when the market crosses it.
-
-Everything else needs new data first: acquisition cost captured at import, a USD
-price feed, and tournament-result ingestion.
-
-Tell me which of the three to build, or which data source to wire up first.
-
-VERIFIED: six suites green (584 keys), mirror byte-identical, sc-if 142/142.
+NOT VERIFIED: rendered output — no site/data/** here, so the app cannot boot.
+CHECK THE SHADER FIRST. The fix is sound in principle but I have not seen it.

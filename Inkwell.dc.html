@@ -66,7 +66,7 @@
   /* Performance mode, reduced motion and small screens all fall back to this. */
   #ink-fallback{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(circle at center,#1a1c23 0%,#0a0c10 100%)}
   #ink-main{overflow-x:hidden}
-  #ink-scroll{background:radial-gradient(1200px 700px at 50% -8%,rgba(255,255,255,.045),transparent 62%),radial-gradient(900px 600px at 88% 12%,rgba(212,175,55,.035),transparent 60%)}
+  #ink-scroll{background:transparent}
   #ink-scroll::-webkit-scrollbar,.ink-sc::-webkit-scrollbar{width:10px;height:10px}
   #ink-scroll::-webkit-scrollbar-thumb,.ink-sc::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:8px;border:3px solid transparent;background-clip:padding-box}
   @keyframes ink-fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
@@ -90,6 +90,7 @@
     .ink-view{max-width:100%!important}
     .ink-coll-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}
     .ink-cols-toggle{display:none!important}
+    .ink-perf-toggle{display:none!important}
     .ink-grid-2,.ink-grid-3{grid-template-columns:1fr!important}
     .ink-price-row{grid-template-columns:1fr auto!important;gap:6px 10px!important}
     .ink-price-row .ink-col-range{display:none!important}
@@ -151,7 +152,7 @@
 <sc-if value="{{ inkFxOff }}" hint-placeholder-val="{{ true }}">
   <div id="ink-fallback" aria-hidden="true"></div>
 </sc-if>
-<button onClick="{{ togglePerf }}" title="{{ perfHint }}" style="position:fixed;right:18px;bottom:18px;z-index:60;display:flex;align-items:center;gap:8px;padding:9px 15px;border-radius:var(--r-pill);background:var(--glass-bg);backdrop-filter:var(--glass-blur);border:var(--glass-border);color:var(--text-3);font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;font-family:inherit;min-height:38px">
+<button class="ink-perf-toggle" onClick="{{ togglePerf }}" title="{{ perfHint }}" style="position:fixed;right:18px;bottom:18px;z-index:60;display:flex;align-items:center;gap:8px;padding:9px 15px;border-radius:var(--r-pill);background:var(--glass-bg);backdrop-filter:var(--glass-blur);border:var(--glass-border);color:var(--text-3);font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;font-family:inherit;min-height:38px">
   <span style="color:{{ perfDotColor }}">⚡</span>{{ perfLabel }}
 </button>
 
@@ -180,9 +181,9 @@
     <sc-if value="{{ dataFatal }}" hint-placeholder-val="{{ false }}">
       <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;min-height:100vh;padding:30px;text-align:center">
         <div style="width:52px;height:52px;border-radius:14px;background:rgba(226,59,78,.12);border:1px solid rgba(226,59,78,.35);display:flex;align-items:center;justify-content:center;font-size:26px">⚠</div>
-        <h2 style="font-family:var(--font-title);font-weight:700;font-size:22px;color:var(--err)">Data could not be loaded</h2>
+        <h2 style="font-family:var(--font-title);font-weight:700;font-size:22px;color:var(--err)">{{ uiFatalTitle }}</h2>
         <p style="max-width:460px;color:#c8c0d0;font-size:14px;line-height:1.6">{{ dataFatal }}</p>
-        <button onClick="{{ reloadApp }}" style="margin-top:6px;padding:10px 20px;border-radius:11px;background:linear-gradient(180deg,var(--gold),var(--accent-strong));border:none;color:#2a2118;font-weight:700;cursor:pointer">Reload</button>
+        <button onClick="{{ reloadApp }}" style="margin-top:6px;padding:10px 20px;border-radius:11px;background:linear-gradient(180deg,var(--gold),var(--accent-strong));border:none;color:#2a2118;font-weight:700;cursor:pointer">{{ uiReload }}</button>
       </div>
     </sc-if>
 
@@ -507,11 +508,10 @@
 
           <div class="ink-coll-grid" style="{{ collGridStyle }}">
             <sc-for list="{{ pageCards }}" as="c" hint-placeholder-count="8">
-              <div data-testid="collection-card" data-card-id="{{ c.cid }}" onClick="{{ c._open }}" onKeyDown="{{ c._openKey }}" role="button" tabindex="0" aria-label="{{ c.openAria }}" style="background:none;border:none;padding:0;cursor:pointer;text-align:left;display:block;transition:transform var(--dur-med)" style-hover="transform:translateY(-8px)">
+              <div data-testid="collection-card" data-card-id="{{ c.cid }}" onClick="{{ c._open }}" onKeyDown="{{ c._openKey }}" role="button" tabindex="0" aria-label="{{ c.openAria }}" style="background:none;border:none;padding:0;cursor:pointer;text-align:left;display:flex;flex-direction:column;transition:transform var(--dur-med)" style-hover="transform:translateY(-6px)">
                 <div style="position:relative;aspect-ratio:2.5/3.5;border-radius:var(--r-lg);overflow:hidden;background:var(--surface-container, var(--surface-panel));box-shadow:var(--shadow-ink);border:1px solid var(--outline)">
                   <img src="{{ c._local }}" data-local="{{ c._local }}" data-remote="{{ c._remote }}" data-cid="{{ c.cid }}" onError="{{ imgError }}" onLoad="{{ imgLoad }}" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block" />
                   <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:12px;text-align:center;font-family:var(--font-title);font-weight:700;font-size:15px;background:{{ c.ink }};display:none" data-ph>{{ c.name }}</div>
-                  <div style="position:absolute;inset:0;background:linear-gradient(to top,var(--surface-page) 4%,rgba(19,19,19,.45) 38%,transparent 70%);pointer-events:none"></div>
                   <div style="position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;z-index:2">
                     <span style="padding:4px 11px;border-radius:var(--r-pill);background:rgba(19,19,19,.8);backdrop-filter:blur(8px);font-size:11px;font-weight:700;color:{{ c.rarityColor }};border:1px solid var(--outline);white-space:nowrap">{{ c.rarityLabel }}</span>
                     <button onClick="{{ c._wish }}" aria-label="{{ c.wishAria }}" style="width:30px;height:30px;border-radius:50%;background:rgba(19,19,19,.75);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1;color:{{ c.wishColor }};cursor:pointer;border:1px solid var(--outline);padding:0;flex-shrink:0" style-hover="background:rgba(19,19,19,.95)">{{ c.wishIcon }}</button>
@@ -519,27 +519,18 @@
                   <sc-if value="{{ c.notOwned }}" hint-placeholder-val="{{ false }}">
                     <div style="position:absolute;inset:0;background:rgba(19,19,19,.62)"></div>
                   </sc-if>
-                  <div style="position:absolute;bottom:0;left:0;right:0;padding:14px;background:var(--glass-bg);backdrop-filter:var(--glass-blur);border-top:var(--glass-border)">
-                    <div style="font-family:var(--font-title);font-weight:600;font-size:17px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-1)">{{ c.name }}</div>
-                    <sc-if value="{{ c.hasSub }}" hint-placeholder-val="{{ false }}">
-                      <div style="font-size:11.5px;color:var(--text-3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.sub }}</div>
-                    </sc-if>
-                    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-top:12px">
-                      <div style="display:flex;gap:12px">
-                        <div>
-                          <div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-4)">{{ colNormalLabel }}</div>
-                          <div style="font-size:14px;font-weight:600;color:var(--text-1);margin-top:1px">{{ c.nQty }}</div>
-                        </div>
-                        <div>
-                          <div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)">{{ colFoilLabel }}</div>
-                          <div style="font-size:14px;font-weight:600;color:{{ c.fDim }};margin-top:1px">{{ c.fQty }}</div>
-                        </div>
-                      </div>
-                      <div style="text-align:right">
-                        <div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-4)">{{ colValueLabel }}</div>
-                        <div style="font-size:14px;font-weight:600;color:var(--ok);margin-top:1px">{{ c.price }}</div>
-                      </div>
+                </div>
+                <div style="padding:12px 4px 0">
+                  <div style="font-weight:600;font-size:14px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-1)">{{ c.name }}</div>
+                  <sc-if value="{{ c.hasSub }}" hint-placeholder-val="{{ false }}">
+                    <div style="font-size:11.5px;font-weight:300;color:var(--text-3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.sub }}</div>
+                  </sc-if>
+                  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:9px">
+                    <div style="display:flex;gap:10px;font-family:var(--font-mono);font-size:12px">
+                      <span style="color:var(--text-2)">{{ c.nQty }}</span>
+                      <span style="color:{{ c.fDim }}">{{ c.fQty }}<span style="font-size:9px;color:var(--gold);margin-left:2px">{{ colFoilLabel }}</span></span>
                     </div>
+                    <span style="font-family:var(--font-mono);font-size:12.5px;color:var(--ok)">{{ c.price }}</span>
                   </div>
                 </div>
               </div>
@@ -696,7 +687,7 @@
               </div>
               <div style="display:flex;gap:10px">
                 <button onClick="{{ importDeck }}" style="padding:10px 20px;border-radius:11px;background:{{ accent }};border:none;color:var(--on-accent);font-weight:700;cursor:pointer">{{ importDeckTitleLabel }}</button>
-                <button onClick="{{ importDeckToggle }}" style="padding:10px 20px;border-radius:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:var(--text-2);cursor:pointer">Cancel</button>
+                <button onClick="{{ importDeckToggle }}" style="padding:10px 20px;border-radius:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:var(--text-2);cursor:pointer">{{ cancel }}</button>
               </div>
             </div>
           </sc-if>
@@ -1522,7 +1513,7 @@
                   <button onClick="{{ b.toggleSetMenu }}" style="padding:8px 12px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:var(--text-1);font-size:12.5px;cursor:pointer">{{ b.setLabel }} ▾</button>
                   <sc-if value="{{ b.setMenu }}" hint-placeholder-val="{{ false }}">
                     <div class="ink-sc" style="position:absolute;top:calc(100% + 6px);left:0;z-index:30;width:250px;max-height:320px;overflow-y:auto;background:#16161c;border:1px solid rgba(255,255,255,.12);border-radius:13px;padding:8px;box-shadow:0 16px 44px rgba(0,0,0,.55)">
-                      <button onClick="{{ b.clearSets }}" style="width:100%;text-align:left;padding:8px 10px;border-radius:9px;background:none;border:none;color:var(--accent);cursor:pointer;font-size:13px;font-weight:600">All sets</button>
+                      <button onClick="{{ b.clearSets }}" style="width:100%;text-align:left;padding:8px 10px;border-radius:9px;background:none;border:none;color:var(--accent);cursor:pointer;font-size:13px;font-weight:600">{{ allSets }}</button>
                       <sc-for list="{{ b.setOptions }}" as="s" hint-placeholder-count="6">
                         <button onClick="{{ s._toggle }}" style="width:100%;display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;background:none;border:none;color:var(--text-1);cursor:pointer;font-size:12.5px;text-align:left">
                           <span style="width:15px;height:15px;border-radius:4px;border:1px solid rgba(255,255,255,.2);background:{{ s.checkBg }};flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--on-accent);font-weight:700">{{ s.check }}</span>
@@ -1540,9 +1531,9 @@
                   <option value="value-desc">Value ↓</option>
                 </select>
                 <select value="{{ b.group }}" onChange="{{ b.onGroup }}" style="padding:8px 11px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:var(--text-1);font-size:12.5px">
-                  <option value="none">No grouping</option>
-                  <option value="color">Group by color</option>
-                  <option value="set">Group by set</option>
+                  <option value="none">{{ grpNone }}</option>
+                  <option value="color">{{ grpColor }}</option>
+                  <option value="set">{{ grpSet }}</option>
                 </select>
                 <button onClick="{{ b.toggleOwned }}" style="{{ b.ownedStyle }}">{{ b.ownedLabel }}</button>
                 <span data-testid="builder-range" style="font-size:12px;color:var(--text-4);font-family:var(--font-mono);margin-left:auto">{{ b.rangeFrom }}–{{ b.rangeTo }} / {{ b.rangeTotal }} {{ cards }}</span>
@@ -1577,7 +1568,7 @@
                   </div>
                 </sc-for>
                 <sc-if value="{{ b.empty }}" hint-placeholder-val="{{ false }}">
-                  <div style="text-align:center;color:var(--text-4);font-size:13px;padding:32px 0">No cards match these filters.</div>
+                  <div style="text-align:center;color:var(--text-4);font-size:13px;padding:32px 0">{{ noMatchFilters }}</div>
                 </sc-if>
                 <sc-if value="{{ b.hasPager }}" hint-placeholder-val="{{ false }}">
                   <div style="display:flex;justify-content:center;align-items:center;gap:10px;padding:14px 0 4px">
@@ -1626,11 +1617,11 @@
           <!-- match log form -->
           <sc-if value="{{ logMatchOpen }}" hint-placeholder-val="{{ false }}">
             <div style="padding:20px;border-radius:18px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);margin-bottom:22px;animation:ink-pop .2s both">
-              <h3 style="font-family:var(--font-title);font-weight:700;font-size:15px;margin-bottom:14px">Log a game</h3>
+              <h3 style="font-family:var(--font-title);font-weight:700;font-size:15px;margin-bottom:14px">{{ logGameTitle }}</h3>
               <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
                 <div style="display:flex;gap:6px">
-                  <button onClick="{{ setMatchWin }}" style="{{ matchWinStyle }}">Win</button>
-                  <button onClick="{{ setMatchLoss }}" style="{{ matchLossStyle }}">Loss</button>
+                  <button onClick="{{ setMatchWin }}" style="{{ matchWinStyle }}">{{ win }}</button>
+                  <button onClick="{{ setMatchLoss }}" style="{{ matchLossStyle }}">{{ loss }}</button>
                 </div>
                 <span style="font-size:13px;color:var(--text-3)">vs inks:</span>
                 <div style="display:flex;flex-wrap:wrap;gap:6px">
@@ -1638,7 +1629,7 @@
                     <button onClick="{{ c._toggle }}" style="{{ c._style }}">{{ c.label }}</button>
                   </sc-for>
                 </div>
-                <button onClick="{{ saveMatch }}" style="padding:9px 18px;border-radius:11px;background:{{ accent }};border:none;color:var(--on-accent);font-weight:700;cursor:pointer;margin-left:auto">Save game</button>
+                <button onClick="{{ saveMatch }}" style="padding:9px 18px;border-radius:11px;background:{{ accent }};border:none;color:var(--on-accent);font-weight:700;cursor:pointer;margin-left:auto">{{ saveGame }}</button>
               </div>
             </div>
           </sc-if>
@@ -1692,7 +1683,7 @@
                           <sc-if value="{{ c.invalid }}" hint-placeholder-val="{{ false }}">
                             <span title="{{ c.warn }}" style="color:var(--warn);font-size:14px;cursor:help">⚠</span>
                           </sc-if>
-                          <a href="{{ c.liga }}" target="_blank" rel="noopener" title="Buy on LigaLorcana" style="font-size:11px;color:#7ac0ff;font-family:var(--font-mono);white-space:nowrap">{{ c.price }} ↗</a>
+                          <a href="{{ c.liga }}" target="_blank" rel="noopener" title="{{ buyOnLiga }}" style="font-size:11px;color:#7ac0ff;font-family:var(--font-mono);white-space:nowrap">{{ c.price }} ↗</a>
                           <sc-if value="{{ deckEdit }}" hint-placeholder-val="{{ false }}">
                             <span style="display:flex;align-items:center;gap:6px">
                               <button onClick="{{ c._dec }}" style="width:22px;height:22px;border-radius:6px;background:rgba(255,255,255,.08);border:none;color:var(--text-1);cursor:pointer;font-size:14px;line-height:1">−</button>
@@ -1767,7 +1758,7 @@
             <div style="display:flex;gap:6px;flex-shrink:0">
               <button data-testid="modal-prev" onClick="{{ navPrev }}" aria-label="{{ navPrevAria }}" disabled="{{ navPrevDisabled }}" style="{{ navPrevStyle }}">‹</button>
               <button data-testid="modal-next" onClick="{{ navNext }}" aria-label="{{ navNextAria }}" disabled="{{ navNextDisabled }}" style="{{ navNextStyle }}">›</button>
-              <button onClick="{{ closeCard }}" aria-label="Close" style="background:rgba(255,255,255,.06);border:none;color:var(--text-2);width:34px;height:34px;border-radius:10px;cursor:pointer;font-size:16px">×</button>
+              <button onClick="{{ closeCard }}" aria-label="{{ closeLabel }}" style="background:rgba(255,255,255,.06);border:none;color:var(--text-2);width:34px;height:34px;border-radius:10px;cursor:pointer;font-size:16px">×</button>
             </div>
           </div>
 
@@ -1800,7 +1791,7 @@
                 </sc-if>
               </div>
               <div style="text-align:right">
-                <div style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3)">foil</div>
+                <div style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3)">{{ foilLower }}</div>
                 <div style="font-family:var(--font-mono);font-weight:700;font-size:20px;margin-top:2px;color:var(--warn)">{{ cm.foilPrice }}</div>
                 <sc-if value="{{ cm.foilRange }}" hint-placeholder-val="{{ false }}">
                   <div style="font-family:var(--font-mono);font-size:11.5px;color:var(--text-3);margin-top:3px">low–high {{ cm.foilRange }}</div>
@@ -1843,7 +1834,7 @@
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px">
               <span style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3)">{{ inkwellStatusLabel }}</span>
               <sc-if value="{{ cm.inkableOverridden }}" hint-placeholder-val="{{ false }}">
-                <button onClick="{{ exportOverrides }}" title="Export your inkable corrections" style="font-size:10.5px;color:#7ac0ff;background:none;border:none;cursor:pointer;font-family:var(--font-mono)">{{ exportCorrLabel }}</button>
+                <button onClick="{{ exportOverrides }}" title="{{ exportCorrHint }}" style="font-size:10.5px;color:#7ac0ff;background:none;border:none;cursor:pointer;font-family:var(--font-mono)">{{ exportCorrLabel }}</button>
               </sc-if>
             </div>
             <div style="display:flex;gap:8px">
@@ -1862,7 +1853,7 @@
                 <button onClick="{{ cm._incN }}" style="width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.08);border:none;color:var(--text-1);cursor:pointer;font-size:16px">+</button>
               </div>
               <div style="display:flex;align-items:center;gap:10px">
-                <span style="font-size:13px;color:var(--warn);width:48px">Foil</span>
+                <span style="font-size:13px;color:var(--warn);width:48px">{{ colFoil }}</span>
                 <button onClick="{{ cm._decF }}" style="width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.08);border:none;color:var(--text-1);cursor:pointer;font-size:16px">−</button>
                 <span style="font-family:var(--font-mono);font-weight:700;font-size:16px;width:24px;text-align:center">{{ cm.qtyF }}</span>
                 <button onClick="{{ cm._incF }}" style="width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.08);border:none;color:var(--text-1);cursor:pointer;font-size:16px">+</button>
@@ -1884,7 +1875,7 @@
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:20px 0">
           <div style="padding:12px;border-radius:12px;background:rgba(255,255,255,.05)"><div style="font-size:11px;color:var(--text-3)">{{ importUniqueLabel }}</div><b style="font-family:var(--font-mono)">{{ importUnique }}</b></div>
           <div style="padding:12px;border-radius:12px;background:rgba(255,255,255,.05)"><div style="font-size:11px;color:var(--text-3)">{{ normalLabel }}</div><b style="font-family:var(--font-mono)">{{ importNormal }}</b></div>
-          <div style="padding:12px;border-radius:12px;background:rgba(255,255,255,.05)"><div style="font-size:11px;color:var(--text-3)">Foil</div><b style="font-family:var(--font-mono)">{{ importFoil }}</b></div>
+          <div style="padding:12px;border-radius:12px;background:rgba(255,255,255,.05)"><div style="font-size:11px;color:var(--text-3)">{{ colFoil }}</div><b style="font-family:var(--font-mono)">{{ importFoil }}</b></div>
         </div>
         <sc-if value="{{ importHasUnresolved }}" hint-placeholder-val="{{ false }}">
           <div style="padding:10px 12px;border-radius:10px;background:rgba(230,193,90,.1);color:var(--warn);font-size:12px;margin-bottom:14px;display:flex;flex-direction:column;gap:9px">
@@ -1944,7 +1935,7 @@
       <div onClick="{{ stop }}" class="ink-sc" style="width:min(520px,100%);max-height:88vh;overflow-y:auto;background:var(--surface-modal);border:1px solid rgba(199,154,68,.2);border-radius:20px;padding:26px 26px 24px;animation:ink-pop .26s both">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
           <div>
-            <h2 style="font-family:var(--font-title);font-weight:700;font-size:20px;background:linear-gradient(180deg,var(--gold),var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent">Backup & Settings</h2>
+            <h2 style="font-family:var(--font-title);font-weight:700;font-size:20px;background:linear-gradient(180deg,var(--gold),var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent">{{ backupSettings }}</h2>
             <div style="font-size:12.5px;color:var(--text-3);margin-top:3px">Profile · {{ displayName }} (@{{ activeUser }})</div>
           </div>
           <button onClick="{{ closeSettings }}" style="background:rgba(255,255,255,.06);border:none;color:var(--text-2);width:30px;height:30px;border-radius:9px;cursor:pointer;font-size:16px">×</button>
@@ -1953,14 +1944,14 @@
         <sc-if value="{{ syncOn }}" hint-placeholder-val="{{ false }}">
           <div style="padding:16px;border-radius:14px;background:rgba(46,144,224,.07);border:1px solid rgba(46,144,224,.22);margin-bottom:16px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-              <div style="display:flex;align-items:center;gap:9px"><span style="font-size:15px">☁</span><span style="font-weight:700;font-size:14px;color:var(--text-1)">Cloud Sync</span></div>
+              <div style="display:flex;align-items:center;gap:9px"><span style="font-size:15px">☁</span><span style="font-weight:700;font-size:14px;color:var(--text-1)">{{ cloudSync }}</span></div>
               <span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:{{ syncBadgeBg }};color:{{ syncBadgeColor }}">{{ syncBadge }}</span>
             </div>
             <sc-if value="{{ syncSignedIn }}" hint-placeholder-val="{{ false }}">
-              <div style="font-size:12.5px;color:#c8d4e0;margin-bottom:12px">Signed in as <b>{{ syncEmail }}</b>. Your profiles sync across devices automatically.</div>
+              <div style="font-size:12.5px;color:var(--text-2);margin-bottom:12px">{{ signedInAs }} <b>{{ syncEmail }}</b> · {{ syncAcrossDevices }}</div>
               <div style="display:flex;gap:10px">
                 <button onClick="{{ syncNow }}" style="flex:1;padding:10px;border-radius:11px;background:rgba(46,144,224,.2);border:1px solid rgba(46,144,224,.4);color:#9ccdff;cursor:pointer;font-size:13px;font-weight:600">↻ Sync now</button>
-                <button onClick="{{ signOutSync }}" style="padding:10px 16px;border-radius:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:var(--text-2);cursor:pointer;font-size:13px">Sign out</button>
+                <button onClick="{{ signOutSync }}" style="padding:10px 16px;border-radius:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:var(--text-2);cursor:pointer;font-size:13px">{{ signOut }}</button>
               </div>
             </sc-if>
             <sc-if value="{{ syncSignedOut }}" hint-placeholder-val="{{ true }}">
@@ -1983,7 +1974,7 @@
           </div>
         </div>
 
-        <div style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3);margin-bottom:10px">Full profile backup</div>
+        <div style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3);margin-bottom:10px">{{ fullBackup }}</div>
         <div style="display:flex;gap:10px;margin-bottom:6px">
           <button onClick="{{ fullExport }}" style="flex:1;padding:11px;border-radius:11px;background:linear-gradient(180deg,var(--gold),var(--accent-strong));border:none;color:#2a2118;font-weight:700;cursor:pointer;font-size:13.5px">↓ Download backup (.json)</button>
           <button onClick="{{ triggerFullImport }}" style="flex:1;padding:11px;border-radius:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:var(--text-1);cursor:pointer;font-size:13.5px">↑ Restore backup</button>
@@ -1993,11 +1984,11 @@
 
         <div style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3);margin-bottom:10px">Collection (CSV)</div>
         <div style="display:flex;gap:10px;margin-bottom:20px">
-          <button onClick="{{ exportCollection }}" style="flex:1;padding:10px;border-radius:11px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:var(--text-2);cursor:pointer;font-size:13px">Export collection CSV</button>
+          <button onClick="{{ exportCollection }}" style="flex:1;padding:10px;border-radius:11px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:var(--text-2);cursor:pointer;font-size:13px">{{ exportCollCsv }}</button>
         </div>
 
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-          <span style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3)">Your data corrections</span>
+          <span style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3)">{{ yourCorrections }}</span>
           <span style="font-size:12px;color:var(--text-3);font-family:var(--font-mono)">{{ correctionCount }}</span>
         </div>
         <sc-if value="{{ hasCorrections }}" hint-placeholder-val="{{ false }}">
@@ -2010,8 +2001,8 @@
             </sc-for>
           </div>
           <div style="display:flex;gap:10px">
-            <button onClick="{{ exportOverrides }}" style="flex:1;padding:9px;border-radius:10px;background:rgba(46,144,224,.14);border:1px solid rgba(46,144,224,.3);color:#7ac0ff;cursor:pointer;font-size:12.5px">Export corrections CSV</button>
-            <button onClick="{{ clearCorrections }}" style="padding:9px 14px;border-radius:10px;background:rgba(226,59,78,.12);border:1px solid rgba(226,59,78,.3);color:var(--err);cursor:pointer;font-size:12.5px">Clear</button>
+            <button onClick="{{ exportOverrides }}" style="flex:1;padding:9px;border-radius:10px;background:rgba(46,144,224,.14);border:1px solid rgba(46,144,224,.3);color:#7ac0ff;cursor:pointer;font-size:12.5px">{{ exportCorrCsv }}</button>
+            <button onClick="{{ clearCorrections }}" style="padding:9px 14px;border-radius:10px;background:rgba(226,59,78,.12);border:1px solid rgba(226,59,78,.3);color:var(--err);cursor:pointer;font-size:12.5px">{{ clearLabel }}</button>
           </div>
         </sc-if>
         <sc-if value="{{ noCorrections }}" hint-placeholder-val="{{ true }}">
@@ -2030,7 +2021,7 @@
         <sc-if value="{{ reportOpen }}" hint-placeholder-val="{{ false }}">
           <div style="height:1px;background:rgba(255,255,255,.08);margin:16px 0"></div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-            <span style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3)">Pipeline report</span>
+            <span style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3)">{{ pipelineReport }}</span>
             <span style="font-size:11px;color:var(--text-4);font-family:var(--font-mono)">{{ reportDate }}</span>
           </div>
           <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
@@ -2061,7 +2052,7 @@
           </sc-if>
         </sc-if>
         <sc-if value="{{ noReportTech }}" hint-placeholder-val="{{ false }}">
-          <div style="font-size:12.5px;color:var(--text-4);padding:10px 0 0">No pipeline validation report was published with this build.</div>
+          <div style="font-size:12.5px;color:var(--text-4);padding:10px 0 0">{{ noPipelineReport }}</div>
         </sc-if>
       </div>
     </div>
@@ -2072,7 +2063,7 @@
       <div onClick="{{ stop }}" role="dialog" aria-modal="true" class="ink-sc" style="width:min(600px,100%);max-height:88vh;overflow-y:auto;background:var(--surface-modal);border:1px solid rgba(199,154,68,.22);border-radius:20px;padding:26px;animation:ink-pop .26s both">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px">
           <h2 style="font-family:var(--font-title);font-weight:800;font-size:20px">{{ lesson.title }}</h2>
-          <button onClick="{{ closeLesson }}" aria-label="Close" style="background:rgba(255,255,255,.06);border:none;color:var(--text-2);width:30px;height:30px;border-radius:9px;cursor:pointer;font-size:16px;flex-shrink:0">×</button>
+          <button onClick="{{ closeLesson }}" aria-label="{{ closeLabel }}" style="background:rgba(255,255,255,.06);border:none;color:var(--text-2);width:30px;height:30px;border-radius:9px;cursor:pointer;font-size:16px;flex-shrink:0">×</button>
         </div>
         <div style="display:flex;flex-direction:column;gap:14px;margin-top:10px">
           <sc-for list="{{ lesson.steps }}" as="s" hint-placeholder-count="3">
@@ -2095,7 +2086,7 @@
         <span style="font-size:10px;padding:2px 8px;border-radius:20px;background:rgba(255,255,255,.06);color:var(--text-3)">{{ rf.estimatedLabel }}</span>
         <span style="flex:1"></span>
         <button type="button" data-testid="replay-hidden-toggle" onClick="{{ replayFsToggleHidden }}" aria-pressed="{{ rf.showHidden }}" style="background:rgba(255,255,255,.08);border:none;color:var(--text-1);padding:0 12px;height:34px;border-radius:9px;cursor:pointer;font-size:12px">{{ rf.hiddenLabel }}</button>
-        <button type="button" data-testid="replay-fullscreen-close" onClick="{{ replayFsClose }}" aria-label="Close" style="background:rgba(255,255,255,.08);border:none;color:var(--text-1);width:34px;height:34px;border-radius:9px;cursor:pointer;font-size:16px">×</button>
+        <button type="button" data-testid="replay-fullscreen-close" onClick="{{ replayFsClose }}" aria-label="{{ closeLabel }}" style="background:rgba(255,255,255,.08);border:none;color:var(--text-1);width:34px;height:34px;border-radius:9px;cursor:pointer;font-size:16px">×</button>
       </div>
       <div style="flex:1;display:flex;flex-direction:column;min-height:0;position:relative">
         <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-start;gap:8px;padding:12px 24px;background:linear-gradient(180deg,rgba(120,90,160,.34),rgba(90,70,130,.14))">
@@ -2228,6 +2219,9 @@ class Component extends DCLogic {
       fmtFilterLabel:'Format', fmtCore:'Core', fmtInfinity:'Infinity', fmtCoreHint:'Legal in the current Core rotation', fmtInfinityHint:'Out of rotation — playable only in Infinity',
       colsLabel:'Per row',
       perfMode:'Perf mode', perfOn:'on', perfOff:'off', perfHintOff:'Living Ink background is running. Tap to switch to the static background.', perfHintOn:'Static background. Tap to turn the Living Ink shader back on.',
+      uiFatalTitle:'Data could not be loaded', uiReload:'Reload', grpNone:'No grouping', grpColor:'Group by ink', grpSet:'Group by set', noMatchFilters:'No cards match these filters.', logGameTitle:'Log a game', foilLower:'foil', backupSettings:'Backup & settings', cloudSync:'Cloud sync', signedInAs:'Signed in as', signOut:'Sign out', fullBackup:'Full profile backup', exportCollCsv:'Export collection CSV', yourCorrections:'Your data corrections', exportCorrCsv:'Export corrections CSV', clearLabel:'Clear', pipelineReport:'Pipeline report', noPipelineReport:'No pipeline validation report shipped with this build.',
+      syncAcrossDevices:'Your profiles sync across devices automatically.', buyOnLiga:'Buy on LigaLorcana', closeLabel:'Close', exportCorrHint:'Export your inkable corrections',
+      tBackupDown:'Backup downloaded', tBackupRestored:'Backup restored', tBackupInvalid:'That file is not a valid Inkwell backup', tNoCorrections:'No corrections to export', tArtUpdated:'Art updated', tCollExported:'Collection exported', tEmptyFile:'That file is empty', tNameDeck:'Name your deck first', tPasteDeck:'Paste a decklist first', tNoCardsMatched:'No cards matched — check the format', tDeckDeleted:'Deck deleted', tCorrCleared:'Corrections cleared',
       newDeck:'+ New Deck', importDeck:'↑ Import', createDeck:'Create', cancel:'Cancel', format:'Format',
       inkable:'Inkable', uninkable:'Uninkable', cost:'Cost', allSets:'All sets',
       welcome:'Welcome, {name}', emptyMsg:'Your codex is empty. Import your collection from Dreamborn, or start building a deck — everything is tracked privately in your profile.',
@@ -2286,6 +2280,9 @@ class Component extends DCLogic {
       fmtFilterLabel:'Formato', fmtCore:'Core', fmtInfinity:'Infinity', fmtCoreHint:'Legal na rotação Core atual', fmtInfinityHint:'Fora da rotação — jogável só no Infinity',
       colsLabel:'Por linha',
       perfMode:'Modo perf', perfOn:'ligado', perfOff:'desligado', perfHintOff:'O fundo Living Ink está rodando. Toque para usar o fundo estático.', perfHintOn:'Fundo estático. Toque para religar o shader Living Ink.',
+      uiFatalTitle:'Não foi possível carregar os dados', uiReload:'Recarregar', grpNone:'Sem agrupamento', grpColor:'Agrupar por ink', grpSet:'Agrupar por set', noMatchFilters:'Nenhuma carta corresponde a estes filtros.', logGameTitle:'Registrar partida', foilLower:'foil', backupSettings:'Backup e ajustes', cloudSync:'Sincronização na nuvem', signedInAs:'Conectado como', signOut:'Sair', fullBackup:'Backup completo do perfil', exportCollCsv:'Exportar coleção em CSV', yourCorrections:'Suas correções de dados', exportCorrCsv:'Exportar correções em CSV', clearLabel:'Limpar', pipelineReport:'Relatório do pipeline', noPipelineReport:'Nenhum relatório de validação foi publicado com esta build.',
+      syncAcrossDevices:'Seus perfis sincronizam entre dispositivos automaticamente.', buyOnLiga:'Comprar na LigaLorcana', closeLabel:'Fechar', exportCorrHint:'Exportar suas correções de inkável',
+      tBackupDown:'Backup baixado', tBackupRestored:'Backup restaurado', tBackupInvalid:'Esse arquivo não é um backup válido do Inkwell', tNoCorrections:'Nenhuma correção para exportar', tArtUpdated:'Arte atualizada', tCollExported:'Coleção exportada', tEmptyFile:'Esse arquivo está vazio', tNameDeck:'Dê um nome ao deck primeiro', tPasteDeck:'Cole uma decklist primeiro', tNoCardsMatched:'Nenhuma carta reconhecida — confira o formato', tDeckDeleted:'Deck excluído', tCorrCleared:'Correções apagadas',
       newDeck:'+ Novo Deck', importDeck:'↑ Importar', createDeck:'Criar', cancel:'Cancelar', format:'Formato',
       inkable:'Inkável', uninkable:'Não-inkável', cost:'Custo', allSets:'Todos os sets',
       welcome:'Bem-vindo, {name}', emptyMsg:'Seu códice está vazio. Importe sua coleção do Dreamborn ou comece a montar um deck — tudo fica salvo de forma privada no seu perfil.',
@@ -2743,13 +2740,13 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
 
   loadLocal(){ try { const s = localStorage.getItem('inkwell_user_'+this.state.activeUser); return s?this.migrateUser(JSON.parse(s), this.state.activeUser):null; } catch(e){ return null; } }
   saveLocal(){ try { const payload = JSON.stringify(this.userPayload()); const key='inkwell_user_'+this.state.activeUser; localStorage.setItem(key, payload); localStorage.setItem('inkwell_backup_'+this.state.activeUser, JSON.stringify({ ts:Date.now(), schema:this.USER_SCHEMA, data:payload })); this.setState({lastSaved:Date.now()}); this.recordPriceSnapshot(); this.queueSync(); } catch(e){} }
-  fullExport = ()=>{ const payload={ schema:'inkwell', _schema:this.USER_SCHEMA, app_version:this.APP_VERSION, user:this.state.activeUser, display_name:this.state.displayName, exported_at:new Date().toISOString(), collection:this.state.collection, decks:this.state.decks, matches:this.state.matches, overrides:this.state.overrides, wishlist:this.state.wishlist, learnDone:this.state.learnDone, activeDeckId:this.state.activeDeckId||null }; const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='inkwell-'+this.state.activeUser+'-backup.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); this.showToast('Backup downloaded'); };
+  fullExport = ()=>{ const payload={ schema:'inkwell', _schema:this.USER_SCHEMA, app_version:this.APP_VERSION, user:this.state.activeUser, display_name:this.state.displayName, exported_at:new Date().toISOString(), collection:this.state.collection, decks:this.state.decks, matches:this.state.matches, overrides:this.state.overrides, wishlist:this.state.wishlist, learnDone:this.state.learnDone, activeDeckId:this.state.activeDeckId||null }; const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='inkwell-'+this.state.activeUser+'-backup.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); this.showToast(this.t('tBackupDown')); };
   triggerFullImport = ()=>{ if(this._fimp) this._fimp.click(); };
-  fullImport = (e)=>{ const file=e.target&&e.target.files&&e.target.files[0]; if(!file) return; const rd=new FileReader(); rd.onload=()=>{ try{ const j=this.migrateUser(JSON.parse(String(rd.result)), this.state.activeUser); this.setState({ collection:j.collection, decks:j.decks, matches:j.matches, overrides:j.overrides, wishlist:j.wishlist, learnDone:j.learnDone, activeDeckId:j.activeDeckId||null, dataWarning:j.warning||this.state.dataWarning }, ()=>{ this.saveLocal(); this.showToast('Backup restored'); }); }catch(err){ this.showToast('Invalid backup file'); } }; rd.readAsText(file); e.target.value=''; };
+  fullImport = (e)=>{ const file=e.target&&e.target.files&&e.target.files[0]; if(!file) return; const rd=new FileReader(); rd.onload=()=>{ try{ const j=this.migrateUser(JSON.parse(String(rd.result)), this.state.activeUser); this.setState({ collection:j.collection, decks:j.decks, matches:j.matches, overrides:j.overrides, wishlist:j.wishlist, learnDone:j.learnDone, activeDeckId:j.activeDeckId||null, dataWarning:j.warning||this.state.dataWarning }, ()=>{ this.saveLocal(); this.showToast(this.t('tBackupRestored')); }); }catch(err){ this.showToast(this.t('tBackupInvalid')); } }; rd.readAsText(file); e.target.value=''; };
   setFimpRef = (el)=>{ this._fimp=el; };
   inkableOf(card){ if(!card) return null; const o=this.state.overrides&&this.state.overrides[card.card_id]; if(o&&typeof o.inkable==='number') return o.inkable; return (typeof card.inkable==='number')?card.inkable:null; }
   setInkable(cardId, val){ const ov={...(this.state.overrides||{})}; const card=this.byId[cardId]; if(card && card.inkable===val){ if(ov[cardId]){ delete ov[cardId].inkable; if(!Object.keys(ov[cardId]).length) delete ov[cardId]; } } else { ov[cardId]={...(ov[cardId]||{}),inkable:val}; } this.setState({overrides:ov},()=>{ this.saveLocal(); this.showToast(val===1?'Marked inkable':'Marked uninkable'); }); }
-  exportOverrides = ()=>{ const ov=this.state.overrides||{}; const rows=[['card_id','name','inkable']]; for(const id in ov){ if(typeof ov[id].inkable==='number'){ const c=this.byId[id]; rows.push([id,'"'+((c&&c.name_en)||'').replace(/"/g,'""')+'"',ov[id].inkable]); } } if(rows.length<2){ this.showToast('No corrections to export'); return; } const csv=rows.map(r=>r.join(',')).join('\n'); const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='inkwell-inkable-corrections.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); this.showToast('Corrections exported ('+(rows.length-1)+')'); };
+  exportOverrides = ()=>{ const ov=this.state.overrides||{}; const rows=[['card_id','name','inkable']]; for(const id in ov){ if(typeof ov[id].inkable==='number'){ const c=this.byId[id]; rows.push([id,'"'+((c&&c.name_en)||'').replace(/"/g,'""')+'"',ov[id].inkable]); } } if(rows.length<2){ this.showToast(this.t('tNoCorrections')); return; } const csv=rows.map(r=>r.join(',')).join('\n'); const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='inkwell-inkable-corrections.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); this.showToast('Corrections exported ('+(rows.length-1)+')'); };
   showToast(t){ this.setState({toast:t}); clearTimeout(this._tt); this._tt=setTimeout(()=>this.setState({toast:null}),1900); }
 
   // ---------- helpers ----------
@@ -3631,7 +3628,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
   baseName(n){ return String(n||'').replace(/\s*\(.*?\)\s*/g,'').trim().toLowerCase(); }
   variantLabel(card){ const m=String(card.name_en).match(/\(([^)]+)\)\s*$/); if(m) return m[1]; const r={C:'Standard',U:'Standard',R:'Rare',SR:'Super Rare',L:'Legendary',E:'Enchanted',EP:'Epic',P:'Promo'}[card.rarity]; return r||'Standard'; }
   variantsOf(card){ if(!card) return []; const bn=this.baseName(card.name_en); return this.cards.filter(c=>this.baseName(c.name_en)===bn).sort((a,b)=>this.setOrder(a.set_code)-this.setOrder(b.set_code)); }
-  switchVariant(fromId, toId){ if(fromId===toId){ this.setState({selectedCard:toId}); return; } const coll={...this.state.collection}; const src=coll[fromId]; if(src){ const dst=coll[toId]?{...coll[toId]}:{n:0,f:0}; dst.n=(dst.n||0)+(src.n||0); dst.f=(dst.f||0)+(src.f||0); coll[toId]=dst; delete coll[fromId]; } this.setState({collection:coll,selectedCard:toId},()=>{ this.saveLocal(); this.showToast('Art updated'); }); }
+  switchVariant(fromId, toId){ if(fromId===toId){ this.setState({selectedCard:toId}); return; } const coll={...this.state.collection}; const src=coll[fromId]; if(src){ const dst=coll[toId]?{...coll[toId]}:{n:0,f:0}; dst.n=(dst.n||0)+(src.n||0); dst.f=(dst.f||0)+(src.f||0); coll[toId]=dst; delete coll[fromId]; } this.setState({collection:coll,selectedCard:toId},()=>{ this.saveLocal(); this.showToast(this.t('tArtUpdated')); }); }
   iconImgEl(src, size){ const s=size||16; return React.createElement('img',{src:src,alt:'',style:{width:s+'px',height:s+'px',display:'block'}}); }
   inkIcon(name){ return 'ink/'+String(name).toLowerCase()+'.svg'; }
   inkIconEl(name, size){ const s=size||18; return React.createElement('img',{src:this.inkIcon(name),alt:'',style:{width:s+'px',height:s+'px',display:'block'}}); }
@@ -3665,7 +3662,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
 
   // ---------- mutations ----------
   parseCsvLine(line){ const out=[]; let cur='',q=false; for(let i=0;i<line.length;i++){ const ch=line[i]; if(q){ if(ch==='"'){ if(line[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=ch; } else { if(ch==='"')q=true; else if(ch===','){out.push(cur);cur='';} else cur+=ch; } } out.push(cur); return out; }
-  exportCollection = ()=>{ const rows=[['card_id','name','set','normal','foil']]; for(const [id,e] of Object.entries(this.state.collection)){ const c=this.byId[id]; if(!c) continue; rows.push([id,'"'+(c.name_en||'').replace(/"/g,'""')+'"',c.set_code,e.n||0,e.f||0]); } const csv=rows.map(r=>r.join(',')).join('\n'); const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='inkwell-collection.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); this.showToast('Collection exported'); };
+  exportCollection = ()=>{ const rows=[['card_id','name','set','normal','foil']]; for(const [id,e] of Object.entries(this.state.collection)){ const c=this.byId[id]; if(!c) continue; rows.push([id,'"'+(c.name_en||'').replace(/"/g,'""')+'"',c.set_code,e.n||0,e.f||0]); } const csv=rows.map(r=>r.join(',')).join('\n'); const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='inkwell-collection.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); this.showToast(this.t('tCollExported')); };
   triggerImport = ()=>{ if(this._imp) this._imp.click(); };
   nameKey(n){ return String(n||'').toLowerCase().replace(/\s*\(.*?\)\s*/g,'').trim(); }
   buildNameIndex(){ if(this._byName) return; this._byName={}; for(const c of this.cards){ const k=this.nameKey(c.name_en); (this._byName[k]=this._byName[k]||[]).push(c); } }
@@ -3694,7 +3691,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     const add=(id,n,f)=>{ if(!id) return; const cur=coll[id]||{n:0,f:0}; cur.n+=n||0; cur.f+=f||0; coll[id]=cur; };
     if(/\.json$/i.test(file.name)){ const j=JSON.parse(txt); const src=j.collection||j; for(const id in src){ if(this.byId[id]){ const e2=src[id]; add(id,e2.n||0,e2.f||0); matched++; } else rejects.push({where:'json', raw:String(id).slice(0,60), reason:'unknown_id'}); } }
     else {
-      const lines=txt.split(/\r?\n/).filter(l=>l.trim()); if(!lines.length){ this.showToast('Empty file'); return; }
+      const lines=txt.split(/\r?\n/).filter(l=>l.trim()); if(!lines.length){ this.showToast(this.t('tEmptyFile')); return; }
       const head=lines[0].toLowerCase(); const cols=this.parseCsvLine(lines[0]).map(h=>h.trim().toLowerCase());
       const dream=/set number/.test(head)&&/card number/.test(head);
       const ci=(names)=>{ for(const n of names){ const i=cols.indexOf(n); if(i>=0) return i; } return -1; };
@@ -3768,8 +3765,8 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     if((cur.n||0)===0 && (cur.f||0)===0) delete coll[id]; else coll[id]=cur;
     this.setState({collection:coll}, ()=>this.saveLocal());
   }
-  createDeck = ()=>{ const st=this.state; if(!st.newDeckName.trim()){ this.showToast('Name your deck first'); return; } const id='deck-'+Date.now().toString(36); const deck={id,name:st.newDeckName.trim(),colors:st.newDeckInks.slice(0,this.maxInks(st.newDeckFmt)),format:st.newDeckFmt,cards:{},notes:'',created_at:new Date().toISOString().slice(0,10)}; this.setState({decks:[...st.decks,deck],newDeckOpen:false,newDeckName:'',newDeckInks:[],newDeckFmt:'core',view:'deckDetail',selectedDeck:id,deckEdit:true,bInks:deck.colors.slice(),bCost:'all',bSets:[],bGroup:'none'},()=>this.saveLocal()); };
-  importDeck = ()=>{ const st=this.state; const text=st.importDeckText||''; if(!text.trim()){ this.showToast('Paste a decklist first'); return; }
+  createDeck = ()=>{ const st=this.state; if(!st.newDeckName.trim()){ this.showToast(this.t('tNameDeck')); return; } const id='deck-'+Date.now().toString(36); const deck={id,name:st.newDeckName.trim(),colors:st.newDeckInks.slice(0,this.maxInks(st.newDeckFmt)),format:st.newDeckFmt,cards:{},notes:'',created_at:new Date().toISOString().slice(0,10)}; this.setState({decks:[...st.decks,deck],newDeckOpen:false,newDeckName:'',newDeckInks:[],newDeckFmt:'core',view:'deckDetail',selectedDeck:id,deckEdit:true,bInks:deck.colors.slice(),bCost:'all',bSets:[],bGroup:'none'},()=>this.saveLocal()); };
+  importDeck = ()=>{ const st=this.state; const text=st.importDeckText||''; if(!text.trim()){ this.showToast(this.t('tPasteDeck')); return; }
     if(!this.byNumIdx){ this.byNumIdx={}; for(const c of this.cards) this.byNumIdx[c.set_code+'|'+String(c.card_number)]=c; }
     const cards={}; let matched=0, unresolved=0; const inkTally={};
     for(const raw of text.split(/\r?\n/)){ const line=raw.trim(); if(!line) continue;
@@ -3782,7 +3779,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       cards[c.card_id]=Math.min(99,(cards[c.card_id]||0)+qty); matched++;
       for(const ink of this.inkList(c)) inkTally[ink]=(inkTally[ink]||0)+qty;
     }
-    if(!matched){ this.showToast('No cards matched — check the format'); return; }
+    if(!matched){ this.showToast(this.t('tNoCardsMatched')); return; }
     const colors=Object.entries(inkTally).sort((a,b)=>b[1]-a[1]).slice(0,this.maxInks(st.importDeckFmt)).map(x=>x[0]);
     const id='deck-'+Date.now().toString(36); const name=st.importDeckName.trim()||'Imported deck';
     const deck={id,name,colors,format:st.importDeckFmt,cards,notes:'',created_at:new Date().toISOString().slice(0,10)};
@@ -3790,7 +3787,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     if(blockers.length){ const first=blockers[0]; this.showToast(this.t('importBlocked')+' · '+first.message+(blockers.length>1?' · +'+(blockers.length-1):'')); return; }
     this.setState({decks:[...st.decks,deck],importDeckOpen:false,importDeckName:'',importDeckText:'',importDeckFmt:'core',view:'deckDetail',selectedDeck:id,deckEdit:false},()=>{ this.saveLocal(); this.showToast('Deck imported · '+matched+' cards'+(unresolved?' · '+unresolved+' unmatched':'')); });
   };
-  deleteDeck = ()=>{ const id=this.state.selectedDeck, decks=this.state.decks.filter(d=>d.id!==id); const activeDeckId=this.state.activeDeckId===id?((decks[0]||{}).id||null):this.state.activeDeckId; this.setState({decks,matches:this.state.matches.filter(m=>m.deck_id!==id),activeDeckId,view:'decks',selectedDeck:null},()=>{this.saveLocal();this.showToast('Deck deleted');}); };
+  deleteDeck = ()=>{ const id=this.state.selectedDeck, decks=this.state.decks.filter(d=>d.id!==id); const activeDeckId=this.state.activeDeckId===id?((decks[0]||{}).id||null):this.state.activeDeckId; this.setState({decks,matches:this.state.matches.filter(m=>m.deck_id!==id),activeDeckId,view:'decks',selectedDeck:null},()=>{this.saveLocal();this.showToast(this.t('tDeckDeleted'));}); };
   deckDelta(cardId, delta){ const decks=this.state.decks.map(d=>{ if(d.id!==this.state.selectedDeck) return d; const cards={...d.cards}; const card=this.byId[cardId]; const limit=card?this.copyLimitFor(card,d.format):4; const nv=Math.min(limit,Math.max(0,(cards[cardId]||0)+delta)); if(nv===0) delete cards[cardId]; else cards[cardId]=nv; return {...d,cards}; }); this.setState({decks},()=>this.saveLocal()); }
   matchEngine(){ return (typeof window!=='undefined'&&window.INKWELL_MATCH_LEGACY)||null; }
   selectedMatchObj(){ return (this.state.matches||[]).find(m=>m.id===this.state.selectedMatch)||null; }
@@ -3989,7 +3986,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     { let bts=null; try{ const b=localStorage.getItem('inkwell_backup_'+st.activeUser); if(b) bts=JSON.parse(b).ts; }catch(e){} V.backupLabel=bts?('Last snapshot '+new Date(bts).toLocaleString()):'No snapshot yet'; }
     const corr=Object.entries(st.overrides||{}).filter(([id,o])=>o&&typeof o.inkable==='number').map(([id,o])=>{ const c=this.byId[id]; return {name:(c&&c.name_en)||id, val:o.inkable===1?'Inkable':'Uninkable', valColor:o.inkable===1?'#5fd07f':'#ff7a86'}; });
     V.corrections=corr; V.correctionCount=corr.length; V.hasCorrections=corr.length>0; V.noCorrections=corr.length===0;
-    V.clearCorrections=()=>{ this.setState({overrides:{}},()=>{ this.saveLocal(); this.showToast('Corrections cleared'); }); };
+    V.clearCorrections=()=>{ this.setState({overrides:{}},()=>{ this.saveLocal(); this.showToast(this.t('tCorrCleared')); }); };
     // ---- M7 validation report ----
     V.dhTitle=this.t('dhTitle');
     V.dhTechLabel=this.t(st.dhTechOpen?'dhHide':'dhTech');
@@ -4030,6 +4027,10 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     const titles={learn:[this.t('learn'),this.t('sub_learn')],matches:[this.t('matches'),this.t('sub_matches')],overview:[this.t('overview'),this.t('sub_overview',{name:st.displayName})],collection:[this.t('collection'),this.t('sub_collection')],prices:[this.t('prices'),this.t('sub_prices')],decks:[this.t('decks'),this.t('sub_decks')],deckDetail:[(this.deckById(st.selectedDeck)||{}).name||this.t('decks'),this.t('sub_deckDetail')],advisor:[this.t('advisorBtn'),this.t('advisorSub')]};
     const eyebrows={overview:'eb_overview',collection:'eb_collection',prices:'eb_prices',decks:'eb_decks',deckDetail:'eb_decks',advisor:'eb_decks',matches:'eb_matches',learn:'eb_learn'};
     V.pageEyebrow=this.t(eyebrows[st.view]||'eb_overview');
+    for(const k of ['uiFatalTitle','uiReload','cancel','allSets','grpNone','grpColor','grpSet','noMatchFilters',
+      'logGameTitle','win','loss','saveGame','foilLower','colFoil','backupSettings','cloudSync','signedInAs',
+      'signOut','fullBackup','exportCollCsv','yourCorrections','exportCorrCsv','clearLabel','pipelineReport',
+      'noPipelineReport','syncAcrossDevices','buyOnLiga','closeLabel','exportCorrHint']) V[k]=this.t(k);
     { const on=this.inkFxAllowed();
       V.inkFxOn=on; V.inkFxOff=!on; V.setShaderRef=this.setShaderRef; V.togglePerf=this.togglePerf;
       V.perfLabel=this.t('perfMode')+': '+this.t(st.perfMode?'perfOn':'perfOff');
