@@ -853,3 +853,34 @@ O DESIGN.md manda botão primário branco; o mockup da Visão Geral mostra o CTA
 "REGISTRAR PARTIDA" em dourado. Segui a spec — ela é a regra que escala para 8
 views, o mockup é uma instância. O dourado fica reservado a valor. Fácil de
 inverter se preferir o mockup.
+
+## Logo — moeda de colecionador (2026-08-06)
+
+O usuário enviou a arte da moeda: disco dourado com "INKWELL BRASIL / SEU LUGAR DE
+LORCANA" gravado e os seis inks como segmentos no aro. É o "Collector Coin Logo"
+que os mockups já referenciavam com placeholder.
+
+Processada de 1024×1024 / 2,1 MB para `site/ink/logo-coin.png` a 256×256, com a
+borda plana do render recortada (3,5%) e máscara circular, para assentar em
+qualquer superfície sem moldura.
+
+Aplicada em três lugares: marca do rail (44 px, ao lado do wordmark), onboarding
+(132 px, sombra em vez do brilho dourado antigo) e **favicon** — que não existia
+no app. Nenhuma referência a `ink/logo.svg` sobrou.
+
+Aos 40–44 px o texto gravado não se lê; funciona como selo dourado e o wordmark ao
+lado carrega o nome. É o comportamento correto para uma marca desse tipo.
+
+### Conflito de design system encontrado na mesma pasta
+
+O upload trouxe também um `DESIGN.md` de **outro** sistema, "Digital Grimoire":
+primary ametista `#f8d8ff`, fundo em gradiente radial a partir de
+`void-depth #1a0a20`, "orbital nav" flutuante, ouro como terciário.
+
+Isso contradiz o "Immortal Precision" implementado (primary branco, Void chapado
+`#131313`, sidebar). A mensagem foi só "logo", então **não troquei o sistema** —
+apenas a logo entrou. Se o Digital Grimoire for a direção nova, é decisão separada
+e desfaz a paleta atual.
+
+Verificação: as seis suítes seguem verdes (visual 18/18, i18n 9/9 com 566 chaves,
+practice 36, meta 32, shared 23, data-health 26).
