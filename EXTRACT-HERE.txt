@@ -1,67 +1,52 @@
-INKWELL BRASIL — V8: no serif, Core/Infinity filter
+INKWELL BRASIL — V9: big numbers no longer overflow
 
 Extract over your repo root, then:
 
   npm run verify
-  git add -A && git commit -m "V8: drop Playfair for Plus Jakarta Sans, fix --font-mono, add Core/Infinity collection filter"
+  git add -A && git commit -m "V9: size display numerals to the string, split the Faltando tile"
   git push
 
 ────────────────────────────────────────────────────────────
-FONT
+BOTH THINGS YOU SPOTTED HAVE ONE CAUSE
 
-"Atividade de Partidas" is a KPI label, and those render in Plus Jakarta Sans —
-the body/UI family. So the ask is: no serif. Playfair Display is gone entirely.
+I sized the display numerals for the slot and not for the string. Brazilian
+currency runs long, and it broke in two places:
 
---font-title and --font-serif now point at Plus Jakarta Sans, and Playfair is out
-of the Google Fonts link — one less request and four weights that would never be
-used. Zero "Playfair" and zero ",serif" left in the file.
+FALTANDO (Now Playing hero)
+  missingText concatenated two different units into one string — "4 · R$ 179,60" —
+  at 26px bold. It wrapped mid-value and left an orphan "4 ·" on the first line.
 
-Large headings were compensated: a grotesque at 44-48px needs more weight and
-tighter tracking than a display serif at the same size, so those went from 700 to
-800 with letter-spacing -.03em. Without that they would have looked thin and
-loose where the serif used to carry them.
+VALOR DA COLEÇÃO (Overview KPI)
+  "R$ 11.732,60" at a fixed 44px inside a tile whose column floor was 210px. It
+  clipped at the "6".
 
-────────────────────────────────────────────────────────────
-A BUG I INTRODUCED, FOUND AND FIXED
-
-In the V5 token retrofit, my replacement of 'JetBrains Mono' with var(--font-mono)
-also hit the token's OWN definition. It became:
-
-    --font-mono: var(--font-mono), monospace
-
-which is self-referential. CSS throws the declaration away, so since V5 every
-tabular number in the app — match scores, replay log, prices, card IDs — has been
-falling back to the system's generic monospace instead of JetBrains Mono.
-
-No suite caught it. visual-contract checks that each token is DEFINED exactly
-once, not that its value is valid. Now:
-
-    --font-mono: 'JetBrains Mono', ui-monospace, monospace
-
-Worth a glance at the replay log and price columns to confirm they look right
-again.
+In both cases the number is the most important thing on the tile, and the number
+was the part you could not read.
 
 ────────────────────────────────────────────────────────────
-CORE / INFINITY FILTER
+THE FIX
 
-Reuses legalInFormat(card,'core'), which already existed for deck validation and
-reads legality.json when published, with CORE_SETS as fallback.
+fitSize(str, max, mid, min) picks the size from the STRING LENGTH, not the slot:
+6 characters or fewer get the full size, up to 9 the middle, longer than that the
+smallest. Run against real values:
 
-ONE DECISION TO CONFIRM. Infinity has no rotation, so a literal "Infinity" filter
-would match every card and filter nothing. I built the pair as a useful opposite:
+  4 · 67% · 2.047              44px
+  R$ 179,60                    34px
+  R$ 11.732,60                 27px
+  R$ 1.234.567,89              27px
 
-  Core      only cards legal in the current rotation
-  Infinity  only cards OUT of rotation — the ones that exist in Infinity alone
+Applied to the four Overview KPIs and the three Collection summary tiles, with
+overflow-wrap:anywhere as a backstop and the grid column floor raised 210 -> 248px.
 
-Both chips toggle off to "all". Each carries a title tooltip saying exactly that,
-so the short label cannot mislead.
-
-If you meant Infinity literally — the whole pool, rotation ignored — it is a
-one-line change. Tell me which.
+The Faltando tile now has three lines of its own: count at 26px, cost in gold mono
+at 12.5px, then the label. Two units, two lines.
 
 ────────────────────────────────────────────────────────────
-VERIFIED
+STILL WORTH A LOOK
 
-visual-contract 18/18 · i18n-contract 9/9 (578 keys EN and PT)
-practice-loop 36/36 · meta-advisor 32/32 · shared-cards 23/23 · data-health 26/26
-sc-if 139/139, sc-for 99/99, mirror byte-identical
+Anywhere else currency renders at a large fixed size — the Market view and the
+Advisor — carries the same risk. I have not swept those yet; tell me if you see it
+and I will, or I can do it proactively.
+
+VERIFIED: all six suites green, fitSize executed here against seven real values,
+sc-if 140/140, sc-for 99/99, mirror byte-identical.

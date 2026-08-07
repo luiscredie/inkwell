@@ -277,7 +277,13 @@
                 <div style="padding:16px 18px;border-radius:var(--r-md);background:var(--surface-lowest);border:1px solid var(--outline)"><div style="font-family:var(--font-title);font-weight:700;font-size:26px;line-height:1.1">{{ np.count }}</div><div style="font-size:11px;color:var(--text-3);margin-top:3px">{{ npCards }}</div></div>
                 <div style="padding:16px 18px;border-radius:var(--r-md);background:var(--surface-lowest);border:1px solid var(--outline)"><div style="font-family:var(--font-title);font-weight:700;font-size:26px;line-height:1.1;color:{{ np.ownColor }}">{{ np.ownedPct }}%</div><div style="font-size:11px;color:var(--text-3);margin-top:3px">{{ npOwned }}</div></div>
                 <div style="padding:16px 18px;border-radius:var(--r-md);background:var(--surface-lowest);border:1px solid var(--outline)"><div style="font-family:var(--font-title);font-weight:700;font-size:26px;line-height:1.1">{{ np.record }}</div><div style="font-size:11px;color:var(--text-3);margin-top:3px">{{ npLast10 }}</div></div>
-                <div style="padding:16px 18px;border-radius:var(--r-md);background:var(--surface-lowest);border:1px solid var(--outline)"><div style="font-family:var(--font-title);font-weight:700;font-size:26px;line-height:1.1">{{ np.missingText }}</div><div style="font-size:11px;color:var(--text-3);margin-top:3px">{{ npMissing }}</div></div>
+                <div style="padding:16px 18px;border-radius:var(--r-md);background:var(--surface-lowest);border:1px solid var(--outline);min-width:0">
+                  <div style="font-family:var(--font-title);font-weight:700;font-size:26px;line-height:1.1">{{ np.missingText }}</div>
+                  <sc-if value="{{ np.hasMissingCost }}" hint-placeholder-val="{{ false }}">
+                    <div style="font-family:var(--font-mono);font-size:12.5px;color:var(--gold);margin-top:4px;white-space:nowrap">{{ np.missingCost }}</div>
+                  </sc-if>
+                  <div style="font-size:11px;color:var(--text-3);margin-top:3px">{{ npMissing }}</div>
+                </div>
               </div>
               <sc-if value="{{ np.hasDeckSwitch }}" hint-placeholder-val="{{ false }}">
                 <div style="margin-top:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -287,13 +293,13 @@
               </sc-if>
             </div>
           </sc-if>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(248px,1fr));gap:var(--gutter)">
             <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
               <div data-testid="{{ k.testid }}" style="padding:24px;border-radius:var(--r-lg);background:var(--glass-bg);backdrop-filter:var(--glass-blur);border:var(--glass-border);position:relative;overflow:hidden;min-height:160px;display:flex;flex-direction:column;justify-content:space-between">
                 <div style="position:absolute;inset:0;background:{{ k.glow }};opacity:.18;pointer-events:none"></div>
                 <div style="font-size:12px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--text-3);position:relative">{{ k.label }}</div>
                 <div style="position:relative;margin-top:18px">
-                  <div style="font-family:var(--font-title);font-weight:800;letter-spacing:-.03em;font-size:44px;line-height:52px;letter-spacing:-.02em;color:{{ k.valueColor }}">{{ k.value }}</div>
+                  <div style="font-family:var(--font-title);font-weight:800;letter-spacing:-.03em;font-size:{{ k.valueSize }};line-height:1.15;color:{{ k.valueColor }};overflow-wrap:anywhere">{{ k.value }}</div>
                   <div style="font-size:14px;color:var(--text-3);margin-top:4px">{{ k.sub }}</div>
                 </div>
               </div>
@@ -446,7 +452,7 @@
             <div style="padding:24px;border-radius:var(--r-lg);background:var(--glass-bg);backdrop-filter:var(--glass-blur);border:var(--glass-border)">
               <div style="font-size:12px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--text-3)">{{ colTotalLabel }}</div>
               <div style="display:flex;align-items:baseline;gap:10px;margin-top:12px">
-                <span style="font-family:var(--font-title);font-weight:800;letter-spacing:-.03em;font-size:40px;line-height:1.1;color:var(--text-1)">{{ colTotalValue }}</span>
+                <span style="font-family:var(--font-title);font-weight:800;letter-spacing:-.03em;font-size:{{ colTotalSize }};line-height:1.1;color:var(--text-1)">{{ colTotalValue }}</span>
                 <span style="font-size:16px;color:var(--text-3)">{{ colTotalUnit }}</span>
               </div>
               <div style="display:flex;gap:18px;margin-top:14px;font-size:13px">
@@ -456,12 +462,12 @@
             </div>
             <div style="padding:24px;border-radius:var(--r-lg);background:var(--glass-bg);backdrop-filter:var(--glass-blur);border:var(--glass-border)">
               <div style="font-size:12px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--text-3)">{{ colValueTitle }}</div>
-              <div style="font-family:var(--font-title);font-weight:800;letter-spacing:-.03em;font-size:40px;line-height:1.1;margin-top:12px;color:var(--gold)">{{ colValueAmount }}</div>
+              <div style="font-family:var(--font-title);font-weight:800;letter-spacing:-.03em;font-size:{{ colValueSize }};line-height:1.15;margin-top:12px;color:var(--gold);overflow-wrap:anywhere">{{ colValueAmount }}</div>
             </div>
             <sc-if value="{{ showAcquire }}" hint-placeholder-val="{{ false }}">
               <div style="padding:24px;border-radius:var(--r-lg);background:var(--glass-bg);backdrop-filter:var(--glass-blur);border:1px solid var(--outline-strong)">
                 <div style="font-size:12px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--gold)">{{ acquireTitle }}</div>
-                <div style="font-family:var(--font-title);font-weight:800;letter-spacing:-.03em;font-size:40px;line-height:1.1;margin-top:12px;color:var(--text-1)">{{ acquireCost }}</div>
+                <div style="font-family:var(--font-title);font-weight:800;letter-spacing:-.03em;font-size:{{ acquireSize }};line-height:1.15;margin-top:12px;color:var(--text-1);overflow-wrap:anywhere">{{ acquireCost }}</div>
                 <div style="font-size:13px;color:var(--text-3);margin-top:14px">{{ acquireSub }}</div>
               </div>
             </sc-if>
@@ -3342,6 +3348,9 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     return { all:moments, top, turns:bounds.length };
   }
   signed(n){ return (n>0?'+':'')+n; }
+  // Display sizes follow the STRING, not the slot: BRL runs past 12 characters
+  // and a fixed 44px overflows the tile.
+  fitSize(str, max, mid, min){ const n=String(str==null?'':str).length; return (n<=6?max:(n<=9?mid:min))+'px'; }
   // Mulligan scoring. Reports the hand's composition and what a keep implies.
   mulliganScore(hand){
     if(!Array.isArray(hand)||!hand.length) return null;
@@ -4112,7 +4121,8 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
           legalText:rd.legal?'✓':'✗', legalColor:rd.legal?'#5fd07f':'#ff8a96',
           count:rd.total, ownedPct:rd.ownedPct, ownColor:rd.ownedPct>=100?'#5fd07f':rd.ownedPct>=75?'#e6c15a':'#ff8a96',
           record:ms.length?(w+'–'+(last10.length-w)):'—',
-          missingText:rd.missingCopies>0?(rd.missingCopies+' · '+this.fmt(rd.missingMarketValue)):'0',
+          missingText:rd.missingCopies>0?String(rd.missingCopies):'0',
+          missingCost:rd.missingCopies>0?this.fmt(rd.missingMarketValue):'', hasMissingCost:rd.missingCopies>0,
           actionLabel:this.t('na_'+rd.nextAction), _act:act,
           hasDeckSwitch:st.decks.length>1, others:st.decks.filter(d=>d.id!==ad.id).map(d=>({name:d.name,_pick:()=>this.setActiveDeck(d.id)})) };
       }
@@ -4133,7 +4143,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
         {testid:'kpi-matches',label:this.t('kpiMatchAct'),value:st.matches.length?(allWR2+'%'):'—',sub:st.matches.length?this.t('gamesLogged',{n:st.matches.length}):this.t('kpiNoGames'),glow:'linear-gradient(150deg,rgba(239,68,68,.26),transparent 62%)',valueColor:'var(--text-1)'},
         {testid:'kpi-collection',label:this.t('kpiCollProg'),value:uniq.toLocaleString('en-US'),sub:this.t('ofInDb',{n:this.cards.length.toLocaleString('en-US')}),glow:'linear-gradient(150deg,rgba(59,130,246,.26),transparent 62%)',valueColor:'var(--text-1)'},
         {testid:'collection-value',label:this.t('collValue'),value:totCards>0?this.fmt(value):'—',sub:valueSub,glow:'linear-gradient(150deg,rgba(139,92,246,.26),transparent 62%)',valueColor:'var(--gold)'},
-      ];
+      ].map(k=>({...k, valueSize:this.fitSize(k.value,44,34,27)}));
       const dist={}; for(const [id,e] of Object.entries(st.collection)){ const c=this.byId[id]; if(!c) continue; const cnt=(e.n||0)+(e.f||0); for(const ink of this.inkList(c)) dist[ink]=(dist[ink]||0)+cnt; }
       const mx=Math.max(1,...Object.values(dist));
       V.inkDist=this.INK_ORDER.map(ink=>({label:ink,iconEl:this.inkIconEl(ink,18),count:dist[ink]||0,pct:((dist[ink]||0)/mx*100).toFixed(1),color:this.INK[ink]}));
@@ -4181,7 +4191,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       V.prevPage=()=>this.setState({page:Math.max(0,page-1)}); V.nextPage=()=>this.setState({page:Math.min(pages-1,page+1)});
       V.clearFilters=()=>this.setState({inks:[],types:[],sets:[],rarities:[],q:'',collMode:'all',inkable:'all',cost:'all',fmtFilter:'all',page:0});
       V.costLabel=this.t('cost'); V.exportLabel='↓ '+this.t('export'); V.importLabel='↑ '+this.t('import');
-      V.noMatchLabel=this.t('noMatch'); V.clearFiltersLabel=this.t('clearFilters'); V.acquireTitle=this.t('acquireTitle');
+      V.noMatchLabel=this.t('noMatch'); V.clearFiltersLabel=this.t('clearFilters'); V.acquireTitle=this.t('acquireTitle'); V.acquireSize=this.fitSize(V.acquireCost,40,32,26);
       V.accent='var(--accent)';
       { let tn=0,tf=0,tval=0;
         for(const [id,e] of Object.entries(st.collection||{})){ const c=this.byId[id]; if(!c) continue;
@@ -4193,6 +4203,8 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
         V.colFoilSplit=tf.toLocaleString('pt-BR')+' '+this.t('colFoil');
         V.colValueTitle=this.t('collValue');
         V.colValueAmount=this.fmt(tval);
+        V.colValueSize=this.fitSize(V.colValueAmount,40,32,26);
+        V.colTotalSize=this.fitSize(V.colTotalValue,40,34,28);
         V.colNormalLabel=this.t('colNormal'); V.colFoilLabel=this.t('colFoil'); V.colValueLabel=this.t('colValueShort');
         V.colHasAny=(tn+tf)>0;
       }

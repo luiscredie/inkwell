@@ -999,3 +999,45 @@ o rótulo curto não enganar. Se preferir que "Infinity" signifique literalmente
 `visual-contract` 18/18, `i18n-contract` 9/9 (578 chaves EN e PT),
 `practice-loop` 36/36, `meta-advisor` 32/32, `shared-cards` 23/23,
 `data-health` 26/26. `sc-if` 139/139, `sc-for` 99/99, espelho byte a byte.
+
+## V9 — números grandes estourando os tiles (2026-08-06)
+
+Dois relatos do usuário, mesma causa raiz: dimensionei os numerais de display sem
+considerar o comprimento das strings em reais.
+
+### O que estava errado
+
+**"Faltando"** no herói Jogando Agora: `missingText` concatenava duas unidades
+diferentes numa string só — `4 · R$ 179,60` — renderizada em 26 px bold. Quebrava
+no meio, deixando um "4 ·" órfão na primeira linha.
+
+**"Valor da Coleção"** no KPI: `R$ 11.732,60` em 44 px fixos dentro de um tile de
+coluna mínima 210 px. Cortava no "6".
+
+Em ambos o número é o dado mais importante da tela, e era o que não dava para ler.
+
+### Correção
+
+`fitSize(str,max,mid,min)` escolhe o tamanho pelo **comprimento da string**, não
+pelo slot: até 6 caracteres o tamanho cheio, até 9 o intermediário, acima disso o
+menor. Verificado com valores reais:
+
+| valor | tamanho |
+|---|---|
+| `4` · `67%` · `2.047` | 44 px |
+| `R$ 179,60` | 34 px |
+| `R$ 11.732,60` · `R$ 1.234.567,89` | 27 px |
+
+Aplicado nos 4 KPIs da Visão Geral e nos 3 tiles de resumo da Coleção, com
+`overflow-wrap:anywhere` como rede de segurança e coluna mínima de 210 → 248 px.
+
+O tile "Faltando" passou a ter três linhas próprias: contagem em 26 px, custo em
+mono dourado 12,5 px, rótulo. Duas unidades, duas linhas.
+
+### Verificação
+
+As seis suítes verdes; `fitSize` executada aqui contra sete valores reais.
+`sc-if` 140/140, `sc-for` 99/99, espelho byte a byte.
+
+Vale rever os outros lugares com moeda em corpo grande (Mercado, Advisor) — o
+mesmo risco existe onde ainda houver tamanho fixo.
