@@ -1,100 +1,87 @@
-INKWELL — M2.5 Practice Loop
+INKWELL BRASIL — M2.7 V6: relayout part 1
 
 Extract over your repo root, then:
 
   npm run verify
-  git add -A && git commit -m "M2.5: decision markers, matchup notebook, mulligan scoring, weekly goals"
+  git add -A && git commit -m "M2.7 V6: Inkwell Brasil brand, PT-first nav, Overview and Collection relayout"
   git push
 
-MERGE, DO NOT REPLACE. site/ holds only index.html here.
+Only site/index.html + mirror + the two records. No test or workflow changes.
+
+LOOK AT IT BEFORE COMMITTING. I cannot boot the app here (site/data/** is absent),
+so nobody has seen these two screens rendered yet. That is also why I stopped at
+two instead of doing all four: if the direction is off, you have half the rework.
 
 ────────────────────────────────────────────────────────────
-ALL FIVE PIECES
+BRAND AND LANGUAGE
 
-1. DECISION MARKERS (Match Center)
-   matchMoments() segments the replay by turn and compares game state at the
-   start and end of each turn, using M2.0's own simulateReplay rather than a
-   second parser — so the markers can never disagree with the board you see.
+"Inkwell Brasil / Seu lugar de Lorcana", your words verbatim. Playfair 700 on the
+Void, no gold gradient, no all-caps. Default language is now PT.
 
-   Three labelled axes per turn:
-     Board  — change in characters and effective STR/WILL on both sides
-     Lore   — lore gained this turn, plus detection of the lead changing hands
-     Ink    — total cost played by each side
+THE EN/PT TOGGLE STAYS. The mockups are PT-only, but there are 566 keys in parity
+and a contract test that fails if one goes missing. Throwing English away to match
+a mockup that never considered bilingualism would destroy tested work. PT-first
+means default, not exclusive.
 
-   A turn only becomes a moment when it crosses a threshold (4 board swing or a
-   2-character difference; 3 lore or a lead flip; 4 ink difference). Quiet turns
-   stay quiet.
+NAVIGATION — my worry last round was overblown
 
-2. "3 MOMENTS TO REVIEW"
-   The three highest combined magnitude, re-sorted into turn order so the list
-   reads like the game happened rather than like a leaderboard. Each jumps the
-   replay to that exact turn.
+The app has SIX nav items, not eight; Advisor and Deck Detail are sub-views. So
+nothing had to be hidden. Match Center and Academy keep their places.
 
-3. DESCRIPTIVE ONLY — as you asked
-   "Characters on the field — you -2, opponent 0." Never "you should have".
-   A standing note explains why: replay logs carry no hidden information, so
-   nothing here can judge what you were holding. There is a test that scans the
-   string block for prescriptive vocabulary in both languages.
+New PT names: Visão Geral, Coleção, Mercado, Decks, Partidas, Treino.
 
-4. MATCHUP NOTEBOOK (Academy)
-   Keyed by opponent ink colours with the pairing sorted, so Amber/Steel and
-   Steel/Amber are one matchup, not two. Shows your record and win rate beside
-   the note field.
-
-   A matchup you have written a note about but never played still appears —
-   dropping someone's writing because they have no games yet would be data loss.
-   With no games the win rate reads "—", never 0%.
-
-5. MULLIGAN LAB (Academy)
-   Reuses M1.9's mulliganHand and adds mulliganScore: plays by 3 ink, inkable
-   count, 6+ cost cards, average cost.
-
-   The score appears only AFTER you commit to keep or mulligan. Showing it first
-   would just be giving you the answer. The verdict is compared against your call
-   and the basis is on screen, with the caveat that it knows nothing about your
-   matchup or your plan.
-
-   A hand with early plays but nothing inkable is still a mulligan — tested.
-
-6. WEEKLY GOALS (Academy)
-   Log 3 matches, review 2 replays, practise 5 opening hands. The week is keyed
-   to its Monday, so progress resets on its own — no cron, no expiry timestamp,
-   no server. Last week's progress is never counted toward this week.
-
-   Logging already counted itself; reviewing counts when you jump to a moment;
-   practising counts when you draw a hand.
-
-PERSISTENCE
-   matchupNotes and goalProgress were added to userPayload, to migrateUser with
-   defaults, and to BOTH load paths (local and cloud pull). Older payloads
-   without these fields load normally.
+I dropped the mockups' "Cofre", "Místicos" and "Forja". They are fantasy labels on
+a system whose own spec calls itself "authoritative, sharp, timeless" — and
+"Místicos" tells nobody that prices live there. Plain nouns serve precision better
+than mystique. Easy to change back if you disagree; it is six strings.
 
 ────────────────────────────────────────────────────────────
-VERIFIED HERE
+OVERVIEW
 
-practice-loop-contract  36/36  (engines lifted and executed against synthetic
-                                replays — lore flips, banishes, ink spikes,
-                                week-boundary resets, notebook aggregation)
-visual-contract         18/18  EN/PT parity across 560 keys
-mirror byte-identical, sc-if 141/141, sc-for 99/99
-test:all and CI both at 19 suites, no drift
+The structure was already the mockup's. What changed is treatment: glass panels,
+Playfair at 44px for KPI figures and 32px for the deck name, label-caps at .15em
+tracking, 44px pill buttons, a per-KPI background tint instead of the old radial
+blur. Collection value is the only KPI in gold.
 
-One of my own assertions was wrong and the suite caught it: I claimed the first
-board moment favoured the opponent, but the turn you land a creature favours YOU
-— the loss is the turn after. The test now checks per turn.
+COLLECTION
 
-NOT VERIFIED HERE: rendered output. site/data/** is absent so the app cannot boot.
-npm run verify plus the Playwright smoke close that.
+Rebuilt the card tile, which is the heart of that mockup: 2.5/3.5 ratio, real art
+from site/images, gradient down to the Void, rarity chip and wishlist star on top,
+and a glass footer with Playfair name, subtitle, Normal / Foil counts and value.
+Grid went 158px -> 230px with a 24px gutter.
+
+Added the mockup's summary row: total in collection with the normal/foil split,
+estimated value in gold, and cost to complete — that last one already existed on
+its own and now has company.
 
 ────────────────────────────────────────────────────────────
-M2 IS NOW COMPLETE
+A DEFECT THE REDESIGN EXPOSED
 
-M2.0 through M2.5 are all built. What remains on the roadmap is M2.6 (Beginner
-Journey), M2.7 (component library, full mobile pass, motion system, AA
-accessibility, performance budgets) and M3 (PWA, scanner, module extraction,
-telemetry).
+The Collection view had English hardcoded in the markup: "Cost", "↓ Export",
+"↑ Import", "Cost to acquire what's missing", "No cards match", "Clear filters",
+"‹ Prev", "Next ›".
 
-Still pending from earlier, unrelated to this package:
-  - git rm --cached on the 3 files from the cleanup delta, if not done
-  - price refresh unfinished: python tools/ligalorcana_price_agent_daily_v5.py --resume-status
-  - restore the deploy gate in deploy-pages.yml before outside people use the site
+They passed i18n-contract because that suite only checks this.t() calls, not
+literals. In an app that now opens in Portuguese they would have shown in English
+to everyone. Translated, 7 new keys in both languages.
+
+Worth knowing: the same class of bug may exist in views I have not touched yet.
+The i18n suite cannot catch it.
+
+────────────────────────────────────────────────────────────
+ONE DELIBERATE DIVERGENCE FROM THE MOCKUPS
+
+DESIGN.md says primary buttons are white. The Overview mockup shows the
+"REGISTRAR PARTIDA" CTA in gold. I followed the spec — it is the rule that scales
+across eight views; the mockup is one instance. Gold stays reserved for value.
+Say the word and I will flip it.
+
+────────────────────────────────────────────────────────────
+VERIFIED
+
+visual-contract 18/18 · i18n-contract 9/9 (499 used, 566 EN, 566 PT)
+practice-loop 36/36 · meta-advisor 32/32 · shared-cards 23/23 · data-health 26/26
+sc-if 141/141, sc-for 99/99, mirror byte-identical
+
+STILL TO DO: Mercado (value chart + gainers/losers) and Forja (three-column deck
+detail with curve + composition).

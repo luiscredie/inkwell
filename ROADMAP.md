@@ -710,3 +710,146 @@ momento de mesa favorecia o oponente, mas o turno em que você baixa a criatura
 favorece você — a perda é no turno seguinte. O teste passou a verificar por turno.
 
 Não executado aqui: `npm run verify` e Playwright.
+
+## M2.7 V5 — "Immortal Precision" (2026-08-06)
+
+Quatro mockups do Stitch + `DESIGN.md` recebidos. Esta entrega é a **camada de
+tokens**, não o relayout.
+
+### O que os mockups revelaram sobre o código
+
+O sistema de tokens do M3V V0 existia mas nunca foi adotado: **828 hex fixos
+contra 28 referências `var()`**. O V1 aplicou "progressivamente" e parou. Trocar a
+paleta seria reescrever 470 KB.
+
+Então o primeiro passo foi terminar o retrofit: 484 ocorrências de hex viraram
+tokens (escala de texto `--text-1..4`, semânticos, superfícies), com regex
+restrita a posições de valor CSS (`:`, `,` ou espaço antes) para não tocar em
+atributos `fill="#..."` de SVG. Hoje são **723 referências `var()`**. A partir
+daqui, trocar a identidade é editar o bloco `:root`.
+
+### Correção que o DESIGN.md impôs
+
+Minha primeira leitura dos mockups tratou o dourado como cor de ação. O
+`DESIGN.md` diz o contrário: **primary é branco puro (#FFFFFF)** com texto
+escuro, e o dourado aparece só como acento de valor (`text-gold-relief` no valor
+da coleção, gráfico do Mercado). Corrigido:
+
+- `--accent:#ffffff`, `--on-accent:#131313`;
+- `--gold:#D4AF37` / `--gold-dim`, reservados a dinheiro e valor;
+- funcionais dessaturados conforme "avoiding neon or vibrant hues":
+  `--ok:#6ec99a`, `--warn:#d9bb63`, `--err:#ffb4ab`, `--info:#8fb3e0`;
+- `--focus-ring` passa a branco (a spec pede borda branca no foco).
+
+O roxo `#b79bff`, identidade antiga, foi absorvido pelo branco — dois acentos
+competindo seria pior que nenhum.
+
+### Também aplicado
+
+Superfícies da Void (#131313 → #353534), Playfair Display para títulos e Plus
+Jakarta Sans para corpo/UI, glass (`rgba(39,39,42,.55)` + blur 20), `--shadow-ink`,
+raios (cards 24 px, `--r-pill` 9999), gutter 24 / margem desktop 64 /
+container 1440, e as seis cores de ink atualizadas para a paleta nova.
+
+`--font-mono` continua JetBrains Mono. O DESIGN.md não define monoespaçada, mas o
+log de replay e as leituras técnicas dependem de alinhamento tabular. É uma
+divergência consciente da spec, não um esquecimento.
+
+### O que NÃO foi feito, e por quê
+
+O relayout (bento grids, painéis de vidro, botões pílula, cabeçalhos Playfair em
+escala) é trabalho de markup por view e depende de uma decisão que não é minha:
+
+**os mockups têm 4–5 itens de navegação; o app tem 8 views.**
+
+Mapeamento provável: Visão Geral→overview, Cofre→collection, Mercado→prices,
+Forja→decks+deckDetail, Místicos→advisor. Sobram sem casa: **Match Center**
+(M2.0 + marcadores do M2.5), **Academy** (M1.9 + caderno, laboratório e metas do
+M2.5) e possivelmente o Advisor.
+
+Adotar a navegação dos mockups ao pé da letra esconderia três milestones
+terminados. Perguntado ao usuário antes de mexer.
+
+Os mockups também são só PT (o app é EN/PT com 560 chaves), usam Tailwind via CDN
+(não vai para produção — os valores foram reimplementados nativamente), têm URLs
+de imagem placeholder que vão expirar, e discordam entre si sobre o valor da
+coleção (R$ 4.850 / 15.375,94 / 18.450,25) — ruído de mockup; o app calcula.
+
+### Verificação
+
+`visual-contract` 18/18, `i18n-contract` 9/9 (490 usadas, 560 EN, 560 PT),
+`practice-loop` 36/36, `meta-advisor` 32/32, `shared-cards` 23/23,
+`data-health` 26/26. Espelho byte a byte.
+
+Não executado aqui: `npm run verify` e Playwright. O app não inicia neste
+ambiente (sem `site/data/**`), então a aparência nova não foi vista renderizada.
+
+## M2.7 V6 — relayout, parte 1 (2026-08-06)
+
+Marca, navegação, Visão Geral e Coleção. Mercado e Forja ficam para a parte 2.
+
+### Marca e idioma
+
+"Inkwell Brasil / Seu lugar de Lorcana", conforme o usuário. O bloco de marca
+perdeu o gradiente dourado e o texto em caixa alta: Playfair em peso 700 sobre a
+Void, com a assinatura em cinza. Idioma padrão passa a **pt**.
+
+O toggle EN/PT **fica**. Os mockups são só PT, mas há 566 chaves em paridade e um
+teste de contrato que falha se uma faltar — jogar o inglês fora seria destruir
+trabalho testado para seguir um mockup que nunca considerou bilinguismo.
+"PT-first" foi implementado como padrão, não como exclusividade.
+
+### Navegação
+
+O receio da rodada anterior era exagerado: o app tem **6 itens** de nav, não 8 —
+Advisor e Deck Detail são sub-views. Então nada precisou ser escondido.
+
+Nomes novos, PT: **Visão Geral, Coleção, Mercado, Decks, Partidas, Treino**.
+
+Descartei "Cofre", "Místicos" e "Forja" dos mockups. São rótulos de fantasia num
+sistema cuja própria spec se descreve como "authoritative, sharp, timeless" — e
+"Místicos" não diz a ninguém que ali estão preços. Substantivos simples servem
+melhor à precisão do que a mística.
+
+### Visão Geral
+
+A estrutura já era a do mockup (herói "Jogando Agora", KPIs, distribuição de
+tinta, mais valiosas). O que mudou foi tratamento: painéis de vidro, Playfair em
+44 px nos KPIs e 32 px no nome do deck, rótulos em label-caps com tracking .15em,
+botões pílula de 44 px, tinta de fundo por KPI em vez do borrão radial.
+
+O valor da coleção é o único KPI em dourado.
+
+### Coleção
+
+Reconstruída a carta, que era o núcleo do mockup: proporção 2.5/3.5, arte real de
+`site/images`, gradiente para a Void na base, chip de raridade e estrela de
+wishlist no topo, e rodapé de vidro com nome em Playfair, subtítulo, contagem
+Normal / Foil e valor. Grade de 158 px para 230 px com gutter de 24.
+
+Somada a faixa de resumo do mockup: total na coleção com separação normal/foil,
+valor estimado em dourado, e custo para completar — este último já existia,
+sozinho, e agora tem companhia.
+
+### Defeito que o redesenho revelou
+
+A view de Coleção tinha texto em inglês cravado no markup: "Cost", "↓ Export",
+"↑ Import", "Cost to acquire what's missing", "No cards match", "Clear filters",
+"‹ Prev", "Next ›". Passavam no `i18n-contract` porque a suíte só verifica
+chamadas `this.t()`, não literais. Num app que agora abre em português, apareciam
+em inglês para todo mundo. Traduzidos, com 7 chaves novas em EN e PT.
+
+### Verificação
+
+`visual-contract` 18/18, `i18n-contract` 9/9 (499 usadas, 566 EN, 566 PT),
+`practice-loop` 36/36, `meta-advisor` 32/32, `shared-cards` 23/23,
+`data-health` 26/26. `sc-if` 141/141, `sc-for` 99/99, espelho byte a byte.
+
+Não visto renderizado: o app não inicia aqui sem `site/data/**`.
+
+### Divergência consciente da spec
+
+O DESIGN.md manda botão primário branco; o mockup da Visão Geral mostra o CTA
+"REGISTRAR PARTIDA" em dourado. Segui a spec — ela é a regra que escala para 8
+views, o mockup é uma instância. O dourado fica reservado a valor. Fácil de
+inverter se preferir o mockup.
