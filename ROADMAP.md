@@ -1415,3 +1415,51 @@ sem divergência. `sc-if` 154/154, `sc-for` 110/110, espelho byte a byte.
 
 Não visto rodando — sem `site/data/**` o app não inicia aqui. Vale testar com um
 CSV real que tenha coluna de preço.
+
+## V16 — hotfix: replay quebrava com "Your turn begins" (2026-08-08)
+
+Erro em produção: `Root.renderVals(): Cannot set properties of undefined (setting
+'inkExert')`, tela vermelha ao abrir replay.
+
+### Causa
+
+Bug meu, do V14. Naquela entrega o teste apontou que `Your turn begins` não era
+reconhecido, e eu ampliei o regex em três lugares para aceitar `Your`. Mas dentro
+de `simulateReplay` o mapeamento de ator não é feito pelo mesmo trecho — é o helper
+`P()`, que continuou conhecendo só `You`:
+
+```js
+const P=(x)=>x==='You'?1:(x==='Opponent'?2:+x);
+```
+
+Com `Your`, `P` caía no `+x` e devolvia `NaN`. Então `S[NaN].inkExert=0` estourava
+no primeiro marcador de turno — ou seja, o regex passou a **reconhecer** a linha e
+entregá-la a um mapeamento que não sabia traduzi-la. Antes do V14 a linha era
+ignorada e não quebrava nada.
+
+Lição: ampliar um reconhecedor obriga a revisar todo consumidor do valor
+reconhecido. Eu corrigi as duas atribuições que usavam `m[2]==='You'` e não
+procurei um terceiro consumidor com forma diferente.
+
+### Correção
+
+`P()` passou a aceitar qualquer forma iniciada por "You" e a devolver `null` — nunca
+`NaN` — para qualquer coisa que não seja jogador 1 ou 2.
+
+Além disso, `simulateReplay` ganhou `slot(p)`, que devolve um objeto descartável
+para ator desconhecido. Três escritas indexavam `S` direto com o resultado de
+`P()`; agora nenhuma indexa sem checagem. Um evento inválido custa **aquele
+evento**, não a tela inteira. Um log de terceiros com uma linha estranha não deve
+derrubar o app.
+
+### Verificação
+
+Três testes de regressão novos em `replay-ux-contract` (36/36), com
+`simulateReplay` extraída e executada de verdade:
+- log com `Your turn begins` simula e a tinta vai para o jogador 1;
+- `Player 7` (inexistente) não derruba a simulação e os eventos válidos continuam
+  valendo;
+- nenhuma escrita indexa `S` sem checar o jogador.
+
+Demais suítes: journey-cost 37, practice 36, meta 32, shared 23, data-health 26,
+visual 18/18, i18n 9/9 (670 chaves). Espelho byte a byte.

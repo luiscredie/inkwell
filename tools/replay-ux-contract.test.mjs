@@ -71,6 +71,41 @@ check('chapter ranges are contiguous and never overlap', () => {
   }
 });
 
+// ---------- regression: "Your turn begins" crashed the replay ----------
+// V14 widened the turn regex to accept "Your" but left the P() helper knowing only
+// "You", so P('Your') was NaN and S[NaN].inkExert threw on the first turn marker —
+// a red error box instead of the app.
+check('a "Your turn begins" log simulates instead of throwing', () => {
+  const simulate = lift('simulateReplay(events, idx){', 'simulateReplay', {
+    React: { createElement() { return null; } }
+  });
+  const ctx = {
+    cardByName() { return null; },
+    cardKeywordMods() { return []; },
+    simulateReplay: simulate
+  };
+  const events = ev('Your turn begins', 'You added Ally to ink', "Opponent's turn begins");
+  const out = simulate.call(ctx, events, events.length - 1);
+  assert.ok(out && out.S, 'a result must come back');
+  assert.equal(out.S[1].inkTotal, 1, 'the ink went to player 1, not into a void');
+});
+check('an unrecognised actor costs one event, not the whole replay', () => {
+  const simulate = lift('simulateReplay(events, idx){', 'simulateReplay', {
+    React: { createElement() { return null; } }
+  });
+  const ctx = { cardByName() { return null; }, cardKeywordMods() { return []; }, simulateReplay: simulate };
+  const events = ev('Player 7 turn begins', "Player 1's turn begins", 'Player 1 added Ally to ink');
+  const out = simulate.call(ctx, events, events.length - 1);
+  assert.ok(out && out.S, 'the view must survive a nonsense actor');
+  assert.equal(out.S[1].inkTotal, 1, 'the valid events still apply');
+});
+check('the player helper never yields NaN', () => {
+  assert.ok(html.includes('return (p===1||p===2)?p:null;'), 'P must reject anything but 1 or 2');
+  assert.ok(html.includes('const slot=(p)=>(p===1||p===2)?S[p]:SINK;'), 'a sink slot must absorb unknown actors');
+  assert.equal((html.match(new RegExp(String.raw`S\[P\([^)]*\)\]\.\w+\s*=`, 'g')) || []).length, 0,
+    'no write may index S with an unchecked player');
+});
+
 // ---------- timeline UI ----------
 check('the timeline is a real range input bound to the replay index', () => {
   assert.match(html, /type="range"[^>]*max="\{\{ tlMax \}\}"[^>]*value="\{\{ tlValue \}\}"[^>]*onChange="\{\{ tlSeek \}\}"/);

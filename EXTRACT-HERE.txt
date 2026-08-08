@@ -1,82 +1,60 @@
-INKWELL BRASIL — V15: acquisition cost + Beginner Journey
+INKWELL BRASIL — V16 HOTFIX: replay crashed on "Your turn begins"
 
 Extract over your repo root, then:
 
   npm run verify
-  git add -A && git commit -m "V15: acquisition cost at import, portfolio ROI, M2.6 Beginner Journey"
+  git add -A && git commit -m "V16 hotfix: P() returned NaN for 'Your', crashing simulateReplay"
   git push
 
-NOTE: V14 may still be uncommitted. This package contains V14 plus V15 — one
-commit covers both if you have not pushed V14 yet.
+If V15 is still uncommitted, this package contains it too — one commit covers both.
 
 ────────────────────────────────────────────────────────────
-1. ACQUISITION COST — the data that unlocks the rest
+THE ERROR
 
-parseMoney() takes both formats that occur in practice: R$ 1.234,56 (pt-BR) and
-1,234.56 (en). Junk, blank and negative all return null — never 0, because "paid
-nothing" and "cost unknown" are different facts and collapsing them would wreck
-every average built on top.
+  Root.renderVals(): Cannot set properties of undefined (setting 'inkExert')
 
-Columns read in BOTH CSV branches (Dreamborn and native):
-  price · unit price · paid · purchase price · preço · custo · valor pago
-  plus the total variants. Total wins over unit when a file has both.
+Red box, no app, on opening a replay.
 
-DATA SHAPE: acquisition[cardId] = {paid: total, qty: copies}
+THE CAUSE — my bug, from V14
 
-Storing the total rather than a unit price is what keeps the average honest: buy 2
-at 10, then 1 at 40, and the average is 20 (60/3) — not 25 ((10+40)/2). There is a
-test for exactly that case.
+In V14 a test caught that "Your turn begins" was not recognised, so I widened the
+turn regex in three places to accept "Your". But inside simulateReplay the actor is
+not resolved by that same code — it goes through a helper, P(), which still knew
+only "You":
 
-Cost ALWAYS accumulates, whatever collection merge mode you pick. Importing the
-same purchase twice will double-count — but replacing would silently throw away
-what an earlier file told you, which is worse. So it accumulates and reports:
-the audit now carries rows_with_cost and cards_costed. The pre-import rollback
-snapshot includes cost too, otherwise undoing an import would orphan it.
+  const P=(x)=>x==='You'?1:(x==='Opponent'?2:+x);
 
-2. PORTFOLIO ROI
+Given "Your", P fell through to +x and returned NaN. So S[NaN].inkExert = 0 threw
+on the very first turn marker.
 
-Paid versus current value — over ONLY the copies whose cost is known. Mixing known
-and unknown would produce a number that looks like a total and is not.
+The shape of the mistake is worth naming: widening a RECOGNISER without checking
+every CONSUMER of what it recognises. Before V14 that line was ignored and nothing
+broke. After V14 it was recognised and handed to a mapper that could not translate
+it. I fixed the two assignments using m[2]==='You' and never looked for a third
+consumer written differently.
 
-Three deliberate refusals:
-  - no recorded cost at all means NO ROI. There is no "0%".
-  - owning 10 copies with cost known for 2 compares 2. It does not extrapolate.
-  - a card with recorded cost you no longer own is skipped, or a card you sold
-    would inflate your total paid forever.
+────────────────────────────────────────────────────────────
+THE FIX
 
-The panel states its coverage ("X of Y copies have a known cost") and says how many
-were left out. If your file has no price column, the import preview says so and
-tells you what to add.
+P() now accepts any form starting with "You" and returns null — never NaN — for
+anything that is not player 1 or 2.
 
-3. M2.6 BEGINNER JOURNEY
-
-The app already had five lesson tracks. What was missing was not more content — it
-was ORDER. A library of lessons does not answer "so what now?".
-
-Six steps, each answered by your real state rather than a checkbox: read the
-lesson, recorded a card, created a deck, got a deck to 60, logged a match, reviewed
-a replay. Nothing is hand-ticked.
-
-Exactly one step is "current" at any moment, and a BLOCKED step never becomes the
-current one: reviewing a replay needs a match WITH a log, and pointing you at
-something impossible is worse than pointing at nothing. The block explains itself
-instead of just going grey.
-
-It is now the first Academy tab and the default, because it is the answer for
-someone who opens the app not knowing what to do.
+simulateReplay also gained slot(p), which hands back a throwaway object for an
+unknown actor. Three writes were indexing S directly with P()'s result; none do
+now. A malformed event costs THAT EVENT, not the whole screen. A third-party log
+with one odd line should not be able to take down the app.
 
 ────────────────────────────────────────────────────────────
 VERIFIED
 
-journey-cost-contract  37/37  (passed first run)
-replay-ux 33 · practice-loop 36 · meta-advisor 32 · shared-cards 23 ·
-data-health 26 · visual 18/18 · i18n 9/9 (670 keys EN and PT)
-test:all and CI both at 21 suites, no drift
-sc-if 154/154 · sc-for 110/110 · mirror byte-identical
+Three new regression tests in replay-ux-contract (36/36), with simulateReplay
+lifted and actually executed:
+  - a "Your turn begins" log simulates, and the ink lands on player 1
+  - "Player 7" does not crash the simulation, and valid events still apply
+  - no write indexes S with an unchecked player
 
-NOT VERIFIED: rendered output — no site/data/** here, so the app cannot boot.
-Worth testing with a real CSV that has a price column, and opening Academy as a
-fresh profile to see the journey pick the right current step.
+journey-cost 37 · practice-loop 36 · meta-advisor 32 · shared-cards 23 ·
+data-health 26 · visual 18/18 · i18n 9/9 (670 keys) · mirror byte-identical
 
-STILL PENDING (unrelated): restore the deploy gate in deploy-pages.yml before
-anyone outside uses the site.
+NOT VERIFIED: rendered output — no site/data/** here. Open a replay first thing
+after deploying.

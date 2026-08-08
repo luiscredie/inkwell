@@ -4156,6 +4156,10 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     let iid=0;
     const S={1:{hand:[],inkTotal:0,inkExert:0,lore:0,chars:[],items:[],locations:[]},2:{hand:[],inkTotal:0,inkExert:0,lore:0,chars:[],items:[],locations:[]}};
     let active=null; let lastAction=null;
+    const SINK={hand:[],inkTotal:0,inkExert:0,lore:0,chars:[],items:[],locations:[]};
+    // Reading or writing an unknown player must not throw: an unparseable actor
+    // costs that one event, not the whole replay view.
+    const slot=(p)=>(p===1||p===2)?S[p]:SINK;
     const baseStats=(n)=>{ const c=this.cardByName(n); return {str:(c&&typeof c.strength==='number')?c.strength:null, will:(c&&typeof c.willpower==='number')?c.willpower:null}; };
     const zoneOf=(n)=>{ const c=this.cardByName(n); if(!c) return 'chars'; if(c.card_type==='Location') return 'locations'; if(c.card_type==='Item') return 'items'; if(c.card_type==='Character') return 'chars'; return null; };
     const rmHand=(p,n)=>{ n=n.trim(); const i=S[p].hand.indexOf(n); if(i>=0) S[p].hand.splice(i,1); };
@@ -4165,13 +4169,14 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     const banishByName=(n)=>{ n=n.trim(); for(const q of[1,2]) for(const z of['chars','items','locations']){ const arr=S[q][z]; const hits=arr.map((x,i)=>({x,i})).filter(o=>o.x.name===n); if(hits.length){ const worst=hits.sort((a,b)=>b.x.damage-a.x.damage)[0]; arr.splice(worst.i,1); return; } } };
     const put=(p,n)=>{ const z=zoneOf(n); if(!z) return null; const bs=baseStats(n); const inst={iid:++iid,name:n.trim(),zone:z,drying:z==='chars',exerted:false,damage:0,str:bs.str,will:bs.will,tempStr:0,mods:this.cardKeywordMods(n)}; S[p][z].push(inst); return inst; };
     for(let i=0;i<=idx && i<events.length;i++){ const t=(events[i]&&events[i].text)||''; let m;
-      const P=(x)=>x==='You'?1:(x==='Opponent'?2:+x);
+      const P=(x)=>{ const p=(typeof x==='string'&&x.indexOf('You')===0)?1:(x==='Opponent'?2:+x);
+        return (p===1||p===2)?p:null; };   // never index S with NaN
       // free undo: roll back the last board-affecting action
       if(/took back their action|free undo/i.test(t)){ if(lastAction&&lastAction.undo) lastAction.undo(); lastAction=null; continue; }
-      if(m=t.match(/^(?:Player (\d)|(You|Opponent))'s starting hand: (.+)$/)){ S[P(m[1]||m[2])].hand=splitList(m[3]); continue; }
+      if(m=t.match(/^(?:Player (\d)|(You|Opponent))'s starting hand: (.+)$/)){ slot(P(m[1]||m[2])).hand=splitList(m[3]); continue; }
       if(m=t.match(/^(?:Player (\d)|(You|Opponent)) mulliganed \d+ cards?: (.+?)\. Drew: (.+)$/)){ const p=P(m[1]||m[2]); for(const n of splitList(m[3])) rmHand(p,n); S[p].hand=S[p].hand.concat(splitList(m[4])); continue; }
-      if(m=t.match(/^(?:Player (\d)|(You|Your|Opponent))(?:'s)? turn begins$/)){ active=P(m[1]||m[2]); S[active].inkExert=0; for(const ch of S[active].chars){ ch.exerted=false; ch.drying=false; } continue; }
-      if(m=t.match(/^(?:Player (\d)|(You|Opponent)) drew (\d+) cards?: (.+)$/)){ S[P(m[1]||m[2])].hand=S[P(m[1]||m[2])].hand.concat(splitList(m[4])); continue; }
+      if(m=t.match(/^(?:Player (\d)|(You|Your|Opponent))(?:'s)? turn begins$/)){ const p0=P(m[1]||m[2]); if(!p0) continue; active=p0; S[active].inkExert=0; for(const ch of S[active].chars){ ch.exerted=false; ch.drying=false; } continue; }
+      if(m=t.match(/^(?:Player (\d)|(You|Opponent)) drew (\d+) cards?: (.+)$/)){ slot(P(m[1]||m[2])).hand=S[P(m[1]||m[2])].hand.concat(splitList(m[4])); continue; }
       if(m=t.match(/^(?:Player (\d)|(You|Opponent)) drew (.+)$/)){ const p=P(m[1]||m[2]), n=m[3].trim(); S[p].hand.push(/^a card$/.test(n)?'?':n); continue; }
       if(m=t.match(/^(?:Player (\d)|(You|Opponent)) added (.+?) to ink$/)){ const p=P(m[1]||m[2]); rmHand(p,m[3]); S[p].inkTotal++; lastAction={undo:()=>{S[p].inkTotal--;S[p].hand.push(m[3].trim());}}; continue; }
       if(m=t.match(/^(?:Player (\d)|(You|Opponent)) played (.+?) \(cost (\d+)/)){ const p=P(m[1]||m[2]), n=m[3].trim(), cost=+m[4]; rmHand(p,n); const prevInk=S[p].inkExert; S[p].inkExert=Math.min(S[p].inkTotal,S[p].inkExert+cost); const inst=put(p,n); lastAction={undo:()=>{S[p].inkExert=prevInk; if(inst){const z=inst.zone; const ix=S[p][z].indexOf(inst); if(ix>=0)S[p][z].splice(ix,1);} S[p].hand.push(n);}}; continue; }
