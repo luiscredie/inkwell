@@ -1463,3 +1463,83 @@ Três testes de regressão novos em `replay-ux-contract` (36/36), com
 
 Demais suítes: journey-cost 37, practice 36, meta 32, shared 23, data-health 26,
 visual 18/18, i18n 9/9 (670 chaves). Espelho byte a byte.
+
+## M2.7 — acessibilidade, movimento e orçamento de performance (2026-08-08)
+
+Auditoria antes de mexer. O que ela encontrou:
+
+### Acessibilidade
+
+**`<html>` sem `lang`.** O leitor de tela escolhia a voz errada — texto em
+português lido com fonética inglesa. Agora acompanha o seletor de idioma
+(`pt-BR` / `en`).
+
+**Toasts mudos.** `role="status"` + `aria-live="polite"`: "Backup restaurado" e
+"Coleção exportada" nunca eram anunciados. Confirmação que só existe visualmente
+não é confirmação para quem não vê.
+
+**Sem link de pulo.** São ~110 paradas de navegação antes do conteúdo, em toda
+view. Link "Ir para o conteúdo" que aparece no foco — posicionado fora da tela,
+não `display:none`, senão sairia da ordem de tabulação.
+
+**Arte das cartas sem `alt`.** Três `<img>` de carta anunciavam nada. Agora levam
+o nome. A moeda decorativa do hero continua com `alt=""` — anunciá-la seria ruído.
+
+**Controles só-ícone sem nome:** os steppers `−`/`+`, e os botões EN/PT que um
+leitor de tela lia como duas letras soltas.
+
+**Inputs de arquivo ocultos recebiam foco.** `display:none` não basta em todos os
+navegadores; ganharam `tabindex="-1"` e `aria-hidden`.
+
+### Alvos de toque
+
+Steppers de quantidade estavam em **24 px**. Também havia botões a 28 e 30 px.
+Nenhum controle declara menos de 32 px agora, e o teste falha se voltar.
+
+### Movimento
+
+O lift de hover era inline por card, com `style-hover`. Virou `.ink-lift`, uma
+regra só, dentro de `@media (hover:hover)` — em toque, hover não existe e o
+efeito ficava preso após o tap.
+
+### Bug de CSS achado pelo próprio teste
+
+Coloquei `@media (prefers-reduced-motion){ .ink-skip{transition:none} }` **antes**
+da regra base do `.ink-skip`. Mesma especificidade: quem vem depois vence. A regra
+de reduced-motion não fazia nada. Movida para depois, com teste que verifica a
+ordem — não só a existência.
+
+### Orçamento de performance
+
+**29 `backdrop-filter`.** Blur é a pintura mais cara da página e o custo aparece
+justamente em GPU de celular. Duas mudanças:
+
+- em telas ≤ 860 px, blur desligado — as superfícies mantêm a cor, só não borram;
+- **modo performance agora derruba o blur também**, não só o shader. O botão
+  promete custo menor; entregar só metade era promessa quebrada.
+
+Descoberto no caminho: havia dois breakpoints de 860 px escritos diferente
+(`@media(` sem espaço), o que fez o teste enxergar só um. Normalizados.
+
+### Chave duplicada no dicionário
+
+`perRow` já existia com `'{n} / row'` e eu criei uma segunda com `'row'`. Em JS a
+última vence em silêncio. Removida a minha, e o teste passou a rejeitar qualquer
+chave definida duas vezes — o `i18n-contract` valida paridade e uso, mas não
+duplicata.
+
+### Não feito: biblioteca de componentes
+
+O M2.7 previa extrair componentes. São 1.231 atributos `style` inline num arquivo
+único, e o modelo de Design Component pinta a partir de estilo inline — extrair
+para classes atrasaria a primeira pintura. A padronização real veio pelos tokens
+(V5) e agora pelo movimento. Extração de módulo é assunto do M3.
+
+### Verificação
+
+`tools/a11y-perf-contract.test.mjs`, nova, 27/27. Demais: replay-ux 36,
+journey-cost 37, practice 36, meta 32, shared 23, data-health 26, visual 18/18,
+i18n 9/9 (676 chaves). `test:all` e CI em 22 suítes, sem divergência.
+
+Não visto rodando. Vale conferir com teclado (Tab logo ao abrir mostra o link de
+pulo) e com o modo performance ligado.

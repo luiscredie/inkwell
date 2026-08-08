@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="{{ htmlLang }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -65,7 +65,13 @@
   #ink-shader{position:fixed;inset:0;z-index:0;display:block;width:100%;height:100%;pointer-events:none}
   /* Performance mode, reduced motion and small screens all fall back to this. */
   #ink-fallback{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(circle at center,#1a1c23 0%,#0a0c10 100%)}
+  body.ink-perf *{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
   #ink-main{overflow-x:hidden}
+  .ink-skip{position:fixed;top:-60px;left:12px;z-index:200;padding:11px 18px;border-radius:var(--r-pill);background:var(--gold);color:#131313;font-weight:700;font-size:13px;text-decoration:none;transition:top var(--dur-fast)}
+  .ink-skip:focus{top:12px}
+  @media (prefers-reduced-motion: reduce){ .ink-skip{transition:none} }
+  /* M2.7 motion: one curve, hover-capable pointers only — a tap should not lift */
+  @media (hover:hover){ .ink-lift{transition:transform var(--dur-med) cubic-bezier(.2,.7,.3,1)} .ink-lift:hover{transform:translateY(-4px)} }
   #ink-scroll{background:transparent}
   #ink-scroll::-webkit-scrollbar,.ink-sc::-webkit-scrollbar{width:10px;height:10px}
   #ink-scroll::-webkit-scrollbar-thumb,.ink-sc::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:8px;border:3px solid transparent;background-clip:padding-box}
@@ -73,7 +79,7 @@
   @keyframes ink-pop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
   @keyframes ink-spin{to{transform:rotate(360deg)}}
   .ink-view{animation:ink-fade .35s cubic-bezier(.2,.7,.2,1) both}
-  @media(max-width:860px){
+  @media (max-width:860px){
     #app{flex-direction:column!important}
     #rail{position:fixed;bottom:0;left:0;right:0;top:auto!important;transform:none!important;border-radius:0!important;width:100%!important;height:62px!important;flex-direction:row!important;padding:0 6px!important;border-right:none!important;border-top:1px solid rgba(255,255,255,.08);z-index:50;justify-content:space-around!important;background:rgba(14,14,18,.96)!important;backdrop-filter:blur(12px)}
     #rail .rail-brand,#rail .rail-user{display:none!important}
@@ -91,6 +97,9 @@
     .ink-coll-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}
     .ink-cols-toggle{display:none!important}
     .ink-perf-toggle{display:none!important}
+    /* Blur is the most expensive paint on the page, and mobile GPUs are where it
+       hurts. Glass surfaces keep their colour; they just stop blurring live. */
+    *{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
     .ink-grid-2,.ink-grid-3{grid-template-columns:1fr!important}
     .ink-price-row{grid-template-columns:1fr auto!important;gap:6px 10px!important}
     .ink-price-row .ink-col-range{display:none!important}
@@ -123,7 +132,7 @@
   .mc-fact-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px}
   .mc-trend-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
   .mc-action-card{padding:15px;border-radius:var(--r-md);background:rgba(95,208,127,.065);border:1px solid rgba(95,208,127,.2)}
-  @media(max-width:860px){
+  @media (max-width:860px){
     .mc-practice{padding:18px}
     .mc-practice-row{align-items:flex-start;flex-direction:column}
     .mc-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -156,6 +165,7 @@
   <span style="color:{{ perfDotColor }}">⚡</span>{{ perfLabel }}
 </button>
 
+<a href="#ink-main" class="ink-skip">{{ skipToContent }}</a>
 <div id="app" style="display:flex;min-height:100vh;position:relative;z-index:1;background:transparent;color:var(--text-1);font-family:var(--font-sans),system-ui,sans-serif;font-size:15px;line-height:1.5">
 
   <aside id="rail" style="position:fixed;left:22px;top:50%;transform:translateY(-50%);z-index:40;width:86px;display:flex;flex-direction:column;padding:12px 8px;border-radius:var(--r-pill);background:var(--glass-bg);backdrop-filter:var(--glass-blur);border:var(--glass-border);box-shadow:var(--shadow-ink)">
@@ -198,7 +208,7 @@
       <sc-if value="{{ priceAlert }}" hint-placeholder-val="{{ false }}">
         <div style="display:flex;align-items:center;gap:10px;padding:9px 18px;background:rgba(230,193,90,.08);border-bottom:1px solid rgba(230,193,90,.2);color:var(--warn);font-size:12.5px">
           <span aria-hidden="true">◷</span><span style="flex:1">{{ priceAlert }}</span>
-          <button onClick="{{ openDataHealth }}" style="background:rgba(230,193,90,.14);border:1px solid rgba(230,193,90,.28);color:var(--warn);border-radius:8px;padding:4px 10px;font-size:11.5px;cursor:pointer;min-height:28px">{{ dhOpenLabel }}</button>
+          <button onClick="{{ openDataHealth }}" style="background:rgba(230,193,90,.14);border:1px solid rgba(230,193,90,.28);color:var(--warn);border-radius:8px;padding:4px 10px;font-size:11.5px;cursor:pointer;min-height:32px">{{ dhOpenLabel }}</button>
           <button onClick="{{ dismissPriceAlert }}" style="background:none;border:none;color:var(--warn);cursor:pointer;font-size:15px;line-height:1">×</button>
         </div>
       </sc-if>
@@ -230,8 +240,8 @@
           </sc-if>
         </div>
         <div style="display:flex;align-items:center;gap:2px;padding:3px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);margin-right:12px">
-          <button onClick="{{ setLangEn }}" style="{{ langEnStyle }}">EN</button>
-          <button onClick="{{ setLangPt }}" style="{{ langPtStyle }}">PT</button>
+          <button onClick="{{ setLangEn }}" style="{{ langEnStyle }}" aria-label="{{ langEnAria }}">EN</button>
+          <button onClick="{{ setLangPt }}" style="{{ langPtStyle }}" aria-label="{{ langPtAria }}">PT</button>
         </div>
         <div style="position:relative;width:min(340px,42vw)">
           <span style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text-4);pointer-events:none;font-size:14px">⌕</span>
@@ -464,7 +474,7 @@
             </div>
             <button onClick="{{ exportCollection }}" style="padding:8px 12px;border-radius:11px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:var(--text-2);cursor:pointer;font-size:13px">{{ exportLabel }}</button>
             <button onClick="{{ triggerImport }}" title="Import from Dreamborn / Inkwell CSV or JSON" style="padding:8px 12px;border-radius:11px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:var(--text-2);cursor:pointer;font-size:13px">{{ importLabel }}</button>
-            <input type="file" accept=".csv,.json" ref="{{ setImpRef }}" onChange="{{ importCollection }}" style="display:none" />
+            <input type="file" accept=".csv,.json" ref="{{ setImpRef }}" onChange="{{ importCollection }}" aria-hidden="true" tabindex="-1" style="display:none" />
           </div>
 
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--gutter);margin-bottom:32px">
@@ -543,9 +553,9 @@
 
           <div class="ink-coll-grid" style="{{ collGridStyle }}">
             <sc-for list="{{ pageCards }}" as="c" hint-placeholder-count="8">
-              <div data-testid="collection-card" data-card-id="{{ c.cid }}" onClick="{{ c._open }}" onKeyDown="{{ c._openKey }}" role="button" tabindex="0" aria-label="{{ c.openAria }}" style="background:none;border:none;padding:0;cursor:pointer;text-align:left;display:flex;flex-direction:column;transition:transform var(--dur-med)" style-hover="transform:translateY(-6px)">
+              <div data-testid="collection-card" data-card-id="{{ c.cid }}" onClick="{{ c._open }}" onKeyDown="{{ c._openKey }}" role="button" tabindex="0" aria-label="{{ c.openAria }}" class="ink-lift" style="background:none;border:none;padding:0;cursor:pointer;text-align:left;display:flex;flex-direction:column">
                 <div style="position:relative;aspect-ratio:2.5/3.5;border-radius:var(--r-lg);overflow:hidden;background:var(--surface-container, var(--surface-panel));box-shadow:var(--shadow-ink);border:1px solid var(--outline)">
-                  <img src="{{ c._local }}" data-local="{{ c._local }}" data-remote="{{ c._remote }}" data-cid="{{ c.cid }}" onError="{{ imgError }}" onLoad="{{ imgLoad }}" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block" />
+                  <img src="{{ c._local }}" data-local="{{ c._local }}" data-remote="{{ c._remote }}" data-cid="{{ c.cid }}" alt="{{ c.name }}" onError="{{ imgError }}" onLoad="{{ imgLoad }}" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block" />
                   <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:12px;text-align:center;font-family:var(--font-title);font-weight:700;font-size:15px;background:{{ c.ink }};display:none" data-ph>{{ c.name }}</div>
                   <div style="position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;z-index:2">
                     <span style="padding:4px 11px;border-radius:var(--r-pill);background:rgba(19,19,19,.8);backdrop-filter:blur(8px);font-size:11px;font-weight:700;color:{{ c.rarityColor }};border:1px solid var(--outline);white-space:nowrap">{{ c.rarityLabel }}</span>
@@ -970,9 +980,9 @@
                   <span style="flex:1;min-width:0;font-weight:600;font-size:14px">{{ d.name }}</span>
                   <span style="font-size:12.5px;color:{{ d.color }};font-family:var(--font-mono)">{{ d.label }}</span>
                   <span style="display:flex;align-items:center;gap:6px;margin-left:8px" title="{{ d.tcLabel }}">
-                    <button onClick="{{ d._dec }}" style="width:24px;height:24px;border-radius:7px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text-1);cursor:pointer;font-size:14px;line-height:1">−</button>
+                    <button onClick="{{ d._dec }}" aria-label="{{ decAria }}" style="width:32px;height:32px;min-width:32px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text-1);cursor:pointer;font-size:15px;line-height:1">−</button>
                     <span style="font-family:var(--font-mono);font-weight:700;font-size:13px;min-width:14px;text-align:center">{{ d.tc }}</span>
-                    <button onClick="{{ d._inc }}" style="width:24px;height:24px;border-radius:7px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text-1);cursor:pointer;font-size:14px;line-height:1">+</button>
+                    <button onClick="{{ d._inc }}" aria-label="{{ incAria }}" style="width:32px;height:32px;min-width:32px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text-1);cursor:pointer;font-size:15px;line-height:1">+</button>
                   </span>
                   <button onClick="{{ d._sim }}" title="{{ d.simLabel }}" style="padding:5px 10px;border-radius:8px;background:rgba(138,92,246,.14);border:1px solid rgba(138,92,246,.3);color:var(--accent);cursor:pointer;font-size:11.5px;white-space:nowrap">{{ d.simLabel }}</button>
                   <button onClick="{{ d._pin }}" title="{{ d.pinLabel }}" aria-label="{{ d.pinLabel }}" style="{{ d.pinStyle }}">{{ d.pinIcon }}</button>
@@ -1592,7 +1602,7 @@
                 <h3 style="font-family:var(--font-title);font-weight:700;font-size:15px">{{ addCardsLabel }} <span style="color:var(--text-3);font-weight:400;font-size:13px">· {{ b.fmtLabel }} · {{ b.deckColorsLabel }}</span></h3>
                 <div style="display:flex;align-items:center;gap:8px">
                   <span style="font-size:12px;color:var(--text-3)">{{ sizeLabel2 }}</span>
-                  <input type="range" min="2" max="5" step="1" value="{{ b.size }}" onInput="{{ b.onSize }}" style="width:96px;accent-color:var(--accent)" />
+                  <input type="range" min="2" max="5" step="1" value="{{ b.size }}" onInput="{{ b.onSize }}" aria-label="{{ b.sizeAria }}" style="width:96px;accent-color:var(--accent)" />
                   <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-3);width:52px">{{ b.sizeLabel }}</span>
                 </div>
               </div>
@@ -1649,7 +1659,7 @@
                     <div style="display:grid;grid-template-columns:{{ b.gridCols }};gap:10px">
                       <sc-for list="{{ g.cards }}" as="r" hint-placeholder-count="8">
                         <div data-testid="builder-card" data-card-id="{{ r.cid }}" data-invalid="{{ r.invalid }}" style="position:relative;border-radius:11px;overflow:hidden;border:1px solid {{ r.borderColor }};background:{{ r.ink }};aspect-ratio:734/1024">
-                          <img src="{{ r._local }}" data-local="{{ r._local }}" data-remote="{{ r._remote }}" data-cid="{{ r.cid }}" onError="{{ imgError }}" onLoad="{{ imgLoad }}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;{{ r.dim }}" />
+                          <img src="{{ r._local }}" data-local="{{ r._local }}" data-remote="{{ r._remote }}" data-cid="{{ r.cid }}" alt="{{ r.name }}" onError="{{ imgError }}" onLoad="{{ imgLoad }}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;{{ r.dim }}" />
                           <div data-ph style="position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:8px;text-align:center;font-family:var(--font-title);font-weight:700;font-size:12px;background:{{ r.ink }}">{{ r.name }}</div>
                           <button onClick="{{ r._open }}" style="position:absolute;inset:0;background:none;border:none;cursor:pointer" title="{{ r.name }}"></button>
                           <sc-if value="{{ r.invalid }}" hint-placeholder-val="{{ false }}">
@@ -1777,7 +1787,7 @@
                       <sc-for list="{{ g.cards }}" as="c" hint-placeholder-count="5">
                         <div style="display:flex;align-items:center;gap:11px;padding:6px 8px;border-radius:9px" style-hover="background:rgba(255,255,255,.03)">
                           <span style="position:relative;width:30px;height:42px;border-radius:5px;overflow:hidden;flex-shrink:0;background:{{ c.ink }}">
-                            <img src="{{ c._local }}" data-local="{{ c._local }}" data-remote="{{ c._remote }}" data-cid="{{ c.cid }}" onError="{{ imgError }}" onLoad="{{ imgLoad }}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block" />
+                            <img src="{{ c._local }}" data-local="{{ c._local }}" data-remote="{{ c._remote }}" data-cid="{{ c.cid }}" alt="{{ c.name }}" onError="{{ imgError }}" onLoad="{{ imgLoad }}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block" />
                             <span data-ph style="position:absolute;inset:0;display:none;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:11px;background:{{ c.ink }};color:var(--on-accent)">{{ c.cost }}</span>
                           </span>
                           <button onClick="{{ c._open }}" style="flex:1;min-width:0;text-align:left;background:none;border:none;cursor:pointer;color:var(--text-1);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0" style-hover="color:#fff">{{ c.name }}</button>
@@ -1988,7 +1998,7 @@
           <div style="padding:10px 12px;border-radius:10px;background:rgba(230,193,90,.1);color:var(--warn);font-size:12px;margin-bottom:14px;display:flex;flex-direction:column;gap:9px">
             <div style="display:flex;align-items:center;gap:10px">
               <span style="flex:1">{{ importUnresolved }}</span>
-              <button onClick="{{ toggleImportRows }}" style="background:rgba(230,193,90,.16);border:1px solid rgba(230,193,90,.3);color:var(--warn);border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;min-height:28px;flex-shrink:0">{{ importRowsToggleLabel }}</button>
+              <button onClick="{{ toggleImportRows }}" style="background:rgba(230,193,90,.16);border:1px solid rgba(230,193,90,.3);color:var(--warn);border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;min-height:32px;flex-shrink:0">{{ importRowsToggleLabel }}</button>
             </div>
             <sc-if value="{{ importRowsOpen }}" hint-placeholder-val="{{ false }}">
               <div class="ink-sc" style="max-height:152px;overflow-y:auto;border-radius:9px;border:1px solid rgba(230,193,90,.2);background:rgba(0,0,0,.28)">
@@ -2085,7 +2095,7 @@
         <div style="display:flex;gap:10px;margin-bottom:6px">
           <button onClick="{{ fullExport }}" style="flex:1;padding:11px;border-radius:11px;background:linear-gradient(180deg,var(--gold),var(--accent-strong));border:none;color:#2a2118;font-weight:700;cursor:pointer;font-size:13.5px">↓ Download backup (.json)</button>
           <button onClick="{{ triggerFullImport }}" style="flex:1;padding:11px;border-radius:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:var(--text-1);cursor:pointer;font-size:13.5px">↑ Restore backup</button>
-          <input type="file" accept=".json" ref="{{ setFimpRef }}" onChange="{{ fullImport }}" style="display:none" />
+          <input type="file" accept=".json" ref="{{ setFimpRef }}" onChange="{{ fullImport }}" aria-hidden="true" tabindex="-1" style="display:none" />
         </div>
         <div style="font-size:11.5px;color:var(--text-4);font-family:var(--font-mono);margin-bottom:20px">{{ backupLabel }}</div>
 
@@ -2300,7 +2310,7 @@
   </sc-if>
 
   <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
-    <div data-testid="toast" style="position:fixed;bottom:28px;left:50%;transform:translateX(-50%);z-index:200;padding:12px 22px;border-radius:13px;background:#1c1c22;border:1px solid rgba(255,255,255,.14);box-shadow:0 12px 40px rgba(0,0,0,.5);font-size:14px;font-weight:500;animation:ink-pop .25s both">{{ toast }}</div>
+    <div data-testid="toast" role="status" aria-live="polite" style="position:fixed;bottom:28px;left:50%;transform:translateX(-50%);z-index:200;padding:12px 22px;border-radius:13px;background:#1c1c22;border:1px solid rgba(255,255,255,.14);box-shadow:0 12px 40px rgba(0,0,0,.5);font-size:14px;font-weight:500;animation:ink-pop .25s both">{{ toast }}</div>
   </sc-if>
 
 </div>
@@ -2382,6 +2392,7 @@ class Component extends DCLogic {
       bjLegal:'Get a deck to 60 cards', bjLegalWhy:'60 is the legal minimum for a real game. The deck view tells you how far off you are.', bjLegalCta:'Open decks',
       bjMatch:'Log a game you played', bjMatchWhy:'One logged game is enough to start seeing your record. Paste a replay log and the board is reconstructed for you.', bjMatchCta:'Log a game', bjMatchDone:'{n} games logged',
       bjReview:'Review one of your games', bjReviewWhy:'The replay shows the board turn by turn and flags the turns that changed the result.', bjReviewCta:'Open a replay', bjReviewBlocked:'Log a game with a replay log first — a result on its own cannot be replayed.',
+      decAria:'One fewer copy', incAria:'One more copy', langEnAria:'Switch to English', langPtAria:'Mudar para português', skipToContent:'Skip to content', colsAria:'Cards per row', anyInk:'Any ink',
       newDeck:'+ New Deck', importDeck:'↑ Import', createDeck:'Create', cancel:'Cancel', format:'Format',
       inkable:'Inkable', uninkable:'Uninkable', cost:'Cost', allSets:'All sets',
       welcome:'Welcome, {name}', emptyMsg:'Your codex is empty. Import your collection from Dreamborn, or start building a deck — everything is tracked privately in your profile.',
@@ -2455,6 +2466,7 @@ class Component extends DCLogic {
       bjLegal:'Leve um deck a 60 cartas', bjLegalWhy:'60 é o mínimo legal para uma partida de verdade. A tela do deck mostra o quanto falta.', bjLegalCta:'Abrir os decks',
       bjMatch:'Registre uma partida que você jogou', bjMatchWhy:'Uma partida registrada já basta para começar a ver seu retrospecto. Cole um log de replay e a mesa é reconstruída para você.', bjMatchCta:'Registrar partida', bjMatchDone:'{n} partidas registradas',
       bjReview:'Revise uma das suas partidas', bjReviewWhy:'O replay mostra a mesa turno a turno e destaca os turnos que mudaram o resultado.', bjReviewCta:'Abrir um replay', bjReviewBlocked:'Registre antes uma partida com log de replay — só o resultado não pode ser reproduzido.',
+      decAria:'Uma cópia a menos', incAria:'Uma cópia a mais', langEnAria:'Switch to English', langPtAria:'Mudar para português', skipToContent:'Ir para o conteúdo', colsAria:'Cartas por linha', anyInk:'Qualquer ink',
       newDeck:'+ Novo Deck', importDeck:'↑ Importar', createDeck:'Criar', cancel:'Cancelar', format:'Formato',
       inkable:'Inkável', uninkable:'Não-inkável', cost:'Custo', allSets:'Todos os sets',
       welcome:'Bem-vindo, {name}', emptyMsg:'Seu códice está vazio. Importe sua coleção do Dreamborn ou comece a montar um deck — tudo fica salvo de forma privada no seu perfil.',
@@ -2544,6 +2556,7 @@ class Component extends DCLogic {
     const isOpen=!!this.state.selectedCard;
     if(!wasOpen&&isOpen) this.bindModalKeys();
     else if(wasOpen&&!isOpen) this.unbindModalKeys();
+    if(prev.perfMode!==this.state.perfMode) this.syncPerfClass();
   }
 
   async componentDidMount() {
@@ -3735,8 +3748,10 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     };
     this._inkRaf=requestAnimationFrame(draw);
   }
+  // Perf mode is a promise about cost, so it drops blur too — not just the shader.
+  syncPerfClass(){ try{ document.body.classList.toggle('ink-perf', !!this.state.perfMode); }catch(e){} }
   togglePerf=()=>{ const v=!this.state.perfMode; try{ localStorage.setItem('inkwell_perf',v?'1':'0'); }catch(e){}
-    if(v) this.stopInkShader(); this.setState({perfMode:v}); };
+    if(v) this.stopInkShader(); this.setState({perfMode:v},()=>this.syncPerfClass()); };
   // Display sizes follow the STRING, not the slot: BRL runs past 12 characters
   // and a fixed 44px overflows the tile.
   fitSize(str, max, mid, min){ const n=String(str==null?'':str).length; return (n<=6?max:(n<=9?mid:min))+'px'; }
@@ -4360,10 +4375,12 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     const titles={learn:[this.t('learn'),this.t('sub_learn')],matches:[this.t('matches'),this.t('sub_matches')],overview:[this.t('overview'),this.t('sub_overview',{name:st.displayName})],collection:[this.t('collection'),this.t('sub_collection')],prices:[this.t('prices'),this.t('sub_prices')],decks:[this.t('decks'),this.t('sub_decks')],deckDetail:[(this.deckById(st.selectedDeck)||{}).name||this.t('decks'),this.t('sub_deckDetail')],advisor:[this.t('advisorBtn'),this.t('advisorSub')]};
     const eyebrows={overview:'eb_overview',collection:'eb_collection',prices:'eb_prices',decks:'eb_decks',deckDetail:'eb_decks',advisor:'eb_decks',matches:'eb_matches',learn:'eb_learn'};
     V.pageEyebrow=this.t(eyebrows[st.view]||'eb_overview');
+    V.htmlLang=st.lang==='pt'?'pt-BR':'en';
     for(const k of ['uiFatalTitle','uiReload','cancel','allSets','grpNone','grpColor','grpSet','noMatchFilters',
       'logGameTitle','win','loss','saveGame','foilLower','colFoil','backupSettings','cloudSync','signedInAs',
       'signOut','fullBackup','exportCollCsv','yourCorrections','exportCorrCsv','clearLabel','pipelineReport',
-      'noPipelineReport','syncAcrossDevices','buyOnLiga','closeLabel','exportCorrHint']) V[k]=this.t(k);
+      'noPipelineReport','syncAcrossDevices','buyOnLiga','closeLabel','exportCorrHint',
+      'decAria','incAria','langEnAria','langPtAria','skipToContent']) V[k]=this.t(k);
     { const on=this.inkFxAllowed();
       V.inkFxOn=on; V.inkFxOff=!on; V.setShaderRef=this.setShaderRef; V.togglePerf=this.togglePerf;
       V.perfLabel=this.t('perfMode')+': '+this.t(st.perfMode?'perfOn':'perfOff');
@@ -4523,7 +4540,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
             _go:()=>{ this.replaySeek(i); if(selected) this.noteMatchReviewed(selected.id); } }; });
         V.tlSpeeds=[0.5,1,2].map(v=>({ label:(v===0.5?'0,5':String(v))+'×', active:(st.replaySpeed||1)===v,
           _pick:()=>this.replaySpeedSet(v),
-          style:'padding:5px 9px;border-radius:var(--r-pill);font-size:10.5px;font-weight:600;cursor:pointer;min-height:30px;border:1px solid '+((st.replaySpeed||1)===v?'rgba(212,175,55,.45)':'var(--outline)')+';background:'+((st.replaySpeed||1)===v?'rgba(212,175,55,.16)':'transparent')+';color:'+((st.replaySpeed||1)===v?'var(--gold)':'var(--text-3)') }));
+          style:'padding:6px 11px;border-radius:var(--r-pill);font-size:10.5px;font-weight:600;cursor:pointer;min-height:32px;border:1px solid '+((st.replaySpeed||1)===v?'rgba(212,175,55,.45)':'var(--outline)')+';background:'+((st.replaySpeed||1)===v?'rgba(212,175,55,.16)':'transparent')+';color:'+((st.replaySpeed||1)===v?'var(--gold)':'var(--text-3)') }));
         V.tlSpeedLabel=this.t('rpSpeed');
       }
       V.replayFullOpen=st.replayFull && !!selected && (selected.replay&&Array.isArray(selected.replay.events)?selected.replay.events.length:0)>0;
@@ -5088,8 +5105,8 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
         }
         const setsPresent=[...new Set(this.cards.map(c=>c.set_code))].map(code=>({code,name:this.setName(code)})).sort((a,b)=>this.setOrder(a.code)-this.setOrder(b.code));
         V.b={
-          fmtLabel:this.fmtLabel(deck.format), deckColorsLabel:colors.length?colors.join('/'):'Any ink',
-          size:st.bSize, sizeLabel:st.bSize+' / row', onSize:(e)=>this.setState({bSize:+e.target.value}), gridCols:`repeat(${st.bSize},1fr)`,
+          fmtLabel:this.fmtLabel(deck.format), deckColorsLabel:colors.length?colors.join('/'):this.t('anyInk'),
+          size:st.bSize, sizeLabel:this.t('perRow',{n:st.bSize}), sizeAria:this.t('colsAria'), onSize:(e)=>this.setState({bSize:+e.target.value}), gridCols:`repeat(${st.bSize},1fr)`,
           inkChips:this.INK_ORDER.map(ink=>({label:ink,iconEl:this.inkIconEl(ink,22),_toggle:()=>{this.toggleArr('bInks',ink);this.setState({bPage:0});},_style:this.chipStyleSm(st.bInks.includes(ink),this.INK[ink])})),
           costChips:[['all','All'],['0','0'],['1','1'],['2','2'],['3','3'],['4','4'],['5','5'],['6','6'],['7','7'],['8','8'],['9','9'],['10','10+']].map(([v,label])=>({label,_toggle:()=>this.setState({bCost:v,page:0,bPage:0}),_style:this.chipStyleSm(st.bCost===v)})),
           setLabel:st.bSets.length?(st.bSets.length+' sets'):this.t('allSetsFilter'), setMenu:st.bSetMenu, toggleSetMenu:()=>this.setState({bSetMenu:!st.bSetMenu}), clearSets:()=>this.setState({bSets:[]}),

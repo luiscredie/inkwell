@@ -53,6 +53,8 @@ jobs:
         run: node tools/replay-ux-contract.test.mjs
       - name: Beginner journey and acquisition cost contract
         run: node tools/journey-cost-contract.test.mjs
+      - name: Accessibility, motion and performance contract
+        run: node tools/a11y-perf-contract.test.mjs
   python:
     runs-on: ubuntu-latest
     steps:
