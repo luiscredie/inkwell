@@ -1,93 +1,80 @@
-INKWELL BRASIL — M3 · PWA: installable, works offline
+INKWELL BRASIL — M4: mesa de replay redesenhada
 
-Extract over your repo root, then:
+Extraia sobre a raiz do repo, depois:
 
   npm run verify
-  git add -A && git commit -m "M3: PWA — installable, offline-capable, versioned cache policy"
+  git add -A && git commit -m "M4: replay board zones, deck/discard tracking, card identity fix, card inspector"
   git push
 
-NEW FILES
-  site/manifest.webmanifest
-  site/sw.js
-  site/ink/icon-192.png
-  site/ink/icon-512.png
-  tools/pwa-contract.test.mjs
-
-Service workers only run on https or localhost, so this does nothing until it is
-deployed. After deploying, check: install prompt, airplane mode, update banner.
+ARQUIVO NOVO: site/ink/card-back.png (do verso que você enviou)
 
 ────────────────────────────────────────────────────────────
-WHY PWA FIRST, OUT OF WHAT M3 LISTS
+VOCÊ ESTAVA CERTO SOBRE DECK E DESCARTE
 
-It solves a concrete situation: checking your collection and decks at a game store
-on bad wi-fi. The scanner needs an OCR and data-source decision first, and
-telemetry has no outside users to measure yet.
+Eu propus não mostrar, achando que o log não dizia o que era descartado. Você
+conferiu e corrigiu: diz sim — o descarte sempre vem de desafio, ação ou canção.
+Implementado como funcionalidade em vez de omissão.
 
-────────────────────────────────────────────────────────────
-A CACHING POLICY, NOT ONE BLANKET RULE
+  deck      diminui na mão inicial e em cada compra
+  descarte  recebe banimento, ação resolvida e canção cantada
 
-The strategy per file follows how that file actually behaves:
+Testado com log sintético: 60 no deck, 7 de mão, 1 compra → 52. Canção e
+personagem banido aparecem no descarte, nessa ordem.
 
-  app shell (html, js)   network-first   an update has to be able to land
-  data-manifest.json     network-first   it is the VERSION POINTER — a stale one
-                                         pins every other file to an old build
-  versioned data         cache-first     the manifest names a version, so those
-                                         files are immutable and safe to keep
-  prices.json            network-first   they move daily; the app already labels
-                                         staleness, so a cached copy is honest
-  card art               cache-first     with a hard cap
-  user data              NEVER           it lives in localStorage and Supabase; a
-                                         cached copy could resurrect a deleted record
-
-RULE ORDER MATTERS. data-manifest.json and prices.json are tested BEFORE the
-generic .json rule, or they would never run at all. There is a test for that
-ordering, not just for the rules existing.
-
-The art cap is 600 entries, oldest evicted first. Without it, thousands of card
-images would sit on disk forever.
-
-The install uses c.add() per file rather than addAll(), because addAll fails the
-ENTIRE service worker install if any single URL 404s.
+O tamanho do deck só é conhecido quando o deck é conhecido. Sem isso mostra "—",
+nunca um 60 chutado.
 
 ────────────────────────────────────────────────────────────
-UPDATES ARE OFFERED, NEVER FORCED
+SEUS ITENS 1, 2, 5 E 8 ERAM UM PROBLEMA SÓ
 
-When a new version installs while a tab is open, a banner appears with a Reload
-button. No automatic location.reload() — reloading mid-import would throw away the
-preview you had not confirmed yet.
+A mesa era uma pilha vertical. O texto do evento e a barra do jogador dividiam a
+mesma faixa — daí a sobreposição — e as cartas não tinham zona própria, então o
+tamanho era o que sobrava. Por isso resolver o layout resolveu os quatro.
 
-REGISTRATION IS GUARDED
+Agora é grade de zonas, como o seu mockup:
 
-The Inkwell.dc.html mirror opens from file://, where registering a service worker
-throws. Registration checks for https? and for API support, and swallows failure —
-a broken PWA must not stop the app from opening.
+  ESQUERDA (132px)  Deck e Descarte dos dois jogadores, com a última carta
+                    descartada visível
+  CENTRO            Lore · mão do oponente · campo dele · campo seu ·
+                    O Tinteiro · sua mão
+  DIREITA (300px)   Log de turnos — todos os eventos, mais recente no topo,
+                    cada linha clicável para pular até ali
 
-OFFLINE
-
-A banner with aria-live that says WHAT STILL WORKS: collection and decks yes,
-prices possibly out of date. A vague "no connection" would leave you unsure whether
-to trust what is on screen.
-
-ICONS
-
-Generated from logo-coin.png at 192 and 512, with 10% breathing room on a #0a0c10
-field, and declared maskable as well as any — without maskable, Android crops the
-coin's engraving away.
-
-Every manifest path is relative. Absolute paths break on a GitHub Pages project
-site, which serves from a subfolder.
+Carta de campo passou de miniatura para 98px. Abaixo de 1100px o log some antes de
+o campo apertar; abaixo de 720px vira coluna única.
 
 ────────────────────────────────────────────────────────────
-VERIFIED
+ITEM 3 — A ENCHANTED NO MEIO DA MESA
 
-pwa-contract  32/32  (passed first run — including parsing sw.js as JavaScript and
-                      checking the icon files exist on disk)
-a11y-perf 27 · replay-ux 36 · journey-cost 37 · practice-loop 36 ·
-meta-advisor 32 · shared-cards 23 · data-health 26 · visual 18/18 ·
-i18n 9/9 (681 keys) · test:all and CI aligned · mirror byte-identical
+Causa: cardByName devolvia a[0], a primeira impressão na ordem de carregamento,
+sem critério nenhum.
 
-REMAINING IN M3: card scanner (needs an OCR and source decision), module
-extraction, telemetry.
+Regra nova, na ordem que você pediu:
+  1. a cópia que você possui
+  2. entre as que possui, a mais barata
+  3. se não possui nenhuma, a mais barata do banco
+  (empate resolve pela raridade menor)
 
-STILL PENDING: restore the deploy gate in deploy-pages.yml before anyone outside
-uses the site.
+Com cache, invalidado a cada import — a preferência depende da coleção.
+
+ITEM 4 — TINTA
+O verso oficial que você enviou. As pips douradas sumiram; eram exatamente o que
+não dava para ver.
+
+ITENS 5, 6, 7 — MÃO
+Mão a 148×74px mostrando a faixa superior da carta. Clicar em QUALQUER carta —
+mão, campo, item, mão revelada do oponente — abre a carta inteira até 74vh, onde o
+texto de regras se lê.
+
+A mão do oponente continua no toggle "Mostrar info oculta", no cabeçalho.
+
+────────────────────────────────────────────────────────────
+VERIFICADO
+
+replay-ux-contract  36 -> 46, com 10 asserções novas
+a11y-perf 27 · journey-cost 37 · practice-loop 36 · meta-advisor 32 ·
+shared-cards 23 · data-health 26 · pwa 32 · visual 18/18 · i18n 9/9 (688 chaves)
+espelho byte a byte
+
+NÃO VERIFICADO: a tela rodando — sem site/data/** o app não inicia aqui. Abra um
+replay e confira as zonas, o log lateral e o clique numa carta.

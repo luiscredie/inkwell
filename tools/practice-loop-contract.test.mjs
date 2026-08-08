@@ -27,7 +27,7 @@ const weekKey = lift('weekKey(d){', 'weekKey');
 const weeklyGoals = lift('weeklyGoals(){', 'weeklyGoals');
 const matchupKey = lift('matchupKey(inks){', 'matchupKey');
 const matchupNotebook = lift('matchupNotebook(){', 'matchupNotebook');
-const simulateReplay = lift('simulateReplay(events, idx){', 'simulateReplay');
+const simulateReplay = lift('simulateReplay(events, idx, deckSize){', 'simulateReplay');
 
 // ---------- harness ----------
 const CARDS = [

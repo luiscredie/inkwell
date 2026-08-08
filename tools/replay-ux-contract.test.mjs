@@ -76,7 +76,7 @@ check('chapter ranges are contiguous and never overlap', () => {
 // "You", so P('Your') was NaN and S[NaN].inkExert threw on the first turn marker —
 // a red error box instead of the app.
 check('a "Your turn begins" log simulates instead of throwing', () => {
-  const simulate = lift('simulateReplay(events, idx){', 'simulateReplay', {
+  const simulate = lift('simulateReplay(events, idx, deckSize){', 'simulateReplay', {
     React: { createElement() { return null; } }
   });
   const ctx = {
@@ -90,7 +90,7 @@ check('a "Your turn begins" log simulates instead of throwing', () => {
   assert.equal(out.S[1].inkTotal, 1, 'the ink went to player 1, not into a void');
 });
 check('an unrecognised actor costs one event, not the whole replay', () => {
-  const simulate = lift('simulateReplay(events, idx){', 'simulateReplay', {
+  const simulate = lift('simulateReplay(events, idx, deckSize){', 'simulateReplay', {
     React: { createElement() { return null; } }
   });
   const ctx = { cardByName() { return null; }, cardKeywordMods() { return []; }, simulateReplay: simulate };
@@ -135,10 +135,62 @@ check('seeking stops playback so the scrub does not fight the timer', () => {
 });
 
 // ---------- board readability ----------
-check('both hands, ink pips and the live event are on the board', () => {
-  for (const hole of ['rf.youHand', 'rf.oppHand', 'rf.youInkPips', 'rf.oppInkPips', 'rf.eventText']) {
+check('both hands, the inkwell and the live event are on the board', () => {
+  for (const hole of ['rf.youHand', 'rf.oppHand', 'rf.youInkCards', 'rf.eventText']) {
     assert.ok(html.includes('{{ ' + hole + ' }}') || html.includes('list="{{ ' + hole + ' }}"'), 'missing ' + hole);
   }
+});
+check('ink is drawn as face-down cards, not abstract pips', () => {
+  assert.match(html, /const BACK='ink\/card-back\.png';/);
+  assert.match(html, /list="\{\{ rf\.youInkCards \}\}"/);
+  assert.doesNotMatch(html, /list="\{\{ rf\.youInkPips \}\}"/, 'the pips were the thing the user could not see');
+});
+check('deck and discard are tracked and shown for both players', () => {
+  for (const hole of ['rf.youDeck', 'rf.oppDeck', 'rf.youDiscard', 'rf.oppDiscard']) {
+    assert.ok(html.includes('{{ ' + hole + ' }}'), 'missing ' + hole);
+  }
+  assert.match(html, /const draw=\(p,n\)=>/);
+  assert.match(html, /const toDiscard=\(p,name\)=>/);
+});
+check('an unknown deck size shows a dash, never a guessed 60', () => {
+  assert.match(html, /SS\[yp\]\.deck==null\?'—':String\(SS\[yp\]\.deck\)/);
+  assert.match(html, /const DS=\(typeof deckSize==='number'&&deckSize>0\)\?deckSize:null;/);
+});
+check('the turn log lists every event so far, newest first, and seeks', () => {
+  assert.match(html, /list="\{\{ rf\.logRows \}\}"/);
+  assert.match(html, /ev2\.slice\(0,idx2\+1\)[\s\S]{0,260}\.reverse\(\)/);
+  assert.match(html, /_go:\(\)=>this\.replaySeek\(i\)/);
+});
+check('the board has named zones instead of one vertical stack', () => {
+  for (const k of ['rpDeck', 'rpDiscard', 'rpLore', 'rpBattlefield', 'rpInkwell', 'rpLog']) {
+    assert.equal((html.match(new RegExp('\\b' + k + ':', 'g')) || []).length, 2, k);
+  }
+  assert.match(html, /class="rp-stage"[^>]*grid-template-columns:132px 1fr 300px/);
+});
+check('the log collapses before the battlefield does', () => {
+  assert.match(html, /@media \(max-width:1100px\)\{ \.rp-stage\{grid-template-columns:112px 1fr!important\} \.rp-log\{display:none!important\} \}/);
+});
+check('clicking any card opens it full size', () => {
+  assert.match(html, /<sc-if value="\{\{ rcOpen \}\}"/);
+  assert.match(html, /max-height:74vh/);
+  for (const h2 of ['c._open', 'z._open', 'h._open']) {
+    assert.ok(html.includes('{{ ' + h2 + ' }}'), 'missing click handler ' + h2);
+  }
+});
+check('hand cards are large enough to recognise and show their top slice', () => {
+  const i = html.indexOf('list="{{ rf.youHand }}"');
+  const block = html.slice(i, i + 500);
+  assert.match(block, /width:148px;height:74px/, 'the hand was too small to read');
+});
+check('the card picker prefers what the player owns, then the cheapest', () => {
+  assert.match(html, /const owned=a\.filter\(c=>\{ const e=coll\[c\.card_id\]; return e&&\(\(e\.n\|\|0\)\+\(e\.f\|\|0\)\)>0; \}\);/);
+  assert.match(html, /const pool=owned\.length\?owned:a;/);
+  assert.doesNotMatch(html, /cardByName\(n\)\{ this\.buildNameIndex\(\); const a=this\._byName\[this\.nameKey\(n\)\]; return \(a&&a\[0\]\)\|\|null; \}/,
+    'returning the first printing is what surfaced an Enchanted the player does not own');
+});
+check('the pick cache is cleared when the collection changes', () => {
+  assert.match(html, /clearCardPickCache\(\)\{ this\._pickCache=null; \}/);
+  assert.match(html, /this\.clearCardPickCache\(\);\s*this\.setState\(\{collection,acquisition/);
 });
 check('ink is shown as available-over-total, not just a total', () => {
   assert.match(html, /youInkText:\(SS\[yp\]\.inkTotal-SS\[yp\]\.inkExert\)\+'\/'\+SS\[yp\]\.inkTotal/);

@@ -1612,3 +1612,136 @@ do deploy vale conferir instalação, modo avião e o aviso de atualização.
 
 Scanner de cartas (precisa de decisão sobre OCR e fonte), extração de módulos,
 telemetria (sem usuários externos ainda, então sem urgência).
+
+## M4 — Mesa de replay: redesenho (planejado, 2026-08-08)
+
+Oito apontamentos do usuário sobre a tela de replay. Organizados abaixo. A
+observação que muda o plano: **1, 2, 5 e 8 não são quatro problemas — são um só.**
+
+A mesa hoje é uma pilha vertical sem sistema de layout. Texto do evento e barra do
+jogador ocupam a mesma faixa (daí a sobreposição), e as cartas não têm zona
+própria, então tamanho vira sobra de espaço. Corrigir o layout resolve os quatro
+de uma vez. Tratar como quatro tickets separados produziria quatro remendos.
+
+### Fase 1 — Zonas nomeadas (itens 1, 2, 5, 8)
+
+O mockup do usuário (imagem 3) já dá a resposta: cada coisa com lugar fixo.
+
+- coluna esquerda: **Deck** e **Descarte**;
+- centro: **Battlefield**, em grade de slots;
+- coluna direita: **Lore** e o **log de turnos** — o painel lateral pedido no
+  item 1, que é também onde o texto do evento para de brigar com a mesa;
+- faixa inferior: **The Inkwell** (tinta) e a mão.
+
+Com zona fixa, carta ganha tamanho mínimo em vez de herdar sobra. Mão maior que
+mesa, porque é onde se lê texto.
+
+**Questão honesta:** o mockup mostra Deck e Descarte como contadores. O replay é
+reconstrução a partir de log — o log nem sempre diz o que foi para o descarte.
+Mostrar número que não sabemos seria inventar. Provável saída: mostrar a zona com
+o que dá para afirmar e marcar o resto como desconhecido, no mesmo espírito do
+"Reconstrução estimada" que já existe.
+
+### Fase 2 — Identidade da carta (item 3)
+
+Bug real, causa localizada. `cardByName(n)` devolve `a[0]` — a primeira carta com
+aquele nome na ordem de carregamento, sem critério. Se a impressão Enchanted vier
+primeiro, é ela que aparece, mesmo o jogador não a possuindo.
+
+Regra a implementar, na ordem pedida:
+1. a cópia que **o usuário possui** (a coleção sabe);
+2. se possui mais de uma, a mais barata entre as que possui;
+3. se não possui nenhuma, **a mais barata** do banco.
+
+Isso também conserta a mesa mostrar arte que o jogador nunca viu na mão.
+
+### Fase 3 — Tinta visível (item 4)
+
+Verso oficial da carta já salvo em `site/ink/card-back.png` (440×612, do arquivo
+enviado). Cartas viradas para tinta passam a mostrar o verso, empilhadas, em vez
+das pips douradas atuais — que o usuário não conseguia ver.
+
+### Fase 4 — Mão do oponente (item 6)
+
+Já existe `replayShowHidden`, mas escondido. Vira um toggle explícito na mesa.
+Com ele desligado, a mão do oponente aparece como versos contados; ligado, revela.
+A distinção entre "não sei" e "sei e escondo" continua sendo do usuário.
+
+### Fase 5 — Texto da carta ao clicar (item 7)
+
+Clicar numa carta mostra a metade inferior da arte, da barra de tinta para baixo —
+onde ficam habilidades e texto. Sai de graça do `object-position` sobre a imagem
+que já existe, sem precisar de dado novo.
+
+### Ordem
+
+Fase 2 é independente e pequena; pode sair antes. Fases 1, 3, 4 e 5 tocam a mesma
+tela e saem juntas, senão a mesa fica meio redesenhada.
+
+## M4 — Mesa de replay redesenhada (2026-08-08)
+
+Os 8 apontamentos, entregues juntos como pedido.
+
+### Correção que o usuário me deu
+
+Eu tinha proposto não mostrar Deck e Descarte, achando que o log não dizia o que
+era descartado. O usuário conferiu os logs e corrigiu: **diz sim** — descarte
+sempre decorre de desafio, ação ou canção. Estava errado, e a correção virou
+funcionalidade em vez de omissão.
+
+Implementado: `deck` decrementa em mão inicial e em cada compra; `discard` recebe
+banimento, ação resolvida e canção cantada. Verificado com log sintético —
+60 cartas, 7 de mão, 1 compra → 52 no deck; canção e personagem banido no
+descarte.
+
+O tamanho do deck só é conhecido quando o deck é conhecido. Sem isso mostra "—",
+não 60 chutado.
+
+### Um problema, não quatro (itens 1, 2, 5, 8)
+
+A mesa era pilha vertical: texto do evento e barra do jogador dividiam faixa, e
+carta herdava sobra de espaço. Agora é grade de zonas, como o mockup:
+
+- **coluna esquerda** (132 px): Deck e Descarte dos dois jogadores, com a última
+  carta descartada visível;
+- **centro**: Lore, mão do oponente, campo dele, campo seu, O Tinteiro, sua mão;
+- **coluna direita** (300 px): log de turnos, todos os eventos, mais recente no
+  topo, cada linha clicável para pular até ali.
+
+Carta de campo passou de miniatura para 98 px. Abaixo de 1100 px o log some antes
+de o campo apertar; abaixo de 720 px vira coluna única.
+
+### Carta errada (item 3)
+
+`cardByName` devolvia `a[0]` — a primeira impressão na ordem de carregamento, sem
+critério. Daí a Enchanted no meio da mesa.
+
+Agora: cópia que o usuário possui → entre as que possui, a mais barata → se não
+possui nenhuma, a mais barata do banco; empate resolve pela raridade menor. Com
+cache, invalidado a cada import, já que a preferência depende da coleção.
+
+### Tinta (item 4)
+
+Verso oficial da carta, do arquivo enviado, em `site/ink/card-back.png`. As pips
+douradas sumiram — eram justamente o que não dava para ver.
+
+### Mão (itens 5, 6, 7)
+
+Mão a 148×74 px mostrando a faixa superior da carta. Clique em **qualquer** carta
+— mão, campo, item, mão do oponente revelada — abre a carta inteira até 74vh, onde
+o texto de regras se lê.
+
+Mão do oponente continua no toggle "Mostrar info oculta", agora no cabeçalho da
+mesa. Desligado, versos contados; ligado, revela.
+
+### Verificação
+
+`replay-ux-contract` passou de 36 para **46**, com 10 asserções novas: deck e
+descarte rastreados, tamanho desconhecido vira "—", log em ordem inversa e
+navegável, zonas nomeadas, log colapsa antes do campo, clique abre carta inteira,
+mão legível, seleção de impressão por posse e preço, cache invalidado no import.
+
+Demais: a11y-perf 27, journey-cost 37, practice 36, meta 32, shared 23,
+data-health 26, pwa 32, visual 18/18, i18n 9/9 (688 chaves). Espelho byte a byte.
+
+Não visto rodando.
