@@ -1,72 +1,82 @@
-INKWELL BRASIL — V14: navigable replay, inkability, wishlist targets
+INKWELL BRASIL — V15: acquisition cost + Beginner Journey
 
 Extract over your repo root, then:
 
   npm run verify
-  git add -A && git commit -m "V14: replay timeline with chapters, inkability panel, wishlist price targets"
+  git add -A && git commit -m "V15: acquisition cost at import, portfolio ROI, M2.6 Beginner Journey"
   git push
 
-────────────────────────────────────────────────────────────
-REPLAY — VIDEO-PLAYER MODEL
-
-Researching how digital TCG clients present replays confirmed the choice you had
-already made on the form: a draggable timeline with per-turn chapters beats a
-next-event stepper. You cannot answer "what happened around turn 6" by clicking
-forty times.
-
-  - real <input type="range"> over the event index
-  - turn chapters from replayChapters(), one per turn, contiguous ranges
-  - the M2.5 decision moments as clickable markers on the bar
-  - speed 0.5x / 1x / 2x
-
-Dragging pauses playback, so the scrub and the timer never fight. Changing speed
-mid-playback restarts the timer at the new rate instead of waiting out the old tick.
+NOTE: V14 may still be uncommitted. This package contains V14 plus V15 — one
+commit covers both if you have not pushed V14 yet.
 
 ────────────────────────────────────────────────────────────
-THREE REAL BUGS THE TESTS FOUND
+1. ACQUISITION COST — the data that unlocks the rest
 
-1. "Your turn begins" WAS NOT RECOGNISED
-   The turn pattern accepted "Player 1", "You", "You's" and "Opponent" — but not
-   "Your", which is the form a real log actually uses. Such a replay produced NO
-   chapters at all, leaving the timeline undivided. Fixed in all three places that
-   share the pattern (chapters, moments, simulation), and player attribution now
-   accepts any form starting with "You".
+parseMoney() takes both formats that occur in practice: R$ 1.234,56 (pt-BR) and
+1,234.56 (en). Junk, blank and negative all return null — never 0, because "paid
+nothing" and "cost unknown" are different facts and collapsing them would wreck
+every average built on top.
 
-2. THE INKABILITY PANEL WAS INVISIBLE ON A HEALTHY DECK
-   It sat INSIDE the deck-warnings sc-if. No warnings meant no panel — precisely
-   the deck where you want to confirm the ratio is fine. The health card now has
-   its own condition; warning chips stay conditional, and a clean deck gets a
-   positive line instead of an empty card.
+Columns read in BOTH CSV branches (Dreamborn and native):
+  price · unit price · paid · purchase price · preço · custo · valor pago
+  plus the total variants. Total wins over unit when a file has both.
 
-3. OPPONENT INK: COMPUTED, NEVER RENDERED
-   oppInkPips existed in renderVals and appeared nowhere in the template. Worse,
-   the opponent row showed exerted/total while your row showed available/total —
-   the same glyph read in opposite directions on the two sides of the board. Both
-   rows are now identical: gold pips plus available-over-total.
+DATA SHAPE: acquisition[cardId] = {paid: total, qty: copies}
 
-   The pips also carried a boolean where the template wanted a colour, so they were
-   painting background:true.
+Storing the total rather than a unit price is what keeps the average honest: buy 2
+at 10, then 1 at 40, and the average is 20 (60/3) — not 25 ((10+40)/2). There is a
+test for exactly that case.
 
-────────────────────────────────────────────────────────────
-INKABILITY
+Cost ALWAYS accumulates, whatever collection merge mode you pick. Importing the
+same purchase twice will double-count — but replacing would silently throw away
+what an earlier file told you, which is worse. So it accumulates and reports:
+the audit now carries rows_with_cost and cards_costed. The pre-import rollback
+snapshot includes cost too, otherwise undoing an import would orphan it.
 
-Inkable percentage with a bar, inkable/non-inkable counts, and one descriptive
-sentence per band (>=55% fine, >=45% borderline, below that missed ink drops are
-likely). Reads inkableOf(), which already honours your corrections.
+2. PORTFOLIO ROI
 
-WISHLIST
+Paid versus current value — over ONLY the copies whose cost is known. Mixing known
+and unknown would produce a number that looks like a total and is not.
 
-Per-card target price with a hit marker when the market crosses it. Accepts a
-decimal comma, rounds to cents, and refuses junk input rather than storing NaN.
-Legacy entries (plain 1, no target) keep working — no wishlist is lost.
+Three deliberate refusals:
+  - no recorded cost at all means NO ROI. There is no "0%".
+  - owning 10 copies with cost known for 2 compares 2. It does not extrapolate.
+  - a card with recorded cost you no longer own is skipped, or a card you sold
+    would inflate your total paid forever.
+
+The panel states its coverage ("X of Y copies have a known cost") and says how many
+were left out. If your file has no price column, the import preview says so and
+tells you what to add.
+
+3. M2.6 BEGINNER JOURNEY
+
+The app already had five lesson tracks. What was missing was not more content — it
+was ORDER. A library of lessons does not answer "so what now?".
+
+Six steps, each answered by your real state rather than a checkbox: read the
+lesson, recorded a card, created a deck, got a deck to 60, logged a match, reviewed
+a replay. Nothing is hand-ticked.
+
+Exactly one step is "current" at any moment, and a BLOCKED step never becomes the
+current one: reviewing a replay needs a match WITH a log, and pointing you at
+something impossible is worse than pointing at nothing. The block explains itself
+instead of just going grey.
+
+It is now the first Academy tab and the default, because it is the answer for
+someone who opens the app not knowing what to do.
 
 ────────────────────────────────────────────────────────────
 VERIFIED
 
-replay-ux-contract  33/33  (engines lifted by brace matching and executed)
-visual 18/18 · i18n 9/9 (639 keys) · practice 36 · meta 32 · shared 23 ·
-data-health 26 · test:all and CI both at 20 suites, no drift · mirror identical
+journey-cost-contract  37/37  (passed first run)
+replay-ux 33 · practice-loop 36 · meta-advisor 32 · shared-cards 23 ·
+data-health 26 · visual 18/18 · i18n 9/9 (670 keys EN and PT)
+test:all and CI both at 21 suites, no drift
+sc-if 154/154 · sc-for 110/110 · mirror byte-identical
 
-NOT VERIFIED: rendered output. No site/data/** here, so the app cannot boot.
-Worth checking by hand: drag the timeline, click a moment marker, and open a deck
-with no warnings to confirm the inkability panel now appears.
+NOT VERIFIED: rendered output — no site/data/** here, so the app cannot boot.
+Worth testing with a real CSV that has a price column, and opening Academy as a
+fresh profile to see the journey pick the right current step.
+
+STILL PENDING (unrelated): restore the deploy gate in deploy-pages.yml before
+anyone outside uses the site.

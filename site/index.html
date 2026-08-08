@@ -479,6 +479,20 @@
                 <span style="color:var(--gold)">{{ colFoilSplit }}</span>
               </div>
             </div>
+            <sc-if value="{{ roiHas }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:24px;border-radius:var(--r-lg);background:var(--glass-bg);backdrop-filter:var(--glass-blur);border:var(--glass-border)">
+                <div style="font-size:12px;font-weight:500;letter-spacing:.15em;text-transform:uppercase;color:var(--text-3)">{{ roi.title }}</div>
+                <div style="display:flex;align-items:baseline;gap:12px;margin-top:12px;flex-wrap:wrap">
+                  <span style="font-family:var(--font-title);font-weight:800;letter-spacing:-.03em;font-size:{{ roi.paidSize }};line-height:1.15;color:var(--text-1);overflow-wrap:anywhere">{{ roi.paid }}</span>
+                  <span style="font-family:var(--font-mono);font-size:13px;color:{{ roi.deltaColor }}">{{ roi.delta }} · {{ roi.pct }}</span>
+                </div>
+                <div style="margin-top:14px;font-size:12.5px;color:var(--text-3)">{{ roi.nowLabel }} <span style="font-family:var(--font-mono);color:var(--gold)">{{ roi.now }}</span></div>
+                <div style="font-size:11px;font-weight:300;color:var(--text-4);margin-top:10px;line-height:1.5">{{ roi.coverage }}</div>
+                <sc-if value="{{ roi.partial }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:11px;font-weight:300;color:var(--warn);margin-top:5px;line-height:1.5">{{ roi.partialNote }}</div>
+                </sc-if>
+              </div>
+            </sc-if>
             <div style="padding:24px;border-radius:var(--r-lg);background:var(--glass-bg);backdrop-filter:var(--glass-blur);border:var(--glass-border)">
               <div style="font-size:12px;font-weight:500;letter-spacing:.15em;text-transform:uppercase;color:var(--text-3)">{{ colValueTitle }}</div>
               <div style="font-family:var(--font-title);font-weight:800;letter-spacing:-.03em;font-size:{{ colValueSize }};line-height:1.15;margin-top:12px;color:var(--gold);overflow-wrap:anywhere">{{ colValueAmount }}</div>
@@ -1265,7 +1279,35 @@
             </sc-for>
           </div>
 
-          <sc-if value="{{ acIsGoals }}" hint-placeholder-val="{{ true }}">
+          <sc-if value="{{ acIsJourney }}" hint-placeholder-val="{{ true }}">
+            <div style="margin-bottom:26px;padding:20px;border-radius:var(--r-lg);background:var(--glass-bg);backdrop-filter:var(--glass-blur);border:var(--glass-border)">
+              <div style="font-weight:700;font-size:17px">{{ bjTitle }}</div>
+              <div style="font-size:12.5px;font-weight:300;color:var(--text-3);margin-top:4px">{{ bjSub }}</div>
+              <div style="height:5px;border-radius:3px;background:rgba(255,255,255,.07);margin-top:13px;overflow:hidden"><div style="height:100%;width:{{ bjPct }};background:var(--gold)"></div></div>
+              <div style="display:flex;flex-direction:column;gap:9px;margin-top:18px">
+                <sc-for list="{{ bjSteps }}" as="bs" hint-placeholder-count="6">
+                  <div style="display:flex;gap:13px;padding:14px;border-radius:var(--r-md);background:{{ bs.cardBg }};border:{{ bs.cardBorder }}">
+                    <span style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:{{ bs.markBg }};color:{{ bs.markColor }};display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;font-family:var(--font-mono)">{{ bs.mark }}</span>
+                    <div style="flex:1;min-width:0">
+                      <div style="font-weight:600;font-size:13.5px;color:{{ bs.labelColor }}">{{ bs.label }}</div>
+                      <div style="font-size:12px;font-weight:300;line-height:1.55;color:var(--text-4);margin-top:3px">{{ bs.why }}</div>
+                      <sc-if value="{{ bs.hasDetail }}" hint-placeholder-val="{{ false }}">
+                        <div style="font-size:11.5px;color:var(--ok);margin-top:5px;font-family:var(--font-mono)">{{ bs.detail }}</div>
+                      </sc-if>
+                      <sc-if value="{{ bs.showBlocked }}" hint-placeholder-val="{{ false }}">
+                        <div style="font-size:11.5px;color:var(--warn);margin-top:5px;font-weight:300">{{ bs.blockedWhy }}</div>
+                      </sc-if>
+                      <sc-if value="{{ bs.showCta }}" hint-placeholder-val="{{ false }}">
+                        <button onClick="{{ bs._go }}" style="margin-top:10px;padding:8px 15px;border-radius:var(--r-pill);background:rgba(212,175,55,.16);border:1px solid rgba(212,175,55,.32);color:var(--gold);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;min-height:38px">{{ bs.cta }}</button>
+                      </sc-if>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ acIsGoals }}" hint-placeholder-val="{{ false }}">
             <div style="margin-bottom:26px;padding:18px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07)">
               <div style="font-family:var(--font-title);font-weight:800;font-size:16px">{{ wgTitle }}</div>
               <div style="font-size:12.5px;color:var(--text-3);margin-top:3px">{{ wgSub }} · {{ wgReset }}</div>
@@ -1936,6 +1978,12 @@
           <div style="padding:12px;border-radius:12px;background:rgba(255,255,255,.05)"><div style="font-size:11px;color:var(--text-3)">{{ normalLabel }}</div><b style="font-family:var(--font-mono)">{{ importNormal }}</b></div>
           <div style="padding:12px;border-radius:12px;background:rgba(255,255,255,.05)"><div style="font-size:11px;color:var(--text-3)">{{ colFoil }}</div><b style="font-family:var(--font-mono)">{{ importFoil }}</b></div>
         </div>
+        <sc-if value="{{ impHasCost }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-bottom:10px;font-size:12px;color:var(--ok)">{{ impCostLine }}</div>
+        </sc-if>
+        <sc-if value="{{ impNoCost }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-bottom:10px;font-size:11.5px;font-weight:300;color:var(--text-4);line-height:1.5">{{ impNoCostLine }}</div>
+        </sc-if>
         <sc-if value="{{ importHasUnresolved }}" hint-placeholder-val="{{ false }}">
           <div style="padding:10px 12px;border-radius:10px;background:rgba(230,193,90,.1);color:var(--warn);font-size:12px;margin-bottom:14px;display:flex;flex-direction:column;gap:9px">
             <div style="display:flex;align-items:center;gap:10px">
@@ -2281,7 +2329,8 @@ class Component extends DCLogic {
     sharedOpenDeck: null, sharedOpenRow: null, sharedAllCards: false,
     metaOpenDeck: null,
     matchupNotes: {}, goalProgress: null, momentsOpen: false,
-    mullDeck: null, mullHand: null, mullChoice: null, academyTab: 'goals',
+    acquisition: {}, roiOpen: false,
+    mullDeck: null, mullHand: null, mullChoice: null, academyTab: 'journey',
     coachDeck: null, coachLoading: false, coachErr: null, coachText: null,
     lang: 'pt',
     toast: null,
@@ -2324,6 +2373,15 @@ class Component extends DCLogic {
       wlTitle:'Wishlist', wlSummaryHit:'{n} at or below your target', wlSummaryNone:'{n} cards tracked', wlTarget:'Target', wlPrice:'Now', wlPlaceholder:'set a price', wlHit:'buy now', wlRemoveAria:'Remove from wishlist — ', wlAddAria:'Add to wishlist — ',
       inkTitle:'Inkability', inkInkable:'Inkable', inkNotInkable:'Not inkable', inkNote:'Cards you can put into ink when you need the ink instead of the card.', inkHealthy:'A healthy deck usually keeps more than half its cards inkable.',
       rpTurnShort:'T{n}', rpMomentAt:'Moment · turn {n}', rpSpeed:'Speed', rpInk:'Ink', rpHand:'Hand', rpReady:'ready', rpExerted:'exerted', rpDrying:'drying',
+      acqFound:'{n} rows carried a price — cost will be recorded for those cards.', acqNoneHint:'No price column found. Add a "price" or "total" column to your CSV and re-import to track what you paid.',
+      roiTitle:'What you paid', roiNow:'Worth now', roiCoverage:'{n} of {total} copies have a known cost ({pct}%)', roiPartial:'{n} copies have no recorded cost and are left out of this comparison.',
+      acJourney:'Getting started', bjTitle:'Your first steps', bjSub:'{done} of {total} done', bjComplete:'You have done all of it. The rest of the app is yours.',
+      bjBasics:'Learn how a game works', bjBasicsWhy:'Objective, ink, questing, winning. Ten minutes of reading before anything else makes sense.', bjBasicsCta:'Open the lesson',
+      bjCollect:'Add the cards you own', bjCollectWhy:'Everything else — deck legality, prices, what you are missing — is built on knowing what you have.', bjCollectCta:'Go to collection', bjCollectDone:'{n} cards recorded',
+      bjDeck:'Create your first deck', bjDeckWhy:'A deck can be any size while you work on it. Start with the cards you like and fix the count later.', bjDeckCta:'Go to decks',
+      bjLegal:'Get a deck to 60 cards', bjLegalWhy:'60 is the legal minimum for a real game. The deck view tells you how far off you are.', bjLegalCta:'Open decks',
+      bjMatch:'Log a game you played', bjMatchWhy:'One logged game is enough to start seeing your record. Paste a replay log and the board is reconstructed for you.', bjMatchCta:'Log a game', bjMatchDone:'{n} games logged',
+      bjReview:'Review one of your games', bjReviewWhy:'The replay shows the board turn by turn and flags the turns that changed the result.', bjReviewCta:'Open a replay', bjReviewBlocked:'Log a game with a replay log first — a result on its own cannot be replayed.',
       newDeck:'+ New Deck', importDeck:'↑ Import', createDeck:'Create', cancel:'Cancel', format:'Format',
       inkable:'Inkable', uninkable:'Uninkable', cost:'Cost', allSets:'All sets',
       welcome:'Welcome, {name}', emptyMsg:'Your codex is empty. Import your collection from Dreamborn, or start building a deck — everything is tracked privately in your profile.',
@@ -2388,6 +2446,15 @@ class Component extends DCLogic {
       wlTitle:'Lista de desejos', wlSummaryHit:'{n} no seu preço-alvo ou abaixo', wlSummaryNone:'{n} cartas acompanhadas', wlTarget:'Alvo', wlPrice:'Agora', wlPlaceholder:'definir preço', wlHit:'comprar', wlRemoveAria:'Remover da lista — ', wlAddAria:'Adicionar à lista — ',
       inkTitle:'Inkabilidade', inkInkable:'Inkável', inkNotInkable:'Não inkável', inkNote:'Cartas que você pode colocar na tinta quando precisa da tinta em vez da carta.', inkHealthy:'Um deck saudável costuma manter mais da metade das cartas inkáveis.',
       rpTurnShort:'T{n}', rpMomentAt:'Momento · turno {n}', rpSpeed:'Velocidade', rpInk:'Tinta', rpHand:'Mão', rpReady:'pronto', rpExerted:'exercido', rpDrying:'secando',
+      acqFound:'{n} linhas trouxeram preço — o custo será registrado para essas cartas.', acqNoneHint:'Nenhuma coluna de preço encontrada. Adicione uma coluna "preço" ou "total" ao seu CSV e importe de novo para acompanhar o quanto pagou.',
+      roiTitle:'O que você pagou', roiNow:'Vale hoje', roiCoverage:'{n} de {total} cópias têm custo conhecido ({pct}%)', roiPartial:'{n} cópias não têm custo registrado e ficam fora desta comparação.',
+      acJourney:'Primeiros passos', bjTitle:'Seus primeiros passos', bjSub:'{done} de {total} concluídos', bjComplete:'Você fez tudo. O resto do app é seu.',
+      bjBasics:'Aprenda como funciona uma partida', bjBasicsWhy:'Objetivo, tinta, aventura, vitória. Dez minutos de leitura antes que qualquer outra coisa faça sentido.', bjBasicsCta:'Abrir a lição',
+      bjCollect:'Cadastre as cartas que você tem', bjCollectWhy:'Todo o resto — legalidade de deck, preços, o que falta — depende de saber o que você tem.', bjCollectCta:'Ir para a coleção', bjCollectDone:'{n} cartas cadastradas',
+      bjDeck:'Crie seu primeiro deck', bjDeckWhy:'Um deck pode ter qualquer tamanho enquanto você monta. Comece pelas cartas que gosta e ajuste a contagem depois.', bjDeckCta:'Ir para os decks',
+      bjLegal:'Leve um deck a 60 cartas', bjLegalWhy:'60 é o mínimo legal para uma partida de verdade. A tela do deck mostra o quanto falta.', bjLegalCta:'Abrir os decks',
+      bjMatch:'Registre uma partida que você jogou', bjMatchWhy:'Uma partida registrada já basta para começar a ver seu retrospecto. Cole um log de replay e a mesa é reconstruída para você.', bjMatchCta:'Registrar partida', bjMatchDone:'{n} partidas registradas',
+      bjReview:'Revise uma das suas partidas', bjReviewWhy:'O replay mostra a mesa turno a turno e destaca os turnos que mudaram o resultado.', bjReviewCta:'Abrir um replay', bjReviewBlocked:'Registre antes uma partida com log de replay — só o resultado não pode ser reproduzido.',
       newDeck:'+ Novo Deck', importDeck:'↑ Importar', createDeck:'Criar', cancel:'Cancelar', format:'Formato',
       inkable:'Inkável', uninkable:'Não-inkável', cost:'Custo', allSets:'Todos os sets',
       welcome:'Bem-vindo, {name}', emptyMsg:'Seu códice está vazio. Importe sua coleção do Dreamborn ou comece a montar um deck — tudo fica salvo de forma privada no seu perfil.',
@@ -2643,7 +2710,7 @@ class Component extends DCLogic {
       const remoteTs = Date.parse(remote.updated_at)||0;
       if(remoteTs > localTs){
         const m = this.migrateUser(remote.data, profile);
-        this.setState({ collection:m.collection, decks:m.decks, matches:m.matches, overrides:m.overrides, wishlist:m.wishlist, learnDone:m.learnDone, activeDeckId:m.activeDeckId||null, matchupNotes:m.matchupNotes||{}, goalProgress:m.goalProgress||null, syncRevision:revision }, ()=>{ try{ localStorage.setItem('inkwell_user_'+profile, JSON.stringify(this.userPayload())); }catch(e){} });
+        this.setState({ collection:m.collection, decks:m.decks, matches:m.matches, overrides:m.overrides, wishlist:m.wishlist, learnDone:m.learnDone, activeDeckId:m.activeDeckId||null, matchupNotes:m.matchupNotes||{}, goalProgress:m.goalProgress||null, acquisition:m.acquisition||{}, syncRevision:revision }, ()=>{ try{ localStorage.setItem('inkwell_user_'+profile, JSON.stringify(this.userPayload())); }catch(e){} });
         this.showToast(this.t('syncPulled'));
       } else if(localTs > remoteTs){
         await this.pushRemote(profile,revision);
@@ -2803,7 +2870,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     try { const s = localStorage.getItem('inkwell_user_'+id); if (s) user = JSON.parse(s); } catch(e){}
     if (!user && meta.seed) { try { const r = await fetch(meta.seed); if (r.ok) user = await r.json(); } catch(e){} }
     const m = this.migrateUser(user, id);
-    return { collection:m.collection, decks:m.decks, matches:m.matches, overrides:m.overrides, wishlist:m.wishlist, learnDone:m.learnDone, activeDeckId:m.activeDeckId||null, matchupNotes:m.matchupNotes||{}, goalProgress:m.goalProgress||null, displayName: meta.name || m.display_name || id, userDataWarning:m.warning||null };
+    return { collection:m.collection, decks:m.decks, matches:m.matches, overrides:m.overrides, wishlist:m.wishlist, learnDone:m.learnDone, activeDeckId:m.activeDeckId||null, matchupNotes:m.matchupNotes||{}, goalProgress:m.goalProgress||null, acquisition:m.acquisition||{}, displayName: meta.name || m.display_name || id, userDataWarning:m.warning||null };
   }
 
   // ---------- M2: user-data schema versioning + migrations ----------
@@ -2834,6 +2901,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     d.learnDone = (d.learnDone && typeof d.learnDone==='object') ? d.learnDone : {};
     // M2.5 additive: absent in older payloads, so default rather than drop
     d.matchupNotes = (d.matchupNotes && typeof d.matchupNotes==='object') ? d.matchupNotes : {};
+    d.acquisition = (d.acquisition && typeof d.acquisition==='object') ? d.acquisition : {};
     d.goalProgress = (d.goalProgress && typeof d.goalProgress==='object' && typeof d.goalProgress.week==='string') ? d.goalProgress : null;
     d.activeDeckId = (typeof d.activeDeckId==='string' && d.activeDeckId) ? d.activeDeckId : null;
     if(!d.activeDeckId){ try{ const leg=localStorage.getItem('inkwell_activedeck_'+id); if(leg) d.activeDeckId=leg; }catch(e){} }
@@ -2841,7 +2909,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     d.warning = warning;
     return d;
   }
-  userPayload(){ return { _schema:this.USER_SCHEMA, saved_at:new Date().toISOString(), app_version:this.APP_VERSION, collection:this.state.collection, decks:this.state.decks, matches:this.state.matches, overrides:this.state.overrides, wishlist:this.state.wishlist, learnDone:this.state.learnDone, activeDeckId:this.state.activeDeckId||null, matchupNotes:this.state.matchupNotes||{}, goalProgress:this.state.goalProgress||null, display_name:this.state.displayName }; }
+  userPayload(){ return { _schema:this.USER_SCHEMA, saved_at:new Date().toISOString(), app_version:this.APP_VERSION, collection:this.state.collection, decks:this.state.decks, matches:this.state.matches, overrides:this.state.overrides, wishlist:this.state.wishlist, learnDone:this.state.learnDone, activeDeckId:this.state.activeDeckId||null, matchupNotes:this.state.matchupNotes||{}, goalProgress:this.state.goalProgress||null, acquisition:this.state.acquisition||{}, display_name:this.state.displayName }; }
 
   switchUser = (id)=>{ this.stopReplayTimer(); if(id===this.state.activeUser){ this.setState({profileMenuOpen:false}); return; } this.saveLocal(); this.loadUser(id).then(data=>{ try{ localStorage.setItem('inkwell_active_user', id); }catch(e){} this.setState({ activeUser:id, profileMenuOpen:false, view:'overview', selectedDeck:null, selectedCard:null, selectedMatch:null, replayPlaying:false, ...data, dataWarning:data.userDataWarning||this.state.dataWarning }, ()=>{ this.showToast('Switched to '+data.displayName); this.recordPriceSnapshot(); if(this.sb && this.state.syncUser){ this.setState({syncStatus:'syncing'}); this.reconcile(id).then(()=>this.setState({syncStatus:'synced', syncLast:Date.now()})).catch(e=>this.setState({syncStatus:'error', syncMsg:String(e&&e.message||e)})); } }); }); };
 
@@ -3426,6 +3494,99 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     });
     return { decks:out, contestedTotal, shortTotal, empty:false };
   }
+  // ---- Acquisition cost. Captured at import when the file carries a price column.
+  //      Shape: acquisition[cardId] = {paid: total BRL, qty: copies that price covered}.
+  //      Stored as a total rather than a unit price so repeated imports accumulate
+  //      honestly: buying 2 at 10 then 1 at 40 averages 20, not 25. ----
+  parseMoney(raw){
+    if(raw==null) return null;
+    let s=String(raw).trim(); if(!s) return null;
+    s=s.replace(/[R$\s\u00a0]/gi,'');
+    if(!s) return null;
+    // "1.234,56" (pt-BR) vs "1,234.56" (en) vs "12.50" vs "12,50"
+    const lastComma=s.lastIndexOf(','), lastDot=s.lastIndexOf('.');
+    if(lastComma>=0&&lastDot>=0){ if(lastComma>lastDot) s=s.replace(/\./g,'').replace(',','.'); else s=s.replace(/,/g,''); }
+    else if(lastComma>=0){ s=(s.length-lastComma-1===3&&!/^\d{1,3},\d{3}$/.test(s)===false)?s.replace(/,/g,''):s.replace(',','.'); }
+    const v=parseFloat(s);
+    if(!isFinite(v)||v<0) return null;
+    return Math.round(v*100)/100;
+  }
+  addAcquisition(acc,id,qty,unitOrTotal,isTotal){
+    if(!id||!qty||qty<=0||unitOrTotal==null) return;
+    const paid=isTotal?unitOrTotal:unitOrTotal*qty;
+    const cur=acc[id]||{paid:0,qty:0};
+    cur.paid=Math.round((cur.paid+paid)*100)/100; cur.qty+=qty;
+    acc[id]=cur;
+  }
+  acquisitionUnit(id){ const a=this.state.acquisition&&this.state.acquisition[id];
+    return (a&&a.qty>0)?Math.round(a.paid/a.qty*100)/100:null; }
+  // Portfolio ROI. Only counts cards whose cost we actually know — mixing known
+  // and unknown cost would produce a number that looks total and is not.
+  portfolioRoi(){
+    const acq=this.state.acquisition||{}; const coll=this.state.collection||{};
+    let paid=0, nowVal=0, covered=0, ownedTotal=0, pricedMissing=0;
+    for(const id in coll){
+      const e=coll[id]||{}; const q=(e.n||0)+(e.f||0); if(q<=0) continue;
+      ownedTotal+=q;
+      const c=this.byId[id]; const unitNow=c?this.priceOr0(c):0;
+      const a=acq[id];
+      if(a&&a.qty>0){
+        const unitPaid=a.paid/a.qty;
+        const q2=Math.min(q,a.qty);          // never claim ROI on copies we have no cost for
+        covered+=q2; paid+=unitPaid*q2; nowVal+=unitNow*q2;
+      } else if(unitNow>0) pricedMissing+=q;
+    }
+    if(covered<=0) return null;
+    paid=Math.round(paid*100)/100; nowVal=Math.round(nowVal*100)/100;
+    const delta=Math.round((nowVal-paid)*100)/100;
+    const pct=paid>0?Math.round(delta/paid*1000)/10:null;
+    return { paid, nowVal, delta, pct, covered, ownedTotal, pricedMissing,
+      coveragePct:ownedTotal?Math.round(covered/ownedTotal*100):0,
+      partial:covered<ownedTotal };
+  }
+  // ---- M2.6 Beginner Journey. Not more lessons — an ordered path whose steps are
+  //      answered by the user's own state, so it can say what to do next instead of
+  //      listing everything at once. ----
+  beginnerJourney(){
+    const st=this.state; const done=st.learnDone||{};
+    const ownedCards=Object.keys(st.collection||{}).length;
+    const decks=(st.decks||[]);
+    const legalDeck=decks.find(d=>{ const n=this.deckSize?this.deckSize(d):Object.values(d.cards||{}).reduce((s,x)=>s+x,0); return n>=60; })||null;
+    const anyDeck=decks[0]||null;
+    const matches=(st.matches||[]);
+    const withReplay=matches.find(m=>m&&m.replay&&Array.isArray(m.replay.events)&&m.replay.events.length>1);
+    const reviewed=Object.keys((st.goalProgress&&st.goalProgress.reviewed)||{}).length;
+    const steps=[
+      { id:'basics', done:!!done.play, label:this.t('bjBasics'), why:this.t('bjBasicsWhy'),
+        cta:this.t('bjBasicsCta'), go:()=>this.setState({view:'learn',lesson:'play'}) },
+      { id:'collect', done:ownedCards>0, label:this.t('bjCollect'), why:this.t('bjCollectWhy'),
+        cta:this.t('bjCollectCta'), go:()=>this.setState({view:'collection'}),
+        detail:ownedCards>0?this.t('bjCollectDone',{n:ownedCards}):null },
+      { id:'deck', done:!!anyDeck, label:this.t('bjDeck'), why:this.t('bjDeckWhy'),
+        cta:this.t('bjDeckCta'), go:()=>this.setState({view:'decks'}),
+        detail:anyDeck?anyDeck.name:null },
+      { id:'legal', done:!!legalDeck, label:this.t('bjLegal'), why:this.t('bjLegalWhy'),
+        cta:this.t('bjLegalCta'), go:()=>this.setState({view:'decks'}),
+        detail:legalDeck?legalDeck.name:null },
+      { id:'match', done:matches.length>0, label:this.t('bjMatch'), why:this.t('bjMatchWhy'),
+        cta:this.t('bjMatchCta'), go:()=>this.setState({view:'matches',logMatchOpen:true}),
+        detail:matches.length>0?this.t('bjMatchDone',{n:matches.length}):null },
+      { id:'review', done:reviewed>0, label:this.t('bjReview'), why:this.t('bjReviewWhy'),
+        cta:this.t('bjReviewCta'),
+        go:()=>this.setState({view:'matches',selectedMatch:withReplay?withReplay.id:null}),
+        blocked:!withReplay, blockedWhy:this.t('bjReviewBlocked') }
+    ];
+    // exactly one current step: the first not done and not blocked
+    let currentSet=false;
+    for(const s of steps){
+      s.current=false;
+      if(!s.done&&!s.blocked&&!currentSet){ s.current=true; currentSet=true; }
+    }
+    const doneCount=steps.filter(s=>s.done).length;
+    return { steps, doneCount, total:steps.length,
+      complete:doneCount===steps.length,
+      pct:Math.round(doneCount/steps.length*100) };
+  }
   // ---- M2.5 practice loop ----
   // Decision markers. Descriptive only: replay logs carry no hidden information,
   // so we can say what changed, never what the player should have held.
@@ -3831,7 +3992,10 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     const txt=String(rd.result); const coll={}; let matched=0; const rejects=[];
     if(!this.byNumIdx){ this.byNumIdx={}; for(const c of this.cards) this.byNumIdx[c.set_code+'|'+String(c.card_number)]=c; }
     const add=(id,n,f)=>{ if(!id) return; const cur=coll[id]||{n:0,f:0}; cur.n+=n||0; cur.f+=f||0; coll[id]=cur; };
-    if(/\.json$/i.test(file.name)){ const j=JSON.parse(txt); const src=j.collection||j; for(const id in src){ if(this.byId[id]){ const e2=src[id]; add(id,e2.n||0,e2.f||0); matched++; } else rejects.push({where:'json', raw:String(id).slice(0,60), reason:'unknown_id'}); } }
+    const acq={}; let costRows=0;
+    if(/\.json$/i.test(file.name)){ const j=JSON.parse(txt); const src=j.collection||j; for(const id in src){ if(this.byId[id]){ const e2=src[id]; add(id,e2.n||0,e2.f||0); matched++;
+      const q=(e2.n||0)+(e2.f||0); const pu=this.parseMoney(e2.paid!=null?e2.paid:e2.price);
+      if(pu!=null){ this.addAcquisition(acq,id,q,pu,e2.paid!=null&&e2.paidIsTotal===true); costRows++; } } else rejects.push({where:'json', raw:String(id).slice(0,60), reason:'unknown_id'}); } }
     else {
       const lines=txt.split(/\r?\n/).filter(l=>l.trim()); if(!lines.length){ this.showToast(this.t('tEmptyFile')); return; }
       const head=lines[0].toLowerCase(); const cols=this.parseCsvLine(lines[0]).map(h=>h.trim().toLowerCase());
@@ -3839,15 +4003,25 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       const ci=(names)=>{ for(const n of names){ const i=cols.indexOf(n); if(i>=0) return i; } return -1; };
       if(dream){
         const iSet=ci(['set number']), iNum=ci(['card number']), iVar=ci(['variant','finish']), iCnt=ci(['count','quantity','qty']), iName=ci(['name']);
-        for(let i=1;i<lines.length;i++){ const p=this.parseCsvLine(lines[i]); if(p.length<2) continue; const c=this.resolveCsvCard(p[iSet], p[iNum], iName>=0?p[iName]:''); if(!c){ rejects.push({where:String(i+1), raw:[p[iSet],p[iNum],iName>=0?p[iName]:''].filter(Boolean).join(' · ').slice(0,60)||'(empty)', reason:'no_match'}); continue; } const cnt=parseInt(p[iCnt])||0; const foil=/foil/i.test((p[iVar]||'')); add(c.card_id, foil?0:cnt, foil?cnt:0); matched++; }
+        const iUnit=ci(['price','unit price','paid','purchase price','preço','preco','valor pago','custo']);
+        const iTotal=ci(['total','total price','total paid','valor total','custo total']);
+        for(let i=1;i<lines.length;i++){ const p=this.parseCsvLine(lines[i]); if(p.length<2) continue; const c=this.resolveCsvCard(p[iSet], p[iNum], iName>=0?p[iName]:''); if(!c){ rejects.push({where:String(i+1), raw:[p[iSet],p[iNum],iName>=0?p[iName]:''].filter(Boolean).join(' · ').slice(0,60)||'(empty)', reason:'no_match'}); continue; } const cnt=parseInt(p[iCnt])||0; const foil=/foil/i.test((p[iVar]||'')); add(c.card_id, foil?0:cnt, foil?cnt:0); matched++;
+          const tot=iTotal>=0?this.parseMoney(p[iTotal]):null, unit=iUnit>=0?this.parseMoney(p[iUnit]):null;
+          if(tot!=null){ this.addAcquisition(acq,c.card_id,cnt,tot,true); costRows++; }
+          else if(unit!=null){ this.addAcquisition(acq,c.card_id,cnt,unit,false); costRows++; } }
       } else {
         const iId=ci(['card_id','id']), iN=ci(['normal','n']), iF=ci(['foil','f']), start=(iId>=0||/card_id/.test(head))?1:0;
-        for(let i=start;i<lines.length;i++){ const p=this.parseCsvLine(lines[i]); const id=(p[iId>=0?iId:0]||'').trim(); if(!this.byId[id]){ if(id) rejects.push({where:String(i+1), raw:id.slice(0,60), reason:'unknown_id'}); else rejects.push({where:String(i+1), raw:'(empty)', reason:'bad_row'}); continue; } const n=parseInt(p[iN>=0?iN:p.length-2])||0, f=parseInt(p[iF>=0?iF:p.length-1])||0; add(id,n,f); matched++; }
+        const iUnit2=ci(['price','unit price','paid','purchase price','preço','preco','valor pago','custo']);
+        const iTotal2=ci(['total','total price','total paid','valor total','custo total']);
+        for(let i=start;i<lines.length;i++){ const p=this.parseCsvLine(lines[i]); const id=(p[iId>=0?iId:0]||'').trim(); if(!this.byId[id]){ if(id) rejects.push({where:String(i+1), raw:id.slice(0,60), reason:'unknown_id'}); else rejects.push({where:String(i+1), raw:'(empty)', reason:'bad_row'}); continue; } const n=parseInt(p[iN>=0?iN:p.length-2])||0, f=parseInt(p[iF>=0?iF:p.length-1])||0; add(id,n,f); matched++;
+          const q=n+f; const tot=iTotal2>=0?this.parseMoney(p[iTotal2]):null, unit=iUnit2>=0?this.parseMoney(p[iUnit2]):null;
+          if(tot!=null){ this.addAcquisition(acq,id,q,tot,true); costRows++; }
+          else if(unit!=null){ this.addAcquisition(acq,id,q,unit,false); costRows++; } }
       }
     }
     if(!Object.keys(coll).length){ this.showToast(this.t('importNoMatches')); return; }
     const normal=Object.values(coll).reduce((s,x)=>s+(x.n||0),0), foil=Object.values(coll).reduce((s,x)=>s+(x.f||0),0);
-    this.setState({importPreview:{collection:coll,fileName:file.name,matched,unresolved:rejects.length,rejects,unique:Object.keys(coll).length,normal,foil},importMode:'merge-max',importRowsOpen:false});
+    this.setState({importPreview:{collection:coll,fileName:file.name,matched,unresolved:rejects.length,rejects,unique:Object.keys(coll).length,normal,foil,acquisition:acq,costRows},importMode:'merge-max',importRowsOpen:false});
   }catch(err){ console.error(err); this.showToast(this.t('importFailed')); } }; rd.readAsText(file); e.target.value=''; };
   setImportMode=(mode)=>this.setState({importMode:mode});
   cancelCollectionImport=()=>this.setState({importPreview:null,importRowsOpen:false});
@@ -3890,7 +4064,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     let snapKey=null;
     try {
       const key='inkwell_preimport_'+this.state.activeUser+'_'+Date.now();
-      localStorage.setItem(key,JSON.stringify({created_at:new Date().toISOString(),collection:this.state.collection,source:p.fileName}));
+      localStorage.setItem(key,JSON.stringify({created_at:new Date().toISOString(),collection:this.state.collection,acquisition:this.state.acquisition||{},source:p.fileName}));
       localStorage.setItem('inkwell_preimport_latest_'+this.state.activeUser,key);
       snapKey=key;
     } catch(e){}
@@ -3898,7 +4072,19 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     const collection=Component.mergeCollections(before,p.collection,this.state.importMode);
     const audit=this.buildImportAudit(p,before,collection,this.state.importMode,snapKey);
     audit.applied=true;
-    this.setState({collection,importPreview:null,importRowsOpen:false,importResult:audit},()=>{ this.saveLocal(); });
+    // Cost always accumulates, whatever the collection merge mode: a second import
+    // of the same purchase would double-count, but replacing would silently discard
+    // what an earlier file told us. Accumulate and report the row count instead.
+    const acquisition={...(this.state.acquisition||{})};
+    let costAdded=0;
+    for(const id in (p.acquisition||{})){
+      const inc=p.acquisition[id]; if(!inc||!(inc.qty>0)) continue;
+      const cur=acquisition[id]||{paid:0,qty:0};
+      acquisition[id]={ paid:Math.round((cur.paid+inc.paid)*100)/100, qty:cur.qty+inc.qty };
+      costAdded++;
+    }
+    audit.acquisition={ rows_with_cost:p.costRows||0, cards_costed:costAdded };
+    this.setState({collection,acquisition,importPreview:null,importRowsOpen:false,importResult:audit},()=>{ this.saveLocal(); });
   };
   setImpRef = (el)=>{ this._imp=el; };
   setQty(id, field, delta){
@@ -4189,10 +4375,27 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       V.learnIntro=this.t('learnIntro'); V.resourcesTitle=this.t('resourcesTitle');
       // --- M2.5 practice loop: goals, notebook, mulligan lab ---
       const tab=st.academyTab||'goals';
-      V.acTabs=[{id:'goals',label:this.t('acGoals')},{id:'notebook',label:this.t('acNotebook')},{id:'mull',label:this.t('acMull')}]
+      V.acTabs=[{id:'journey',label:this.t('acJourney')},{id:'goals',label:this.t('acGoals')},{id:'notebook',label:this.t('acNotebook')},{id:'mull',label:this.t('acMull')}]
         .map(t=>({ label:t.label, active:tab===t.id, _pick:()=>this.setState({academyTab:t.id}),
           style:'padding:9px 14px;border-radius:10px;font-size:12.5px;cursor:pointer;min-height:40px;border:1px solid '+(tab===t.id?'rgba(199,154,68,.4)':'rgba(255,255,255,.1)')+';background:'+(tab===t.id?'rgba(199,154,68,.16)':'rgba(255,255,255,.03)')+';color:'+(tab===t.id?'#e0c15a':'#b8b8c0') }));
-      V.acIsGoals=tab==='goals'; V.acIsNotebook=tab==='notebook'; V.acIsMull=tab==='mull';
+      V.acIsJourney=tab==='journey'; V.acIsGoals=tab==='goals'; V.acIsNotebook=tab==='notebook'; V.acIsMull=tab==='mull';
+      { const BJ=this.beginnerJourney();
+        V.bjTitle=this.t('bjTitle');
+        V.bjSub=BJ.complete?this.t('bjComplete'):this.t('bjSub',{done:BJ.doneCount,total:BJ.total});
+        V.bjPct=BJ.pct+'%'; V.bjDone=BJ.complete;
+        V.bjSteps=BJ.steps.map((s,i)=>({
+          n:String(i+1), label:s.label, why:s.why, cta:s.cta, _go:s.go,
+          done:s.done, current:!!s.current, blocked:!!s.blocked,
+          showCta:!s.done&&!s.blocked,
+          detail:s.detail||'', hasDetail:!!s.detail,
+          blockedWhy:s.blockedWhy||'', showBlocked:!!s.blocked&&!s.done,
+          mark:s.done?'✓':String(i+1),
+          markBg:s.done?'var(--ok)':(s.current?'var(--gold)':'rgba(255,255,255,.08)'),
+          markColor:s.done||s.current?'#131313':'var(--text-4)',
+          labelColor:s.done?'var(--text-3)':(s.current?'var(--text-1)':'var(--text-3)'),
+          cardBg:s.current?'rgba(212,175,55,.07)':'transparent',
+          cardBorder:s.current?'1px solid rgba(212,175,55,.28)':'1px solid rgba(255,255,255,.06)' }));
+      }
 
       const WG=this.weeklyGoals();
       V.wgTitle=this.t('wgTitle'); V.wgSub=this.t('wgSub',{done:WG.doneCount,n:WG.goals.length});
@@ -4448,6 +4651,24 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
         const hits=WL.filter(r=>r.hit).length;
         V.wlSummary=hits>0?this.t('wlSummaryHit',{n:hits}):this.t('wlSummaryNone',{n:WL.length});
         V.wlSummaryColor=hits>0?'var(--ok)':'var(--text-3)';
+        { const ip=st.importPreview;
+          V.impHasCost=!!(ip&&ip.costRows>0);
+          V.impCostLine=ip?this.t('acqFound',{n:ip.costRows||0}):'';
+          V.impNoCost=!!(ip&&!(ip.costRows>0));
+          V.impNoCostLine=this.t('acqNoneHint'); }
+        { const RO=this.portfolioRoi();
+          V.roiHas=!!RO;
+          if(RO){
+            const up=RO.delta>=0;
+            V.roi={ title:this.t('roiTitle'), nowLabel:this.t('roiNow'),
+              paid:this.fmt(RO.paid), now:this.fmt(RO.nowVal),
+              delta:(up?'+':'−')+this.fmt(Math.abs(RO.delta)),
+              deltaColor:up?'var(--ok)':'var(--err)',
+              pct:RO.pct==null?'—':((up?'+':'')+RO.pct+'%'),
+              paidSize:this.fitSize(this.fmt(RO.paid),34,28,23),
+              coverage:this.t('roiCoverage',{n:RO.covered,total:RO.ownedTotal,pct:RO.coveragePct}),
+              partial:RO.partial, partialNote:this.t('roiPartial',{n:RO.ownedTotal-RO.covered}) };
+          } }
         V.wlTargetLabel=this.t('wlTarget'); V.wlPriceLabel=this.t('wlPrice'); V.wlPlaceholder=this.t('wlPlaceholder');
         V.wlRows=WL.map(r=>({
           name:r.name,

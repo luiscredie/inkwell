@@ -1347,3 +1347,71 @@ extraídos por casamento de chaves. Suítes existentes: visual 18/18, i18n 9/9
 20 suítes cada, sem divergência. Espelho byte a byte.
 
 Não visto rodando — sem `site/data/**` o app não inicia aqui.
+
+## V15 — custo de aquisição e M2.6 Beginner Journey (2026-08-07)
+
+### Custo de aquisição
+
+Era o dado que destravava mais coisa, e agora entra pelo import.
+
+`parseMoney()` aceita os dois formatos que aparecem na prática: `R$ 1.234,56`
+(pt-BR) e `1,234.56` (en). Rejeita vazio, lixo e negativo devolvendo `null` —
+nunca 0, porque "pagou zero" e "não sei quanto pagou" são fatos diferentes e
+tratá-los igual arruinaria qualquer média.
+
+Colunas reconhecidas nos dois ramos de CSV (Dreamborn e nativo): `price`,
+`unit price`, `paid`, `purchase price`, `preço`, `custo`, `valor pago`, e as
+variantes de total. Total tem precedência sobre unitário quando ambos existem.
+
+**Forma do dado:** `acquisition[cardId] = {paid: total, qty: cópias}`. Guardar
+total em vez de preço unitário é o que faz a média ficar honesta: comprar 2 a 10
+e depois 1 a 40 dá média 20 (60/3), não 25 ((10+40)/2). Tem teste para exatamente
+esse caso.
+
+O custo **sempre acumula**, independente do modo de merge da coleção. Importar a
+mesma compra duas vezes conta dobrado — mas substituir descartaria em silêncio o
+que um arquivo anterior informou. Acumular e reportar quantas linhas trouxeram
+preço é o comportamento defensável; o audit registra `rows_with_cost` e
+`cards_costed`. O snapshot de rollback também passou a incluir o custo, senão
+desfazer o import deixaria o custo órfão.
+
+### ROI de portfólio
+
+Compara pago × valor atual — **só nas cópias cujo custo é conhecido**. Misturar
+conhecido e desconhecido produziria um número com cara de total que não é total.
+
+Três recusas deliberadas:
+- sem nenhum custo registrado, não há ROI — não existe "0%";
+- possuir 10 cópias com custo de 2 conhecido compara 2, não extrapola;
+- carta com custo registrado que não está mais na coleção é ignorada, senão uma
+  carta vendida ficaria inflando o total pago para sempre.
+
+O painel declara a cobertura ("X de Y cópias têm custo conhecido") e avisa quantas
+ficaram de fora. Se não houver coluna de preço, o preview diz isso e explica como
+adicionar.
+
+### M2.6 Beginner Journey
+
+O app já tinha 5 trilhas de lições. O que faltava não era mais conteúdo — era
+**ordem**. Uma biblioteca de lições não responde "e agora?".
+
+`beginnerJourney()` são 6 passos cujo estado vem do estado real do usuário, não de
+um checklist: leu a lição, cadastrou carta, criou deck, deck chegou a 60, registrou
+partida, revisou replay. Nada é marcado à mão.
+
+Exatamente um passo é "atual" a qualquer momento, e o passo bloqueado nunca vira o
+atual: revisar replay exige uma partida **com log**, e apontar para algo impossível
+seria pior que não apontar. O bloqueio se explica em vez de só ficar cinza.
+
+Virou a primeira aba da Academy e o padrão, porque é a resposta para quem abre o
+app sem saber o que fazer.
+
+### Verificação
+
+`tools/journey-cost-contract.test.mjs`, nova, **37/37 na primeira execução**.
+Suítes existentes: replay-ux 33, practice 36, meta 32, shared 23, data-health 26,
+visual 18/18, i18n 9/9 (670 chaves EN e PT). `test:all` e CI em 21 suítes cada,
+sem divergência. `sc-if` 154/154, `sc-for` 110/110, espelho byte a byte.
+
+Não visto rodando — sem `site/data/**` o app não inicia aqui. Vale testar com um
+CSV real que tenha coluna de preço.
