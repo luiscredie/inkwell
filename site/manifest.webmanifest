@@ -1,0 +1,19 @@
+{
+  "name": "Inkwell Brasil — Seu lugar de Lorcana",
+  "short_name": "Inkwell",
+  "description": "Coleção, decks, preços e replays de Lorcana.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a0c10",
+  "theme_color": "#0a0c10",
+  "lang": "pt-BR",
+  "categories": ["games", "utilities"],
+  "icons": [
+    { "src": "ink/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "ink/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "ink/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "ink/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

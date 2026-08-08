@@ -1543,3 +1543,72 @@ i18n 9/9 (676 chaves). `test:all` e CI em 22 suítes, sem divergência.
 
 Não visto rodando. Vale conferir com teclado (Tab logo ao abrir mostra o link de
 pulo) e com o modo performance ligado.
+
+## M3 · PWA — instalável e utilizável offline (2026-08-08)
+
+Primeiro item do M3. Escolhido antes do scanner e da telemetria porque resolve uma
+situação concreta: conferir coleção e decks numa loja com wi-fi ruim.
+
+### Política de cache, não uma regra só
+
+O ponto de partida foi como cada arquivo se comporta:
+
+| O quê | Estratégia | Por quê |
+|---|---|---|
+| shell (html, js) | network-first | atualização precisa conseguir chegar |
+| `data-manifest.json` | network-first | é o ponteiro de versão; se ficar velho, prende tudo numa build antiga |
+| dados versionados | cache-first | o manifest nomeia a versão, então são imutáveis |
+| `prices.json` | network-first | mudam diariamente; o app já rotula defasagem |
+| arte das cartas | cache-first + teto | uma coleção grande encheria o disco em silêncio |
+| dados do usuário | **nunca** | ficam em localStorage e Supabase; cache poderia ressuscitar registro apagado |
+
+A ordem das regras importa: `data-manifest.json` e `prices.json` são testados
+**antes** da regra genérica de `.json`, senão nunca rodariam. Há teste para essa
+ordem, não só para a existência das regras.
+
+O teto de arte é 600 entradas, com descarte do mais antigo. Sem isso, milhares de
+imagens ficariam para sempre.
+
+`c.add()` por item em vez de `addAll()`: com `addAll`, um único 404 falha a
+instalação inteira do service worker.
+
+### Atualização é oferecida, nunca forçada
+
+Quando uma versão nova instala com a aba aberta, aparece um aviso com botão. Nada
+de `location.reload()` automático — recarregar no meio de um import descartaria o
+preview.
+
+### Registro protegido
+
+O espelho `Inkwell.dc.html` abre de `file://`, onde registrar service worker lança
+exceção. O registro checa `https?:` e a existência da API, e engole falha — PWA
+quebrado não pode impedir o app de abrir.
+
+### Offline
+
+Banner com `aria-live` dizendo o que continua funcionando: coleção e decks sim,
+preços podem estar defasados. Vago ("sem conexão") deixaria o usuário sem saber se
+pode confiar no que está vendo.
+
+### Ícones
+
+Gerados de `logo-coin.png`: 192 e 512, com 10% de respiro e fundo `#0a0c10`,
+declarados também como `maskable` — sem isso o Android recorta a gravação da moeda.
+
+Todos os caminhos do manifest são relativos. Absolutos quebrariam num site de
+projeto do GitHub Pages, que serve a partir de subpasta.
+
+### Verificação
+
+`tools/pwa-contract.test.mjs`, nova, **32/32 na primeira execução** — inclusive
+parse do service worker como JS e existência dos arquivos de ícone. Demais:
+a11y-perf 27, replay-ux 36, journey-cost 37, practice 36, meta 32, shared 23,
+data-health 26, visual 18/18, i18n 9/9 (681 chaves). `test:all` e CI em 23 suítes.
+
+Não visto rodando. Service worker só funciona em `https` ou `localhost` — depois
+do deploy vale conferir instalação, modo avião e o aviso de atualização.
+
+### Restante do M3
+
+Scanner de cartas (precisa de decisão sobre OCR e fonte), extração de módulos,
+telemetria (sem usuários externos ainda, então sem urgência).

@@ -1,87 +1,93 @@
-INKWELL BRASIL — M2.7: accessibility, motion, performance budget
+INKWELL BRASIL — M3 · PWA: installable, works offline
 
 Extract over your repo root, then:
 
   npm run verify
-  git add -A && git commit -m "M2.7: accessibility pass, motion system, performance budget"
+  git add -A && git commit -m "M3: PWA — installable, offline-capable, versioned cache policy"
   git push
 
-────────────────────────────────────────────────────────────
-WHAT THE AUDIT FOUND
+NEW FILES
+  site/manifest.webmanifest
+  site/sw.js
+  site/ink/icon-192.png
+  site/ink/icon-512.png
+  tools/pwa-contract.test.mjs
 
-ACCESSIBILITY
-
-<html> HAD NO lang. Screen readers picked the wrong voice — Portuguese text read
-with English phonetics. It now follows the language toggle (pt-BR / en).
-
-TOASTS WERE SILENT. role="status" + aria-live="polite". "Backup restaurado" and
-"Coleção exportada" were never announced. A confirmation that exists only visually
-is not a confirmation for someone who cannot see it.
-
-NO SKIP LINK. Roughly 110 navigation stops sit before the content on every view.
-There is now a "Skip to content" link that appears on focus — positioned offscreen
-rather than display:none, which would have taken it out of the tab order entirely.
-
-CARD ART HAD NO alt. Three card <img> elements announced nothing. They now carry
-the card name. The decorative hero coin keeps alt="" — announcing it is noise.
-
-ICON-ONLY CONTROLS WERE UNNAMED: the − / + steppers, and the EN/PT buttons that a
-screen reader read as two loose letters.
-
-HIDDEN FILE INPUTS TOOK FOCUS. display:none is not enough in every browser; they
-now carry tabindex="-1" and aria-hidden.
-
-TOUCH TARGETS
-Quantity steppers were 24px. There were also buttons at 28px and 30px. No control
-declares under 32px now, and the test fails if one comes back.
-
-MOTION
-The hover lift was inline per card via style-hover. It is now .ink-lift — one rule,
-inside @media (hover:hover). On touch there is no hover, so the effect used to
-stick after a tap.
-
-A CSS BUG THE TEST ITSELF CAUGHT
-I placed @media (prefers-reduced-motion){ .ink-skip{transition:none} } BEFORE the
-base .ink-skip rule. Same specificity means source order wins, so the
-reduced-motion override did nothing at all. Moved after, with a test that checks
-the ORDER rather than just the presence.
-
-PERFORMANCE BUDGET
-29 backdrop-filter declarations. Blur is the most expensive paint on the page and
-the cost lands exactly on phone GPUs. Two changes:
-  - at <=860px, blur is off. Glass surfaces keep their colour, they just stop
-    blurring live.
-  - PERFORMANCE MODE NOW DROPS BLUR TOO, not just the shader. The button promises
-    lower cost; delivering half of it was a broken promise.
-
-Found along the way: two 860px breakpoints written differently (@media( with no
-space), which is why the test could only see one. Normalised.
-
-A DUPLICATE DICTIONARY KEY
-perRow already existed as '{n} / row' and I added a second one as 'row'. In JS the
-last definition silently wins. Mine is gone, and the test now rejects any key
-defined twice — i18n-contract checks parity and usage, but not duplication.
+Service workers only run on https or localhost, so this does nothing until it is
+deployed. After deploying, check: install prompt, airplane mode, update banner.
 
 ────────────────────────────────────────────────────────────
-NOT DONE: COMPONENT LIBRARY
+WHY PWA FIRST, OUT OF WHAT M3 LISTS
 
-M2.7 listed component extraction. There are 1,231 inline style attributes in a
-single file, and this app paints from inline styles by design — pulling them into
-classes would delay first paint, which is the opposite of the goal. The real
-standardisation came from the tokens (V5) and now from the motion system. Module
-extraction belongs to M3, where it is already listed.
+It solves a concrete situation: checking your collection and decks at a game store
+on bad wi-fi. The scanner needs an OCR and data-source decision first, and
+telemetry has no outside users to measure yet.
+
+────────────────────────────────────────────────────────────
+A CACHING POLICY, NOT ONE BLANKET RULE
+
+The strategy per file follows how that file actually behaves:
+
+  app shell (html, js)   network-first   an update has to be able to land
+  data-manifest.json     network-first   it is the VERSION POINTER — a stale one
+                                         pins every other file to an old build
+  versioned data         cache-first     the manifest names a version, so those
+                                         files are immutable and safe to keep
+  prices.json            network-first   they move daily; the app already labels
+                                         staleness, so a cached copy is honest
+  card art               cache-first     with a hard cap
+  user data              NEVER           it lives in localStorage and Supabase; a
+                                         cached copy could resurrect a deleted record
+
+RULE ORDER MATTERS. data-manifest.json and prices.json are tested BEFORE the
+generic .json rule, or they would never run at all. There is a test for that
+ordering, not just for the rules existing.
+
+The art cap is 600 entries, oldest evicted first. Without it, thousands of card
+images would sit on disk forever.
+
+The install uses c.add() per file rather than addAll(), because addAll fails the
+ENTIRE service worker install if any single URL 404s.
+
+────────────────────────────────────────────────────────────
+UPDATES ARE OFFERED, NEVER FORCED
+
+When a new version installs while a tab is open, a banner appears with a Reload
+button. No automatic location.reload() — reloading mid-import would throw away the
+preview you had not confirmed yet.
+
+REGISTRATION IS GUARDED
+
+The Inkwell.dc.html mirror opens from file://, where registering a service worker
+throws. Registration checks for https? and for API support, and swallows failure —
+a broken PWA must not stop the app from opening.
+
+OFFLINE
+
+A banner with aria-live that says WHAT STILL WORKS: collection and decks yes,
+prices possibly out of date. A vague "no connection" would leave you unsure whether
+to trust what is on screen.
+
+ICONS
+
+Generated from logo-coin.png at 192 and 512, with 10% breathing room on a #0a0c10
+field, and declared maskable as well as any — without maskable, Android crops the
+coin's engraving away.
+
+Every manifest path is relative. Absolute paths break on a GitHub Pages project
+site, which serves from a subfolder.
 
 ────────────────────────────────────────────────────────────
 VERIFIED
 
-a11y-perf-contract  27/27
-replay-ux 36 · journey-cost 37 · practice-loop 36 · meta-advisor 32 ·
-shared-cards 23 · data-health 26 · visual 18/18 · i18n 9/9 (676 keys)
-test:all and CI both at 22 suites, no drift · mirror byte-identical
+pwa-contract  32/32  (passed first run — including parsing sw.js as JavaScript and
+                      checking the icon files exist on disk)
+a11y-perf 27 · replay-ux 36 · journey-cost 37 · practice-loop 36 ·
+meta-advisor 32 · shared-cards 23 · data-health 26 · visual 18/18 ·
+i18n 9/9 (681 keys) · test:all and CI aligned · mirror byte-identical
 
-NOT VERIFIED: rendered output. Worth checking with the keyboard — press Tab as
-soon as the page loads and the skip link should appear — and with performance mode
-on, where the glass should go flat.
+REMAINING IN M3: card scanner (needs an OCR and source decision), module
+extraction, telemetry.
 
 STILL PENDING: restore the deploy gate in deploy-pages.yml before anyone outside
 uses the site.

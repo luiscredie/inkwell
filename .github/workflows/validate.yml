@@ -55,6 +55,8 @@ jobs:
         run: node tools/journey-cost-contract.test.mjs
       - name: Accessibility, motion and performance contract
         run: node tools/a11y-perf-contract.test.mjs
+      - name: PWA manifest and service worker contract
+        run: node tools/pwa-contract.test.mjs
   python:
     runs-on: ubuntu-latest
     steps:

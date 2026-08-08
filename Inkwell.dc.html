@@ -10,6 +10,12 @@
 <x-dc>
 <helmet>
 <link rel="icon" type="image/png" href="ink/logo-coin.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0a0c10">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Inkwell">
+<link rel="apple-touch-icon" href="ink/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -161,11 +167,23 @@
 <sc-if value="{{ inkFxOff }}" hint-placeholder-val="{{ true }}">
   <div id="ink-fallback" aria-hidden="true"></div>
 </sc-if>
+<sc-if value="{{ canInstall }}" hint-placeholder-val="{{ false }}">
+  <button onClick="{{ doInstall }}" style="position:fixed;right:18px;bottom:64px;z-index:60;display:flex;align-items:center;gap:8px;padding:9px 15px;border-radius:var(--r-pill);background:var(--gold);border:none;color:#131313;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;font-family:inherit;min-height:38px">↓ {{ installText }}</button>
+</sc-if>
 <button class="ink-perf-toggle" onClick="{{ togglePerf }}" title="{{ perfHint }}" style="position:fixed;right:18px;bottom:18px;z-index:60;display:flex;align-items:center;gap:8px;padding:9px 15px;border-radius:var(--r-pill);background:var(--glass-bg);backdrop-filter:var(--glass-blur);border:var(--glass-border);color:var(--text-3);font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;font-family:inherit;min-height:38px">
   <span style="color:{{ perfDotColor }}">⚡</span>{{ perfLabel }}
 </button>
 
 <a href="#ink-main" class="ink-skip">{{ skipToContent }}</a>
+<sc-if value="{{ isOffline }}" hint-placeholder-val="{{ false }}">
+  <div role="status" aria-live="polite" style="position:fixed;top:0;left:0;right:0;z-index:120;padding:9px 16px;background:var(--warn);color:#131313;font-size:12.5px;font-weight:600;text-align:center">{{ offlineText }}</div>
+</sc-if>
+<sc-if value="{{ hasUpdate }}" hint-placeholder-val="{{ false }}">
+  <div role="status" aria-live="polite" style="position:fixed;bottom:18px;left:18px;z-index:120;display:flex;align-items:center;gap:12px;padding:11px 16px;border-radius:var(--r-pill);background:var(--surface-highest);border:1px solid var(--outline);box-shadow:var(--elev-2)">
+    <span style="font-size:12.5px;color:var(--text-2)">{{ updateText }}</span>
+    <button onClick="{{ doUpdate }}" style="padding:7px 14px;border-radius:var(--r-pill);background:var(--gold);border:none;color:#131313;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;min-height:34px">{{ updateCta }}</button>
+  </div>
+</sc-if>
 <div id="app" style="display:flex;min-height:100vh;position:relative;z-index:1;background:transparent;color:var(--text-1);font-family:var(--font-sans),system-ui,sans-serif;font-size:15px;line-height:1.5">
 
   <aside id="rail" style="position:fixed;left:22px;top:50%;transform:translateY(-50%);z-index:40;width:86px;display:flex;flex-direction:column;padding:12px 8px;border-radius:var(--r-pill);background:var(--glass-bg);backdrop-filter:var(--glass-blur);border:var(--glass-border);box-shadow:var(--shadow-ink)">
@@ -2340,6 +2358,8 @@ class Component extends DCLogic {
     metaOpenDeck: null,
     matchupNotes: {}, goalProgress: null, momentsOpen: false,
     acquisition: {}, roiOpen: false,
+    online: (typeof navigator!=='undefined' && 'onLine' in navigator) ? navigator.onLine : true,
+    swUpdate: false, installPrompt: null,
     mullDeck: null, mullHand: null, mullChoice: null, academyTab: 'journey',
     coachDeck: null, coachLoading: false, coachErr: null, coachText: null,
     lang: 'pt',
@@ -2393,6 +2413,7 @@ class Component extends DCLogic {
       bjMatch:'Log a game you played', bjMatchWhy:'One logged game is enough to start seeing your record. Paste a replay log and the board is reconstructed for you.', bjMatchCta:'Log a game', bjMatchDone:'{n} games logged',
       bjReview:'Review one of your games', bjReviewWhy:'The replay shows the board turn by turn and flags the turns that changed the result.', bjReviewCta:'Open a replay', bjReviewBlocked:'Log a game with a replay log first — a result on its own cannot be replayed.',
       decAria:'One fewer copy', incAria:'One more copy', langEnAria:'Switch to English', langPtAria:'Mudar para português', skipToContent:'Skip to content', colsAria:'Cards per row', anyInk:'Any ink',
+      offlineBanner:'You are offline. Your collection and decks still work; prices may be out of date.', updateReady:'A new version is ready', updateNow:'Reload', installCta:'Install',
       newDeck:'+ New Deck', importDeck:'↑ Import', createDeck:'Create', cancel:'Cancel', format:'Format',
       inkable:'Inkable', uninkable:'Uninkable', cost:'Cost', allSets:'All sets',
       welcome:'Welcome, {name}', emptyMsg:'Your codex is empty. Import your collection from Dreamborn, or start building a deck — everything is tracked privately in your profile.',
@@ -2467,6 +2488,7 @@ class Component extends DCLogic {
       bjMatch:'Registre uma partida que você jogou', bjMatchWhy:'Uma partida registrada já basta para começar a ver seu retrospecto. Cole um log de replay e a mesa é reconstruída para você.', bjMatchCta:'Registrar partida', bjMatchDone:'{n} partidas registradas',
       bjReview:'Revise uma das suas partidas', bjReviewWhy:'O replay mostra a mesa turno a turno e destaca os turnos que mudaram o resultado.', bjReviewCta:'Abrir um replay', bjReviewBlocked:'Registre antes uma partida com log de replay — só o resultado não pode ser reproduzido.',
       decAria:'Uma cópia a menos', incAria:'Uma cópia a mais', langEnAria:'Switch to English', langPtAria:'Mudar para português', skipToContent:'Ir para o conteúdo', colsAria:'Cartas por linha', anyInk:'Qualquer ink',
+      offlineBanner:'Você está offline. Sua coleção e seus decks continuam funcionando; os preços podem estar desatualizados.', updateReady:'Uma nova versão está pronta', updateNow:'Recarregar', installCta:'Instalar',
       newDeck:'+ Novo Deck', importDeck:'↑ Importar', createDeck:'Criar', cancel:'Cancelar', format:'Formato',
       inkable:'Inkável', uninkable:'Não-inkável', cost:'Custo', allSets:'Todos os sets',
       welcome:'Bem-vindo, {name}', emptyMsg:'Seu códice está vazio. Importe sua coleção do Dreamborn ou comece a montar um deck — tudo fica salvo de forma privada no seu perfil.',
@@ -2560,6 +2582,7 @@ class Component extends DCLogic {
   }
 
   async componentDidMount() {
+    this.initPwa();
     let boot;
     try { boot = await this.bootData(); }
     catch(e){ console.error(e); this.setState({ loading:false, ready:false, dataFatal:'Failed to load data: '+(e&&e.message||e) }); return; }
@@ -2793,7 +2816,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
   closeCoach = ()=>this.setState({coachDeck:null, coachText:null, coachErr:null, coachLoading:false});
   parseCoach(txt){ if(!txt) return []; const blocks=[]; const lines=String(txt).split('\n'); let cur={head:'',body:''}; for(const ln of lines){ const h=ln.match(/^#{1,4}\s+(.+)/)||ln.match(/^\*\*(.+?)\*\*\s*$/); if(h){ if(cur.head||cur.body.trim()) blocks.push(cur); cur={head:h[1].trim(),body:''}; } else { cur.body+=(cur.body?'\n':'')+ln; } } if(cur.head||cur.body.trim()) blocks.push(cur); return blocks.map(b=>({head:b.head,body:b.body.trim()})); }
 
-  componentWillUnmount(){ this.unbindModalKeys(); this.releaseInkShader(); }
+  componentWillUnmount(){ this.unbindModalKeys(); this.releaseInkShader(); this.releasePwa(); }
 
   async bootData(){
     let man = await this.fetchJson('data-manifest.json');
@@ -3557,6 +3580,52 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       coveragePct:ownedTotal?Math.round(covered/ownedTotal*100):0,
       partial:covered<ownedTotal };
   }
+  // ---- M3 PWA. Registration is guarded: opened from a file:// path (the .dc.html
+  //      mirror) there is no service worker and registering would throw. ----
+  initPwa(){
+    try{
+      this._onOnline=()=>this.setState({online:true});
+      this._onOffline=()=>this.setState({online:false});
+      window.addEventListener('online',this._onOnline);
+      window.addEventListener('offline',this._onOffline);
+      this._onInstall=(e)=>{ e.preventDefault(); this.setState({installPrompt:e}); };
+      window.addEventListener('beforeinstallprompt',this._onInstall);
+    }catch(e){}
+    try{
+      if(!('serviceWorker' in navigator)) return;
+      if(!/^https?:$/.test(location.protocol)) return;
+      navigator.serviceWorker.register('sw.js').then(reg=>{
+        this._swReg=reg;
+        // an update that installs while a tab is open should be offered, not forced:
+        // reloading mid-import would lose the preview
+        reg.addEventListener('updatefound',()=>{
+          const w=reg.installing; if(!w) return;
+          w.addEventListener('statechange',()=>{
+            if(w.state==='installed'&&navigator.serviceWorker.controller) this.setState({swUpdate:true});
+          });
+        });
+      }).catch(()=>{});
+    }catch(e){}
+  }
+  releasePwa(){
+    try{
+      window.removeEventListener('online',this._onOnline);
+      window.removeEventListener('offline',this._onOffline);
+      window.removeEventListener('beforeinstallprompt',this._onInstall);
+    }catch(e){}
+  }
+  applyUpdate=()=>{
+    try{
+      const w=this._swReg&&this._swReg.waiting;
+      if(w) w.postMessage('skip-waiting');
+      location.reload();
+    }catch(e){ location.reload(); }
+  };
+  promptInstall=async()=>{
+    const p=this.state.installPrompt; if(!p) return;
+    try{ p.prompt(); await p.userChoice; }catch(e){}
+    this.setState({installPrompt:null});
+  };
   // ---- M2.6 Beginner Journey. Not more lessons — an ordered path whose steps are
   //      answered by the user's own state, so it can say what to do next instead of
   //      listing everything at once. ----
@@ -4376,6 +4445,9 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     const eyebrows={overview:'eb_overview',collection:'eb_collection',prices:'eb_prices',decks:'eb_decks',deckDetail:'eb_decks',advisor:'eb_decks',matches:'eb_matches',learn:'eb_learn'};
     V.pageEyebrow=this.t(eyebrows[st.view]||'eb_overview');
     V.htmlLang=st.lang==='pt'?'pt-BR':'en';
+    V.isOffline=!st.online; V.offlineText=this.t('offlineBanner');
+    V.hasUpdate=!!st.swUpdate; V.updateText=this.t('updateReady'); V.updateCta=this.t('updateNow'); V.doUpdate=this.applyUpdate;
+    V.canInstall=!!st.installPrompt; V.installText=this.t('installCta'); V.doInstall=this.promptInstall;
     for(const k of ['uiFatalTitle','uiReload','cancel','allSets','grpNone','grpColor','grpSet','noMatchFilters',
       'logGameTitle','win','loss','saveGame','foilLower','colFoil','backupSettings','cloudSync','signedInAs',
       'signOut','fullBackup','exportCollCsv','yourCorrections','exportCorrCsv','clearLabel','pipelineReport',
