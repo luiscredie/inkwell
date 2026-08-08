@@ -69,9 +69,28 @@ texto de regras se lê.
 A mão do oponente continua no toggle "Mostrar info oculta", no cabeçalho.
 
 ────────────────────────────────────────────────────────────
+HOTFIX INCLUÍDO (M4.1)
+
+O primeiro pacote M4 quebrava ao abrir a tela cheia:
+
+  index.renderVals(): this.deckSize is not a function
+
+O método real é deckCount. Eu escrevi deckSize e conferi com um grep que deu
+positivo — mas ele encontrou o PARÂMETRO deckSize que eu mesmo tinha acabado de
+adicionar em simulateReplay, não um método. Grep confirmando o próprio texto
+recém-escrito não é verificação.
+
+Havia um segundo uso no beginnerJourney, escrito com guarda
+(this.deckSize ? ... : fallback). Nunca quebrou, mas usava sempre o fallback em
+silêncio. Corrigido junto.
+
+Teste novo: this.deckSize( não pode existir no arquivo, e deckCount precisa estar
+declarado como método.
+
+────────────────────────────────────────────────────────────
 VERIFICADO
 
-replay-ux-contract  36 -> 46, com 10 asserções novas
+replay-ux-contract  36 -> 47, com 11 asserções novas
 a11y-perf 27 · journey-cost 37 · practice-loop 36 · meta-advisor 32 ·
 shared-cards 23 · data-health 26 · pwa 32 · visual 18/18 · i18n 9/9 (688 chaves)
 espelho byte a byte

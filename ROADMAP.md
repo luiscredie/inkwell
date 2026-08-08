@@ -1745,3 +1745,20 @@ Demais: a11y-perf 27, journey-cost 37, practice 36, meta 32, shared 23,
 data-health 26, pwa 32, visual 18/18, i18n 9/9 (688 chaves). Espelho byte a byte.
 
 Não visto rodando.
+
+## M4.1 — hotfix: `this.deckSize is not a function` (2026-08-08)
+
+Erro ao abrir a mesa em tela cheia. Bug meu, do M4.
+
+O método real chama-se `deckCount`. Escrevi `this.deckSize(d2)` e conferi com um
+grep que deu positivo — mas o que ele encontrou foi o **parâmetro** `deckSize` que
+eu mesmo tinha acabado de adicionar em `simulateReplay`, não um método. Grep
+confirmando o próprio texto recém-escrito não é verificação.
+
+Havia um segundo uso, no `beginnerJourney`, escrito como
+`this.deckSize?this.deckSize(d):fallback`. Protegido pela guarda, nunca quebrou —
+mas silenciosamente usava sempre o fallback, que conta entradas cruas do deck em
+vez de passar pelo índice de cartas. Corrigido junto.
+
+Teste novo: `this.deckSize(` não pode aparecer no arquivo, e `deckCount` precisa
+existir como método declarado. 47/47 no replay-ux.

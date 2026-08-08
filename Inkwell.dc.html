@@ -3711,7 +3711,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     const st=this.state; const done=st.learnDone||{};
     const ownedCards=Object.keys(st.collection||{}).length;
     const decks=(st.decks||[]);
-    const legalDeck=decks.find(d=>{ const n=this.deckSize?this.deckSize(d):Object.values(d.cards||{}).reduce((s,x)=>s+x,0); return n>=60; })||null;
+    const legalDeck=decks.find(d=>{ const n=this.deckCount?this.deckCount(d):Object.values(d.cards||{}).reduce((s,x)=>s+x,0); return n>=60; })||null;
     const anyDeck=decks[0]||null;
     const matches=(st.matches||[]);
     const withReplay=matches.find(m=>m&&m.replay&&Array.isArray(m.replay.events)&&m.replay.events.length>1);
@@ -4729,7 +4729,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       V.mcReplayFullscreen=this.t('mcReplayFullscreen'); V.mcOpponent=this.t('mcOpponent'); V.mcYou=this.t('mcYou');
       if(V.replayFullOpen){ const ev2=selected.replay.events, idx2=Math.max(0,Math.min(ev2.length-1,st.replayIndex||0)), d2=this.deckById(selected.deck_id);
         const e2=ev2[idx2]||{}; const yp=this.youPlayerOf(selected), op=yp===1?2:1;
-        const dsize=d2?this.deckSize(d2):null;
+        const dsize=d2?this.deckCount(d2):null;
         const sim=this.simulateReplay(ev2, idx2, dsize); const SS=sim.S;
         const hl=(name)=>e2.text&&e2.text.indexOf(name)>=0;
         const tile=(ch)=>{ const name=ch.name; const card=this.cardByName(name); const cv=card?this.cardView(card):null; const _open=()=>{ this.setState({replayCard:name}); }; const strv=(ch.tempStr?ch.tempStr:0)+(ch.str!=null?ch.str:0); return { name, _open, ink:cv?cv.ink:'#2a2a30', tileStyle:(ch.exerted?'transform:rotate(90deg) scale(.82);opacity:.72;':'')+(hl(name)?'box-shadow:0 0 0 2px var(--warn);':''),

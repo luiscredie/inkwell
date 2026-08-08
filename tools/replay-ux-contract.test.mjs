@@ -152,6 +152,13 @@ check('deck and discard are tracked and shown for both players', () => {
   assert.match(html, /const draw=\(p,n\)=>/);
   assert.match(html, /const toDiscard=\(p,name\)=>/);
 });
+check('the deck size comes from a method that exists', () => {
+  // this.deckSize was never defined; calling it threw the moment fullscreen opened
+  assert.doesNotMatch(html, /this\.deckSize\(/, 'deckSize is not a method on this class');
+  assert.match(html, /const dsize=d2\?this\.deckCount\(d2\):null;/);
+  const decl = (html.match(/\n  deckCount\(deck\)\{/g) || []).length;
+  assert.equal(decl, 1, 'deckCount must be the real method being called');
+});
 check('an unknown deck size shows a dash, never a guessed 60', () => {
   assert.match(html, /SS\[yp\]\.deck==null\?'—':String\(SS\[yp\]\.deck\)/);
   assert.match(html, /const DS=\(typeof deckSize==='number'&&deckSize>0\)\?deckSize:null;/);
