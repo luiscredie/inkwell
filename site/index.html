@@ -77,9 +77,18 @@
   .ink-skip:focus{top:12px}
   /* The replay stage is a three-column board. Below 1100px the log moves under it
      rather than squeezing the battlefield to nothing. */
+  /* A card that exerts should be seen turning; an instant 90deg jump reads as a
+     glitch rather than an action. */
+  .rp-card{transition:transform var(--dur-med) cubic-bezier(.2,.7,.3,1),box-shadow var(--dur-fast)}
+  .rp-hand{transition:transform var(--dur-fast) ease-out}
+  .rp-hand:hover{transform:translateY(-6px)}
+  .rp-ink{animation:rp-ink-in .3s cubic-bezier(.2,.7,.3,1) both}
+  @keyframes rp-ink-in{from{transform:rotateY(-90deg);opacity:0}to{transform:rotateY(0);opacity:1}}
+  .rp-arrow{animation:rp-arrow 1s ease-in-out infinite}
+  @keyframes rp-arrow{0%,100%{transform:translateX(0)}50%{transform:translateX(4px)}}
   @media (max-width:1100px){ .rp-stage{grid-template-columns:112px 1fr!important} .rp-log{display:none!important} }
   @media (max-width:720px){ .rp-stage{grid-template-columns:1fr!important;gap:8px!important;padding:8px!important} }
-  @media (prefers-reduced-motion: reduce){ .ink-skip{transition:none} }
+  @media (prefers-reduced-motion: reduce){ .ink-skip{transition:none} .rp-card,.rp-hand{transition:none} .rp-ink,.rp-arrow{animation:none} }
   /* M2.7 motion: one curve, hover-capable pointers only — a tap should not lift */
   @media (hover:hover){ .ink-lift{transition:transform var(--dur-med) cubic-bezier(.2,.7,.3,1)} .ink-lift:hover{transform:translateY(-4px)} }
   #ink-scroll{background:transparent}
@@ -2229,122 +2238,153 @@
         <button type="button" data-testid="replay-fullscreen-close" onClick="{{ replayFsClose }}" aria-label="{{ closeLabel }}" style="background:rgba(255,255,255,.08);border:none;color:var(--text-1);width:34px;height:34px;border-radius:9px;cursor:pointer;font-size:16px">×</button>
       </div>
 
-      <div class="rp-stage" style="flex:1;min-height:0;display:grid;grid-template-columns:132px 1fr 300px;gap:12px;padding:12px 16px">
+      <div class="rp-stage" style="flex:1;min-height:0;display:grid;grid-template-columns:150px 1fr 292px;gap:10px;padding:8px 12px">
 
-        <div style="display:flex;flex-direction:column;gap:10px;min-height:0">
-          <div style="flex:1;display:flex;flex-direction:column;gap:8px;min-height:0">
-            <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-4)">{{ mcOpponent }}</div>
-            <div style="display:flex;gap:8px">
-              <div style="flex:1;padding:8px 6px;border-radius:var(--r-sm);background:rgba(255,255,255,.03);border:1px solid var(--outline);text-align:center">
-                <div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-4)">{{ rf.deckLabel }}</div>
-                <div style="font-family:var(--font-mono);font-size:17px;color:var(--text-2);margin-top:2px">{{ rf.oppDeck }}</div>
+        <div style="display:grid;grid-template-rows:1fr 1fr;gap:8px;min-height:0">
+          <div style="display:flex;flex-direction:column;gap:6px;min-height:0">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-family:var(--font-title);font-weight:800;font-size:28px;color:var(--gold);line-height:1">{{ rf.oppLore }}</span>
+              <span style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-4)">{{ rf.loreLabel }}</span>
+            </div>
+            <div style="display:flex;gap:6px">
+              <div style="flex:1;padding:6px 4px;border-radius:var(--r-sm);background:rgba(255,255,255,.03);border:1px solid var(--outline);text-align:center">
+                <div style="font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-4)">{{ rf.deckLabel }}</div>
+                <div style="font-family:var(--font-mono);font-size:15px;color:var(--text-2)">{{ rf.oppDeck }}</div>
               </div>
-              <div style="flex:1;padding:8px 6px;border-radius:var(--r-sm);background:rgba(255,255,255,.03);border:1px solid var(--outline);text-align:center">
-                <div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-4)">{{ rf.discardLabel }}</div>
-                <div style="font-family:var(--font-mono);font-size:17px;color:var(--text-2);margin-top:2px">{{ rf.oppDiscard }}</div>
+              <div style="flex:1;padding:6px 4px;border-radius:var(--r-sm);background:rgba(255,255,255,.03);border:1px solid var(--outline);text-align:center">
+                <div style="font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-4)">{{ rf.discardLabel }}</div>
+                <div style="font-family:var(--font-mono);font-size:15px;color:var(--text-2)">{{ rf.oppDiscard }}</div>
               </div>
             </div>
             <sc-if value="{{ rf.hasOppDiscard }}" hint-placeholder-val="{{ false }}">
-              <div style="font-size:10px;color:var(--text-4);line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ rf.oppDiscardTop }}</div>
+              <div style="font-size:9.5px;color:var(--text-4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ rf.oppDiscardTop }}</div>
             </sc-if>
-          </div>
-          <div style="flex:1;display:flex;flex-direction:column;gap:8px;justify-content:flex-end;min-height:0">
-            <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)">{{ mcYou }}</div>
-            <div style="display:flex;gap:8px">
-              <div style="flex:1;padding:8px 6px;border-radius:var(--r-sm);background:rgba(255,255,255,.03);border:1px solid var(--outline);text-align:center">
-                <div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-4)">{{ rf.deckLabel }}</div>
-                <div style="font-family:var(--font-mono);font-size:17px;color:var(--text-2);margin-top:2px">{{ rf.youDeck }}</div>
+            <div style="margin-top:auto">
+              <div style="display:flex;align-items:baseline;gap:6px">
+                <span style="font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-4)">{{ rf.inkwellLabel }}</span>
+                <span style="font-family:var(--font-mono);font-size:10.5px;color:var(--gold)">{{ rf.oppInkText }}</span>
               </div>
-              <div style="flex:1;padding:8px 6px;border-radius:var(--r-sm);background:rgba(255,255,255,.03);border:1px solid var(--outline);text-align:center">
-                <div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-4)">{{ rf.discardLabel }}</div>
-                <div style="font-family:var(--font-mono);font-size:17px;color:var(--text-2);margin-top:2px">{{ rf.youDiscard }}</div>
+              <div style="display:flex;gap:1px;margin-top:4px;flex-wrap:wrap">
+                <sc-for list="{{ rf.oppInkCards }}" as="k" hint-placeholder-count="4">
+                  <div class="rp-ink" style="width:20px;aspect-ratio:734/1024;border-radius:2px;overflow:hidden;background:var(--surface-lowest)">{{ k.imgEl }}</div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:6px;justify-content:flex-end;min-height:0">
+            <div>
+              <div style="display:flex;align-items:baseline;gap:6px">
+                <span style="font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-4)">{{ rf.inkwellLabel }}</span>
+                <span style="font-family:var(--font-mono);font-size:10.5px;color:var(--gold)">{{ rf.youInkText }}</span>
+              </div>
+              <div style="display:flex;gap:1px;margin-top:4px;flex-wrap:wrap">
+                <sc-for list="{{ rf.youInkCards }}" as="k" hint-placeholder-count="4">
+                  <div class="rp-ink" style="width:20px;aspect-ratio:734/1024;border-radius:2px;overflow:hidden;background:var(--surface-lowest)">{{ k.imgEl }}</div>
+                </sc-for>
               </div>
             </div>
             <sc-if value="{{ rf.hasYouDiscard }}" hint-placeholder-val="{{ false }}">
-              <div style="font-size:10px;color:var(--text-4);line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ rf.youDiscardTop }}</div>
+              <div style="font-size:9.5px;color:var(--text-4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ rf.youDiscardTop }}</div>
             </sc-if>
+            <div style="display:flex;gap:6px">
+              <div style="flex:1;padding:6px 4px;border-radius:var(--r-sm);background:rgba(255,255,255,.03);border:1px solid var(--outline);text-align:center">
+                <div style="font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-4)">{{ rf.deckLabel }}</div>
+                <div style="font-family:var(--font-mono);font-size:15px;color:var(--text-2)">{{ rf.youDeck }}</div>
+              </div>
+              <div style="flex:1;padding:6px 4px;border-radius:var(--r-sm);background:rgba(255,255,255,.03);border:1px solid var(--outline);text-align:center">
+                <div style="font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-4)">{{ rf.discardLabel }}</div>
+                <div style="font-family:var(--font-mono);font-size:15px;color:var(--text-2)">{{ rf.youDiscard }}</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-family:var(--font-title);font-weight:800;font-size:28px;color:var(--gold);line-height:1">{{ rf.youLore }}</span>
+              <span style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-4)">{{ rf.loreLabel }}</span>
+            </div>
           </div>
         </div>
 
-        <div style="display:flex;flex-direction:column;gap:10px;min-height:0;overflow-y:auto">
+        <div style="display:grid;grid-template-rows:auto 1fr auto 1fr auto;gap:6px;min-height:0">
 
-          <div style="display:flex;align-items:center;gap:10px">
-            <span style="font-family:var(--font-title);font-weight:800;font-size:30px;color:var(--gold);min-width:38px;text-align:center">{{ rf.oppLore }}</span>
-            <span style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-4)">{{ rf.loreLabel }}</span>
-            <span style="flex:1"></span>
-            <span style="display:flex;gap:3px;align-items:center">
-              <sc-for list="{{ rf.oppHand }}" as="h" hint-placeholder-count="4">
-                <div onClick="{{ h._open }}" style="width:30px;aspect-ratio:734/1024;border-radius:3px;overflow:hidden;background:var(--surface-lowest);cursor:pointer">{{ h.imgEl }}</div>
-              </sc-for>
-            </span>
-            <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-3)">{{ rf.handLabel }} {{ rf.oppHandCount }}</span>
+          <div style="display:flex;align-items:center;gap:5px;min-height:60px">
+            <span style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-4);flex-shrink:0;width:64px">{{ mcOpponent }}</span>
+            <sc-for list="{{ rf.oppHand }}" as="h" hint-placeholder-count="5">
+              <div onClick="{{ h._open }}" class="rp-hand" style="flex-shrink:0;width:44px;aspect-ratio:734/1024;border-radius:4px;overflow:hidden;background:var(--surface-lowest);cursor:pointer;border:1px solid var(--outline)">{{ h.imgEl }}</div>
+            </sc-for>
+            <span style="font-family:var(--font-mono);font-size:10.5px;color:var(--text-3);margin-left:4px">{{ rf.oppHandCount }}</span>
           </div>
 
-          <div style="flex:1;min-height:120px;padding:12px;border-radius:var(--r-md);background:rgba(255,255,255,.02);border:1px solid var(--outline);display:flex;flex-wrap:wrap;gap:10px;align-content:flex-start">
+          <div style="min-height:0;padding:8px;border-radius:var(--r-md);background:rgba(255,255,255,.02);border:1px solid var(--outline);display:flex;flex-wrap:wrap;gap:9px;align-content:flex-start;overflow-y:auto">
             <sc-if value="{{ rf.oppEmpty }}" hint-placeholder-val="{{ true }}">
-              <span style="font-size:11.5px;color:var(--text-4);margin:auto">{{ rf.battlefieldLabel }}</span>
+              <span style="font-size:11px;color:var(--text-4);margin:auto">{{ rf.battlefieldLabel }}</span>
             </sc-if>
             <sc-for list="{{ rf.opp }}" as="c" hint-placeholder-count="3">
-              <div onClick="{{ c._open }}" style="width:98px;cursor:pointer;{{ c.tileStyle }}">
-                <div style="width:100%;aspect-ratio:734/1024;border-radius:6px;overflow:hidden;background:{{ c.ink }};box-shadow:var(--elev-1)">{{ c.imgEl }}</div>
-                <div style="display:flex;align-items:center;gap:5px;margin-top:3px;font-family:var(--font-mono);font-size:10px">
-                  <span style="color:{{ c.strColor }}">{{ c.str }}</span><span style="color:var(--text-4)">/</span><span style="color:var(--info)">{{ c.will }}</span>
-                  <span style="flex:1"></span><span style="color:{{ c.stateColor }};font-size:9px">{{ c.stateLabel }}</span>
-                </div>
+              <div onClick="{{ c._open }}" class="rp-card" style="position:relative;width:96px;aspect-ratio:734/1024;border-radius:6px;overflow:hidden;background:{{ c.ink }};box-shadow:var(--elev-1);cursor:pointer;{{ c.tileStyle }}">
+                {{ c.imgEl }}
+                <span style="position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:4px;padding:2px 4px;background:linear-gradient(to top,rgba(0,0,0,.82),transparent);font-family:var(--font-mono);font-size:10px">
+                  <span style="color:{{ c.strColor }}">{{ c.str }}</span><span style="color:#fff8">/</span><span style="color:var(--info)">{{ c.will }}</span>
+                  <span style="flex:1"></span><span style="color:var(--err)">{{ c.dmgText }}</span>
+                </span>
+                <sc-if value="{{ c.hasBadge }}" hint-placeholder-val="{{ false }}">
+                  <span style="position:absolute;top:4px;left:4px;padding:2px 6px;border-radius:20px;background:rgba(96,165,250,.9);color:#0a0c10;font-size:8.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase">{{ c.badge }}</span>
+                </sc-if>
               </div>
             </sc-for>
             <sc-for list="{{ rf.oppItems }}" as="z" hint-placeholder-count="1">
-              <div onClick="{{ z._open }}" style="width:74px;aspect-ratio:734/1024;border-radius:6px;overflow:hidden;background:{{ z.ink }};cursor:pointer;opacity:.9">{{ z.imgEl }}</div>
+              <div onClick="{{ z._open }}" class="rp-card" style="width:70px;aspect-ratio:734/1024;border-radius:6px;overflow:hidden;background:{{ z.ink }};cursor:pointer">{{ z.imgEl }}</div>
             </sc-for>
           </div>
 
-          <div style="flex:1;min-height:120px;padding:12px;border-radius:var(--r-md);background:rgba(212,175,55,.04);border:1px solid rgba(212,175,55,.18);display:flex;flex-wrap:wrap;gap:10px;align-content:flex-start">
+          <div style="position:relative;height:64px;display:flex;align-items:center">
+            <div style="position:absolute;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--outline-strong),transparent)"></div>
+            <sc-if value="{{ rf.hasAction }}" hint-placeholder-val="{{ false }}">
+              <div style="position:relative;margin:0 auto;display:flex;align-items:center;gap:10px;padding:5px 12px 5px 5px;border-radius:var(--r-pill);background:var(--surface-highest);border:1px solid var(--outline-strong);box-shadow:var(--elev-2)">
+                <div onClick="{{ rf.action._open }}" class="rp-card" style="width:38px;aspect-ratio:734/1024;border-radius:4px;overflow:hidden;background:var(--surface-lowest);cursor:pointer;flex-shrink:0">
+                  <img src="{{ rf.action.src }}" data-local="{{ rf.action.src }}" data-remote="{{ rf.action.remote }}" data-cid="{{ rf.action.cid }}" alt="{{ rf.action.name }}" onError="{{ imgError }}" onLoad="{{ imgLoad }}" style="width:100%;display:block" />
+                </div>
+                <span style="font-size:11.5px;color:var(--text-1);white-space:nowrap">{{ rf.action.name }}</span>
+                <sc-if value="{{ rf.action.hasTarget }}" hint-placeholder-val="{{ false }}">
+                  <span class="rp-arrow" style="font-size:15px;color:var(--warn)">→</span>
+                  <span style="font-size:11.5px;color:var(--warn);white-space:nowrap">{{ rf.action.target }}</span>
+                </sc-if>
+              </div>
+            </sc-if>
+          </div>
+
+          <div style="min-height:0;padding:8px;border-radius:var(--r-md);background:rgba(212,175,55,.04);border:1px solid rgba(212,175,55,.18);display:flex;flex-wrap:wrap;gap:9px;align-content:flex-start;overflow-y:auto">
             <sc-if value="{{ rf.youEmpty }}" hint-placeholder-val="{{ true }}">
-              <span style="font-size:11.5px;color:var(--text-4);margin:auto">{{ rf.battlefieldLabel }}</span>
+              <span style="font-size:11px;color:var(--text-4);margin:auto">{{ rf.battlefieldLabel }}</span>
             </sc-if>
             <sc-for list="{{ rf.you }}" as="c" hint-placeholder-count="3">
-              <div onClick="{{ c._open }}" style="width:98px;cursor:pointer;{{ c.tileStyle }}">
-                <div style="width:100%;aspect-ratio:734/1024;border-radius:6px;overflow:hidden;background:{{ c.ink }};box-shadow:var(--elev-1)">{{ c.imgEl }}</div>
-                <div style="display:flex;align-items:center;gap:5px;margin-top:3px;font-family:var(--font-mono);font-size:10px">
-                  <span style="color:{{ c.strColor }}">{{ c.str }}</span><span style="color:var(--text-4)">/</span><span style="color:var(--info)">{{ c.will }}</span>
-                  <span style="flex:1"></span><span style="color:{{ c.stateColor }};font-size:9px">{{ c.stateLabel }}</span>
-                </div>
+              <div onClick="{{ c._open }}" class="rp-card" style="position:relative;width:96px;aspect-ratio:734/1024;border-radius:6px;overflow:hidden;background:{{ c.ink }};box-shadow:var(--elev-1);cursor:pointer;{{ c.tileStyle }}">
+                {{ c.imgEl }}
+                <span style="position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:4px;padding:2px 4px;background:linear-gradient(to top,rgba(0,0,0,.82),transparent);font-family:var(--font-mono);font-size:10px">
+                  <span style="color:{{ c.strColor }}">{{ c.str }}</span><span style="color:#fff8">/</span><span style="color:var(--info)">{{ c.will }}</span>
+                  <span style="flex:1"></span><span style="color:var(--err)">{{ c.dmgText }}</span>
+                </span>
+                <sc-if value="{{ c.hasBadge }}" hint-placeholder-val="{{ false }}">
+                  <span style="position:absolute;top:4px;left:4px;padding:2px 6px;border-radius:20px;background:rgba(96,165,250,.9);color:#0a0c10;font-size:8.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase">{{ c.badge }}</span>
+                </sc-if>
               </div>
             </sc-for>
             <sc-for list="{{ rf.youItems }}" as="z" hint-placeholder-count="1">
-              <div onClick="{{ z._open }}" style="width:74px;aspect-ratio:734/1024;border-radius:6px;overflow:hidden;background:{{ z.ink }};cursor:pointer;opacity:.9">{{ z.imgEl }}</div>
+              <div onClick="{{ z._open }}" class="rp-card" style="width:70px;aspect-ratio:734/1024;border-radius:6px;overflow:hidden;background:{{ z.ink }};cursor:pointer">{{ z.imgEl }}</div>
             </sc-for>
           </div>
 
-          <div style="display:flex;align-items:center;gap:10px">
-            <span style="font-family:var(--font-title);font-weight:800;font-size:30px;color:var(--gold);min-width:38px;text-align:center">{{ rf.youLore }}</span>
-            <span style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-4)">{{ rf.loreLabel }}</span>
-          </div>
-
-          <div style="padding:10px 12px;border-radius:var(--r-md);background:rgba(255,255,255,.02);border:1px solid var(--outline)">
-            <div style="display:flex;align-items:center;gap:10px">
-              <span style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-4)">{{ rf.inkwellLabel }}</span>
-              <span style="font-family:var(--font-mono);font-size:11.5px;color:var(--gold)">{{ rf.youInkText }}</span>
-            </div>
-            <div style="display:flex;gap:2px;margin-top:7px;flex-wrap:wrap">
-              <sc-for list="{{ rf.youInkCards }}" as="k" hint-placeholder-count="5">
-                <div style="width:32px;aspect-ratio:734/1024;border-radius:3px;overflow:hidden;background:var(--surface-lowest)">{{ k.imgEl }}</div>
-              </sc-for>
-            </div>
-          </div>
-
-          <div style="display:flex;gap:8px;align-items:flex-start;overflow-x:auto;padding-bottom:4px">
-            <sc-for list="{{ rf.youHand }}" as="h" hint-placeholder-count="5">
-              <div onClick="{{ h._open }}" role="button" tabindex="0" aria-label="{{ h.name }}" style="flex-shrink:0;width:148px;height:74px;border-radius:7px;overflow:hidden;background:{{ h.ink }};box-shadow:var(--elev-1);cursor:pointer;border:1px solid var(--outline)">{{ h.imgEl }}</div>
+          <div style="display:flex;align-items:flex-end;gap:6px;min-height:104px;overflow-x:auto;padding-top:2px">
+            <span style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);flex-shrink:0;width:64px">{{ mcYou }}</span>
+            <sc-for list="{{ rf.youHand }}" as="h" hint-placeholder-count="6">
+              <div onClick="{{ h._open }}" role="button" tabindex="0" aria-label="{{ h.name }}" class="rp-hand" style="flex-shrink:0;width:76px;height:96px;border-radius:6px;overflow:hidden;background:{{ h.ink }};box-shadow:var(--elev-1);cursor:pointer;border:1px solid var(--outline)">{{ h.imgEl }}</div>
             </sc-for>
           </div>
         </div>
 
         <div class="rp-log" style="display:flex;flex-direction:column;min-height:0;border-radius:var(--r-md);background:rgba(255,255,255,.02);border:1px solid var(--outline)">
-          <div style="flex-shrink:0;padding:10px 13px;border-bottom:1px solid var(--outline);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-4)">{{ rf.logLabel }}</div>
-          <div style="flex:1;overflow-y:auto;padding:6px">
-            <sc-for list="{{ rf.logRows }}" as="l" hint-placeholder-count="8">
-              <button onClick="{{ l._go }}" style="display:block;width:100%;text-align:left;padding:7px 9px;border-radius:7px;border:none;background:{{ l.bg }};color:{{ l.color }};font-family:var(--font-mono);font-size:11px;line-height:1.45;cursor:pointer">{{ l.text }}</button>
+          <div style="flex-shrink:0;padding:9px 12px;border-bottom:1px solid var(--outline);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-4)">{{ rf.logLabel }}</div>
+          <div style="flex:1;overflow-y:auto;padding:5px">
+            <sc-for list="{{ rf.logRows }}" as="l" hint-placeholder-count="10">
+              <button onClick="{{ l._go }}" style="display:block;width:100%;text-align:left;padding:6px 8px;border-radius:6px;border:none;background:{{ l.bg }};color:{{ l.color }};font-family:var(--font-mono);font-size:10.5px;line-height:1.45;cursor:pointer">{{ l.text }}</button>
             </sc-for>
           </div>
         </div>
@@ -2366,13 +2406,7 @@
         </div>
       </sc-if>
 
-      <div style="flex-shrink:0;position:relative;z-index:2;padding:12px 20px 14px;border-top:1px solid var(--outline)">
-        <sc-if value="{{ rf.hasEvent }}" hint-placeholder-val="{{ false }}">
-          <div style="display:flex;align-items:center;gap:10px;padding:9px 13px;border-radius:var(--r-md);background:rgba(212,175,55,.08);border:1px solid rgba(212,175,55,.2);margin-bottom:11px">
-            <span style="font-family:var(--font-mono);font-size:10.5px;color:var(--gold);flex-shrink:0">{{ rf.eventTurn }}</span>
-            <span style="font-family:var(--font-mono);font-size:12.5px;color:var(--text-1);line-height:1.4">{{ rf.eventText }}</span>
-          </div>
-        </sc-if>
+      <div style="flex-shrink:0;position:relative;z-index:2;padding:8px 20px 10px;border-top:1px solid var(--outline)">
         <sc-if value="{{ tlHas }}" hint-placeholder-val="{{ false }}">
           <div style="position:relative;height:26px;margin-bottom:4px">
             <div style="position:absolute;left:0;right:0;top:11px;height:4px;border-radius:2px;background:rgba(255,255,255,.09)"></div>
@@ -2491,6 +2525,7 @@ class Component extends DCLogic {
       decAria:'One fewer copy', incAria:'One more copy', langEnAria:'Switch to English', langPtAria:'Mudar para português', skipToContent:'Skip to content', colsAria:'Cards per row', anyInk:'Any ink',
       offlineBanner:'You are offline. Your collection and decks still work; prices may be out of date.', updateReady:'A new version is ready', updateNow:'Reload', installCta:'Install',
       rpDeck:'Deck', rpDiscard:'Discard', rpLore:'Lore', rpBattlefield:'Battlefield', rpInkwell:'The Inkwell', rpLog:'Turn log', rpShowOppHand:'Opponent hand',
+      rpTargets:'targets {name}',
       newDeck:'+ New Deck', importDeck:'↑ Import', createDeck:'Create', cancel:'Cancel', format:'Format',
       inkable:'Inkable', uninkable:'Uninkable', cost:'Cost', allSets:'All sets',
       welcome:'Welcome, {name}', emptyMsg:'Your codex is empty. Import your collection from Dreamborn, or start building a deck — everything is tracked privately in your profile.',
@@ -2567,6 +2602,7 @@ class Component extends DCLogic {
       decAria:'Uma cópia a menos', incAria:'Uma cópia a mais', langEnAria:'Switch to English', langPtAria:'Mudar para português', skipToContent:'Ir para o conteúdo', colsAria:'Cartas por linha', anyInk:'Qualquer ink',
       offlineBanner:'Você está offline. Sua coleção e seus decks continuam funcionando; os preços podem estar desatualizados.', updateReady:'Uma nova versão está pronta', updateNow:'Recarregar', installCta:'Instalar',
       rpDeck:'Deck', rpDiscard:'Descarte', rpLore:'Lore', rpBattlefield:'Campo de batalha', rpInkwell:'O Tinteiro', rpLog:'Log de turnos', rpShowOppHand:'Mão do oponente',
+      rpTargets:'mira {name}',
       newDeck:'+ Novo Deck', importDeck:'↑ Importar', createDeck:'Criar', cancel:'Cancelar', format:'Formato',
       inkable:'Inkável', uninkable:'Não-inkável', cost:'Custo', allSets:'Todos os sets',
       welcome:'Bem-vindo, {name}', emptyMsg:'Seu códice está vazio. Importe sua coleção do Dreamborn ou comece a montar um deck — tudo fica salvo de forma privada no seu perfil.',
@@ -4731,8 +4767,34 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
         const e2=ev2[idx2]||{}; const yp=this.youPlayerOf(selected), op=yp===1?2:1;
         const dsize=d2?this.deckCount(d2):null;
         const sim=this.simulateReplay(ev2, idx2, dsize); const SS=sim.S;
+        // where the game actually starts: everything above is exporter preamble
+        let firstPlay=0;
+        for(let i=0;i<ev2.length;i++){
+          const tx=(ev2[i]&&ev2[i].text)||'';
+          if(/starting hand:|turn begins|^--- Turn/.test(tx)){ firstPlay=i; break; }
+        }
         const hl=(name)=>e2.text&&e2.text.indexOf(name)>=0;
-        const tile=(ch)=>{ const name=ch.name; const card=this.cardByName(name); const cv=card?this.cardView(card):null; const _open=()=>{ this.setState({replayCard:name}); }; const strv=(ch.tempStr?ch.tempStr:0)+(ch.str!=null?ch.str:0); return { name, _open, ink:cv?cv.ink:'#2a2a30', tileStyle:(ch.exerted?'transform:rotate(90deg) scale(.82);opacity:.72;':'')+(hl(name)?'box-shadow:0 0 0 2px var(--warn);':''),
+        // An action or song has no board zone, so without this it resolved invisibly:
+        // the log said it happened and nothing on the table moved.
+        const actionOf=()=>{
+          const t=e2.text||''; if(!t) return null;
+          let m=t.match(/^(?:Player \d|You|Your|Opponent)(?:'s)? played (.+?) \(cost \d+/);
+          if(!m) m=t.match(/^(?:Player \d|You|Your|Opponent)(?:'s)? sang (.+?) (?:with|using) /);
+          if(!m) return null;
+          const nm=m[1].trim(); const card=this.cardByName(nm); if(!card) return null;
+          const type=(card.card_type||'').toLowerCase();
+          if(type!=='action'&&type!=='song'&&!/song/i.test(card.subtypes||'')) return null;
+          const cv=this.cardView(card);
+          // the target is any board name the same line also mentions
+          let target=null;
+          for(const p of [yp,op]) for(const c of (SS[p].chars||[])) if(c.name!==nm&&t.indexOf(c.name)>=0) target=c.name;
+          return { name:nm, hasImg:!!(cv&&cv._local), src:cv&&cv._local?cv._local:'', remote:cv&&cv._remote?cv._remote:'',
+            cid:card.card_id, target:target||'', hasTarget:!!target,
+            targetLabel:target?this.t('rpTargets',{name:target}):'', _open:()=>this.setState({replayCard:nm}) };
+        };
+        const tile=(ch)=>{ const name=ch.name; const card=this.cardByName(name); const cv=card?this.cardView(card):null; const _open=()=>{ this.setState({replayCard:name}); }; const strv=(ch.tempStr?ch.tempStr:0)+(ch.str!=null?ch.str:0); return { name, _open, ink:cv?cv.ink:'#2a2a30', tileStyle:(ch.exerted?'transform:rotate(90deg) scale(.86);':'')+(hl(name)?'box-shadow:0 0 0 2px var(--warn);':''),
+            badge:ch.drying?this.t('rpDrying'):'', hasBadge:!!ch.drying,
+            dmgText:ch.damage?('−'+ch.damage):'', hasDmg:!!ch.damage,
             stateLabel:ch.drying?this.t('rpDrying'):(ch.exerted?this.t('rpExerted'):this.t('rpReady')),
             stateColor:ch.drying?'var(--info)':(ch.exerted?'var(--text-4)':'var(--ok)'), exerted:!!ch.exerted, drying:!!ch.drying, damage:ch.damage||0, hasStats:ch.str!=null||ch.will!=null, str:strv, strColor:ch.tempStr?'#5fd07f':'#ff8a72', will:ch.will!=null?ch.will:0, tempBuff:!!ch.tempStr, mods:(ch.mods||[]).map(md=>({label:md.label, bg:md.active?'rgba(224,193,90,.22)':'rgba(255,255,255,.06)', color:md.active?'#e0c15a':'#7c7c85'})), imgEl: cv&&cv._local ? React.createElement('img',{key:name,src:cv._local,'data-local':cv._local,'data-remote':cv._remote,'data-cid':card.card_id,onError:window.imgError,onLoad:window.imgLoad,style:{width:'100%',height:'100%',objectFit:'cover',display:'block'}}) : React.createElement('div',{style:{padding:'4px',fontSize:'8px',color:'#fff',lineHeight:1.1}}, name) }; };
         const zTile=(ch)=>{ const card=this.cardByName(ch.name); const cv=card?this.cardView(card):null; return { name:ch.name, _open:()=>this.setState({replayCard:ch.name}), ink:cv?cv.ink:'#2a2a30', exerted:!!ch.exerted, imgEl: cv&&cv._local ? React.createElement('img',{key:ch.name,src:cv._local,'data-local':cv._local,'data-remote':cv._remote,'data-cid':card.card_id,onError:window.imgError,onLoad:window.imgLoad,style:{width:'100%',height:'100%',objectFit:'cover',display:'block'}}) : React.createElement('div',{style:{padding:'3px',fontSize:'7px',color:'#fff',lineHeight:1.1}}, ch.name) }; };
@@ -4762,6 +4824,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
           oppItems:(SS[op].items||[]).concat(SS[op].locations||[]).map(zTile), youItems:(SS[yp].items||[]).concat(SS[yp].locations||[]).map(zTile),
           oppHand:SS[op].hand.map(n=>handTile(n,hideOpp)), youHand:SS[yp].hand.map(n=>handTile(n,false)), oppHandCount:SS[op].hand.length, youHandCount:SS[yp].hand.length,
           eventText:e2.text||'', eventTurn:e2.turn!=null?this.t('rpTurnShort',{n:e2.turn}):'',
+          action:actionOf(), hasAction:!!actionOf(),
           eventKind:e2.type||'', hasEvent:!!e2.text,
           oppInkPips:Array.from({length:Math.min(10,SS[op].inkTotal)},(_,i)=>({ on:i>=SS[op].inkExert?'var(--gold)':'rgba(255,255,255,.18)' })),
           youInkPips:Array.from({length:Math.min(10,SS[yp].inkTotal)},(_,i)=>({ on:i>=SS[yp].inkExert?'var(--gold)':'rgba(255,255,255,.18)' })),
@@ -4777,7 +4840,11 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
           oppDiscardTop:SS[op].discard.length?SS[op].discard[SS[op].discard.length-1]:'',
           hasYouDiscard:SS[yp].discard.length>0, hasOppDiscard:SS[op].discard.length>0,
           youInkCards:inkStack(SS[yp].inkTotal), oppInkCards:inkStack(SS[op].inkTotal),
-          logRows:ev2.slice(0,idx2+1).map((e,i)=>({ text:e.text||'', current:i===idx2,
+          logRows:ev2.slice(0,idx2+1).map((e,i)=>({ e, i })).filter(({e,i})=>{
+            // Lines before the first real game event are exporter headers, not play.
+            if(i>=firstPlay) return true;
+            return false;
+          }).map(({e,i})=>({ text:e.text||'', current:i===idx2,
             _go:()=>this.replaySeek(i),
             color:i===idx2?'var(--text-1)':'var(--text-4)',
             bg:i===idx2?'rgba(212,175,55,.12)':'transparent' })).reverse(),

@@ -1762,3 +1762,70 @@ vez de passar pelo índice de cartas. Corrigido junto.
 
 Teste novo: `this.deckSize(` não pode aparecer no arquivo, e `deckCount` precisa
 existir como método declarado. 47/47 no replay-ux.
+
+## M4.2 — mesa de replay, segunda passada (2026-08-08)
+
+Doze apontamentos após o M4. Três eram consequência de uma decisão errada minha.
+
+### O banner de evento era o problema, não a solução
+
+Eu tinha mantido a faixa "T0 · Your starting hand: …" acima dos controles. Ela
+repetia o que o log lateral já mostra, roubava altura da mesa, e ainda assim o
+usuário reclamou que a linha da mão inicial **não estava no log**. Estava — só
+que a atenção ia para o banner.
+
+Removido. O texto vive no log, a mesa recuperou ~60 px de altura, e três itens da
+lista (banner, altura, mão invisível) caíram juntos.
+
+### Preâmbulo do exportador
+
+A linha "lifetime" que o usuário não reconhecia vem do cabeçalho do arquivo, não
+do jogo. O log agora começa no primeiro evento real — mão inicial, marcador de
+turno ou "--- Turn N ---" — e descarta o que vem antes. A mão inicial é
+justamente o primeiro evento válido, então continua no topo.
+
+### Altura da mesa
+
+O centro virou grade de cinco faixas: mão do oponente, campo dele, divisória,
+seu campo, sua mão. Os campos são as únicas faixas elásticas, então tudo que
+sobra de altura vai para as cartas. Antes era coluna rolante e a mão saía da tela.
+
+Sua mão a 76×96 px; a do oponente a 44 px, que basta para contar versos.
+
+### Coluna lateral
+
+Lore grande acima de Deck e Descarte, Tinteiro abaixo — na ordem pedida, espelhada
+entre os dois jogadores. A tinta usa o verso da carta em 20 px, empilhado.
+
+### Legenda fora, estado sobre a carta
+
+O texto sob cada carta saiu. Força e vontade viram faixa translúcida no rodapé da
+própria arte; dano em vermelho ao lado; **secando** vira etiqueta azul sobre o
+canto superior. Menos linhas, mais carta.
+
+Exercer não escurece mais a carta — reduzir opacidade escondia justamente o que se
+queria olhar. E a rotação passou a ser transição, não salto.
+
+### Ações e canções finalmente aparecem
+
+Antes, uma ação resolvia invisível: o log dizia que aconteceu e nada na mesa se
+mexia, porque ação não tem zona de campo. Agora, quando o evento atual é uma ação
+ou canção, ela aparece como carta na divisória entre os dois campos, com seta
+animada até o alvo quando a mesma linha nomeia uma criatura em jogo. Depois segue
+para o descarte, que já era rastreado desde o M4.
+
+O alvo é inferido do texto do evento — só é mostrado quando o nome bate com algo
+que está em campo. Sem isso, seria seta apontando para lugar nenhum.
+
+### Verificação
+
+`replay-ux-contract` de 47 para **57**. As dez novas travam: banner removido,
+preâmbulo filtrado sem perder a mão inicial, ação com carta e seta, ausência de
+legenda sob a carta, etiqueta de secando, exercer sem opacidade, animação de
+virada, coluna lateral com lore/deck/descarte/tinteiro, divisória entre campos,
+mão legível.
+
+Demais suítes verdes: a11y-perf 27, journey-cost 37, practice 36, meta 32,
+shared 23, data-health 26, pwa 32, visual 18/18, i18n 9/9 (689 chaves).
+
+Não visto rodando.

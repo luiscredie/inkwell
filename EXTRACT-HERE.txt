@@ -1,99 +1,65 @@
-INKWELL BRASIL — M4: mesa de replay redesenhada
+INKWELL BRASIL — M4.2: mesa de replay, segunda passada
 
 Extraia sobre a raiz do repo, depois:
 
   npm run verify
-  git add -A && git commit -m "M4: replay board zones, deck/discard tracking, card identity fix, card inspector"
+  git add -A && git commit -m "M4.2: replay board height, side column, action cards with target, card state on art"
   git push
 
-ARQUIVO NOVO: site/ink/card-back.png (do verso que você enviou)
+Se o M4 ainda não foi commitado, este pacote contém os dois.
 
 ────────────────────────────────────────────────────────────
-VOCÊ ESTAVA CERTO SOBRE DECK E DESCARTE
+O BANNER ERA O PROBLEMA, NÃO A SOLUÇÃO
 
-Eu propus não mostrar, achando que o log não dizia o que era descartado. Você
-conferiu e corrigiu: diz sim — o descarte sempre vem de desafio, ação ou canção.
-Implementado como funcionalidade em vez de omissão.
+Eu tinha mantido a faixa "T0 · Your starting hand: …" acima dos controles. Ela
+repetia o que o log lateral já mostra, roubava altura da mesa — e ainda assim você
+reclamou que a linha da mão inicial não estava no log. Estava. A atenção ia para
+o banner.
 
-  deck      diminui na mão inicial e em cada compra
-  descarte  recebe banimento, ação resolvida e canção cantada
+Removido. O texto vive no log, a mesa recuperou cerca de 60px, e três dos seus
+itens (banner, altura, mão invisível) caíram juntos.
 
-Testado com log sintético: 60 no deck, 7 de mão, 1 compra → 52. Canção e
-personagem banido aparecem no descarte, nessa ordem.
+A LINHA "lifetime"
+Vem do cabeçalho do arquivo exportado, não do jogo. O log agora começa no primeiro
+evento real — mão inicial, "turn begins" ou "--- Turn N ---" — e descarta o que
+vem antes. Sua mão inicial é justamente o primeiro evento válido, então continua
+no topo do log.
 
-O tamanho do deck só é conhecido quando o deck é conhecido. Sem isso mostra "—",
-nunca um 60 chutado.
+ALTURA
+O centro virou grade de cinco faixas: mão do oponente · campo dele · divisória ·
+seu campo · sua mão. Os campos são as únicas faixas elásticas, então toda altura
+que sobra vai para as cartas. Antes era uma coluna rolante e a mão saía da tela.
 
-────────────────────────────────────────────────────────────
-SEUS ITENS 1, 2, 5 E 8 ERAM UM PROBLEMA SÓ
+Sua mão a 76×96px. A do oponente a 44px, o suficiente para contar versos.
 
-A mesa era uma pilha vertical. O texto do evento e a barra do jogador dividiam a
-mesma faixa — daí a sobreposição — e as cartas não tinham zona própria, então o
-tamanho era o que sobrava. Por isso resolver o layout resolveu os quatro.
+COLUNA LATERAL
+Lore grande acima de Deck e Descarte, Tinteiro abaixo — na ordem que você pediu,
+espelhada entre os dois jogadores. A tinta usa o verso da carta, empilhado.
 
-Agora é grade de zonas, como o seu mockup:
+LEGENDA FORA, ESTADO SOBRE A CARTA
+O texto sob cada carta saiu. Força/vontade viram faixa translúcida no rodapé da
+própria arte, dano em vermelho ao lado, e SECANDO virou etiqueta azul sobre o
+canto da carta.
 
-  ESQUERDA (132px)  Deck e Descarte dos dois jogadores, com a última carta
-                    descartada visível
-  CENTRO            Lore · mão do oponente · campo dele · campo seu ·
-                    O Tinteiro · sua mão
-  DIREITA (300px)   Log de turnos — todos os eventos, mais recente no topo,
-                    cada linha clicável para pular até ali
+Exercer não escurece mais — reduzir opacidade escondia exatamente o que você queria
+olhar. E a rotação virou transição, não salto.
 
-Carta de campo passou de miniatura para 98px. Abaixo de 1100px o log some antes de
-o campo apertar; abaixo de 720px vira coluna única.
+AÇÕES E CANÇÕES
+Antes uma ação resolvia invisível: o log dizia que aconteceu e nada se mexia,
+porque ação não tem zona de campo. Agora ela aparece como carta na divisória entre
+os dois campos, com seta animada até o alvo quando a linha nomeia uma criatura em
+jogo — e segue para o descarte, que já era rastreado.
 
-────────────────────────────────────────────────────────────
-ITEM 3 — A ENCHANTED NO MEIO DA MESA
-
-Causa: cardByName devolvia a[0], a primeira impressão na ordem de carregamento,
-sem critério nenhum.
-
-Regra nova, na ordem que você pediu:
-  1. a cópia que você possui
-  2. entre as que possui, a mais barata
-  3. se não possui nenhuma, a mais barata do banco
-  (empate resolve pela raridade menor)
-
-Com cache, invalidado a cada import — a preferência depende da coleção.
-
-ITEM 4 — TINTA
-O verso oficial que você enviou. As pips douradas sumiram; eram exatamente o que
-não dava para ver.
-
-ITENS 5, 6, 7 — MÃO
-Mão a 148×74px mostrando a faixa superior da carta. Clicar em QUALQUER carta —
-mão, campo, item, mão revelada do oponente — abre a carta inteira até 74vh, onde o
-texto de regras se lê.
-
-A mão do oponente continua no toggle "Mostrar info oculta", no cabeçalho.
-
-────────────────────────────────────────────────────────────
-HOTFIX INCLUÍDO (M4.1)
-
-O primeiro pacote M4 quebrava ao abrir a tela cheia:
-
-  index.renderVals(): this.deckSize is not a function
-
-O método real é deckCount. Eu escrevi deckSize e conferi com um grep que deu
-positivo — mas ele encontrou o PARÂMETRO deckSize que eu mesmo tinha acabado de
-adicionar em simulateReplay, não um método. Grep confirmando o próprio texto
-recém-escrito não é verificação.
-
-Havia um segundo uso no beginnerJourney, escrito com guarda
-(this.deckSize ? ... : fallback). Nunca quebrou, mas usava sempre o fallback em
-silêncio. Corrigido junto.
-
-Teste novo: this.deckSize( não pode existir no arquivo, e deckCount precisa estar
-declarado como método.
+O alvo é inferido do texto do evento e só aparece quando o nome bate com algo que
+está em campo. Sem isso seria uma seta apontando para lugar nenhum.
 
 ────────────────────────────────────────────────────────────
 VERIFICADO
 
-replay-ux-contract  36 -> 47, com 11 asserções novas
+replay-ux-contract  47 -> 57
 a11y-perf 27 · journey-cost 37 · practice-loop 36 · meta-advisor 32 ·
-shared-cards 23 · data-health 26 · pwa 32 · visual 18/18 · i18n 9/9 (688 chaves)
+shared-cards 23 · data-health 26 · pwa 32 · visual 18/18 · i18n 9/9 (689 chaves)
 espelho byte a byte
 
-NÃO VERIFICADO: a tela rodando — sem site/data/** o app não inicia aqui. Abra um
-replay e confira as zonas, o log lateral e o clique numa carta.
+NÃO VERIFICADO: a tela rodando. Abra um replay e confira a altura, a mão, e um
+turno em que uma canção é cantada.

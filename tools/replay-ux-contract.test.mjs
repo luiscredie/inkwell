@@ -135,10 +135,60 @@ check('seeking stops playback so the scrub does not fight the timer', () => {
 });
 
 // ---------- board readability ----------
-check('both hands, the inkwell and the live event are on the board', () => {
-  for (const hole of ['rf.youHand', 'rf.oppHand', 'rf.youInkCards', 'rf.eventText']) {
-    assert.ok(html.includes('{{ ' + hole + ' }}') || html.includes('list="{{ ' + hole + ' }}"'), 'missing ' + hole);
+check('both hands and both inkwells are on the board', () => {
+  for (const hole of ['rf.youHand', 'rf.oppHand', 'rf.youInkCards', 'rf.oppInkCards']) {
+    assert.ok(html.includes('list="{{ ' + hole + ' }}"'), 'missing ' + hole);
   }
+});
+check('the event banner is gone — the log carries the text now', () => {
+  assert.doesNotMatch(html, /\{\{ rf\.eventTurn \}\}/,
+    'a banner repeating the current line stole height the board needed');
+  assert.match(html, /list="\{\{ rf\.logRows \}\}"/);
+});
+check('exporter preamble is dropped from the log, real play is kept', () => {
+  assert.match(html, /if\(\/starting hand:\|turn begins\|\^--- Turn\/\.test\(tx\)\)\{ firstPlay=i; break; \}/);
+  assert.match(html, /if\(i>=firstPlay\) return true;/,
+    'the starting hand is the first real event and must survive the filter');
+});
+check('a played action or song is shown as a card, with its target', () => {
+  assert.match(html, /const actionOf=\(\)=>\{/);
+  assert.match(html, /<sc-if value="\{\{ rf\.hasAction \}\}"/);
+  assert.match(html, /\{\{ rf\.action\.target \}\}/);
+  assert.match(html, /class="rp-arrow"/, 'the arrow is what links the action to what it hit');
+});
+check('board cards carry no caption; state rides on the art', () => {
+  const i = html.indexOf('list="{{ rf.you }}"');
+  const block = html.slice(i, i + 1600);
+  assert.doesNotMatch(block, /\{\{ c\.stateLabel \}\}/, 'the caption under each card was noise');
+  assert.match(block, /\{\{ c\.badge \}\}/, 'drying must read as a badge over the card');
+  assert.match(block, /\{\{ c\.dmgText \}\}/);
+});
+check('exerting dims nothing and animates the turn', () => {
+  assert.match(html, /tileStyle:\(ch\.exerted\?'transform:rotate\(90deg\) scale\(\.86\);':''\)/);
+  assert.doesNotMatch(html, /rotate\(90deg\) scale\(\.82\);opacity:\.72;/, 'fading an exerted card hid it');
+  assert.match(html, /\.rp-card\{transition:transform var\(--dur-med\)/);
+});
+check('ink cards flip in rather than appearing', () => {
+  assert.match(html, /@keyframes rp-ink-in\{from\{transform:rotateY\(-90deg\)/);
+});
+check('replay motion is disabled under reduced motion', () => {
+  assert.match(html, /\.rp-card,\.rp-hand\{transition:none\} \.rp-ink,\.rp-arrow\{animation:none\}/);
+});
+check('lore, deck, discard and inkwell share the side column', () => {
+  const i = html.indexOf('class="rp-stage"');
+  const col = html.slice(i, html.indexOf('grid-template-rows:auto 1fr auto 1fr auto', i));
+  for (const hole of ['rf.oppLore', 'rf.youLore', 'rf.oppDeck', 'rf.youDiscard']) {
+    assert.ok(col.includes('{{ ' + hole + ' }}'), hole + ' belongs in the side column');
+  }
+  assert.match(col, /list="\{\{ rf\.youInkCards \}\}"/, 'the inkwell sits under deck and discard');
+});
+check('the two boards are separated by a divider row', () => {
+  assert.match(html, /grid-template-rows:auto 1fr auto 1fr auto/,
+    'opponent hand, opponent board, divider, your board, your hand');
+});
+check('your hand is big enough to see', () => {
+  const i = html.indexOf('list="{{ rf.youHand }}"');
+  assert.match(html.slice(i, i + 420), /width:76px;height:96px/);
 });
 check('ink is drawn as face-down cards, not abstract pips', () => {
   assert.match(html, /const BACK='ink\/card-back\.png';/);
@@ -165,14 +215,14 @@ check('an unknown deck size shows a dash, never a guessed 60', () => {
 });
 check('the turn log lists every event so far, newest first, and seeks', () => {
   assert.match(html, /list="\{\{ rf\.logRows \}\}"/);
-  assert.match(html, /ev2\.slice\(0,idx2\+1\)[\s\S]{0,260}\.reverse\(\)/);
+  assert.match(html, /ev2\.slice\(0,idx2\+1\)[\s\S]{0,700}\.reverse\(\)/);
   assert.match(html, /_go:\(\)=>this\.replaySeek\(i\)/);
 });
 check('the board has named zones instead of one vertical stack', () => {
   for (const k of ['rpDeck', 'rpDiscard', 'rpLore', 'rpBattlefield', 'rpInkwell', 'rpLog']) {
     assert.equal((html.match(new RegExp('\\b' + k + ':', 'g')) || []).length, 2, k);
   }
-  assert.match(html, /class="rp-stage"[^>]*grid-template-columns:132px 1fr 300px/);
+  assert.match(html, /class="rp-stage"[^>]*grid-template-columns:150px 1fr 292px/);
 });
 check('the log collapses before the battlefield does', () => {
   assert.match(html, /@media \(max-width:1100px\)\{ \.rp-stage\{grid-template-columns:112px 1fr!important\} \.rp-log\{display:none!important\} \}/);
@@ -184,10 +234,10 @@ check('clicking any card opens it full size', () => {
     assert.ok(html.includes('{{ ' + h2 + ' }}'), 'missing click handler ' + h2);
   }
 });
-check('hand cards are large enough to recognise and show their top slice', () => {
+check('hand cards show the top slice of the card, not a sliver', () => {
   const i = html.indexOf('list="{{ rf.youHand }}"');
   const block = html.slice(i, i + 500);
-  assert.match(block, /width:148px;height:74px/, 'the hand was too small to read');
+  assert.match(block, /width:76px;height:96px/, 'the hand must be tall enough to recognise the card');
 });
 check('the card picker prefers what the player owns, then the cheapest', () => {
   assert.match(html, /const owned=a\.filter\(c=>\{ const e=coll\[c\.card_id\]; return e&&\(\(e\.n\|\|0\)\+\(e\.f\|\|0\)\)>0; \}\);/);

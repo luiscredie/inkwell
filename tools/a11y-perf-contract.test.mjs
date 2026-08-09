@@ -85,7 +85,7 @@ check('no interactive control declares a target under 32px', () => {
 // ---------- motion ----------
 check('reduced motion is honoured globally', () => {
   assert.match(html, /@media \(prefers-reduced-motion: reduce\)\{ \*\{animation-duration:\.001ms!important/);
-  assert.match(html, /@media \(prefers-reduced-motion: reduce\)\{ \.ink-skip\{transition:none\} \}/);
+  assert.match(html, /@media \(prefers-reduced-motion: reduce\)\{ \.ink-skip\{transition:none\}/);
 });
 check('hover lift is one shared rule, not per-element inline transitions', () => {
   assert.match(html, /@media \(hover:hover\)\{ \.ink-lift\{transition:transform var\(--dur-med\)/);
