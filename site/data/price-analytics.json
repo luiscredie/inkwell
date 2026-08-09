@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-08-08T11:50:49.431815+00:00",
+  "generated_at": "2026-08-09T05:55:43.797737+00:00",
   "top_100_most_expensive": [
     {
       "id": "LOR9-242",
@@ -705,20 +705,20 @@
   ],
   "biggest_gainers": [
     {
+      "id": "LOR13-81",
+      "name": "Tod - Clever Fox",
+      "from": 1.8,
+      "to": 14.9,
+      "change_brl": 13.1,
+      "change_pct": 727.78
+    },
+    {
       "id": "DLPC1-4-P3",
       "name": "Maleficent - Monstrous Dragon (Store Championship Participant)",
       "from": 30.0,
       "to": 199.9,
       "change_brl": 169.9,
       "change_pct": 566.33
-    },
-    {
-      "id": "LOR13-81",
-      "name": "Tod - Clever Fox",
-      "from": 1.8,
-      "to": 9.9,
-      "change_brl": 8.1,
-      "change_pct": 450.0
     },
     {
       "id": "LOR1-25",
@@ -833,14 +833,6 @@
       "change_pct": 100.25
     },
     {
-      "id": "LOR10-13",
-      "name": "Shanti - Village Girl",
-      "from": 0.1,
-      "to": 0.2,
-      "change_brl": 0.1,
-      "change_pct": 100.0
-    },
-    {
       "id": "LOR10-63",
       "name": "Swooping Strike",
       "from": 0.1,
@@ -871,22 +863,6 @@
       "to": 0.2,
       "change_brl": 0.1,
       "change_pct": 100.0
-    },
-    {
-      "id": "LOR10-11",
-      "name": "Mrs. Beakley - Former S.H.U.S.H. Agent",
-      "from": 0.1,
-      "to": 0.19,
-      "change_brl": 0.09,
-      "change_pct": 90.0
-    },
-    {
-      "id": "LOR10-22",
-      "name": "Della Duck - Returning Mother",
-      "from": 0.1,
-      "to": 0.19,
-      "change_brl": 0.09,
-      "change_pct": 90.0
     },
     {
       "id": "LOR10-44",
@@ -961,14 +937,6 @@
       "change_pct": 90.0
     },
     {
-      "id": "LOR13-92",
-      "name": "Dr. Bushroot - Evil Botanist",
-      "from": 15.88,
-      "to": 29.9,
-      "change_brl": 14.02,
-      "change_pct": 88.29
-    },
-    {
       "id": "LOR13-161",
       "name": "Pluto - Suspicious Sentry",
       "from": 0.8,
@@ -985,8 +953,24 @@
       "change_pct": 87.5
     },
     {
-      "id": "LOR10-15",
-      "name": "Taran - Pig Keeper",
+      "id": "LOR13-92",
+      "name": "Dr. Bushroot - Evil Botanist",
+      "from": 15.88,
+      "to": 28.9,
+      "change_brl": 13.02,
+      "change_pct": 81.99
+    },
+    {
+      "id": "LOR10-11",
+      "name": "Mrs. Beakley - Former S.H.U.S.H. Agent",
+      "from": 0.1,
+      "to": 0.18,
+      "change_brl": 0.08,
+      "change_pct": 80.0
+    },
+    {
+      "id": "LOR10-22",
+      "name": "Della Duck - Returning Mother",
       "from": 0.1,
       "to": 0.18,
       "change_brl": 0.08,
@@ -1017,8 +1001,8 @@
       "change_pct": 79.64
     },
     {
-      "id": "LOR10-38",
-      "name": "The Horned King - Heartless Devil",
+      "id": "LOR10-15",
+      "name": "Taran - Pig Keeper",
       "from": 0.1,
       "to": 0.17,
       "change_brl": 0.07,
@@ -1073,6 +1057,22 @@
       "change_pct": 63.33
     },
     {
+      "id": "LOR13-12",
+      "name": "Pocahontas - Guiding the Tribe",
+      "from": 49.9,
+      "to": 79.9,
+      "change_brl": 30.0,
+      "change_pct": 60.12
+    },
+    {
+      "id": "LOR10-38",
+      "name": "The Horned King - Heartless Devil",
+      "from": 0.1,
+      "to": 0.16,
+      "change_brl": 0.06,
+      "change_pct": 60.0
+    },
+    {
       "id": "LOR9-30",
       "name": "World's Greatest Criminal Mind",
       "from": 13.9,
@@ -1089,16 +1089,16 @@
       "change_pct": 53.85
     },
     {
-      "id": "LOR11-70",
-      "name": "Stitch - Naughty Experiment",
+      "id": "LOR10-13",
+      "name": "Shanti - Village Girl",
       "from": 0.1,
       "to": 0.15,
       "change_brl": 0.05,
       "change_pct": 50.0
     },
     {
-      "id": "LOR11-72",
-      "name": "Minnie Mouse - Spinning Skater",
+      "id": "LOR11-70",
+      "name": "Stitch - Naughty Experiment",
       "from": 0.1,
       "to": 0.15,
       "change_brl": 0.05,
@@ -1115,12 +1115,12 @@
       "change_pct": -93.33
     },
     {
-      "id": "LOR11-104",
-      "name": "Scrooge McDuck - Ghostly Ebenezer",
-      "from": 17.99,
-      "to": 1.5,
-      "change_brl": -16.49,
-      "change_pct": -91.66
+      "id": "DLPC1-34-P1",
+      "name": "Mickey Mouse - Leader of the Band",
+      "from": 249.9,
+      "to": 79.99,
+      "change_brl": -169.91,
+      "change_pct": -67.99
     },
     {
       "id": "DLPC1-23-P3",
@@ -1147,12 +1147,36 @@
       "change_pct": -46.58
     },
     {
+      "id": "DLPC1-51-P3",
+      "name": "Will O' the Wisp - Forest Spirit",
+      "from": 49.9,
+      "to": 29.99,
+      "change_brl": -19.91,
+      "change_pct": -39.9
+    },
+    {
+      "id": "DLPC1-26-P2",
+      "name": "Moana - Adventurer of Land and Sea",
+      "from": 64.9,
+      "to": 39.99,
+      "change_brl": -24.91,
+      "change_pct": -38.38
+    },
+    {
       "id": "LOR12-109",
       "name": "Zeus - Defiant God",
       "from": 0.59,
       "to": 0.39,
       "change_brl": -0.2,
       "change_pct": -33.9
+    },
+    {
+      "id": "DLPC1-36-P3",
+      "name": "Scrooge McDuck - S.H.U.S.H. Agent",
+      "from": 89.9,
+      "to": 59.99,
+      "change_brl": -29.91,
+      "change_pct": -33.27
     },
     {
       "id": "LOR11-13",
@@ -1171,6 +1195,14 @@
       "change_pct": -30.0
     },
     {
+      "id": "DLPC1-30-P3",
+      "name": "Elisa Maza - Transformed Gargoyle",
+      "from": 69.9,
+      "to": 49.99,
+      "change_brl": -19.91,
+      "change_pct": -28.48
+    },
+    {
       "id": "LOR12-81",
       "name": "Peter Pan - Searching Far and Wide",
       "from": 0.53,
@@ -1185,6 +1217,22 @@
       "to": 149.9,
       "change_brl": -50.1,
       "change_pct": -25.05
+    },
+    {
+      "id": "DLPC1-28-P3",
+      "name": "Gramma Tala - Connected to Nature",
+      "from": 19.9,
+      "to": 14.99,
+      "change_brl": -4.91,
+      "change_pct": -24.67
+    },
+    {
+      "id": "LOR1-187",
+      "name": "Prince Eric - Dashing and Brave",
+      "from": 0.23,
+      "to": 0.18,
+      "change_brl": -0.05,
+      "change_pct": -21.74
     },
     {
       "id": "LOR4-21",
@@ -1457,54 +1505,6 @@
       "to": 0.15,
       "change_brl": -0.04,
       "change_pct": -21.05
-    },
-    {
-      "id": "LOR4-6",
-      "name": "Daisy Duck - Lovely Lady",
-      "from": 0.24,
-      "to": 0.19,
-      "change_brl": -0.05,
-      "change_pct": -20.83
-    },
-    {
-      "id": "LOR4-29",
-      "name": "Lost in the Woods",
-      "from": 0.24,
-      "to": 0.19,
-      "change_brl": -0.05,
-      "change_pct": -20.83
-    },
-    {
-      "id": "LOR5-8",
-      "name": "Lilo - Junior Cake Decorator",
-      "from": 0.24,
-      "to": 0.19,
-      "change_brl": -0.05,
-      "change_pct": -20.83
-    },
-    {
-      "id": "LOR5-34",
-      "name": "Pride Lands - Jungle Oasis",
-      "from": 0.24,
-      "to": 0.19,
-      "change_brl": -0.05,
-      "change_pct": -20.83
-    },
-    {
-      "id": "LOR5-64",
-      "name": "Retrosphere",
-      "from": 0.24,
-      "to": 0.19,
-      "change_brl": -0.05,
-      "change_pct": -20.83
-    },
-    {
-      "id": "LOR5-76",
-      "name": "Merryweather - Good Fairy",
-      "from": 0.24,
-      "to": 0.19,
-      "change_brl": -0.05,
-      "change_pct": -20.83
     }
   ]
 }
