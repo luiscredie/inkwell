@@ -1,65 +1,91 @@
-INKWELL BRASIL — M4.2: mesa de replay, segunda passada
+INKWELL BRASIL — simulador em site/sim/
 
 Extraia sobre a raiz do repo, depois:
 
   npm run verify
-  git add -A && git commit -m "M4.2: replay board height, side column, action cards with target, card state on art"
+  git add -A && git commit -m "Integra simulador offline em site/sim/"
   git push
 
-Se o M4 ainda não foi commitado, este pacote contém os dois.
+O QUE VAI ONDE
+  site/sim/*            os 6 arquivos de runtime, prontos para publicar
+  site/sw.js            alterado: cede o escopo /sim/ ao simulador
+  tools/pwa-contract…   +1 asserção travando essa cessão
+  sim-project/web/*     copie ESTES dois de volta para o repo do simulador,
+                        senão o próximo `npm run build:web` desfaz a correção
+
+Não copiei os .ts, src/ nem tests/ para site/ — não são runtime e só engordariam
+o deploy.
 
 ────────────────────────────────────────────────────────────
-O BANNER ERA O PROBLEMA, NÃO A SOLUÇÃO
+1. CAMINHO DAS IMAGENS — corrigido
 
-Eu tinha mantido a faixa "T0 · Your starting hand: …" acima dos controles. Ela
-repetia o que o log lateral já mostra, roubava altura da mesa — e ainda assim você
-reclamou que a linha da mão inicial não estava no log. Estava. A atenção ia para
-o banner.
+  antes:  new URL(cru.image_base_path ?? "images/", <url do catálogo>)
+          → site/data/images/   (não existe)
+  agora:  new URL("../lorcana-card-images/", <url do catálogo>)
+          → site/lorcana-card-images/   (onde a arte realmente está)
 
-Removido. O texto vive no log, a mesa recuperou cerca de 60px, e três dos seus
-itens (banner, altura, mão invisível) caíram juntos.
+O comentário do próprio arquivo já dizia "site/lorcana-card-images/ via
+image_base_path" — mas a conta não dava isso. Seguir o campo é a armadilha: o app
+principal do Inkwell também o ignora para arquivo local (imgLocal() tem o caminho
+fixo). Corrigido no .ts e no bundle. Também entrou encodeURI: nome de arquivo de
+carta tem espaço.
 
-A LINHA "lifetime"
-Vem do cabeçalho do arquivo exportado, não do jogo. O log agora começa no primeiro
-evento real — mão inicial, "turn begins" ou "--- Turn N ---" — e descarta o que
-vem antes. Sua mão inicial é justamente o primeiro evento válido, então continua
-no topo do log.
+MAS — E ISSO IMPORTA MAIS QUE A CORREÇÃO
 
-ALTURA
-O centro virou grade de cinco faixas: mão do oponente · campo dele · divisória ·
-seu campo · sua mão. Os campos são as únicas faixas elásticas, então toda altura
-que sobra vai para as cartas. Antes era uma coluna rolante e a mão saía da tela.
+Fui verificar onde urlDaImagem é chamada. Não é. Em lugar nenhum. O esbuild a
+removeu do bundle por tree-shaking, e app.ts não tem uma única referência a img,
+src ou imageBase: a mesa desenha chips de texto — nome, força, willpower,
+keywords.
 
-Sua mão a 76×96px. A do oponente a 44px, o suficiente para contar versos.
+Ou seja, o bug que apontei era real no código e inofensivo na prática, porque
+nada consumia a função. A correção continua certa (fica correta quando a arte for
+ligada), mas o buraco de verdade é outro: o simulador não mostra carta nenhuma.
+Ao lado do Inkwell, que é todo arte, vai parecer outro produto.
 
-COLUNA LATERAL
-Lore grande acima de Deck e Descarte, Tinteiro abaixo — na ordem que você pediu,
-espelhada entre os dois jogadores. A tinta usa o verso da carta, empilhado.
+2. SERVICE WORKER DO SIMULADOR — reescrito
 
-LEGENDA FORA, ESTADO SOBRE A CARTA
-O texto sob cada carta saiu. Força/vontade viram faixa translúcida no rodapé da
-própria arte, dano em vermelho ao lado, e SECANDO virou etiqueta azul sobre o
-canto da carta.
+  addAll(SHELL)  →  add() por item
+      Com addAll, UM 404 falha a instalação inteira do worker e o offline
+      simplesmente não existe, sem aviso. Mesmo cuidado que o SW da raiz já toma.
 
-Exercer não escurece mais — reduzir opacidade escondia exatamente o que você queria
-olhar. E a rotação virou transição, não salto.
+  game.js e trace.js  →  network-first
+      São bundles. Cache-first serve a versão velha para sempre se alguém
+      esquecer de trocar CACHE depois de um build — exatamente a ressalva que
+      você mesmo levantou. Agora a rede decide e o cache é a rede de proteção.
+      O resto do shell (html, manifest) segue cache-first.
 
-AÇÕES E CANÇÕES
-Antes uma ação resolvia invisível: o log dizia que aconteceu e nada se mexia,
-porque ação não tem zona de campo. Agora ela aparece como carta na divisória entre
-os dois campos, com seta animada até o alvo quando a linha nomeia uma criatura em
-jogo — e segue para o descarte, que já era rastreado.
+  CACHE: inkwell-sim-v1 → inkwell-sim-v2   (invalida o cache antigo na subida)
 
-O alvo é inferido do texto do evento e só aparece quando o nome bate com algo que
-está em campo. Sem isso seria uma seta apontando para lugar nenhum.
+3. OS DOIS WORKERS NÃO BRIGAM MAIS
+
+O SW da raiz (M3) agora ignora /sim/. Sem isso, o fallback de navegação dele
+serviria o app principal quando você abrisse /sim/game.html offline. E o SW do
+simulador agora ignora tudo fora de /sim/ — catálogo e imagens ficam com o da
+raiz, que já tem política própria para .json e imagem.
+
+Um dono por URL, dos dois lados.
 
 ────────────────────────────────────────────────────────────
-VERIFICADO
+ANTES DE LINKAR NA NAVEGAÇÃO
 
-replay-ux-contract  47 -> 57
-a11y-perf 27 · journey-cost 37 · practice-loop 36 · meta-advisor 32 ·
-shared-cards 23 · data-health 26 · pwa 32 · visual 18/18 · i18n 9/9 (689 chaves)
-espelho byte a byte
+35 cartas codificadas, e deck com carta não implementada é REJEITADO na
+validação. Então isto não é "jogue seus decks" — são dois decks de demonstração.
+Se entrar como "Simulador" no menu, a maioria dos decks do usuário vai ser
+recusada na cara dele, e a culpa vai parecer do Inkwell.
 
-NÃO VERIFICADO: a tela rodando. Abra um replay e confira a altura, a mão, e um
-turno em que uma canção é cantada.
+Sugestão: linkar de dentro da Academy, rotulado como demo, com as duas listas
+prontas. Quando a cobertura crescer, promove.
+
+Faltam ainda Alert e Boost — deixadas de fora de propósito, por não haver o texto
+do CR 2.2.0 §8.
+
+────────────────────────────────────────────────────────────
+VERIFICADO AQUI
+
+pwa-contract 32 → 33. A nova trava a cessão do escopo /sim/ e que ela vem antes
+do fallback de navegação.
+
+NÃO VERIFICADO: o simulador rodando. Não instalei as dependências dele nem rodei
+os 209 testes — o pacote chegou sem node_modules, como você disse. Depois de
+subir, abra /sim/game.html e confira o contador "N cartas no catálogo · M
+jogáveis" no topo: se aparecer, o caminho do catálogo está certo.

@@ -56,6 +56,12 @@ check('user data is never cached', () => {
   const after = sw.slice(i, i + 120);
   assert.match(after, /return;/, 'the handler must bail out before any caching');
 });
+check('the root worker yields the /sim/ scope to the simulator', () => {
+  assert.match(sw, /if \(path\.includes\('\/sim\/'\)\) return;/);
+  const i = sw.indexOf("path.includes('/sim/')");
+  const nav = sw.indexOf("req.mode === 'navigate'");
+  assert.ok(i < nav, 'the bail-out must come before the navigation fallback');
+});
 check('cross-origin requests are left alone', () => {
   assert.match(sw, /if \(url\.origin !== self\.location\.origin\) return;/);
 });

@@ -1,0 +1,11 @@
+{
+  "name": "Simulador Inkwell",
+  "short_name": "Inkwell Sim",
+  "description": "Simulador offline de Lorcana — trace do motor de regras",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#141118",
+  "theme_color": "#141118",
+  "lang": "pt-BR"
+}

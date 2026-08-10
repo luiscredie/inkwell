@@ -93,6 +93,11 @@ self.addEventListener('fetch', (e) => {
   // user data must never be served from a cache
   if (path.includes('/users/') || path.includes('sync-config')) return;
 
+  // The simulator ships its own service worker scoped to /sim/. Two workers
+  // caching the same URL with different policies is a bug waiting to happen —
+  // and this one's navigation fallback would serve the main app for /sim/ pages.
+  if (path.includes('/sim/')) return;
+
   if (/\.(png|jpg|jpeg|webp|avif)$/i.test(path)) {
     e.respondWith(cacheFirst(req, ART, ART_MAX).catch(() => caches.match(req)));
     return;
