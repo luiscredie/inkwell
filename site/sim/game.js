@@ -2352,6 +2352,9 @@ function splitFullName(fullName) {
     version: normalized.slice(i + 3).trim()
   };
 }
+function stripSetNumber(nome) {
+  return nome.replace(/\s*\(\s*\d+\s*-\s*\d+\s*\)\s*$/, "").trim();
+}
 function stripMarkdownLinks(line) {
   return line.replace(/\[[^\]]*\]\([^)]*\)/g, "");
 }
@@ -2378,7 +2381,7 @@ function parseDeckList(text) {
       warnings.push(`linha sem quantidade, ignorada: ${raw}`);
       continue;
     }
-    nome = normalizeFullName(nome);
+    nome = normalizeFullName(stripSetNumber(nome));
     if (nome.length === 0 || !Number.isFinite(qty) || qty <= 0) {
       warnings.push(`linha invalida, ignorada: ${raw}`);
       continue;
