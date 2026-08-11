@@ -1,40 +1,52 @@
-RECUPERAR O SITE — o index foi sobrescrito
+CORREÇÃO — "Root: Unexpected identifier 'SIM_KEYWORDS'"
 
 Extraia sobre a raiz do repo, commit e push.
 
-════════════════════════════════════════════════════════════
-O QUE ACONTECEU
-
-Não fui eu que mudei o index. O pacote do simulador traz uma pasta site-sim/ com
-um index.html próprio — a página de trace do motor. Ela foi copiada para site/ em
-vez de site/sim/, e sobrescreveu o index do Inkwell.
-
-É por isso que luiscredie.github.io/inkwell/ mostra "Simulador Inkwell — trace do
-motor": o arquivo na raiz agora é o do simulador.
-
-Este pacote devolve o site/index.html correto.
-
-CONFIRA depois de extrair: site/index.html tem que ter cerca de 530 KB. Se estiver
-com poucos KB, ainda é o do simulador.
+  site/index.html        corrigido
+  Inkwell.dc.html        espelho
+  tools/sim-readiness…   asserção refeita
+  site/sim/game.html     + botão "← Inkwell"
+  site/sim/index.html    + botão "← Inkwell"
 
 ════════════════════════════════════════════════════════════
-VOCÊ ESTÁ CERTO SOBRE O BOTÃO
+ERRO MEU, E DE UM TIPO QUE NÃO DEVIA TER PASSADO
 
-Eu fiz o caminho de ida — botão "Abrir simulador" na tela de cada deck, que já
-passa as duas listas — mas não fiz o de volta. Sem link de retorno, quem entra no
-simulador só sai pelo botão do navegador. Falha minha.
+Eu escrevi, dentro da classe:
 
-Adicionado "← Inkwell" no topo das duas páginas do simulador (game.html e a de
-trace). Aponta para ../index.html, relativo, então funciona igual em localhost e no
-GitHub Pages.
+    SIM_KEYWORDS: ['Evasive','Rush', ...],
+
+Membro de classe em JavaScript usa "=", nunca ":" seguido de vírgula. Isso é erro
+de PARSE, então não quebra só aquela função — derruba o arquivo inteiro. Foi por
+isso que a página ficou preta com uma faixa vermelha em vez de mostrar o app.
+
+A lista nem era usada em lugar nenhum: eu a escrevi como referência e nunca a li.
+Removida em vez de corrigida — código morto que quebra a página é o pior dos dois
+mundos.
 
 ════════════════════════════════════════════════════════════
-ONDE FICA CADA ARQUIVO
+POR QUE OS TESTES NÃO PEGARAM
 
-  site/index.html        o Inkwell        <- restaurado aqui
-  site/sim/game.html     o simulador
-  site/sim/index.html    trace do motor
-  site/sim/game.js       o bundle
+Esta é a parte que interessa. As 11 suítes passavam com o arquivo quebrado, porque
+todas leem o HTML como TEXTO e conferem se um trecho existe. Nenhuma tentava
+compilar o JavaScript.
 
-Nada do simulador vai na raiz de site/. Se um dia você recopiar o pacote dele,
-copie para site/sim/, nunca para site/.
+Pior: minha própria asserção usava o SIM_KEYWORDS como âncora — ela dependia da
+linha defeituosa para passar.
+
+Duas asserções novas fecham a brecha:
+
+  1. a classe é EXTRAÍDA E COMPILADA de verdade (new Function). Se o parse falhar,
+     a suíte falha — que é o que deveria ter acontecido ontem.
+  2. nenhum membro de classe pode ser escrito com sintaxe de objeto (":" seguido de
+     vírgula), que é a forma exata do erro.
+
+E a asserção sobre auto-geração deixou de olhar comentário: agora executa
+cardSimTier com os quatro tipos de habilidade e exige "manual" em todos.
+
+════════════════════════════════════════════════════════════
+VERIFICADO
+
+A classe compila (parse de verdade, não busca de texto).
+sim-readiness 26 · replay-ux 57 · a11y-perf 27 · journey-cost 37 ·
+practice-loop 36 · meta-advisor 32 · shared-cards 23 · data-health 26 · pwa 33 ·
+visual 18/18 · i18n 9/9 (698 chaves) · espelho byte a byte

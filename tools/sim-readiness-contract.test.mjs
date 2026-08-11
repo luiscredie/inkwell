@@ -157,9 +157,23 @@ check('the readiness note explains what the number means', () => {
   assert.equal((html.match(/simNote:/g) || []).length, 2);
 });
 check('nothing claims to auto-generate card rules', () => {
-  const i = html.indexOf('SIM_KEYWORDS:');
-  const block = html.slice(i - 500, i);
-  assert.match(block, /Nao "codifica" carta/, 'the comment must state the limit honestly');
+  // A ancora anterior era o campo SIM_KEYWORDS, que estava escrito com sintaxe de
+  // objeto dentro de uma classe e derrubava a pagina inteira. Removido. Ancorar num
+  // comentario tambem era fragil: o que importa e o comportamento, e o comportamento
+  // e que uma habilidade nao-keyword NUNCA e tratada como executavel.
+  for (const t of ['triggered', 'static', 'activated', 'rules_text']) {
+    const c = { abilities: [{ type: 'keyword', name: 'Evasive' }, { type: t }] };
+    assert.equal(cardSimTier(c), 'manual', t + ' nao pode ser auto-gerado');
+  }
+  assert.doesNotMatch(html, /SIM_KEYWORDS/, 'lista morta de keywords nao deve voltar');
+});
+check('no class member is written with object syntax', () => {
+  // Erro de verdade que aconteceu: "SIM_KEYWORDS: [...]," dentro da classe. Um
+  // membro de classe usa "=", nunca ":" seguido de virgula — e o parser derruba a
+  // pagina toda, nao so a funcao.
+  const cls = html.slice(html.indexOf('class Root'), html.indexOf('  render()'));
+  const ruins = (cls.match(/^  [A-Za-z_$][\w$]*\s*:[^\n]*,\s*$/gm) || []);
+  assert.deepEqual(ruins, [], 'membro de classe com sintaxe de objeto: ' + ruins.join(' | '));
 });
 check('every new key exists in EN and PT', () => {
   for (const k of ['simTitle', 'simReady', 'simBlocked', 'simReadyCopies', 'simBlockedLabel',
