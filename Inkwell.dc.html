@@ -211,7 +211,7 @@
             <span class="rail-label">{{ item.label }}</span>
           </a>
         </sc-if>
-        <sc-if value="{{ item._isLink }}" hint-placeholder-val="{{ true }}">
+        <sc-if value="{{ item._isView }}" hint-placeholder-val="{{ true }}">
           <button onClick="{{ item._go }}" style="{{ item._style }}">
             <span class="rail-ico" style="display:flex;width:20px;justify-content:center">{{ item._icon }}</span>
             <span class="rail-label">{{ item.label }}</span>
@@ -4695,7 +4695,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       {key:'sim',label:this.t('simulator'),_href:this.simUrlFor(this.getActiveDeck(),
         (this.state.decks||[]).find(d=>{ const a=this.getActiveDeck(); return !a||d.id!==a.id; })||null),
         _style:this.navStyle('__none'),_icon:'⚔'}
-    ].map(x=>({...x, _isLink:!!x._href}));
+    ].map(x=>({...x, _isLink:!!x._href, _isView:!x._href}));
     const titles={learn:[this.t('learn'),this.t('sub_learn')],matches:[this.t('matches'),this.t('sub_matches')],overview:[this.t('overview'),this.t('sub_overview',{name:st.displayName})],collection:[this.t('collection'),this.t('sub_collection')],prices:[this.t('prices'),this.t('sub_prices')],decks:[this.t('decks'),this.t('sub_decks')],deckDetail:[(this.deckById(st.selectedDeck)||{}).name||this.t('decks'),this.t('sub_deckDetail')],advisor:[this.t('advisorBtn'),this.t('advisorSub')]};
     const eyebrows={overview:'eb_overview',collection:'eb_collection',prices:'eb_prices',decks:'eb_decks',deckDetail:'eb_decks',advisor:'eb_decks',matches:'eb_matches',learn:'eb_learn'};
     V.pageEyebrow=this.t(eyebrows[st.view]||'eb_overview');

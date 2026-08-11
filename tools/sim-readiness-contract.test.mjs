@@ -174,10 +174,22 @@ check('the simulator has its own nav entry, not only a deck button', () => {
   assert.equal((html.match(/\bsimulator:/g) || []).length, 2, 'chave EN e PT');
 });
 check('a nav entry is either an app view or an external link, never both', () => {
-  assert.match(html, /_isLink:!!x\._href/);
+  assert.match(html, /_isLink:!!x\._href, _isView:!x\._href/);
   assert.match(html, /<sc-if value="\{\{ item\._isLink \}\}"/);
+  assert.match(html, /<sc-if value="\{\{ item\._isView \}\}"/);
   // o <a> no meio de <button>s herda sublinhado e azul do navegador
   assert.match(html, /#rail \.rail-nav a\{text-decoration:none/);
+});
+check('the two nav branches test opposite values, not the same one twice', () => {
+  // Bug real: escrevi dois <sc-if> com o MESMO valor, como se fosse if/else. sc-if
+  // renderiza quando o valor e verdadeiro e nao tem "senao": o item de link
+  // aparecia DUAS vezes e o item de view NENHUMA — o rail ficou so com "Simulador"
+  // repetido e o resto invisivel.
+  const i = html.indexOf('list="{{ nav }}"');
+  const bloco = html.slice(i, i + 900);
+  const valores = [...bloco.matchAll(/<sc-if value="\{\{ (item\.\w+) \}\}"/g)].map((m) => m[1]);
+  assert.equal(valores.length, 2, 'esperado um ramo de link e um de view');
+  assert.notEqual(valores[0], valores[1], 'os dois ramos nao podem testar o mesmo valor');
 });
 check('the nav link carries the active deck and a distinct opponent', () => {
   const i = html.indexOf("{key:'sim'");

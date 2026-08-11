@@ -1,66 +1,63 @@
-SIMULADOR NA NAVEGAÇÃO — respondendo "onde está o link?"
+CORREÇÃO — o rail perdeu os botões
 
 Extraia sobre a raiz do repo, commit e push.
 
-  site/index.html        entrada "Simulador" no rail
-  Inkwell.dc.html        espelho
-  tools/sim-readiness…   +4 asserções
-  site/sim/game.html     botão "← Inkwell"
-  site/sim/index.html    botão "← Inkwell"
+════════════════════════════════════════════════════════════
+1. OS BOTÕES DE NAVEGAÇÃO — bug meu, na entrega anterior
+
+Eu escrevi dois <sc-if> com o MESMO valor, como se fosse if/else:
+
+    <sc-if value="{{ item._isLink }}">  ... <a> ...
+    <sc-if value="{{ item._isLink }}">  ... <button> ...   <- errado
+
+sc-if renderiza quando o valor é verdadeiro. Não existe "senão". Então:
+
+  item de link  (_isLink true)   -> os DOIS ramos renderizam -> "Simulador" dobrado
+  item de view  (_isLink false)  -> NENHUM ramo renderiza    -> Visão Geral,
+                                    Coleção, Mercado, Decks e Partidas invisíveis
+
+É exatamente o que a sua captura mostra.
+
+Corrigido com um segundo valor, `_isView: !x._href`. Os dois ramos agora testam
+coisas opostas.
+
+Teste novo que trava isso: extrai os valores dos dois sc-if do rail e falha se
+forem iguais. Não é o texto — é a relação entre eles.
 
 ════════════════════════════════════════════════════════════
-ONDE ESTAVA (E POR QUE ESTAVA ERRADO)
+2. O SIMULADOR "NÃO FUNCIONA" — não é bug, é o motor antigo no ar
 
-Havia um único caminho: dentro da tela de um deck, no painel "Prontidão no
-simulador", um botão "Abrir simulador". E ele só aparecia se você tivesse DOIS
-decks — porque eu escondi o botão quando não há oponente.
+A segunda captura mostra o simulador rodando e validando corretamente. Ele lista:
 
-Com um deck só, o simulador era inalcançável pela interface. Sua pergunta era a
-resposta: se você não acha, ninguém acha.
+  Medallion Weights, Morph, Mulan - Elite Archer, Mulan - Injured Soldier,
+  Petrify, Red Alert, Scrooge's Counting House...
 
-AGORA
+Essas são exatamente as 7 cartas que o motor 2.0 implementa. Se ainda aparecem como
+"sem texto codificado", o site/sim/game.js no ar é o bundle ANTIGO.
 
-Entrada própria no rail, com ícone ⚔, ao lado de Visão Geral / Coleção / Mercado /
-Decks / Partidas. Abre em nova aba, já com o deck ativo no lugar do seu e o
-primeiro outro deck como oponente.
+Você compilou (214/214) e rodou build:web no lorcana-sim. Falta o passo de levar o
+bundle para o site:
 
-O botão dentro do deck continua — ele serve para jogar um deck específico, não o
-ativo.
+    Copy-Item "$HOME\OneDrive\Desktop\lorcana-sim\web\game.js" `
+              "$HOME\OneDrive\Desktop\inkwell\site\sim\game.js" -Force
 
-════════════════════════════════════════════════════════════
-UMA DECISÃO DE ESTRUTURA
+    cd "$HOME\OneDrive\Desktop\inkwell"
+    git add -A; git commit -m "Bundle do motor 2.0"; git push
 
-O simulador não é uma view do app: é outra página. Então o item de nav tem `_href`
-em vez de `_go`, e o rail renderiza `<a>` quando há href e `<button>` quando não há
-— nunca os dois. Um `<a>` no meio de `<button>`s herda sublinhado e azul do
-navegador, então tem uma regra para isso.
+COMO CONFERIR: abra /sim/game.html e olhe o contador no topo. Hoje diz "40
+jogáveis". Com o motor 2.0 tem de subir — 40 + as 7 novas em todas as impressões.
 
-Fingir que é uma view (navegar por estado e depois redirecionar) daria histórico de
-navegação quebrado: o botão Voltar do navegador voltaria para uma view fantasma.
-
-════════════════════════════════════════════════════════════
-JÁ ESTÁ FUNCIONANDO?
-
-O link, sim, depois deste commit.
-
-Jogar seus decks depende do motor 2.0 estar no ar. Você compilou (214/214) e gerou
-o game.js — se ele já foi copiado para site/sim/ e commitado, as 7 cartas estão
-valendo. Se não, o simulador ainda tem 40 cartas e o painel de prontidão vai
-mostrar seus decks bloqueados, corretamente.
-
-Para conferir: abra /sim/game.html e olhe o contador no topo. Se disser mais de 40
-jogáveis, o motor novo está no ar.
+Uma carta a mais na sua lista que eu não tinha visto: "Lumpy - Hunny Druid". Ela
+não estava no deck que você me mandou antes, então não está no motor 2.0. Se você
+trocou uma carta do deck, essa é a próxima a codificar.
 
 ════════════════════════════════════════════════════════════
 VERIFICADO
 
-sim-readiness 26 → 30. As 4 novas travam: a entrada existe na nav com chave EN e
-PT, um item é view OU link e nunca os dois, o link leva deck ativo e um oponente
-diferente dele, e — a que faltava — A CLASSE COMPILA DE VERDADE.
+sim-readiness 30 → 31 · replay-ux 57 · a11y-perf 27 · journey-cost 37 ·
+practice-loop 36 · meta-advisor 32 · shared-cards 23 · data-health 26 · pwa 33 ·
+visual 18/18 · i18n 9/9 (699 chaves) · sc-if 166/166 · espelho byte a byte
 
-Essa última é a lição do SIM_KEYWORDS: as 11 suítes passavam com o arquivo
-quebrado porque todas leem o HTML como texto. Agora uma delas compila.
-
-replay-ux 57 · a11y-perf 27 · journey-cost 37 · practice-loop 36 · meta-advisor 32
-shared-cards 23 · data-health 26 · pwa 33 · visual 18/18 · i18n 9/9 (699 chaves)
-sc-if 166/166 · sc-for 112/112 · espelho byte a byte
+A suíte compila a classe de verdade agora, mas ela não renderiza — foi por isso que
+o bug do sc-if passou. O teste novo cobre este caso específico; renderização
+completa só o navegador dá.
