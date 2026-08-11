@@ -1,97 +1,40 @@
-MOTOR 2.0 — arquivos completos, não instruções
+RECUPERAR O SITE — o index foi sobrescrito
 
-Substitua os arquivos abaixo no repo do simulador. São os originais dele com as
-alterações já aplicadas — não patches para colar à mão.
-
-  src/engine/effects.ts       filtro por força, putDamageCounters, grantTriggered,
-                              dealDamage com quantidade vinda do gatilho
-  src/engine/modifiers.ts     contagem por classificação, grantedAbilities
-  src/engine/abilities.ts     gatilho dealsDamage, grantedTriggersFor
-  src/engine/damage.ts        dispara dealsDamage com o dano causado
-  src/engine/actions.ts       Shift de qualquer nome (2 call sites + hook)
-  src/cards/princesses.ts     campo shiftTargetAnyName na CardImpl
-  src/cards/registry.ts       registra o deck novo e o hook do Shift
-  src/cards/deck-peter-scrooge.ts   NOVO — as 7 cartas
-  src/decks/classification.ts       NOVO — normalizador
-  src/decks/catalog.ts        usa o normalizador em vez de split(",")
-  web/inkwell.ts              caminho da arte corrigido
-
-Depois:  npm test && npm run build:web
-         cp web/game.js <inkwell>/site/sim/
+Extraia sobre a raiz do repo, commit e push.
 
 ════════════════════════════════════════════════════════════
-DUAS COISAS MUDARAM DE DESENHO AO ESCREVER DE VERDADE
+O QUE ACONTECEU
 
-1. HOOK, EM VEZ DE IMPORTAR O REGISTRO
+Não fui eu que mudei o index. O pacote do simulador traz uma pasta site-sim/ com
+um index.html próprio — a página de trace do motor. Ela foi copiada para site/ em
+vez de site/sim/, e sobrescreveu o index do Inkwell.
 
-No documento anterior eu escrevi `implFor(...)` como se fosse um acessor existente.
-Não é — e o motor NÃO PODE importar de src/cards/, porque cards/ importa o motor.
-Seria ciclo.
+É por isso que luiscredie.github.io/inkwell/ mostra "Simulador Inkwell — trace do
+motor": o arquivo na raiz agora é o do simulador.
 
-Resolvido por injeção, o mesmo padrão que o projeto já usa em
-setDispatchPlayedHook: actions.ts expõe setShiftAnyNameHook, registry.ts registra.
-Sem registro, a validação cai no casamento por nome — o comportamento correto na
-ausência da permissão.
+Este pacote devolve o site/index.html correto.
 
-2. UMA VARIÁVEL FICOU ÓRFÃ
-
-Ao trocar a comparação de nomes pela função em legalActions, `nomes` deixou de ser
-usada. Com noUnusedLocals ligado isso reprova o build. Removida.
+CONFIRA depois de extrair: site/index.html tem que ter cerca de 530 KB. Se estiver
+com poucos KB, ainda é o do simulador.
 
 ════════════════════════════════════════════════════════════
-O QUE VERIFIQUEI DE FATO
+VOCÊ ESTÁ CERTO SOBRE O BOTÃO
 
-Normalizador executado contra os 372 valores distintos de classificação do
-catálogo: 371 limpos.
+Eu fiz o caminho de ida — botão "Abrir simulador" na tela de cada deck, que já
+passa as duas listas — mas não fiz o de volta. Sem link de retorno, quem entra no
+simulador só sai pelo botão do navegador. Falha minha.
 
-  "Storyborn Ally Alien"              -> Storyborn, Ally, Alien
-  "Storyborn Mentor Giant Red Panda"  -> Storyborn, Mentor, Giant, Red Panda
-  "Seven Dwarfs"                      -> Seven Dwarfs   (não quebra em dois)
-
-O único valor que produz termo estranho é LOR7-39 (Restoring the Heart), que guarda
-o TEXTO DA HABILIDADE no campo de classificação. Dado corrompido no gerador do
-catálogo, não problema do split. O normalizador não trava com ele.
-
-Os 13 ids do registro (as 7 cartas com todas as impressões) conferidos contra o
-catálogo: nenhum ausente. Um id errado deixaria a carta silenciosamente
-não-codificada — é o tipo de erro que não aparece em teste.
-
-13 checagens de integridade nos arquivos finais, todas passando: cada `kind` novo
-aparece no tipo E no switch, aceitaShift está nos dois call sites, o hook é
-exportado e registrado.
-
-NÃO VERIFICADO: nada compilado. Sem npm install, sem tsc, sem os 209 testes.
-
-O risco maior está nos imports que adicionei entre módulos do motor:
-
-  effects.ts   -> characteristics.ts  (strengthOf, valor)
-  effects.ts   -> abilities.ts        (type TriggeredAbility)
-  modifiers.ts -> abilities.ts        (type TriggeredAbility)
-  damage.ts    -> abilities.ts        (dispatch, valor)
-
-Os dois de tipo apagam na compilação e não criam ciclo. Os dois de valor podem —
-abilities.ts já importa effects.ts. Se der ciclo, o projeto tem o padrão pronto:
-injeção por hook, como setDispatchPlayedHook.
+Adicionado "← Inkwell" no topo das duas páginas do simulador (game.html e a de
+trace). Aponta para ../index.html, relativo, então funciona igual em localhost e no
+GitHub Pages.
 
 ════════════════════════════════════════════════════════════
-O QUE TESTAR, POR ORDEM DE RISCO
+ONDE FICA CADA ARQUIVO
 
-  Medallion num personagem DO OPONENTE      -> VOCÊ compra, não ele
-  Medallion + desafio no mesmo turno        -> compra uma vez por desafio
-  Medallion e o turno vira                  -> a habilidade concedida some
-  Elite Archer com +2 do Medallion          -> eco de 4, não de 2
-  TRIPLE SHOT com dano reduzido             -> eco = dano causado, não a força
-  TRIPLE SHOT com a Mulan banida no desafio -> não ecoa (guarda zone==="play")
-  Red Alert em personagem com +2            -> deixa de ser alvo de "3 ou menos"
-  Red Alert com Morph em jogo               -> Alien conta, agora que o split é certo
-  Shift qualquer nome sobre o Morph         -> aparece em legalActions E é aceito
+  site/index.html        o Inkwell        <- restaurado aqui
+  site/sim/game.html     o simulador
+  site/sim/index.html    trace do motor
+  site/sim/game.js       o bundle
 
-════════════════════════════════════════════════════════════
-AINDA FORA
-
-A recursão do TRIPLE SHOT. O eco causa dano, que dispara dealsDamage outra vez. A
-carta diz "other chosen characters", então nunca ecoa em si mesma — mas uma carta
-futura poderia, e aí é laço infinito. Vale profundidade máxima no dispatch antes de
-codificar a próxima carta com eco de dano.
-
-A carta LOR7-39. A correção pertence ao pipeline que gera cards.json.
+Nada do simulador vai na raiz de site/. Se um dia você recopiar o pacote dele,
+copie para site/sim/, nunca para site/.
