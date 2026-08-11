@@ -75,6 +75,9 @@
   #ink-main{overflow-x:hidden}
   .ink-skip{position:fixed;top:-60px;left:12px;z-index:200;padding:11px 18px;border-radius:var(--r-pill);background:var(--gold);color:#131313;font-weight:700;font-size:13px;text-decoration:none;transition:top var(--dur-fast)}
   .ink-skip:focus{top:12px}
+  /* O item do simulador e um <a> no meio de <button>s: sem isto vem sublinhado e
+     azul de link herdado do navegador. */
+  #rail .rail-nav a{text-decoration:none;box-sizing:border-box}
   /* The replay stage is a three-column board. Below 1100px the log moves under it
      rather than squeezing the battlefield to nothing. */
   /* A card that exerts should be seen turning; an instant 90deg jump reads as a
@@ -202,10 +205,18 @@
   <aside id="rail" style="position:fixed;left:22px;top:50%;transform:translateY(-50%);z-index:40;width:86px;display:flex;flex-direction:column;padding:12px 8px;border-radius:var(--r-pill);background:var(--glass-bg);backdrop-filter:var(--glass-blur);border:var(--glass-border);box-shadow:var(--shadow-ink)">
     <nav class="rail-nav" style="display:flex;flex-direction:column;gap:4px">
       <sc-for list="{{ nav }}" as="item" hint-placeholder-count="4">
-        <button onClick="{{ item._go }}" style="{{ item._style }}">
-          <span class="rail-ico" style="display:flex;width:20px;justify-content:center">{{ item._icon }}</span>
-          <span class="rail-label">{{ item.label }}</span>
-        </button>
+        <sc-if value="{{ item._isLink }}" hint-placeholder-val="{{ false }}">
+          <a href="{{ item._href }}" target="_blank" rel="noopener" style="{{ item._style }}">
+            <span class="rail-ico" style="display:flex;width:20px;justify-content:center">{{ item._icon }}</span>
+            <span class="rail-label">{{ item.label }}</span>
+          </a>
+        </sc-if>
+        <sc-if value="{{ item._isLink }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ item._go }}" style="{{ item._style }}">
+            <span class="rail-ico" style="display:flex;width:20px;justify-content:center">{{ item._icon }}</span>
+            <span class="rail-label">{{ item.label }}</span>
+          </button>
+        </sc-if>
       </sc-for>
     </nav>
 
@@ -2573,6 +2584,7 @@ class Component extends DCLogic {
       rpDeck:'Deck', rpDiscard:'Discard', rpLore:'Lore', rpBattlefield:'Battlefield', rpInkwell:'The Inkwell', rpLog:'Turn log', rpShowOppHand:'Opponent hand',
       rpTargets:'targets {name}',
       simTitle:'Simulator readiness', simReady:'Every card in this deck is implemented — this deck can be played.', simBlocked:'{n} cards ({copies} copies) have rules text the engine does not implement yet, so this deck cannot be played.', simReadyCopies:'{n} of {total} copies ready', simBlockedLabel:'Which cards', simKeywordLabel:'Playable through keywords', simNote:'Read from the card text in the catalogue. Cards with keywords only (Evasive, Rush, Shift…) are mechanical and work as-is; cards with triggered or activated text have to be coded by hand in the engine.', simOpponent:'Against', simPlay:'Open simulator',
+      simulator:'Simulator',
       newDeck:'+ New Deck', importDeck:'↑ Import', createDeck:'Create', cancel:'Cancel', format:'Format',
       inkable:'Inkable', uninkable:'Uninkable', cost:'Cost', allSets:'All sets',
       welcome:'Welcome, {name}', emptyMsg:'Your codex is empty. Import your collection from Dreamborn, or start building a deck — everything is tracked privately in your profile.',
@@ -2651,6 +2663,7 @@ class Component extends DCLogic {
       rpDeck:'Deck', rpDiscard:'Descarte', rpLore:'Lore', rpBattlefield:'Campo de batalha', rpInkwell:'O Tinteiro', rpLog:'Log de turnos', rpShowOppHand:'Mão do oponente',
       rpTargets:'mira {name}',
       simTitle:'Prontidão no simulador', simReady:'Todas as cartas deste deck estão implementadas — dá para jogar.', simBlocked:'{n} cartas ({copies} cópias) têm texto de regra que o motor ainda não implementa, então este deck não pode ser jogado.', simReadyCopies:'{n} de {total} cópias prontas', simBlockedLabel:'Quais cartas', simKeywordLabel:'Jogáveis por keyword', simNote:'Lido do texto da carta no catálogo. Carta só com keyword (Evasive, Rush, Shift…) é mecânica e funciona como está; carta com texto disparado ou ativado precisa ser codificada à mão no motor.', simOpponent:'Contra', simPlay:'Abrir simulador',
+      simulator:'Simulador',
       newDeck:'+ Novo Deck', importDeck:'↑ Importar', createDeck:'Criar', cancel:'Cancelar', format:'Formato',
       inkable:'Inkável', uninkable:'Não-inkável', cost:'Custo', allSets:'Todos os sets',
       welcome:'Bem-vindo, {name}', emptyMsg:'Seu códice está vazio. Importe sua coleção do Dreamborn ou comece a montar um deck — tudo fica salvo de forma privada no seu perfil.',
@@ -4676,8 +4689,13 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       {key:'prices',label:this.t('prices'),_go:this.go('prices'),_style:this.navStyle('prices'),_icon:this.icon('prices')},
       {key:'decks',label:this.t('decks'),_go:this.go('decks'),_style:this.navStyle('decks'),_icon:this.icon('decks')},
       {key:'matches',label:this.t('matches'),_go:this.go('matches'),_style:this.navStyle('matches'),_icon:this.icon('matches')},
-      {key:'learn',label:this.t('learn'),_go:this.go('learn'),_style:this.navStyle('learn'),_icon:this.icon('learn')},
-    ];
+      {key:'learn',label:this.t('learn'),_go:this.go('learn'),_style:this.navStyle('learn'),_icon:this.icon('learn')},,
+      // O simulador e outra pagina, nao uma view. Abre em nova aba, com o deck
+      // ativo e o seguinte ja preenchidos quando existirem.
+      {key:'sim',label:this.t('simulator'),_href:this.simUrlFor(this.getActiveDeck(),
+        (this.state.decks||[]).find(d=>{ const a=this.getActiveDeck(); return !a||d.id!==a.id; })||null),
+        _style:this.navStyle('__none'),_icon:'⚔'}
+    ].map(x=>({...x, _isLink:!!x._href}));
     const titles={learn:[this.t('learn'),this.t('sub_learn')],matches:[this.t('matches'),this.t('sub_matches')],overview:[this.t('overview'),this.t('sub_overview',{name:st.displayName})],collection:[this.t('collection'),this.t('sub_collection')],prices:[this.t('prices'),this.t('sub_prices')],decks:[this.t('decks'),this.t('sub_decks')],deckDetail:[(this.deckById(st.selectedDeck)||{}).name||this.t('decks'),this.t('sub_deckDetail')],advisor:[this.t('advisorBtn'),this.t('advisorSub')]};
     const eyebrows={overview:'eb_overview',collection:'eb_collection',prices:'eb_prices',decks:'eb_decks',deckDetail:'eb_decks',advisor:'eb_decks',matches:'eb_matches',learn:'eb_learn'};
     V.pageEyebrow=this.t(eyebrows[st.view]||'eb_overview');

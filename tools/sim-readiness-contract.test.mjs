@@ -167,6 +167,37 @@ check('nothing claims to auto-generate card rules', () => {
   }
   assert.doesNotMatch(html, /SIM_KEYWORDS/, 'lista morta de keywords nao deve voltar');
 });
+check('the simulator has its own nav entry, not only a deck button', () => {
+  // Antes o unico caminho era o botao dentro do painel de prontidao de um deck, e
+  // ele so aparece com DOIS decks: com um deck so, o simulador era inalcancavel.
+  assert.match(html, /\{key:'sim',label:this\.t\('simulator'\)/);
+  assert.equal((html.match(/\bsimulator:/g) || []).length, 2, 'chave EN e PT');
+});
+check('a nav entry is either an app view or an external link, never both', () => {
+  assert.match(html, /_isLink:!!x\._href/);
+  assert.match(html, /<sc-if value="\{\{ item\._isLink \}\}"/);
+  // o <a> no meio de <button>s herda sublinhado e azul do navegador
+  assert.match(html, /#rail \.rail-nav a\{text-decoration:none/);
+});
+check('the nav link carries the active deck and a distinct opponent', () => {
+  const i = html.indexOf("{key:'sim'");
+  const block = html.slice(i, i + 320);
+  assert.match(block, /this\.simUrlFor\(this\.getActiveDeck\(\)/);
+  assert.match(block, /d\.id!==a\.id/, 'o oponente nao pode ser o proprio deck ativo');
+});
+check('the class actually parses', () => {
+  // As 11 suites passavam com o arquivo quebrado por "SIM_KEYWORDS: [...]," porque
+  // todas leem o HTML como TEXTO. Isto compila de verdade.
+  const s = html.indexOf('class Root');
+  let d = 0, end = -1;
+  for (let i = html.indexOf('{', s); i < html.length; i++) {
+    if (html[i] === '{') d++;
+    else if (html[i] === '}') { d--; if (d === 0) { end = i + 1; break; } }
+  }
+  assert.ok(end > s, 'classe Root nao encontrada');
+  const src = html.slice(s, end).replace(/^class Root extends \w+/, 'class Root');
+  new Function('DCLogic', 'React', src + '; return Root;');
+});
 check('no class member is written with object syntax', () => {
   // Erro de verdade que aconteceu: "SIM_KEYWORDS: [...]," dentro da classe. Um
   // membro de classe usa "=", nunca ":" seguido de virgula — e o parser derruba a

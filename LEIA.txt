@@ -1,52 +1,66 @@
-CORREÇÃO — "Root: Unexpected identifier 'SIM_KEYWORDS'"
+SIMULADOR NA NAVEGAÇÃO — respondendo "onde está o link?"
 
 Extraia sobre a raiz do repo, commit e push.
 
-  site/index.html        corrigido
+  site/index.html        entrada "Simulador" no rail
   Inkwell.dc.html        espelho
-  tools/sim-readiness…   asserção refeita
-  site/sim/game.html     + botão "← Inkwell"
-  site/sim/index.html    + botão "← Inkwell"
+  tools/sim-readiness…   +4 asserções
+  site/sim/game.html     botão "← Inkwell"
+  site/sim/index.html    botão "← Inkwell"
 
 ════════════════════════════════════════════════════════════
-ERRO MEU, E DE UM TIPO QUE NÃO DEVIA TER PASSADO
+ONDE ESTAVA (E POR QUE ESTAVA ERRADO)
 
-Eu escrevi, dentro da classe:
+Havia um único caminho: dentro da tela de um deck, no painel "Prontidão no
+simulador", um botão "Abrir simulador". E ele só aparecia se você tivesse DOIS
+decks — porque eu escondi o botão quando não há oponente.
 
-    SIM_KEYWORDS: ['Evasive','Rush', ...],
+Com um deck só, o simulador era inalcançável pela interface. Sua pergunta era a
+resposta: se você não acha, ninguém acha.
 
-Membro de classe em JavaScript usa "=", nunca ":" seguido de vírgula. Isso é erro
-de PARSE, então não quebra só aquela função — derruba o arquivo inteiro. Foi por
-isso que a página ficou preta com uma faixa vermelha em vez de mostrar o app.
+AGORA
 
-A lista nem era usada em lugar nenhum: eu a escrevi como referência e nunca a li.
-Removida em vez de corrigida — código morto que quebra a página é o pior dos dois
-mundos.
+Entrada própria no rail, com ícone ⚔, ao lado de Visão Geral / Coleção / Mercado /
+Decks / Partidas. Abre em nova aba, já com o deck ativo no lugar do seu e o
+primeiro outro deck como oponente.
+
+O botão dentro do deck continua — ele serve para jogar um deck específico, não o
+ativo.
 
 ════════════════════════════════════════════════════════════
-POR QUE OS TESTES NÃO PEGARAM
+UMA DECISÃO DE ESTRUTURA
 
-Esta é a parte que interessa. As 11 suítes passavam com o arquivo quebrado, porque
-todas leem o HTML como TEXTO e conferem se um trecho existe. Nenhuma tentava
-compilar o JavaScript.
+O simulador não é uma view do app: é outra página. Então o item de nav tem `_href`
+em vez de `_go`, e o rail renderiza `<a>` quando há href e `<button>` quando não há
+— nunca os dois. Um `<a>` no meio de `<button>`s herda sublinhado e azul do
+navegador, então tem uma regra para isso.
 
-Pior: minha própria asserção usava o SIM_KEYWORDS como âncora — ela dependia da
-linha defeituosa para passar.
+Fingir que é uma view (navegar por estado e depois redirecionar) daria histórico de
+navegação quebrado: o botão Voltar do navegador voltaria para uma view fantasma.
 
-Duas asserções novas fecham a brecha:
+════════════════════════════════════════════════════════════
+JÁ ESTÁ FUNCIONANDO?
 
-  1. a classe é EXTRAÍDA E COMPILADA de verdade (new Function). Se o parse falhar,
-     a suíte falha — que é o que deveria ter acontecido ontem.
-  2. nenhum membro de classe pode ser escrito com sintaxe de objeto (":" seguido de
-     vírgula), que é a forma exata do erro.
+O link, sim, depois deste commit.
 
-E a asserção sobre auto-geração deixou de olhar comentário: agora executa
-cardSimTier com os quatro tipos de habilidade e exige "manual" em todos.
+Jogar seus decks depende do motor 2.0 estar no ar. Você compilou (214/214) e gerou
+o game.js — se ele já foi copiado para site/sim/ e commitado, as 7 cartas estão
+valendo. Se não, o simulador ainda tem 40 cartas e o painel de prontidão vai
+mostrar seus decks bloqueados, corretamente.
+
+Para conferir: abra /sim/game.html e olhe o contador no topo. Se disser mais de 40
+jogáveis, o motor novo está no ar.
 
 ════════════════════════════════════════════════════════════
 VERIFICADO
 
-A classe compila (parse de verdade, não busca de texto).
-sim-readiness 26 · replay-ux 57 · a11y-perf 27 · journey-cost 37 ·
-practice-loop 36 · meta-advisor 32 · shared-cards 23 · data-health 26 · pwa 33 ·
-visual 18/18 · i18n 9/9 (698 chaves) · espelho byte a byte
+sim-readiness 26 → 30. As 4 novas travam: a entrada existe na nav com chave EN e
+PT, um item é view OU link e nunca os dois, o link leva deck ativo e um oponente
+diferente dele, e — a que faltava — A CLASSE COMPILA DE VERDADE.
+
+Essa última é a lição do SIM_KEYWORDS: as 11 suítes passavam com o arquivo
+quebrado porque todas leem o HTML como texto. Agora uma delas compila.
+
+replay-ux 57 · a11y-perf 27 · journey-cost 37 · practice-loop 36 · meta-advisor 32
+shared-cards 23 · data-health 26 · pwa 33 · visual 18/18 · i18n 9/9 (699 chaves)
+sc-if 166/166 · sc-for 112/112 · espelho byte a byte
