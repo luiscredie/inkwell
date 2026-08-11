@@ -57,6 +57,8 @@ jobs:
         run: node tools/a11y-perf-contract.test.mjs
       - name: PWA manifest and service worker contract
         run: node tools/pwa-contract.test.mjs
+      - name: Simulator readiness contract
+        run: node tools/sim-readiness-contract.test.mjs
   python:
     runs-on: ubuntu-latest
     steps:

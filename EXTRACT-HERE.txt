@@ -1,91 +1,83 @@
-INKWELL BRASIL — simulador em site/sim/
+INKWELL BRASIL — pacote único de deployment
 
 Extraia sobre a raiz do repo, depois:
 
   npm run verify
-  git add -A && git commit -m "Integra simulador offline em site/sim/"
+  git add -A && git commit -m "Prontidao de deck no simulador, simulador em site/sim/"
   git push
 
-O QUE VAI ONDE
-  site/sim/*            os 6 arquivos de runtime, prontos para publicar
-  site/sw.js            alterado: cede o escopo /sim/ ao simulador
-  tools/pwa-contract…   +1 asserção travando essa cessão
-  sim-project/web/*     copie ESTES dois de volta para o repo do simulador,
-                        senão o próximo `npm run build:web` desfaz a correção
+MERGE, NÃO SUBSTITUA. site/ aqui traz apenas index.html, sw.js, manifest e sim/.
+Seus site/data/**, site/lorcana-card-images/, site/ink/, support.js,
+match-center-engine.js e sync-config.json precisam continuar onde estão.
 
-Não copiei os .ts, src/ nem tests/ para site/ — não são runtime e só engordariam
-o deploy.
+════════════════════════════════════════════════════════════
+O QUE VAI DENTRO
 
-────────────────────────────────────────────────────────────
-1. CAMINHO DAS IMAGENS — corrigido
+  site/index.html            painel de prontidão no simulador + botão de jogar
+  Inkwell.dc.html            espelho byte a byte
+  site/sim/*                 o simulador (6 arquivos de runtime)
+  site/sw.js                 cede o escopo /sim/ ao service worker do simulador
+  site/manifest.webmanifest   PWA
+  tools/*.test.mjs           6 suítes de contrato
+  package.json               test:all com 23 suítes
+  .github/workflows/…        CI alinhada
+  ROADMAP.md                 histórico
 
-  antes:  new URL(cru.image_base_path ?? "images/", <url do catálogo>)
-          → site/data/images/   (não existe)
-  agora:  new URL("../lorcana-card-images/", <url do catálogo>)
-          → site/lorcana-card-images/   (onde a arte realmente está)
+PRONTIDÃO NO SIMULADOR (novo)
 
-O comentário do próprio arquivo já dizia "site/lorcana-card-images/ via
-image_base_path" — mas a conta não dava isso. Seguir o campo é a armadilha: o app
-principal do Inkwell também o ignora para arquivo local (imgLocal() tem o caminho
-fixo). Corrigido no .ts e no bundle. Também entrou encodeURI: nome de arquivo de
-carta tem espaço.
+Painel na tela de cada deck. Lê o campo abilities do catálogo e separa as cartas
+em três: sem habilidade, só-keyword (mecânicas, o motor executa) e as que precisam
+de código escrito à mão.
 
-MAS — E ISSO IMPORTA MAIS QUE A CORREÇÃO
+Percentual por CÓPIAS, não por nomes distintos — 1 carta bloqueada em 60 é 98%, e
+"1 de 19 nomes" daria a impressão oposta.
 
-Fui verificar onde urlDaImagem é chamada. Não é. Em lugar nenhum. O esbuild a
-removeu do bundle por tree-shaking, e app.ts não tem uma única referência a img,
-src ou imageBase: a mesa desenha chips de texto — nome, força, willpower,
-keywords.
+Lista quais bloqueiam, recolhida por padrão. E as jogáveis por keyword com a
+keyword e o parâmetro à mostra, que é a evidência de que a classificação não é
+chute.
 
-Ou seja, o bug que apontei era real no código e inofensivo na prática, porque
-nada consumia a função. A correção continua certa (fica correta quando a arte for
-ligada), mas o buraco de verdade é outro: o simulador não mostra carta nenhuma.
-Ao lado do Inkwell, que é todo arte, vai parecer outro produto.
+JOGAR COM DECK CADASTRADO (novo)
 
-2. SERVICE WORKER DO SIMULADOR — reescrito
+Seletor de oponente entre seus outros decks e botão que abre /sim/game.html já com
+as duas listas. O export não escreve o sufixo "(10-60)" — o mesmo que quebrava o
+parser do simulador.
 
-  addAll(SHELL)  →  add() por item
-      Com addAll, UM 404 falha a instalação inteira do worker e o offline
-      simplesmente não existe, sem aviso. Mesmo cuidado que o SW da raiz já toma.
+O botão só aparece quando existe um segundo deck.
 
-  game.js e trace.js  →  network-first
-      São bundles. Cache-first serve a versão velha para sempre se alguém
-      esquecer de trocar CACHE depois de um build — exatamente a ressalva que
-      você mesmo levantou. Agora a rede decide e o cache é a rede de proteção.
-      O resto do shell (html, manifest) segue cache-first.
+════════════════════════════════════════════════════════════
+ORDEM IMPORTA: ESTE PACOTE NÃO INCLUI O MOTOR 2.0
 
-  CACHE: inkwell-sim-v1 → inkwell-sim-v2   (invalida o cache antigo na subida)
+O motor 2.0 são 11 arquivos TypeScript que vivem no REPO DO SIMULADOR, não aqui.
+Enquanto eles não forem aplicados e compilados, o simulador continua com 40 cartas
+e seus dois decks seguem bloqueados — o painel de prontidão vai mostrar isso com
+precisão, o que é o comportamento correto, mas não é o estado final.
 
-3. OS DOIS WORKERS NÃO BRIGAM MAIS
+Sequência:
 
-O SW da raiz (M3) agora ignora /sim/. Sem isso, o fallback de navegação dele
-serviria o app principal quando você abrisse /sim/game.html offline. E o SW do
-simulador agora ignora tudo fora de /sim/ — catálogo e imagens ficam com o da
-raiz, que já tem política própria para .json e imagem.
+  1. este pacote           -> commit e push no Inkwell
+  2. motor 2.0             -> no repo do simulador
+  3. npm test              -> os 209 testes + os novos
+  4. npm run build:web     -> gera web/game.js
+  5. cp web/game.js <inkwell>/site/sim/  -> commit
 
-Um dono por URL, dos dois lados.
+O passo 3 é onde pode aparecer erro: dois imports de valor que adicionei
+(effects.ts -> characteristics.ts e damage.ts -> abilities.ts) podem dar ciclo,
+porque abilities.ts já importa effects.ts. Sem compilador aqui não pude descartar.
+Se der, me mande o erro.
 
-────────────────────────────────────────────────────────────
-ANTES DE LINKAR NA NAVEGAÇÃO
+════════════════════════════════════════════════════════════
+VERIFICADO
 
-35 cartas codificadas, e deck com carta não implementada é REJEITADO na
-validação. Então isto não é "jogue seus decks" — são dois decks de demonstração.
-Se entrar como "Simulador" no menu, a maioria dos decks do usuário vai ser
-recusada na cara dele, e a culpa vai parecer do Inkwell.
+sim-readiness 25 · replay-ux 57 · a11y-perf 27 · journey-cost 37 ·
+practice-loop 36 · meta-advisor 32 · shared-cards 23 · data-health 26 · pwa 33 ·
+visual 18/18 · i18n 9/9 (698 chaves EN e PT)
+test:all e CI em 23 suítes, sem divergência · espelho byte a byte
 
-Sugestão: linkar de dentro da Academy, rotulado como demo, com as duas listas
-prontas. Quando a cobertura crescer, promove.
+NÃO VERIFICADO: a tela rodando. Sem site/data/** o app não inicia aqui.
 
-Faltam ainda Alert e Boost — deixadas de fora de propósito, por não haver o texto
-do CR 2.2.0 §8.
+════════════════════════════════════════════════════════════
+AINDA PENDENTE, E É RISCO
 
-────────────────────────────────────────────────────────────
-VERIFICADO AQUI
-
-pwa-contract 32 → 33. A nova trava a cessão do escopo /sim/ e que ela vem antes
-do fallback de navegação.
-
-NÃO VERIFICADO: o simulador rodando. Não instalei as dependências dele nem rodei
-os 209 testes — o pacote chegou sem node_modules, como você disse. Depois de
-subir, abra /sim/game.html e confira o contador "N cartas no catálogo · M
-jogáveis" no topo: se aparecer, o caminho do catálogo está certo.
+Restaurar o gate de deploy no .github/workflows/deploy-pages.yml. Está aberto há
+várias entregas: hoje um push com teste quebrado vai para produção sem barreira.
+Não mexi porque não tenho o arquivo aqui — mande que eu ajusto.

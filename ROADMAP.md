@@ -1829,3 +1829,62 @@ Demais suítes verdes: a11y-perf 27, journey-cost 37, practice 36, meta 32,
 shared 23, data-health 26, pwa 32, visual 18/18, i18n 9/9 (689 chaves).
 
 Não visto rodando.
+
+## Simulador — prontidão de deck e lançamento a partir do Inkwell (2026-08-09)
+
+Pedido: codificar os decks cadastrados e recodificar ao concluir edição, import ou
+criação. Entreguei outra coisa, e o motivo importa.
+
+### Por que não codifiquei
+
+"Codificar" uma carta, no simulador, é escrever a regra dela em TypeScript no
+motor. Não é dado que o site tenha — é código no repositório do simulador.
+
+Antes de concluir isso, medi. O catálogo tem `abilities` estruturado, então testei
+gerar automaticamente. Dos 3.442 cards: 506 sem habilidade (vanilla) e 1.034 com
+keyword — keyword tem parâmetro explícito e é puramente mecânica, dá para executar
+sem interpretar texto. Os outros 2.612 têm `triggered`, `static`, `activated` ou
+`rules_text`: texto livre em inglês.
+
+Nos **seus dois decks**, o que a geração automática cobriria: **18%** e **10%** das
+60 cartas. Não desbloqueia nenhum dos dois. E traduzir texto livre por heurística
+daria partida silenciosamente errada — pior que a recusa atual, porque o erro não
+aparece.
+
+Então gerar "codificação" no site seria produzir um arquivo com cara de solução
+que não faz o deck rodar.
+
+### O que entreguei
+
+**Prontidão no simulador**, painel na tela do deck. Lê `abilities` do catálogo e
+classifica cada carta em três: vanilla, só-keyword (jogável) e precisa-de-mão.
+Mostra percentual por **cópias**, não por nomes distintos — 1 carta bloqueada em 60
+é 98%, e dizer "1 de 19 nomes" enganaria.
+
+Lista quais cartas bloqueiam, recolhida por padrão. E as jogáveis por keyword com
+a keyword e o parâmetro à mostra, porque é a evidência de que a classificação não
+é chute.
+
+**Seleção de deck cadastrado**, que era o item 12: seletor de oponente entre seus
+outros decks, e botão que abre o simulador já com as duas listas. `deckToList`
+exporta sem o sufixo "(10-60)" — o mesmo sufixo que quebrava o parser antes.
+
+O botão de jogar só aparece quando existe um segundo deck. Abrir o simulador sem
+oponente não leva a nada.
+
+### O que isso resolve e o que não resolve
+
+Resolve saber, antes de tentar, se o deck roda — e abrir com um clique quando
+roda. Não resolve fazer os seus decks rodarem: para isso, alguém escreve as ~23
+regras que faltam, no repo do simulador. A prontidão diz exatamente quais.
+
+### Verificação
+
+`tools/sim-readiness-contract.test.mjs`, nova, **25/25**, com os motores extraídos
+e executados: classificação por tipo de ability, uma carta manual bloqueando o
+deck, percentual por cópias, ordenação pelo maior bloqueador, export sem sufixo de
+set, URL relativa, parâmetro ausente quando não há oponente.
+
+Demais: replay-ux 57, a11y-perf 27, journey-cost 37, practice 36, meta 32,
+shared 23, data-health 26, pwa 33, visual 18/18, i18n 9/9 (698 chaves).
+`test:all` e CI em 23 suítes, sem divergência. Espelho byte a byte.

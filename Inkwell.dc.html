@@ -1537,6 +1537,51 @@
             </sc-for>
           </div>
 
+          <sc-if value="{{ dd.hasSim }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:18px 20px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);margin-bottom:22px">
+              <div style="display:flex;align-items:baseline;gap:10px">
+                <span style="font-size:12px;font-weight:500;letter-spacing:.15em;text-transform:uppercase;color:var(--text-3)">{{ dd.sim.title }}</span>
+                <span style="flex:1"></span>
+                <span style="font-family:var(--font-mono);font-size:19px;color:{{ dd.sim.pctColor }}">{{ dd.sim.pct }}</span>
+              </div>
+              <div style="height:6px;border-radius:3px;background:rgba(255,255,255,.07);margin-top:9px;overflow:hidden"><div style="height:100%;width:{{ dd.sim.barPct }};background:{{ dd.sim.pctColor }}"></div></div>
+              <div style="font-size:12.5px;font-weight:300;line-height:1.55;color:{{ dd.sim.summaryColor }};margin-top:9px">{{ dd.sim.summary }}</div>
+              <div style="font-size:11px;color:var(--text-4);margin-top:3px;font-family:var(--font-mono)">{{ dd.sim.readyText }}</div>
+              <button onClick="{{ dd.sim._toggle }}" style="display:flex;align-items:center;gap:8px;width:100%;margin-top:10px;padding:8px 0;background:none;border:none;color:var(--text-3);font-size:11.5px;cursor:pointer;font-family:inherit;text-align:left;min-height:36px">
+                <span style="color:var(--text-4);font-size:10px">{{ dd.sim.caret }}</span>{{ dd.sim.blockedLabel }}
+              </button>
+              <sc-if value="{{ dd.sim.open }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:5px;padding-left:18px">
+                  <sc-for list="{{ dd.sim.blocked }}" as="b" hint-placeholder-count="4">
+                    <div style="display:flex;gap:9px;font-size:12px">
+                      <span style="font-family:var(--font-mono);color:var(--text-4);width:16px;flex-shrink:0">{{ b.count }}</span>
+                      <span style="color:var(--text-2)">{{ b.name }}</span>
+                    </div>
+                  </sc-for>
+                  <sc-if value="{{ dd.sim.hasKeyword }}" hint-placeholder-val="{{ false }}">
+                    <div style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-4);margin-top:8px">{{ dd.sim.keywordLabel }}</div>
+                    <sc-for list="{{ dd.sim.keyword }}" as="k" hint-placeholder-count="2">
+                      <div style="display:flex;gap:9px;font-size:12px">
+                        <span style="font-family:var(--font-mono);color:var(--text-4);width:16px;flex-shrink:0">{{ k.count }}</span>
+                        <span style="color:var(--text-2);flex:1;min-width:0">{{ k.name }}</span>
+                        <span style="color:var(--ok);font-size:10.5px">{{ k.kws }}</span>
+                      </div>
+                    </sc-for>
+                  </sc-if>
+                </div>
+              </sc-if>
+              <div style="font-size:10.5px;font-weight:300;line-height:1.5;color:var(--text-4);margin-top:11px">{{ dd.sim.note }}</div>
+              <sc-if value="{{ dd.sim.hasOpp }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:center">
+                  <span style="font-size:11px;color:var(--text-4)">{{ dd.sim.oppLabel }}</span>
+                  <select value="{{ dd.sim.oppId }}" onChange="{{ dd.sim._onOpp }}" aria-label="{{ dd.sim.oppLabel }}" style="flex:1;min-width:140px;padding:8px 11px;border-radius:var(--r-sm);background:var(--surface-lowest);border:1px solid var(--outline);color:var(--text-1);font-size:12px;font-family:inherit;min-height:38px">
+                    <sc-for list="{{ dd.sim.oppOptions }}" as="o" hint-placeholder-count="1"><option value="{{ o.id }}">{{ o.name }}</option></sc-for>
+                  </select>
+                  <button onClick="{{ dd.sim._play }}" style="padding:9px 16px;border-radius:var(--r-pill);background:var(--gold);border:none;color:#131313;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;min-height:38px">{{ dd.sim.playLabel }}</button>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
           <sc-if value="{{ dd.hasHealth }}" hint-placeholder-val="{{ false }}">
             <div style="padding:18px 20px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);margin-bottom:22px">
               <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
@@ -2467,6 +2512,7 @@ class Component extends DCLogic {
     metaOpenDeck: null,
     matchupNotes: {}, goalProgress: null, momentsOpen: false,
     acquisition: {}, roiOpen: false,
+    simOppDeck: null, simDetailOpen: false,
     replayCard: null,
     online: (typeof navigator!=='undefined' && 'onLine' in navigator) ? navigator.onLine : true,
     swUpdate: false, installPrompt: null,
@@ -2526,6 +2572,7 @@ class Component extends DCLogic {
       offlineBanner:'You are offline. Your collection and decks still work; prices may be out of date.', updateReady:'A new version is ready', updateNow:'Reload', installCta:'Install',
       rpDeck:'Deck', rpDiscard:'Discard', rpLore:'Lore', rpBattlefield:'Battlefield', rpInkwell:'The Inkwell', rpLog:'Turn log', rpShowOppHand:'Opponent hand',
       rpTargets:'targets {name}',
+      simTitle:'Simulator readiness', simReady:'Every card in this deck is implemented — this deck can be played.', simBlocked:'{n} cards ({copies} copies) have rules text the engine does not implement yet, so this deck cannot be played.', simReadyCopies:'{n} of {total} copies ready', simBlockedLabel:'Which cards', simKeywordLabel:'Playable through keywords', simNote:'Read from the card text in the catalogue. Cards with keywords only (Evasive, Rush, Shift…) are mechanical and work as-is; cards with triggered or activated text have to be coded by hand in the engine.', simOpponent:'Against', simPlay:'Open simulator',
       newDeck:'+ New Deck', importDeck:'↑ Import', createDeck:'Create', cancel:'Cancel', format:'Format',
       inkable:'Inkable', uninkable:'Uninkable', cost:'Cost', allSets:'All sets',
       welcome:'Welcome, {name}', emptyMsg:'Your codex is empty. Import your collection from Dreamborn, or start building a deck — everything is tracked privately in your profile.',
@@ -2603,6 +2650,7 @@ class Component extends DCLogic {
       offlineBanner:'Você está offline. Sua coleção e seus decks continuam funcionando; os preços podem estar desatualizados.', updateReady:'Uma nova versão está pronta', updateNow:'Recarregar', installCta:'Instalar',
       rpDeck:'Deck', rpDiscard:'Descarte', rpLore:'Lore', rpBattlefield:'Campo de batalha', rpInkwell:'O Tinteiro', rpLog:'Log de turnos', rpShowOppHand:'Mão do oponente',
       rpTargets:'mira {name}',
+      simTitle:'Prontidão no simulador', simReady:'Todas as cartas deste deck estão implementadas — dá para jogar.', simBlocked:'{n} cartas ({copies} cópias) têm texto de regra que o motor ainda não implementa, então este deck não pode ser jogado.', simReadyCopies:'{n} de {total} cópias prontas', simBlockedLabel:'Quais cartas', simKeywordLabel:'Jogáveis por keyword', simNote:'Lido do texto da carta no catálogo. Carta só com keyword (Evasive, Rush, Shift…) é mecânica e funciona como está; carta com texto disparado ou ativado precisa ser codificada à mão no motor.', simOpponent:'Contra', simPlay:'Abrir simulador',
       newDeck:'+ Novo Deck', importDeck:'↑ Importar', createDeck:'Criar', cancel:'Cancelar', format:'Formato',
       inkable:'Inkável', uninkable:'Não-inkável', cost:'Custo', allSets:'Todos os sets',
       welcome:'Bem-vindo, {name}', emptyMsg:'Seu códice está vazio. Importe sua coleção do Dreamborn ou comece a montar um deck — tudo fica salvo de forma privada no seu perfil.',
@@ -3740,6 +3788,50 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     try{ p.prompt(); await p.userChoice; }catch(e){}
     this.setState({installPrompt:null});
   };
+  // ---- Simulador: prontidao de deck ----
+  // Nao "codifica" carta: le o campo abilities do catalogo e classifica o que o
+  // motor consegue executar sem adivinhar. Keyword tem parametro explicito e e
+  // puramente mecanica; triggered/static/activated/rules_text sao texto livre, e
+  // traduzi-los automaticamente daria partida silenciosamente errada.
+  SIM_KEYWORDS: ['Evasive','Rush','Ward','Support','Bodyguard','Resist','Challenger','Reckless','Singer','Sing Together','Shift','Vanish'],
+  cardSimTier(card){
+    const A=(card&&card.abilities)||[];
+    if(!A.length) return 'vanilla';
+    if(A.every(a=>a&&a.type==='keyword')) return 'keyword';
+    return 'manual';
+  }
+  deckSimReadiness(deck){
+    const entries=this.deckEntries(deck);
+    if(!entries.length) return null;
+    const g={vanilla:[],keyword:[],manual:[]};
+    let copies={vanilla:0,keyword:0,manual:0}, total=0;
+    for(const e of entries){
+      const t=this.cardSimTier(e.card);
+      g[t].push({ name:e.card.name_en, count:e.count, cid:e.card.card_id,
+        kws:(e.card.abilities||[]).filter(a=>a.type==='keyword').map(a=>a.name+(a.parameter?(' '+a.parameter):'')) });
+      copies[t]+=e.count; total+=e.count;
+    }
+    for(const k in g) g[k].sort((a,b)=>b.count-a.count||a.name.localeCompare(b.name));
+    const ready=copies.vanilla+copies.keyword;
+    return { total, copies, groups:g,
+      readyCopies:ready, blockedCopies:copies.manual,
+      pct: total?Math.round(ready/total*100):0,
+      playable: copies.manual===0 && total>0,
+      blockedNames: g.manual.length };
+  }
+  // Lista no formato que o simulador le, uma linha por carta.
+  deckToList(deck){
+    return this.deckEntries(deck)
+      .sort((a,b)=>a.card.name_en.localeCompare(b.card.name_en))
+      .map(e=>e.count+' '+e.card.name_en).join('\n');
+  }
+  simUrlFor(a,b){
+    const p=new URLSearchParams();
+    if(a) p.set('deck1',this.deckToList(a));
+    if(b) p.set('deck2',this.deckToList(b));
+    return 'sim/game.html'+(p.toString()?('?'+p.toString()):'');
+  }
+  openSim=(a,b)=>{ try{ window.open(this.simUrlFor(a,b),'_blank','noopener'); }catch(e){} };
   // ---- M2.6 Beginner Journey. Not more lessons — an ordered path whose steps are
   //      answered by the user's own state, so it can say what to do next instead of
   //      listing everything at once. ----
@@ -5308,6 +5400,30 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       V.dd.health={ score:H.score, scoreColor, inkablePct:H.inkablePct, avgCost:H.avgCost,
             warnings:H.warnings.map(w=>this.t('dh_'+w)), hasWarnings:H.warnings.length>0, ok:H.warnings.length===0,
             title:this.t('deckHealthTitle'), inkableLabel:this.t('inkablePctLabel'), avgLabel:this.t('avgCostLabel'), okLabel:this.t('deckHealthOk') }; }
+        { const SR=this.deckSimReadiness(deck);
+          V.dd.hasSim=!!SR;
+          if(SR){
+            const others=(st.decks||[]).filter(x=>x.id!==deck.id);
+            const opp=st.simOppDeck?this.deckById(st.simOppDeck):(others[0]||null);
+            const col=SR.playable?'var(--ok)':(SR.pct>=50?'var(--warn)':'var(--err)');
+            V.dd.sim={ title:this.t('simTitle'),
+              pct:SR.pct+'%', pctColor:col, barPct:SR.pct+'%',
+              summary:SR.playable?this.t('simReady'):this.t('simBlocked',{n:SR.blockedNames,copies:SR.blockedCopies}),
+              summaryColor:col,
+              readyText:this.t('simReadyCopies',{n:SR.readyCopies,total:SR.total}),
+              note:this.t('simNote'),
+              open:st.simDetailOpen, caret:st.simDetailOpen?'▾':'▸',
+              _toggle:()=>this.setState({simDetailOpen:!st.simDetailOpen}),
+              blockedLabel:this.t('simBlockedLabel'), keywordLabel:this.t('simKeywordLabel'),
+              hasKeyword:SR.groups.keyword.length>0,
+              blocked:SR.groups.manual.map(x=>({ name:x.name, count:String(x.count) })),
+              keyword:SR.groups.keyword.map(x=>({ name:x.name, count:String(x.count), kws:x.kws.join(' · ') })),
+              hasOpp:!!opp, oppLabel:this.t('simOpponent'),
+              oppOptions:others.map(x=>({ id:x.id, name:x.name })),
+              oppId:opp?opp.id:'',
+              _onOpp:(e)=>this.setState({simOppDeck:e.target.value}),
+              playLabel:this.t('simPlay'), _play:()=>this.openSim(deck,opp) };
+          } }
         const buckets=[0,0,0,0,0,0,0,0]; const bseg=[{},{},{},{},{},{},{},{}]; const inkTot={};
         for(const e of entries){ const cost=Math.min(7,Math.max(0,(typeof e.card.ink_cost==='number'?e.card.ink_cost:0))); buckets[cost]+=e.count; const inks=this.inkList(e.card); const key=inks.length?inks[0]:'—'; bseg[cost][key]=(bseg[cost][key]||0)+e.count; inkTot[key]=(inkTot[key]||0)+e.count; }
         const bmax=Math.max(1,...buckets);
