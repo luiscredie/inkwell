@@ -2332,6 +2332,10 @@ function putUnder(game, card, under, action) {
 
 // src/decks/parse.ts
 var SECTION_HEADER = /^(characters|items|locations|actions|songs)\s*\d*$/i;
+var PRINTING_SUFFIX = /\s*\(([A-Za-z0-9]+(?:-[A-Za-z0-9]+)+)\)\s*$/;
+function normalizarImpressao(codigo) {
+  return /^\d/.test(codigo) ? `LOR${codigo}` : codigo;
+}
 function normalizeFullName(input) {
   return input.replace(/[\u2010-\u2015\u2212]/g, "-").replace(/[\u00A0\u2007\u202F]/g, " ").replace(/\s+-\s*|\s*-\s+/g, " - ").replace(/\s+/g, " ").trim();
 }
@@ -2378,6 +2382,12 @@ function parseDeckList(text) {
       warnings.push(`linha sem quantidade, ignorada: ${raw}`);
       continue;
     }
+    let printing;
+    const comSufixo = nome.match(PRINTING_SUFFIX);
+    if (comSufixo) {
+      printing = normalizarImpressao(comSufixo[1]);
+      nome = nome.slice(0, comSufixo.index).trim();
+    }
     nome = normalizeFullName(nome);
     if (nome.length === 0 || !Number.isFinite(qty) || qty <= 0) {
       warnings.push(`linha invalida, ignorada: ${raw}`);
@@ -2389,7 +2399,7 @@ function parseDeckList(text) {
       existente.qty += qty;
       warnings.push(`"${nome}" aparece mais de uma vez; quantidades somadas`);
     } else {
-      soma.set(chave, { fullName: nome, qty, raw });
+      soma.set(chave, { fullName: nome, qty, printing, raw });
     }
   }
   const entries = [...soma.values()];
@@ -2477,6 +2487,7 @@ function cardDefFromInkwell(raw) {
     shift: shift ? shift.n : null,
     keywords,
     printedText: raw.ability_text ?? null,
+    imageFile: raw.image_file ?? null,
     abilities: [],
     // Sempre false: nenhuma carta e jogavel ate alguem codificar o texto.
     implemented: false
@@ -2518,7 +2529,7 @@ function resolveDeck(parsed, defs) {
   const cards = {};
   const errors = [];
   for (const entry of parsed.entries) {
-    const def = index.get(entry.fullName.toLowerCase());
+    const def = (entry.printing ? defs.get(entry.printing) : void 0) ?? index.get(entry.fullName.toLowerCase());
     if (!def) {
       coverage.push({ fullName: entry.fullName, qty: entry.qty, status: "unknown" });
       continue;
@@ -3178,6 +3189,11 @@ async function carregarCatalogo(config) {
     codificadas: aplicado.implemented
   };
 }
+function urlDaImagem(catalogo, def) {
+  const arquivo = def.imageFile;
+  if (!arquivo) return null;
+  return new URL(encodeURI(arquivo.replace(/^images\//, "")), catalogo.imageBase).href;
+}
 function resolverLista(nome, texto, catalogo) {
   return { nome, report: resolveDeck(parseDeckList(texto), catalogo.defs) };
 }
@@ -3205,6 +3221,60 @@ function listasDaUrl() {
       { nome: p.get("nome2") ?? "Deck do oponente", lista: d2 }
     ]
   };
+}
+function lerDecksSalvos() {
+  const achados = [];
+  let armazenamento;
+  try {
+    armazenamento = window.localStorage;
+  } catch {
+    return achados;
+  }
+  for (let i = 0; i < armazenamento.length; i++) {
+    const chave = armazenamento.key(i);
+    if (!chave) continue;
+    let valor;
+    try {
+      valor = JSON.parse(armazenamento.getItem(chave) ?? "");
+    } catch {
+      continue;
+    }
+    for (const candidato of Array.isArray(valor) ? valor : [valor]) {
+      const deck = interpretarDeck(candidato, chave);
+      if (deck) achados.push(deck);
+    }
+  }
+  return achados;
+}
+function interpretarDeck(valor, chave) {
+  if (!valor || typeof valor !== "object") return null;
+  const r = valor;
+  const nome = String(r.nome ?? r.name ?? r.title ?? r.deckName ?? chave);
+  const bruto = r.lista ?? r.list ?? r.cards ?? r.deck ?? r.cartas;
+  const lista = paraTexto(bruto);
+  return lista ? { nome, lista, chave } : null;
+}
+function paraTexto(bruto) {
+  if (typeof bruto === "string" && bruto.includes("\n")) return bruto;
+  if (bruto && typeof bruto === "object" && !Array.isArray(bruto)) {
+    const linhas = Object.entries(bruto).filter(([, q]) => typeof q === "number" && q > 0).map(([nome, q]) => `${q} ${nome}`);
+    return linhas.length > 0 ? linhas.join("\n") : null;
+  }
+  if (Array.isArray(bruto)) {
+    const linhas = [];
+    for (const item of bruto) {
+      if (!item || typeof item !== "object") continue;
+      const r = item;
+      const nome = r.fullName ?? r.name_en ?? r.nome ?? r.name ?? r.card;
+      const qty = r.qty ?? r.quantity ?? r.count ?? r.qtd;
+      if (typeof nome !== "string" || typeof qty !== "number" || qty <= 0) continue;
+      const id = r.card_id ?? r.cardId ?? r.id;
+      const sufixo = typeof id === "string" ? ` (${id.replace(/^LOR/, "")})` : "";
+      linhas.push(`${qty} ${nome}${sufixo}`);
+    }
+    return linhas.length > 0 ? linhas.join("\n") : null;
+  }
+  return null;
 }
 
 // web/driver.ts
@@ -3374,6 +3444,43 @@ function jogarTurnoDoOponente(game, bot, limite = 60) {
   return tomadas;
 }
 
+// web/decks-exemplo.ts
+var PRINCESSES_YELLOW_GREEN = `4 Aurora - Holding Court
+4 Bobby Zimuruski - Spray Cheese Kid
+4 Mike Wazowski - Heroic Climber
+4 Pluto - Friendly Pooch
+4 Pocahontas - Guiding the Tribe
+4 Rapunzel - Tower Defender
+4 The Queen - Regal Monarch
+4 Thomas - Wide-Eyed Recruit
+4 David - Protective Snowboarder
+4 Grandmother Willow - Ancient Advisor
+4 Ursula - Deceiver
+4 Nani - Stage Manager
+4 Dale - Ready for His Shot
+4 Elinor - Renowned Diplomat
+4 Pocahontas - Peacekeeper`;
+var EVASIVES_RED_PURPLE = `2 Dash Parr - Dodgeball Dynamo
+3 Mr. Incredible - Bob Parr
+3 Peter Pan - Vine Duelist
+3 Peter Pan & Tinker Bell - Fast Friends
+4 Randall Boggs - Envious Coworker
+3 Liquidator - Iced Over
+4 Scrooge McDuck - Ghostly Ebenezer
+4 Cheshire Cat - Inexplicable
+2 Peter Pan - High Flyer
+2 Violet Parr - Learning New Powers
+3 Dumbo - Ninth Wonder of the Universe
+2 Hercules - Mighty Leader
+4 Isis Vanderchill - Ice Queen of St. Canard
+3 Hades - Looking for a Deal
+4 Mr. Incredible - Super Strong
+3 Mrs. Incredible - Super Stretchy
+2 Ursula - Whisper of Vanessa
+4 Demona - Scourge of the Wyvern Clan
+3 Junior Woodchuck Guidebook
+2 Remote Inklands - Desert Ruins`;
+
 // web/app.ts
 var EU = 0;
 var ELE = 1;
@@ -3415,7 +3522,11 @@ async function iniciar() {
     $("lista1").value = daUrl.decks[0].lista;
     $("lista2").value = daUrl.decks[1].lista;
     validarDecks();
+  } else if (!$("lista1").value.trim()) {
+    preencherExemplos();
   }
+  $("exemplos").addEventListener("click", preencherExemplos);
+  montarSeletorDeSalvos();
   $("validar").addEventListener("click", validarDecks);
   $("comecar").addEventListener("click", comecarPartida);
   $("conceder").addEventListener("click", () => {
@@ -3431,6 +3542,35 @@ async function iniciar() {
     estado.selecionados = [];
     renderizar();
   });
+}
+function montarSeletorDeSalvos() {
+  const salvos = lerDecksSalvos();
+  const caixa = $("salvos");
+  if (salvos.length === 0) {
+    caixa.classList.add("escondido");
+    return;
+  }
+  caixa.classList.remove("escondido");
+  for (const destino of ["1", "2"]) {
+    const sel = $(`salvo${destino}`);
+    sel.innerHTML = "";
+    sel.appendChild(new Option("\u2014 escolher deck salvo \u2014", ""));
+    for (const d of salvos) sel.appendChild(new Option(d.nome, d.chave + "::" + d.nome));
+    sel.addEventListener("change", () => {
+      const escolhido = salvos.find((d) => d.chave + "::" + d.nome === sel.value);
+      if (!escolhido) return;
+      $(`nome${destino}`).value = escolhido.nome;
+      $(`lista${destino}`).value = escolhido.lista;
+      validarDecks();
+    });
+  }
+}
+function preencherExemplos() {
+  $("nome1").value = "Princesses Yellow Green";
+  $("nome2").value = "Evasives Red Purple";
+  $("lista1").value = PRINCESSES_YELLOW_GREEN;
+  $("lista2").value = EVASIVES_RED_PURPLE;
+  validarDecks();
 }
 function validarDecks() {
   if (!estado.catalogo) return;
@@ -3569,10 +3709,33 @@ function nomeCurto(game, id) {
   const def = game.def(id);
   return def.version ? `${def.name} \u2014 ${def.version}` : def.name;
 }
+function arteDaCarta(game, id) {
+  if (!estado.catalogo) return null;
+  const url = urlDaImagem(estado.catalogo, game.def(id));
+  if (!url) return null;
+  const moldura = el("div", "arte");
+  const img = document.createElement("img");
+  img.src = url;
+  img.alt = nomeCurto(game, id);
+  img.loading = "lazy";
+  img.decoding = "async";
+  img.addEventListener("error", () => {
+    moldura.remove();
+    const dono = moldura.parentElement;
+    if (dono) dono.classList.add("sem-arte");
+  });
+  moldura.appendChild(img);
+  return moldura;
+}
 function chipsDeCarta(game, id) {
   const card = game.card(id);
   const def = game.def(id);
   const no = el("div", `carta ${card.exerted ? "exaurida" : ""} ${card.drying ? "secando" : ""}`);
+  const arte = arteDaCarta(game, id);
+  if (arte) {
+    no.classList.add("com-arte");
+    no.appendChild(arte);
+  }
   no.appendChild(el("div", "carta-nome", nomeCurto(game, id)));
   const linha = el("div", "carta-stats");
   if (def.type === "character") {
@@ -3586,6 +3749,11 @@ function chipsDeCarta(game, id) {
     linha.appendChild(el("span", "stat", def.type === "item" ? "item" : "a\xE7\xE3o"));
   }
   no.appendChild(linha);
+  if (card.damage > 0) {
+    const dano = el("div", "dano", String(card.damage));
+    dano.title = `${card.damage} de dano`;
+    no.appendChild(dano);
+  }
   const kws = keywordsOf(game, id).map((k) => k.k).join(" \xB7 ");
   if (kws) no.appendChild(el("div", "carta-kw", kws));
   if (card.atLocation !== null) no.appendChild(el("div", "carta-kw", "no local"));
