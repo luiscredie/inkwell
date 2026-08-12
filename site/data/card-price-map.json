@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "generated_at": "2026-08-11T03:05:25.033119+00:00",
+  "generated_at": "2026-08-12T10:26:22.050152+00:00",
   "identity": "ligaId -> Database ID",
   "master_catalog": {
     "schema_version": 1,
-    "generated_at": "2026-08-11T03:05:25.002260+00:00",
+    "generated_at": "2026-08-12T10:26:21.994093+00:00",
     "catalog_rows": 3442,
     "liga_cards": 3438,
     "summary": {
@@ -14,7 +14,7 @@
   },
   "legacy_card_db": {
     "schema_version": 3,
-    "generated_at": "2026-08-11T03:05:25.032204+00:00",
+    "generated_at": "2026-08-12T10:26:22.047975+00:00",
     "source": "current-cards.card_id",
     "summary": {
       "matched": 3438
