@@ -3429,7 +3429,7 @@ async function carregarCatalogo(config) {
 function urlDaImagem(catalogo, def) {
   const arquivo = def.imageFile;
   if (!arquivo) return null;
-  return new URL(encodeURI(arquivo.replace(/^images\//, "")), catalogo.imageBase).href;
+  return new URL(encodeURI(arquivo), catalogo.imageBase).href;
 }
 function resolverLista(nome, texto, catalogo) {
   return { nome, report: resolveDeck(parseDeckList(texto), catalogo.defs) };
@@ -3944,9 +3944,12 @@ function arteDaCarta(game, id) {
   img.loading = "lazy";
   img.decoding = "async";
   img.addEventListener("error", () => {
-    moldura.remove();
     const dono = moldura.parentElement;
-    if (dono) dono.classList.add("sem-arte");
+    moldura.remove();
+    if (dono) {
+      dono.classList.remove("com-arte");
+      dono.classList.add("sem-arte");
+    }
   });
   moldura.appendChild(img);
   return moldura;
@@ -3963,12 +3966,12 @@ function chipsDeCarta(game, id) {
   no.appendChild(el("div", "carta-nome", nomeCurto(game, id)));
   const linha = el("div", "carta-stats");
   if (def.type === "character") {
-    linha.appendChild(el("span", "stat", `${strengthOf(game, id)}\u2694`));
-    linha.appendChild(el("span", "stat", `${willpowerOf(game, id) - card.damage}/${willpowerOf(game, id)}\u25C6`));
-    if (loreOf(game, id) > 0) linha.appendChild(el("span", "stat lore", `${loreOf(game, id)}\u2726`));
+    linha.appendChild(el("span", "stat", `\u2694 ${strengthOf(game, id)}`));
+    linha.appendChild(el("span", "stat", `\u2726 ${willpowerOf(game, id) - card.damage}/${willpowerOf(game, id)}`));
+    if (loreOf(game, id) > 0) linha.appendChild(el("span", "stat lore", `\u25C6 ${loreOf(game, id)}`));
   } else if (def.type === "location") {
-    linha.appendChild(el("span", "stat", `${willpowerOf(game, id) - card.damage}/${willpowerOf(game, id)}\u25C6`));
-    if (loreOf(game, id) > 0) linha.appendChild(el("span", "stat lore", `${loreOf(game, id)}\u2726`));
+    linha.appendChild(el("span", "stat", `\u2726 ${willpowerOf(game, id) - card.damage}/${willpowerOf(game, id)}`));
+    if (loreOf(game, id) > 0) linha.appendChild(el("span", "stat lore", `\u25C6 ${loreOf(game, id)}`));
   } else {
     linha.appendChild(el("span", "stat", def.type === "item" ? "item" : "a\xE7\xE3o"));
   }
