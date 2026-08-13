@@ -52,7 +52,7 @@
   .carta{position:relative;background:var(--painel);border:1px solid var(--linha);
          border-radius:8px;padding:8px 10px;min-width:150px;max-width:190px}
   .carta.com-arte{padding:0;overflow:hidden;width:150px;min-width:150px}
-  .carta.com-arte .carta-nome{position:absolute;left:0;right:0;bottom:34px;z-index:2;
+  .carta.com-arte .carta-nome{position:absolute;left:0;right:0;bottom:34px;
         padding:3px 6px;font-size:10.5px;background:linear-gradient(transparent,rgba(10,8,14,.92) 45%)}
   .carta.com-arte .carta-stats{position:absolute;left:0;right:0;bottom:16px;
         padding:0 6px;background:rgba(10,8,14,.92);justify-content:space-between}
@@ -60,10 +60,6 @@
         padding:1px 6px;background:rgba(10,8,14,.92);white-space:nowrap;
         overflow:hidden;text-overflow:ellipsis}
   .carta.sem-arte{padding:8px 10px}
-  /* Sem arte, tudo volta ao fluxo normal — nada de posicao absoluta. */
-  .carta.sem-arte .carta-nome,
-  .carta.sem-arte .carta-stats,
-  .carta.sem-arte .carta-kw{position:static;background:none;padding:0}
   .arte{display:block;line-height:0}
   .arte img{width:100%;display:block;aspect-ratio:734/1024;object-fit:cover;
         background:var(--linha)}
@@ -210,23 +206,8 @@
 
 <script type="module" src="game.js"></script>
 <script>
-  // Um worker novo instalado enquanto o antigo controla a pagina: recarrega uma
-  // vez para assumir. Sem isto, a atualizacao so aparece apos "Unregister" no
-  // DevTools — foi exatamente o que travou o primeiro deploy.
   if ("serviceWorker" in navigator) {
-    window.addEventListener("load", async () => {
-      try {
-        const reg = await navigator.serviceWorker.register("sw.js");
-        reg.addEventListener("updatefound", () => {
-          const novo = reg.installing;
-          novo?.addEventListener("statechange", () => {
-            if (novo.state === "installed" && navigator.serviceWorker.controller) {
-              location.reload();
-            }
-          });
-        });
-      } catch { /* sem SW o jogo funciona igual, so nao fica offline */ }
-    });
+    window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
   }
 </script>
 </body>
