@@ -1,20 +1,14 @@
 name: Deploy Inkwell to GitHub Pages
 
-# Deploys on every push to main, without waiting for "Inkwell release checks".
-# The checks workflow still runs and still reports — it just no longer gates.
-# To put the gate back, restore the workflow_run trigger and the conclusion
-# condition (see the block commented out below).
+# O deploy espera "Inkwell release checks" concluir com sucesso em main.
+# O gatilho de push direto foi removido de proposito: com ele, o deploy corria
+# em paralelo com os checks e podia publicar uma arvore que falhava.
 on:
-  push:
+  workflow_run:
+    workflows: ["Inkwell release checks"]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
-
-# on:
-#   workflow_run:
-#     workflows: ["Inkwell release checks"]
-#     types: [completed]
-#     branches: [main]
-#   workflow_dispatch:
 
 permissions:
   contents: read
@@ -27,9 +21,9 @@ concurrency:
 
 jobs:
   deploy:
-    # if: >-
-    #   github.event_name == 'workflow_dispatch' ||
-    #   github.event.workflow_run.conclusion == 'success'
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -37,9 +31,12 @@ jobs:
     steps:
       - name: Check out revision
         uses: actions/checkout@v4
+        with:
+          # Sem isto, o workflow_run publicaria o HEAD de main no momento do
+          # deploy — que pode ja ser um commit posterior, ainda nao testado.
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
 
-      # Kept deliberately. This is not a test suite — it is the guard against
-      # publishing a structurally broken root, and it costs nothing.
+      # Nao e suite de teste — e a guarda contra publicar uma raiz quebrada.
       - name: Verify deploy root
         shell: bash
         run: |
@@ -47,6 +44,16 @@ jobs:
           test -f site/support.js
           test -f site/data-manifest.json
           test ! -f index.html
+
+      # Se um dos seis arquivos sumir, /sim/ abre em branco sem erro visivel.
+      - name: Verify simulator files
+        shell: bash
+        run: |
+          for f in index.html game.js trace.html trace.js sw.js manifest.webmanifest; do
+            test -f "site/sim/$f" || { echo "faltando: site/sim/$f"; exit 1; }
+          done
+          test ! -f site/sim/game.html
+          grep -q 'src="game.js"' site/sim/index.html
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
