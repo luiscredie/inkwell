@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulador Inkwell — trace do motor</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#141118">
+<style>
+  :root {
+    --bg: #141118;
+    --panel: #1c1822;
+    --line: #2e2838;
+    --text: #e8e3ef;
+    --dim: #948ba6;
+    --accent: #c8a24a;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  header {
+    padding: 20px 24px 16px; border-bottom: 1px solid var(--line);
+  }
+  h1 { margin: 0 0 4px; font-size: 17px; font-weight: 600; letter-spacing: .01em; }
+  .sub { color: var(--dim); font-size: 13px; }
+  .controles {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    padding: 14px 24px; border-bottom: 1px solid var(--line); background: var(--panel);
+  }
+  input {
+    background: var(--bg); color: var(--text); border: 1px solid var(--line);
+    border-radius: 6px; padding: 7px 10px; font: inherit; font-size: 14px;
+  }
+  input:focus { outline: none; border-color: var(--accent); }
+  button {
+    background: var(--accent); color: #1a1410; border: 0; border-radius: 6px;
+    padding: 7px 14px; font: inherit; font-weight: 600; cursor: pointer;
+  }
+  button.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
+  .resumo {
+    display: flex; flex-wrap: wrap; gap: 24px; padding: 16px 24px;
+    border-bottom: 1px solid var(--line);
+  }
+  .campo .rotulo { color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+  .campo .valor { font-size: 15px; margin-top: 2px; }
+  #resultado { color: var(--accent); font-weight: 600; }
+  .tabela { padding: 0 24px 40px; }
+  table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 12.5px; }
+  th {
+    text-align: left; color: var(--dim); font-weight: 500; font-size: 11px;
+    text-transform: uppercase; letter-spacing: .06em;
+    padding: 12px 8px 8px; border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; background: var(--bg);
+  }
+  td { padding: 3px 8px; border-bottom: 1px solid rgba(46,40,56,.5); vertical-align: top; }
+  .seq { color: var(--dim); width: 56px; }
+  .tipo { color: var(--text); width: 190px; }
+  .regra { color: var(--accent); opacity: .75; width: 130px; }
+  .dados { color: var(--dim); word-break: break-word; }
+  footer { padding: 0 24px 32px; color: var(--dim); font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Simulador Inkwell — trace do motor</h1>
+  <div class="sub">
+    Partida completa com ações aleatórias, rodando inteiramente no navegador.
+    Não é a interface de jogo — é a verificação de que o motor roda offline e o log explica cada mudança de estado.
+    <br><strong><a href="./">← Ir para o jogo</a></strong>
+  </div>
+</header>
+
+<div class="controles">
+  <label class="sub" for="seed">seed</label>
+  <input id="seed" value="web-1" size="14">
+  <button id="rodar">Rodar partida</button>
+  <button id="aleatorio" class="ghost">Seed aleatória</button>
+  <input id="filtro" placeholder="filtrar por evento ou regra (ex.: CR 1.8)" size="34">
+</div>
+
+<div class="resumo">
+  <div class="campo"><div class="rotulo">Resultado</div><div class="valor" id="resultado">—</div></div>
+  <div class="campo"><div class="rotulo">Partida</div><div class="valor" id="stats">—</div></div>
+  <div class="campo"><div class="rotulo">Tempo</div><div class="valor" id="tempo">—</div></div>
+  <div class="campo"><div class="rotulo">Exibindo</div><div class="valor" id="contagem">—</div></div>
+</div>
+
+<div class="tabela">
+  <table>
+    <thead><tr><th>#</th><th>evento</th><th>regra</th><th>dados</th></tr></thead>
+    <tbody id="log"></tbody>
+  </table>
+</div>
+
+<footer>
+  Disney Lorcana é propriedade da Ravensburger e da Disney. Projeto de fã, sem fins lucrativos,
+  sem cobrança de qualquer espécie. Todos os direitos sobre as cartas, nomes e personagens
+  pertencem aos respectivos detentores.
+</footer>
+
+<script type="module" src="trace.js"></script>
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  }
+</script>
+</body>
+</html>

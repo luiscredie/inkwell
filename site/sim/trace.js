@@ -960,6 +960,8 @@ function matchesFilter(game, id, f) {
       return f.values.some((v) => game.def(id).classifications.includes(v));
     case "hasKeyword":
       return hasKeyword(game, id, f.value);
+    case "strengthAtLeast":
+      return strengthOf(game, id) >= f.value;
     case "atSourceLocation":
       return false;
     // resolvido so em habilidade estatica
@@ -1467,6 +1469,9 @@ function staticAffects(game, source, ability, target) {
       case "hasKeyword":
         if (!keywordsOf(game, target).some((k) => k.k === f.value)) return false;
         break;
+      case "strengthAtLeast":
+        if ((game.def(target).strength ?? 0) < f.value) return false;
+        break;
       default: {
         const _exaustivo = f;
         void _exaustivo;
@@ -1515,9 +1520,21 @@ function dispatch(game, ev) {
       if (ability.when.on !== ev.on) continue;
       if (!subjectMatches(game, ability, ouvinte, ev)) continue;
       const controller = game.card(ouvinte).owner;
+      const marca = 1e3 + triggeredAbilities(game, ouvinte).indexOf(ability);
+      if (ability.oncePerTurn && game.card(ouvinte).abilitiesUsedThisTurn.includes(marca)) {
+        continue;
+      }
       const label = ability.text ?? `${game.def(ouvinte).fullName}: ${ev.on}`;
       addTrigger(game, controller, label, (g) => {
-        execute(g, ability.effect, { controller, source: ouvinte, label });
+        const fez = execute(g, ability.effect, { controller, source: ouvinte, label });
+        if (ability.oncePerTurn && fez) {
+          const inst = g.card(ouvinte);
+          const antes = inst.abilitiesUsedThisTurn;
+          g.journal.record(() => {
+            inst.abilitiesUsedThisTurn = antes;
+          });
+          inst.abilitiesUsedThisTurn = [...antes, marca];
+        }
       }, ouvinte);
     }
   }
@@ -1862,6 +1879,7 @@ function playCard(game, p, id) {
       source: id
     });
     dispatch(game, { on: "played", card: id, player: p });
+    if (isSong(game, id)) dispatch(game, { on: "songPlayed", card: id, player: p });
     if (def2.type === "action") {
       game.moveCard(id, p, "discard", null, { rule: "CR 5.4.1.3", action: "play-a-card" });
     }
@@ -2034,41 +2052,67 @@ function singSong(game, p, song, singers) {
     inst.faceDown = false;
     game.emit("song-sung", { song, singers }, { rule: "CR 8 Singer", source: song });
     dispatch(game, { on: "played", card: song, player: p });
+    dispatch(game, { on: "songPlayed", card: song, player: p });
     game.moveCard(song, p, "discard", null, { rule: "CR 5.4.1.3", action: "sing" });
   });
   settle(game);
 }
 function playWithShift(game, p, id, onto) {
   requireMainPhase(game, p);
+  const alvos = Array.isArray(onto) ? onto : [onto];
   game.transaction("shift", () => {
     const card = game.card(id);
     if (card.owner !== p || card.zone !== "hand") {
       throw new IllegalActionError("a carta nao esta na sua mao", "CR 4.3.1");
     }
-    const shiftCost = game.def(id).shift;
-    if (shiftCost === null) {
+    const kws = keywordsOf(game, id);
+    const combo = kws.find((k) => k.k === "comboShift");
+    const shiftCost = combo ? combo.n : game.def(id).shift;
+    if (shiftCost === null || shiftCost === void 0) {
       throw new IllegalActionError("a carta nao tem Shift", "CR 6.3");
     }
-    const alvo = game.card(onto);
-    if (alvo.owner !== p || alvo.zone !== "play" || game.def(onto).type !== "character") {
-      throw new IllegalActionError("alvo de Shift invalido", "CR 5.1.1.5");
+    if (alvos.length > 1 && !combo) {
+      throw new IllegalActionError("so Combo Shift aceita mais de um alvo", "CR 8 Combo Shift");
+    }
+    if (alvos.length === 0) throw new IllegalActionError("nenhum alvo de Shift");
+    if (new Set(alvos).size !== alvos.length) {
+      throw new IllegalActionError("o mesmo personagem nao pode ser alvo duas vezes");
     }
     const nomes = new Set(game.def(id).names);
-    if (!game.def(onto).names.some((n) => nomes.has(n))) {
-      throw new IllegalActionError("os nomes nao coincidem", "CR 5.2.6");
+    for (const alvoId of alvos) {
+      const alvo = game.card(alvoId);
+      if (alvo.owner !== p || alvo.zone !== "play" || game.def(alvoId).type !== "character") {
+        throw new IllegalActionError("alvo de Shift invalido", "CR 5.1.1.5");
+      }
+      if (!game.def(alvoId).names.some((n) => nomes.has(n))) {
+        throw new IllegalActionError("os nomes nao coincidem", "CR 5.2.6");
+      }
+    }
+    if (alvos.length > 1) {
+      const casados = alvos.map(
+        (a) => game.def(a).names.find((n) => nomes.has(n)) ?? ""
+      );
+      if (new Set(casados).size !== casados.length) {
+        throw new IllegalActionError(
+          "Combo Shift exige um personagem de cada nome",
+          "CR 8 Combo Shift"
+        );
+      }
     }
     payInk(game, p, shiftCost, "shift");
-    const damage = alvo.damage;
-    const exerted = alvo.exerted;
-    const atLocation = alvo.atLocation;
-    game.moveCard(onto, p, "under", null, { rule: "CR 5.1.1.5", action: "shift" });
-    const under = game.card(onto);
-    const beforeTop = under.onTopOf;
-    game.journal.record(() => {
-      under.onTopOf = beforeTop;
-    });
-    under.onTopOf = id;
-    game.setDamage(onto, 0, { rule: "CR 5.1.1.5" });
+    const damage = Math.max(...alvos.map((a) => game.card(a).damage));
+    const exerted = alvos.some((a) => game.card(a).exerted);
+    const atLocation = alvos.map((a) => game.card(a).atLocation).find((l) => l !== null) ?? null;
+    for (const alvoId of alvos) {
+      game.moveCard(alvoId, p, "under", null, { rule: "CR 5.1.1.5", action: "shift" });
+      const under = game.card(alvoId);
+      const beforeTop = under.onTopOf;
+      game.journal.record(() => {
+        under.onTopOf = beforeTop;
+      });
+      under.onTopOf = id;
+      game.setDamage(alvoId, 0, { rule: "CR 5.1.1.5" });
+    }
     game.moveCard(id, p, "play", null, { rule: "CR 5.1.1.6", action: "shift" });
     const top = game.card(id);
     const beforeFaceDown = top.faceDown;
@@ -2087,7 +2131,7 @@ function playWithShift(game, p, id, onto) {
       top.playedViaShift = beforeShiftFlag;
     });
     top.playedViaShift = true;
-    game.emit("shifted", { card: id, onto, cost: shiftCost }, {
+    game.emit("shifted", { card: id, onto: alvos.join(","), cost: shiftCost }, {
       rule: "CR 5.1.1.6",
       source: id,
       action: "shift"
@@ -2183,13 +2227,22 @@ function legalActions(game) {
       out.push({ kind: "ink", card: id });
     }
     if (costToPlay(game, p, id) <= ink) out.push({ kind: "play", card: id });
-    const shiftCost = game.def(id).shift;
-    if (shiftCost !== null && shiftCost <= ink) {
+    const kws = keywordsOf(game, id);
+    const combo = kws.find((k) => k.k === "comboShift");
+    const shiftCost = combo ? combo.n : game.def(id).shift;
+    if (shiftCost !== null && shiftCost !== void 0 && shiftCost <= ink) {
       const nomes = new Set(game.def(id).names);
-      for (const alvo of me.play) {
-        if (game.def(alvo).type !== "character") continue;
-        if (game.def(alvo).names.some((n) => nomes.has(n))) {
-          out.push({ kind: "shift", card: id, onto: alvo });
+      const casaveis = me.play.filter(
+        (a) => game.def(a).type === "character" && game.def(a).names.some((n) => nomes.has(n))
+      );
+      for (const alvo of casaveis) out.push({ kind: "shift", card: id, onto: alvo });
+      if (combo) {
+        const nomeDe = (a) => game.def(a).names.find((n) => nomes.has(n)) ?? "";
+        for (let i = 0; i < casaveis.length; i++) {
+          for (let j = i + 1; j < casaveis.length; j++) {
+            if (nomeDe(casaveis[i]) === nomeDe(casaveis[j])) continue;
+            out.push({ kind: "shift", card: id, onto: [casaveis[i], casaveis[j]] });
+          }
         }
       }
     }

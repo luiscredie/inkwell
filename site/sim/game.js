@@ -747,15 +747,6 @@ function dealDamage(game, target, amount, cause = {}, opts = {}) {
     ...cause,
     rule: "CR 1.9.4"
   });
-  if (dealt > 0 && cause.source !== void 0 && game.card(cause.source).zone === "play") {
-    dispatch(game, {
-      on: "dealsDamage",
-      card: cause.source,
-      player: game.card(cause.source).owner,
-      damageAmount: dealt,
-      inChallenge: opts.inChallenge === true
-    });
-  }
   return { intended: amount, dealt, wasDealt: true };
 }
 function removeDamage(game, target, amount, cause = {}) {
@@ -770,12 +761,6 @@ function removeDamage(game, target, amount, cause = {}) {
 function countFor(game, id, kind) {
   const owner = game.card(id).owner;
   const play = game.player(owner).play;
-  if (typeof kind === "object") {
-    switch (kind.of) {
-      case "classificationYouControl":
-        return play.filter((c) => game.def(c).type === "character" && game.def(c).classifications.includes(kind.value)).length;
-    }
-  }
   switch (kind) {
     case "cardsUnder":
       return game.player(owner).under.filter((c) => game.card(c).onTopOf === id).length;
@@ -951,9 +936,6 @@ function consumeUses(game, effects) {
 }
 
 // src/engine/effects.ts
-function forcaAtual(game, id) {
-  return (game.def(id).strength ?? 0) + modifierTotal(game, id, "strength");
-}
 var dispatchPlayedHook = null;
 function setDispatchPlayedHook(fn) {
   dispatchPlayedHook = fn;
@@ -978,10 +960,8 @@ function matchesFilter(game, id, f) {
       return f.values.some((v) => game.def(id).classifications.includes(v));
     case "hasKeyword":
       return hasKeyword(game, id, f.value);
-    case "strengthAtMost":
-      return forcaAtual(game, id) <= f.value;
     case "strengthAtLeast":
-      return forcaAtual(game, id) >= f.value;
+      return strengthOf(game, id) >= f.value;
     case "atSourceLocation":
       return false;
     // resolvido so em habilidade estatica
@@ -1082,31 +1062,10 @@ function execute(game, effect, ctx) {
       return execute(game, picked.effect, ctx);
     }
     case "dealDamage": {
-      const amount = typeof effect.amount === "number" ? effect.amount : ctx.triggerDamage ?? 0;
-      if (amount <= 0) return false;
       const targets = pickTargets(game, ctx, effect.target);
       let any = false;
       for (const id of targets) {
-        if (dealDamage(game, id, amount, cause).wasDealt) any = true;
-      }
-      return any;
-    }
-    /**
-     * [CR 1.9.1] Colocar contadores NAO e causar dano: nao emite "damage-dealt",
-     * entao gatilhos de dano nao disparam. E a diferenca em relacao a dealDamage e
-     * o motivo de ser um atomo proprio em vez de reuso.
-     */
-    case "putDamageCounters": {
-      if (effect.amount <= 0) return false;
-      const targets = pickTargets(game, ctx, effect.target);
-      let any = false;
-      for (const id of targets) {
-        if (game.card(id).zone !== "play") continue;
-        game.setDamage(id, game.card(id).damage + effect.amount, {
-          ...cause,
-          rule: "CR 1.9.1"
-        });
-        any = true;
+        if (dealDamage(game, id, effect.amount, cause).wasDealt) any = true;
       }
       return any;
     }
@@ -1359,20 +1318,6 @@ function execute(game, effect, ctx) {
       });
       return true;
     }
-    case "grantTriggered": {
-      const alvos = pickTargets(game, ctx, effect.target);
-      if (alvos.length === 0) return false;
-      addContinuousEffect(game, {
-        label: effect.label ?? ctx.label,
-        source: ctx.source,
-        controller: you,
-        modifiers: [],
-        duration: effect.duration,
-        cards: alvos,
-        grantedAbilities: effect.abilities
-      });
-      return true;
-    }
     /**
      * [CR 4.3.4] Jogar de graca continua sendo JOGAR: entra secando e dispara
      * os gatilhos de "ao ser jogada". So o pagamento e dispensado.
@@ -1524,13 +1469,8 @@ function staticAffects(game, source, ability, target) {
       case "hasKeyword":
         if (!keywordsOf(game, target).some((k) => k.k === f.value)) return false;
         break;
-      // Forca MODIFICADA, igual ao mesmo filtro em effects.ts: personagem com +2
-      // de um efeito deixa de ser alvo de "3 ou menos".
-      case "strengthAtMost":
-        if ((game.def(target).strength ?? 0) + modifierTotal(game, target, "strength") > f.value) return false;
-        break;
       case "strengthAtLeast":
-        if ((game.def(target).strength ?? 0) + modifierTotal(game, target, "strength") < f.value) return false;
+        if ((game.def(target).strength ?? 0) < f.value) return false;
         break;
       default: {
         const _exaustivo = f;
@@ -1556,15 +1496,6 @@ function abilitiesOf(game, id) {
 function triggeredAbilities(game, id) {
   return abilitiesOf(game, id).filter((a) => a.kind === "triggered");
 }
-function grantedTriggersFor(game, id) {
-  const out = [];
-  for (const e of game.state.continuousEffects) {
-    if (!e.grantedAbilities || !e.cards?.includes(id)) continue;
-    if (e.duration === "whileSourceInPlay" && (e.source === null || game.card(e.source).zone !== "play")) continue;
-    for (const ability of e.grantedAbilities) out.push({ ability, controller: e.controller });
-  }
-  return out;
-}
 function activatedAbilities(game, id) {
   const printed = abilitiesOf(game, id).filter((a) => a.kind === "activated");
   const granted = [];
@@ -1585,22 +1516,25 @@ function dispatch(game, ev) {
   for (const ouvinte of ouvintes) {
     const precisaEstarEmJogo = ev.on !== "played" && ev.on !== "banished";
     if (precisaEstarEmJogo && game.card(ouvinte).zone !== "play") continue;
-    const candidatas = [
-      ...triggeredAbilities(game, ouvinte).map((ability) => ({ ability, controller: game.card(ouvinte).owner })),
-      ...grantedTriggersFor(game, ouvinte)
-    ];
-    for (const { ability, controller } of candidatas) {
+    for (const ability of triggeredAbilities(game, ouvinte)) {
       if (ability.when.on !== ev.on) continue;
-      if (ability.when.on === "dealsDamage" && ability.when.inChallenge && !ev.inChallenge) continue;
       if (!subjectMatches(game, ability, ouvinte, ev)) continue;
+      const controller = game.card(ouvinte).owner;
+      const marca = 1e3 + triggeredAbilities(game, ouvinte).indexOf(ability);
+      if (ability.oncePerTurn && game.card(ouvinte).abilitiesUsedThisTurn.includes(marca)) {
+        continue;
+      }
       const label = ability.text ?? `${game.def(ouvinte).fullName}: ${ev.on}`;
       addTrigger(game, controller, label, (g) => {
-        execute(g, ability.effect, {
-          controller,
-          source: ouvinte,
-          label,
-          triggerDamage: ev.damageAmount
-        });
+        const fez = execute(g, ability.effect, { controller, source: ouvinte, label });
+        if (ability.oncePerTurn && fez) {
+          const inst = g.card(ouvinte);
+          const antes = inst.abilitiesUsedThisTurn;
+          g.journal.record(() => {
+            inst.abilitiesUsedThisTurn = antes;
+          });
+          inst.abilitiesUsedThisTurn = [...antes, marca];
+        }
       }, ouvinte);
     }
   }
@@ -1949,6 +1883,7 @@ function playCard(game, p, id) {
       source: id
     });
     dispatch(game, { on: "played", card: id, player: p });
+    if (isSong(game, id)) dispatch(game, { on: "songPlayed", card: id, player: p });
     if (def.type === "action") {
       game.moveCard(id, p, "discard", null, { rule: "CR 5.4.1.3", action: "play-a-card" });
     }
@@ -2121,49 +2056,67 @@ function singSong(game, p, song, singers) {
     inst.faceDown = false;
     game.emit("song-sung", { song, singers }, { rule: "CR 8 Singer", source: song });
     dispatch(game, { on: "played", card: song, player: p });
+    dispatch(game, { on: "songPlayed", card: song, player: p });
     game.moveCard(song, p, "discard", null, { rule: "CR 5.4.1.3", action: "sing" });
   });
   settle(game);
 }
-function aceitaShift(game, id, onto) {
-  if (shiftAnyNameHook?.(game.def(onto).defId)) return true;
-  const nomes = new Set(game.def(id).names);
-  return game.def(onto).names.some((n) => nomes.has(n));
-}
-var shiftAnyNameHook = null;
-function setShiftAnyNameHook(fn) {
-  shiftAnyNameHook = fn;
-}
 function playWithShift(game, p, id, onto) {
   requireMainPhase(game, p);
+  const alvos = Array.isArray(onto) ? onto : [onto];
   game.transaction("shift", () => {
     const card = game.card(id);
     if (card.owner !== p || card.zone !== "hand") {
       throw new IllegalActionError("a carta nao esta na sua mao", "CR 4.3.1");
     }
-    const shiftCost = game.def(id).shift;
-    if (shiftCost === null) {
+    const kws = keywordsOf(game, id);
+    const combo = kws.find((k) => k.k === "comboShift");
+    const shiftCost = combo ? combo.n : game.def(id).shift;
+    if (shiftCost === null || shiftCost === void 0) {
       throw new IllegalActionError("a carta nao tem Shift", "CR 6.3");
     }
-    const alvo = game.card(onto);
-    if (alvo.owner !== p || alvo.zone !== "play" || game.def(onto).type !== "character") {
-      throw new IllegalActionError("alvo de Shift invalido", "CR 5.1.1.5");
+    if (alvos.length > 1 && !combo) {
+      throw new IllegalActionError("so Combo Shift aceita mais de um alvo", "CR 8 Combo Shift");
     }
-    if (!aceitaShift(game, id, onto)) {
-      throw new IllegalActionError("os nomes nao coincidem", "CR 5.2.6");
+    if (alvos.length === 0) throw new IllegalActionError("nenhum alvo de Shift");
+    if (new Set(alvos).size !== alvos.length) {
+      throw new IllegalActionError("o mesmo personagem nao pode ser alvo duas vezes");
+    }
+    const nomes = new Set(game.def(id).names);
+    for (const alvoId of alvos) {
+      const alvo = game.card(alvoId);
+      if (alvo.owner !== p || alvo.zone !== "play" || game.def(alvoId).type !== "character") {
+        throw new IllegalActionError("alvo de Shift invalido", "CR 5.1.1.5");
+      }
+      if (!game.def(alvoId).names.some((n) => nomes.has(n))) {
+        throw new IllegalActionError("os nomes nao coincidem", "CR 5.2.6");
+      }
+    }
+    if (alvos.length > 1) {
+      const casados = alvos.map(
+        (a) => game.def(a).names.find((n) => nomes.has(n)) ?? ""
+      );
+      if (new Set(casados).size !== casados.length) {
+        throw new IllegalActionError(
+          "Combo Shift exige um personagem de cada nome",
+          "CR 8 Combo Shift"
+        );
+      }
     }
     payInk(game, p, shiftCost, "shift");
-    const damage = alvo.damage;
-    const exerted = alvo.exerted;
-    const atLocation = alvo.atLocation;
-    game.moveCard(onto, p, "under", null, { rule: "CR 5.1.1.5", action: "shift" });
-    const under = game.card(onto);
-    const beforeTop = under.onTopOf;
-    game.journal.record(() => {
-      under.onTopOf = beforeTop;
-    });
-    under.onTopOf = id;
-    game.setDamage(onto, 0, { rule: "CR 5.1.1.5" });
+    const damage = Math.max(...alvos.map((a) => game.card(a).damage));
+    const exerted = alvos.some((a) => game.card(a).exerted);
+    const atLocation = alvos.map((a) => game.card(a).atLocation).find((l) => l !== null) ?? null;
+    for (const alvoId of alvos) {
+      game.moveCard(alvoId, p, "under", null, { rule: "CR 5.1.1.5", action: "shift" });
+      const under = game.card(alvoId);
+      const beforeTop = under.onTopOf;
+      game.journal.record(() => {
+        under.onTopOf = beforeTop;
+      });
+      under.onTopOf = id;
+      game.setDamage(alvoId, 0, { rule: "CR 5.1.1.5" });
+    }
     game.moveCard(id, p, "play", null, { rule: "CR 5.1.1.6", action: "shift" });
     const top = game.card(id);
     const beforeFaceDown = top.faceDown;
@@ -2182,7 +2135,7 @@ function playWithShift(game, p, id, onto) {
       top.playedViaShift = beforeShiftFlag;
     });
     top.playedViaShift = true;
-    game.emit("shifted", { card: id, onto, cost: shiftCost }, {
+    game.emit("shifted", { card: id, onto: alvos.join(","), cost: shiftCost }, {
       rule: "CR 5.1.1.6",
       source: id,
       action: "shift"
@@ -2278,12 +2231,22 @@ function legalActions(game) {
       out.push({ kind: "ink", card: id });
     }
     if (costToPlay(game, p, id) <= ink) out.push({ kind: "play", card: id });
-    const shiftCost = game.def(id).shift;
-    if (shiftCost !== null && shiftCost <= ink) {
-      for (const alvo of me.play) {
-        if (game.def(alvo).type !== "character") continue;
-        if (aceitaShift(game, id, alvo)) {
-          out.push({ kind: "shift", card: id, onto: alvo });
+    const kws = keywordsOf(game, id);
+    const combo = kws.find((k) => k.k === "comboShift");
+    const shiftCost = combo ? combo.n : game.def(id).shift;
+    if (shiftCost !== null && shiftCost !== void 0 && shiftCost <= ink) {
+      const nomes = new Set(game.def(id).names);
+      const casaveis = me.play.filter(
+        (a) => game.def(a).type === "character" && game.def(a).names.some((n) => nomes.has(n))
+      );
+      for (const alvo of casaveis) out.push({ kind: "shift", card: id, onto: alvo });
+      if (combo) {
+        const nomeDe = (a) => game.def(a).names.find((n) => nomes.has(n)) ?? "";
+        for (let i = 0; i < casaveis.length; i++) {
+          for (let j = i + 1; j < casaveis.length; j++) {
+            if (nomeDe(casaveis[i]) === nomeDe(casaveis[j])) continue;
+            out.push({ kind: "shift", card: id, onto: [casaveis[i], casaveis[j]] });
+          }
         }
       }
     }
@@ -2473,6 +2436,15 @@ function parseDeckList(text) {
       continue;
     }
     let printing;
+    const porId = nome.match(/^#\s*([A-Za-z0-9][A-Za-z0-9-]*)$/);
+    if (porId) {
+      const id = porId[1];
+      const chaveId = id.toLowerCase();
+      const existente2 = soma.get(chaveId);
+      if (existente2) existente2.qty += qty;
+      else soma.set(chaveId, { fullName: id, qty, printing: id, raw });
+      continue;
+    }
     const comSufixo = nome.match(PRINTING_SUFFIX);
     if (comSufixo) {
       printing = normalizarImpressao(comSufixo[1]);
@@ -2494,31 +2466,6 @@ function parseDeckList(text) {
   }
   const entries = [...soma.values()];
   return { entries, total: entries.reduce((s, e) => s + e.qty, 0), warnings };
-}
-
-// src/decks/classification.ts
-var MULTI_WORD = ["Seven Dwarfs", "Red Panda"];
-function normalizeClassification(raw) {
-  if (raw == null) return [];
-  const s = String(raw).trim();
-  if (!s) return [];
-  if (/[,;]/.test(s)) {
-    return s.split(/[,;]/).map((x) => x.trim()).filter(Boolean);
-  }
-  const out = [];
-  let rest = s;
-  while (rest.length) {
-    const hit = MULTI_WORD.find((t) => rest === t || rest.startsWith(t + " "));
-    if (hit) {
-      out.push(hit);
-      rest = rest.slice(hit.length).trim();
-      continue;
-    }
-    const w = rest.split(/\s+/)[0];
-    out.push(w);
-    rest = rest.slice(w.length).trim();
-  }
-  return out;
 }
 
 // src/decks/catalog.ts
@@ -2598,12 +2545,11 @@ function cardDefFromInkwell(raw) {
     willpower: raw.willpower ?? null,
     lore: raw.lore ?? null,
     moveCost: null,
-    // split(",") deixava "Storyborn Ally Alien" (Morph) como UMA classificacao, e
-    // nenhum filtro por classificacao casava nele. Ver classification.ts.
-    classifications: normalizeClassification(raw.classification),
+    classifications: (raw.classification ?? "").split(",").map((s) => s.trim()).filter(Boolean),
     shift: shift ? shift.n : null,
     keywords,
     printedText: raw.ability_text ?? null,
+    imageFile: raw.image_file ?? null,
     abilities: [],
     // Sempre false: nenhuma carta e jogavel ate alguem codificar o texto.
     implemented: false
@@ -3244,195 +3190,183 @@ var EVASIVES = {
   }
 };
 
-// src/cards/deck-peter-scrooge.ts
-var CHAR = ["character"];
-var umQualquer = { count: 1, owner: "any", types: [...CHAR] };
-var umOponente3 = { count: 1, owner: "opposing", types: [...CHAR] };
+// src/cards/extras.ts
+var PERSONAGEM3 = ["character"];
+var umQualquer = { count: 1, owner: "any", types: [...PERSONAGEM3] };
+var umOponente3 = { count: 1, owner: "opposing", types: [...PERSONAGEM3] };
+var todos = { count: "all", owner: "any", types: [...PERSONAGEM3] };
 var euMesmo2 = {
   count: 1,
   owner: "yours",
-  types: [...CHAR],
+  types: [...PERSONAGEM3],
   self: true
 };
-var esteLocal = {
-  count: 1,
-  owner: "yours",
-  types: ["location"],
-  self: true
+var EXAURIR_POR_LORE = {
+  kind: "activated",
+  cost: { exertSelf: true },
+  text: "ONLY THE BOLD",
+  effect: { kind: "gainLore", amount: 1, who: "you" }
 };
-var doisOutros = {
-  count: 2,
-  upTo: true,
-  owner: "any",
-  types: [...CHAR],
-  filters: [{ kind: "otherThanSource" }]
-};
-var alvoFixado = {
-  bound: true,
-  count: 1,
-  owner: "any",
-  types: [...CHAR]
-};
-var PETRIFY = {
-  abilities: [{
-    kind: "triggered",
-    when: { on: "played" },
-    text: "PETRIFY",
-    effect: { kind: "exert", target: umOponente3 }
-  }]
-};
-var COUNTING_HOUSE = {
-  keywords: [{ k: "boost", n: 2 }],
-  abilities: [{
-    kind: "static",
-    text: "GOOD BUSINESS",
-    affects: esteLocal,
-    modifiers: [
-      { attr: "willpower", amount: { perEach: "cardsUnder" } },
-      { attr: "lore", amount: { perEach: "cardsUnder" } }
-    ]
-  }]
-};
-var MEDALLION_WEIGHTS = {
-  abilities: [{
-    kind: "activated",
-    cost: { ink: 2 },
-    text: "DISCIPLINE AND STRENGTH",
-    effect: {
-      kind: "bindTarget",
-      target: umQualquer,
-      then: {
+var EXTRAS = {
+  // Lumpy - Hunny Druid
+  "LOR13-42": {
+    abilities: [{
+      kind: "triggered",
+      when: { on: "played" },
+      text: "WELCOME HEALING",
+      effect: {
+        kind: "optional",
+        effect: { kind: "moveDamage", amount: 2, upTo: true, from: umQualquer, to: umOponente3 }
+      }
+    }]
+  },
+  // Aladdin - Barreling Through
+  "LOR10-123": {
+    keywords: [{ k: "boost", n: 1 }, { k: "reckless" }],
+    abilities: [{
+      kind: "static",
+      text: "ONLY THE BOLD",
+      while: { hasCardsUnder: true },
+      grantsAbilities: [EXAURIR_POR_LORE],
+      affects: {
+        count: "all",
+        owner: "yours",
+        types: [...PERSONAGEM3],
+        filters: [{ kind: "hasKeyword", value: "reckless" }]
+      }
+    }],
+    notes: "O texto diz 'seus personagens com Reckless', sem excluir o proprio Aladdin \u2014 que tem Reckless. Por isso NAO ha filtro otherThanSource aqui, ao contrario do Dumbo, cujo texto diz 'seus OUTROS personagens'."
+  },
+  // Ariel - Ethereal Voice
+  "LOR10-17": {
+    keywords: [{ k: "boost", n: 1 }],
+    abilities: [{
+      kind: "triggered",
+      when: { on: "songPlayed" },
+      subject: { scope: "yours" },
+      oncePerTurn: true,
+      text: "COMMAND PERFORMANCE",
+      effect: {
+        kind: "ifCondition",
+        condition: { kind: "countAtLeast", what: "cardsUnder", value: 1 },
+        then: { kind: "optional", effect: { kind: "draw", amount: 1, who: "you" } }
+      }
+    }]
+  },
+  // Besties, Assemble!
+  "LOR13-34": {
+    abilities: [{
+      kind: "triggered",
+      when: { on: "played" },
+      text: "BESTIES, ASSEMBLE!",
+      effect: {
+        kind: "lookAtTop",
+        amount: 4,
+        who: "you",
+        rest: "bottom",
+        take: { count: 1, upTo: true, predicate: { types: [...PERSONAGEM3] } }
+      }
+    }]
+  },
+  // Boo - Energetic Child
+  "LOR13-127": { keywords: [{ k: "rush" }] },
+  // Della's Moon Lullaby — cancao
+  "LOR10-28": {
+    abilities: [{
+      kind: "triggered",
+      when: { on: "played" },
+      text: "DELLA'S MOON LULLABY",
+      effect: {
         kind: "sequence",
         effects: [
           {
             kind: "modify",
-            target: alvoFixado,
-            modifiers: [{ attr: "strength", amount: 2 }],
-            duration: "thisTurn",
-            label: "DISCIPLINE AND STRENGTH"
+            target: umOponente3,
+            modifiers: [{ attr: "strength", amount: -2 }],
+            duration: "untilYourNextTurn"
           },
+          { kind: "draw", amount: 1, who: "you" }
+        ]
+      }
+    }]
+  },
+  // Gaston - Superior Archer
+  "LOR13-15": {
+    abilities: [{
+      kind: "triggered",
+      when: { on: "played" },
+      text: "WATCH THIS!",
+      effect: {
+        kind: "optional",
+        effect: {
+          kind: "banish",
+          target: { ...umQualquer, filters: [{ kind: "strengthAtLeast", value: 5 }] }
+        }
+      }
+    }]
+    // Forca confirmada pelo Luis (o texto do catalogo perdeu o simbolo {s}).
+  },
+  // Hercules - Spectral Demigod
+  "LOR11-117": {
+    keywords: [{ k: "boost", n: 2 }],
+    abilities: [{
+      kind: "static",
+      text: "SUPERHUMAN STRENGTH",
+      while: { hasCardsUnder: true },
+      affects: euMesmo2,
+      modifiers: [{ attr: "strength", amount: 3 }]
+    }]
+  },
+  // Maleficent - Monstrous Dragon
+  "LOR1-113": {
+    abilities: [{
+      kind: "triggered",
+      when: { on: "played" },
+      text: "DRAGON FIRE",
+      effect: { kind: "optional", effect: { kind: "banish", target: umQualquer } }
+    }]
+  },
+  // Raging Storm
+  "LOR11-28": {
+    abilities: [{
+      kind: "triggered",
+      when: { on: "played" },
+      text: "RAGING STORM",
+      effect: { kind: "banish", target: todos }
+    }]
+  },
+  // Sulley - The New Boss
+  "LOR13-24": { keywords: [{ k: "bodyguard" }] },
+  // Sulley & Boo - Scare Buddies
+  "LOR13-29": {
+    keywords: [{ k: "comboShift", n: 4 }],
+    notes: "Combo Shift completo: um Sulley, um Boo, ou um de cada \u2014 no ultimo caso as DUAS cartas ficam sob ela. Heranca de estado com dois alvos: fica exaurida se qualquer um estava (nao da para lavar exaustao comboando) e herda o MAIOR dano dos dois (nao apaga dano existente). O CR nao detalha esse caso; revisar se sair ruling."
+  },
+  // The Horseman Strikes!
+  "LOR10-29": {
+    abilities: [{
+      kind: "triggered",
+      when: { on: "played" },
+      text: "THE HORSEMAN STRIKES!",
+      effect: {
+        kind: "sequence",
+        effects: [
+          { kind: "draw", amount: 1, who: "you" },
           {
-            kind: "grantTriggered",
-            target: alvoFixado,
-            duration: "thisTurn",
-            label: "DISCIPLINE AND STRENGTH",
-            abilities: [{
-              kind: "triggered",
-              when: { on: "challenges" },
-              text: "DISCIPLINE AND STRENGTH",
-              effect: {
-                kind: "optional",
-                effect: { kind: "draw", amount: 1, who: "you" }
-              }
-            }]
+            kind: "optional",
+            effect: {
+              kind: "banish",
+              target: { ...umQualquer, filters: [{ kind: "hasKeyword", value: "evasive" }] }
+            }
           }
         ]
       }
-    }
-  }]
-};
-var INJURED_SOLDIER = {
-  abilities: [{
-    kind: "triggered",
-    when: { on: "played" },
-    text: "BATTLE WOUND",
-    effect: { kind: "putDamageCounters", amount: 2, target: euMesmo2 }
-  }]
-};
-var RED_ALERT = {
-  abilities: [{
-    kind: "triggered",
-    when: { on: "played" },
-    text: "RED ALERT",
-    effect: {
-      kind: "sequence",
-      effects: [
-        {
-          kind: "banish",
-          target: {
-            count: 1,
-            owner: "any",
-            types: [...CHAR],
-            filters: [{ kind: "strengthAtMost", value: 3 }]
-          }
-        },
-        {
-          kind: "ifCondition",
-          condition: {
-            kind: "countAtLeast",
-            what: { of: "classificationYouControl", value: "Monster" },
-            value: 1
-          },
-          then: { kind: "loseLore", amount: 1, who: "opponent" }
-        }
-      ]
-    }
-  }]
-};
-var MORPH = {
-  shiftTargetAnyName: true
-};
-var ELITE_ARCHER = {
-  keywords: [{ k: "shift", n: 5 }],
-  abilities: [
-    {
-      kind: "triggered",
-      when: { on: "played" },
-      text: "STRAIGHT SHOOTER",
-      effect: {
-        kind: "ifCondition",
-        condition: { kind: "sourcePlayedViaShift" },
-        then: {
-          kind: "modify",
-          target: euMesmo2,
-          modifiers: [{ attr: "strength", amount: 3 }],
-          duration: "thisTurn",
-          label: "STRAIGHT SHOOTER"
-        }
-      }
-    },
-    {
-      kind: "triggered",
-      when: { on: "dealsDamage", inChallenge: true },
-      text: "TRIPLE SHOT",
-      effect: {
-        kind: "dealDamage",
-        amount: { fromTrigger: "damageDealt" },
-        target: doisOutros
-      }
-    }
-  ]
-};
-var DECK_PETER_SCROOGE = {
-  // Petrify — Action 1
-  "LOR13-66": PETRIFY,
-  // Scrooge's Counting House - Ebenezer's Office — Location 2, Boost 2
-  "LOR11-134": COUNTING_HOUSE,
-  // Medallion Weights — Item 2
-  "LOR4-132": MEDALLION_WEIGHTS,
-  "LOR9-134": MEDALLION_WEIGHTS,
-  // Mulan - Injured Soldier — Character 1
-  "LOR4-116": INJURED_SOLDIER,
-  "LOR9-125": INJURED_SOLDIER,
-  // Red Alert — Action 4
-  "LOR13-135": RED_ALERT,
-  // Morph - Little Imitator — Character 1
-  "LOR13-57": MORPH,
-  "DLPC1-9-P4": MORPH,
-  // Mulan - Elite Archer — Character 6, Shift 5
-  "Q1-244": ELITE_ARCHER,
-  "LOR4-114": ELITE_ARCHER,
-  "LOR9-126": ELITE_ARCHER,
-  "DLPC1-4-CC1": ELITE_ARCHER
+    }]
+  }
 };
 
 // src/cards/registry.ts
-var REGISTRY = {
-  ...PRINCESSES,
-  ...EVASIVES,
-  ...DECK_PETER_SCROOGE
-};
-setShiftAnyNameHook((defId) => REGISTRY[defId]?.shiftTargetAnyName === true);
+var REGISTRY = { ...PRINCESSES, ...EVASIVES, ...EXTRAS };
 function applyImplementations(defs, registry = REGISTRY) {
   const orphans = [];
   const withNotes = [];
@@ -3526,58 +3460,45 @@ function listasDaUrl() {
   };
 }
 function lerDecksSalvos() {
-  const achados = [];
   let armazenamento;
   try {
     armazenamento = window.localStorage;
   } catch {
-    return achados;
+    return [];
   }
+  const perfis = /* @__PURE__ */ new Set();
+  const ativo = armazenamento.getItem("inkwell_active_user");
+  if (ativo) perfis.add(`inkwell_user_${ativo}`);
   for (let i = 0; i < armazenamento.length; i++) {
     const chave = armazenamento.key(i);
-    if (!chave) continue;
-    let valor;
+    if (chave?.startsWith("inkwell_user_")) perfis.add(chave);
+  }
+  const achados = [];
+  for (const chave of perfis) {
+    let dados;
     try {
-      valor = JSON.parse(armazenamento.getItem(chave) ?? "");
+      dados = JSON.parse(armazenamento.getItem(chave) ?? "");
     } catch {
       continue;
     }
-    for (const candidato of Array.isArray(valor) ? valor : [valor]) {
-      const deck = interpretarDeck(candidato, chave);
-      if (deck) achados.push(deck);
+    const decks = dados?.decks;
+    if (!Array.isArray(decks)) continue;
+    for (const bruto of decks) {
+      const lista = paraLista(bruto?.cards);
+      if (!lista) continue;
+      achados.push({
+        nome: bruto.name?.trim() || bruto.id || "Deck sem nome",
+        lista,
+        chave: `${chave}::${bruto.id ?? bruto.name ?? achados.length}`
+      });
     }
   }
   return achados;
 }
-function interpretarDeck(valor, chave) {
-  if (!valor || typeof valor !== "object") return null;
-  const r = valor;
-  const nome = String(r.nome ?? r.name ?? r.title ?? r.deckName ?? chave);
-  const bruto = r.lista ?? r.list ?? r.cards ?? r.deck ?? r.cartas;
-  const lista = paraTexto(bruto);
-  return lista ? { nome, lista, chave } : null;
-}
-function paraTexto(bruto) {
-  if (typeof bruto === "string" && bruto.includes("\n")) return bruto;
-  if (bruto && typeof bruto === "object" && !Array.isArray(bruto)) {
-    const linhas = Object.entries(bruto).filter(([, q]) => typeof q === "number" && q > 0).map(([nome, q]) => `${q} ${nome}`);
-    return linhas.length > 0 ? linhas.join("\n") : null;
-  }
-  if (Array.isArray(bruto)) {
-    const linhas = [];
-    for (const item of bruto) {
-      if (!item || typeof item !== "object") continue;
-      const r = item;
-      const nome = r.fullName ?? r.name_en ?? r.nome ?? r.name ?? r.card;
-      const qty = r.qty ?? r.quantity ?? r.count ?? r.qtd;
-      if (typeof nome !== "string" || typeof qty !== "number" || qty <= 0) continue;
-      const id = r.card_id ?? r.cardId ?? r.id;
-      const sufixo = typeof id === "string" ? ` (${id.replace(/^LOR/, "")})` : "";
-      linhas.push(`${qty} ${nome}${sufixo}`);
-    }
-    return linhas.length > 0 ? linhas.join("\n") : null;
-  }
-  return null;
+function paraLista(cards) {
+  if (!cards || typeof cards !== "object") return null;
+  const linhas = Object.entries(cards).filter(([, qtd]) => typeof qtd === "number" && qtd > 0).map(([cardId, qtd]) => `${qtd} #${cardId}`);
+  return linhas.length > 0 ? linhas.join("\n") : null;
 }
 
 // web/driver.ts
@@ -4102,7 +4023,7 @@ function rotuloDaAcao(game, acao) {
     case "ability":
       return "Habilidade";
     case "shift":
-      return `Shift sobre ${nomeCurto(game, acao.onto)}`;
+      return Array.isArray(acao.onto) ? `Combo Shift sobre ${acao.onto.map((c) => nomeCurto(game, c)).join(" + ")}` : `Shift sobre ${nomeCurto(game, acao.onto)}`;
     case "sing":
       return "Cantar";
     case "boost":

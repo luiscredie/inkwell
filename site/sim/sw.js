@@ -6,9 +6,9 @@
 //   2. game.js e trace.js sao network-first. Sao bundles: cache-first serve a
 //      versao velha para sempre se alguem esquecer de trocar CACHE apos um build.
 //      O resto do shell (html, manifest) continua cache-first.
-const CACHE = "inkwell-sim-v2";
+const CACHE = "inkwell-sim-v5";
 const SHELL = [
-  "./", "./index.html", "./game.html", "./manifest.webmanifest",
+  "./", "./index.html", "./trace.html", "./manifest.webmanifest",
 ];
 const BUNDLES = ["game.js", "trace.js"];
 
