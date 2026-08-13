@@ -1333,6 +1333,18 @@ function execute(game, effect, ctx) {
       game.emit("opponent-chose", { label: escolhida.label }, { ...cause, rule: "CR 6.1.5" });
       return execute(game, escolhida.effect, ctx);
     }
+    case "mayPayInk": {
+      const prontas = game.player(you).inkwell.filter((c) => !game.card(c).exerted);
+      if (prontas.length < effect.amount) return false;
+      if (!game.decisions.confirmOptional(game, you, ctx.label)) {
+        game.emit("effect-declined", { label: ctx.label }, { ...cause, rule: "CR 6.1.7" });
+        return false;
+      }
+      for (let i = 0; i < effect.amount; i++) {
+        game.setExerted(prontas[i], true, { ...cause, rule: "CR 4.3.5" });
+      }
+      return execute(game, effect.then, ctx);
+    }
     case "restrict": {
       addContinuousEffect(game, {
         label: effect.label ?? ctx.label,
@@ -3635,6 +3647,22 @@ var EXTRAS = {
   "LOR13-29": {
     keywords: [{ k: "comboShift", n: 4 }],
     notes: "Combo Shift completo: um Sulley, um Boo, ou um de cada \u2014 no ultimo caso as DUAS cartas ficam sob ela. Heranca de estado com dois alvos: fica exaurida se qualquer um estava (nao da para lavar exaustao comboando) e herda o MAIOR dano dos dois (nao apaga dano existente). O CR nao detalha esse caso; revisar se sair ruling."
+  },
+  // Webby's Diary
+  "LOR10-31": {
+    abilities: [{
+      kind: "triggered",
+      when: { on: "cardPutUnder" },
+      // "sempre que VOCE poe uma carta sob um dos SEUS personagens ou locais":
+      // o gatilho mora no item, mas o evento acontece em outra carta.
+      subject: { scope: "yours" },
+      text: "LATEST ENTRY",
+      effect: {
+        kind: "mayPayInk",
+        amount: 1,
+        then: { kind: "draw", amount: 1, who: "you" }
+      }
+    }]
   },
   // The Horseman Strikes!
   "LOR10-29": {
