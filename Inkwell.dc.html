@@ -5125,7 +5125,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       V.accent='var(--accent)';
       { let tn=0,tf=0,tval=0;
         for(const [id,e] of Object.entries(st.collection||{})){ const c=this.byId[id]; if(!c) continue;
-          const n=e.n||0,f=e.f||0; tn+=n; tf+=f; tval+=this.priceOr0(c)*(n+f); }
+          const n=e.n||0,f=e.f||0; tn+=n; tf+=f; tval+=this.priceOr0(c)*n+(this.foilPrice(c)??this.priceOr0(c))*f; }
         V.colTotalLabel=this.t('colTotalTitle');
         V.colTotalValue=(tn+tf).toLocaleString('pt-BR');
         V.colTotalUnit=this.t('cards');
