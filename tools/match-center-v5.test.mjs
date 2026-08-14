@@ -72,7 +72,11 @@ ck('fullscreen replay opens at the first event and reuses the guarded keyboard p
   html.includes("()=>this.bindModalKeys()")&&
   html.includes("if(this.state.replayFull)")&&
   !html.includes("_replayFullKeyBound"));
-ck('fullscreen victory layer cannot intercept controls',html.includes('pointer-events:none;background:rgba(5,5,8,.4)'));
+const victoryLayerStart=html.indexOf('<sc-if value="{{ rf.showVictory }}"');
+const victoryLayerEnd=html.indexOf('</sc-if>',victoryLayerStart);
+const victoryLayer=html.slice(victoryLayerStart,victoryLayerEnd);
+ck('fullscreen victory layer cannot intercept controls',
+  victoryLayerStart>=0&&victoryLayer.includes('pointer-events:none'));
 
 const logic=(html.match(/<script type="text\/x-dc"[^>]*data-dc-script[^>]*>([\s\S]*?)<\/script>/)||[])[1];
 if(!logic) throw new Error('component logic not found');

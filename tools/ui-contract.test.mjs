@@ -54,7 +54,7 @@ check(
     html.includes('componentDidUpdate(_prevProps, prevState)') &&
     html.includes('if(!wasOpen&&isOpen) this.bindModalKeys()') &&
     html.includes('else if(wasOpen&&!isOpen) this.unbindModalKeys()') &&
-    html.includes('componentWillUnmount(){ this.unbindModalKeys(); }') &&
+    html.includes('componentWillUnmount(){ this.unbindModalKeys();') &&
     !didMountBlock.includes("document.addEventListener('keydown'")
 );
 check(

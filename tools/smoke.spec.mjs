@@ -60,7 +60,7 @@ test.describe('Inkwell release smoke', () => {
     await page.goto(URL, { waitUntil: 'networkidle' });
     await openView(page, /Decks/);
     await openView(page, /Matches|Partidas/);
-    await openView(page, /Learn|Aprender/);
+    await openView(page, /Training|Treino|Learn|Aprender/);
   });
 
   test('deck builder shows its full range and rejects a copy-limit add', async ({ page }) => {
@@ -204,7 +204,7 @@ test.describe('Inkwell release smoke', () => {
     });
     expect(order).toBe('before');
 
-    await openView(page, /Prices|Preços/);
+    await openView(page, /Market|Mercado|Prices|Preços/);
     const movers = page.locator('[data-testid="price-movers"]');
     const insufficient = page.getByText(/Not enough price history|Ainda não há histórico/);
     // either the movers boxes or the insufficient-history state must be present

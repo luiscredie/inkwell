@@ -1,11 +1,19 @@
 {
-  "name": "Simulador Inkwell",
-  "short_name": "Inkwell Sim",
-  "description": "Simulador offline de Lorcana — trace do motor de regras",
-  "start_url": "./",
+  "name": "Inkwell Brasil — Seu lugar de Lorcana",
+  "short_name": "Inkwell",
+  "description": "Coleção, decks, preços e replays de Lorcana.",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#141118",
-  "theme_color": "#141118",
-  "lang": "pt-BR"
+  "orientation": "any",
+  "background_color": "#0a0c10",
+  "theme_color": "#0a0c10",
+  "lang": "pt-BR",
+  "categories": ["games", "utilities"],
+  "icons": [
+    { "src": "ink/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "ink/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "ink/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "ink/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
 }
