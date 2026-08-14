@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Simulador Inkwell</title>
+<!--
+  Redirecionador para links antigos.
+
+  O jogo era `game.html` e passou a ser `index.html` (a pagina de trace, que
+  ocupava o index, virou `trace.html`). Links salvos e URLs com ?deck1=&deck2=
+  continuavam apontando para ca e davam 404.
+
+  O redirect preserva a query string INTEIRA: sem isso, um link com dois decks
+  chegaria no jogo sem deck nenhum, o que e pior que o 404 — falha em silencio.
+-->
+<link rel="canonical" href="./">
+<meta name="robots" content="noindex">
+<script>
+  location.replace("./" + location.search + location.hash);
+</script>
+<style>
+  body{margin:0;background:#141118;color:#e8e3ef;
+       font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;padding:32px}
+  a{color:#c8a24a}
+</style>
+</head>
+<body>
+  <!-- Fallback para navegador com JS desligado: o meta refresh nao carrega a
+       query, entao o link manual fica visivel. -->
+  <noscript><meta http-equiv="refresh" content="0; url=./"></noscript>
+  <p>O simulador mudou de endereço. <a href="./">Ir para o jogo</a>.</p>
+</body>
+</html>

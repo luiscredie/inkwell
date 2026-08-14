@@ -672,7 +672,8 @@ function bodyguardTargets(game, defender) {
 function challengeRestriction(game, attacker, target) {
   const targetType = game.def(target).type;
   if (targetType === "character") {
-    if (hasKeyword(game, target, "evasive") && !hasKeyword(game, attacker, "evasive")) {
+    const podeAlcancarEvasive = hasKeyword(game, attacker, "evasive") || hasKeyword(game, attacker, "alert");
+    if (hasKeyword(game, target, "evasive") && !podeAlcancarEvasive) {
       return { reason: "so personagens com Evasive podem desafiar Evasive", rule: "CR 8 Evasive" };
     }
     const guards = bodyguardTargets(game, game.card(target).owner);
@@ -1332,6 +1333,18 @@ function execute(game, effect, ctx) {
       if (!escolhida) throw new IllegalActionError(`opcao invalida: ${i}`, "CR 1.7.7");
       game.emit("opponent-chose", { label: escolhida.label }, { ...cause, rule: "CR 6.1.5" });
       return execute(game, escolhida.effect, ctx);
+    }
+    case "mayPayInk": {
+      const prontas = game.player(you).inkwell.filter((c) => !game.card(c).exerted);
+      if (prontas.length < effect.amount) return false;
+      if (!game.decisions.confirmOptional(game, you, ctx.label)) {
+        game.emit("effect-declined", { label: ctx.label }, { ...cause, rule: "CR 6.1.7" });
+        return false;
+      }
+      for (let i = 0; i < effect.amount; i++) {
+        game.setExerted(prontas[i], true, { ...cause, rule: "CR 4.3.5" });
+      }
+      return execute(game, effect.then, ctx);
     }
     case "restrict": {
       addContinuousEffect(game, {

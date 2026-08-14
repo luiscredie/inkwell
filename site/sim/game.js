@@ -672,7 +672,8 @@ function bodyguardTargets(game, defender) {
 function challengeRestriction(game, attacker, target) {
   const targetType = game.def(target).type;
   if (targetType === "character") {
-    if (hasKeyword(game, target, "evasive") && !hasKeyword(game, attacker, "evasive")) {
+    const podeAlcancarEvasive = hasKeyword(game, attacker, "evasive") || hasKeyword(game, attacker, "alert");
+    if (hasKeyword(game, target, "evasive") && !podeAlcancarEvasive) {
       return { reason: "so personagens com Evasive podem desafiar Evasive", rule: "CR 8 Evasive" };
     }
     const guards = bodyguardTargets(game, game.card(target).owner);
@@ -2621,6 +2622,7 @@ function parseKeywords(text) {
       const m = l.match(re);
       return m ? Number(m[1]) : null;
     };
+    if (/^Alert\b/i.test(l)) out.push({ k: "alert" });
     if (/^Evasive\b/i.test(l)) out.push({ k: "evasive" });
     if (/^Bodyguard\b/i.test(l)) out.push({ k: "bodyguard" });
     if (/^Reckless\b/i.test(l)) out.push({ k: "reckless" });
@@ -3687,6 +3689,100 @@ var EXTRAS = {
   }
 };
 
+// src/cards/vanilla.ts
+var KW_SIMPLES = [
+  "Evasive",
+  "Bodyguard",
+  "Reckless",
+  "Rush",
+  "Support",
+  "Ward",
+  "Vanish",
+  "Alert"
+];
+var RE_SIMPLES = new RegExp(`^(?:${KW_SIMPLES.join("|")})\\b`, "i");
+var RE_NUMERICA = new RegExp(
+  [
+    "^(?:",
+    "(?:Shift|Boost)\\s+\\d+\\b(?:\\s*\\{i\\})?",
+    "|(?:Resist|Challenger)\\s*\\+\\s*\\d+\\b",
+    "|(?:Singer|Sing Together)\\s+\\d+\\b",
+    ")"
+  ].join(""),
+  "i"
+);
+function pulaParenteses(texto, i) {
+  let nivel = 0;
+  for (let j = i; j < texto.length; j++) {
+    if (texto[j] === "(") nivel++;
+    else if (texto[j] === ")") {
+      nivel--;
+      if (nivel === 0) return j + 1;
+    }
+  }
+  return null;
+}
+function analisaReducao(texto) {
+  const t = (texto ?? "").trim();
+  if (t === "") return { somenteKeywords: true, keywordSemParser: false };
+  let resto = t;
+  let guarda = 0;
+  let keywordSemParser = false;
+  while (resto.length > 0) {
+    if (++guarda > 64) {
+      return { somenteKeywords: false, keywordSemParser };
+    }
+    resto = resto.replace(/^[\s,.;\n]+/, "");
+    if (resto.length === 0) break;
+    const numerica = resto.match(RE_NUMERICA);
+    const simples = resto.match(RE_SIMPLES);
+    const keyword = numerica ?? simples;
+    if (!keyword) return { somenteKeywords: false, keywordSemParser };
+    resto = resto.slice(keyword[0].length);
+    const inicioLembrete = /^\s*\(/.exec(resto);
+    if (inicioLembrete) {
+      const inicio = inicioLembrete[0].length - 1;
+      const fim = pulaParenteses(resto, inicio);
+      if (fim === null) return { somenteKeywords: false, keywordSemParser };
+      resto = resto.slice(fim);
+    }
+  }
+  return { somenteKeywords: true, keywordSemParser };
+}
+function vanillaImplementations(defs, filtro = () => true) {
+  const impls = {};
+  const suspeitas = [];
+  let semTexto = 0;
+  let soKeywords = 0;
+  for (const def of defs.values()) {
+    if (def.implemented) continue;
+    if (!filtro(def)) continue;
+    const texto = (def.printedText ?? "").trim();
+    const reducao = analisaReducao(texto);
+    if (!reducao.somenteKeywords) continue;
+    const keywords = parseKeywords(def.printedText ?? null);
+    if (texto === "") {
+      semTexto++;
+    } else {
+      if (reducao.keywordSemParser || keywords.length === 0) {
+        suspeitas.push(def.defId);
+        continue;
+      }
+      soKeywords++;
+    }
+    impls[def.defId] = keywords.length > 0 ? { keywords } : {};
+  }
+  return { impls, semTexto, soKeywords, suspeitas };
+}
+function numeroDaColecao(defId) {
+  const m = /^LOR(\d+)-/.exec(defId);
+  return m ? Number(m[1]) : null;
+}
+function colecao9OuMais(def) {
+  const n = numeroDaColecao(def.defId);
+  return n !== null && n >= 9;
+}
+
 // src/cards/registry.ts
 var REGISTRY = {
   ...PRINCESSES,
@@ -3695,7 +3791,7 @@ var REGISTRY = {
   ...DECK_PETER_SCROOGE
 };
 setShiftAnyNameHook((defId) => REGISTRY[defId]?.shiftTargetAnyName === true);
-function applyImplementations(defs, registry = REGISTRY) {
+function applyImplementations(defs, registry = REGISTRY, opts = { vanilla: "colecao9" }) {
   const orphans = [];
   const withNotes = [];
   let implemented = 0;
@@ -3717,7 +3813,19 @@ function applyImplementations(defs, registry = REGISTRY) {
     }
     if (impl.notes) withNotes.push({ defId, note: impl.notes });
   }
-  return { implemented, orphans, withNotes };
+  let vanilla = 0;
+  const suspeitasVanilla = [];
+  if (opts.vanilla) {
+    const filtro = opts.vanilla === "colecao9" ? colecao9OuMais : void 0;
+    const r = vanillaImplementations(defs, filtro);
+    for (const [defId, impl] of Object.entries(r.impls)) {
+      const def = defs.get(defId);
+      if (!def) continue;
+      vanilla += aplicar(defs, def, impl);
+    }
+    suspeitasVanilla.push(...r.suspeitas);
+  }
+  return { implemented, orphans, withNotes, vanilla, suspeitasVanilla };
 }
 function aplicar(defs, def, impl) {
   const atualizado = {
