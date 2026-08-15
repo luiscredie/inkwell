@@ -1,0 +1,20 @@
+ARQUIVOS AJUSTADOS — correcao do Valor da Colecao (foil)
+
+Descompacte e copie por cima, mantendo os caminhos:
+
+  site/index.html    ->  site/index.html
+  Inkwell.dc.html    ->  Inkwell.dc.html   (raiz do repo)
+
+Nada mais precisa ser feito. Nenhum script para rodar.
+
+O QUE MUDOU
+Uma linha em site/index.html: o card "Valor da Colecao" da aba Colecao
+somava as copias foil pelo preco normal. Agora usa o preco de foil, igual
+a Visao Geral, ao Mercado e ao historico de valor.
+
+Inkwell.dc.html ja estava correto e vai identico, so para os dois arquivos
+ficarem na mesma versao.
+
+CONFERIR DEPOIS DO DEPLOY
+Visao Geral e Colecao devem mostrar o mesmo valor (~R$ 20.192,81).
+A contagem de cartas (2.423) nao muda.

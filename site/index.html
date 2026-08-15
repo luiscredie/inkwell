@@ -3841,7 +3841,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     const p=new URLSearchParams();
     if(a) p.set('deck1',this.deckToList(a));
     if(b) p.set('deck2',this.deckToList(b));
-    return 'sim/'+(p.toString()?('?'+p.toString()):'');
+    return 'sim/game.html'+(p.toString()?('?'+p.toString()):'');
   }
   openSim=(a,b)=>{ try{ window.open(this.simUrlFor(a,b),'_blank','noopener'); }catch(e){} };
   // ---- M2.6 Beginner Journey. Not more lessons — an ordered path whose steps are
