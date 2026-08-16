@@ -84,10 +84,11 @@ This rebuilds these files without reopening the browser or repeating the scrape:
 The writer retries short Windows locks. If a lock persists, it preserves a
 complete uniquely named `.tmp` recovery copy and reports its exact path.
 
-## Emergency snapshot restore
+## Emergency restore from Git history
 
-Only use this if the live raw cache is missing, corrupt, or has fewer records
-than the snapshot.
+Only use this if the live raw cache is missing or corrupt. The repository no
+longer carries a second snapshot beside the live cache; duplicate recovery
+payloads became stale and were easy to publish accidentally.
 
 First back up any existing cache:
 
@@ -96,9 +97,9 @@ Copy-Item .\site\data\ligalorcana-prices.json `
   .\site\data\ligalorcana-prices.before-recovery.json
 ```
 
-Then copy `ligalorcana-prices.recovery-snapshot.json` from this package to:
-
-`site\data\ligalorcana-prices.json`
+Restore `site/data/ligalorcana-prices.json` from a known-good commit into a
+temporary file, inspect it, and only then replace the live cache. Git history is
+the recovery source; do not add a second tracked JSON snapshot.
 
 Run `--resume-status`, then `--resume-today`.
 

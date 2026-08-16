@@ -32,6 +32,7 @@ $generatedArtifacts = @(
     "site/data/prices.json",
     "site/data/price-history.json",
     "site/data/price-analytics.json",
+    "site/data/validation-report.json",
     "site/data-manifest.json"
 )
 
@@ -40,6 +41,7 @@ $generatedArtifacts = @(
 $publishedArtifacts = @(
     "site/data/prices.json",
     "site/data/price-history.json",
+    "site/data/validation-report.json",
     "site/data-manifest.json"
 )
 

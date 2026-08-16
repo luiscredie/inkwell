@@ -84,6 +84,19 @@ check('versioned data is cache-first, since the manifest makes it immutable', ()
   assert.ok(sw.indexOf("path.endsWith('prices.json')") < i,
     'the prices rule must come before the generic .json rule');
 });
+check('artifact checksums version the first data request', () => {
+  const i = html.indexOf('async loadArtifact(');
+  const body = html.slice(i, i + 1800);
+  assert.match(body, /const fetchUrl = entry\.sha256/);
+  assert.match(body, /'v=' \+ encodeURIComponent\(entry\.sha256\)/);
+  assert.match(body, /this\.fetchJson\(fetchUrl\)/,
+    'loading an unversioned URL first can pin an existing PWA to stale JSON');
+});
+check('old versioned data entries are capped', () => {
+  const cap = +(sw.match(/DATA_MAX = (\d+)/) || [])[1];
+  assert.ok(cap > 0 && cap <= 200, 'the data cache needs a practical bound, got ' + cap);
+  assert.match(sw, /cacheFirst\(req, DATA, DATA_MAX\)/);
+});
 check('the app shell is network-first, so an update can land', () => {
   const i = sw.indexOf("req.mode === 'navigate'");
   assert.match(sw.slice(i, i + 140), /networkFirst/);
