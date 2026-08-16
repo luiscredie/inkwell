@@ -91,11 +91,13 @@ check(
     workflow.includes('(cd site && python3 -m http.server 8080 &)')
 );
 check(
-  'Pages deploy waits for green CI and publishes site as the artifact root',
+  'Pages deploy waits for green CI and publishes a minimal artifact root',
   deployWorkflow.includes('workflows: ["Inkwell release checks"]') &&
     deployWorkflow.includes("github.event.workflow_run.conclusion == 'success'") &&
     deployWorkflow.includes('uses: actions/upload-pages-artifact@v3') &&
-    deployWorkflow.includes('path: site') &&
+    deployWorkflow.includes('build_pages_artifact.py --source site --output _site') &&
+    deployWorkflow.includes('path: _site') &&
+    deployWorkflow.includes('test ! -f _site/data/ligalorcana-prices.json') &&
     deployWorkflow.includes('test ! -f index.html')
 );
 check(

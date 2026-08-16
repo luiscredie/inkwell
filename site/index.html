@@ -1,8 +1,10 @@
 <!DOCTYPE html>
-<html lang="{{ htmlLang }}">
+<html lang="pt-BR">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inkwell — Códice Lorcana</title>
+<meta name="description" content="Gerencie sua coleção, decks, partidas e preços de Disney Lorcana no Inkwell.">
 <script src="./support.js"></script>
 <script src="./match-center-engine.js"></script>
 </head>
@@ -2754,10 +2756,12 @@ class Component extends DCLogic {
     if(!wasOpen&&isOpen) this.bindModalKeys();
     else if(wasOpen&&!isOpen) this.unbindModalKeys();
     if(prev.perfMode!==this.state.perfMode) this.syncPerfClass();
+    if(prev.lang!==this.state.lang) this.syncDocumentMeta();
   }
 
   async componentDidMount() {
     this.initPwa();
+    this.syncDocumentMeta();
     let boot;
     try { boot = await this.bootData(); }
     catch(e){ console.error(e); this.setState({ loading:false, ready:false, dataFatal:'Failed to load data: '+(e&&e.message||e) }); return; }
@@ -3036,7 +3040,13 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
 
   async loadArtifact(type, entry, manifestSchema, dir, hashJobs, required){
     let url; try { url = this.resolvePath(dir, entry.path); } catch(e){ return required?{fatal:'Unsafe path for '+type+' artifact.'}:{}; }
-    const res = await this.fetchJson(url);
+    // The manifest checksum is part of the first request, not only a later
+    // integrity probe. Each published artifact therefore gets an immutable
+    // cache key and an existing PWA cannot be pinned to yesterday's JSON.
+    const fetchUrl = entry.sha256
+      ? url + (url.indexOf('?')>=0?'&':'?') + 'v=' + encodeURIComponent(entry.sha256)
+      : url;
+    const res = await this.fetchJson(fetchUrl);
     if (!res.ok){ return required?{fatal:'Could not load required "'+type+'" artifact ('+url+').', fetchFailed:true}:{}; }
     const data = res.data;
     // self-describing check: artifact.schema_version must equal manifest.schema[type]
@@ -3047,7 +3057,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       else { const msg='Deployment mismatch: '+type+'.json is v'+data.schema_version+' but manifest expects v'+manifestSchema+'. Redeploy data.'; return required?{fatal:msg}:{}; }
     }
     if (!this.supports(type, data.schema_version)){ const msg='Unsupported '+type+' schema v'+data.schema_version+'. Update the app.'; return required?{fatal:msg}:{}; }
-    if (entry.sha256) hashJobs.push({ url, expected:entry.sha256, type });
+    if (entry.sha256) hashJobs.push({ url:fetchUrl, expected:entry.sha256, type });
     return { data };
   }
 
@@ -3067,8 +3077,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     if (!(window.crypto && window.crypto.subtle)) return;
     for (const job of jobs){
       try {
-        let ok = await this.hashMatches(job.url, job.expected);
-        if (!ok){ ok = await this.hashMatches(job.url + (job.url.indexOf('?')>=0?'&':'?') + 'v=' + encodeURIComponent(job.expected), job.expected); }
+        const ok = await this.hashMatches(job.url, job.expected);
         if (!ok){ this.setState({ dataWarning:'Data integrity warning: '+job.type+' file did not match its published checksum. It may be cached or out of date.' }); }
       } catch(e){}
     }
@@ -4037,6 +4046,17 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
   }
   // Perf mode is a promise about cost, so it drops blur too — not just the shader.
   syncPerfClass(){ try{ document.body.classList.toggle('ink-perf', !!this.state.perfMode); }catch(e){} }
+  syncDocumentMeta(){
+    try{
+      const pt=this.state.lang==='pt';
+      document.documentElement.lang=pt?'pt-BR':'en';
+      document.title=pt?'Inkwell — Códice Lorcana':'Inkwell — Lorcana Codex';
+      const meta=document.querySelector('meta[name="description"]');
+      if(meta) meta.setAttribute('content',pt
+        ?'Gerencie sua coleção, decks, partidas e preços de Disney Lorcana no Inkwell.'
+        :'Manage your Disney Lorcana collection, decks, matches and prices in Inkwell.');
+    }catch(e){}
+  }
   togglePerf=()=>{ const v=!this.state.perfMode; try{ localStorage.setItem('inkwell_perf',v?'1':'0'); }catch(e){}
     if(v) this.stopInkShader(); this.setState({perfMode:v},()=>this.syncPerfClass()); };
   // Display sizes follow the STRING, not the slot: BRL runs past 12 characters
@@ -4699,7 +4719,6 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     const titles={learn:[this.t('learn'),this.t('sub_learn')],matches:[this.t('matches'),this.t('sub_matches')],overview:[this.t('overview'),this.t('sub_overview',{name:st.displayName})],collection:[this.t('collection'),this.t('sub_collection')],prices:[this.t('prices'),this.t('sub_prices')],decks:[this.t('decks'),this.t('sub_decks')],deckDetail:[(this.deckById(st.selectedDeck)||{}).name||this.t('decks'),this.t('sub_deckDetail')],advisor:[this.t('advisorBtn'),this.t('advisorSub')]};
     const eyebrows={overview:'eb_overview',collection:'eb_collection',prices:'eb_prices',decks:'eb_decks',deckDetail:'eb_decks',advisor:'eb_decks',matches:'eb_matches',learn:'eb_learn'};
     V.pageEyebrow=this.t(eyebrows[st.view]||'eb_overview');
-    V.htmlLang=st.lang==='pt'?'pt-BR':'en';
     V.isOffline=!st.online; V.offlineText=this.t('offlineBanner');
     V.hasUpdate=!!st.swUpdate; V.updateText=this.t('updateReady'); V.updateCta=this.t('updateNow'); V.doUpdate=this.applyUpdate;
     V.canInstall=!!st.installPrompt; V.installText=this.t('installCta'); V.doInstall=this.promptInstall;

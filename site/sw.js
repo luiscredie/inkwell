@@ -18,6 +18,7 @@ const VERSION = 'inkwell-v1';
 const SHELL = VERSION + '-shell';
 const DATA = VERSION + '-data';
 const ART = VERSION + '-art';
+const DATA_MAX = 80;              // several releases without unbounded stale JSON keys
 const ART_MAX = 600;              // roughly a large collection, not every card ever printed
 
 const SHELL_URLS = [
@@ -107,7 +108,7 @@ self.addEventListener('fetch', (e) => {
     return;
   }
   if (path.endsWith('.json')) {
-    e.respondWith(cacheFirst(req, DATA).catch(() => caches.match(req)));
+    e.respondWith(cacheFirst(req, DATA, DATA_MAX).catch(() => caches.match(req)));
     return;
   }
   if (req.mode === 'navigate' || path.endsWith('.html') || path.endsWith('.js')) {

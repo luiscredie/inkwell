@@ -1,111 +1,21 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-07-26T06:21:15.783546+00:00",
+  "generated_at": "2026-08-16T17:54:49.226822+00:00",
   "status": "pass",
   "summary": {
     "cards": 3442,
     "pt_overlay_cards": 3442,
-    "priced_cards": 3250,
+    "priced_cards": 3311,
     "errors": 0,
-    "warnings": 475,
-    "missing_prices": 192,
-    "missing_images": 282,
+    "warnings": 391,
+    "missing_prices": 131,
+    "missing_images": 259,
+    "missing_translations": 0,
+    "orphan_prices_detected": 0,
     "orphan_prices_removed": 0
   },
   "errors": [],
   "warnings": [
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "D100-18"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "D100-19"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "D100-20"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "D100-21"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "D100-22"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "D100-23"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "D23-2"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "D23-3"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "D23-4"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "D23-5"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "D23-6"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "D23-7"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-1-CC1"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-1-DIS"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-10-P3"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-12-P4"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-13-P3"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-14-P2"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-14-P3"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-15-P2"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-15-P3"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-15-P4"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-16-P2"
-    },
     {
       "code": "MISSING_IMAGE",
       "card_id": "DLPC1-16-P3"
@@ -1144,14 +1054,6 @@
     },
     {
       "code": "MISSING_PRICE",
-      "card_id": "D100-18"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "D100-20"
-    },
-    {
-      "code": "MISSING_PRICE",
       "card_id": "D23-1"
     },
     {
@@ -1181,10 +1083,6 @@
     {
       "code": "MISSING_PRICE",
       "card_id": "DLPC1-1-CC1"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "DLPC1-1-P2"
     },
     {
       "code": "MISSING_PRICE",
@@ -1256,19 +1154,11 @@
     },
     {
       "code": "MISSING_PRICE",
-      "card_id": "DLPC1-18-P2"
-    },
-    {
-      "code": "MISSING_PRICE",
       "card_id": "DLPC1-2-C2"
     },
     {
       "code": "MISSING_PRICE",
       "card_id": "DLPC1-2-CC1"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "DLPC1-2-P2"
     },
     {
       "code": "MISSING_PRICE",
@@ -1288,23 +1178,11 @@
     },
     {
       "code": "MISSING_PRICE",
-      "card_id": "DLPC1-27-P2"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "DLPC1-29-P3"
-    },
-    {
-      "code": "MISSING_PRICE",
       "card_id": "DLPC1-3-C1"
     },
     {
       "code": "MISSING_PRICE",
       "card_id": "DLPC1-3-CC1"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "DLPC1-3-P2"
     },
     {
       "code": "MISSING_PRICE",
@@ -1316,10 +1194,6 @@
     },
     {
       "code": "MISSING_PRICE",
-      "card_id": "DLPC1-32-P3"
-    },
-    {
-      "code": "MISSING_PRICE",
       "card_id": "DLPC1-34-P3"
     },
     {
@@ -1328,23 +1202,11 @@
     },
     {
       "code": "MISSING_PRICE",
-      "card_id": "DLPC1-39-P1"
-    },
-    {
-      "code": "MISSING_PRICE",
       "card_id": "DLPC1-4-C1"
     },
     {
       "code": "MISSING_PRICE",
       "card_id": "DLPC1-4-CC1"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "DLPC1-4-DIS"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "DLPC1-4-P2"
     },
     {
       "code": "MISSING_PRICE",
@@ -1360,10 +1222,6 @@
     },
     {
       "code": "MISSING_PRICE",
-      "card_id": "DLPC1-45-P3"
-    },
-    {
-      "code": "MISSING_PRICE",
       "card_id": "DLPC1-46-P3"
     },
     {
@@ -1373,10 +1231,6 @@
     {
       "code": "MISSING_PRICE",
       "card_id": "DLPC1-48-P3"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "DLPC1-49-P3"
     },
     {
       "code": "MISSING_PRICE",
@@ -1396,27 +1250,11 @@
     },
     {
       "code": "MISSING_PRICE",
-      "card_id": "DLPC1-50-P3"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "DLPC1-51-P3"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "DLPC1-52-P3"
-    },
-    {
-      "code": "MISSING_PRICE",
       "card_id": "DLPC1-54-P3"
     },
     {
       "code": "MISSING_PRICE",
       "card_id": "DLPC1-56-P3"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "DLPC1-58-P3"
     },
     {
       "code": "MISSING_PRICE",
@@ -1428,10 +1266,6 @@
     },
     {
       "code": "MISSING_PRICE",
-      "card_id": "DLPC1-6-P2"
-    },
-    {
-      "code": "MISSING_PRICE",
       "card_id": "DLPC1-6-PD1"
     },
     {
@@ -1440,19 +1274,11 @@
     },
     {
       "code": "MISSING_PRICE",
-      "card_id": "DLPC1-7-P2"
-    },
-    {
-      "code": "MISSING_PRICE",
       "card_id": "DLPC1-7-PD1"
     },
     {
       "code": "MISSING_PRICE",
       "card_id": "DLPC1-8-D23"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "DLPC1-8-P1"
     },
     {
       "code": "MISSING_PRICE",
@@ -1508,19 +1334,7 @@
     },
     {
       "code": "MISSING_PRICE",
-      "card_id": "LOR1-212"
-    },
-    {
-      "code": "MISSING_PRICE",
       "card_id": "LOR1-5-OS"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "LOR13-12"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "LOR13-238"
     },
     {
       "code": "MISSING_PRICE",
@@ -1532,15 +1346,7 @@
     },
     {
       "code": "MISSING_PRICE",
-      "card_id": "LOR13-74s"
-    },
-    {
-      "code": "MISSING_PRICE",
       "card_id": "LOR13-T01"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "LOR13-T01-09"
     },
     {
       "code": "MISSING_PRICE",
@@ -1680,10 +1486,6 @@
     },
     {
       "code": "MISSING_PRICE",
-      "card_id": "Q1-225"
-    },
-    {
-      "code": "MISSING_PRICE",
       "card_id": "Q1-23"
     },
     {
@@ -1764,147 +1566,11 @@
     },
     {
       "code": "MISSING_PRICE",
-      "card_id": "Q2-1"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-10"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-11"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-12"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-13"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-14"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-15"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-16"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-17"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-18"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-19"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-2"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-20"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-21"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-22"
-    },
-    {
-      "code": "MISSING_PRICE",
       "card_id": "Q2-223--bolt-superdog"
     },
     {
       "code": "MISSING_PRICE",
       "card_id": "Q2-224--elsa-ice-maker"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-23"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-24"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-25"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-26"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-27"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-28"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-29"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-3"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-30"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-31"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-32"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-33"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-34"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-35"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-4"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-5"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-6"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-7"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "Q2-8"
     },
     {
       "code": "MISSING_PRICE",

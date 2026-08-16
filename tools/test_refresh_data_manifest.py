@@ -4,7 +4,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tools.refresh_data_manifest import build_refreshed_manifest
+from tools.refresh_data_manifest import (
+    build_refreshed_manifest,
+    build_validation_report,
+    refresh_validation_report,
+)
 
 
 def write_json(path: Path, value: dict) -> None:
@@ -73,6 +77,49 @@ class RefreshManifestTests(unittest.TestCase):
         write_json(root / "data-manifest.json", manifest)
         with self.assertRaisesRegex(ValueError, "unsafe artifact path"):
             build_refreshed_manifest(root)
+
+    def test_validation_report_is_rebuilt_from_current_artifacts(self):
+        root = self.fixture()
+        manifest = json.loads((root / "data-manifest.json").read_text())
+        manifest["schema"]["validation"] = 1
+        manifest["artifacts"]["validation"] = {
+            "path": "data/validation-report.json"
+        }
+        write_json(root / "data/validation-report.json", {
+            "schema_version": 1,
+            "generated_at": "2020-01-01T00:00:00Z",
+            "summary": {"missing_prices": 999},
+        })
+        write_json(root / "data/production-corrections.json", {
+            "corrections": [{"card_id": "B", "provisional": True}]
+        })
+        write_json(root / "data-manifest.json", manifest)
+
+        report = build_validation_report(
+            root, generated_at="2026-07-28T12:00:00+00:00"
+        )
+        self.assertEqual(report["summary"]["cards"], 2)
+        self.assertEqual(report["summary"]["priced_cards"], 1)
+        self.assertEqual(report["summary"]["missing_prices"], 1)
+        self.assertEqual(report["summary"]["missing_images"], 2)
+        self.assertEqual(report["summary"]["missing_translations"], 0)
+        self.assertEqual(report["summary"]["orphan_prices_detected"], 0)
+        self.assertIn(
+            {"code": "PROVISIONAL_CORRECTION", "card_id": "B"},
+            report["warnings"],
+        )
+
+        path = refresh_validation_report(
+            root, generated_at="2026-07-28T12:00:00+00:00"
+        )
+        self.assertEqual(path, root / "data/validation-report.json")
+        result, _ = build_refreshed_manifest(
+            root, generated_at="2026-07-28T12:00:00+00:00"
+        )
+        self.assertEqual(
+            result["artifacts"]["validation"]["sha256"],
+            hashlib.sha256(path.read_bytes()).hexdigest(),
+        )
 
 
 if __name__ == "__main__":

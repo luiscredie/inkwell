@@ -105,26 +105,13 @@ is safe in the repo. Its safety depends entirely on RLS being on, which is why
 
 ---
 
-## 2. Untrack the 3 files committed by `git add .`
+## 2. Repository/public-artifact cleanup — completed
 
-From the repo root:
-
-```bash
-git rm --cached site/data/ligalorcana-prices.before-v5.json
-git rm --cached ligalorcana-access-headers.txt
-git rm -r --cached tools/__pycache__
-git commit -m "Untrack local backups and build artifacts"
-git push
-```
-
-`.gitignore` is already in place, so they will not come back.
-
-Keep `ligalorcana-prices.before-v5.json` **on disk** — it is your rollback for the
-price cache. `git rm --cached` removes it from tracking only, not from your
-working directory. `tools/INSTALL_PRICE_AGENT_V5.md` says not to commit it.
-
-`ligalorcana-access-headers.txt` holds no credentials — it is a captured
-Cloudflare 403 *response* (CSP nonce, CF-RAY, Report-To). Nothing to rotate.
+Local backups, captured headers, Python bytecode, test results and historical
+recovery directories were removed from tracking. The Pages workflow now builds
+a minimal `_site` artifact and excludes raw price caches, pipeline-only reports,
+manifests used only by tooling and backup files. `.gitignore` prevents the local
+artifacts from returning.
 
 ---
 

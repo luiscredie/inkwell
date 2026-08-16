@@ -9,8 +9,14 @@ const check = (name, fn) => { fn(); passed++; console.log('✓', name); };
 
 // ---------- language ----------
 check('the document declares its language, and it follows the UI toggle', () => {
-  assert.match(html, /<html lang="\{\{ htmlLang \}\}">/);
-  assert.match(html, /V\.htmlLang=st\.lang==='pt'\?'pt-BR':'en';/);
+  assert.match(html, /<html lang="pt-BR">/);
+  assert.match(html, /document\.documentElement\.lang=pt\?'pt-BR':'en';/);
+  assert.match(html, /if\(prev\.lang!==this\.state\.lang\) this\.syncDocumentMeta\(\);/);
+});
+check('the document has useful localized metadata', () => {
+  assert.match(html, /<title>Inkwell — Códice Lorcana<\/title>/);
+  assert.match(html, /<meta name="description" content="[^"]+">/);
+  assert.match(html, /document\.title=pt\?'Inkwell — Códice Lorcana':'Inkwell — Lorcana Codex';/);
 });
 
 // ---------- announcements ----------

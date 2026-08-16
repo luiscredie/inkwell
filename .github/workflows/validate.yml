@@ -3,14 +3,17 @@ on:
   push:
     branches: [ main ]
   pull_request:
+permissions:
+  contents: read
 jobs:
   js:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '24'
+          package-manager-cache: false
       - name: Data-contract fixtures
         run: node tools/validate.test.mjs
       - name: Image-fallback identity regression
@@ -62,8 +65,8 @@ jobs:
   python:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
       - name: Release validator fixtures
@@ -80,15 +83,20 @@ jobs:
         run: python -m unittest tools/test_refine_cards_pt.py
       - name: Manifest refresh suite
         run: python -m unittest tools/test_refresh_data_manifest.py
+      - name: Install Pages image optimizer
+        run: python -m pip install --disable-pip-version-check -r tools/requirements-pages.txt
+      - name: Pages artifact builder suite
+        run: python -m unittest tools/test_build_pages_artifact.py
       - name: Release validator against site/
         run: python tools/validate_release.py --root site --quick
   smoke:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '24'
+          package-manager-cache: false
       - name: Install Playwright
         run: npm ci && npx playwright install --with-deps chromium
       - name: Serve site
