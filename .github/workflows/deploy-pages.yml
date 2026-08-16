@@ -45,15 +45,15 @@ jobs:
           test -f site/data-manifest.json
           test ! -f index.html
 
-      # Se um dos seis arquivos sumir, /sim/ abre em branco sem erro visivel.
+      # Se um dos sete arquivos sumir, /sim/ ou links antigos podem quebrar.
       - name: Verify simulator files
         shell: bash
         run: |
-          for f in index.html game.js trace.html trace.js sw.js manifest.webmanifest; do
+          for f in index.html game.html game.js trace.html trace.js sw.js manifest.webmanifest; do
             test -f "site/sim/$f" || { echo "faltando: site/sim/$f"; exit 1; }
           done
-          test ! -f site/sim/game.html
           grep -q 'src="game.js"' site/sim/index.html
+          grep -Fq 'location.replace("./" + location.search + location.hash);' site/sim/game.html
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
