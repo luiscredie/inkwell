@@ -116,7 +116,7 @@ check('the export carries no set-number suffix', () => {
 check('the launch URL passes both decks as parameters', () => {
   const c = ctx({ v: 4 });
   const url = simUrlFor.call(c, c._deck, c._deck);
-  assert.match(url, /^sim\/\?/);
+  assert.match(url, /^sim\/game\.html\?/);
   const q = new URLSearchParams(url.slice(url.indexOf('?') + 1));
   assert.equal(q.get('deck1'), '4 Vanilla Guy');
   assert.equal(q.get('deck2'), '4 Vanilla Guy');
