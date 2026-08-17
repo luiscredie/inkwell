@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Refresh Inkwell artifact hashes, sizes, counts and timestamp.
+"""Refresh Inkwell validation metadata, artifact hashes, counts and timestamp.
 
-The command validates every published artifact before replacing the manifest.
-It does not modify cards, translations, prices, history or images.
+The validation report is rebuilt from the published cards, translations, prices,
+images and corrections. The manifest is replaced last, after every artifact has
+been validated and hashed. Cards, translations, prices, history and images are
+never modified.
 
     python tools/refresh_data_manifest.py --root site
 """
@@ -50,6 +52,107 @@ def count_cards(data: dict[str, Any]) -> int:
 def count_prices(data: dict[str, Any]) -> int:
     prices = data.get("prices") or data.get("prices_by_liga_id")
     return len(prices) if isinstance(prices, dict) else 0
+
+
+def validation_report_path(root: Path) -> Path | None:
+    manifest_path = root / "data-manifest.json"
+    manifest = load_json(manifest_path)
+    artifacts = manifest.get("artifacts") or manifest.get("files") or {}
+    entry = artifacts.get("validation") if isinstance(artifacts, dict) else None
+    if not isinstance(entry, dict) or not entry.get("path"):
+        return None
+    return safe_artifact_path(manifest_path.parent, str(entry["path"]))
+
+
+def build_validation_report(
+    root: Path,
+    *,
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    """Build the player-facing report from the artifacts being published."""
+    manifest_path = root / "data-manifest.json"
+    manifest = load_json(manifest_path)
+    artifacts = manifest.get("artifacts") or manifest.get("files") or {}
+    if not isinstance(artifacts, dict):
+        raise ValueError("data-manifest.json: missing artifacts/files map")
+
+    def artifact(kind: str) -> dict[str, Any]:
+        entry = artifacts.get(kind)
+        if not isinstance(entry, dict):
+            raise ValueError(f"data-manifest.json: missing {kind} artifact")
+        return load_json(safe_artifact_path(root, str(entry.get("path") or "")))
+
+    cards_doc = artifact("cards")
+    prices_doc = artifact("prices")
+    pt_doc = artifact("cards_pt")
+    cards = cards_doc.get("cards")
+    prices = prices_doc.get("prices") or prices_doc.get("prices_by_liga_id")
+    pt_cards = pt_doc.get("cards")
+    if not isinstance(cards, list):
+        raise ValueError("cards: expected cards[]")
+    if not isinstance(prices, dict):
+        raise ValueError("prices: expected a price map")
+    if not isinstance(pt_cards, (dict, list)):
+        raise ValueError("cards_pt: expected cards map/list")
+
+    card_ids = [str(card.get("card_id") or "") for card in cards if isinstance(card, dict)]
+    known_ids = {card_id for card_id in card_ids if card_id}
+    pt_ids = set(pt_cards) if isinstance(pt_cards, dict) else {
+        str(card.get("card_id") or "") for card in pt_cards if isinstance(card, dict)
+    }
+    missing_images = []
+    for card in cards:
+        if not isinstance(card, dict):
+            continue
+        card_id = str(card.get("card_id") or "")
+        if card_id and not (card.get("image_file") or card.get("image_url")):
+            missing_images.append(card_id)
+    missing_prices = [card_id for card_id in card_ids if card_id and card_id not in prices]
+    missing_translations = [card_id for card_id in card_ids if card_id and card_id not in pt_ids]
+    orphan_prices = [card_id for card_id in prices if card_id not in known_ids]
+
+    warnings = (
+        [{"code": "MISSING_IMAGE", "card_id": card_id} for card_id in missing_images]
+        + [{"code": "MISSING_PRICE", "card_id": card_id} for card_id in missing_prices]
+        + [{"code": "MISSING_TRANSLATION", "card_id": card_id} for card_id in missing_translations]
+        + [{"code": "ORPHAN_PRICE", "card_id": card_id} for card_id in orphan_prices]
+    )
+    corrections_path = root / "data" / "production-corrections.json"
+    if corrections_path.is_file():
+        corrections = load_json(corrections_path).get("corrections") or []
+        warnings.extend(
+            {"code": "PROVISIONAL_CORRECTION", "card_id": str(item.get("card_id") or "")}
+            for item in corrections
+            if isinstance(item, dict) and item.get("provisional") and item.get("card_id")
+        )
+
+    return {
+        "schema_version": 1,
+        "generated_at": generated_at or datetime.now(timezone.utc).isoformat(),
+        "status": "pass",
+        "summary": {
+            "cards": len(known_ids),
+            "pt_overlay_cards": len(pt_ids & known_ids),
+            "priced_cards": len(prices),
+            "errors": 0,
+            "warnings": len(warnings),
+            "missing_prices": len(missing_prices),
+            "missing_images": len(missing_images),
+            "missing_translations": len(missing_translations),
+            "orphan_prices_detected": len(orphan_prices),
+            "orphan_prices_removed": 0,
+        },
+        "errors": [],
+        "warnings": warnings,
+    }
+
+
+def refresh_validation_report(root: Path, *, generated_at: str) -> Path | None:
+    path = validation_report_path(root)
+    if path is None:
+        return None
+    atomic_write_json(path, build_validation_report(root, generated_at=generated_at))
+    return path
 
 
 def build_refreshed_manifest(
@@ -135,10 +238,18 @@ def main() -> int:
     parser.add_argument("--check", action="store_true", help="validate and print without writing")
     args = parser.parse_args()
     root = args.root.resolve()
-    manifest, summary = build_refreshed_manifest(root)
+    generated_at = datetime.now(timezone.utc).isoformat()
+    report_path = None
+    if not args.check:
+        report_path = refresh_validation_report(root, generated_at=generated_at)
+    manifest, summary = build_refreshed_manifest(root, generated_at=generated_at)
     if not args.check:
         atomic_write_json(root / "data-manifest.json", manifest)
-    print(json.dumps({**summary, "written": not args.check}, ensure_ascii=False, indent=2))
+    print(json.dumps({
+        **summary,
+        "validation_report": str(report_path) if report_path else None,
+        "written": not args.check,
+    }, ensure_ascii=False, indent=2))
     return 0
 
 

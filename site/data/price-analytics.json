@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-08-15T23:59:08.803838+00:00",
+  "generated_at": "2026-08-17T23:06:11.768093+00:00",
   "top_100_most_expensive": [
     {
       "id": "LOR9-242",
@@ -63,7 +63,7 @@
       "name": "Mickey Mouse - Steamboat Pilot (Enchanted)",
       "edition": "LOR9",
       "number": "231",
-      "minimum_price_brl": 8499.9
+      "minimum_price_brl": 8499.99
     },
     {
       "id": "LOR12-242",
@@ -80,18 +80,18 @@
       "minimum_price_brl": 7999.0
     },
     {
+      "id": "DLPC1-4-C2",
+      "name": "Simba - Pride Protector",
+      "edition": "DLPC1",
+      "number": "4-C2",
+      "minimum_price_brl": 7000.0
+    },
+    {
       "id": "LOR9-241",
       "name": "Minnie Mouse - Sweetheart Princess (Iconic)",
       "edition": "LOR9",
       "number": "241",
       "minimum_price_brl": 6999.9
-    },
-    {
-      "id": "DLPC1-4-C2",
-      "name": "Simba - Pride Protector",
-      "edition": "DLPC1",
-      "number": "4-C2",
-      "minimum_price_brl": 5999.9
     },
     {
       "id": "LOR9-225",
@@ -105,7 +105,7 @@
       "name": "Winnie the Pooh &amp; Piglet - Hunny Mages (Enchanted)",
       "edition": "LOR13",
       "number": "234",
-      "minimum_price_brl": 4199.9
+      "minimum_price_brl": 4199.5
     },
     {
       "id": "LOR10-237",
@@ -157,6 +157,13 @@
       "minimum_price_brl": 2999.9
     },
     {
+      "id": "LOR8-220",
+      "name": "Stitch - Experiment 626 (Enchanted)",
+      "edition": "LOR8",
+      "number": "220",
+      "minimum_price_brl": 2999.9
+    },
+    {
       "id": "LOR7-220",
       "name": "All Is Found (Enchanted)",
       "edition": "LOR7",
@@ -189,7 +196,21 @@
       "name": "Into the Unknown (Enchanted)",
       "edition": "LOR8",
       "number": "213",
-      "minimum_price_brl": 2499.95
+      "minimum_price_brl": 2499.9
+    },
+    {
+      "id": "LOR12-229",
+      "name": "Alien - True Believer (Enchanted)",
+      "edition": "LOR12",
+      "number": "229",
+      "minimum_price_brl": 2440.0
+    },
+    {
+      "id": "LOR8-208",
+      "name": "It Means No Worries (Enchanted)",
+      "edition": "LOR8",
+      "number": "208",
+      "minimum_price_brl": 2399.9
     },
     {
       "id": "LOR1-210",
@@ -241,13 +262,6 @@
       "minimum_price_brl": 2000.0
     },
     {
-      "id": "LOR12-229",
-      "name": "Alien - True Believer (Enchanted)",
-      "edition": "LOR12",
-      "number": "229",
-      "minimum_price_brl": 2000.0
-    },
-    {
       "id": "LOR10-232",
       "name": "The Headless Horseman - Terror of Sleepy Hollow (Enchanted)",
       "edition": "LOR10",
@@ -266,7 +280,7 @@
       "name": "Mulan - Considerate Diplomat (Enchanted)",
       "edition": "LOR9",
       "number": "235",
-      "minimum_price_brl": 1899.9
+      "minimum_price_brl": 1800.0
     },
     {
       "id": "LOR8-221",
@@ -357,13 +371,6 @@
       "name": "Belle - Snowfield Strategist (Enchanted)",
       "edition": "LOR11",
       "number": "236",
-      "minimum_price_brl": 1499.9
-    },
-    {
-      "id": "LOR8-220",
-      "name": "Stitch - Experiment 626 (Enchanted)",
-      "edition": "LOR8",
-      "number": "220",
       "minimum_price_brl": 1499.9
     },
     {
@@ -542,6 +549,13 @@
       "minimum_price_brl": 1000.0
     },
     {
+      "id": "LOR7-205",
+      "name": "Aurora - Waking Beauty (Enchanted)",
+      "edition": "LOR7",
+      "number": "205",
+      "minimum_price_brl": 1000.0
+    },
+    {
       "id": "LOR11-237",
       "name": "Tamatoa - Seeker of Shine (Enchanted)",
       "edition": "LOR11",
@@ -591,13 +605,6 @@
       "minimum_price_brl": 999.9
     },
     {
-      "id": "LOR13-235",
-      "name": "Maleficent &amp; Diablo - Evil Incarnate (Enchanted)",
-      "edition": "LOR13",
-      "number": "235",
-      "minimum_price_brl": 999.9
-    },
-    {
       "id": "LOR13-239",
       "name": "Rapunzel &amp; Flynn Rider - Unlikely Pair (Enchanted)",
       "edition": "LOR13",
@@ -626,6 +633,20 @@
       "minimum_price_brl": 999.9
     },
     {
+      "id": "LOR8-217",
+      "name": "Lilo - Causing an Uproar (Enchanted)",
+      "edition": "LOR8",
+      "number": "217",
+      "minimum_price_brl": 999.9
+    },
+    {
+      "id": "LOR13-235",
+      "name": "Maleficent &amp; Diablo - Evil Incarnate (Enchanted)",
+      "edition": "LOR13",
+      "number": "235",
+      "minimum_price_brl": 999.5
+    },
+    {
       "id": "LOR12-236",
       "name": "Kida - Crystal Scion (Enchanted)",
       "edition": "LOR12",
@@ -638,13 +659,6 @@
       "edition": "LOR11",
       "number": "230",
       "minimum_price_brl": 990.0
-    },
-    {
-      "id": "DLPC1-14-P2",
-      "name": "Scar - Heartless Hunter (Store Championship)",
-      "edition": "DLPC1",
-      "number": "14-P2",
-      "minimum_price_brl": 989.9
     },
     {
       "id": "LOR12-239",
@@ -661,6 +675,13 @@
       "minimum_price_brl": 969.9
     },
     {
+      "id": "LOR8-210",
+      "name": "Kuzco - Impulsive Llama (Enchanted)",
+      "edition": "LOR8",
+      "number": "210",
+      "minimum_price_brl": 959.9
+    },
+    {
       "id": "LOR8-218",
       "name": "Mushu - Your Worst Nightmare (Enchanted)",
       "edition": "LOR8",
@@ -668,18 +689,11 @@
       "minimum_price_brl": 950.0
     },
     {
-      "id": "LOR8-210",
-      "name": "Kuzco - Impulsive Llama (Enchanted)",
-      "edition": "LOR8",
-      "number": "210",
-      "minimum_price_brl": 949.95
-    },
-    {
       "id": "LOR10-239",
       "name": "Nick Wilde - Persistent Investigator (Enchanted)",
       "edition": "LOR10",
       "number": "239",
-      "minimum_price_brl": 949.9
+      "minimum_price_brl": 949.0
     },
     {
       "id": "DLPC1-37-P3",
@@ -687,824 +701,810 @@
       "edition": "DLPC1",
       "number": "37-P3",
       "minimum_price_brl": 900.0
-    },
-    {
-      "id": "LOR8-222",
-      "name": "Desperate Plan (Enchanted)",
-      "edition": "LOR8",
-      "number": "222",
-      "minimum_price_brl": 900.0
-    },
-    {
-      "id": "LOR5-213",
-      "name": "You're Welcome (Enchanted)",
-      "edition": "LOR5",
-      "number": "213",
-      "minimum_price_brl": 899.99
     }
   ],
   "biggest_gainers": [
     {
-      "id": "DLPC1-34-P1",
-      "name": "Mickey Mouse - Leader of the Band",
-      "from": 79.99,
-      "to": 249.9,
-      "change_brl": 169.91,
-      "change_pct": 212.41
+      "id": "LOR1-190",
+      "name": "Simba - Rightful Heir",
+      "from": 0.99,
+      "to": 9.99,
+      "change_brl": 9.0,
+      "change_pct": 909.09
     },
     {
-      "id": "LOR1-74",
-      "name": "Flynn Rider - Charming Rogue",
-      "from": 0.62,
-      "to": 1.9,
-      "change_brl": 1.28,
-      "change_pct": 206.45
+      "id": "LOR8-208",
+      "name": "It Means No Worries (Enchanted)",
+      "from": 645.9,
+      "to": 2399.9,
+      "change_brl": 1754.0,
+      "change_pct": 271.56
     },
     {
-      "id": "LOR1-10",
-      "name": "Maximus - Palace Horse",
-      "from": 2.47,
-      "to": 4.75,
-      "change_brl": 2.28,
-      "change_pct": 92.31
+      "id": "LOR1-14",
+      "name": "Moana - Of Motunui",
+      "from": 4.25,
+      "to": 14.99,
+      "change_brl": 10.74,
+      "change_pct": 252.71
     },
     {
-      "id": "LOR3-186",
-      "name": "Nala - Fierce Friend",
-      "from": 0.45,
-      "to": 0.8,
-      "change_brl": 0.35,
-      "change_pct": 77.78
+      "id": "LOR13-156",
+      "name": "Hades - Meticulous Schemer",
+      "from": 1.47,
+      "to": 5.0,
+      "change_brl": 3.53,
+      "change_pct": 240.14
     },
     {
-      "id": "LOR13-75s",
-      "name": "Ellie Fredricksen - Loving Wife (Scene Foil)",
-      "from": 5.9,
-      "to": 9.95,
-      "change_brl": 4.05,
-      "change_pct": 68.64
+      "id": "DLPC1-32-P3",
+      "name": "Timon - Snowball Swiper",
+      "from": 24.99,
+      "to": 80.0,
+      "change_brl": 55.01,
+      "change_pct": 220.13
     },
     {
-      "id": "LOR1-104",
-      "name": "Aladdin - Heroic Outlaw",
-      "from": 5.99,
-      "to": 10.0,
-      "change_brl": 4.01,
-      "change_pct": 66.94
+      "id": "DLPC1-23-P2",
+      "name": "Snow White - Fairest in the Land",
+      "from": 19.99,
+      "to": 40.0,
+      "change_brl": 20.01,
+      "change_pct": 100.1
     },
     {
-      "id": "LOR1-113",
-      "name": "Maleficent - Monstrous Dragon",
-      "from": 60.0,
-      "to": 100.0,
-      "change_brl": 40.0,
+      "id": "LOR8-220",
+      "name": "Stitch - Experiment 626 (Enchanted)",
+      "from": 1499.9,
+      "to": 2999.9,
+      "change_brl": 1500.0,
+      "change_pct": 100.01
+    },
+    {
+      "id": "LOR7-205",
+      "name": "Aurora - Waking Beauty (Enchanted)",
+      "from": 599.99,
+      "to": 1000.0,
+      "change_brl": 400.01,
       "change_pct": 66.67
     },
     {
-      "id": "LOR1-86",
-      "name": "Mad Hatter - Gracious Host",
-      "from": 0.62,
-      "to": 1.0,
-      "change_brl": 0.38,
-      "change_pct": 61.29
+      "id": "LOR8-217",
+      "name": "Lilo - Causing an Uproar (Enchanted)",
+      "from": 600.0,
+      "to": 999.9,
+      "change_brl": 399.9,
+      "change_pct": 66.65
     },
     {
-      "id": "LOR13-147",
-      "name": "Quackerjack - Loony Toymaker",
-      "from": 14.99,
-      "to": 21.9,
-      "change_brl": 6.91,
-      "change_pct": 46.1
+      "id": "LOR9-75",
+      "name": "Max Goof - Rebellious Teen",
+      "from": 4.99,
+      "to": 7.79,
+      "change_brl": 2.8,
+      "change_pct": 56.11
     },
     {
-      "id": "LOR11-26",
-      "name": "Widow Tweed - Kindly Soul",
-      "from": 0.2,
-      "to": 0.29,
-      "change_brl": 0.09,
-      "change_pct": 45.0
+      "id": "LOR1-204",
+      "name": "Plasma Blaster",
+      "from": 1.45,
+      "to": 2.0,
+      "change_brl": 0.55,
+      "change_pct": 37.93
     },
     {
-      "id": "LOR1-115",
-      "name": "Mickey Mouse - Brave Little Tailor",
-      "from": 399.9,
-      "to": 499.9,
-      "change_brl": 100.0,
-      "change_pct": 25.01
+      "id": "LOR13-50",
+      "name": "Merida - Wisp Conjurer",
+      "from": 29.99,
+      "to": 40.8,
+      "change_brl": 10.81,
+      "change_pct": 36.05
     },
     {
-      "id": "LOR1-152",
-      "name": "Maurice - World-Famous Inventor",
-      "from": 2.0,
-      "to": 2.5,
-      "change_brl": 0.5,
-      "change_pct": 25.0
+      "id": "LOR4-219",
+      "name": "Ariel’s Grotto - A Secret Place (Enchanted)",
+      "from": 180.0,
+      "to": 239.9,
+      "change_brl": 59.9,
+      "change_pct": 33.28
     },
     {
-      "id": "LOR3-206",
-      "name": "Kida - Protector of Atlantis (Alternate Art)",
-      "from": 509.25,
-      "to": 629.9,
-      "change_brl": 120.65,
-      "change_pct": 23.69
+      "id": "LOR13-12",
+      "name": "Pocahontas - Guiding the Tribe",
+      "from": 84.95,
+      "to": 109.5,
+      "change_brl": 24.55,
+      "change_pct": 28.9
     },
     {
-      "id": "LOR2-199",
-      "name": "Let the Storm Rage On",
-      "from": 15.0,
-      "to": 18.0,
-      "change_brl": 3.0,
-      "change_pct": 20.0
+      "id": "LOR12-229",
+      "name": "Alien - True Believer (Enchanted)",
+      "from": 2000.0,
+      "to": 2440.0,
+      "change_brl": 440.0,
+      "change_pct": 22.0
     },
     {
-      "id": "LOR1-178",
-      "name": "Gantu - Galactic Federation Captain",
-      "from": 14.95,
-      "to": 17.5,
-      "change_brl": 2.55,
-      "change_pct": 17.06
-    },
-    {
-      "id": "LOR1-189",
-      "name": "Simba - Returned King",
-      "from": 5.99,
-      "to": 7.0,
-      "change_brl": 1.01,
-      "change_pct": 16.86
-    },
-    {
-      "id": "LOR13-15",
-      "name": "Gaston - Superior Archer",
-      "from": 59.95,
-      "to": 69.5,
-      "change_brl": 9.55,
-      "change_pct": 15.93
-    },
-    {
-      "id": "LOR5-16",
-      "name": "Daisy Duck - Donald's Date",
-      "from": 25.9,
-      "to": 29.75,
-      "change_brl": 3.85,
-      "change_pct": 14.86
-    },
-    {
-      "id": "LOR1-100",
-      "name": "Vicious Betrayal",
-      "from": 0.44,
-      "to": 0.5,
-      "change_brl": 0.06,
-      "change_pct": 13.64
-    },
-    {
-      "id": "LOR8-4",
-      "name": "Goofy - Groundbreaking Chef",
-      "from": 10.8,
+      "id": "LOR13-106",
+      "name": "My Adventure Book",
+      "from": 9.99,
       "to": 11.9,
-      "change_brl": 1.1,
-      "change_pct": 10.19
-    },
-    {
-      "id": "LOR11-135",
-      "name": "Graveyard of Christmas Future - Lonely Resting Place",
-      "from": 0.2,
-      "to": 0.22,
-      "change_brl": 0.02,
-      "change_pct": 10.0
-    },
-    {
-      "id": "LOR4-T07",
-      "name": "Ursula - Sea Witch Queen Puzzle Insert (7)",
-      "from": 0.81,
-      "to": 0.89,
-      "change_brl": 0.08,
-      "change_pct": 9.88
-    },
-    {
-      "id": "LOR13-31",
-      "name": "Lilo &amp; Stitch - Fun-Loving Friends",
-      "from": 59.99,
-      "to": 65.0,
-      "change_brl": 5.01,
-      "change_pct": 8.35
-    },
-    {
-      "id": "LOR12-10",
-      "name": "Rex - Protective Dinosaur",
-      "from": 9.45,
-      "to": 9.99,
-      "change_brl": 0.54,
-      "change_pct": 5.71
-    },
-    {
-      "id": "LOR9-156",
-      "name": "Belle - Inventive Engineer",
-      "from": 0.18,
-      "to": 0.19,
-      "change_brl": 0.01,
-      "change_pct": 5.56
-    },
-    {
-      "id": "LOR11-168",
-      "name": "Darkwing's Chair Set",
-      "from": 0.38,
-      "to": 0.4,
-      "change_brl": 0.02,
-      "change_pct": 5.26
-    },
-    {
-      "id": "LOR13-136",
-      "name": "Rahr!",
-      "from": 0.8,
-      "to": 0.84,
-      "change_brl": 0.04,
-      "change_pct": 5.0
-    },
-    {
-      "id": "LOR11-93",
-      "name": "Donald Duck - Fred Honeywell",
-      "from": 6.0,
-      "to": 6.29,
-      "change_brl": 0.29,
-      "change_pct": 4.83
-    },
-    {
-      "id": "LOR11-89",
-      "name": "White Rabbit - Late Again",
-      "from": 0.21,
-      "to": 0.22,
-      "change_brl": 0.01,
-      "change_pct": 4.76
-    },
-    {
-      "id": "LOR7-212",
-      "name": "Tramp - Enterprising Dog (Enchanted)",
-      "from": 1099.9,
-      "to": 1150.0,
-      "change_brl": 50.1,
-      "change_pct": 4.55
-    },
-    {
-      "id": "LOR1-29",
-      "name": "Just in Time",
-      "from": 5.75,
-      "to": 6.0,
-      "change_brl": 0.25,
-      "change_pct": 4.35
-    },
-    {
-      "id": "LOR8-74",
-      "name": "Jafar - High Sultan of Lorcana",
-      "from": 6.52,
-      "to": 6.8,
-      "change_brl": 0.28,
-      "change_pct": 4.29
-    },
-    {
-      "id": "LOR10-81",
-      "name": "Flynn Rider - Spectral Scoundrel",
-      "from": 0.24,
-      "to": 0.25,
-      "change_brl": 0.01,
-      "change_pct": 4.17
-    },
-    {
-      "id": "LOR11-134",
-      "name": "Scrooge's Counting House - Ebenezer's Office",
-      "from": 0.24,
-      "to": 0.25,
-      "change_brl": 0.01,
-      "change_pct": 4.17
-    },
-    {
-      "id": "LOR10-197",
-      "name": "He Hurled His Thunderbolt",
-      "from": 7.49,
-      "to": 7.8,
-      "change_brl": 0.31,
-      "change_pct": 4.14
-    },
-    {
-      "id": "LOR13-57",
-      "name": "Morph - Little Imitator",
-      "from": 23.95,
-      "to": 24.9,
-      "change_brl": 0.95,
-      "change_pct": 3.97
-    },
-    {
-      "id": "LOR13-183",
-      "name": "Violet Parr - Force Field Practice",
-      "from": 9.5,
-      "to": 9.8,
-      "change_brl": 0.3,
-      "change_pct": 3.16
-    },
-    {
-      "id": "LOR10-130",
-      "name": "Get to Safety!",
-      "from": 0.34,
-      "to": 0.35,
-      "change_brl": 0.01,
-      "change_pct": 2.94
-    },
-    {
-      "id": "LOR11-145",
-      "name": "Darkwing Duck - Drake Mallard",
-      "from": 0.34,
-      "to": 0.35,
-      "change_brl": 0.01,
-      "change_pct": 2.94
-    },
-    {
-      "id": "LOR12-79",
-      "name": "Lenny - Toy Binoculars",
-      "from": 6.8,
-      "to": 7.0,
-      "change_brl": 0.2,
-      "change_pct": 2.94
-    },
-    {
-      "id": "LOR5-215",
-      "name": "Robin Hood - Sharpshooter (Enchanted)",
-      "from": 700.0,
-      "to": 719.91,
-      "change_brl": 19.91,
-      "change_pct": 2.84
-    },
-    {
-      "id": "LOR10-23",
-      "name": "Mickey Mouse - Amber Champion",
-      "from": 3.9,
-      "to": 3.98,
-      "change_brl": 0.08,
-      "change_pct": 2.05
-    },
-    {
-      "id": "LOR4-192",
-      "name": "Rajah - Royal Protector",
-      "from": 0.49,
-      "to": 0.5,
-      "change_brl": 0.01,
-      "change_pct": 2.04
-    },
-    {
-      "id": "LOR11-50",
-      "name": "Anna - Soothing Sister",
-      "from": 4.39,
-      "to": 4.46,
-      "change_brl": 0.07,
-      "change_pct": 1.59
-    },
-    {
-      "id": "LOR1-39",
-      "name": "Dr. Facilier - Remarkable Gentleman",
-      "from": 3.9,
-      "to": 3.95,
-      "change_brl": 0.05,
-      "change_pct": 1.28
-    },
-    {
-      "id": "LOR12-126",
-      "name": "Sid Phillips - Toy Surgeon",
-      "from": 19.9,
-      "to": 20.0,
-      "change_brl": 0.1,
-      "change_pct": 0.5
-    },
-    {
-      "id": "LOR11-25",
-      "name": "Angel - Siren Singer",
-      "from": 2.29,
-      "to": 2.3,
-      "change_brl": 0.01,
-      "change_pct": 0.44
-    },
-    {
-      "id": "LOR12-82",
-      "name": "Milo Thatch - Getting His Hands Dirty",
-      "from": 9.86,
-      "to": 9.9,
-      "change_brl": 0.04,
-      "change_pct": 0.41
-    },
-    {
-      "id": "LOR2-24",
-      "name": "Snow White - Unexpected Houseguest",
-      "from": 2.69,
-      "to": 2.7,
-      "change_brl": 0.01,
-      "change_pct": 0.37
-    },
-    {
-      "id": "LOR11-192",
-      "name": "Darkwing Duck - Cool Under Pressure",
-      "from": 34.9,
-      "to": 35.0,
-      "change_brl": 0.1,
-      "change_pct": 0.29
-    }
-  ],
-  "biggest_losers": [
-    {
-      "id": "LOR3-7",
-      "name": "Kida - Protector of Atlantis",
-      "from": 79.9,
-      "to": 19.9,
-      "change_brl": -60.0,
-      "change_pct": -75.09
-    },
-    {
-      "id": "LOR13-175",
-      "name": "Hundred Acre Wood - Hunny Campsite",
-      "from": 3.83,
-      "to": 1.2,
-      "change_brl": -2.63,
-      "change_pct": -68.67
-    },
-    {
-      "id": "LOR13-239",
-      "name": "Rapunzel &amp; Flynn Rider - Unlikely Pair (Enchanted)",
-      "from": 2899.9,
-      "to": 999.9,
-      "change_brl": -1900.0,
-      "change_pct": -65.52
-    },
-    {
-      "id": "LOR13-154",
-      "name": "Piglet - Hunny Mage Apprentice",
-      "from": 2.0,
-      "to": 0.8,
-      "change_brl": -1.2,
-      "change_pct": -60.0
-    },
-    {
-      "id": "LOR13-227",
-      "name": "Pocahontas &amp; Meeko - Adventurous Friends (Enchanted)",
-      "from": 1999.9,
-      "to": 799.9,
-      "change_brl": -1200.0,
-      "change_pct": -60.0
-    },
-    {
-      "id": "LOR13-93",
-      "name": "Mother Gothel - Evil as Ever",
-      "from": 1.99,
-      "to": 0.8,
-      "change_brl": -1.19,
-      "change_pct": -59.8
-    },
-    {
-      "id": "LOR11-229",
-      "name": "Mulan - Resourceful Recruit (Enchanted)",
-      "from": 1799.9,
-      "to": 799.9,
-      "change_brl": -1000.0,
-      "change_pct": -55.56
-    },
-    {
-      "id": "LOR12-196",
-      "name": "Diablo - Stone Servant",
-      "from": 4.0,
-      "to": 2.0,
-      "change_brl": -2.0,
-      "change_pct": -50.0
-    },
-    {
-      "id": "LOR13-226",
-      "name": "Mike Wazowski - Heroic Climber (Enchanted)",
-      "from": 1999.9,
-      "to": 999.9,
-      "change_brl": -1000.0,
-      "change_pct": -50.0
-    },
-    {
-      "id": "DLPC1-4-P3",
-      "name": "Maleficent - Monstrous Dragon (Store Championship Participant)",
-      "from": 199.9,
-      "to": 99.99,
-      "change_brl": -99.91,
-      "change_pct": -49.98
-    },
-    {
-      "id": "LOR13-241",
-      "name": "Dash Parr &amp; Violet Parr - Super Siblings (Enchanted)",
-      "from": 1299.9,
-      "to": 659.9,
-      "change_brl": -640.0,
-      "change_pct": -49.23
-    },
-    {
-      "id": "LOR10-224",
-      "name": "Simba - King in the Making (Enchanted)",
-      "from": 1899.9,
-      "to": 999.9,
-      "change_brl": -900.0,
-      "change_pct": -47.37
-    },
-    {
-      "id": "LOR13-161",
-      "name": "Pluto - Suspicious Sentry",
-      "from": 1.5,
-      "to": 0.8,
-      "change_brl": -0.7,
-      "change_pct": -46.67
-    },
-    {
-      "id": "LOR12-121",
-      "name": "Jack‐Jack Parr – Incredible Potential",
-      "from": 7.49,
-      "to": 4.0,
-      "change_brl": -3.49,
-      "change_pct": -46.6
-    },
-    {
-      "id": "LOR13-231",
-      "name": "Merida - Wisp Conjurer (Enchanted)",
-      "from": 1100.0,
-      "to": 589.9,
-      "change_brl": -510.1,
-      "change_pct": -46.37
-    },
-    {
-      "id": "LOR11-234",
-      "name": "The Cold Never Bothered Me (Enchanted)",
-      "from": 2599.99,
-      "to": 1399.9,
-      "change_brl": -1200.09,
-      "change_pct": -46.16
-    },
-    {
-      "id": "LOR13-233",
-      "name": "Peter Pan &amp; Tinker Bell - Fast Friends (Enchanted)",
-      "from": 2149.9,
-      "to": 1199.9,
-      "change_brl": -950.0,
-      "change_pct": -44.19
-    },
-    {
-      "id": "LOR12-125",
-      "name": "The Leviathan - Guardian of Atlantis",
-      "from": 3.5,
-      "to": 2.0,
-      "change_brl": -1.5,
-      "change_pct": -42.86
-    },
-    {
-      "id": "LOR13-242",
-      "name": "Darkwing Duck &amp; Launchpad - St. Canard's Finest (Enchanted)",
-      "from": 1199.9,
-      "to": 699.9,
-      "change_brl": -500.0,
-      "change_pct": -41.67
-    },
-    {
-      "id": "LOR13-235",
-      "name": "Maleficent &amp; Diablo - Evil Incarnate (Enchanted)",
-      "from": 1699.9,
-      "to": 999.9,
-      "change_brl": -700.0,
-      "change_pct": -41.18
-    },
-    {
-      "id": "D100-23",
-      "name": "Maui - Demigod (Alternate Art)",
-      "from": 250.0,
-      "to": 149.95,
-      "change_brl": -100.05,
-      "change_pct": -40.02
-    },
-    {
-      "id": "LOR13-232",
-      "name": "Aladdin &amp; Genie - Mischievous Pals (Enchanted)",
-      "from": 1299.9,
-      "to": 799.9,
-      "change_brl": -500.0,
-      "change_pct": -38.46
-    },
-    {
-      "id": "LOR11-236",
-      "name": "Belle - Snowfield Strategist (Enchanted)",
-      "from": 2399.9,
-      "to": 1499.9,
-      "change_brl": -900.0,
-      "change_pct": -37.5
+      "change_brl": 1.91,
+      "change_pct": 19.12
     },
     {
       "id": "DLPC1-30-P3",
       "name": "Elisa Maza - Transformed Gargoyle",
-      "from": 89.95,
-      "to": 56.87,
-      "change_brl": -33.08,
-      "change_pct": -36.78
+      "from": 56.87,
+      "to": 66.9,
+      "change_brl": 10.03,
+      "change_pct": 17.64
     },
     {
-      "id": "LOR10-228",
-      "name": "Can't Hold It Back Anymore (Enchanted)",
-      "from": 2000.0,
-      "to": 1299.9,
-      "change_brl": -700.1,
-      "change_pct": -35.0
+      "id": "DLPC1-51-P3",
+      "name": "Will O' the Wisp - Forest Spirit",
+      "from": 42.42,
+      "to": 49.9,
+      "change_brl": 7.48,
+      "change_pct": 17.63
     },
     {
-      "id": "D100-22",
-      "name": "Maleficent - Uninvited (Alternate Art)",
-      "from": 299.9,
-      "to": 199.95,
-      "change_brl": -99.95,
+      "id": "LOR11-32",
+      "name": "Ohana means Family",
+      "from": 99.5,
+      "to": 117.0,
+      "change_brl": 17.5,
+      "change_pct": 17.59
+    },
+    {
+      "id": "DLPC1-52-P3",
+      "name": "Dash Parr - Lava Runner",
+      "from": 29.99,
+      "to": 35.0,
+      "change_brl": 5.01,
+      "change_pct": 16.71
+    },
+    {
+      "id": "DLPC1-4-C2",
+      "name": "Simba - Pride Protector",
+      "from": 5999.9,
+      "to": 7000.0,
+      "change_brl": 1000.1,
+      "change_pct": 16.67
+    },
+    {
+      "id": "LOR1-98",
+      "name": "Sudden Chill",
+      "from": 0.3,
+      "to": 0.35,
+      "change_brl": 0.05,
+      "change_pct": 16.67
+    },
+    {
+      "id": "LOR11-100",
+      "name": "Retro Evolution Device",
+      "from": 0.3,
+      "to": 0.35,
+      "change_brl": 0.05,
+      "change_pct": 16.67
+    },
+    {
+      "id": "LOR13-59",
+      "name": "Aladdin &amp; Genie - Mischievous Pals",
+      "from": 12.9,
+      "to": 14.9,
+      "change_brl": 2.0,
+      "change_pct": 15.5
+    },
+    {
+      "id": "LOR7-175",
+      "name": "Baymax - Upgraded Robot",
+      "from": 1.75,
+      "to": 2.01,
+      "change_brl": 0.26,
+      "change_pct": 14.86
+    },
+    {
+      "id": "LOR13-32",
+      "name": "If I Didn't Have You",
+      "from": 0.7,
+      "to": 0.8,
+      "change_brl": 0.1,
+      "change_pct": 14.29
+    },
+    {
+      "id": "LOR13-85",
+      "name": "Aladdin - Doing His Part",
+      "from": 0.7,
+      "to": 0.8,
+      "change_brl": 0.1,
+      "change_pct": 14.29
+    },
+    {
+      "id": "LOR12-232",
+      "name": "Jack‐Jack Parr - Incredible Potential (Enchanted)",
+      "from": 750.0,
+      "to": 849.0,
+      "change_brl": 99.0,
+      "change_pct": 13.2
+    },
+    {
+      "id": "LOR8-137",
+      "name": "Lilo - Causing an Uproar",
+      "from": 80.0,
+      "to": 89.7,
+      "change_brl": 9.7,
+      "change_pct": 12.13
+    },
+    {
+      "id": "LOR13-23",
+      "name": "Kanga - Hunny Bard",
+      "from": 5.73,
+      "to": 6.37,
+      "change_brl": 0.64,
+      "change_pct": 11.17
+    },
+    {
+      "id": "DLPC1-18-P3",
+      "name": "Zeus - Missing His Spark",
+      "from": 52.96,
+      "to": 58.85,
+      "change_brl": 5.89,
+      "change_pct": 11.12
+    },
+    {
+      "id": "LOR1-121",
+      "name": "Rapunzel - Letting Down Her Hair",
+      "from": 0.45,
+      "to": 0.5,
+      "change_brl": 0.05,
+      "change_pct": 11.11
+    },
+    {
+      "id": "DLPC1-30-P2",
+      "name": "Patch - Playful Pup",
+      "from": 13.5,
+      "to": 14.9,
+      "change_brl": 1.4,
+      "change_pct": 10.37
+    },
+    {
+      "id": "LOR13-64",
+      "name": "You've Got Some Punch",
+      "from": 2.3,
+      "to": 2.49,
+      "change_brl": 0.19,
+      "change_pct": 8.26
+    },
+    {
+      "id": "LOR12-92",
+      "name": "Cruella De Vil - Judgmental Traveler",
+      "from": 0.75,
+      "to": 0.81,
+      "change_brl": 0.06,
+      "change_pct": 8.0
+    },
+    {
+      "id": "LOR9-14",
+      "name": "Pluto - Determined Defender",
+      "from": 0.27,
+      "to": 0.29,
+      "change_brl": 0.02,
+      "change_pct": 7.41
+    },
+    {
+      "id": "LOR12-12",
+      "name": "Monterey Jack - Hypnotized by Cheese",
+      "from": 0.56,
+      "to": 0.6,
+      "change_brl": 0.04,
+      "change_pct": 7.14
+    },
+    {
+      "id": "LOR11-197",
+      "name": "The Terror That Flaps in the Night",
+      "from": 0.16,
+      "to": 0.17,
+      "change_brl": 0.01,
+      "change_pct": 6.25
+    },
+    {
+      "id": "LOR13-172",
+      "name": "Laugh Canister",
+      "from": 4.62,
+      "to": 4.9,
+      "change_brl": 0.28,
+      "change_pct": 6.06
+    },
+    {
+      "id": "LOR13-101",
+      "name": "To Wither a Flower",
+      "from": 20.66,
+      "to": 21.9,
+      "change_brl": 1.24,
+      "change_pct": 6.0
+    },
+    {
+      "id": "LOR10-43",
+      "name": "Iago - Stompin’ Mad",
+      "from": 0.34,
+      "to": 0.36,
+      "change_brl": 0.02,
+      "change_pct": 5.88
+    },
+    {
+      "id": "LOR11-203",
+      "name": "Containment Unit",
+      "from": 0.17,
+      "to": 0.18,
+      "change_brl": 0.01,
+      "change_pct": 5.88
+    },
+    {
+      "id": "LOR13-153",
+      "name": "Randall Boggs - Scary Smart",
+      "from": 9.04,
+      "to": 9.5,
+      "change_brl": 0.46,
+      "change_pct": 5.09
+    },
+    {
+      "id": "LOR13-5",
+      "name": "Rabbit - Hunny Paladin",
+      "from": 2.37,
+      "to": 2.49,
+      "change_brl": 0.12,
+      "change_pct": 5.06
+    },
+    {
+      "id": "LOR4-102",
+      "name": "Ursula's Garden - Full of the Unfortunate",
+      "from": 0.42,
+      "to": 0.44,
+      "change_brl": 0.02,
+      "change_pct": 4.76
+    },
+    {
+      "id": "LOR6-92",
+      "name": "Olivia Flaversham - The Toymaker's Daughter",
+      "from": 0.67,
+      "to": 0.7,
+      "change_brl": 0.03,
+      "change_pct": 4.48
+    },
+    {
+      "id": "LOR11-107",
+      "name": "Copper - On the Scent",
+      "from": 0.24,
+      "to": 0.25,
+      "change_brl": 0.01,
+      "change_pct": 4.17
+    },
+    {
+      "id": "LOR4-3",
+      "name": "Ariel - Singing Mermaid",
+      "from": 1.2,
+      "to": 1.25,
+      "change_brl": 0.05,
+      "change_pct": 4.17
+    },
+    {
+      "id": "LOR4-106",
+      "name": "Flynn Rider - Frenemy",
+      "from": 0.48,
+      "to": 0.5,
+      "change_brl": 0.02,
+      "change_pct": 4.17
+    },
+    {
+      "id": "LOR4-156",
+      "name": "The Queen - Diviner",
+      "from": 8.56,
+      "to": 8.9,
+      "change_brl": 0.34,
+      "change_pct": 3.97
+    }
+  ],
+  "biggest_losers": [
+    {
+      "id": "LOR7-188",
+      "name": "Fa Zhou - War Hero",
+      "from": 3.5,
+      "to": 0.4,
+      "change_brl": -3.1,
+      "change_pct": -88.57
+    },
+    {
+      "id": "LOR2-70",
+      "name": "Beast - Relentless",
+      "from": 69.99,
+      "to": 29.9,
+      "change_brl": -40.09,
+      "change_pct": -57.28
+    },
+    {
+      "id": "LOR1-140",
+      "name": "Aurora - Regal Princess",
+      "from": 0.15,
+      "to": 0.1,
+      "change_brl": -0.05,
       "change_pct": -33.33
     },
     {
-      "id": "LOR12-68",
-      "name": "Ring of Stones - Place of Legends",
-      "from": 1.5,
-      "to": 1.0,
-      "change_brl": -0.5,
-      "change_pct": -33.33
+      "id": "LOR4-16",
+      "name": "Mickey Mouse - Musketeer Captain",
+      "from": 19.95,
+      "to": 13.59,
+      "change_brl": -6.36,
+      "change_pct": -31.88
     },
     {
-      "id": "LOR13-229",
-      "name": "Sulley &amp; Boo - Scare Buddies (Enchanted)",
-      "from": 2499.9,
-      "to": 1699.9,
-      "change_brl": -800.0,
-      "change_pct": -32.0
+      "id": "DLPC1-49-P3",
+      "name": "Lenny - Toy Binoculars",
+      "from": 49.99,
+      "to": 34.9,
+      "change_brl": -15.09,
+      "change_pct": -30.19
     },
     {
-      "id": "LOR13-243",
-      "name": "Scar - Created by the Vine (Enchanted)",
-      "from": 1099.9,
-      "to": 749.9,
-      "change_brl": -350.0,
-      "change_pct": -31.82
-    },
-    {
-      "id": "LOR11-227",
-      "name": "Anna - Soothing Sister (Enchanted)",
-      "from": 2199.0,
-      "to": 1499.9,
-      "change_brl": -699.1,
-      "change_pct": -31.79
-    },
-    {
-      "id": "LOR12-204",
-      "name": "The Island of Nomanisan - Syndrome's Headquarters",
-      "from": 1.46,
-      "to": 1.0,
-      "change_brl": -0.46,
-      "change_pct": -31.51
-    },
-    {
-      "id": "LOR12-102",
-      "name": "Pizza Planet - Spaceport",
-      "from": 2.9,
-      "to": 2.0,
-      "change_brl": -0.9,
-      "change_pct": -31.03
-    },
-    {
-      "id": "LOR12-155",
-      "name": "Cinderella - Resourceful Traveler",
-      "from": 1.45,
-      "to": 1.0,
-      "change_brl": -0.45,
-      "change_pct": -31.03
-    },
-    {
-      "id": "LOR13-237",
-      "name": "Carl Fredricksen &amp; Russell - Intrepid Explorers (Enchanted)",
-      "from": 1000.0,
-      "to": 699.9,
-      "change_brl": -300.1,
+      "id": "LOR8-212",
+      "name": "Fantastical and Magical (Enchanted)",
+      "from": 499.95,
+      "to": 349.9,
+      "change_brl": -150.05,
       "change_pct": -30.01
     },
     {
-      "id": "LOR11-223",
-      "name": "Lilo - Rock Star (Enchanted)",
-      "from": 1399.95,
-      "to": 999.9,
-      "change_brl": -400.05,
-      "change_pct": -28.58
+      "id": "LOR1-171",
+      "name": "Aladdin - Cornered Swordsman",
+      "from": 0.36,
+      "to": 0.26,
+      "change_brl": -0.1,
+      "change_pct": -27.78
     },
     {
-      "id": "LOR12-103",
-      "name": "Lyle Tiberius Rourke - Crystallized Commander",
-      "from": 1.39,
-      "to": 1.0,
-      "change_brl": -0.39,
-      "change_pct": -28.06
+      "id": "LOR1-63",
+      "name": "Freeze",
+      "from": 0.39,
+      "to": 0.29,
+      "change_brl": -0.1,
+      "change_pct": -25.64
     },
     {
-      "id": "LOR12-49",
-      "name": "Mrs. Incredible – Super Stretchy",
-      "from": 9.6,
-      "to": 7.0,
-      "change_brl": -2.6,
-      "change_pct": -27.08
+      "id": "LOR1-131",
+      "name": "Fan the Flames",
+      "from": 0.39,
+      "to": 0.29,
+      "change_brl": -0.1,
+      "change_pct": -25.64
     },
     {
-      "id": "LOR10-237",
-      "name": "Spooky Sight (Enchanted)",
-      "from": 4999.9,
-      "to": 3699.9,
-      "change_brl": -1300.0,
-      "change_pct": -26.0
-    },
-    {
-      "id": "LOR13-236",
-      "name": "Tod &amp; Copper - Best of Friends (Enchanted)",
-      "from": 1199.9,
-      "to": 899.9,
-      "change_brl": -300.0,
+      "id": "LOR1-28",
+      "name": "Healing Glow",
+      "from": 0.4,
+      "to": 0.3,
+      "change_brl": -0.1,
       "change_pct": -25.0
     },
     {
-      "id": "LOR6-40",
-      "name": "The White Rose - Jewel of the Garden",
-      "from": 0.38,
-      "to": 0.29,
-      "change_brl": -0.09,
-      "change_pct": -23.68
+      "id": "LOR1-146",
+      "name": "Gramma Tala - Storyteller",
+      "from": 0.4,
+      "to": 0.3,
+      "change_brl": -0.1,
+      "change_pct": -25.0
     },
     {
-      "id": "D100-21",
-      "name": "Stitch - Abomination (Alternate Art)",
-      "from": 380.0,
-      "to": 299.95,
-      "change_brl": -80.05,
-      "change_pct": -21.07
+      "id": "DLPC1-14-P2",
+      "name": "Scar - Heartless Hunter (Store Championship)",
+      "from": 989.9,
+      "to": 749.9,
+      "change_brl": -240.0,
+      "change_pct": -24.24
     },
     {
-      "id": "LOR13-164",
-      "name": "Eeyore - Hunny Scholar",
-      "from": 1.5,
-      "to": 1.2,
-      "change_brl": -0.3,
+      "id": "LOR1-47",
+      "name": "Magic Broom - Bucket Brigade",
+      "from": 0.45,
+      "to": 0.35,
+      "change_brl": -0.1,
+      "change_pct": -22.22
+    },
+    {
+      "id": "LOR1-202",
+      "name": "Frying Pan",
+      "from": 0.45,
+      "to": 0.35,
+      "change_brl": -0.1,
+      "change_pct": -22.22
+    },
+    {
+      "id": "LOR1-110",
+      "name": "Gaston - Arrogant Hunter",
+      "from": 0.23,
+      "to": 0.18,
+      "change_brl": -0.05,
+      "change_pct": -21.74
+    },
+    {
+      "id": "LOR1-124",
+      "name": "Sergeant Tibbs - Courageous Cat",
+      "from": 0.23,
+      "to": 0.18,
+      "change_brl": -0.05,
+      "change_pct": -21.74
+    },
+    {
+      "id": "LOR1-132",
+      "name": "He's Got A Sword!",
+      "from": 0.23,
+      "to": 0.18,
+      "change_brl": -0.05,
+      "change_pct": -21.74
+    },
+    {
+      "id": "LOR1-176",
+      "name": "Cerberus - Three-Headed Dog",
+      "from": 0.23,
+      "to": 0.18,
+      "change_brl": -0.05,
+      "change_pct": -21.74
+    },
+    {
+      "id": "LOR1-187",
+      "name": "Prince Eric - Dashing and Brave",
+      "from": 0.23,
+      "to": 0.18,
+      "change_brl": -0.05,
+      "change_pct": -21.74
+    },
+    {
+      "id": "LOR1-196",
+      "name": "Break",
+      "from": 0.23,
+      "to": 0.18,
+      "change_brl": -0.05,
+      "change_pct": -21.74
+    },
+    {
+      "id": "LOR12-56",
+      "name": "Pepa Madrigal - Calm Before the Storm",
+      "from": 1.9,
+      "to": 1.5,
+      "change_brl": -0.4,
+      "change_pct": -21.05
+    },
+    {
+      "id": "LOR1-141",
+      "name": "Belle - Inventive Engineer",
+      "from": 0.49,
+      "to": 0.39,
+      "change_brl": -0.1,
+      "change_pct": -20.41
+    },
+    {
+      "id": "LOR1-11",
+      "name": "Maximus - Relentless Pursuer",
+      "from": 0.25,
+      "to": 0.2,
+      "change_brl": -0.05,
       "change_pct": -20.0
     },
     {
-      "id": "LOR11-225",
-      "name": "Raging Storm (Enchanted)",
-      "from": 1600.0,
-      "to": 1299.9,
-      "change_brl": -300.1,
-      "change_pct": -18.76
+      "id": "LOR1-32",
+      "name": "Dinglehopper",
+      "from": 0.25,
+      "to": 0.2,
+      "change_brl": -0.05,
+      "change_pct": -20.0
     },
     {
-      "id": "LOR10-240",
-      "name": "The Sword of Hercules (Enchanted)",
-      "from": 429.9,
-      "to": 349.9,
-      "change_brl": -80.0,
-      "change_pct": -18.61
+      "id": "LOR1-46",
+      "name": "Jetsam - Ursula's Spy",
+      "from": 0.25,
+      "to": 0.2,
+      "change_brl": -0.05,
+      "change_pct": -20.0
     },
     {
-      "id": "LOR10-233",
-      "name": "Lady Tremaine - Sinister Socialite (Enchanted)",
-      "from": 490.99,
-      "to": 399.9,
-      "change_brl": -91.09,
-      "change_pct": -18.55
+      "id": "LOR1-58",
+      "name": "Tinker Bell - Peter Pan's Ally",
+      "from": 0.25,
+      "to": 0.2,
+      "change_brl": -0.05,
+      "change_pct": -20.0
     },
     {
-      "id": "LOR10-235",
-      "name": "Judy Hopps - Lead Detective (Enchanted)",
-      "from": 1099.9,
-      "to": 899.9,
-      "change_brl": -200.0,
-      "change_pct": -18.18
+      "id": "LOR1-91",
+      "name": "Peter Pan - Never Landing",
+      "from": 0.5,
+      "to": 0.4,
+      "change_brl": -0.1,
+      "change_pct": -20.0
     },
     {
-      "id": "LOR10-226",
-      "name": "The Horned King - Wicked Ruler (Enchanted)",
-      "from": 599.9,
-      "to": 499.9,
-      "change_brl": -100.0,
-      "change_pct": -16.67
+      "id": "LOR1-100",
+      "name": "Vicious Betrayal",
+      "from": 0.5,
+      "to": 0.4,
+      "change_brl": -0.1,
+      "change_pct": -20.0
     },
     {
-      "id": "LOR13-10",
-      "name": "Lilo - Patient Weaver",
-      "from": 0.84,
-      "to": 0.7,
-      "change_brl": -0.14,
-      "change_pct": -16.67
+      "id": "LOR1-105",
+      "name": "Aladdin - Street Rat",
+      "from": 0.5,
+      "to": 0.4,
+      "change_brl": -0.1,
+      "change_pct": -20.0
     },
     {
-      "id": "LOR11-226",
-      "name": "Eeyore - In the Way (Enchanted)",
-      "from": 3999.9,
-      "to": 3399.9,
-      "change_brl": -600.0,
-      "change_pct": -15.0
+      "id": "LOR1-129",
+      "name": "Cut to the Chase",
+      "from": 0.25,
+      "to": 0.2,
+      "change_brl": -0.05,
+      "change_pct": -20.0
     },
     {
-      "id": "LOR11-228",
-      "name": "Colors of the Wind (Enchanted)",
-      "from": 1999.9,
-      "to": 1699.9,
-      "change_brl": -300.0,
-      "change_pct": -15.0
+      "id": "LOR1-133",
+      "name": "Tangle",
+      "from": 0.25,
+      "to": 0.2,
+      "change_brl": -0.05,
+      "change_pct": -20.0
+    },
+    {
+      "id": "LOR1-145",
+      "name": "Flounder - Voice of Reason",
+      "from": 0.25,
+      "to": 0.2,
+      "change_brl": -0.05,
+      "change_pct": -20.0
+    },
+    {
+      "id": "LOR1-156",
+      "name": "Philoctetes - Trainer of Heroes",
+      "from": 0.25,
+      "to": 0.2,
+      "change_brl": -0.05,
+      "change_pct": -20.0
+    },
+    {
+      "id": "LOR1-179",
+      "name": "Goons - Maleficent's Underlings",
+      "from": 0.25,
+      "to": 0.2,
+      "change_brl": -0.05,
+      "change_pct": -20.0
+    },
+    {
+      "id": "LOR1-194",
+      "name": "Tinker Bell - Tiny Tactician",
+      "from": 0.25,
+      "to": 0.2,
+      "change_brl": -0.05,
+      "change_pct": -20.0
+    },
+    {
+      "id": "LOR1-200",
+      "name": "Smash",
+      "from": 0.5,
+      "to": 0.4,
+      "change_brl": -0.1,
+      "change_pct": -20.0
+    },
+    {
+      "id": "LOR1-201",
+      "name": "Beast's Mirror",
+      "from": 0.25,
+      "to": 0.2,
+      "change_brl": -0.05,
+      "change_pct": -20.0
+    },
+    {
+      "id": "LOR12-3",
+      "name": "Woody - Waiting for a Friend",
+      "from": 1.25,
+      "to": 1.0,
+      "change_brl": -0.25,
+      "change_pct": -20.0
+    },
+    {
+      "id": "LOR12-26",
+      "name": "Mickey Mouse - Expedition Leader",
+      "from": 18.6,
+      "to": 15.0,
+      "change_brl": -3.6,
+      "change_pct": -19.35
+    },
+    {
+      "id": "LOR2-173",
+      "name": "Beast - Tragic Hero",
+      "from": 99.0,
+      "to": 79.9,
+      "change_brl": -19.1,
+      "change_pct": -19.29
+    },
+    {
+      "id": "LOR1-3",
+      "name": "Cinderella - Gentle and Kind",
+      "from": 0.52,
+      "to": 0.42,
+      "change_brl": -0.1,
+      "change_pct": -19.23
+    },
+    {
+      "id": "LOR1-62",
+      "name": "Befuddle",
+      "from": 0.52,
+      "to": 0.42,
+      "change_brl": -0.1,
+      "change_pct": -19.23
+    },
+    {
+      "id": "LOR1-122",
+      "name": "Scar - Fiery Usurper",
+      "from": 0.27,
+      "to": 0.22,
+      "change_brl": -0.05,
+      "change_pct": -18.52
+    },
+    {
+      "id": "LOR1-144",
+      "name": "Donald Duck - Strutting His Stuff",
+      "from": 0.27,
+      "to": 0.22,
+      "change_brl": -0.05,
+      "change_pct": -18.52
+    },
+    {
+      "id": "LOR1-148",
+      "name": "Jasmine - Disguised",
+      "from": 0.27,
+      "to": 0.22,
+      "change_brl": -0.05,
+      "change_pct": -18.52
+    },
+    {
+      "id": "LOR1-150",
+      "name": "Maleficent - Sinister Visitor",
+      "from": 0.27,
+      "to": 0.22,
+      "change_brl": -0.05,
+      "change_pct": -18.52
+    },
+    {
+      "id": "LOR1-155",
+      "name": "Mufasa - King of the Pride Lands",
+      "from": 0.27,
+      "to": 0.22,
+      "change_brl": -0.05,
+      "change_pct": -18.52
+    },
+    {
+      "id": "LOR1-165",
+      "name": "Work Together",
+      "from": 0.27,
+      "to": 0.22,
+      "change_brl": -0.05,
+      "change_pct": -18.52
+    },
+    {
+      "id": "LOR1-79",
+      "name": "Horace - No-Good Scoundrel",
+      "from": 0.28,
+      "to": 0.23,
+      "change_brl": -0.05,
+      "change_pct": -17.86
+    },
+    {
+      "id": "LOR1-172",
+      "name": "Beast - Hardheaded",
+      "from": 1.4,
+      "to": 1.15,
+      "change_brl": -0.25,
+      "change_pct": -17.86
     }
   ]
 }
