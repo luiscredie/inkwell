@@ -25,3 +25,20 @@ from public.inkwell_profiles
 where user_id = auth.uid();
 ```
 
+
+## Lore Counter (offline app at `/counter/`)
+
+The Lore Counter works with no internet and sends each finished match to
+`public.game_logs` when the phone is back online. One-time setup:
+
+1. **SQL Editor**: run `supabase/game_logs.sql` (safe to run again).
+2. **Authentication → Emails → Magic Link**: add the code to the email body, e.g.
+   `<p>Código: <b>{{ .Token }}</b></p>`. On iPhone an app added to the home
+   screen doesn't share Safari's sign-in, so the counter signs in by typing
+   this code instead of tapping the link.
+3. **Authentication → URL Configuration → Redirect URLs**: add
+   `https://luiscredie.github.io/inkwell/counter/`.
+
+The counter is built from the Inkwell 2 repo
+(`apps/lorecounter/build_pwa.py --config site/sync-config.json --out site/counter`).
+Don't edit `site/counter/` by hand.
