@@ -188,8 +188,9 @@ check('the two nav branches test opposite values, not the same one twice', () =>
   const i = html.indexOf('list="{{ nav }}"');
   const bloco = html.slice(i, i + 900);
   const valores = [...bloco.matchAll(/<sc-if value="\{\{ (item\.\w+) \}\}"/g)].map((m) => m[1]);
-  assert.equal(valores.length, 2, 'esperado um ramo de link e um de view');
-  assert.notEqual(valores[0], valores[1], 'os dois ramos nao podem testar o mesmo valor');
+  // link externo, pagina do proprio site (Comunidade) e view: cada ramo testa um valor diferente
+  assert.deepEqual(valores, ['item._isLink', 'item._isSame', 'item._isView'], 'esperado um ramo de link, um de pagina do site e um de view');
+  assert.equal(new Set(valores).size, valores.length, 'os ramos nao podem testar o mesmo valor');
 });
 check('the nav link carries the active deck and a distinct opponent', () => {
   const i = html.indexOf("{key:'sim'");

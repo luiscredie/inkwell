@@ -13,14 +13,14 @@
 <helmet>
 <link rel="icon" type="image/png" href="ink/logo-coin.png">
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#0a0c10">
+<meta name="theme-color" content="#13102a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Inkwell">
 <link rel="apple-touch-icon" href="ink/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
@@ -30,23 +30,23 @@
     /* M3V design tokens — "Immortal Precision" (M2.7 V5). Values swapped here reach
        the whole app: V5 retrofitted the hardcoded hex to these names. */
     --ink-amber:#F59E0B; --ink-amethyst:#8B5CF6; --ink-emerald:#10B981; --ink-ruby:#EF4444; --ink-sapphire:#3B82F6; --ink-steel:#64748B;
-    --accent:#ffffff; --accent-strong:#e2e2e2; --on-accent:#131313;
+    --accent:#ecc061; --accent-strong:#d9a93f; --on-accent:#241a04;
     --gold:#D4AF37; --gold-dim:#B8962E;   /* value/money only — never a UI action */
-    --surface-page:#0a0c10; --surface-section:#1c1b1b; --surface-panel:#201f1f; --surface-card:#2a2a2a; --surface-modal:#201f1f;
-    --surface-lowest:#0e0e0e; --surface-highest:#353534;
-    --glass-bg:rgba(255,255,255,.03); --glass-border:1px solid rgba(255,255,255,.05); --glass-blur:blur(24px);
+    --surface-page:#13102a; --surface-section:#1a1636; --surface-panel:#1e1a3b; --surface-card:#2a2552; --surface-modal:#1e1a3b;
+    --surface-lowest:#100d24; --surface-highest:#352f60;
+    --glass-bg:rgba(42,37,82,.35); --glass-border:1px solid rgba(53,47,96,.7); --glass-blur:blur(24px);
     --amethyst:#8e5b9b;
-    --text-primary:#e5e2e1; --text-secondary:#c4c7c8; --text-muted:#8e9192;
-    --text-1:#e5e2e1; --text-2:#c4c7c8; --text-3:#8e9192; --text-4:#6b6e6f;
-    --outline:rgba(63,63,70,.5); --outline-strong:rgba(255,255,255,.22);
+    --text-primary:#f5f1fb; --text-secondary:#d3cdea; --text-muted:#aaa3cc;
+    --text-1:#f5f1fb; --text-2:#d3cdea; --text-3:#aaa3cc; --text-4:#7f78a8;
+    --outline:rgba(53,47,96,.85); --outline-strong:rgba(255,255,255,.22);
     --ok:#6ec99a; --warn:#d9bb63; --err:#ffb4ab; --info:#8fb3e0;
-    --font-sans:'Inter',system-ui,-apple-system,sans-serif; --font-title:'Inter',system-ui,-apple-system,sans-serif; --font-serif:'Inter',system-ui,-apple-system,sans-serif; --font-mono:'JetBrains Mono',ui-monospace,monospace;
+    --font-sans:'Bricolage Grotesque','Inter',system-ui,-apple-system,sans-serif; --font-title:'Bricolage Grotesque','Inter',system-ui,sans-serif; --font-serif:'Inter',system-ui,-apple-system,sans-serif; --font-mono:'JetBrains Mono',ui-monospace,monospace;
     --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px;
     --r-sm:8px; --r-md:16px; --r-lg:24px; --r-xl:24px; --r-pill:9999px;
     --gutter:24px; --margin-desktop:64px; --container-max:1440px;
     --elev-1:0 8px 24px -8px rgba(0,0,0,.5); --elev-2:0 20px 40px -10px rgba(0,0,0,.55);
     --shadow-ink:0 20px 40px -10px rgba(0,0,0,.5);
-    --dur-fast:.16s; --dur-med:.28s; --focus-ring:2px solid #ffffff;
+    --dur-fast:.16s; --dur-med:.28s; --focus-ring:2px solid #ecc061;
   }
   a{color:var(--accent);text-decoration:none}
   a:hover{color:#cbb8ff}
@@ -165,6 +165,13 @@
     .mc-match-row{grid-template-columns:34px minmax(0,1fr);padding:13px 12px}
     .mc-match-row>.mc-row-end{grid-column:2;justify-self:start}
   }
+  /* Noite — the same night look as Início, Coach Review and Trocas (packages/ui/shell.css in inkwell-2) */
+  html,body{background:var(--surface-page) radial-gradient(1200px 500px at 85% -10%, rgba(236,192,97,.10), transparent 60%) no-repeat fixed}
+  #ink-main header{background:rgba(19,16,42,.82)!important}
+  a:hover{color:#f3d48d}
+  /* phones: the bottom bar spans the screen (the inline left:22px used to push it off the right edge);
+     the simulator is a desktop page, so its link stays on the desktop rail to leave room for Comunidade */
+  @media (max-width:760px){ #rail{background:rgba(19,16,42,.94)!important;left:0!important;right:0!important} #rail .rail-nav a[target="_blank"]{display:none!important} }
 </style>
 <script>
   window.imgError = function(e){ var el=e.target; var d=el.dataset||{};
@@ -209,6 +216,12 @@
       <sc-for list="{{ nav }}" as="item" hint-placeholder-count="4">
         <sc-if value="{{ item._isLink }}" hint-placeholder-val="{{ false }}">
           <a href="{{ item._href }}" target="_blank" rel="noopener" style="{{ item._style }}">
+            <span class="rail-ico" style="display:flex;width:20px;justify-content:center">{{ item._icon }}</span>
+            <span class="rail-label">{{ item.label }}</span>
+          </a>
+        </sc-if>
+        <sc-if value="{{ item._isSame }}" hint-placeholder-val="{{ false }}">
+          <a href="{{ item._here }}" style="{{ item._style }}" data-testid="rail-community">
             <span class="rail-ico" style="display:flex;width:20px;justify-content:center">{{ item._icon }}</span>
             <span class="rail-label">{{ item.label }}</span>
           </a>
@@ -1859,8 +1872,16 @@
                 </sc-if>
               </div>
               <sc-if value="{{ dd.hasMissing }}" hint-placeholder-val="{{ true }}">
+                <sc-if value="{{ dd.boardReady }}" hint-placeholder-val="{{ false }}">
+                  <div data-testid="missing-board" style="display:flex;flex-wrap:wrap;gap:8px;margin:-4px 0 12px">
+                    <button onClick="{{ postMissingBuy }}" data-testid="post-missing-buy" style="padding:6px 12px;border-radius:999px;background:rgba(236,192,97,.12);border:1px solid rgba(236,192,97,.4);color:var(--accent);font-size:12px;font-weight:600;cursor:pointer">{{ boardPostBuy }}</button>
+                    <button onClick="{{ postMissingBorrow }}" data-testid="post-missing-borrow" style="padding:6px 12px;border-radius:999px;background:rgba(236,192,97,.12);border:1px solid rgba(236,192,97,.4);color:var(--accent);font-size:12px;font-weight:600;cursor:pointer">{{ boardPostBorrow }}</button>
+                    <a href="trades/?tab=board" style="padding:6px 12px;font-size:12px;color:var(--text-3);text-decoration:underline">{{ boardOpen }}</a>
+                  </div>
+                </sc-if>
                 <div style="display:flex;flex-direction:column;gap:3px">
                   <sc-for list="{{ dd.missing }}" as="m" hint-placeholder-count="4">
+                    <div data-testid="missing-row">
                     <div style="display:flex;align-items:center;gap:11px;padding:7px 8px;border-radius:9px" style-hover="background:rgba(255,255,255,.03)">
                       <span style="width:8px;height:26px;border-radius:3px;background:{{ m.ink }};flex-shrink:0"></span>
                       <button onClick="{{ m._open }}" style="flex:1;min-width:0;text-align:left;background:none;border:none;cursor:pointer;color:var(--text-1);font-size:13px;padding:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" style-hover="color:#fff">{{ m.name }}</button>
@@ -1868,6 +1889,13 @@
                       <span style="font-family:var(--font-mono);font-weight:700;font-size:12.5px;color:#ff9d5c">{{ needLabel }} {{ m.need }}</span>
                       <span style="font-size:11px;color:var(--text-4);font-family:var(--font-mono);min-width:64px;text-align:right">{{ m.price }}</span>
                       <a href="{{ m.liga }}" target="_blank" rel="noopener" style="padding:5px 11px;border-radius:9px;background:rgba(46,144,224,.16);border:1px solid rgba(46,144,224,.35);color:#7ac0ff;font-size:12px;font-weight:600;white-space:nowrap">{{ buyLabel }}</a>
+                    </div>
+                    <sc-if value="{{ m.hasOffers }}" hint-placeholder-val="{{ false }}">
+                      <a href="{{ m.board }}" data-testid="missing-offers" style="display:block;padding:0 8px 6px 27px;font-size:12px;color:var(--ok)">↳ {{ m.offers }}</a>
+                    </sc-if>
+                    <sc-if value="{{ m.posted }}" hint-placeholder-val="{{ false }}">
+                      <span data-testid="missing-posted" style="display:block;padding:0 8px 6px 27px;font-size:11.5px;color:var(--text-4)">✓ {{ m.postedLabel }}</span>
+                    </sc-if>
                     </div>
                   </sc-for>
                 </div>
@@ -2599,7 +2627,7 @@ class Component extends DCLogic {
       rpDeck:'Deck', rpDiscard:'Discard', rpLore:'Lore', rpBattlefield:'Battlefield', rpInkwell:'The Inkwell', rpLog:'Turn log', rpShowOppHand:'Opponent hand',
       rpTargets:'targets {name}',
       simTitle:'Simulator readiness', simReady:'Every card in this deck is implemented — this deck can be played.', simBlocked:'{n} cards ({copies} copies) have rules text the engine does not implement yet, so this deck cannot be played.', simReadyCopies:'{n} of {total} copies ready', simBlockedLabel:'Which cards', simKeywordLabel:'Playable through keywords', simNote:'Read from the card text in the catalogue. Cards with keywords only (Evasive, Rush, Shift…) are mechanical and work as-is; cards with triggered or activated text have to be coded by hand in the engine.', simOpponent:'Against', simPlay:'Open simulator',
-      simulator:'Simulator',
+      simulator:'Simulator', community:'Community',
       newDeck:'+ New Deck', importDeck:'↑ Import', createDeck:'Create', cancel:'Cancel', format:'Format',
       inkable:'Inkable', uninkable:'Uninkable', cost:'Cost', allSets:'All sets',
       welcome:'Welcome, {name}', emptyMsg:'Your codex is empty. Import your collection from Dreamborn, or start building a deck — everything is tracked privately in your profile.',
@@ -2623,7 +2651,7 @@ class Component extends DCLogic {
       nowPlaying:'Now Playing', legality:'Legality', last10:'Last 10', switchDeck:'Switch deck:', stSetup:'Setup needed', stIllegal:'Legality issue', stMissing:'Missing cards', stReady:'Ready to play', stPlay:'In rotation', na_finishDeck:'Finish deck', na_fixLegality:'Fix legality', na_viewMissing:'View missing cards', na_logFirst:'Log first match', na_review:'Review / log match', setActive:'Set as active', activeDeck:'✓ Active deck',
       advisorBtn:'Deck Advisor', advisorSub:'Can you build your decks from your collection?',
       activeDeckSet:'Active deck set', optimizedPlan:'Optimized Plan', recommendedPlan:'Recommended Plan', physicalCopies:'Physical copies', pinPriority:'Pin priority', portfolioImpactUnlocks:'+1 copy completes {n} more deck copy(ies)', portfolioImpactReduces:'+1 copy reduces total missing by {n}', portfolioHead:'With your collection, you can build {b} of the {n} selected deck copies at the same time.', portfolioMissing:'{n} total missing copies across the portfolio.', portfolioNextNamed:'Next easiest — {deckName} · {n} additional card(s).', portfolioTotalMissing:'{n} total missing copies across every selected deck.', portfolioPlanTitle:'Deck portfolio plan', portfolioModeHint:'Optimized = exact best plan. Recommended = a good plan found within limits.', portfolioAllOk:'All requested decks are buildable at once.', portfolioExcluded:'Excluded from plan', portfolioNofM:'{a} of {b} buildable', buyLabel:'Buy', buyExt:'Buy ↗', purchaseDetail:'Needs {need} · allocated {allocated} · buy {buy}', sharedCardsTitle:'Shared cards', sharedCardsSummary:'{n} card identities are contested between decks.', sharedAllocation:'{allocated}/{need} allocated', sharedShowMore:'Show all {n}', sharedShowLess:'Show fewer', simPrioritize:'Prioritize', simActive:'Prioritizing', simBanner:'Simulating priority — plan not saved yet.', simConfirm:'Confirm', simReset:'Reset', addMissingWish:'Add missing to wishlist', deckHealthTitle:'Deck health', inkablePctLabel:'inkable', avgCostLabel:'avg cost', deckHealthOk:'Healthy ✓', dh_lowInkable:'Low inkable ratio — you may struggle for ink', dh_slowStart:'Few 1–2 cost plays — slow starts', dh_topHeavy:'High average cost — top-heavy curve', dh_fewCharacters:'Few characters — thin board presence', dh_under60:'Under 60 cards — not tournament legal', typeCharacters:'Characters', typeActions:'Actions', typeSongs:'Songs', typeItems:'Items', typeLocations:'Locations', typeOther:'Other', ownedFilter:'✓ Owned', allFilter:'All', allSetsFilter:'All sets', closeLabel:'Close', advAll:'All at once', advEach:'One at a time', advEachNote:'Each deck built on its own, drawing from your full collection (rebuild between events).', advNoDecks:'Add some decks first, then the advisor can plan your copies.', advAllOk:'All decks buildable at once', advAllShort:'{n} extra copies needed', advAllOkSub:'Your {n} decks share no card beyond what you own — sleeve them all simultaneously.', advAllShortSub:'Buy these to have every deck fully built at the same time — {v} total.', advBuildable:'buildable together', advBlocked:'needs shared cards', advComplete:'100% owned', advNeedN:'need {n} more',
-      missingCards:"Cards you're missing", ownEvery:'You own every card ✓', decklist:'Decklist', matchHistory:'Match History', logGame:'Log game', editCards:'Edit cards', doneEditing:'Done editing', delete:'Delete', manaCurve:'Mana Curve', cardTypes:'Card Types', raritySpread:'Rarity Spread',
+      missingCards:"Cards you're missing", boardLends:'{who} lends', boardSells:'{who} sells{price}', boardFriend:' (friend)', boardPostBuy:'Post on the board — want to buy', boardPostBorrow:'Post on the board — want to borrow', boardPosted:'{n} card(s) posted on the board', boardAlready:'These cards are already in your board posts', boardFail:"Couldn't post. Try again.", boardSignIn:'Sign in (Cloud Sync) to use the board', boardOpen:'Open the board', boardYours:'on your board posts', ownEvery:'You own every card ✓', decklist:'Decklist', matchHistory:'Match History', logGame:'Log game', editCards:'Edit cards', doneEditing:'Done editing', delete:'Delete', manaCurve:'Mana Curve', cardTypes:'Card Types', raritySpread:'Rarity Spread',
       totalLore:'Total Lore', deckValue:'Deck Value', winRate:'Win Rate', games:'Games', inCollection:'In Collection',
       importBtn:'↑ Import', lentShort:'{n} lent', lentTitle:'On loan to {who}', lentInDeck:'Cards on loan in this deck', lentRow:'{n}× on loan to {who}', lentHint:'You can still build the deck; these copies are with someone else.', newDeckBtn:'+ New Deck', allDecks:'All decks', allDecksBack:'‹ All decks', cards2:'Cards', tournamentLegal:'Tournament legal', cardsOf60:'{n}/60 cards', noNotes:'No notes yet.', logGameBtn:'Log game', deleteBtn:'Delete', addCards:'Add cards', searchCardsPh:'Search cards by name…', size:'Size', perRow:'{n} / row', noGamesLogged:'No games logged yet.', clickPlus:'Click + on cards to add them.', copiesToComplete:'{n} copies · {v} to complete', need:'need', buy:'Buy ↗', haveOf:'have {h} of {c}',
       marketNormal:'Lowest · Liga', foilLc:'foil', printingArt:'Printing / Art · pick the one you own', inkwellStatus:'Inkwell status', exportCorr:'edited · export ↓', yourCopies:'Your copies', normal:'Normal', pCost:'Cost', pStrength:'Strength', pWillpower:'Willpower', pLore:'Lore', pMoveCost:'Move Cost', pType:'Type', pInk:'Ink', yes:'Yes', no:'No',
@@ -2678,7 +2706,7 @@ class Component extends DCLogic {
       rpDeck:'Deck', rpDiscard:'Descarte', rpLore:'Lore', rpBattlefield:'Campo de batalha', rpInkwell:'O Tinteiro', rpLog:'Log de turnos', rpShowOppHand:'Mão do oponente',
       rpTargets:'mira {name}',
       simTitle:'Prontidão no simulador', simReady:'Todas as cartas deste deck estão implementadas — dá para jogar.', simBlocked:'{n} cartas ({copies} cópias) têm texto de regra que o motor ainda não implementa, então este deck não pode ser jogado.', simReadyCopies:'{n} de {total} cópias prontas', simBlockedLabel:'Quais cartas', simKeywordLabel:'Jogáveis por keyword', simNote:'Lido do texto da carta no catálogo. Carta só com keyword (Evasive, Rush, Shift…) é mecânica e funciona como está; carta com texto disparado ou ativado precisa ser codificada à mão no motor.', simOpponent:'Contra', simPlay:'Abrir simulador',
-      simulator:'Simulador',
+      simulator:'Simulador', community:'Comunidade',
       newDeck:'+ Novo Deck', importDeck:'↑ Importar', createDeck:'Criar', cancel:'Cancelar', format:'Formato',
       inkable:'Inkável', uninkable:'Não-inkável', cost:'Custo', allSets:'Todos os sets',
       welcome:'Bem-vindo, {name}', emptyMsg:'Seu códice está vazio. Importe sua coleção do Dreamborn ou comece a montar um deck — tudo fica salvo de forma privada no seu perfil.',
@@ -2702,7 +2730,7 @@ class Component extends DCLogic {
       nowPlaying:'Jogando Agora', legality:'Legalidade', last10:'Últimas 10', switchDeck:'Trocar deck:', stSetup:'Precisa montar', stIllegal:'Problema de legalidade', stMissing:'Faltam cartas', stReady:'Pronto para jogar', stPlay:'Em rotação', na_finishDeck:'Terminar deck', na_fixLegality:'Corrigir legalidade', na_viewMissing:'Ver cartas que faltam', na_logFirst:'Registrar 1ª partida', na_review:'Revisar / registrar', setActive:'Definir como ativo', activeDeck:'✓ Deck ativo',
       advisorBtn:'Consultor de Decks', advisorSub:'Você consegue montar seus decks com sua coleção?',
       activeDeckSet:'Deck ativo definido', optimizedPlan:'Plano otimizado', recommendedPlan:'Plano recomendado', physicalCopies:'Cópias físicas', pinPriority:'Fixar prioridade', portfolioImpactUnlocks:'+1 cópia completa mais {n} cópia(s) de deck', portfolioImpactReduces:'+1 cópia reduz o total de faltas em {n}', portfolioHead:'Com sua coleção, você consegue montar {b} das {n} cópias de decks selecionadas ao mesmo tempo.', portfolioMissing:'{n} cópias faltantes no total no portfólio.', portfolioNextNamed:'Próximo mais fácil — {deckName} · faltam {n} carta(s).', portfolioTotalMissing:'{n} cópias faltantes no total entre todos os decks selecionados.', portfolioPlanTitle:'Plano para seus decks', portfolioModeHint:'Otimizado = melhor plano exato. Recomendado = um bom plano encontrado dentro dos limites.', portfolioAllOk:'Todos os decks solicitados são montáveis ao mesmo tempo.', portfolioExcluded:'Excluído do plano', portfolioNofM:'{a} de {b} montáveis', buyLabel:'Comprar', buyExt:'Comprar ↗', purchaseDetail:'Precisa {need} · alocadas {allocated} · comprar {buy}', sharedCardsTitle:'Cartas compartilhadas', sharedCardsSummary:'{n} cartas disputadas entre os decks.', sharedAllocation:'{allocated}/{need} alocadas', sharedShowMore:'Ver todas ({n})', sharedShowLess:'Ver menos', simPrioritize:'Priorizar', simActive:'Priorizando', simBanner:'Simulando prioridade — plano ainda não salvo.', simConfirm:'Confirmar', simReset:'Redefinir', addMissingWish:'Adicionar faltantes à wishlist', deckHealthTitle:'Saúde do deck', inkablePctLabel:'tintável', avgCostLabel:'custo médio', deckHealthOk:'Saudável ✓', dh_lowInkable:'Poucas cartas tintáveis — pode faltar tinta', dh_slowStart:'Poucas jogadas de custo 1–2 — início lento', dh_topHeavy:'Custo médio alto — curva pesada', dh_fewCharacters:'Poucos personagens — presença fraca na mesa', dh_under60:'Menos de 60 cartas — fora do formato', typeCharacters:'Personagens', typeActions:'Ações', typeSongs:'Canções', typeItems:'Itens', typeLocations:'Locais', typeOther:'Outros', ownedFilter:'✓ Possuídas', allFilter:'Todas', allSetsFilter:'Todos os sets', closeLabel:'Fechar', advAll:'Todos ao mesmo tempo', advEach:'Um de cada vez', advEachNote:'Cada deck montado sozinho, usando sua coleção inteira (remontando entre eventos).', advNoDecks:'Adicione decks primeiro para o consultor planejar suas cópias.', advAllOk:'Todos os decks montáveis ao mesmo tempo', advAllShort:'{n} cópias extras necessárias', advAllOkSub:'Seus {n} decks não dividem cartas além do que você tem — monte todos ao mesmo tempo.', advAllShortSub:'Compre estas para ter todos os decks montados simultaneamente — {v} no total.', advBuildable:'montável junto', advBlocked:'precisa de cartas compartilhadas', advComplete:'100% na coleção', advNeedN:'faltam {n}',
-      missingCards:'Cartas que faltam', ownEvery:'Você tem todas as cartas ✓', decklist:'Decklist', matchHistory:'Histórico de Partidas', logGame:'Registrar', editCards:'Editar cartas', doneEditing:'Concluir', delete:'Excluir', manaCurve:'Curva de Mana', cardTypes:'Tipos de Carta', raritySpread:'Raridades',
+      missingCards:'Cartas que faltam', boardLends:'{who} empresta', boardSells:'{who} vende{price}', boardFriend:' (amigo)', boardPostBuy:'Publicar no Mural — quero comprar', boardPostBorrow:'Publicar no Mural — quero pegar emprestado', boardPosted:'{n} carta(s) publicada(s) no Mural', boardAlready:'Essas cartas já estão nos seus anúncios do Mural', boardFail:'Não foi possível publicar. Tente de novo.', boardSignIn:'Entre (Sincronização na nuvem) para usar o Mural', boardOpen:'Abrir o Mural', boardYours:'nos seus anúncios', ownEvery:'Você tem todas as cartas ✓', decklist:'Decklist', matchHistory:'Histórico de Partidas', logGame:'Registrar', editCards:'Editar cartas', doneEditing:'Concluir', delete:'Excluir', manaCurve:'Curva de Mana', cardTypes:'Tipos de Carta', raritySpread:'Raridades',
       totalLore:'Lore Total', deckValue:'Valor do Deck', winRate:'Vitórias', games:'Jogos', inCollection:'Na Coleção',
       importBtn:'↑ Importar', lentShort:'{n} emprest.', lentTitle:'Emprestada para {who}', lentInDeck:'Cartas emprestadas neste deck', lentRow:'{n}× emprestada para {who}', lentHint:'Você pode montar o deck mesmo assim; estas cópias estão com outra pessoa.', newDeckBtn:'+ Novo Deck', allDecks:'Todos os decks', allDecksBack:'‹ Todos os decks', cards2:'Cartas', tournamentLegal:'Legal para torneio', cardsOf60:'{n}/60 cartas', noNotes:'Sem notas ainda.', logGameBtn:'Registrar jogo', deleteBtn:'Excluir', addCards:'Adicionar cartas', searchCardsPh:'Buscar cartas por nome…', size:'Tamanho', perRow:'{n} / linha', noGamesLogged:'Nenhum jogo registrado ainda.', clickPlus:'Clique + nas cartas para adicioná-las.', copiesToComplete:'{n} cópias · {v} para completar', need:'faltam', buy:'Comprar ↗', haveOf:'tem {h} de {c}',
       marketNormal:'Menor · Liga', foilLc:'foil', printingArt:'Impressão / Arte · escolha a que você tem', inkwellStatus:'Status de tinta', exportCorr:'editado · exportar ↓', yourCopies:'Suas cópias', normal:'Normal', pCost:'Custo', pStrength:'Força', pWillpower:'Força de Vontade', pLore:'Lore', pMoveCost:'Custo de Mov.', pType:'Tipo', pInk:'Tinta', yes:'Sim', no:'Não',
@@ -2907,7 +2935,7 @@ class Component extends DCLogic {
   sendMagicLink = ()=>{ const email=(this.state.syncInput||'').trim(); if(!this.sb||!email){ this.showToast(this.t('syncEnterEmail')); return; } this.setState({syncStatus:'sending'}); const redirectTo=(location.href.split('#')[0]); this.sb.auth.signInWithOtp({email, options:{emailRedirectTo:redirectTo}}).then(({error})=>{ if(error){ this.setState({syncStatus:'signed_out', syncMsg:error.message}); this.showToast(this.t('syncSignInFailed')); } else { this.setState({syncStatus:'link_sent', syncMsg:this.t('syncCheckEmail',{email})}); } }); };
   signOutSync = ()=>{ if(!this.sb) return; this.sb.auth.signOut().then(()=>{ this.setState({syncStatus:'signed_out', syncUser:null, syncEmail:null, syncRevision:0, syncMsg:this.t('syncSignedOutMsg')}); }); };
   async onSignedIn(user){
-    this.loadLoans();   // independent of the profile sync below
+    this.loadLoans(user); this.loadBoard(user);   // independent of the profile sync below
     await new Promise(resolve=>this.setState({syncStatus:'syncing', syncUser:user.id, syncEmail:user.email, syncMsg:null},resolve));
     try { await this.reconcile(this.state.activeUser); }
     catch(e){ this.setState({syncStatus:'error', syncMsg:this.syncErrorMessage(e)}); return; }
@@ -3222,7 +3250,28 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
   fmtOrDash(v){ return v==null ? '—' : this.fmt(v); }
   ownedOf(id){ const e=this.state.collection[id]; return e?{n:e.n||0,f:e.f||0}:{n:0,f:0}; }
   // Loans (Empréstimos e trocas page, table public.loans): copies lent out are flagged in the deck builder, never blocked.
-  async loadLoans(){ try { if(!this.sb) return; const { data, error } = await this.sb.from('loans').select('direction,person,items').is('returned_at', null); if(error) return; const m={}; for(const l of (data||[])){ if(l.direction!=='lent') continue; for(const e of (l.items||[])){ (m[e.card_id] = m[e.card_id] || []).push({ qty:e.qty||0, person:l.person }); } } this.setState({ lentOut:m }); } catch(e){ /* loans are optional */ } }
+  async loadLoans(user){ try { if(!this.sb) return; const { data, error } = await this.sb.from('loans').select('direction,person,items').is('returned_at', null); if(error) return; const m={}; for(const l of (data||[])){ if(l.direction!=='lent') continue; for(const e of (l.items||[])){ (m[e.card_id] = m[e.card_id] || []).push({ qty:e.qty||0, person:l.person }); } }
+    this.setState({ lentOut:m });
+    // loans to friends on the site: accepted or delivered copies are out too
+    if(user&&user.id) try { const { data:ul } = await this.sb.from('user_loans').select('lender,borrower,items,status').in('status',['accepted','delivered']); const mine=(ul||[]).filter(u=>u.lender===user.id); if(mine.length){ const ids=[...new Set(mine.map(u=>u.borrower))]; const { data:ps } = await this.sb.from('profiles').select('user_id,display_name').in('user_id', ids); const nm={}; for(const p of (ps||[])) nm[p.user_id]=p.display_name; for(const u of mine) for(const e of (u.items||[])) (m[e.card_id] = m[e.card_id] || []).push({ qty:e.qty||0, person:nm[u.borrower]||'?' }); this.setState({ lentOut:{...m} }); } } catch(e){ /* older database without loans between friends */ }
+    } catch(e){ /* loans are optional */ } }
+  // Public board (inkwell-2 /trades/ "Mural"): who lends or sells each card, and what I already posted.
+  async loadBoard(user){ try { if(!this.sb||!user||!user.id) return; const me=user.id;
+    const { data:ls, error } = await this.sb.from('listings').select('id,user_id,kind,card_id,qty,foil,price_brl'); if(error) return;
+    const { data:fr } = await this.sb.from('friendships').select('requester,addressee,status');
+    const ids=[...new Set((ls||[]).map(l=>l.user_id).filter(x=>x!==me))]; const nm={};
+    if(ids.length){ const { data:ps } = await this.sb.from('profiles').select('user_id,display_name').in('user_id', ids); for(const p of (ps||[])) nm[p.user_id]=p.display_name; }
+    const friends=new Set((fr||[]).filter(f=>f.status==='accepted').map(f=>f.requester===me?f.addressee:f.requester));
+    const offers={}, mine={};
+    for(const l of (ls||[])){ if(l.user_id===me){ (mine[l.card_id]=mine[l.card_id]||[]).push(l.kind); continue; } if(l.kind!=='lend'&&l.kind!=='sell') continue; (offers[l.card_id]=offers[l.card_id]||[]).push({ kind:l.kind, who:nm[l.user_id]||'?', price:l.price_brl, friend:friends.has(l.user_id) }); }
+    this.setState({ boardOffers:offers, myPosts:mine, boardMe:me });
+  } catch(e){ /* the board is optional */ } }
+  offersText(id){ const a=(this.state.boardOffers||{})[id]||[]; return a.slice().sort((x,y)=>(y.friend?1:0)-(x.friend?1:0)).slice(0,3).map(o=>this.t(o.kind==='lend'?'boardLends':'boardSells',{who:o.who+(o.friend?this.t('boardFriend'):''),price:o.kind==='sell'&&o.price!=null?' '+this.fmt(+o.price):''})).join(' · '); }
+  postMissing = async (kind)=>{ const me=this.state.boardMe; if(!this.sb||!me){ this.showToast(this.t('boardSignIn')); return; }
+    const mine=this.state.myPosts||{}; const rows=(this._missingNow||[]).filter(m=>!(mine[m.card.card_id]||[]).includes(kind)).map(m=>({ kind, card_id:m.card.card_id, qty:Math.max(1,Math.min(99,m.need)), foil:false }));
+    if(!rows.length){ this.showToast(this.t('boardAlready')); return; }
+    const { error } = await this.sb.from('listings').insert(rows); if(error){ this.showToast(this.t('boardFail')); return; }
+    this.showToast(this.t('boardPosted',{n:rows.length})); this.loadBoard({id:me}); };
   lentOf(id){ const a=(this.state.lentOut||{})[id]; return a ? a.reduce((s,x)=>s+x.qty,0) : 0; }
   lentWho(id){ const a=(this.state.lentOut||{})[id]; return a ? [...new Set(a.map(x=>x.person))].join(', ') : ''; }
   isOwned(id){ const o=this.ownedOf(id); return o.n>0||o.f>0; }
@@ -4612,6 +4661,7 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
     decks: e('svg',s, e('rect',{x:4,y:3,width:11,height:15,rx:2}), e('rect',{x:9,y:6,width:11,height:15,rx:2})),
     matches: e('svg',s, e('path',{d:'M4 6h16M4 12h16M4 18h10'}), e('circle',{cx:19,cy:18,r:2})),
     learn: e('svg',s, e('path',{d:'M3 5a2 2 0 0 1 2-2h6v16H5a2 2 0 0 0-2 2zM21 5a2 2 0 0 0-2-2h-6v16h6a2 2 0 0 1 2 2z'})),
+    community: e('svg',s, e('circle',{cx:9,cy:8,r:3}), e('circle',{cx:17,cy:9,r:2.5}), e('path',{d:'M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M15 14.5c2.8 0 5 2.2 5 5'})),
   }; return map[name]; }
 
   go(view){ return ()=>this.setState({view,page:0,selectedCard:null,newDeckOpen:false}); }
@@ -4732,8 +4782,10 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
       // ativo e o seguinte ja preenchidos quando existirem.
       {key:'sim',label:this.t('simulator'),_href:this.simUrlFor(this.getActiveDeck(),
         (this.state.decks||[]).find(d=>{ const a=this.getActiveDeck(); return !a||d.id!==a.id; })||null),
-        _style:this.navStyle('__none'),_icon:'⚔'}
-    ].map(x=>({...x, _isLink:!!x._href, _isView:!x._href}));
+        _style:this.navStyle('__none'),_icon:'⚔'},
+      // Início, Coach Review e Trocas: the community pages of the same site, same tab.
+      {key:'community',label:this.t('community'),_here:'feed/',_style:this.navStyle('__none'),_icon:this.icon('community')}
+    ].map(x=>({...x, _isLink:!!x._href, _isView:!x._href})).map(x=>x._here?{...x,_isView:false,_isSame:true}:x);   // _here: a page of this same site, same tab
     const titles={learn:[this.t('learn'),this.t('sub_learn')],matches:[this.t('matches'),this.t('sub_matches')],overview:[this.t('overview'),this.t('sub_overview',{name:st.displayName})],collection:[this.t('collection'),this.t('sub_collection')],prices:[this.t('prices'),this.t('sub_prices')],decks:[this.t('decks'),this.t('sub_decks')],deckDetail:[(this.deckById(st.selectedDeck)||{}).name||this.t('decks'),this.t('sub_deckDetail')],advisor:[this.t('advisorBtn'),this.t('advisorSub')]};
     const eyebrows={overview:'eb_overview',collection:'eb_collection',prices:'eb_prices',decks:'eb_decks',deckDetail:'eb_decks',advisor:'eb_decks',matches:'eb_matches',learn:'eb_learn'};
     V.pageEyebrow=this.t(eyebrows[st.view]||'eb_overview');
@@ -5496,7 +5548,12 @@ Only reference plausible Lorcana cards (prefer cards already in the list). Keep 
         V.dd.countColor=total>=60?'#5fd07f':'#e6c15a'; V.dd.buildValue=this.fmt(this.deckValue(deck))+' · '+this.deckLore(deck)+' lore'; V.dd.emptyList=entries.length===0;
         // missing cards (owned fewer than required)
         const missing=entries.map(e=>{ const o=this.ownedAcross(e.card); const have=o.n+o.f; const need=Math.max(0,e.count-have); return {card:e.card,need,have,count:e.count}; }).filter(x=>x.need>0).sort((a,b)=>this.priceOr0(b.card)-this.priceOr0(a.card));
-        V.dd.missing=missing.map(m=>({ name:m.card.name_en, ink:this.inkHex(m.card), need:m.need, price:this.fmtOrDash(this.price(m.card)), sub:this.t('haveOf',{h:m.have,c:m.count}), liga:this.ligaUrl(m.card), _open:()=>this.openCard(m.card.card_id) }));
+        this._missingNow=missing;
+        V.dd.missing=missing.map(m=>{ const offers=this.offersText(m.card.card_id); const posted=((this.state.myPosts||{})[m.card.card_id]||[]).some(k=>k==='buy'||k==='borrow');
+          return { name:m.card.name_en, ink:this.inkHex(m.card), need:m.need, price:this.fmtOrDash(this.price(m.card)), sub:this.t('haveOf',{h:m.have,c:m.count}), liga:this.ligaUrl(m.card), _open:()=>this.openCard(m.card.card_id),
+            offers, hasOffers:!!offers, posted, postedLabel:this.t('boardYours'), board:'trades/?tab=board&q='+encodeURIComponent(m.card.name_en) }; });
+        V.dd.boardReady=!!this.state.boardMe; V.boardPostBuy=this.t('boardPostBuy'); V.boardPostBorrow=this.t('boardPostBorrow'); V.boardOpen=this.t('boardOpen');
+        V.postMissingBuy=()=>this.postMissing('buy'); V.postMissingBorrow=()=>this.postMissing('borrow');
         V.dd.missingCount=missing.reduce((s,m)=>s+m.need,0);
         V.dd.missingCost=this.fmt(missing.reduce((s,m)=>s+this.priceOr0(m.card)*m.need,0));
         V.dd.missingSummary=this.t('copiesToComplete',{n:V.dd.missingCount,v:V.dd.missingCost});

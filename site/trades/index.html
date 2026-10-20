@@ -436,7 +436,13 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
   const mySide = (t) => (t.proposer === me.id ? "proposer_collection" : "partner_collection");
   const ACTIVE = new Set(["requested", "accepted", "delivered"]);
   let tab = "loans", showReturned = false, form = null;   // form: {kind, ...draft}
+  let boardKind = "all", boardQ = "";
   try { tab = sessionStorage.getItem("inkwell-trades-tab") || "loans"; } catch { /* */ }
+  {   // links from the deck builder: ?tab=board&q=<card name>
+    const qp = new URLSearchParams(location.search);
+    if (["loans", "trades", "board", "collection"].includes(qp.get("tab"))) tab = qp.get("tab");
+    if (qp.get("q")) boardQ = qp.get("q").slice(0, 80);
+  }
 
   async function loadAll() {
     const [l, t, p, pr] = await Promise.all([
@@ -721,7 +727,6 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
 
   // ---------- public board ----------
   const KIND = { borrow: ["I want to borrow", "wants to borrow"], buy: ["I want to buy", "wants to buy"], lend: ["I lend", "lends"], sell: ["I sell", "sells"] };
-  let boardKind = "all", boardQ = "";
   function boardHtml() {
     const st = stock();
     const mine = listings.filter((l) => l.user_id === me.id);
