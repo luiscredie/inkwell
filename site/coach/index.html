@@ -658,6 +658,29 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     </svg>`;
   }
 
+  // Lore Counter games: lore totals over time (no turns recorded). Steps, minutes on the x axis.
+  function loreTimeChart(log, meSeat) {
+    const tr = log.lore_track, other = meSeat === "p1" ? "p2" : "p1";
+    const end = Math.max(60, tr.at(-1).t), fin = log.result?.final_lore || {};
+    const W = 480, H = 150, L = 26, R = 10, T = 10, B = 24;
+    const top = Math.max(20, ...tr.map((e) => e.lore));
+    const X = (sec) => L + (sec / end) * (W - L - R), Y = (v) => T + (1 - v / top) * (H - T - B);
+    const steps = (seat) => {
+      let v = 0, d = `M${X(0).toFixed(1)} ${Y(0).toFixed(1)}`;
+      for (const e of tr) if (e.seat === seat) { d += `H${X(e.t).toFixed(1)}V${Y(e.lore).toFixed(1)}`; v = e.lore; }
+      return { d: d + `H${X(end).toFixed(1)}`, v };
+    };
+    const me = steps(meSeat), op = steps(other);
+    const mins = Math.ceil(end / 60), every = mins <= 12 ? 2 : mins <= 30 ? 5 : 10;
+    const ticks = [0, 5, 10, 15, 20].filter((v) => v <= top);
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Lore over ${mins} minutes: you ${fin[meSeat] ?? me.v}, opponent ${fin[other] ?? op.v}">
+      ${ticks.map((v) => `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width="${v === 20 ? 1.4 : 0.8}" ${v === 20 ? "" : 'stroke-dasharray="2 4"'}/>
+        <text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="12" fill="var(--faint)">${v}</text>`).join("")}
+      ${Array.from({ length: Math.floor(mins / every) + 1 }, (_, i) => i * every).filter((m) => m * 60 <= end).map((m) => `<text x="${X(m * 60)}" y="${H - 6}" text-anchor="middle" font-size="12" fill="var(--faint)">${m}′</text>`).join("")}
+      <path d="${op.d}" fill="none" stroke="var(--opp)" stroke-width="2" stroke-linejoin="round"/>
+      <path d="${me.d}" fill="none" stroke="var(--gold)" stroke-width="2.6" stroke-linejoin="round"/>
+    </svg>`;
+  }
   function anchorKey(a) { return a.kind === "action" ? `a:${a.seq}` : a.kind === "turn" ? `t:${a.turn}` : a.kind === "card" ? `c:${a.card_id}` : a.kind; }
   function notesHtml(key, profilesMap) {
     return notes.filter((n) => anchorKey(n.anchor) === key).map((n) => {
@@ -690,7 +713,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
         <h2>${inkDots(s.my_inks || s.my_deck)}${esc(s.my_deck || "Your deck")} vs ${inkDots(s.opp_inks || s.opp_deck)}${esc(s.opp_deck || "Unknown")}</h2>
         <span class="muted small">${esc([
           sideText(s).replace(/^./, (c) => c.toUpperCase()),
-          log.turns.length ? `${log.turns.length} turns` : "Lore Counter game, final lore and result only",
+          log.turns.length ? `${log.turns.length} turns` : (log.lore_track || []).length > 1 ? `Lore Counter game, about ${Math.max(1, Math.round(log.lore_track.at(-1).t / 60))} minutes` : "Lore Counter game, final lore and result only",
           [ev.name, ev.game_in_match ? `game ${ev.game_in_match}` : ""].filter(Boolean).join(", "),
           new Date(log.played_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }),
           `ended by ${log.result?.reason || "unknown"}`,
@@ -701,7 +724,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
         ${log.source_ref?.replay_url && !/\.\.\.$/.test(log.source_ref.replay_url) ? `<a class="btn ghost small" href="${esc(log.source_ref.replay_url)}" target="_blank" rel="noopener">Watch replay on duels.ink</a>` : ""}
       </div>
       ${!db ? `<div class="notice">Comments need the shared store, which isn't available in this view. You can still read the game.</div>` : !me?.id ? `<div class="notice">Sign in to comment.</div>` : canWrite === false ? `<div class="notice">You can read this game. Ask the owner to make you a Contributor to comment.</div>` : ""}
-      ${log.turns.length ? `<div class="chart"><div class="legend"><span>Lore by turn</span><span><i style="background:var(--gold)"></i>${esc(seatName(log, meSeat))}</span><span><i style="background:var(--opp)"></i>${esc(seatName(log, meSeat === "p1" ? "p2" : "p1"))}</span></div>${loreChart(log)}</div>` : ""}
+      ${log.turns.length ? `<div class="chart"><div class="legend"><span>Lore by turn</span><span><i style="background:var(--gold)"></i>${esc(seatName(log, meSeat))}</span><span><i style="background:var(--opp)"></i>${esc(seatName(log, meSeat === "p1" ? "p2" : "p1"))}</span></div>${loreChart(log)}</div>`  : (log.lore_track || []).length > 1 ? `<div class="chart"><div class="legend"><span>Lore over time</span><span><i style="background:var(--gold)"></i>${esc(seatName(log, meSeat))}</span><span><i style="background:var(--opp)"></i>${esc(seatName(log, meSeat === "p1" ? "p2" : "p1"))}</span></div>${loreTimeChart(log, meSeat)}</div>` : ""}
       <div>${add("game", "Comment on the whole game")}${notesHtml("game", profilesMap)}</div>
       ${deck.length || isOwner ? `<details class="deck" ${!deck.length || deckNotice?.key === g.key ? "open" : ""}><summary>Your deck (${deck.length ? `${deck.reduce((n, e) => n + e.qty, 0)} cards` : "no list yet"})</summary>
         ${isOwner ? `<div class="deckedit"><button type="button" class="btn ghost small" id="deckEdit">${deck.length ? "Edit your deck list" : "Add your deck list"}</button>

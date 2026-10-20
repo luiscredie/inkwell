@@ -398,14 +398,15 @@ table.stats td.n { text-align: right; }
   // ---------- tapping ----------
   const pending = zero(), timers = {};
   function clearDeltas() { for (const seat of SEATS) { pending[seat] = 0; clearTimeout(timers[seat]); $(`d${n(seat)}`)?.classList.remove("show"); } }
-  function resetLore() { s.lore = zero(); s.log = []; clearDeltas(); }
+  function resetLore() { s.lore = zero(); s.log = []; s.gameStart = null; clearDeltas(); }
   function tap(seat, d) {
     if (s.matchDone) return startMatch();
     if (s.won) return nextGame();
     const before = s.lore[seat], after = Math.max(0, before + d);
     if (after === before) return;
     s.lore[seat] = after;
-    s.log.push({ seat, from: before, to: after });
+    s.gameStart ||= Date.now();
+    s.log.push({ seat, from: before, to: after, at: Date.now() });
     if (s.log.length > 300) s.log.shift();
     pending[seat] += after - before;
     const del = $(`d${n(seat)}`);
@@ -474,7 +475,9 @@ table.stats td.n { text-align: right; }
   function award(w, reason = "lore", concededBy = null) {
     if (s.won || s.matchDone) return;
     if (!s.match) s.match = { started: new Date().toISOString(), tour: s.tour, players: s.players, best_of: s.bestOf, me: null, opp: null, games: [] };
-    const g = { winner: w, reason, conceded_by: concededBy, lore: { ...s.lore }, first: null, ended: new Date().toISOString() };
+    // Lore totals over time: public information (Tournament Rules §5.2), kept for the lore chart in Coach Review.
+    const track = s.log.filter((e) => !e.award && e.at && s.gameStart).slice(-400).map((e) => [Math.round((e.at - s.gameStart) / 1000), e.seat, e.to]);
+    const g = { winner: w, reason, conceded_by: concededBy, lore: { ...s.lore }, first: null, ended: new Date().toISOString(), track };
     s.match.games.push(g);
     s.wins[w] += 1; s.won = w;
     s.log.push({ award: true, auto: reason === "lore", seat: w });
@@ -597,6 +600,7 @@ table.stats td.n { text-align: right; }
           deck: { archetype: m.opp?.name || m.opp?.inks?.length ? deckText(m.opp) : "Unknown", inks: m.opp?.inks || [], list_source: "unknown" } },
       ],
       turns: [],
+      ...(g.track?.length ? { lore_track: g.track.filter((e) => e[1] === "p1" || e[1] === "p2").map(([tt, seat, lore]) => ({ t: tt, seat, lore: Math.min(99, lore) })) } : {}),
       result: { winner: g.winner, reason: g.reason === "concede" ? "concede" : g.reason === "lore" ? "lore" : "other", final_lore: { p1: g.lore.p1, p2: g.lore.p2 } },
       ...(g.conceded_by ? { notes: `${g.conceded_by === "p1" ? "I" : "Opponent"} conceded` } : {}),
       visibility: "private",
