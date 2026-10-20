@@ -117,3 +117,11 @@ reach a coach who isn't a friend.
 On `/trades/`, "I lent" and "I gave" search only your Inkwell collection, show
 how many copies you have, how many are lent out, and let you pick only the free
 ones (normal and foil counted apart).
+
+## Loans between friends on the site
+
+Run `supabase/user_loans.sql` (already applied). On `/trades/`, "New loan" →
+"A friend on the site": one friend asks (to lend or to borrow), the other
+accepts or declines, then either marks the physical delivery with a date and
+later the return with a date. Steps are enforced in the database; cards promised
+in an accepted loan stop counting as free in the lender's collection.
