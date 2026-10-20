@@ -36,9 +36,9 @@ check('a maskable icon is provided so Android does not crop the coin', () => {
   assert.ok(manifest.icons.some(i => i.purpose === 'maskable'));
 });
 check('the theme colour matches the app background', () => {
-  assert.equal(manifest.background_color, '#0a0c10');
-  assert.equal(manifest.theme_color, '#0a0c10');
-  assert.match(html, /<meta name="theme-color" content="#0a0c10">/);
+  assert.equal(manifest.background_color, '#13102a');
+  assert.equal(manifest.theme_color, '#13102a');
+  assert.match(html, /<meta name="theme-color" content="#13102a">/);
 });
 check('the page links the manifest and the iOS icon', () => {
   assert.match(html, /<link rel="manifest" href="manifest\.webmanifest">/);
