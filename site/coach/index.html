@@ -122,7 +122,8 @@ window.INKWELL_CLOUD = (() => {
   const me = CLOUD?.user();
   let player = me?.id || null;
   try { const p = localStorage.getItem(PLAYER_KEY); if (p && me) player = p; } catch { /* storage off */ }
-  let links = [];                 // coach_links rows visible to me (mine as player, and players who added me)
+  let links = [];
+  let duelsSync = null;           // my automatic duels.ink sync, if set up                 // coach_links rows visible to me (mine as player, and players who added me)
   let rows = [], noteRows = [];
   const logs = new Map();         // full game logs, fetched when a game is opened (the list only needs summaries)
   const stub = (r) => ({ _loading: true, format_version: "1.0", game_id: r.game_id, source: r.source, played_at: r.played_at, players: [], turns: [], result: {} });
@@ -175,7 +176,8 @@ window.INKWELL_CLOUD = (() => {
       CLOUD.api(`game_logs?user_id=eq.${enc(player)}&select=game_id,source,played_at,summary,visibility,created_at&order=played_at.desc.nullslast&limit=5000`),
       CLOUD.api(`game_notes?owner_id=eq.${enc(player)}&select=id,game_id,author,author_name,anchor,body,created_at&order=created_at&limit=5000`),
       CLOUD.api("coach_links?select=owner_id,owner_email,coach_email,created_at&order=created_at"),
-    ]);
+      player === me.id ? CLOUD.api("rpc/my_duels_sync", { method: "POST", body: {} }).catch(() => null) : Promise.resolve(null),
+    ]).then((r) => { duelsSync = r[3]?.[0] || null; return r; });
     rows = g || []; noteRows = n || []; links = l || [];
     for (const cb of listeners) cb();
     panels();
@@ -273,6 +275,15 @@ window.INKWELL_CLOUD = (() => {
     document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") reload().catch(() => {}); });
   }
 
+  function syncLine(d) {
+    const when = (iso) => { try { return new Date(iso).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); } catch { return ""; } };
+    if (!d.enabled) return "duels.ink sync is off.";
+    const r = d.last_result || {};
+    if (!d.last_run_at) return "duels.ink games sync every 30 minutes.";
+    if (r.ok === false) return `duels.ink sync needs attention: ${esc(r.error || "unknown error")}.`;
+    return `duels.ink games sync every 30 minutes. Last check ${esc(when(d.last_run_at))}${r.added ? `, ${r.added} new` : ", nothing new"}${r.waiting ? `, ${r.waiting} more on the next runs` : ""}.`;
+  }
+
   // ---------- panels: sign-in, whose games, my coaches ----------
   function panels() {
     const host = document.getElementById("accountPanel");
@@ -301,6 +312,7 @@ window.INKWELL_CLOUD = (() => {
     const viewing = player === me.id ? null : students.find((l) => l.owner_id === player);
     host.innerHTML = `<div class="acct">
       <span class="small muted">Signed in as ${esc(me.email)} · <button type="button" class="linkbtn" id="siOut">Sign out</button></span>
+      ${duelsSync && player === me.id ? `<span class="small muted" id="duelsSync">${syncLine(duelsSync)}</span>` : ""}
       ${students.length ? `<label class="small">Games of <select id="whose"><option value="${esc(me.id)}">Me</option>${students.map((l) => `<option value="${esc(l.owner_id)}" ${l.owner_id === player ? "selected" : ""}>${esc(l.owner_email || "Player")}</option>`).join("")}</select></label>` : ""}
       ${viewing ? `<span class="small">You're coaching ${esc(viewing.owner_email)}: you can read their games and comment.</span>` : `<details class="coaches"><summary class="small">My coaches (${mine.length})</summary>
         <span class="small muted">A coach you add can read all your games and comment, after signing in with that email.</span>

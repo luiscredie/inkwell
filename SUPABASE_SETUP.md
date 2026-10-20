@@ -61,3 +61,11 @@ signed in. Anyone who can see a game can comment; the author or the player can
 delete a comment. Only the player can add games or change visibility.
 
 Built from the Inkwell 2 repo (`apps/coach/build_site.py`); don't edit `site/coach/` by hand.
+
+## Automatic duels.ink sync
+
+New duels.ink games arrive in `public.game_logs` every 30 minutes (Edge Function
+`duels-sync`, scheduled by pg_cron). Setup is in `supabase/duels_sync.sql`; the
+function's code is in the Inkwell 2 repo (`supabase/functions/duels-sync`). The
+duels.ink token is the Edge Function secret `DUELS_TOKEN`; Coach Review shows the
+last sync and any problem (e.g. an expired token).
