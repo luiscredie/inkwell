@@ -220,6 +220,19 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     "{n} available": "{n} disponível(is)", "none available": "nenhuma disponível", "Not in your collection.": "Não está na sua coleção.", "{card}: you only have {n} available.": "{card}: você só tem {n} disponível(is).",
     "Only cards on loan": "Só cartas emprestadas", "No cards match.": "Nenhuma carta encontrada.", "Showing {n} of {t}.": "Mostrando {n} de {t}.",
     "more than you own": "mais do que você tem",
+    "With": "Com", "Someone not on the site": "Pessoa fora do site", "A friend on the site": "Amigo do site", "Friend": "Amigo",
+    "I lend": "Eu empresto", "I ask to borrow": "Peço emprestado", "Choose a friend.": "Escolha um amigo.",
+    "Send request": "Enviar pedido", "With friends on the site": "Com amigos do site",
+    "Lending to {name}": "Emprestando para {name}", "Borrowing from {name}": "Pegando emprestado de {name}",
+    "Waiting for {name} to accept": "Aguardando {name} aceitar", "{name} asks to borrow these cards": "{name} pediu estas cartas emprestadas",
+    "{name} offers to lend you these cards": "{name} quer te emprestar estas cartas", "Accept": "Aceitar", "Decline": "Recusar",
+    "Accepted {date}. Mark when the cards change hands.": "Aceito em {date}. Marque quando as cartas forem entregues.",
+    "Delivered {date}": "Entregue em {date}", "Returned {date}": "Devolvido em {date}", "Mark delivered": "Marcar entregue", "Mark returned on": "Marcar devolvido",
+    "Delivery date": "Data da entrega", "Return date": "Data da devolução", "Declined": "Recusado", "Cancelled": "Cancelado",
+    "Cancel loan": "Cancelar empréstimo", "Confirm cancel": "Confirmar cancelamento", "Confirm decline": "Confirmar recusa",
+    "You don't have enough free copies of some cards ({cards}). You can still accept.": "Você não tem cópias livres suficientes de algumas cartas ({cards}). Ainda assim pode aceitar.",
+    "{n} waiting for you": "{n} aguardando você", "Add friends on the home page to lend between site players.": "Adicione amigos na página inicial para emprestar entre jogadores do site.",
+    "a player": "um jogador",
     "{n} more": "mais {n}", "Unknown card": "Carta desconhecida",
   };
   const fill = (s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)) : s);
@@ -252,9 +265,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
   function stock() {
     const prof = profiles.find((p) => p.profile === profileName) || profiles[0];
     const lent = new Map();
-    for (const l of loans) if (!l.returned_at && l.direction === "lent") for (const e of l.items) {
-      const s = lent.get(e.card_id) || { n: 0, f: 0 }; s[e.foil ? "f" : "n"] += e.qty; lent.set(e.card_id, s);
-    }
+    const add = (items) => { for (const e of items) { const s = lent.get(e.card_id) || { n: 0, f: 0 }; s[e.foil ? "f" : "n"] += e.qty; lent.set(e.card_id, s); } };
+    for (const l of loans) if (!l.returned_at && l.direction === "lent") add(l.items);
+    for (const u of uloans) if (u.lender === me.id && (u.status === "accepted" || u.status === "delivered")) add(u.items);
     return { has: !!prof, coll: prof?.collection || {}, lent };
   }
   const ownedOf = (st, id, foil) => { const c = st.coll[id] || {}; return foil ? +c.f || 0 : +c.n || 0; };
@@ -276,6 +289,11 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
   const CLOUD = window.INKWELL_CLOUD;
   const me = CLOUD?.user();
   let loans = [], trades = [], profiles = [], profileName = null;
+  let uloans = [], friends = [];             // loans with friends on the site, my accepted friends' ids
+  const names = new Map();                   // user id -> display name
+  const nameOf = (id) => names.get(id) || Tx("a player");
+  const other = (u) => (u.lender === me.id ? u.borrower : u.lender);
+  const ACTIVE = new Set(["requested", "accepted", "delivered"]);
   let tab = "loans", showReturned = false, form = null;   // form: {kind, ...draft}
   try { tab = sessionStorage.getItem("inkwell-trades-tab") || "loans"; } catch { /* */ }
 
@@ -287,6 +305,13 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       fetch(window.INKWELL_PRICES_URL || "../data/prices.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
     ]);
     loans = l || []; trades = t || []; profiles = (p || []).filter((x) => x.collection && typeof x.collection === "object");
+    const [ul, fr] = await Promise.all([
+      CLOUD.api("user_loans?select=*&order=created_at.desc&limit=1000").catch(() => []),
+      CLOUD.api("friendships?status=eq.accepted&select=requester,addressee").catch(() => []),
+    ]);
+    uloans = ul || []; friends = [...new Set((fr || []).map((f) => (f.requester === me.id ? f.addressee : f.requester)))];
+    const want = [...new Set([...friends, ...uloans.map(other)])].filter((id) => !names.has(id));
+    if (want.length) for (const r of (await CLOUD.api(`profiles?user_id=in.(${want.join(",")})&select=user_id,display_name`).catch(() => [])) || []) names.set(r.user_id, r.display_name);
     if (pr?.prices) { PRICES = pr.prices; pricesDate = pr.generated_at; }
     try { profileName = localStorage.getItem("inkwell-trades-profile"); } catch { /* */ }
     if (!profiles.some((x) => x.profile === profileName)) profileName = profiles.sort((a, b) => Object.keys(b.collection).length - Object.keys(a.collection).length)[0]?.profile || null;
@@ -378,21 +403,60 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
         ${itemsText(l.items)}${l.note ? `<div class="small muted">${esc(l.note)}</div>` : ""}
         <div class="row">${!l.returned_at ? `<button type="button" class="btn small" data-return="${l.id}">${Tx("Mark returned")}</button>` : ""}<button type="button" class="btn ghost small" data-delloan="${l.id}">${Tx("Delete")}</button></div></div>`;
     };
+    const live = uloans.filter((u) => ACTIVE.has(u.status)), past = uloans.filter((u) => !ACTIVE.has(u.status));
     return `${form?.kind === "loan" ? loanFormHtml() : `<button type="button" class="btn primary" id="newLoan">${Tx("New loan")}</button>`}
+      ${live.length ? `<h2>${Tx("With friends on the site")}</h2>${live.map(siteLoanCard).join("")}` : ""}
       <h2>${Tx("Open loans")}</h2>${open.length ? open.map(loanCard).join("") : `<p class="empty">${Tx("No open loans.")}</p>`}
       ${done.length ? `<button type="button" class="linkbtn small" id="toggleReturned">${Tx(showReturned ? "Hide returned loans" : "Show returned loans")} (${done.length})</button>
-        ${showReturned ? `<h2>${Tx("Returned")}</h2>${done.map(loanCard).join("")}` : ""}` : ""}`;
+        ${showReturned ? `<h2>${Tx("Returned")}</h2>${done.map(loanCard).join("")}` : ""}` : ""}
+      ${past.length ? `<button type="button" class="linkbtn small" id="toggleSitePast" style="display:block;margin-top:8px">${Tx(showReturned ? "Hide returned loans" : "Show returned loans")}: ${Tx("With friends on the site")} (${past.length})</button>
+        ${showReturned ? past.map(siteLoanCard).join("") : ""}` : ""}`;
+  }
+  const waitingForMe = () => uloans.filter((u) => u.status === "requested" && u.created_by !== me.id).length;
+  function siteLoanCard(u) {
+    const who = nameOf(other(u)), lending = u.lender === me.id, mineAsk = u.created_by === me.id;
+    const late = u.status === "delivered" && u.due_on && u.due_on < today();
+    let step = "", actions = "";
+    if (u.status === "requested" && mineAsk) {
+      step = Tx("Waiting for {name} to accept", { name: who });
+      actions = `<button type="button" class="btn ghost small" data-ul="${u.id}:cancelled">${Tx("Cancel")}</button>`;
+    } else if (u.status === "requested") {
+      step = Tx(lending ? "{name} asks to borrow these cards" : "{name} offers to lend you these cards", { name: who });
+      const st = stock(), short = lending && st.has ? u.items.filter((e) => inForm(u.items, e.card_id, e.foil) > freeOf(st, e.card_id, e.foil)) : [];
+      if (short.length) step += `</div><p class="notice" data-short="${u.id}">${esc(Tx("You don't have enough free copies of some cards ({cards}). You can still accept.", { cards: short.map((e) => cardLabel(e.card_id)).join(", ") }))}</p><div>`;
+      actions = `<button type="button" class="btn primary small" data-ul="${u.id}:accepted">${Tx("Accept")}</button><button type="button" class="btn ghost small" data-ul="${u.id}:declined">${Tx("Decline")}</button>`;
+    } else if (u.status === "accepted") {
+      step = Tx("Accepted {date}. Mark when the cards change hands.", { date: fmtDate(u.accepted_at) });
+      actions = `<label class="f" style="max-width:170px">${Tx("Delivery date")}<input type="date" data-uldate="${u.id}" value="${today()}" max="${today()}"></label>
+        <button type="button" class="btn primary small" data-ul="${u.id}:delivered">${Tx("Mark delivered")}</button><button type="button" class="btn ghost small" data-ul="${u.id}:cancelled">${Tx("Cancel loan")}</button>`;
+    } else if (u.status === "delivered") {
+      step = Tx("Delivered {date}", { date: fmtDate(u.delivered_on) });
+      actions = `<label class="f" style="max-width:170px">${Tx("Return date")}<input type="date" data-uldate="${u.id}" value="${today()}" min="${esc(u.delivered_on)}" max="${today()}"></label>
+        <button type="button" class="btn primary small" data-ul="${u.id}:returned">${Tx("Mark returned on")}</button>`;
+    } else {
+      step = u.status === "returned" ? `${Tx("Delivered {date}", { date: fmtDate(u.delivered_on) })} · ${Tx("Returned {date}", { date: fmtDate(u.returned_on) })}` : Tx(u.status === "declined" ? "Declined" : "Cancelled");
+      if (mineAsk && u.status !== "returned") actions = `<button type="button" class="btn ghost small" data-uldel="${u.id}">${Tx("Delete")}</button>`;
+    }
+    return `<div class="card" data-uloan="${u.id}" data-status="${u.status}"><div class="hd"><b>${esc(Tx(lending ? "Lending to {name}" : "Borrowing from {name}", { name: who }))}</b>
+        <span class="small money">R$ ${fmtMoney(valueOf(u.items))}</span></div>
+      <div class="small muted">${step}${u.due_on ? ` · ${esc(Tx("due {date}", { date: fmtDate(u.due_on) }))}` : ""}${late ? ` <span class="tag late">${Tx("late")}</span>` : ""}</div>
+      ${itemsText(u.items)}${u.note ? `<div class="small muted">${esc(u.note)}</div>` : ""}
+      ${actions ? `<div class="row" style="align-items:flex-end">${actions}</div>` : ""}</div>`;
   }
   function loanFormHtml() {
     const f = form;
+    const site = f.withSite;
     return `<div class="panel" id="loanForm"><h2 style="margin-top:0">${Tx("New loan")}</h2>
-      <div class="seg" role="group"><button type="button" data-dir="lent" aria-pressed="${f.direction === "lent"}">${Tx("I lent")}</button><button type="button" data-dir="borrowed" aria-pressed="${f.direction === "borrowed"}">${Tx("I borrowed")}</button></div>
-      <div class="grid2" style="margin-top:10px"><label class="f">${Tx("Person")}<input type="text" id="fPerson" list="people" maxlength="60" value="${esc(f.person)}" placeholder="${Tx("Name of who you lent to or borrowed from")}"></label>
+      <div class="row"><span class="small muted">${Tx("With")}</span><div class="seg" role="group"><button type="button" data-with="off" aria-pressed="${!site}">${Tx("Someone not on the site")}</button><button type="button" data-with="site" aria-pressed="${!!site}">${Tx("A friend on the site")}</button></div></div>
+      ${site && !friends.length ? `<p class="notice">${Tx("Add friends on the home page to lend between site players.")}</p>` : ""}
+      <div class="seg" role="group" style="margin-top:8px"><button type="button" data-dir="lent" aria-pressed="${f.direction === "lent"}">${Tx(site ? "I lend" : "I lent")}</button><button type="button" data-dir="borrowed" aria-pressed="${f.direction === "borrowed"}">${Tx(site ? "I ask to borrow" : "I borrowed")}</button></div>
+      <div class="grid2" style="margin-top:10px">${site ? `<label class="f">${Tx("Friend")}<select id="fFriend"><option value="">–</option>${friends.map((id) => [id, nameOf(id)]).sort((a, b) => a[1].localeCompare(b[1])).map(([id, n]) => `<option value="${id}" ${f.friend === id ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></label>`
+        : `<label class="f">${Tx("Person")}<input type="text" id="fPerson" list="people" maxlength="60" value="${esc(f.person)}" placeholder="${Tx("Name of who you lent to or borrowed from")}"></label>`}
         <label class="f">${Tx("Due date (optional)")}<input type="date" id="fDue" value="${esc(f.due_on || "")}"></label></div>
       <div style="margin-top:10px">${pickerHtml("li", f.items, Tx("Cards"), f.direction === "lent")}</div>
       <label class="f" style="margin-top:10px">${Tx("Note (optional)")}<textarea id="fNote" maxlength="500">${esc(f.note)}</textarea></label>
       <p class="small muted">${Tx("Value")}: <b class="money">R$ ${fmtMoney(valueOf(f.items))}</b></p>
-      <div class="row"><button type="button" class="btn primary" id="fSave">${Tx("Save")}</button><button type="button" class="btn ghost" id="fCancel">${Tx("Cancel")}</button><span class="small" id="fMsg" aria-live="polite"></span></div>
+      <div class="row"><button type="button" class="btn primary" id="fSave">${Tx(site ? "Send request" : "Save")}</button><button type="button" class="btn ghost" id="fCancel">${Tx("Cancel")}</button><span class="small" id="fMsg" aria-live="polite"></span></div>
       ${peopleList()}</div>`;
   }
 
@@ -437,6 +501,10 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
   function onLoan() {
     const out = new Map(), inn = new Map();
     for (const l of loans) if (!l.returned_at) for (const e of l.items) { const m = l.direction === "lent" ? out : inn; m.set(e.card_id, (m.get(e.card_id) || 0) + e.qty); }
+    for (const u of uloans) if (u.status === "accepted" || u.status === "delivered") {
+      const m = u.lender === me.id ? out : u.status === "delivered" ? inn : null;
+      if (m) for (const e of u.items) m.set(e.card_id, (m.get(e.card_id) || 0) + e.qty);
+    }
     return { out, inn };
   }
   function collectionHtml() {
@@ -470,7 +538,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     const app = $("app");
     if (!me) { app.innerHTML = ""; return; }
     const keepFocus = document.activeElement?.id, caret = document.activeElement?.selectionStart;
-    app.innerHTML = `<div class="tabs" role="tablist">${[["loans", "Loans"], ["trades", "Trades"], ["collection", "Collection"]].map(([k, l]) => `<button type="button" class="tab" role="tab" data-tab="${k}" aria-selected="${tab === k}">${Tx(l)}</button>`).join("")}</div>
+    app.innerHTML = `<div class="tabs" role="tablist">${[["loans", "Loans"], ["trades", "Trades"], ["collection", "Collection"]].map(([k, l]) => `<button type="button" class="tab" role="tab" data-tab="${k}" aria-selected="${tab === k}">${Tx(l)}${k === "loans" && waitingForMe() ? ` <span class="tag" data-waiting>${esc(Tx("{n} waiting for you", { n: waitingForMe() }))}</span>` : ""}</button>`).join("")}</div>
       <div id="tabBody">${tab === "loans" ? loansHtml() : tab === "trades" ? tradesHtml() : collectionHtml()}</div>`;
     app.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => { tab = b.dataset.tab; form = null; try { sessionStorage.setItem("inkwell-trades-tab", tab); } catch { /* */ } render(); });
     wire(app);
@@ -479,6 +547,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
   const keep = () => {   // copy typed values into the draft before a re-render
     if (!form) return;
     if ($("fPerson")) form.person = $("fPerson").value;
+    if ($("fFriend")) form.friend = $("fFriend").value;
     if ($("fNote")) form.note = $("fNote").value;
     if ($("fDue")) form.due_on = $("fDue").value;
     if ($("fDate")) form.traded_on = $("fDate").value;
@@ -493,6 +562,18 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     $("newLoan")?.addEventListener("click", () => { form = { kind: "loan", direction: "lent", person: "", due_on: "", note: "", items: [] }; render(); });
     $("newTrade")?.addEventListener("click", () => { form = { kind: "trade", person: "", traded_on: today(), note: "", gave: [], got: [], cashMode: "none", cash: "" }; render(); });
     $("toggleReturned")?.addEventListener("click", () => { showReturned = !showReturned; render(); });
+    $("toggleSitePast")?.addEventListener("click", () => { showReturned = !showReturned; render(); });
+    app.querySelectorAll("[data-ul]").forEach((b) => b.onclick = () => {
+      const [id, status] = b.dataset.ul.split(":");
+      const body = { status };
+      const d = app.querySelector(`[data-uldate="${id}"]`)?.value;
+      if (status === "delivered") body.delivered_on = d || today();
+      if (status === "returned") body.returned_on = d || today();
+      const go = () => CLOUD.api(`user_loans?id=eq.${id}`, { method: "PATCH", prefer: "return=minimal", body });
+      if (status === "cancelled" || status === "declined") confirmThen(b, status === "declined" ? "Confirm decline" : "Confirm cancel", go);
+      else { b.dataset.c = "1"; confirmThen(b, "", go); }
+    });
+    app.querySelectorAll("[data-uldel]").forEach((b) => b.onclick = () => confirmThen(b, "Confirm delete", () => CLOUD.api(`user_loans?id=eq.${b.dataset.uldel}`, { method: "DELETE" })));
     app.querySelectorAll("[data-return]").forEach((b) => b.onclick = () => confirmThen(b, "Confirm returned", () => CLOUD.api(`loans?id=eq.${b.dataset.return}`, { method: "PATCH", prefer: "return=minimal", body: { returned_at: new Date().toISOString() } })));
     app.querySelectorAll("[data-delloan]").forEach((b) => b.onclick = () => confirmThen(b, "Confirm delete", () => CLOUD.api(`loans?id=eq.${b.dataset.delloan}`, { method: "DELETE" })));
     app.querySelectorAll("[data-deltrade]").forEach((b) => b.onclick = () => confirmThen(b, "Confirm delete", () => CLOUD.api(`trades?id=eq.${b.dataset.deltrade}`, { method: "DELETE" })));
@@ -501,6 +582,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       if (form.kind === "loan") {
         wirePicker(app, "li", form.items, changed, form.direction === "lent");
         app.querySelectorAll("[data-dir]").forEach((b) => b.onclick = () => { keep(); form.direction = b.dataset.dir; render(); });
+        app.querySelectorAll("[data-with]").forEach((b) => b.onclick = () => { keep(); form.withSite = b.dataset.with === "site"; render(); });
       } else {
         wirePicker(app, "gv", form.gave, changed, true); wirePicker(app, "gt", form.got, changed);
         app.querySelectorAll("[data-cash]").forEach((b) => b.onclick = () => { keep(); form.cashMode = b.dataset.cash; render(); });
@@ -524,7 +606,14 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     if (over) { msg.textContent = Tx("{card}: you only have {n} available.", { card: cardLabel(over.card_id), n: freeOf(stock(), over.card_id, over.foil) }); return; }
     const person = (f.person || "").trim();
     try {
-      if (f.kind === "loan") {
+      if (f.kind === "loan" && f.withSite) {
+        const items = cleanItems(f.items);
+        if (!f.friend) { msg.textContent = Tx("Choose a friend."); return; }
+        if (!items.length) { msg.textContent = Tx("Add at least one card and the person's name."); return; }
+        msg.textContent = Tx("Saving…"); $("fSave").disabled = true;
+        const lending = f.direction === "lent";
+        await CLOUD.api("user_loans", { method: "POST", prefer: "return=minimal", body: { lender: lending ? me.id : f.friend, borrower: lending ? f.friend : me.id, created_by: me.id, items, due_on: f.due_on || null, note: (f.note || "").slice(0, 500) } });
+      } else if (f.kind === "loan") {
         const items = cleanItems(f.items);
         if (!person || !items.length) { msg.textContent = Tx("Add at least one card and the person's name."); return; }
         msg.textContent = Tx("Saving…"); $("fSave").disabled = true;
