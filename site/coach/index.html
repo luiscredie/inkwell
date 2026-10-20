@@ -403,6 +403,9 @@ details.add[open] { display: grid; gap: 8px; }
 .legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
 .deck { background: var(--panel); border-radius: 14px; padding: 10px 12px; }
 .deck summary { cursor: pointer; font-weight: 600; }
+.deckedit { margin-top: 8px; display: grid; gap: 8px; }
+.deckedit #deckBox { display: grid; gap: 8px; }
+.deckedit #deckBox[hidden] { display: none; }
 .decklist { columns: 2 220px; column-gap: 18px; margin-top: 8px; font-size: 0.88rem; }
 .decklist div { break-inside: avoid; display: flex; gap: 8px; padding: 2px 0; }
 .decklist .q { color: var(--gold); font-variant-numeric: tabular-nums; width: 1.4em; text-align: right; }
@@ -480,6 +483,32 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
   "use strict";
   const $ = (id) => document.getElementById(id);
   const CARDS = new Map((CARD_INDEX?.cards || []).map(([id, name, cost, type, ink, lore]) => [id, { id, name, cost, type, ink, lore }]));
+  // Deck-list text ("4 Elsa - Spirit of Winter", "4x ...") to card ids. Prefers main-set printings over promos and variants.
+  const normName = (n) => String(n || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\((enchanted|epic|iconic|foil|alternate art)\)/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+  const BY_NAME = new Map();
+  for (const c of CARDS.values()) {
+    const k = normName(c.name), cur = BY_NAME.get(k);
+    const rank = (x) => (/^LOR\d+-\d+$/.test(x.id) ? 0 : /^LOR/.test(x.id) ? 1 : 2) * 1000 + (parseInt(x.id.replace(/^\D+/, ""), 10) || 0);
+    if (!cur || rank(c) < rank(cur)) BY_NAME.set(k, c);
+  }
+  function parseDeck(text) {
+    const list = new Map(), missing = [];
+    for (const raw of String(text).split(/\r?\n/)) {
+      const line = raw.trim();
+      if (!line || /^(deck|main|sideboard|total)\b/i.test(line)) continue;
+      let qty = 1, name = line, m = line.match(/^(\d{1,2})\s*x?\s+(.+)$/i);
+      if (m) { qty = +m[1]; name = m[2]; } else if ((m = line.match(/^(.+?)\s+x?(\d{1,2})$/i))) { name = m[1]; qty = +m[2]; }
+      const c = BY_NAME.get(normName(name));
+      if (!c) { missing.push(line); continue; }
+      list.set(c.id, Math.min(99, (list.get(c.id) || 0) + qty));
+    }
+    return { list: [...list].map(([card_id, qty]) => ({ card_id, qty })), missing };
+  }
+  function inksOf(list) {
+    const n = new Map();
+    for (const e of list) for (const ink of String(CARDS.get(e.card_id)?.ink || "").split(/[,\/]\s*/).filter(Boolean)) n.set(ink, (n.get(ink) || 0) + e.qty);
+    return [...n].sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k]) => k).sort();
+  }
   const INK_VAR = { Amber: "--amber", Amethyst: "--amethyst", Emerald: "--emerald", Ruby: "--ruby", Sapphire: "--sapphire", Steel: "--steel" };
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const cardName = (id, fallback) => (id && CARDS.get(id)?.name) || fallback || (id ? id : "a card");
@@ -498,6 +527,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
   const noteCount = (g) => allNotes[notesColl(g)].filter((n) => n.game === g.key).length;
   let composerFor = null;           // anchor key with an open composer
   let filter = "all";
+  let deckNotice = null;            // {key, text, open}: survives the re-render that follows a save
 
   // ---------- list ----------
   function summaryOf(g) { return g.doc.summary || {}; }
@@ -628,8 +658,12 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       ${!db ? `<div class="notice">Comments need the shared store, which isn't available in this view. You can still read the game.</div>` : !me?.id ? `<div class="notice">Sign in to comment.</div>` : canWrite === false ? `<div class="notice">You can read this game. Ask the owner to make you a Contributor to comment.</div>` : ""}
       ${log.turns.length ? `<div class="chart"><div class="legend"><span>Lore by turn</span><span><i style="background:var(--gold)"></i>${esc(seatName(log, meSeat))}</span><span><i style="background:var(--opp)"></i>${esc(seatName(log, meSeat === "p1" ? "p2" : "p1"))}</span></div>${loreChart(log)}</div>` : ""}
       <div>${add("game", "Comment on the whole game")}${notesHtml("game", profilesMap)}</div>
-      ${deck.length ? `<details class="deck"><summary>Your deck (${deck.reduce((n, e) => n + e.qty, 0)} cards)</summary>
-        <div class="decklist">${deck.map((e) => `<div><span class="q">${e.qty}</span><span>${esc(cardName(e.card_id))}</span></div>`).join("") || `<span class="muted">No list recorded.</span>`}</div>
+      ${deck.length || isOwner ? `<details class="deck" ${!deck.length || deckNotice?.key === g.key ? "open" : ""}><summary>Your deck (${deck.length ? `${deck.reduce((n, e) => n + e.qty, 0)} cards` : "no list yet"})</summary>
+        ${isOwner ? `<div class="deckedit"><button type="button" class="btn ghost small" id="deckEdit">${deck.length ? "Edit your deck list" : "Add your deck list"}</button>
+          <div id="deckBox" ${deckNotice?.key === g.key && deckNotice.open ? "" : "hidden"}><textarea id="deckText" rows="10" placeholder="One card per line, e.g.&#10;4 Elsa - Spirit of Winter&#10;4 Tipo - Growing Son">${esc(deck.map((e) => `${e.qty} ${cardName(e.card_id)}`).join("\n"))}</textarea>
+          ${siblings(g.key).length > 1 ? `<label class="small"><input type="checkbox" id="deckAll" checked> All ${siblings(g.key).length} games of this match</label>` : ""}
+          <div class="row"><button type="button" class="btn primary small" id="deckSave">Save deck list</button></div></div><span class="small" id="deckMsg" aria-live="polite">${deckNotice?.key === g.key ? esc(deckNotice.text) : ""}</span></div>` : ""}
+        ${deck.length ? `<div class="decklist">${deck.map((e) => `<div><span class="q">${e.qty}</span><span>${esc(cardName(e.card_id))}</span></div>`).join("")}</div>` : ""}
         <div style="margin-top:8px">${add("deck", "Comment on the deck list")}${notesHtml("deck", profilesMap)}</div>
       </details>` : ""}`;
     for (const t of log.turns) {
@@ -686,6 +720,35 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       catch { alertInline("Couldn't delete the comment."); }
     }));
     $("review").querySelectorAll("[data-vis]").forEach((b) => b.addEventListener("click", () => setVisibility(g, b.dataset.vis)));
+    $("deckEdit")?.addEventListener("click", () => { $("deckBox").hidden = !$("deckBox").hidden; if (!$("deckBox").hidden) $("deckText").focus(); });
+    $("deckSave")?.addEventListener("click", () => saveDeck(g));
+  }
+  // Games recorded together by the Lore Counter share a match id: lc-<match>-g<n>.
+  function siblings(key) {
+    const m = key.match(/^(lc-[A-Za-z0-9]+)-g\d+$/);
+    return m ? [...games.keys()].filter((k) => k.startsWith(`${m[1]}-g`)) : [key];
+  }
+  async function saveDeck(g) {
+    const msg = $("deckMsg"), { list, missing } = parseDeck($("deckText").value);
+    if (missing.length && !list.length) { msg.textContent = `No cards recognized. Check the names: ${missing.slice(0, 3).join("; ")}`; return; }
+    const keys = $("deckAll")?.checked ? siblings(g.key) : [g.key];
+    const inks = inksOf(list);
+    $("deckSave").disabled = true; msg.textContent = "Saving…";
+    try {
+      for (const k of keys) {
+        if (db.loadGame) await db.loadGame(k);
+        const x = games.get(k); if (!x) continue;
+        const log = JSON.parse(JSON.stringify(x.doc.log));
+        const meP = log.players.find((p) => p.is_me) || log.players[0];
+        meP.deck = { ...(meP.deck || {}), list, list_source: "text", ...(inks.length && !(meP.deck?.inks || []).length ? { inks } : {}) };
+        const summary = { ...(x.doc.summary || {}), ...(inks.length && !x.doc.summary?.my_inks ? { my_inks: inks.join("/") } : {}) };
+        await db.collection(x.coll).doc(k).set({ ...x.doc, log, summary });
+      }
+      const n = list.reduce((t, e) => t + e.qty, 0);
+      deckNotice = { key: g.key, open: missing.length > 0,
+        text: `Saved: ${n} cards${keys.length > 1 ? ` on ${keys.length} games` : ""}.${missing.length ? ` Not recognized, left out: ${missing.join("; ")}` : ""}` };
+    } catch { deckNotice = { key: g.key, open: true, text: "Couldn't save the deck list. Try again." }; }
+    renderReview();
   }
   function alertInline(msg) {
     const n = document.createElement("div"); n.className = "notice"; n.textContent = msg;
@@ -710,7 +773,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
   }
 
   function openGame(key) {
-    current = key; composerFor = null; notes = [];
+    current = key; composerFor = null; notes = []; if (deckNotice?.key !== key) deckNotice = null;
     $("wrap").classList.add("reading");
     refreshNotes(); renderList(); renderReview();
     if (db?.loadGame) db.loadGame(key).then(() => { if (current === key) renderReview(); }).catch(() => alertInline("Couldn't load this game. Try again."));
