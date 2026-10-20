@@ -42,3 +42,22 @@ The Lore Counter works with no internet and sends each finished match to
 The counter is built from the Inkwell 2 repo
 (`apps/lorecounter/build_pwa.py --config site/sync-config.json --out site/counter`).
 Don't edit `site/counter/` by hand.
+
+## Coach Review (`/coach/`)
+
+Shows your games from `public.game_logs` (the Lore Counter sends them there),
+with comments and coach access. One-time setup:
+
+1. **SQL Editor**: run `supabase/coach_review.sql` after `game_logs.sql`.
+2. **Authentication → URL Configuration → Redirect URLs**: add
+   `https://luiscredie.github.io/inkwell/coach/` (or `https://luiscredie.github.io/inkwell/**`).
+3. A coach signs in with their own email. With Supabase's built-in email
+   (no custom SMTP), sign-in emails only go to members of your Supabase
+   organization: invite the coach there, or set up custom SMTP (e.g. Resend).
+
+Who sees what (enforced by row-level security): a private game is visible to the
+player and to coaches the player added under "My coaches"; a public game to anyone
+signed in. Anyone who can see a game can comment; the author or the player can
+delete a comment. Only the player can add games or change visibility.
+
+Built from the Inkwell 2 repo (`apps/coach/build_site.py`); don't edit `site/coach/` by hand.
