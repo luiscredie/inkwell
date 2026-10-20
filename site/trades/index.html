@@ -153,8 +153,9 @@ label.f { display: grid; gap: 4px; font-size: 0.85rem; color: var(--muted); }
 .card { background: var(--panel); border-radius: 14px; padding: 10px 12px; margin: 8px 0; }
 .card .hd { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
 .card ul { margin: 6px 0; padding-left: 18px; }
-.tag { font-size: 0.75rem; border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; color: var(--muted); }
+.tag { white-space: nowrap; font-size: 0.75rem; border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; color: var(--muted); }
 .tag.late { border-color: var(--loss); color: var(--loss); }
+.tag.match { border-color: var(--win); color: var(--win); }
 .money { font-variant-numeric: tabular-nums; }
 .bal { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
 .bal div { background: var(--night); border-radius: 10px; padding: 8px; }
@@ -211,7 +212,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     "You came out R$ {v} ahead": "Você saiu R$ {v} à frente", "You came out R$ {v} behind": "Você saiu R$ {v} atrás",
     "Prices: Liga Lorcana, {date}. Cards without a price count as R$ 0.": "Preços: Liga Lorcana, {date}. Cartas sem preço contam como R$ 0.",
     "No trades yet.": "Nenhuma troca ainda.", "with {person}": "com {person}", "paid R$ {v}": "pagou R$ {v}", "received R$ {v}": "recebeu R$ {v}",
-    "Recording a trade doesn't change your collection yet. Update the collection in Inkwell.": "Registrar uma troca ainda não altera sua coleção. Atualize a coleção no Inkwell.",
+
     "From your Inkwell collection. Out of date? Update it in Inkwell.": "Da sua coleção no Inkwell. Desatualizada? Atualize no Inkwell.",
     "Profile": "Perfil", "No collection found in your Inkwell account.": "Nenhuma coleção encontrada na sua conta Inkwell.",
     "cards": "cartas", "collection value": "valor da coleção", "lent out": "emprestadas", "borrowed": "pegas emprestadas",
@@ -233,6 +234,26 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     "You don't have enough free copies of some cards ({cards}). You can still accept.": "Você não tem cópias livres suficientes de algumas cartas ({cards}). Ainda assim pode aceitar.",
     "{n} waiting for you": "{n} aguardando você", "Add friends on the home page to lend between site players.": "Adicione amigos na página inicial para emprestar entre jogadores do site.",
     "a player": "um jogador",
+    "Board": "Mural", "I give": "Eu dou", "I get": "Eu recebo", "Send proposal": "Enviar proposta",
+    "Trade with {name}": "Troca com {name}", "Waiting for {name} to answer": "Aguardando {name} responder", "{name} proposes this trade": "{name} propõe esta troca",
+    "Accepted {date}. Mark when the cards change hands.": "Aceito em {date}. Marque quando as cartas forem entregues.",
+    "Trade accepted {date}. Mark it done when the cards change hands.": "Troca aceita em {date}. Marque como concluída quando as cartas forem trocadas.",
+    "Trade date": "Data da troca", "Mark trade done": "Marcar troca concluída", "Cancel trade": "Cancelar troca", "Traded {date}": "Trocada em {date}",
+    "You don't have enough free copies to give ({cards}).": "Você não tem cópias livres suficientes para dar ({cards}).",
+    "Update your collection with this trade?": "Atualizar sua coleção com esta troca?", "Out: {cards}": "Sai: {cards}", "In: {cards}": "Entra: {cards}",
+    "Update collection": "Atualizar coleção", "Don't update": "Não atualizar", "Always update my collection after a trade, without asking": "Sempre atualizar minha coleção depois de uma troca, sem perguntar",
+    "Collection updated": "Coleção atualizada", "Collection not changed": "Coleção não alterada", "Updated your collection with {n} finished trade(s).": "Sua coleção foi atualizada com {n} troca(s) concluída(s).",
+    "No Inkwell collection to update.": "Nenhuma coleção do Inkwell para atualizar.", "nothing": "nada",
+    "Changes go to your Inkwell collection; Inkwell picks them up on its next sync.": "As mudanças vão para sua coleção no Inkwell; o Inkwell as recebe na próxima sincronização.",
+    "Public board": "Mural público", "What players want and offer. Everyone signed in sees it.": "O que os jogadores procuram e oferecem. Todos que entram no site veem.",
+    "My posts": "Meus anúncios", "New post": "Novo anúncio", "Post": "Publicar", "No posts yet.": "Nenhum anúncio ainda.",
+    "I want to borrow": "Quero pegar emprestado", "I want to buy": "Quero comprar", "I lend": "Eu empresto", "I sell": "Vendo",
+    "wants to borrow": "quer pegar emprestado", "wants to buy": "quer comprar", "lends": "empresta", "sells": "vende",
+    "All": "Todos", "Looking for": "Procurando", "Offering": "Oferecendo", "Price per card (optional)": "Preço por carta (opcional)",
+    "You have {n} free": "Você tem {n} livre(s)", "On your list": "Na sua lista", "Add friend": "Adicionar amigo", "Friend request sent": "Pedido de amizade enviado",
+    "Ask to borrow": "Pedir emprestado", "Offer to lend": "Oferecer empréstimo", "Propose to buy": "Propor compra", "Propose to sell": "Propor venda",
+    "Remove": "Remover", "Nothing on the board matches.": "Nada no mural corresponde.",
+    "To lend or trade with someone, you need to be friends on the site.": "Para emprestar ou trocar com alguém, vocês precisam ser amigos no site.",
     "{n} more": "mais {n}", "Unknown card": "Carta desconhecida",
   };
   const fill = (s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)) : s);
@@ -290,9 +311,13 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
   const me = CLOUD?.user();
   let loans = [], trades = [], profiles = [], profileName = null;
   let uloans = [], friends = [];             // loans with friends on the site, my accepted friends' ids
+  let utrades = [], listings = [], pendingWith = new Set(), autoColl = false, autoNote = "";
   const names = new Map();                   // user id -> display name
   const nameOf = (id) => names.get(id) || Tx("a player");
   const other = (u) => (u.lender === me.id ? u.borrower : u.lender);
+  const otherT = (t) => (t.proposer === me.id ? t.partner : t.proposer);
+  const myView = (t) => (t.proposer === me.id ? { gave: t.gave, got: t.got, cash: +t.cash_brl } : { gave: t.got, got: t.gave, cash: -(+t.cash_brl) });
+  const mySide = (t) => (t.proposer === me.id ? "proposer_collection" : "partner_collection");
   const ACTIVE = new Set(["requested", "accepted", "delivered"]);
   let tab = "loans", showReturned = false, form = null;   // form: {kind, ...draft}
   try { tab = sessionStorage.getItem("inkwell-trades-tab") || "loans"; } catch { /* */ }
@@ -305,12 +330,19 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       fetch(window.INKWELL_PRICES_URL || "../data/prices.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
     ]);
     loans = l || []; trades = t || []; profiles = (p || []).filter((x) => x.collection && typeof x.collection === "object");
-    const [ul, fr] = await Promise.all([
+    const [ul, fr, ut, ls, mp] = await Promise.all([
       CLOUD.api("user_loans?select=*&order=created_at.desc&limit=1000").catch(() => []),
-      CLOUD.api("friendships?status=eq.accepted&select=requester,addressee").catch(() => []),
+      CLOUD.api("friendships?select=requester,addressee,status").catch(() => []),
+      CLOUD.api("user_trades?select=*&order=created_at.desc&limit=1000").catch(() => []),
+      CLOUD.api("listings?select=*&order=created_at.desc&limit=3000").catch(() => []),
+      CLOUD.api(`profiles?user_id=eq.${me.id}&select=auto_collection`).catch(() => []),
     ]);
-    uloans = ul || []; friends = [...new Set((fr || []).map((f) => (f.requester === me.id ? f.addressee : f.requester)))];
-    const want = [...new Set([...friends, ...uloans.map(other)])].filter((id) => !names.has(id));
+    const otherF = (f) => (f.requester === me.id ? f.addressee : f.requester);
+    uloans = ul || []; utrades = ut || []; listings = ls || [];
+    friends = [...new Set((fr || []).filter((f) => f.status === "accepted").map(otherF))];
+    pendingWith = new Set((fr || []).filter((f) => f.status !== "accepted").map(otherF));
+    autoColl = !!mp?.[0]?.auto_collection;
+    const want = [...new Set([...friends, ...uloans.map(other), ...utrades.map(otherT), ...listings.map((l) => l.user_id)])].filter((id) => id !== me.id && !names.has(id));
     if (want.length) for (const r of (await CLOUD.api(`profiles?user_id=in.(${want.join(",")})&select=user_id,display_name`).catch(() => [])) || []) names.set(r.user_id, r.display_name);
     if (pr?.prices) { PRICES = pr.prices; pricesDate = pr.generated_at; }
     try { profileName = localStorage.getItem("inkwell-trades-profile"); } catch { /* */ }
@@ -443,6 +475,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       ${itemsText(u.items)}${u.note ? `<div class="small muted">${esc(u.note)}</div>` : ""}
       ${actions ? `<div class="row" style="align-items:flex-end">${actions}</div>` : ""}</div>`;
   }
+  const friendSelect = (f) => `<label class="f">${Tx("Friend")}<select id="fFriend"><option value="">–</option>${friends.map((id) => [id, nameOf(id)]).sort((a, b) => a[1].localeCompare(b[1])).map(([id, n]) => `<option value="${id}" ${f.friend === id ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></label>`;
   function loanFormHtml() {
     const f = form;
     const site = f.withSite;
@@ -450,7 +483,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       <div class="row"><span class="small muted">${Tx("With")}</span><div class="seg" role="group"><button type="button" data-with="off" aria-pressed="${!site}">${Tx("Someone not on the site")}</button><button type="button" data-with="site" aria-pressed="${!!site}">${Tx("A friend on the site")}</button></div></div>
       ${site && !friends.length ? `<p class="notice">${Tx("Add friends on the home page to lend between site players.")}</p>` : ""}
       <div class="seg" role="group" style="margin-top:8px"><button type="button" data-dir="lent" aria-pressed="${f.direction === "lent"}">${Tx(site ? "I lend" : "I lent")}</button><button type="button" data-dir="borrowed" aria-pressed="${f.direction === "borrowed"}">${Tx(site ? "I ask to borrow" : "I borrowed")}</button></div>
-      <div class="grid2" style="margin-top:10px">${site ? `<label class="f">${Tx("Friend")}<select id="fFriend"><option value="">–</option>${friends.map((id) => [id, nameOf(id)]).sort((a, b) => a[1].localeCompare(b[1])).map(([id, n]) => `<option value="${id}" ${f.friend === id ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></label>`
+      <div class="grid2" style="margin-top:10px">${site ? friendSelect(f)
         : `<label class="f">${Tx("Person")}<input type="text" id="fPerson" list="people" maxlength="60" value="${esc(f.person)}" placeholder="${Tx("Name of who you lent to or borrowed from")}"></label>`}
         <label class="f">${Tx("Due date (optional)")}<input type="date" id="fDue" value="${esc(f.due_on || "")}"></label></div>
       <div style="margin-top:10px">${pickerHtml("li", f.items, Tx("Cards"), f.direction === "lent")}</div>
@@ -468,33 +501,154 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     return `<div class="bal"><div><b class="money">R$ ${fmtMoney(valueOf(gave))}</b><span>${Tx("Given")}</span></div><div><b class="money">R$ ${fmtMoney(valueOf(got))}</b><span>${Tx("Received")}</span></div>
       <div><b class="money ${b > 0.5 ? "good" : b < -0.5 ? "bad" : ""}">${b >= 0 ? "+" : "−"}R$ ${fmtMoney(Math.abs(b))}</b><span>${Tx("Balance")}</span></div></div><p class="small">${word}</p>`;
   }
+  // ----- collection updates after a finished trade -----
+  const listText = (items) => items.length ? items.map((e) => `${e.qty}× ${cardLabel(e.card_id)}${e.foil ? " (foil)" : ""}`).join(", ") : Tx("nothing");
+  function collPrompt(kind, id, v) {
+    return `<div class="notice" data-cprompt="${kind}:${id}"><b>${Tx("Update your collection with this trade?")}</b>
+      <div class="small">${esc(Tx("Out: {cards}", { cards: listText(v.gave) }))}<br>${esc(Tx("In: {cards}", { cards: listText(v.got) }))}</div>
+      <div class="row" style="margin-top:6px"><button type="button" class="btn primary small" data-capply="${kind}:${id}">${Tx("Update collection")}</button>
+        <button type="button" class="btn ghost small" data-cskip="${kind}:${id}">${Tx("Don't update")}</button></div>
+      <label class="foil" style="margin-top:6px"><input type="checkbox" class="autoColl" ${autoColl ? "checked" : ""}>${Tx("Always update my collection after a trade, without asking")}</label></div>`;
+  }
+  const collTag = (flag) => (flag ? `<span class="tag">${Tx(flag === "applied" ? "Collection updated" : "Collection not changed")}</span>` : "");
+  function pendingColl() {
+    return [...utrades.filter((t) => t.status === "completed" && !t[mySide(t)]).map((t) => ["site", t.id]), ...trades.filter((t) => !t.collection).map((t) => ["off", t.id])];
+  }
+  async function applyTrade(kind, id, apply) {
+    const t = kind === "site" ? utrades.find((x) => x.id === id) : trades.find((x) => x.id === id);
+    if (!t) return;
+    const v = kind === "site" ? myView(t) : { gave: t.gave, got: t.got };
+    if (apply) {
+      const prof = profiles.find((p) => p.profile === profileName) || profiles[0];
+      if (!prof) throw new Error("no-profile");
+      const delta = [...v.gave.map((e) => ({ card_id: e.card_id, qty: -e.qty, foil: !!e.foil })), ...v.got.map((e) => ({ card_id: e.card_id, qty: e.qty, foil: !!e.foil }))];
+      if (delta.length) await CLOUD.api("rpc/apply_collection_delta", { method: "POST", prefer: "return=minimal", body: { p_profile: prof.profile, p_delta: delta } });
+    }
+    const flag = apply ? "applied" : "skipped";
+    if (kind === "site") await CLOUD.api(`user_trades?id=eq.${id}`, { method: "PATCH", prefer: "return=minimal", body: { status: "completed", [mySide(t)]: flag } });
+    else await CLOUD.api(`trades?id=eq.${id}`, { method: "PATCH", prefer: "return=minimal", body: { collection: flag } });
+  }
+  async function autoApply() {   // "always update": apply every finished trade not decided yet
+    if (!autoColl || !profiles.length) return false;
+    const todo = pendingColl();
+    if (!todo.length) return false;
+    let n = 0;
+    for (const [kind, id] of todo) { try { await applyTrade(kind, id, true); n++; } catch { break; } }
+    autoNote = n ? Tx("Updated your collection with {n} finished trade(s).", { n }) : "";
+    return n > 0;
+  }
+  const tradesWaitingForMe = () => utrades.filter((t) => t.status === "proposed" && t.partner === me.id).length;
+  function siteTradeCard(t) {
+    const who = nameOf(otherT(t)), mine = t.proposer === me.id, v = myView(t);
+    let step = "", actions = "", extra = "";
+    if (t.status === "proposed" && mine) {
+      step = Tx("Waiting for {name} to answer", { name: who });
+      actions = `<button type="button" class="btn ghost small" data-ut="${t.id}:cancelled">${Tx("Cancel")}</button>`;
+    } else if (t.status === "proposed") {
+      step = Tx("{name} proposes this trade", { name: who });
+      const st = stock(), short = st.has ? v.gave.filter((e) => inForm(v.gave, e.card_id, e.foil) > freeOf(st, e.card_id, e.foil)) : [];
+      if (short.length) extra = `<p class="notice">${esc(Tx("You don't have enough free copies to give ({cards}).", { cards: short.map((e) => cardLabel(e.card_id)).join(", ") }))}</p>`;
+      actions = `<button type="button" class="btn primary small" data-ut="${t.id}:accepted">${Tx("Accept")}</button><button type="button" class="btn ghost small" data-ut="${t.id}:declined">${Tx("Decline")}</button>`;
+    } else if (t.status === "accepted") {
+      step = Tx("Trade accepted {date}. Mark it done when the cards change hands.", { date: fmtDate(t.accepted_at) });
+      actions = `<label class="f" style="max-width:170px">${Tx("Trade date")}<input type="date" data-utdate="${t.id}" value="${today()}" max="${today()}"></label>
+        <button type="button" class="btn primary small" data-ut="${t.id}:completed">${Tx("Mark trade done")}</button><button type="button" class="btn ghost small" data-ut="${t.id}:cancelled">${Tx("Cancel trade")}</button>`;
+    } else if (t.status === "completed") {
+      step = `${Tx("Traded {date}", { date: fmtDate(t.completed_on) })} ${collTag(t[mySide(t)])}`;
+      if (!t[mySide(t)]) extra = collPrompt("site", t.id, v);
+    } else {
+      step = Tx(t.status === "declined" ? "Declined" : "Cancelled");
+      if (mine) actions = `<button type="button" class="btn ghost small" data-utdel="${t.id}">${Tx("Delete")}</button>`;
+    }
+    return `<div class="card" data-utrade="${t.id}" data-status="${t.status}"><div class="hd"><b>${esc(Tx("Trade with {name}", { name: who }))}</b></div>
+      <div class="small muted">${step}</div>
+      <div class="grid2"><div><span class="small muted">${Tx("I give")}</span>${v.gave.length ? itemsText(v.gave) : "<p class='faint'>–</p>"}</div><div><span class="small muted">${Tx("I get")}</span>${v.got.length ? itemsText(v.got) : "<p class='faint'>–</p>"}</div></div>
+      ${v.cash ? `<div class="small muted">${esc(Tx(v.cash > 0 ? "paid R$ {v}" : "received R$ {v}", { v: fmtMoney(Math.abs(v.cash)) }))}</div>` : ""}
+      ${balanceHtml(v.gave, v.got, v.cash)}${t.note ? `<div class="small muted">${esc(t.note)}</div>` : ""}${extra}
+      ${actions ? `<div class="row" style="align-items:flex-end">${actions}</div>` : ""}</div>`;
+  }
   function tradesHtml() {
-    const tradeCard = (t) => `<div class="card"><div class="hd"><b>${esc(Tx("with {person}", { person: t.person }))}</b><span class="small muted">${esc(fmtDate(t.traded_on))}</span></div>
+    const live = utrades.filter((t) => t.status !== "declined" && t.status !== "cancelled" && !(t.status === "completed" && t[mySide(t)]));
+    const past = utrades.filter((t) => !live.includes(t));
+    const tradeCard = (t) => `<div class="card"><div class="hd"><b>${esc(Tx("with {person}", { person: t.person }))}</b><span class="small muted">${esc(fmtDate(t.traded_on))} ${collTag(t.collection)}</span></div>
       <div class="grid2"><div><span class="small muted">${Tx("I gave")}</span>${t.gave.length ? itemsText(t.gave) : "<p class='faint'>–</p>"}</div><div><span class="small muted">${Tx("I got")}</span>${t.got.length ? itemsText(t.got) : "<p class='faint'>–</p>"}</div></div>
       ${+t.cash_brl ? `<div class="small muted">${esc(Tx(+t.cash_brl > 0 ? "paid R$ {v}" : "received R$ {v}", { v: fmtMoney(Math.abs(+t.cash_brl)) }))}</div>` : ""}
       ${balanceHtml(t.gave, t.got, +t.cash_brl)}${t.note ? `<div class="small muted">${esc(t.note)}</div>` : ""}
+      ${!t.collection ? collPrompt("off", t.id, t) : ""}
       <div class="row"><button type="button" class="btn ghost small" data-deltrade="${t.id}">${Tx("Delete")}</button></div></div>`;
-    return `<p class="notice">${Tx("Recording a trade doesn't change your collection yet. Update the collection in Inkwell.")}</p>
+    return `${autoNote ? `<p class="notice" id="autoNote">${esc(autoNote)}</p>` : ""}
       ${form?.kind === "trade" ? tradeFormHtml() : `<button type="button" class="btn primary" id="newTrade">${Tx("New trade")}</button>`}
-      <h2>${Tx("Trades")}</h2>${trades.length ? trades.map(tradeCard).join("") : `<p class="empty">${Tx("No trades yet.")}</p>`}
+      ${live.length ? `<h2>${Tx("With friends on the site")}</h2>${live.map(siteTradeCard).join("")}` : ""}
+      <h2>${Tx("Trades")}</h2>${trades.length || past.length ? trades.map(tradeCard).join("") + past.map(siteTradeCard).join("") : `<p class="empty">${Tx("No trades yet.")}</p>`}
+      <p class="small faint">${Tx("Changes go to your Inkwell collection; Inkwell picks them up on its next sync.")}</p>
       ${pricesNote()}`;
   }
   function tradeFormHtml() {
     const f = form;
     const cashPaid = f.cashMode === "paid" ? +f.cash || 0 : f.cashMode === "received" ? -(+f.cash || 0) : 0;
+    const site = f.withSite;
     return `<div class="panel" id="tradeForm"><h2 style="margin-top:0">${Tx("New trade")}</h2>
-      <div class="grid2"><label class="f">${Tx("Person")}<input type="text" id="fPerson" list="people" maxlength="60" value="${esc(f.person)}" placeholder="${Tx("Who you traded with")}"></label>
-        <label class="f">${Tx("Date")}<input type="date" id="fDate" value="${esc(f.traded_on)}"></label></div>
-      <div class="grid2" style="margin-top:10px"><div>${pickerHtml("gv", f.gave, Tx("I gave"), true)}</div><div>${pickerHtml("gt", f.got, Tx("I got"))}</div></div>
+      <div class="row"><span class="small muted">${Tx("With")}</span><div class="seg" role="group"><button type="button" data-with="off" aria-pressed="${!site}">${Tx("Someone not on the site")}</button><button type="button" data-with="site" aria-pressed="${!!site}">${Tx("A friend on the site")}</button></div></div>
+      ${site && !friends.length ? `<p class="notice">${Tx("Add friends on the home page to lend between site players.")}</p>` : ""}
+      <div class="grid2" style="margin-top:10px">${site ? friendSelect(f) : `<label class="f">${Tx("Person")}<input type="text" id="fPerson" list="people" maxlength="60" value="${esc(f.person)}" placeholder="${Tx("Who you traded with")}"></label>
+        <label class="f">${Tx("Date")}<input type="date" id="fDate" value="${esc(f.traded_on)}"></label>`}</div>
+      <div class="grid2" style="margin-top:10px"><div>${pickerHtml("gv", f.gave, Tx(site ? "I give" : "I gave"), true)}</div><div>${pickerHtml("gt", f.got, Tx(site ? "I get" : "I got"))}</div></div>
       <div class="row" style="margin-top:10px"><span class="small muted">${Tx("Money")}</span>
         <div class="seg" role="group">${[["none", "No money"], ["paid", "I paid"], ["received", "I received"]].map(([k, l]) => `<button type="button" data-cash="${k}" aria-pressed="${f.cashMode === k}">${Tx(l)}</button>`).join("")}</div>
         ${f.cashMode !== "none" ? `<input type="number" id="fCash" min="0" step="0.01" inputmode="decimal" value="${esc(f.cash)}" placeholder="${Tx("Amount (R$)")}" style="max-width:140px">` : ""}</div>
       ${balanceHtml(f.gave, f.got, cashPaid)}
       <label class="f" style="margin-top:10px">${Tx("Note (optional)")}<textarea id="fNote" maxlength="500">${esc(f.note)}</textarea></label>
-      <div class="row" style="margin-top:8px"><button type="button" class="btn primary" id="fSave">${Tx("Save")}</button><button type="button" class="btn ghost" id="fCancel">${Tx("Cancel")}</button><span class="small" id="fMsg" aria-live="polite"></span></div>
+      <div class="row" style="margin-top:8px"><button type="button" class="btn primary" id="fSave">${Tx(site ? "Send proposal" : "Save")}</button><button type="button" class="btn ghost" id="fCancel">${Tx("Cancel")}</button><span class="small" id="fMsg" aria-live="polite"></span></div>
       ${peopleList()}</div>`;
   }
   const pricesNote = () => `<p class="small faint">${esc(Tx("Prices: Liga Lorcana, {date}. Cards without a price count as R$ 0.", { date: pricesDate ? fmtDate(pricesDate) : "–" }))}</p>`;
+
+  // ---------- public board ----------
+  const KIND = { borrow: ["I want to borrow", "wants to borrow"], buy: ["I want to buy", "wants to buy"], lend: ["I lend", "lends"], sell: ["I sell", "sells"] };
+  let boardKind = "all", boardQ = "";
+  function boardHtml() {
+    const st = stock();
+    const mine = listings.filter((l) => l.user_id === me.id);
+    const myWants = new Set(mine.filter((l) => l.kind === "borrow" || l.kind === "buy").map((l) => l.card_id));
+    const words = norm(boardQ).split(" ").filter(Boolean);
+    const matchOf = (l) => {
+      if (l.kind === "borrow" || l.kind === "buy") { const n = freeOf(st, l.card_id, false) + freeOf(st, l.card_id, true); return n > 0 ? Tx("You have {n} free", { n }) : ""; }
+      return myWants.has(l.card_id) ? Tx("On your list") : "";
+    };
+    const rows = listings.filter((l) => l.user_id !== me.id && CARDS.has(l.card_id)
+        && (boardKind === "all" || (boardKind === "want" ? l.kind === "borrow" || l.kind === "buy" : l.kind === "lend" || l.kind === "sell"))
+        && (!words.length || words.every((w) => norm(`${cardLabel(l.card_id)} ${l.card_id} ${nameOf(l.user_id)}`).includes(w))))
+      .map((l) => ({ l, m: matchOf(l) })).sort((a, b) => (b.m ? 1 : 0) - (a.m ? 1 : 0) || String(b.l.created_at).localeCompare(String(a.l.created_at)));
+    const action = (l) => {
+      if (friends.includes(l.user_id)) {
+        const [k, label] = { lend: ["ask", "Ask to borrow"], borrow: ["offer", "Offer to lend"], sell: ["buy", "Propose to buy"], buy: ["sell", "Propose to sell"] }[l.kind];
+        return `<button type="button" class="btn small" data-bact="${k}:${l.id}">${Tx(label)}</button>`;
+      }
+      return pendingWith.has(l.user_id) ? `<span class="small muted">${Tx("Friend request sent")}</span>` : `<button type="button" class="btn ghost small" data-addfriend="${l.user_id}">${Tx("Add friend")}</button>`;
+    };
+    const line = (l, m, own) => `<div class="card post" data-listing="${l.id}" data-kind="${l.kind}"><div class="hd"><span>${inkDots(CARDS.get(l.card_id)?.ink)}<b>${esc(cardLabel(l.card_id))}</b> <small class="faint">${esc(l.card_id)}</small></span>
+        ${l.price_brl != null ? `<span class="money small">R$ ${fmtMoney(+l.price_brl)}</span>` : ""}</div>
+      <div class="small muted">${own ? `<span class="tag">${Tx(KIND[l.kind][0])}</span>` : `<b>${esc(nameOf(l.user_id))}</b> ${Tx(KIND[l.kind][1])}`} · ${l.qty}×${l.foil ? ` ${Tx("foil")}` : ""}${m ? ` <span class="tag match">${esc(m)}</span>` : ""}</div>
+      ${l.note ? `<div class="small">${esc(l.note)}</div>` : ""}
+      <div class="row" style="margin-top:4px">${own ? `<button type="button" class="btn ghost small" data-dellist="${l.id}">${Tx("Remove")}</button>` : action(l)}</div></div>`;
+    return `<p class="small muted">${Tx("What players want and offer. Everyone signed in sees it.")}</p>
+      ${form?.kind === "post" ? postFormHtml() : `<button type="button" class="btn primary" id="newPost">${Tx("New post")}</button>`}
+      <h2>${Tx("My posts")}</h2>${mine.length ? mine.map((l) => line(l, "", true)).join("") : `<p class="empty">${Tx("No posts yet.")}</p>`}
+      <h2>${Tx("Public board")}</h2>
+      <div class="row" style="margin-bottom:6px"><div class="seg" role="group">${[["all", "All"], ["want", "Looking for"], ["offer", "Offering"]].map(([k, l]) => `<button type="button" data-bkind="${k}" aria-pressed="${boardKind === k}">${Tx(l)}</button>`).join("")}</div>
+        <input type="text" id="boardQ" value="${esc(boardQ)}" placeholder="${Tx("Search a card by name")}" style="flex:1;min-width:180px"></div>
+      ${rows.length ? rows.map(({ l, m }) => line(l, m, false)).join("") : `<p class="empty">${Tx("Nothing on the board matches.")}</p>`}
+      <p class="small faint">${Tx("To lend or trade with someone, you need to be friends on the site.")}</p>`;
+  }
+  function postFormHtml() {
+    const f = form, own = f.post === "lend" || f.post === "sell";
+    return `<div class="panel" id="postForm"><h2 style="margin-top:0">${Tx("New post")}</h2>
+      <div class="seg" role="group" style="flex-wrap:wrap">${Object.entries(KIND).map(([k, [l]]) => `<button type="button" data-post="${k}" aria-pressed="${f.post === k}">${Tx(l)}</button>`).join("")}</div>
+      <div style="margin-top:10px">${pickerHtml("bd", f.items, Tx("Cards"), own)}</div>
+      <div class="grid2" style="margin-top:10px">${f.post === "buy" || f.post === "sell" ? `<label class="f">${Tx("Price per card (optional)")}<input type="number" id="fPrice" min="0" step="0.01" inputmode="decimal" value="${esc(f.price || "")}"></label>` : ""}
+        <label class="f">${Tx("Note (optional)")}<input type="text" id="fNote" maxlength="200" value="${esc(f.note || "")}"></label></div>
+      <div class="row" style="margin-top:8px"><button type="button" class="btn primary" id="fSave">${Tx("Post")}</button><button type="button" class="btn ghost" id="fCancel">${Tx("Cancel")}</button><span class="small" id="fMsg" aria-live="polite"></span></div></div>`;
+  }
 
   // ---------- collection ----------
   let collQuery = "", onlyLoaned = false;
@@ -538,8 +692,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     const app = $("app");
     if (!me) { app.innerHTML = ""; return; }
     const keepFocus = document.activeElement?.id, caret = document.activeElement?.selectionStart;
-    app.innerHTML = `<div class="tabs" role="tablist">${[["loans", "Loans"], ["trades", "Trades"], ["collection", "Collection"]].map(([k, l]) => `<button type="button" class="tab" role="tab" data-tab="${k}" aria-selected="${tab === k}">${Tx(l)}${k === "loans" && waitingForMe() ? ` <span class="tag" data-waiting>${esc(Tx("{n} waiting for you", { n: waitingForMe() }))}</span>` : ""}</button>`).join("")}</div>
-      <div id="tabBody">${tab === "loans" ? loansHtml() : tab === "trades" ? tradesHtml() : collectionHtml()}</div>`;
+    app.innerHTML = `<div class="tabs" role="tablist">${[["loans", "Loans", waitingForMe()], ["trades", "Trades", tradesWaitingForMe() + pendingColl().length], ["board", "Board", 0], ["collection", "Collection", 0]].map(([k, l, n]) => `<button type="button" class="tab" role="tab" data-tab="${k}" aria-selected="${tab === k}">${Tx(l)}${n ? ` <span class="tag" data-waiting="${k}">${esc(Tx("{n} waiting for you", { n }))}</span>` : ""}</button>`).join("")}</div>
+      <div id="tabBody">${tab === "loans" ? loansHtml() : tab === "trades" ? tradesHtml() : tab === "board" ? boardHtml() : collectionHtml()}</div>`;
     app.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => { tab = b.dataset.tab; form = null; try { sessionStorage.setItem("inkwell-trades-tab", tab); } catch { /* */ } render(); });
     wire(app);
     if (keepFocus && $(keepFocus)) { const el = $(keepFocus); el.focus(); try { if (caret != null) el.setSelectionRange(caret, caret); } catch { /* */ } }
@@ -549,6 +703,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     if ($("fPerson")) form.person = $("fPerson").value;
     if ($("fFriend")) form.friend = $("fFriend").value;
     if ($("fNote")) form.note = $("fNote").value;
+    if ($("fPrice")) form.price = $("fPrice").value;
     if ($("fDue")) form.due_on = $("fDue").value;
     if ($("fDate")) form.traded_on = $("fDate").value;
     if ($("fCash")) form.cash = $("fCash").value;
@@ -560,7 +715,49 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
   }
   function wire(app) {
     $("newLoan")?.addEventListener("click", () => { form = { kind: "loan", direction: "lent", person: "", due_on: "", note: "", items: [] }; render(); });
-    $("newTrade")?.addEventListener("click", () => { form = { kind: "trade", person: "", traded_on: today(), note: "", gave: [], got: [], cashMode: "none", cash: "" }; render(); });
+    $("newTrade")?.addEventListener("click", () => { form = newTradeForm(); render(); });
+    $("newPost")?.addEventListener("click", () => { form = { kind: "post", post: "borrow", items: [], price: "", note: "" }; render(); });
+    app.querySelectorAll("[data-ut]").forEach((b) => b.onclick = () => {
+      const [id, status] = b.dataset.ut.split(":");
+      const body = { status };
+      if (status === "completed") body.completed_on = app.querySelector(`[data-utdate="${id}"]`)?.value || today();
+      const go = () => CLOUD.api(`user_trades?id=eq.${id}`, { method: "PATCH", prefer: "return=minimal", body });
+      if (status === "cancelled" || status === "declined") confirmThen(b, status === "declined" ? "Confirm decline" : "Confirm cancel", go);
+      else { b.dataset.c = "1"; confirmThen(b, "", go); }
+    });
+    app.querySelectorAll("[data-utdel]").forEach((b) => b.onclick = () => confirmThen(b, "Confirm delete", () => CLOUD.api(`user_trades?id=eq.${b.dataset.utdel}`, { method: "DELETE" })));
+    const decide = (b, apply) => {
+      const [kind, id] = (apply ? b.dataset.capply : b.dataset.cskip).split(":");
+      b.dataset.c = "1";
+      confirmThen(b, "", async () => {
+        try { await applyTrade(kind, id, apply); }
+        catch (e) { if (e?.message === "no-profile") { b.closest("[data-cprompt]").querySelector(".small").textContent = Tx("No Inkwell collection to update."); } throw e; }
+      });
+    };
+    app.querySelectorAll("[data-capply]").forEach((b) => b.onclick = () => decide(b, true));
+    app.querySelectorAll("[data-cskip]").forEach((b) => b.onclick = () => decide(b, false));
+    app.querySelectorAll(".autoColl").forEach((c) => c.onchange = async () => {
+      autoColl = c.checked;
+      app.querySelectorAll(".autoColl").forEach((x) => { x.checked = autoColl; });
+      try { await CLOUD.api(`profiles?user_id=eq.${me.id}`, { method: "PATCH", prefer: "return=minimal", body: { auto_collection: autoColl } }); } catch { /* kept for this visit */ }
+      if (autoColl && await autoApply()) await refresh();
+    });
+    app.querySelectorAll("[data-bkind]").forEach((b) => b.onclick = () => { boardKind = b.dataset.bkind; render(); });
+    $("boardQ")?.addEventListener("input", (e) => { boardQ = e.target.value; render(); });
+    app.querySelectorAll("[data-dellist]").forEach((b) => b.onclick = () => confirmThen(b, "Confirm delete", () => CLOUD.api(`listings?id=eq.${b.dataset.dellist}`, { method: "DELETE" })));
+    app.querySelectorAll("[data-addfriend]").forEach((b) => b.onclick = () => { b.dataset.c = "1"; confirmThen(b, "", () => CLOUD.api("friendships", { method: "POST", prefer: "return=minimal", body: { addressee: b.dataset.addfriend } })); });
+    app.querySelectorAll("[data-bact]").forEach((b) => b.onclick = () => {
+      const [act, id] = b.dataset.bact.split(":"), l = listings.find((x) => x.id === id);
+      if (!l) return;
+      const item = { card_id: l.card_id, qty: l.qty, foil: !!l.foil };
+      if (act === "ask" || act === "offer") { tab = "loans"; form = { kind: "loan", withSite: true, friend: l.user_id, direction: act === "ask" ? "borrowed" : "lent", person: "", due_on: "", note: "", items: [item] }; }
+      else {
+        const cash = l.price_brl != null ? String(+l.price_brl * l.qty) : "";
+        tab = "trades"; form = { ...newTradeForm(), withSite: true, friend: l.user_id, ...(act === "buy" ? { got: [item], cashMode: "paid" } : { gave: [item], cashMode: "received" }), cash };
+      }
+      try { sessionStorage.setItem("inkwell-trades-tab", tab); } catch { /* */ }
+      render(); window.scrollTo(0, 0);
+    });
     $("toggleReturned")?.addEventListener("click", () => { showReturned = !showReturned; render(); });
     $("toggleSitePast")?.addEventListener("click", () => { showReturned = !showReturned; render(); });
     app.querySelectorAll("[data-ul]").forEach((b) => b.onclick = () => {
@@ -583,8 +780,12 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
         wirePicker(app, "li", form.items, changed, form.direction === "lent");
         app.querySelectorAll("[data-dir]").forEach((b) => b.onclick = () => { keep(); form.direction = b.dataset.dir; render(); });
         app.querySelectorAll("[data-with]").forEach((b) => b.onclick = () => { keep(); form.withSite = b.dataset.with === "site"; render(); });
+      } else if (form.kind === "post") {
+        wirePicker(app, "bd", form.items, changed, form.post === "lend" || form.post === "sell");
+        app.querySelectorAll("[data-post]").forEach((b) => b.onclick = () => { keep(); form.post = b.dataset.post; render(); });
       } else {
         wirePicker(app, "gv", form.gave, changed, true); wirePicker(app, "gt", form.got, changed);
+        app.querySelectorAll("[data-with]").forEach((b) => b.onclick = () => { keep(); form.withSite = b.dataset.with === "site"; render(); });
         app.querySelectorAll("[data-cash]").forEach((b) => b.onclick = () => { keep(); form.cashMode = b.dataset.cash; render(); });
         $("fCash")?.addEventListener("input", () => { keep(); render(); });
       }
@@ -595,6 +796,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     $("collQ")?.addEventListener("input", (e) => { collQuery = e.target.value; render(); });
     $("onlyLoaned")?.addEventListener("change", (e) => { onlyLoaned = e.target.checked; render(); });
   }
+  const newTradeForm = () => ({ kind: "trade", person: "", traded_on: today(), note: "", gave: [], got: [], cashMode: "none", cash: "" });
   function overStock(items) {   // a card asked for more copies than are free
     const st = stock(); if (!st.has) return null;
     return items.find((e, i) => i === items.findIndex((x) => x.card_id === e.card_id && !!x.foil === !!e.foil) && inForm(items, e.card_id, e.foil) > freeOf(st, e.card_id, e.foil)) || null;
@@ -602,7 +804,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
   async function saveForm() {
     keep();
     const msg = $("fMsg"), f = form;
-    const over = overStock(f.kind === "loan" ? (f.direction === "lent" ? f.items : []) : f.gave);
+    const over = overStock(f.kind === "loan" ? (f.direction === "lent" ? f.items : []) : f.kind === "post" ? (f.post === "lend" || f.post === "sell" ? f.items : []) : f.gave);
     if (over) { msg.textContent = Tx("{card}: you only have {n} available.", { card: cardLabel(over.card_id), n: freeOf(stock(), over.card_id, over.foil) }); return; }
     const person = (f.person || "").trim();
     try {
@@ -618,6 +820,19 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
         if (!person || !items.length) { msg.textContent = Tx("Add at least one card and the person's name."); return; }
         msg.textContent = Tx("Saving…"); $("fSave").disabled = true;
         await CLOUD.api("loans", { method: "POST", prefer: "return=minimal", body: { direction: f.direction, person, items, due_on: f.due_on || null, note: (f.note || "").slice(0, 500) } });
+      } else if (f.kind === "post") {
+        const items = cleanItems(f.items);
+        if (!items.length) { msg.textContent = Tx("Add at least one card and the person's name."); return; }
+        const price = (f.post === "buy" || f.post === "sell") && f.price !== "" && +f.price >= 0 ? Math.round(+f.price * 100) / 100 : null;
+        msg.textContent = Tx("Saving…"); $("fSave").disabled = true;
+        await CLOUD.api("listings", { method: "POST", prefer: "return=minimal", body: items.map((e) => ({ kind: f.post, card_id: e.card_id, qty: e.qty, foil: e.foil, price_brl: price, note: (f.note || "").slice(0, 200) })) });
+      } else if (f.withSite) {
+        const gave = cleanItems(f.gave), got = cleanItems(f.got);
+        if (!f.friend) { msg.textContent = Tx("Choose a friend."); return; }
+        if (!gave.length && !got.length) { msg.textContent = Tx("Add at least one card and the person's name."); return; }
+        const cash = f.cashMode === "paid" ? +f.cash || 0 : f.cashMode === "received" ? -(+f.cash || 0) : 0;
+        msg.textContent = Tx("Saving…"); $("fSave").disabled = true;
+        await CLOUD.api("user_trades", { method: "POST", prefer: "return=minimal", body: { proposer: me.id, partner: f.friend, gave, got, cash_brl: Math.round(cash * 100) / 100, note: (f.note || "").slice(0, 500) } });
       } else {
         const gave = cleanItems(f.gave), got = cleanItems(f.got);
         if (!person || !gave.length && !got.length) { msg.textContent = Tx("Add at least one card and the person's name."); return; }
@@ -629,7 +844,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       await refresh();
     } catch { msg.textContent = Tx("Couldn't save. Try again."); $("fSave").disabled = false; }
   }
-  async function refresh() { await loadAll(); render(); }
+  async function refresh() { await loadAll(); if (await autoApply()) await loadAll(); render(); }
 
   // ---------- boot ----------
   document.title = `${Tx("Loans and trades")} · Inkwell`;

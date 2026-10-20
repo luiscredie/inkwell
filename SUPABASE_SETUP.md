@@ -125,3 +125,15 @@ Run `supabase/user_loans.sql` (already applied). On `/trades/`, "New loan" →
 accepts or declines, then either marks the physical delivery with a date and
 later the return with a date. Steps are enforced in the database; cards promised
 in an accepted loan stop counting as free in the lender's collection.
+
+## Trades between friends, collection updates and the public board
+
+Run `supabase/user_trades_listings.sql` (already applied).
+- Trades with a friend on the site: proposal → accept / decline → done (with the
+  date the cards changed hands), enforced by a trigger.
+- After any finished trade (with a friend or someone off the site) each player is
+  asked whether to update their Inkwell collection; "always update" is saved in
+  `profiles.auto_collection`. Updates go through `apply_collection_delta`, which
+  bumps the profile revision so Inkwell pulls the change on its next sync.
+- Public board (`listings`): what each player wants to borrow / buy and what they
+  lend / sell; every signed-in player sees it.
