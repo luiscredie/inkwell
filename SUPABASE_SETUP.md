@@ -83,3 +83,12 @@ Run `supabase/hide_names.sql`. When a game is made public, the opponent's name
 (for example a duels.ink username) is replaced by "Opponent" in the stored game;
 the real name is kept in a private table and restored if the game goes back to
 private. Coach Review also hides it on screen in the community feed.
+
+## Loans and trades (`/trades/`)
+
+Run `supabase/loans_trades.sql`. The page records cards lent and borrowed (with
+due dates and returns) and trades (what was given and received, plus any money),
+valued at the site's Liga Lorcana prices. It reads the collection from
+`inkwell_profiles` to show how many copies are free after loans; it doesn't
+change the collection. Add `https://luiscredie.github.io/inkwell/trades/` to the
+Redirect URLs (or use `https://luiscredie.github.io/inkwell/**`).
