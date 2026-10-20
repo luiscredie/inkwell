@@ -101,3 +101,19 @@ everyone), optionally applying it to older games. The feed shows the player's
 and their friends' shared games, newest first, with comments. Friends never see
 opponents' names. Add `https://luiscredie.github.io/inkwell/feed/` to the
 Redirect URLs (or `https://luiscredie.github.io/inkwell/**`).
+
+## Who sees a game: coaches, friend groups and coach groups
+
+Run `supabase/audiences.sql`, then `supabase/coach_choice.sql` (both already
+applied to the project). Each game has one audience: only me, all my coaches,
+one coach, a coach group, friends, a friend group, or everyone. Players set the
+default for new games and manage friend groups and coach groups on `/feed/`,
+and change one game in Coach Review ("Who can see this game"). Coaches see only
+games shared with them (or with everyone); a game shared with friends does not
+reach a coach who isn't a friend.
+
+## Loans: only cards you have free
+
+On `/trades/`, "I lent" and "I gave" search only your Inkwell collection, show
+how many copies you have, how many are lent out, and let you pick only the free
+ones (normal and foil counted apart).

@@ -139,6 +139,9 @@ label.f { display: grid; gap: 4px; font-size: 0.85rem; color: var(--muted); }
 .sugg { position: absolute; left: 0; right: 0; top: 100%; z-index: 5; background: var(--raised); border: 1px solid var(--line); border-radius: 10px; margin-top: 4px; max-height: 260px; overflow: auto; }
 .sugg button { display: flex; justify-content: space-between; gap: 8px; width: 100%; text-align: left; background: none; border: 0; padding: 8px 10px; cursor: pointer; }
 .sugg button:hover, .sugg button:focus-visible { background: var(--line); }
+.sugg button small[data-have], .item small[data-stock] { display: block; }
+.sugg button:disabled { cursor: not-allowed; opacity: .6; }
+.qty button:disabled { opacity: .35; cursor: not-allowed; }
 .items { display: grid; gap: 6px; margin-top: 8px; }
 .item { display: grid; grid-template-columns: 1fr auto auto auto; gap: 8px; align-items: center; background: var(--night); border-radius: 10px; padding: 6px 8px; }
 .item .nm { min-width: 0; }
@@ -213,6 +216,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     "Profile": "Perfil", "No collection found in your Inkwell account.": "Nenhuma coleção encontrada na sua conta Inkwell.",
     "cards": "cartas", "collection value": "valor da coleção", "lent out": "emprestadas", "borrowed": "pegas emprestadas",
     "Owned": "Tem", "Lent": "Emprest.", "Borrowed": "Pegas", "Free": "Livres", "Card": "Carta",
+    "Only cards in your collection that aren't lent out.": "Só cartas da sua coleção que não estão emprestadas.", "you have {own}": "você tem {own}", "{n} lent": "{n} emprestada(s)",
+    "{n} available": "{n} disponível(is)", "none available": "nenhuma disponível", "Not in your collection.": "Não está na sua coleção.", "{card}: you only have {n} available.": "{card}: você só tem {n} disponível(is).",
     "Only cards on loan": "Só cartas emprestadas", "No cards match.": "Nenhuma carta encontrada.", "Showing {n} of {t}.": "Mostrando {n} de {t}.",
     "more than you own": "mais do que você tem",
     "{n} more": "mais {n}", "Unknown card": "Carta desconhecida",
@@ -242,6 +247,30 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     const starts = (c) => (norm(c.name).startsWith(words[0]) ? 0 : 1);
     return out.sort((a, b) => starts(a) - starts(b) || (/^LOR\d+-\d+$/.test(a.id) ? 0 : 1) - (/^LOR\d+-\d+$/.test(b.id) ? 0 : 1) || a.name.localeCompare(b.name)).slice(0, n);
   }
+
+  // What I own and can still lend or give: collection minus open "lent" loans, per normal/foil.
+  function stock() {
+    const prof = profiles.find((p) => p.profile === profileName) || profiles[0];
+    const lent = new Map();
+    for (const l of loans) if (!l.returned_at && l.direction === "lent") for (const e of l.items) {
+      const s = lent.get(e.card_id) || { n: 0, f: 0 }; s[e.foil ? "f" : "n"] += e.qty; lent.set(e.card_id, s);
+    }
+    return { has: !!prof, coll: prof?.collection || {}, lent };
+  }
+  const ownedOf = (st, id, foil) => { const c = st.coll[id] || {}; return foil ? +c.f || 0 : +c.n || 0; };
+  const lentOf = (st, id, foil) => (st.lent.get(id) || { n: 0, f: 0 })[foil ? "f" : "n"];
+  const freeOf = (st, id, foil) => Math.max(0, ownedOf(st, id, foil) - lentOf(st, id, foil));
+  const inForm = (items, id, foil, skip) => items.reduce((s, e, i) => s + (i !== skip && e.card_id === id && !!e.foil === !!foil ? e.qty : 0), 0);
+  function searchOwned(st, q, n = 8) {
+    const words = norm(q).split(" ").filter(Boolean);
+    if (!words.length) return [];
+    return Object.keys(st.coll).filter((id) => CARDS.has(id) && ownedOf(st, id, false) + ownedOf(st, id, true) > 0 && words.every((w) => norm(`${cardLabel(id)} ${id}`).includes(w)))
+      .map((id) => CARDS.get(id)).sort((a, b) => (norm(a.name).startsWith(words[0]) ? 0 : 1) - (norm(b.name).startsWith(words[0]) ? 0 : 1) || a.name.localeCompare(b.name)).slice(0, n);
+  }
+  const stockLine = (st, id) => {
+    const own = ownedOf(st, id, false) + ownedOf(st, id, true), lent = lentOf(st, id, false) + lentOf(st, id, true);
+    return Tx("you have {own}", { own }) + (lent ? ` · ${Tx("{n} lent", { n: lent })}` : "") + ` · ${Tx("{n} available", { n: own - lent < 0 ? 0 : own - lent })}`;
+  };
 
   // ---------- data ----------
   const CLOUD = window.INKWELL_CLOUD;
@@ -291,33 +320,48 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     const shown = items.slice(0, max).map((e) => `<li>${e.qty}× ${esc(cardLabel(e.card_id))}${e.foil ? ` <span class="tag">${Tx("foil")}</span>` : ""}</li>`).join("");
     return `<ul>${shown}${items.length > max ? `<li class="faint">${esc(Tx("{n} more", { n: items.length - max }))}</li>` : ""}</ul>`;
   };
-  function pickerHtml(key, items, label) {
+  function pickerHtml(key, items, label, own) {
+    const st = own ? stock() : null;
     return `<div class="f"><span class="small muted">${esc(label)}</span>
+      ${own ? `<span class="small faint">${Tx(st.has ? "Only cards in your collection that aren't lent out." : "No collection found in your Inkwell account.")}</span>` : ""}
       <div class="picker"><input type="text" data-search="${key}" placeholder="${Tx("Search a card by name")}" autocomplete="off" aria-label="${esc(label)}"><div class="sugg" data-sugg="${key}" hidden></div></div>
-      <div class="items" data-items="${key}">${items.map((e, i) => `<div class="item"><span class="nm">${inkDots(CARDS.get(e.card_id)?.ink)}${esc(cardLabel(e.card_id))}<small>${esc(e.card_id)}${priceOf(e.card_id, e.foil) != null ? ` · R$ ${fmtMoney(priceOf(e.card_id, e.foil))}` : ""}</small></span>
-        <span class="qty"><button type="button" data-dec="${key}:${i}" aria-label="−1">−</button><b>${e.qty}</b><button type="button" data-inc="${key}:${i}" aria-label="+1">+</button></span>
+      <div class="items" data-items="${key}">${items.map((e, i) => `<div class="item"><span class="nm">${inkDots(CARDS.get(e.card_id)?.ink)}${esc(cardLabel(e.card_id))}<small>${esc(e.card_id)}${priceOf(e.card_id, e.foil) != null ? ` · R$ ${fmtMoney(priceOf(e.card_id, e.foil))}` : ""}</small>${own && st.has ? `<small data-stock="${key}:${i}">${esc(stockLine(st, e.card_id))}</small>` : ""}</span>
+        <span class="qty"><button type="button" data-dec="${key}:${i}" aria-label="−1">−</button><b>${e.qty}</b><button type="button" data-inc="${key}:${i}" aria-label="+1" ${own && st.has && e.qty + inForm(items, e.card_id, e.foil, i) >= freeOf(st, e.card_id, e.foil) ? "disabled" : ""}>+</button></span>
         <label class="foil"><input type="checkbox" data-foil="${key}:${i}" ${e.foil ? "checked" : ""}>${Tx("foil")}</label>
         <button type="button" class="x" data-rm="${key}:${i}" aria-label="${Tx("Delete")}">✕</button></div>`).join("")}</div></div>`;
   }
-  function wirePicker(root, key, items, onChange) {
+  function wirePicker(root, key, items, onChange, own) {
     const input = root.querySelector(`[data-search="${key}"]`), box = root.querySelector(`[data-sugg="${key}"]`);
+    const st = own ? stock() : null, limited = own && st.has;
+    const left = (id, foil) => freeOf(st, id, foil) - inForm(items, id, foil);
     const show = () => {
-      const res = search(input.value);
-      box.hidden = !res.length;
-      box.innerHTML = res.map((c) => `<button type="button" data-pick="${esc(c.id)}"><span>${inkDots(c.ink)}${esc(c.name)} <small class="faint">${esc(c.id)}</small></span><span class="small muted">${priceOf(c.id) != null ? `R$ ${fmtMoney(priceOf(c.id))}` : ""}</span></button>`).join("");
+      const res = limited ? searchOwned(st, input.value) : search(input.value);
+      box.hidden = !res.length && !(limited && input.value.trim());
+      box.innerHTML = res.length ? res.map((c) => {
+        const none = limited && left(c.id, false) + left(c.id, true) <= 0;
+        return `<button type="button" data-pick="${esc(c.id)}" ${none ? "disabled" : ""}><span>${inkDots(c.ink)}${esc(c.name)} <small class="faint">${esc(c.id)}</small>${limited ? `<small class="${none ? "bad" : "muted"}" data-have="${esc(c.id)}">${esc(stockLine(st, c.id))}${none ? ` · ${Tx("none available")}` : ""}</small>` : ""}</span><span class="small muted">${priceOf(c.id) != null ? `R$ ${fmtMoney(priceOf(c.id))}` : ""}</span></button>`;
+      }).join("") : `<p class="small muted" style="padding:6px 8px;margin:0">${Tx("Not in your collection.")}</p>`;
       box.querySelectorAll("[data-pick]").forEach((b) => b.onclick = () => {
-        const ex = items.find((e) => e.card_id === b.dataset.pick && !e.foil);
-        if (ex) ex.qty = Math.min(99, ex.qty + 1); else items.push({ card_id: b.dataset.pick, qty: 1, foil: false });
+        const id = b.dataset.pick, foil = limited && left(id, false) <= 0;
+        if (limited && left(id, foil) <= 0) return;
+        const ex = items.find((e) => e.card_id === id && !!e.foil === foil);
+        if (ex) ex.qty = Math.min(99, ex.qty + 1); else items.push({ card_id: id, qty: 1, foil });
         onChange(key);
       });
     };
     input.addEventListener("input", show);
     input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); box.querySelector("[data-pick]")?.click(); } if (e.key === "Escape") box.hidden = true; });
     const idx = (v) => +v.split(":")[1];
-    root.querySelectorAll(`[data-inc^="${key}:"]`).forEach((b) => b.onclick = () => { items[idx(b.dataset.inc)].qty = Math.min(99, items[idx(b.dataset.inc)].qty + 1); onChange(key); });
+    root.querySelectorAll(`[data-inc^="${key}:"]`).forEach((b) => b.onclick = () => {
+      const e = items[idx(b.dataset.inc)];
+      if (limited && e.qty + inForm(items, e.card_id, e.foil, idx(b.dataset.inc)) >= freeOf(st, e.card_id, e.foil)) return;
+      e.qty = Math.min(99, e.qty + 1); onChange(key); });
     root.querySelectorAll(`[data-dec^="${key}:"]`).forEach((b) => b.onclick = () => { const e = items[idx(b.dataset.dec)]; if (e.qty > 1) e.qty -= 1; else items.splice(idx(b.dataset.dec), 1); onChange(key); });
     root.querySelectorAll(`[data-rm^="${key}:"]`).forEach((b) => b.onclick = () => { items.splice(idx(b.dataset.rm), 1); onChange(key); });
-    root.querySelectorAll(`[data-foil^="${key}:"]`).forEach((b) => b.onchange = () => { items[idx(b.dataset.foil)].foil = b.checked; onChange(key); });
+    root.querySelectorAll(`[data-foil^="${key}:"]`).forEach((b) => b.onchange = () => {
+      const i = idx(b.dataset.foil), e = items[i];
+      if (limited) { const cap = freeOf(st, e.card_id, b.checked) - inForm(items, e.card_id, b.checked, i); if (cap <= 0) { b.checked = !b.checked; return; } e.qty = Math.min(e.qty, cap); }
+      e.foil = b.checked; onChange(key); });
   }
   const people = () => [...new Set([...loans.map((l) => l.person), ...trades.map((t) => t.person)])].sort((a, b) => a.localeCompare(b));
   const peopleList = () => `<datalist id="people">${people().map((p) => `<option value="${esc(p)}">`).join("")}</datalist>`;
@@ -345,7 +389,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       <div class="seg" role="group"><button type="button" data-dir="lent" aria-pressed="${f.direction === "lent"}">${Tx("I lent")}</button><button type="button" data-dir="borrowed" aria-pressed="${f.direction === "borrowed"}">${Tx("I borrowed")}</button></div>
       <div class="grid2" style="margin-top:10px"><label class="f">${Tx("Person")}<input type="text" id="fPerson" list="people" maxlength="60" value="${esc(f.person)}" placeholder="${Tx("Name of who you lent to or borrowed from")}"></label>
         <label class="f">${Tx("Due date (optional)")}<input type="date" id="fDue" value="${esc(f.due_on || "")}"></label></div>
-      <div style="margin-top:10px">${pickerHtml("li", f.items, Tx("Cards"))}</div>
+      <div style="margin-top:10px">${pickerHtml("li", f.items, Tx("Cards"), f.direction === "lent")}</div>
       <label class="f" style="margin-top:10px">${Tx("Note (optional)")}<textarea id="fNote" maxlength="500">${esc(f.note)}</textarea></label>
       <p class="small muted">${Tx("Value")}: <b class="money">R$ ${fmtMoney(valueOf(f.items))}</b></p>
       <div class="row"><button type="button" class="btn primary" id="fSave">${Tx("Save")}</button><button type="button" class="btn ghost" id="fCancel">${Tx("Cancel")}</button><span class="small" id="fMsg" aria-live="polite"></span></div>
@@ -377,7 +421,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     return `<div class="panel" id="tradeForm"><h2 style="margin-top:0">${Tx("New trade")}</h2>
       <div class="grid2"><label class="f">${Tx("Person")}<input type="text" id="fPerson" list="people" maxlength="60" value="${esc(f.person)}" placeholder="${Tx("Who you traded with")}"></label>
         <label class="f">${Tx("Date")}<input type="date" id="fDate" value="${esc(f.traded_on)}"></label></div>
-      <div class="grid2" style="margin-top:10px"><div>${pickerHtml("gv", f.gave, Tx("I gave"))}</div><div>${pickerHtml("gt", f.got, Tx("I got"))}</div></div>
+      <div class="grid2" style="margin-top:10px"><div>${pickerHtml("gv", f.gave, Tx("I gave"), true)}</div><div>${pickerHtml("gt", f.got, Tx("I got"))}</div></div>
       <div class="row" style="margin-top:10px"><span class="small muted">${Tx("Money")}</span>
         <div class="seg" role="group">${[["none", "No money"], ["paid", "I paid"], ["received", "I received"]].map(([k, l]) => `<button type="button" data-cash="${k}" aria-pressed="${f.cashMode === k}">${Tx(l)}</button>`).join("")}</div>
         ${f.cashMode !== "none" ? `<input type="number" id="fCash" min="0" step="0.01" inputmode="decimal" value="${esc(f.cash)}" placeholder="${Tx("Amount (R$)")}" style="max-width:140px">` : ""}</div>
@@ -455,10 +499,10 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     if (form) {
       const changed = (key) => { keep(); render(); const inp = document.querySelector(`[data-search="${key}"]`); inp?.focus(); };
       if (form.kind === "loan") {
-        wirePicker(app, "li", form.items, changed);
+        wirePicker(app, "li", form.items, changed, form.direction === "lent");
         app.querySelectorAll("[data-dir]").forEach((b) => b.onclick = () => { keep(); form.direction = b.dataset.dir; render(); });
       } else {
-        wirePicker(app, "gv", form.gave, changed); wirePicker(app, "gt", form.got, changed);
+        wirePicker(app, "gv", form.gave, changed, true); wirePicker(app, "gt", form.got, changed);
         app.querySelectorAll("[data-cash]").forEach((b) => b.onclick = () => { keep(); form.cashMode = b.dataset.cash; render(); });
         $("fCash")?.addEventListener("input", () => { keep(); render(); });
       }
@@ -469,9 +513,15 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     $("collQ")?.addEventListener("input", (e) => { collQuery = e.target.value; render(); });
     $("onlyLoaned")?.addEventListener("change", (e) => { onlyLoaned = e.target.checked; render(); });
   }
+  function overStock(items) {   // a card asked for more copies than are free
+    const st = stock(); if (!st.has) return null;
+    return items.find((e, i) => i === items.findIndex((x) => x.card_id === e.card_id && !!x.foil === !!e.foil) && inForm(items, e.card_id, e.foil) > freeOf(st, e.card_id, e.foil)) || null;
+  }
   async function saveForm() {
     keep();
     const msg = $("fMsg"), f = form;
+    const over = overStock(f.kind === "loan" ? (f.direction === "lent" ? f.items : []) : f.gave);
+    if (over) { msg.textContent = Tx("{card}: you only have {n} available.", { card: cardLabel(over.card_id), n: freeOf(stock(), over.card_id, over.foil) }); return; }
     const person = (f.person || "").trim();
     try {
       if (f.kind === "loan") {

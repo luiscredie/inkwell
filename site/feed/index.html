@@ -148,6 +148,8 @@ input, select, textarea { background: var(--night); border: 1px solid var(--line
 .person { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line); }
 .person:first-of-type { border-top: 0; }
 .empty { color: var(--muted); padding: 8px 0; }
+details.grp { border-top: 1px solid var(--line); padding: 6px 0; }
+details.grp summary { cursor: pointer; }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .seg button { border: 0; background: transparent; padding: 6px 10px; cursor: pointer; color: var(--muted); font-size: 0.85rem; }
 .seg button[aria-pressed=true] { background: var(--line); color: var(--text); }
@@ -183,7 +185,7 @@ input, select, textarea { background: var(--night); border: 1px solid var(--line
     "Wants to be your friend": "Quer ser seu amigo", "Accept": "Aceitar", "Decline": "Recusar", "Waiting for {name}": "Aguardando {name}", "Cancel": "Cancelar",
     "No friends yet. Search for people above.": "Nenhum amigo ainda. Busque pessoas acima.", "Remove": "Remover", "Confirm": "Confirmar",
     "No one found with that name.": "Ninguém encontrado com esse nome.",
-    "Who sees my new games": "Quem vê meus jogos novos", "Only me": "Só eu", "Friends ": "Amigos", "Everyone": "Todos",
+    "Who sees my new games": "Quem vê meus jogos novos", "Only me": "Só eu", "Friends ": "Amigos", "Everyone": "Todos", "My coaches": "Meus coaches", "Group: {name}": "Grupo: {name}", "a group": "um grupo", "coaches": "coaches", "group": "grupo", "Friend groups": "Grupos de amigos", "New group name": "Nome do novo grupo", "Create": "Criar", "Delete group": "Apagar grupo", "No groups yet. A group lets you share games with only some friends.": "Nenhum grupo ainda. Um grupo permite compartilhar jogos só com alguns amigos.", "Add friends first.": "Adicione amigos primeiro.", "Coaches only see the games you share with them, and games for everyone.": "Os coaches só veem os jogos compartilhados com eles e os jogos para todos.", "All my coaches": "Todos os meus coaches", "Coach: {name}": "Coach: {name}", "Coach group: {name}": "Grupo de coaches: {name}", "Coach groups": "Grupos de coaches", "Add coaches first, in Coach Review.": "Adicione coaches primeiro, no Coach Review.", "No coach groups yet. A coach group lets you share games with only some of your coaches.": "Nenhum grupo de coaches ainda. Um grupo de coaches permite compartilhar jogos só com alguns dos seus coaches.",
     "Apply to my {n} older games too": "Aplicar também aos meus {n} jogos antigos", "Apply to my older game too": "Aplicar também ao meu jogo antigo", "Applying…": "Aplicando…", "Done.": "Pronto.",
     "Opponents' names are never shown to others.": "O nome dos adversários nunca aparece para os outros.",
     "won": "venceu", "lost": "perdeu", "with {deck}": "com {deck}", "against {deck}": "contra {deck}",
@@ -211,7 +213,7 @@ input, select, textarea { background: var(--night); border: 1px solid var(--line
   const CLOUD = window.INKWELL_CLOUD;
   const me = CLOUD?.user();
   const enc = encodeURIComponent;
-  let myProfile = null, names = new Map(), friendships = [], posts = [], notes = new Map(), olderThan = null, moreAvailable = false, searchRes = null, myGameCount = 0;
+  let groups = [], coachGroups = [], myCoaches = [], coachCols = true, otherGroups = new Map(), myProfile = null, names = new Map(), friendships = [], posts = [], notes = new Map(), olderThan = null, moreAvailable = false, searchRes = null, myGameCount = 0;
   const PAGE = 25;
   const friendIds = () => friendships.filter((f) => f.status === "accepted").map((f) => (f.requester === me.id ? f.addressee : f.requester));
   const nameOf = (id) => (id === me.id ? Tx("You") : names.get(id) || Tx("A player"));
@@ -232,11 +234,21 @@ input, select, textarea { background: var(--night); border: 1px solid var(--line
     }
   }
   async function loadPeople() {
-    const [prof, fr, cnt] = await Promise.all([
-      CLOUD.api(`profiles?user_id=eq.${me.id}&select=user_id,display_name,default_visibility`),
+    const profSel = "user_id,display_name,default_visibility,default_group_id";
+    const [prof, fr, cnt, grp, cl, cg] = await Promise.all([
+      CLOUD.api(`profiles?user_id=eq.${me.id}&select=${profSel},default_coach_email,default_coach_group_id`)
+        .catch(() => { coachCols = false; return CLOUD.api(`profiles?user_id=eq.${me.id}&select=${profSel}`); }),   // database without the coach columns yet
       CLOUD.api("friendships?select=*&order=created_at.desc"),
       CLOUD.api(`game_logs?user_id=eq.${me.id}&visibility=eq.private&select=game_id&limit=5000`),
+      CLOUD.api(`friend_groups?select=id,name,owner_id,friend_group_members(member)&order=name`).catch(() => []),
+      CLOUD.api(`coach_links?owner_id=eq.${me.id}&select=coach_email&order=created_at`).catch(() => []),
+      CLOUD.api(`coach_groups?owner_id=eq.${me.id}&select=id,name,emails&order=name`).catch(() => null),
     ]);
+    myCoaches = [...new Set((cl || []).map((c) => c.coach_email))];
+    coachGroups = cg || [];
+    if (cg === null) coachCols = false;
+    groups = (grp || []).filter((g) => g.owner_id === me.id);
+    otherGroups = new Map((grp || []).filter((g) => g.owner_id !== me.id).map((g) => [g.id, g.name]));
     myProfile = prof?.[0] || null;
     if (myProfile) names.set(me.id, myProfile.display_name);
     friendships = fr || [];
@@ -245,7 +257,7 @@ input, select, textarea { background: var(--night); border: 1px solid var(--line
   }
   async function loadPosts(more = false) {
     const ids = [me.id, ...friendIds()];
-    const q = `game_logs?user_id=in.(${ids.join(",")})&visibility=in.(friends,public)&select=user_id,game_id,source,played_at,summary,visibility&order=played_at.desc.nullslast&limit=${PAGE}${more && olderThan ? `&played_at=lt.${enc(olderThan)}` : ""}`;
+    const q = `game_logs?user_id=in.(${ids.join(",")})&visibility=neq.private&select=user_id,game_id,source,played_at,summary,visibility,group_id&order=played_at.desc.nullslast&limit=${PAGE}${more && olderThan ? `&played_at=lt.${enc(olderThan)}` : ""}`;
     const rows = (await CLOUD.api(q)) || [];
     posts = more ? posts.concat(rows) : rows;
     moreAvailable = rows.length === PAGE;
@@ -276,6 +288,10 @@ input, select, textarea { background: var(--night); border: 1px solid var(--line
     const outgoing = friendships.filter((f) => f.status === "pending" && f.requester === me.id);
     const friends = friendIds().sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
     const vis = myProfile.default_visibility || "private";
+    const visKey = vis === "group" && myProfile.default_group_id ? `group:${myProfile.default_group_id}`
+      : vis === "coaches" && myProfile.default_coach_group_id ? `cgroup:${myProfile.default_coach_group_id}`
+      : vis === "coaches" && myProfile.default_coach_email ? `coach:${myProfile.default_coach_email}` : vis;
+    const coachName = (e) => (e || "").split("@")[0];
     el.innerHTML = `<div class="panel"><div class="who"><span class="av">${esc(myProfile.display_name[0].toUpperCase())}</span><div><b>${esc(myProfile.display_name)}</b><span class="small muted">${esc(me.email)} · <button type="button" class="linkbtn" id="siOut">${Tx("Sign out")}</button></span></div></div></div>
       <div class="panel"><h2>${Tx("Friends")}</h2>
         <input id="findPeople" placeholder="${Tx("Find people by name")}" autocomplete="off">
@@ -290,9 +306,26 @@ input, select, textarea { background: var(--night); border: 1px solid var(--line
           : !incoming.length && !outgoing.length ? `<p class="small muted">${Tx("No friends yet. Search for people above.")}</p>` : ""}
       </div>
       <div class="panel"><h2>${Tx("Who sees my new games")}</h2>
-        <div class="seg" role="group">${[["private", "Only me"], ["friends", "Friends "], ["public", "Everyone"]].map(([k, l]) => `<button type="button" data-vis="${k}" aria-pressed="${vis === k}">${Tx(l)}</button>`).join("")}</div>
+        <select id="defVis">${[["private", Tx("Only me")], ["coaches", Tx("All my coaches")],
+            ...(coachCols && myCoaches.length > 1 ? myCoaches.map((c) => [`coach:${c}`, Tx("Coach: {name}", { name: coachName(c) })]) : []),
+            ...(coachCols ? coachGroups.map((g) => [`cgroup:${g.id}`, Tx("Coach group: {name}", { name: g.name })]) : []),
+            ["friends", Tx("Friends ")], ...groups.map((g) => [`group:${g.id}`, Tx("Group: {name}", { name: g.name })]), ["public", Tx("Everyone")]]
+          .map(([k, l]) => `<option value="${esc(k)}" ${k === visKey ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>
         ${vis !== "private" && myGameCount ? `<p><button type="button" class="linkbtn small" id="applyOld">${esc(myGameCount === 1 ? Tx("Apply to my older game too") : Tx("Apply to my {n} older games too", { n: myGameCount }))}</button></p>` : ""}
-        <p class="small muted" id="visMsg">${Tx("Opponents' names are never shown to others.")}</p></div>`;
+        <p class="small muted" id="visMsg">${Tx("Opponents' names are never shown to others.")}</p>
+        <p class="small muted">${Tx("Coaches only see the games you share with them, and games for everyone.")}</p></div>
+      <div class="panel"><h2>${Tx("Friend groups")}</h2>
+        ${groups.length ? groups.map((g) => `<details class="grp"><summary>${esc(g.name)} <span class="small muted">(${(g.friend_group_members || []).length})</span></summary>
+          ${friends.length ? friends.map((id) => `<label class="person small"><span>${esc(nameOf(id))}</span><input type="checkbox" style="width:auto" data-gm="${g.id}|${id}" ${(g.friend_group_members || []).some((m) => m.member === id) ? "checked" : ""}></label>`).join("") : `<p class="small muted">${Tx("Add friends first.")}</p>`}
+          <button type="button" class="linkbtn small" data-delgroup="${g.id}">${Tx("Delete group")}</button></details>`).join("")
+          : `<p class="small muted">${Tx("No groups yet. A group lets you share games with only some friends.")}</p>`}
+        <div class="cmtform"><input id="newGroup" maxlength="40" placeholder="${Tx("New group name")}"><button type="button" class="btn small" id="addGroup">${Tx("Create")}</button></div></div>
+      ${coachCols ? `<div class="panel"><h2>${Tx("Coach groups")}</h2>
+        ${coachGroups.length ? coachGroups.map((g) => `<details class="grp"><summary>${esc(g.name)} <span class="small muted">(${(g.emails || []).length})</span></summary>
+          ${myCoaches.length ? myCoaches.map((c) => `<label class="person small"><span>${esc(coachName(c))}</span><input type="checkbox" style="width:auto" data-cgm="${g.id}|${esc(c)}" ${(g.emails || []).includes(c) ? "checked" : ""}></label>`).join("") : `<p class="small muted">${Tx("Add coaches first, in Coach Review.")}</p>`}
+          <button type="button" class="linkbtn small" data-delcgroup="${g.id}">${Tx("Delete group")}</button></details>`).join("")
+          : `<p class="small muted">${Tx("No coach groups yet. A coach group lets you share games with only some of your coaches.")}</p>`}
+        <div class="cmtform"><input id="newCGroup" maxlength="40" placeholder="${Tx("New group name")}"><button type="button" class="btn small" id="addCGroup">${Tx("Create")}</button></div></div>` : ""}`;
     $("siOut").onclick = () => { CLOUD.signOut(); location.reload(); };
     let t;
     $("findPeople").addEventListener("input", (e) => {
@@ -314,21 +347,46 @@ input, select, textarea { background: var(--night); border: 1px solid var(--line
       const f = friendships.find((x) => [x.requester, x.addressee].includes(b.dataset.unfriend));
       act(() => CLOUD.api(`friendships?requester=eq.${f.requester}&addressee=eq.${f.addressee}`, { method: "DELETE" }));
     });
-    el.querySelectorAll("[data-vis]").forEach((b) => b.onclick = () => act(() => CLOUD.api(`profiles?user_id=eq.${me.id}`, { method: "PATCH", prefer: "return=minimal", body: { default_visibility: b.dataset.vis } })));
+    $("defVis").onchange = (e) => { const v = e.target.value; act(() => CLOUD.api(`profiles?user_id=eq.${me.id}`, { method: "PATCH", prefer: "return=minimal",
+      body: { ...(v.startsWith("group:") ? { default_visibility: "group", default_group_id: v.slice(6) }
+        : v.startsWith("coach:") ? { default_visibility: "coaches", default_group_id: null, default_coach_email: v.slice(6), default_coach_group_id: null }
+        : v.startsWith("cgroup:") ? { default_visibility: "coaches", default_group_id: null, default_coach_email: null, default_coach_group_id: v.slice(7) }
+        : { default_visibility: v, default_group_id: null }), ...(coachCols && !v.includes(":") ? { default_coach_email: null, default_coach_group_id: null } : {}) } })); };
+    $("addCGroup")?.addEventListener("click", () => { const n = $("newCGroup").value.trim(); if (n) act(() => CLOUD.api("coach_groups", { method: "POST", prefer: "return=minimal", body: { name: n } })); });
+    el.querySelectorAll("[data-cgm]").forEach((c) => c.onchange = () => { const [g, e] = [c.dataset.cgm.slice(0, 36), c.dataset.cgm.slice(37)];
+      const grp = coachGroups.find((x) => x.id === g); const emails = new Set(grp?.emails || []); c.checked ? emails.add(e) : emails.delete(e);
+      act(() => CLOUD.api(`coach_groups?id=eq.${g}`, { method: "PATCH", prefer: "return=minimal", body: { emails: [...emails] } })); });
+    el.querySelectorAll("[data-delcgroup]").forEach((b) => b.onclick = () => {
+      if (b.dataset.c !== "1") { b.dataset.c = "1"; b.textContent = Tx("Confirm"); return; }
+      act(() => CLOUD.api(`coach_groups?id=eq.${b.dataset.delcgroup}`, { method: "DELETE" }));
+    });
+    $("addGroup").onclick = () => { const n = $("newGroup").value.trim(); if (n) act(() => CLOUD.api("friend_groups", { method: "POST", prefer: "return=minimal", body: { name: n } })); };
+    el.querySelectorAll("[data-gm]").forEach((c) => c.onchange = () => { const [g, m] = c.dataset.gm.split("|");
+      act(() => (c.checked ? CLOUD.api("friend_group_members", { method: "POST", prefer: "return=minimal", body: { group_id: g, member: m } })
+        : CLOUD.api(`friend_group_members?group_id=eq.${g}&member=eq.${m}`, { method: "DELETE" }))); });
+    el.querySelectorAll("[data-delgroup]").forEach((b) => b.onclick = () => {
+      if (b.dataset.c !== "1") { b.dataset.c = "1"; b.textContent = Tx("Confirm"); return; }
+      act(() => CLOUD.api(`friend_groups?id=eq.${b.dataset.delgroup}`, { method: "DELETE" }));
+    });
     $("applyOld")?.addEventListener("click", async () => {
       $("visMsg").textContent = Tx("Applying…");
-      await act(() => CLOUD.api(`game_logs?user_id=eq.${me.id}&visibility=eq.private`, { method: "PATCH", prefer: "return=minimal", body: { visibility: vis } }));
+      await act(() => CLOUD.api(`game_logs?user_id=eq.${me.id}&visibility=eq.private`, { method: "PATCH", prefer: "return=minimal", body: vis === "group" ? { visibility: "group", group_id: myProfile.default_group_id }
+        : vis === "coaches" && coachCols ? { visibility: "coaches", coach_email: myProfile.default_coach_email || null, coach_group_id: myProfile.default_coach_group_id || null } : { visibility: vis } }));
       $("visMsg").textContent = Tx("Done.");
     });
   }
 
   // ---------- feed ----------
+  function audienceTag(r) {
+    if (r.visibility === "group") { const own = groups.find((g) => g.id === r.group_id); return own ? Tx("Group: {name}", { name: own.name }) : otherGroups.has(r.group_id) ? Tx("Group: {name}", { name: otherGroups.get(r.group_id) }) : Tx("group"); }
+    return Tx(r.visibility === "coaches" ? "coaches" : r.visibility);   // a coach-only game shows up here only for its owner
+  }
   function postHtml(r) {
     const s = r.summary || {}, win = s.result === "win", key = `${r.user_id}|${r.game_id}`, cm = notes.get(key) || [];
     const who = nameOf(r.user_id), first = s.went_first === true ? Tx("going first") : s.went_first === false ? Tx("going second") : "";
     const myDeck = s.my_deck && s.my_deck !== "Physical game" ? s.my_deck : "", opp = s.opp_deck && s.opp_deck !== "Unknown" ? s.opp_deck : "";
     return `<article class="post" data-key="${esc(key)}">
-      <div class="who"><span class="av">${esc(who[0]?.toUpperCase() || "?")}</span><div><b>${esc(who)}</b><span class="small muted">${esc(ago(r.played_at))} · ${esc(Tx(r.source === "duels_ink" ? "duels.ink" : r.source === "lore_counter" ? "Lore Counter" : r.source))} · ${esc(Tx(r.visibility))}</span></div></div>
+      <div class="who"><span class="av">${esc(who[0]?.toUpperCase() || "?")}</span><div><b>${esc(who)}</b><span class="small muted">${esc(ago(r.played_at))} · ${esc(Tx(r.source === "duels_ink" ? "duels.ink" : r.source === "lore_counter" ? "Lore Counter" : r.source))} · ${esc(audienceTag(r))}</span></div></div>
       <div class="res"><span class="${win ? "w" : "l"}">${Tx(win ? "won" : "lost")}</span>${myDeck ? ` ${inkDots(s.my_inks || myDeck)}${esc(Tx("with {deck}", { deck: myDeck }))}` : ""}${opp ? ` ${inkDots(s.opp_inks || opp)}${esc(Tx("against {deck}", { deck: opp }))}` : ""}</div>
       <div class="meta"><span class="score">${esc(s.my_lore ?? 0)}–${esc(s.opp_lore ?? 0)}</span>${first ? `<span class="tag">${first}</span>` : ""}${s.turns ? `<span class="tag">${esc(Tx("{n} turns", { n: s.turns }))}</span>` : ""}</div>
       ${cm.length ? `<div class="cmts">${cm.slice(-3).map((n) => `<div class="cmt"><b>${esc(nameOf(n.author) === Tx("A player") ? n.author_name || Tx("Someone") : nameOf(n.author))}</b><span data-body="${esc(n.id)}"></span></div>`).join("")}</div>` : ""}
