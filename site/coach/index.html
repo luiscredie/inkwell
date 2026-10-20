@@ -16,6 +16,150 @@ window.INKWELL_COUNTER_URL = "../counter/";
 window.INKWELL_NO_STORE_MSG = "Sign in above to see your games.";
 </script>
 <script>
+/* Coach Review: Portuguese / English.
+ * Texts are written in English in the code and looked up here; {name} marks a value filled in at run time.
+ * Language: the viewer's choice (saved on this device), else the browser's language, Portuguese first.
+ */
+(() => {
+  "use strict";
+  const KEY = "inkwell-lang";
+  let lang = "pt";
+  try { lang = localStorage.getItem(KEY) || ((navigator.language || "pt").toLowerCase().startsWith("en") ? "en" : "pt"); } catch { /* storage off */ }
+  const PT = {
+    // page
+    "Coach review": "Coach Review",
+    "Games": "Jogos",
+    "Lore Counter": "Contador de lore",
+    "· games save here": "· os jogos ficam salvos aqui",
+    "Stats: decks, matchups, trend": "Estatísticas: decks, confrontos, evolução",
+    "Show games": "Mostrar jogos",
+    "Loading games…": "Carregando jogos…",
+    "Add games": "Adicionar jogos",
+    "Games played in the Lore Counter above are saved automatically. From the standalone Lore Counter: Settings, Recorded matches, Copy for Coach Review. From the Training Logger: Copy game file. Then paste here.":
+      "Os jogos do Contador de lore são salvos sozinhos. Do contador avulso: Ajustes, Partidas registradas, Copiar para o Coach Review. Do Training Logger: Copiar arquivo do jogo. Depois cole aqui.",
+    "Paste the copied games here": "Cole aqui os jogos copiados",
+    "Import a file": "Importar arquivo",
+    "Pick a game to review it turn by turn.": "Escolha um jogo para revisar turno a turno.",
+    // list
+    "All": "Todos", "Losses": "Derrotas", "Wins": "Vitórias", "With comments": "Com comentários", "Public games": "Públicos", "Public (one game)": "Público",
+    "Showing games against {deck}. Remove filter": "Mostrando jogos contra {deck}. Remover filtro",
+    "No games here yet. Games show up when they are imported from duels.ink.": "Nenhum jogo aqui ainda. Os jogos aparecem quando vêm do duels.ink.",
+    "No games here yet. Games show up when they are imported from duels.ink or added below from the Table Logger.": "Nenhum jogo aqui ainda. Os jogos aparecem quando vêm do duels.ink ou do Contador de lore.",
+    "No games match this filter.": "Nenhum jogo com este filtro.",
+    "on the play": "começou jogando", "on the draw": "começou comprando", "first player not recorded": "sem registro de quem começou",
+    ", public": ", público",
+    "won on the play ({n} games)": "vitórias começando ({n} jogos)",
+    "won on the draw ({n} games)": "vitórias comprando ({n} jogos)",
+    "{n} recorded games, {from} to {to}": "{n} jogos registrados, de {from} a {to}",
+    "{n} duels.ink games vs people, {from} to {to}": "{n} jogos do duels.ink contra pessoas, de {from} a {to}",
+    // actions
+    "a card": "uma carta",
+    "Inked {c}": "Colocou {c} no inkwell", "Inked a card": "Colocou uma carta no inkwell",
+    "Played {c}": "Jogou {c}", "Shifted {c}": "Fez Shift de {c}", " onto {t}": " sobre {t}",
+    "Sang {c}": "Cantou {c}", "Quested with {c}": "Fez quest com {c}", "{c} challenged {t}": "{c} desafiou {t}",
+    "{c} banished": "{c} banido", " ability": " habilidade", "{v} damage to {t} from {c}": "{v} de dano em {t} por {c}",
+    "Gained {v} lore": "Ganhou {v} de lore", "Lost {v} lore": "Perdeu {v} de lore", "Moved {c} to {t}": "Moveu {c} para {t}", "Note: {t}": "Nota: {t}",
+    // review
+    "All games": "Todos os jogos", "Win": "Vitória", "Loss": "Derrota", "Played by {name}": "Jogado por {name}",
+    "Your deck": "Seu deck", "Unknown": "Desconhecido", "vs": "vs",
+    "{n} turns": "{n} turnos", "Lore Counter game, under 2 minutes": "Jogo do Contador de lore, menos de 2 minutos",
+    "Lore Counter game, about {m} minutes": "Jogo do Contador de lore, cerca de {m} minutos",
+    "Lore Counter game, final lore and result only": "Jogo do Contador de lore, só lore final e resultado",
+    "game {n}": "jogo {n}", "ended by {reason}": "terminou por {reason}",
+    "lore": "lore", "concede": "concessão", "other": "outro motivo", "deck_out": "deck vazio", "time": "tempo", "unknown": "desconhecido",
+    "Who can see this game": "Quem pode ver este jogo", "Private": "Privado", "Public game": "Jogo público", "Private game": "Jogo privado",
+    "Watch replay on duels.ink": "Ver replay no duels.ink",
+    "Sign in to comment.": "Entre para comentar.",
+    "Lore by turn": "Lore por turno", "Lore over time": "Lore ao longo do jogo",
+    "Comment on the whole game": "Comentar o jogo todo", "Comment on the deck list": "Comentar a lista do deck", "Comment on this turn": "Comentar este turno",
+    ". Comment on this play": ". Comentar esta jogada",
+    "{name}'s deck": "Deck de {name}", "{n} cards": "{n} cartas", "no list yet": "sem lista ainda",
+    "Edit your deck list": "Editar sua lista", "Add your deck list": "Adicionar sua lista",
+    "One card per line, e.g.\n4 Elsa - Spirit of Winter\n4 Tipo - Growing Son": "Uma carta por linha, por exemplo\n4 Elsa - Spirit of Winter\n4 Tipo - Growing Son",
+    "All {n} games of this match": "Todos os {n} jogos desta partida", "Save deck list": "Salvar lista",
+    "Turn {n}: {name}": "Turno {n}: {name}", "lore {s}": "lore {s}",
+    "Your comment": "Seu comentário", "Cancel": "Cancelar", "Comment": "Comentar", "Delete": "Apagar", "Confirm delete": "Confirmar",
+    "Someone": "Alguém", "You": "Você", "A player": "Um jogador",
+    "The comment store is full. Delete old comments to add new ones.": "O espaço de comentários está cheio. Apague comentários antigos.",
+    "Couldn't save the comment. Try again.": "Não foi possível salvar o comentário. Tente de novo.",
+    "Couldn't delete the comment.": "Não foi possível apagar o comentário.",
+    "Couldn't change who can see this game. Try again.": "Não foi possível mudar quem vê este jogo. Tente de novo.",
+    "Couldn't load this game. Try again.": "Não foi possível abrir este jogo. Tente de novo.",
+    "Loading the game…": "Carregando o jogo…",
+    "No cards recognized. Check the names: {list}": "Nenhuma carta reconhecida. Confira os nomes: {list}",
+    "Saving…": "Salvando…", "Saved: {n} cards.": "Salvo: {n} cartas.", "Saved: {n} cards on {g} games.": "Salvo: {n} cartas em {g} jogos.",
+    " Not recognized, left out: {list}": " Não reconhecidas, deixadas de fora: {list}",
+    "Couldn't save the deck list. Try again.": "Não foi possível salvar a lista. Tente de novo.",
+    // adding games
+    "That file isn't a game file.": "Esse arquivo não é um arquivo de jogos.",
+    "That isn't a copied game. Copy it again from the Lore Counter or the Training Logger.": "Isso não é um jogo copiado. Copie de novo no Contador de lore ou no Training Logger.",
+    "No games found in that file (expected game format 1.0).": "Nenhum jogo nesse arquivo (formato 1.0 esperado).",
+    "No games found in what you pasted (expected game format 1.0).": "Nenhum jogo no que você colou (formato 1.0 esperado).",
+    "Adding games: {a} of {b}…": "Adicionando jogos: {a} de {b}…",
+    "A game was too large or malformed to store.": "Um jogo era grande demais ou estava com problema.",
+    "Couldn't add all the games. Try again: games already added are skipped.": "Não deu para adicionar todos. Tente de novo: os já adicionados são pulados.",
+    "{n} game added": "{n} jogo adicionado", "{n} games added": "{n} jogos adicionados", ", {n} already here": ", {n} já estavam aqui",
+    "Couldn't read that file.": "Não foi possível ler esse arquivo.",
+    "Couldn't load games. Reload the page to try again.": "Não foi possível carregar os jogos. Recarregue a página.",
+    "Sign in above to see your games.": "Entre acima para ver seus jogos.",
+    // stats
+    "Stats": "Estatísticas", "Decks are named by their ink colors.": "Os decks são identificados pelas cores de tinta.",
+    "Source": "Origem", "Period": "Período", "All time": "Todo o período", "Last 90 days": "Últimos 90 dias", "Last 30 days": "Últimos 30 dias",
+    "All my decks": "Todos os meus decks", "No games match these filters.": "Nenhum jogo com estes filtros.",
+    "games": "jogos", "won ({w}–{l})": "vitórias ({w}–{l})", "won going first ({n})": "vitórias começando ({n})", "won going second ({n})": "vitórias comprando ({n})",
+    "Matchups costing you the most": "Confrontos que mais custam jogos", "(8+ games; games lost beyond an even split)": "(8+ jogos; derrotas além do empate 50/50)",
+    "vs {deck}: {w}–{l}, {p} won, {d} games below even": "vs {deck}: {w}–{l}, {p} de vitórias, {d} jogos abaixo do empate",
+    "Trend": "Evolução", "Needs games in at least two months.": "Precisa de jogos em pelo menos dois meses.",
+    "Win rate by month. Hollow points: under 10 games.": "Vitórias por mês. Pontos vazados: menos de 10 jogos.",
+    "{month}: {p}% won, {n} games": "{month}: {p}% de vitórias, {n} jogos", "{month}: {p}% won, {n} game": "{month}: {p}% de vitórias, {n} jogo",
+    "Your decks": "Seus decks", "Your inks": "Suas cores", "Against each deck": "Contra cada deck", "Opponent's inks": "Cores do oponente",
+    "Tap a row to see those games. Faded rows: under 5 games.": "Toque numa linha para ver os jogos. Linhas apagadas: menos de 5 jogos.",
+    "Won": "Vitórias", "Going first": "Começando", "Going second": "Comprando", "Show games against {deck}": "Mostrar jogos contra {deck}",
+    // account panel (site)
+    "Sign in": "Entrar", "Use your Inkwell account email. Your Lore Counter games appear here.": "Use o e-mail da sua conta Inkwell. Os jogos do Contador de lore aparecem aqui.",
+    "Email": "E-mail", "Send code": "Enviar código", "Code from the email": "Código do e-mail",
+    "Enter your email.": "Digite seu e-mail.", "Sending…": "Enviando…",
+    "Check {email}: type the code, or open the link on this device.": "Veja {email}: digite o código ou abra o link neste aparelho.",
+    "Couldn't send the email. Check the address and your connection.": "Não foi possível enviar o e-mail. Confira o endereço e a internet.",
+    "Wrong or expired code.": "Código errado ou expirado.",
+    "Signed in as {email}": "Conectado como {email}", "Sign out": "Sair",
+    "Show": "Mostrar", "My games": "Meus jogos", "Community: public games": "Comunidade: jogos públicos", "Games of {name}": "Jogos de {name}",
+    "Your name for public games and comments": "Seu nome em jogos públicos e comentários", "Save": "Salvar",
+    "Your name: {name}": "Seu nome: {name}", "Change": "Mudar", "Use at least 2 characters.": "Use pelo menos 2 caracteres.",
+    "Couldn't save the name. Try again.": "Não foi possível salvar o nome. Tente de novo.",
+    "Public games from every player. Anyone signed in can read them and comment.": "Jogos públicos de todos os jogadores. Quem estiver conectado pode ler e comentar.",
+    "You're coaching {name}: you can read their games and comment.": "Você é coach de {name}: pode ler os jogos e comentar.",
+    "My coaches ({n})": "Meus coaches ({n})",
+    "A coach you add can read all your games and comment, after signing in with that email.": "Um coach adicionado lê todos os seus jogos e comenta, depois de entrar com esse e-mail.",
+    "Remove": "Remover", "Confirm remove": "Confirmar", "Coach's email": "E-mail do coach", "Add": "Adicionar",
+    "Enter your coach's email.": "Digite o e-mail do coach.", "Couldn't add the coach. Try again.": "Não foi possível adicionar o coach. Tente de novo.",
+    "duels.ink sync is off.": "A sincronização com o duels.ink está desligada.",
+    "duels.ink games sync every 30 minutes.": "Os jogos do duels.ink sincronizam a cada 30 minutos.",
+    "duels.ink sync needs attention: {error}.": "A sincronização com o duels.ink precisa de atenção: {error}.",
+    "duels.ink games sync every 30 minutes. Last check {when}, {n} new.": "Os jogos do duels.ink sincronizam a cada 30 minutos. Última verificação {when}, {n} novos.",
+    "duels.ink games sync every 30 minutes. Last check {when}, nothing new.": "Os jogos do duels.ink sincronizam a cada 30 minutos. Última verificação {when}, nada novo.",
+    " {n} more on the next runs.": " Mais {n} nas próximas verificações.",
+    "Opponent": "Oponente", "Language": "Idioma",
+  };
+  // English wording for the few keys that carry a hint to tell them apart.
+  const EN = { "Public (one game)": "Public" };
+  const fill = (s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)) : s);
+  const tr = (en, v) => fill(lang === "pt" && en in PT ? PT[en] : EN[en] || en, v);
+  const locale = () => (lang === "pt" ? "pt-BR" : "en");
+  function applyStatic(root = document) {
+    root.querySelectorAll("[data-i18n]").forEach((el) => { el.dataset.i18nEn ||= el.textContent; el.textContent = tr(el.dataset.i18nEn); });
+    root.querySelectorAll("[data-i18n-ph]").forEach((el) => { el.dataset.i18nPhEn ||= el.placeholder; el.placeholder = tr(el.dataset.i18nPhEn); });
+    document.documentElement.lang = locale();
+  }
+  window.INKWELL_I18N = {
+    tr, locale, applyStatic,
+    get lang() { return lang; },
+    setLang(l) { lang = l === "en" ? "en" : "pt"; try { localStorage.setItem(KEY, lang); } catch { /* */ } location.reload(); },
+  };
+  document.addEventListener("DOMContentLoaded", () => applyStatic());
+})();
+</script>
+<script>
 /* Inkwell Lore Counter: cloud adapter for the offline app.
  *
  * Talks to the Inkwell Supabase project with plain fetch (no library to cache):
@@ -118,6 +262,8 @@ window.INKWELL_CLOUD = (() => {
 (() => {
   "use strict";
   const CLOUD = window.INKWELL_CLOUD;
+  const Tx = window.INKWELL_I18N?.tr || ((t, v) => (v ? t.replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)) : t));
+  const LOC = window.INKWELL_I18N?.locale?.() || undefined;
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const PLAYER_KEY = "inkwell-coach-player";
   const me = CLOUD?.user();
@@ -133,7 +279,7 @@ window.INKWELL_CLOUD = (() => {
   const listeners = new Set();
   const enc = encodeURIComponent;
 
-  const nameOf = (email) => (email || "").split("@")[0] || "Someone";
+  const nameOf = (email) => (email || "").split("@")[0] || Tx("Someone");
   const myName = () => names.get(me?.id) || nameOf(me?.email);
   const ownerOf = (gameId) => rows.find((r) => r.game_id === gameId)?.user_id || player;
   const avatar = (name) => "data:image/svg+xml," + enc(`<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" rx="20" fill="#3b3560"/><text x="20" y="26" font-family="sans-serif" font-size="17" fill="#e9d28a" text-anchor="middle">${esc((name || "?")[0].toUpperCase())}</text></svg>`);
@@ -155,7 +301,7 @@ window.INKWELL_CLOUD = (() => {
       const vis = coll === "games" ? "private" : "public";
       return rows.filter((r) => r.visibility === vis).map((r) => ({ id: r.game_id,
         data: { log: logs.get(r.game_id) || stub(r), summary: r.summary || summarize(logs.get(r.game_id) || stub(r)), played_at: r.played_at, source: r.source, added_at: r.created_at,
-          ...(player === COMMUNITY ? { owner_name: r.user_id === me.id ? "You" : names.get(r.user_id) || "A player" } : {}) } }));
+          ...(player === COMMUNITY ? { owner_name: r.user_id === me.id ? "You" : names.get(r.user_id) || Tx("A player") } : {}) } }));
     }
     if (coll === "notes" || coll === "public_notes") {
       const vis = coll === "notes" ? "private" : "public";
@@ -275,7 +421,11 @@ window.INKWELL_CLOUD = (() => {
     async loadGame(gameId) {
       if (logs.has(gameId)) return;
       const r = await CLOUD.api(`game_logs?user_id=eq.${enc(ownerOf(gameId))}&game_id=eq.${enc(gameId)}&select=log`);
-      if (r?.[0]?.log) { logs.set(gameId, r[0].log); for (const cb of listeners) cb(); }
+      const log = r?.[0]?.log;
+      // Another player's public game: never show the opponent's name (supabase/hide_names.sql removes it in the database too).
+      if (log && player === COMMUNITY && ownerOf(gameId) !== me.id)
+        for (const p of log.players || []) if (!p.is_me) p.name = Tx("Opponent");
+      if (log) { logs.set(gameId, log); for (const cb of listeners) cb(); }
     },
     async setVisibility(gameId, vis) {
       await CLOUD.api(`game_logs?user_id=eq.${enc(me.id)}&game_id=eq.${enc(gameId)}`, { method: "PATCH", prefer: "return=minimal", body: { visibility: vis } });
@@ -288,7 +438,7 @@ window.INKWELL_CLOUD = (() => {
     can: async () => true,
     profiles: async (ids) => Object.fromEntries(ids.map((id) => {
       const n = noteRows.find((x) => x.author === id);
-      const name = id === me.id ? myName() : names.get(id) || n?.author_name || "Someone";
+      const name = id === me.id ? myName() : names.get(id) || n?.author_name || Tx("Someone");
       return [id, { name, avatarUrl: avatar(name) }];
     })),
   };
@@ -302,12 +452,13 @@ window.INKWELL_CLOUD = (() => {
   }
 
   function syncLine(d) {
-    const when = (iso) => { try { return new Date(iso).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); } catch { return ""; } };
-    if (!d.enabled) return "duels.ink sync is off.";
+    const when = (iso) => { try { return new Date(iso).toLocaleString(LOC, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); } catch { return ""; } };
+    if (!d.enabled) return Tx("duels.ink sync is off.");
     const r = d.last_result || {};
-    if (!d.last_run_at) return "duels.ink games sync every 30 minutes.";
-    if (r.ok === false) return `duels.ink sync needs attention: ${esc(r.error || "unknown error")}.`;
-    return `duels.ink games sync every 30 minutes. Last check ${esc(when(d.last_run_at))}${r.added ? `, ${r.added} new` : ", nothing new"}${r.waiting ? `, ${r.waiting} more on the next runs` : ""}.`;
+    if (!d.last_run_at) return Tx("duels.ink games sync every 30 minutes.");
+    if (r.ok === false) return esc(Tx("duels.ink sync needs attention: {error}.", { error: r.error || "unknown error" }));
+    return esc(Tx(r.added ? "duels.ink games sync every 30 minutes. Last check {when}, {n} new." : "duels.ink games sync every 30 minutes. Last check {when}, nothing new.", { when: when(d.last_run_at), n: r.added })
+      + (r.waiting ? Tx(" {n} more on the next runs.", { n: r.waiting }) : ""));
   }
 
   // ---------- panels: sign-in, whose games, my coaches ----------
@@ -315,21 +466,21 @@ window.INKWELL_CLOUD = (() => {
     const host = document.getElementById("accountPanel");
     if (!host) return;
     if (!me) {
-      host.innerHTML = `<div class="acct"><b>Sign in</b><span class="small muted">Use your Inkwell account email. Your Lore Counter games appear here.</span>
-        <input id="siEmail" type="email" autocomplete="email" placeholder="Email"><button type="button" class="btn primary small" id="siSend">Send code</button>
-        <div id="siCodeRow" hidden><input id="siCode" inputmode="numeric" autocomplete="one-time-code" placeholder="Code from the email"><button type="button" class="btn primary small" id="siIn">Sign in</button></div>
+      host.innerHTML = `<div class="acct"><b>${Tx("Sign in")}</b><span class="small muted">${Tx("Use your Inkwell account email. Your Lore Counter games appear here.")}</span>
+        <input id="siEmail" type="email" autocomplete="email" placeholder="${Tx("Email")}"><button type="button" class="btn primary small" id="siSend">${Tx("Send code")}</button>
+        <div id="siCodeRow" hidden><input id="siCode" inputmode="numeric" autocomplete="one-time-code" placeholder="${Tx("Code from the email")}"><button type="button" class="btn primary small" id="siIn">${Tx("Sign in")}</button></div>
         <span class="small" id="siMsg" aria-live="polite"></span></div>`;
       const msg = (t) => { document.getElementById("siMsg").textContent = t; };
       document.getElementById("siSend").onclick = async () => {
         const e = document.getElementById("siEmail").value.trim();
-        if (!/^\S+@\S+\.\S+$/.test(e)) { msg("Enter your email."); return; }
-        msg("Sending…");
-        try { await CLOUD.requestCode(e); document.getElementById("siCodeRow").hidden = false; msg(`Check ${e}: type the code, or open the link on this device.`); }
-        catch { msg("Couldn't send the email. Check the address and your connection."); }
+        if (!/^\S+@\S+\.\S+$/.test(e)) { msg(Tx("Enter your email.")); return; }
+        msg(Tx("Sending…"));
+        try { await CLOUD.requestCode(e); document.getElementById("siCodeRow").hidden = false; msg(Tx("Check {email}: type the code, or open the link on this device.", { email: e })); }
+        catch { msg(Tx("Couldn't send the email. Check the address and your connection.")); }
       };
       document.getElementById("siIn").onclick = async () => {
         try { await CLOUD.verify(document.getElementById("siEmail").value.trim(), document.getElementById("siCode").value); location.reload(); }
-        catch { msg("Wrong or expired code."); }
+        catch { msg(Tx("Wrong or expired code.")); }
       };
       return;
     }
@@ -337,27 +488,27 @@ window.INKWELL_CLOUD = (() => {
     const mine = links.filter((l) => l.owner_id === me.id);
     const viewing = player === me.id ? null : students.find((l) => l.owner_id === player);
     host.innerHTML = `<div class="acct">
-      <span class="small muted">Signed in as ${esc(me.email)} · <button type="button" class="linkbtn" id="siOut">Sign out</button></span>
+      <span class="small muted">${esc(Tx("Signed in as {email}", { email: me.email }))} · <button type="button" class="linkbtn" id="siOut">${Tx("Sign out")}</button></span>
       ${duelsSync && player === me.id ? `<span class="small muted" id="duelsSync">${syncLine(duelsSync)}</span>` : ""}
-      <label class="small">Show <select id="whose"><option value="${esc(me.id)}">My games</option><option value="${COMMUNITY}" ${player === COMMUNITY ? "selected" : ""}>Community: public games</option>${students.map((l) => `<option value="${esc(l.owner_id)}" ${l.owner_id === player ? "selected" : ""}>Games of ${esc(names.get(l.owner_id) || l.owner_email || "a player")}</option>`).join("")}</select></label>
-      ${!names.has(me.id) ? `<div class="row2"><input id="dispName" maxlength="40" placeholder="Your name for public games and comments"><button type="button" class="btn small" id="dispSave">Save</button></div>`
-        : `<span class="small muted">Your name: ${esc(names.get(me.id))} · <button type="button" class="linkbtn" id="dispEdit">Change</button></span>`}
+      <label class="small">${Tx("Show")} <select id="whose"><option value="${esc(me.id)}">${Tx("My games")}</option><option value="${COMMUNITY}" ${player === COMMUNITY ? "selected" : ""}>${Tx("Community: public games")}</option>${students.map((l) => `<option value="${esc(l.owner_id)}" ${l.owner_id === player ? "selected" : ""}>${esc(Tx("Games of {name}", { name: names.get(l.owner_id) || l.owner_email || Tx("A player") }))}</option>`).join("")}</select></label>
+      ${!names.has(me.id) ? `<div class="row2"><input id="dispName" maxlength="40" placeholder="${Tx("Your name for public games and comments")}"><button type="button" class="btn small" id="dispSave">${Tx("Save")}</button></div>`
+        : `<span class="small muted">${esc(Tx("Your name: {name}", { name: names.get(me.id) }))} · <button type="button" class="linkbtn" id="dispEdit">${Tx("Change")}</button></span>`}
       <span class="small" id="dispMsg" aria-live="polite"></span>
-      ${player === COMMUNITY ? `<span class="small">Public games from every player. Anyone signed in can read them and comment.</span>`
-        : viewing ? `<span class="small">You're coaching ${esc(names.get(viewing.owner_id) || viewing.owner_email)}: you can read their games and comment.</span>` : `<details class="coaches"><summary class="small">My coaches (${mine.length})</summary>
-        <span class="small muted">A coach you add can read all your games and comment, after signing in with that email.</span>
-        ${mine.map((l) => `<div class="small row2"><span>${esc(l.coach_email)}</span><button type="button" class="linkbtn" data-rm="${esc(l.coach_email)}">Remove</button></div>`).join("")}
-        <div class="row2"><input id="coachEmail" type="email" placeholder="Coach's email"><button type="button" class="btn small" id="coachAdd">Add</button></div>
+      ${player === COMMUNITY ? `<span class="small">${Tx("Public games from every player. Anyone signed in can read them and comment.")}</span>`
+        : viewing ? `<span class="small">${esc(Tx("You're coaching {name}: you can read their games and comment.", { name: names.get(viewing.owner_id) || viewing.owner_email }))}</span>` : `<details class="coaches"><summary class="small">${Tx("My coaches ({n})", { n: mine.length })}</summary>
+        <span class="small muted">${Tx("A coach you add can read all your games and comment, after signing in with that email.")}</span>
+        ${mine.map((l) => `<div class="small row2"><span>${esc(l.coach_email)}</span><button type="button" class="linkbtn" data-rm="${esc(l.coach_email)}">${Tx("Remove")}</button></div>`).join("")}
+        <div class="row2"><input id="coachEmail" type="email" placeholder="${Tx("Coach's email")}"><button type="button" class="btn small" id="coachAdd">${Tx("Add")}</button></div>
         <span class="small" id="coachMsg" aria-live="polite"></span></details>`}
     </div>`;
     document.getElementById("siOut").onclick = () => { CLOUD.signOut(); try { localStorage.removeItem(PLAYER_KEY); } catch { /* */ } location.reload(); };
     const saveName = async (v) => {
       v = String(v || "").trim();
-      if (v.length < 2) { document.getElementById("dispMsg").textContent = "Use at least 2 characters."; return; }
+      if (v.length < 2) { document.getElementById("dispMsg").textContent = Tx("Use at least 2 characters."); return; }
       try {
         await CLOUD.api("profiles?on_conflict=user_id", { method: "POST", prefer: "resolution=merge-duplicates,return=minimal", body: [{ user_id: me.id, display_name: v.slice(0, 40), updated_at: new Date().toISOString() }] });
         names.set(me.id, v.slice(0, 40)); panels(); for (const cb of listeners) cb();
-      } catch { document.getElementById("dispMsg").textContent = "Couldn't save the name. Try again."; }
+      } catch { document.getElementById("dispMsg").textContent = Tx("Couldn't save the name. Try again."); }
     };
     document.getElementById("dispSave")?.addEventListener("click", () => saveName(document.getElementById("dispName").value));
     document.getElementById("dispEdit")?.addEventListener("click", () => { names.delete(me.id); panels(); const i = document.getElementById("dispName"); if (i) { i.value = myName() === nameOf(me.email) ? "" : myName(); i.focus(); } });
@@ -366,12 +517,12 @@ window.INKWELL_CLOUD = (() => {
     const add = document.getElementById("coachAdd");
     if (add) add.onclick = async () => {
       const e = document.getElementById("coachEmail").value.trim().toLowerCase();
-      if (!/^\S+@\S+\.\S+$/.test(e) || e === (me.email || "").toLowerCase()) { document.getElementById("coachMsg").textContent = "Enter your coach's email."; return; }
+      if (!/^\S+@\S+\.\S+$/.test(e) || e === (me.email || "").toLowerCase()) { document.getElementById("coachMsg").textContent = Tx("Enter your coach's email."); return; }
       try { await CLOUD.api("coach_links", { method: "POST", prefer: "resolution=ignore-duplicates,return=minimal", body: [{ coach_email: e }] }); await reload(); }
-      catch { document.getElementById("coachMsg").textContent = "Couldn't add the coach. Try again."; }
+      catch { document.getElementById("coachMsg").textContent = Tx("Couldn't add the coach. Try again."); }
     };
     host.querySelectorAll("[data-rm]").forEach((b) => b.onclick = async () => {
-      if (b.dataset.c !== "1") { b.dataset.c = "1"; b.textContent = "Confirm remove"; return; }
+      if (b.dataset.c !== "1") { b.dataset.c = "1"; b.textContent = Tx("Confirm remove"); return; }
       try { await CLOUD.api(`coach_links?owner_id=eq.${enc(me.id)}&coach_email=eq.${enc(b.dataset.rm)}`, { method: "DELETE" }); await reload(); } catch { /* stays listed */ }
     });
   }
@@ -517,6 +668,7 @@ table.mt tr[data-opp]:hover td, table.mt tr[data-opp]:focus-visible td { backgro
 .acct label { display: grid; gap: 4px; }
 .acct .row2 { display: flex; gap: 8px; align-items: center; justify-content: space-between; margin-top: 6px; }
 .acct details summary { cursor: pointer; }
+.titlerow { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .linkbtn { background: none; border: 0; padding: 0; color: var(--gold); text-decoration: underline; cursor: pointer; font-size: inherit; }
 .filebtn { cursor: pointer; }
 .add .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
@@ -533,24 +685,24 @@ table.mt tr[data-opp]:hover td, table.mt tr[data-opp]:focus-visible td { backgro
 
 <div class="wrap" id="wrap">
   <aside class="list" aria-label="Games">
-    <h1>Coach review</h1>
+    <div class="titlerow"><h1 data-i18n>Coach review</h1><button type="button" class="linkbtn small" id="langBtn" hidden></button></div>
     <div id="accountPanel"></div>
-    <button type="button" class="btn primary counterBtn" id="openCounter" hidden>Lore Counter <span class="small">· games save here</span></button>
+    <button type="button" class="btn primary counterBtn" id="openCounter" hidden><span data-i18n>Lore Counter</span> <span class="small" data-i18n>· games save here</span></button>
     <div class="stats" id="stats" hidden></div>
-    <button type="button" class="btn small statsBtn" id="openStats" hidden>Stats: decks, matchups, trend</button>
+    <button type="button" class="btn small statsBtn" id="openStats" hidden data-i18n>Stats: decks, matchups, trend</button>
     <div class="filters" id="filters" role="group" aria-label="Show games"></div>
-    <div id="games"><p class="empty">Loading games…</p></div>
+    <div id="games"><p class="empty" data-i18n>Loading games…</p></div>
     <details class="add" id="addBox" hidden>
-      <summary>Add games</summary>
-      <span class="small muted">Games played in the Lore Counter above are saved automatically. From the standalone Lore Counter: Settings, Recorded matches, Copy for Coach Review. From the Training Logger: Copy game file. Then paste here.</span>
-      <textarea id="pasteLog" placeholder="Paste the copied games here"></textarea>
-      <div class="row"><button type="button" class="btn primary small" id="addGame">Add games</button>
-        <label class="btn small filebtn">Import a file<input type="file" id="addFile" accept=".json,.gz,application/json,application/gzip" hidden></label></div>
+      <summary data-i18n>Add games</summary>
+      <span class="small muted" data-i18n>Games played in the Lore Counter above are saved automatically. From the standalone Lore Counter: Settings, Recorded matches, Copy for Coach Review. From the Training Logger: Copy game file. Then paste here.</span>
+      <textarea id="pasteLog" placeholder="Paste the copied games here" data-i18n-ph></textarea>
+      <div class="row"><button type="button" class="btn primary small" id="addGame" data-i18n>Add games</button>
+        <label class="btn small filebtn"><span data-i18n>Import a file</span><input type="file" id="addFile" accept=".json,.gz,application/json,application/gzip" hidden></label></div>
       <span class="small" id="addStatus" aria-live="polite"></span>
     </details>
   </aside>
   <main class="review" id="review" aria-live="polite">
-    <p class="empty">Pick a game to review it turn by turn.</p>
+    <p class="empty" data-i18n>Pick a game to review it turn by turn.</p>
   </main>
 </div>
 <div class="counterView" id="counterView" hidden><iframe id="counterFrame" title="Lore Counter" allow="screen-wake-lock; clipboard-write"></iframe></div>
@@ -560,6 +712,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
 (() => {
   "use strict";
   const $ = (id) => document.getElementById(id);
+  // Portuguese / English (i18n.js); falls back to the English text when it isn't loaded.
+  const Tx = window.INKWELL_I18N?.tr || ((t, v) => (v ? t.replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)) : t));
+  const LOC = window.INKWELL_I18N?.locale?.() || undefined;
   const CARDS = new Map((CARD_INDEX?.cards || []).map(([id, name, cost, type, ink, lore]) => [id, { id, name, cost, type, ink, lore }]));
   // Deck-list text ("4 Elsa - Spirit of Winter", "4x ...") to card ids. Prefers main-set printings over promos and variants.
   const normName = (n) => String(n || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\((enchanted|epic|iconic|foil|alternate art)\)/g, "").replace(/[^a-z0-9]+/g, " ").trim();
@@ -589,11 +744,11 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
   }
   const INK_VAR = { Amber: "--amber", Amethyst: "--amethyst", Emerald: "--emerald", Ruby: "--ruby", Sapphire: "--sapphire", Steel: "--steel" };
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const cardName = (id, fallback) => (id && CARDS.get(id)?.name) || fallback || (id ? id : "a card");
+  const cardName = (id, fallback) => (id && CARDS.get(id)?.name) || fallback || (id ? id : Tx("a card"));
   const inkDots = (colors) => `<span class="inks">${(colors || "").split(/[\/,]\s*/).filter(Boolean).slice(0, 2)
     .map((c) => `<i style="background:var(${INK_VAR[c.trim().replace(/^./, (x) => x.toUpperCase())] || "--steel"})"></i>`).join("")}</span>`;
-  const sideText = (s) => s.went_first === true ? "on the play" : s.went_first === false ? "on the draw" : "first player not recorded";
-  const fmtDate = (iso) => { try { return new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short" }); } catch { return ""; } };
+  const sideText = (s) => Tx(s.went_first === true ? "on the play" : s.went_first === false ? "on the draw" : "first player not recorded");
+  const fmtDate = (iso) => { try { return new Date(iso).toLocaleDateString(LOC, { day: "numeric", month: "short" }); } catch { return ""; } };
 
   // ---------- state ----------
   let db = null, user = null, me = null, isOwner = false, canWrite = null;
@@ -617,14 +772,14 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     el.hidden = false;
     const p = (w, n) => n ? `${Math.round(100 * w / n)}%` : "–";
     el.innerHTML = `<div class="pair">
-        <div class="stat"><b>${p(stats.otp[0], stats.otp[1])}</b><span>won on the play (${stats.otp[1]} games)</span></div>
-        <div class="stat"><b>${p(stats.otd[0], stats.otd[1])}</b><span>won on the draw (${stats.otd[1]} games)</span></div></div>
-      <span class="small muted">${esc(stats.games)} ${esc(stats.label || "duels.ink games vs people")}, ${esc(fmtDate(stats.from))} to ${esc(fmtDate(stats.to))}</span>`;
+        <div class="stat"><b>${p(stats.otp[0], stats.otp[1])}</b><span>${Tx("won on the play ({n} games)", { n: stats.otp[1] })}</span></div>
+        <div class="stat"><b>${p(stats.otd[0], stats.otd[1])}</b><span>${Tx("won on the draw ({n} games)", { n: stats.otd[1] })}</span></div></div>
+      <span class="small muted">${esc(Tx(stats.label === "recorded games" ? "{n} recorded games, {from} to {to}" : "{n} duels.ink games vs people, {from} to {to}", { n: stats.games, from: fmtDate(stats.from), to: fmtDate(stats.to) }))}</span>`;
   }
   function renderFilters() {
-    const opts = [["all", "All"], ["loss", "Losses"], ["win", "Wins"], ["noted", "With comments"], ["public", "Public"]];
+    const opts = [["all", "All"], ["loss", "Losses"], ["win", "Wins"], ["noted", "With comments"], ["public", "Public games"]].map(([k, l]) => [k, Tx(l)]);
     $("filters").innerHTML = opts.map(([k, l]) => `<button type="button" class="chipbtn" data-f="${k}" aria-pressed="${filter === k}">${l}</button>`).join("")
-      + (oppFilter ? `<button type="button" class="chipbtn x" id="oppChip" aria-pressed="true" aria-label="Showing games against ${esc(oppFilter)}. Remove filter">vs ${esc(oppFilter)}</button>` : "");
+      + (oppFilter ? `<button type="button" class="chipbtn x" id="oppChip" aria-pressed="true" aria-label="${esc(Tx("Showing games against {deck}. Remove filter", { deck: oppFilter }))}">vs ${esc(oppFilter)}</button>` : "");
     $("filters").querySelectorAll("[data-f]").forEach((b) => b.onclick = () => { filter = b.dataset.f; renderFilters(); renderList(); });
     $("oppChip")?.addEventListener("click", () => { oppFilter = null; renderFilters(); renderList(); });
   }
@@ -639,7 +794,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       return true;
     });
     if (!all.length) {
-      $("games").innerHTML = `<p class="empty">No games here yet. Games show up when they are imported from duels.ink${isOwner ? " or added below from the Table Logger" : ""}.</p>`;
+      $("games").innerHTML = `<p class="empty">${Tx(isOwner ? "No games here yet. Games show up when they are imported from duels.ink or added below from the Table Logger." : "No games here yet. Games show up when they are imported from duels.ink.")}</p>`;
       return;
     }
     $("openStats").hidden = !!db?.isCommunity;
@@ -647,9 +802,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       const s = summaryOf(g);
       return `<button type="button" class="game ${s.result === "win" ? "win" : "loss"}" data-k="${esc(g.key)}" aria-current="${g.key === current}">
         <span class="bar"></span>
-        <span class="t">${inkDots(s.opp_inks || s.opp_deck)}vs ${esc(s.opp_deck || "Unknown")}<small>${g.doc.owner_name ? `${esc(g.doc.owner_name)} · ` : ""}${esc(s.my_deck || "")}, ${sideText(s)}, ${esc(fmtDate(g.doc.played_at))}${g.coll === "public_games" ? ", public" : ""}</small></span>
+        <span class="t">${inkDots(s.opp_inks || s.opp_deck)}${Tx("vs")} ${esc(s.opp_deck === "Unknown" || !s.opp_deck ? Tx("Unknown") : s.opp_deck)}<small>${g.doc.owner_name ? `${esc(g.doc.owner_name)} · ` : ""}${esc(s.my_deck || "")}, ${sideText(s)}, ${esc(fmtDate(g.doc.played_at))}${g.coll === "public_games" ? Tx(", public") : ""}</small></span>
         <span class="score">${esc(s.my_lore)}–${esc(s.opp_lore)}${noteCount(g) ? `<span class="n">${noteCount(g)} comment${noteCount(g) > 1 ? "s" : ""}</span>` : ""}</span></button>`;
-    }).join("") : `<p class="empty">No games match this filter.</p>`;
+    }).join("") : `<p class="empty">${Tx("No games match this filter.")}</p>`;
     $("games").querySelectorAll(".game").forEach((b) => b.onclick = () => openGame(b.dataset.k));
   }
 
@@ -659,18 +814,18 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     const c = cardName(a.card_id, a.card_name);
     const t = (a.targets || []).map((x) => cardName(x)).join(", ");
     switch (a.type) {
-      case "ink": return a.card_id || a.card_name ? `Inked ${c}` : `Inked a card${a.text ? ` (${a.text})` : ""}`;
-      case "play": return `Played ${c}`;
-      case "shift": return `Shifted ${c}${t ? ` onto ${t}` : ""}`;
-      case "sing": return `Sang ${c}${a.text ? `, ${a.text}` : ""}`;
-      case "quest": return `Quested with ${c}`;
-      case "challenge": return `${c} challenged ${t || ""}${a.text ? ` ${a.text}` : ""}`.trim();
-      case "banish": return `${c} banished`;
-      case "activate": return `${c}${a.text ? `: ${a.text}` : " ability"}`;
-      case "damage": return `${a.value} damage to ${t || "?"} from ${c}`;
-      case "lore_adjust": return `${a.value > 0 ? "Gained" : "Lost"} ${Math.abs(a.value)} lore${a.text ? ` (${a.text})` : ""}`;
-      case "move": return `Moved ${c} to ${t || a.text || "?"}`;
-      case "note": return `Note: ${a.text}`;
+      case "ink": return a.card_id || a.card_name ? Tx("Inked {c}", { c }) : `${Tx("Inked a card")}${a.text ? ` (${a.text})` : ""}`;
+      case "play": return Tx("Played {c}", { c });
+      case "shift": return Tx("Shifted {c}", { c }) + (t ? Tx(" onto {t}", { t }) : "");
+      case "sing": return Tx("Sang {c}", { c }) + (a.text ? `, ${a.text}` : "");
+      case "quest": return Tx("Quested with {c}", { c });
+      case "challenge": return `${Tx("{c} challenged {t}", { c, t: t || "" })}${a.text ? ` ${a.text}` : ""}`.trim();
+      case "banish": return Tx("{c} banished", { c });
+      case "activate": return `${c}${a.text ? `: ${a.text}` : Tx(" ability")}`;
+      case "damage": return Tx("{v} damage to {t} from {c}", { v: a.value, t: t || "?", c });
+      case "lore_adjust": return Tx(a.value > 0 ? "Gained {v} lore" : "Lost {v} lore", { v: Math.abs(a.value) }) + (a.text ? ` (${a.text})` : "");
+      case "move": return Tx("Moved {c} to {t}", { c, t: t || a.text || "?" });
+      case "note": return Tx("Note: {t}", { t: a.text });
       default: return a.type;
     }
   }
@@ -726,18 +881,18 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     return notes.filter((n) => anchorKey(n.anchor) === key).map((n) => {
       const p = profilesMap[n.author] || {};
       const mine = me?.id && n.author === me.id;
-      return `<div class="note ${key === "game" || key === "deck" ? "game-note" : ""}"><div class="who"><img alt="" src="${esc(p.avatarUrl || "")}"><span class="nm" data-author="${esc(n.author)}"></span><span>${esc(fmtDate(n.at))}</span>${mine || isOwner ? `<button type="button" class="del" data-del="${esc(n.id)}">Delete</button>` : ""}</div><div class="body" data-body="${esc(n.id)}"></div></div>`;
+      return `<div class="note ${key === "game" || key === "deck" ? "game-note" : ""}"><div class="who"><img alt="" src="${esc(p.avatarUrl || "")}"><span class="nm" data-author="${esc(n.author)}"></span><span>${esc(fmtDate(n.at))}</span>${mine || isOwner ? `<button type="button" class="del" data-del="${esc(n.id)}">${Tx("Delete")}</button>` : ""}</div><div class="body" data-body="${esc(n.id)}"></div></div>`;
     }).join("") + (composerFor === key ? `<div class="composer ${key === "game" || key === "deck" ? "game-note" : ""}">
-        <textarea id="compose" placeholder="Your comment"></textarea>
-        <div class="row"><button type="button" class="btn ghost small" id="cancelC">Cancel</button><button type="button" class="btn primary small" id="saveC">Comment</button></div></div>` : "");
+        <textarea id="compose" placeholder="${Tx("Your comment")}"></textarea>
+        <div class="row"><button type="button" class="btn ghost small" id="cancelC">${Tx("Cancel")}</button><button type="button" class="btn primary small" id="saveC">${Tx("Comment")}</button></div></div>` : "");
   }
 
   async function renderReview() {
     if (showingStats && !current) { renderStatsView(); return; }
     const g = games.get(current);
     const el = $("review");
-    if (!g) { el.innerHTML = `<p class="empty">Pick a game to review it turn by turn.</p>`; return; }
-    if (g.doc.log?._loading) { el.innerHTML = `<p class="empty">Loading the game…</p>`; return; }
+    if (!g) { el.innerHTML = `<p class="empty">${Tx("Pick a game to review it turn by turn.")}</p>`; return; }
+    if (g.doc.log?._loading) { el.innerHTML = `<p class="empty">${Tx("Loading the game…")}</p>`; return; }
     const log = g.doc.log, s = summaryOf(g);
     const ids = [...new Set(notes.map((n) => n.author))];
     const profilesMap = user && ids.length ? await user.profiles(ids) : {};
@@ -747,46 +902,46 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     const canComment = !!db && canWrite !== false && !!me?.id;
     const add = (key, label) => canComment ? `<button type="button" class="addc" data-anchor="${key}">${label}</button>` : "";
     const ev = log.event || {};
-    let html = `<button type="button" class="btn ghost small back" id="back">All games</button>
+    let html = `<button type="button" class="btn ghost small back" id="back">${Tx("All games")}</button>
       <div class="head">
-        <span class="result ${s.result}">${s.result === "win" ? "Win" : "Loss"} ${esc(s.my_lore)}–${esc(s.opp_lore)}</span>
-        ${g.doc.owner_name ? `<span class="muted small">Played by ${esc(g.doc.owner_name)}</span>` : ""}
-        <h2>${inkDots(s.my_inks || s.my_deck)}${esc(s.my_deck || "Your deck")} vs ${inkDots(s.opp_inks || s.opp_deck)}${esc(s.opp_deck || "Unknown")}</h2>
+        <span class="result ${s.result}">${Tx(s.result === "win" ? "Win" : "Loss")} ${esc(s.my_lore)}–${esc(s.opp_lore)}</span>
+        ${g.doc.owner_name ? `<span class="muted small">${esc(Tx("Played by {name}", { name: g.doc.owner_name === "You" ? Tx("You") : g.doc.owner_name }))}</span>` : ""}
+        <h2>${inkDots(s.my_inks || s.my_deck)}${esc(s.my_deck || Tx("Your deck"))} ${Tx("vs")} ${inkDots(s.opp_inks || s.opp_deck)}${esc(s.opp_deck === "Unknown" || !s.opp_deck ? Tx("Unknown") : s.opp_deck)}</h2>
         <span class="muted small">${esc([
           sideText(s).replace(/^./, (c) => c.toUpperCase()),
-          log.turns.length ? `${log.turns.length} turns` : (log.lore_track || []).length > 1 ? `Lore Counter game, ${((m) => m < 2 ? "under 2 minutes" : `about ${m} minutes`)(Math.round(log.lore_track.at(-1).t / 60))}` : "Lore Counter game, final lore and result only",
-          [ev.name, ev.game_in_match ? `game ${ev.game_in_match}` : ""].filter(Boolean).join(", "),
-          new Date(log.played_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }),
-          `ended by ${log.result?.reason || "unknown"}`,
+          log.turns.length ? Tx("{n} turns", { n: log.turns.length }) : (log.lore_track || []).length > 1 ? ((m) => (m < 2 ? Tx("Lore Counter game, under 2 minutes") : Tx("Lore Counter game, about {m} minutes", { m })))(Math.round(log.lore_track.at(-1).t / 60)) : Tx("Lore Counter game, final lore and result only"),
+          [ev.name, ev.game_in_match ? Tx("game {n}", { n: ev.game_in_match }) : ""].filter(Boolean).join(", "),
+          new Date(log.played_at).toLocaleString(LOC, { dateStyle: "medium", timeStyle: "short" }),
+          Tx("ended by {reason}", { reason: Tx(log.result?.reason || "unknown") }),
         ].filter(Boolean).map((x) => x.replace(/^./, (c) => c.toUpperCase())).join(". "))}.</span>
       </div>
       <div class="toolbar">
-        ${isOwner ? `<span class="vis" role="group" aria-label="Who can see this game"><button type="button" data-vis="private" aria-pressed="${g.coll === "games"}">Private</button><button type="button" data-vis="public" aria-pressed="${g.coll === "public_games"}">Public</button></span>` : `<span class="muted small">${g.coll === "public_games" ? "Public game" : "Private game"}</span>`}
-        ${log.source_ref?.replay_url && !/\.\.\.$/.test(log.source_ref.replay_url) ? `<a class="btn ghost small" href="${esc(log.source_ref.replay_url)}" target="_blank" rel="noopener">Watch replay on duels.ink</a>` : ""}
+        ${isOwner ? `<span class="vis" role="group" aria-label="${Tx("Who can see this game")}"><button type="button" data-vis="private" aria-pressed="${g.coll === "games"}">${Tx("Private")}</button><button type="button" data-vis="public" aria-pressed="${g.coll === "public_games"}">${Tx("Public (one game)")}</button></span>` : `<span class="muted small">${Tx(g.coll === "public_games" ? "Public game" : "Private game")}</span>`}
+        ${log.source_ref?.replay_url && !/\.\.\.$/.test(log.source_ref.replay_url) ? `<a class="btn ghost small" href="${esc(log.source_ref.replay_url)}" target="_blank" rel="noopener">${Tx("Watch replay on duels.ink")}</a>` : ""}
       </div>
-      ${!db ? `<div class="notice">Comments need the shared store, which isn't available in this view. You can still read the game.</div>` : !me?.id ? `<div class="notice">Sign in to comment.</div>` : canWrite === false ? `<div class="notice">You can read this game. Ask the owner to make you a Contributor to comment.</div>` : ""}
-      ${log.turns.length ? `<div class="chart"><div class="legend"><span>Lore by turn</span><span><i style="background:var(--gold)"></i>${esc(seatName(log, meSeat))}</span><span><i style="background:var(--opp)"></i>${esc(seatName(log, meSeat === "p1" ? "p2" : "p1"))}</span></div>${loreChart(log)}</div>`  : (log.lore_track || []).length > 1 ? `<div class="chart"><div class="legend"><span>Lore over time</span><span><i style="background:var(--gold)"></i>${esc(seatName(log, meSeat))}</span><span><i style="background:var(--opp)"></i>${esc(seatName(log, meSeat === "p1" ? "p2" : "p1"))}</span></div>${loreTimeChart(log, meSeat)}</div>` : ""}
-      <div>${add("game", "Comment on the whole game")}${notesHtml("game", profilesMap)}</div>
-      ${deck.length || isOwner ? `<details class="deck" ${!deck.length || deckNotice?.key === g.key ? "open" : ""}><summary>${g.doc.owner_name && g.doc.owner_name !== "You" ? `${esc(g.doc.owner_name)}'s deck` : "Your deck"} (${deck.length ? `${deck.reduce((n, e) => n + e.qty, 0)} cards` : "no list yet"})</summary>
-        ${isOwner ? `<div class="deckedit"><button type="button" class="btn ghost small" id="deckEdit">${deck.length ? "Edit your deck list" : "Add your deck list"}</button>
-          <div id="deckBox" ${deckNotice?.key === g.key && deckNotice.open ? "" : "hidden"}><textarea id="deckText" rows="10" placeholder="One card per line, e.g.&#10;4 Elsa - Spirit of Winter&#10;4 Tipo - Growing Son">${esc(deck.map((e) => `${e.qty} ${cardName(e.card_id)}`).join("\n"))}</textarea>
-          ${siblings(g.key).length > 1 ? `<label class="small"><input type="checkbox" id="deckAll" checked> All ${siblings(g.key).length} games of this match</label>` : ""}
-          <div class="row"><button type="button" class="btn primary small" id="deckSave">Save deck list</button></div></div><span class="small" id="deckMsg" aria-live="polite">${deckNotice?.key === g.key ? esc(deckNotice.text) : ""}</span></div>` : ""}
+      ${!db ? `<div class="notice">Comments need the shared store, which isn't available in this view. You can still read the game.</div>` : !me?.id ? `<div class="notice">${Tx("Sign in to comment.")}</div>` : canWrite === false ? `<div class="notice">You can read this game. Ask the owner to make you a Contributor to comment.</div>` : ""}
+      ${log.turns.length ? `<div class="chart"><div class="legend"><span>${Tx("Lore by turn")}</span><span><i style="background:var(--gold)"></i>${esc(seatName(log, meSeat))}</span><span><i style="background:var(--opp)"></i>${esc(seatName(log, meSeat === "p1" ? "p2" : "p1"))}</span></div>${loreChart(log)}</div>`  : (log.lore_track || []).length > 1 ? `<div class="chart"><div class="legend"><span>${Tx("Lore over time")}</span><span><i style="background:var(--gold)"></i>${esc(seatName(log, meSeat))}</span><span><i style="background:var(--opp)"></i>${esc(seatName(log, meSeat === "p1" ? "p2" : "p1"))}</span></div>${loreTimeChart(log, meSeat)}</div>` : ""}
+      <div>${add("game", Tx("Comment on the whole game"))}${notesHtml("game", profilesMap)}</div>
+      ${deck.length || isOwner ? `<details class="deck" ${!deck.length || deckNotice?.key === g.key ? "open" : ""}><summary>${g.doc.owner_name && g.doc.owner_name !== "You" ? esc(Tx("{name}'s deck", { name: g.doc.owner_name })) : Tx("Your deck")} (${deck.length ? Tx("{n} cards", { n: deck.reduce((n, e) => n + e.qty, 0) }) : Tx("no list yet")})</summary>
+        ${isOwner ? `<div class="deckedit"><button type="button" class="btn ghost small" id="deckEdit">${Tx(deck.length ? "Edit your deck list" : "Add your deck list")}</button>
+          <div id="deckBox" ${deckNotice?.key === g.key && deckNotice.open ? "" : "hidden"}><textarea id="deckText" rows="10" placeholder="${esc(Tx("One card per line, e.g.\n4 Elsa - Spirit of Winter\n4 Tipo - Growing Son"))}">${esc(deck.map((e) => `${e.qty} ${cardName(e.card_id)}`).join("\n"))}</textarea>
+          ${siblings(g.key).length > 1 ? `<label class="small"><input type="checkbox" id="deckAll" checked> ${Tx("All {n} games of this match", { n: siblings(g.key).length })}</label>` : ""}
+          <div class="row"><button type="button" class="btn primary small" id="deckSave">${Tx("Save deck list")}</button></div></div><span class="small" id="deckMsg" aria-live="polite">${deckNotice?.key === g.key ? esc(deckNotice.text) : ""}</span></div>` : ""}
         ${deck.length ? `<div class="decklist">${deck.map((e) => `<div><span class="q">${e.qty}</span><span>${esc(cardName(e.card_id))}</span></div>`).join("")}</div>` : ""}
-        <div style="margin-top:8px">${add("deck", "Comment on the deck list")}${notesHtml("deck", profilesMap)}</div>
+        <div style="margin-top:8px">${add("deck", Tx("Comment on the deck list"))}${notesHtml("deck", profilesMap)}</div>
       </details>` : ""}`;
     for (const t of log.turns) {
       const mine = t.player === meSeat;
       const le = t.lore_end ? `${t.lore_end[meSeat]}–${t.lore_end[meSeat === "p1" ? "p2" : "p1"]}` : "";
-      html += `<section class="turn ${mine ? "me" : ""}"><div class="th"><b>Turn ${t.number}: ${esc(seatName(log, t.player))}</b><span class="lv">lore ${le}</span></div>`;
+      html += `<section class="turn ${mine ? "me" : ""}"><div class="th"><b>${esc(Tx("Turn {n}: {name}", { n: t.number, name: seatName(log, t.player) }))}</b><span class="lv">${Tx("lore {s}", { s: le })}</span></div>`;
       for (const a of t.actions) {
         if (a.type === "end_turn") continue;
         const cls = [a.type === "quest" ? "quest" : a.type === "lore_adjust" ? "lore" : "", a.by !== meSeat ? "opp" : "", MINOR.has(a.type) ? "minor" : ""].join(" ");
         const val = a.type === "quest" ? ` <span class="v">+${a.value}</span>` : "";
-        html += `<button type="button" class="act ${cls}" data-anchor="a:${a.seq}" ${canComment ? "" : "disabled"} aria-label="${esc(actionText(a, log))}${canComment ? ". Comment on this play" : ""}"><span class="ic">${ICON[a.type] || "·"}</span><span>${a.by !== t.player ? `(${esc(seatName(log, a.by))}) ` : ""}${esc(actionText(a, log))}${val}</span></button>`;
+        html += `<button type="button" class="act ${cls}" data-anchor="a:${a.seq}" ${canComment ? "" : "disabled"} aria-label="${esc(actionText(a, log))}${canComment ? Tx(". Comment on this play") : ""}"><span class="ic">${ICON[a.type] || "·"}</span><span>${a.by !== t.player ? `(${esc(seatName(log, a.by))}) ` : ""}${esc(actionText(a, log))}${val}</span></button>`;
         html += notesHtml(`a:${a.seq}`, profilesMap);
       }
-      html += add(`t:${t.number}`, "Comment on this turn") + notesHtml(`t:${t.number}`, profilesMap) + `</section>`;
+      html += add(`t:${t.number}`, Tx("Comment on this turn")) + notesHtml(`t:${t.number}`, profilesMap) + `</section>`;
     }
     el.innerHTML = html;
     // names and comment bodies are other people's input: set as text
@@ -820,13 +975,13 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       } catch (e) {
         btn.disabled = false;
         if (e?.code === "invalid_argument") { canWrite = false; renderReview(); }
-        else alertInline(e?.code === "quota_exceeded" ? "The comment store is full. Delete old comments to add new ones." : "Couldn't save the comment. Try again.");
+        else alertInline(Tx(e?.code === "quota_exceeded" ? "The comment store is full. Delete old comments to add new ones." : "Couldn't save the comment. Try again."));
       }
     });
     $("review").querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", async () => {
-      if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Confirm delete"; return; }
+      if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = Tx("Confirm delete"); return; }
       try { await db.collection(notesColl(g)).doc(b.dataset.del).delete(); }
-      catch { alertInline("Couldn't delete the comment."); }
+      catch { alertInline(Tx("Couldn't delete the comment.")); }
     }));
     $("review").querySelectorAll("[data-vis]").forEach((b) => b.addEventListener("click", () => setVisibility(g, b.dataset.vis)));
     $("deckEdit")?.addEventListener("click", () => { $("deckBox").hidden = !$("deckBox").hidden; if (!$("deckBox").hidden) $("deckText").focus(); });
@@ -861,7 +1016,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     if (months.length < 2) return "";
     const W = Math.round(Math.max(300, Math.min(640, ($("review").clientWidth || 520) - 26))), H = 170, L = 34, R = 12, T = 12, B = 26;   // drawn at 1:1 so labels keep their size
     const X = (i) => L + (i / (months.length - 1)) * (W - L - R), Y = (v) => T + (1 - v) * (H - T - B);
-    const label = (m) => new Date(`${m}-15T12:00:00Z`).toLocaleDateString(undefined, { month: "short", year: months.length > 12 ? "2-digit" : undefined });
+    const label = (m) => new Date(`${m}-15T12:00:00Z`).toLocaleDateString(LOC, { month: "short", year: months.length > 12 ? "2-digit" : undefined });
     const pts = months.map(([m, x], i) => ({ i, m, n: x.n, v: x.w / x.n }));
     const path = pts.map((p, i) => `${i ? "L" : "M"}${X(p.i).toFixed(1)} ${Y(p.v).toFixed(1)}`).join("");
     return `<div class="trend" id="trend"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Win rate by month: ${pts.map((p) => `${label(p.m)} ${Math.round(100 * p.v)}% of ${p.n}`).join(", ")}">
@@ -870,8 +1025,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       ${pts.map((p) => `<text x="${X(p.i)}" y="${H - 8}" text-anchor="middle" font-size="11" fill="var(--faint)">${esc(label(p.m))}</text>`).join("")}
       <path d="${path}" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linejoin="round"/>
       ${pts.map((p) => `<circle cx="${X(p.i)}" cy="${Y(p.v)}" r="${p.n < 10 ? 3.5 : 4.5}" fill="${p.n < 10 ? "var(--panel)" : "var(--gold)"}" stroke="var(--gold)" stroke-width="2"/>`).join("")}
-      ${pts.map((p) => `<circle class="hit" cx="${X(p.i)}" cy="${Y(p.v)}" r="16" fill="transparent" data-tip="${esc(`${label(p.m)}: ${Math.round(100 * p.v)}% won, ${p.n} game${p.n === 1 ? "" : "s"}`)}"/>`).join("")}
-    </svg><div class="tip" id="tip" hidden></div><span class="small muted">Win rate by month. Hollow points: under 10 games.</span></div>`;
+      ${pts.map((p) => `<circle class="hit" cx="${X(p.i)}" cy="${Y(p.v)}" r="16" fill="transparent" data-tip="${esc(Tx(p.n === 1 ? "{month}: {p}% won, {n} game" : "{month}: {p}% won, {n} games", { month: label(p.m), p: Math.round(100 * p.v), n: p.n }))}"/>`).join("")}
+    </svg><div class="tip" id="tip" hidden></div><span class="small muted">${Tx("Win rate by month. Hollow points: under 10 games.")}</span></div>`;
   }
   function renderStatsView() {
     const el = $("review");
@@ -883,28 +1038,28 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     const mine = groupBy(rows, (r) => r.s.my_deck), opp = groupBy(rows, (r) => r.s.opp_deck);
     const cost = opp.filter((o) => o.t.n >= 8 && o.t.n - 2 * o.t.w > 0).sort((a, b) => (b.t.n - 2 * b.t.w) - (a.t.n - 2 * a.t.w)).slice(0, 3);
     const chip = (group, v, l) => `<button type="button" class="chipbtn" data-sv="${group}" data-v="${esc(v)}" aria-pressed="${String(sv[group]) === String(v)}">${esc(l)}</button>`;
-    const row = (x, isOpp) => `<tr class="${x.t.n < 5 ? "few" : ""}" ${isOpp ? `data-opp="${esc(x.k)}" tabindex="0" aria-label="Show games against ${esc(x.k)}"` : ""}>
+    const row = (x, isOpp) => `<tr class="${x.t.n < 5 ? "few" : ""}" ${isOpp ? `data-opp="${esc(x.k)}" tabindex="0" aria-label="${esc(Tx("Show games against {deck}", { deck: x.k }))}"` : ""}>
       <td>${inkDots(x.k)}${esc(x.k)}</td><td class="n">${x.t.n}</td>
       <td class="n">${pct(x.t.w, x.t.n)}<span class="wbar" aria-hidden="true"><i style="width:${x.t.n ? (100 * x.t.w / x.t.n).toFixed(0) : 0}%"></i></span></td>
       <td class="n">${pct(x.t.fw, x.t.fn)} <span class="muted small">(${x.t.fn})</span></td><td class="n">${pct(x.t.dw, x.t.dn)} <span class="muted small">(${x.t.dn})</span></td></tr>`;
-    const head = (first) => `<tr><th>${first}</th><th class="n">Games</th><th class="n">Won</th><th class="n">Going first</th><th class="n">Going second</th></tr>`;
-    el.innerHTML = `<div class="sv"><button type="button" class="btn ghost small back" id="back">All games</button>
-      <h2>Stats</h2><span class="muted small">Decks are named by their ink colors.</span>
-      <div class="ctl" role="group" aria-label="Source">${chip("source", "all", "All games")}${chip("source", "duels_ink", "duels.ink")}${chip("source", "lore_counter", "Lore Counter")}</div>
-      <div class="ctl" role="group" aria-label="Period">${chip("days", 0, "All time")}${chip("days", 90, "Last 90 days")}${chip("days", 30, "Last 30 days")}</div>
-      ${decks.length > 1 ? `<div class="ctl" role="group" aria-label="Your deck">${chip("deck", "all", "All my decks")}${decks.map((d) => chip("deck", d, d)).join("")}</div>` : ""}
-      ${!rows.length ? `<p class="empty">No games match these filters.</p>` : `
+    const head = (first) => `<tr><th>${first}</th><th class="n">${Tx("Games")}</th><th class="n">${Tx("Won")}</th><th class="n">${Tx("Going first")}</th><th class="n">${Tx("Going second")}</th></tr>`;
+    el.innerHTML = `<div class="sv"><button type="button" class="btn ghost small back" id="back">${Tx("All games")}</button>
+      <h2>${Tx("Stats")}</h2><span class="muted small">${Tx("Decks are named by their ink colors.")}</span>
+      <div class="ctl" role="group" aria-label="${Tx("Source")}">${chip("source", "all", Tx("All games"))}${chip("source", "duels_ink", "duels.ink")}${chip("source", "lore_counter", Tx("Lore Counter"))}</div>
+      <div class="ctl" role="group" aria-label="${Tx("Period")}">${chip("days", 0, Tx("All time"))}${chip("days", 90, Tx("Last 90 days"))}${chip("days", 30, Tx("Last 30 days"))}</div>
+      ${decks.length > 1 ? `<div class="ctl" role="group" aria-label="Your deck">${chip("deck", "all", Tx("All my decks"))}${decks.map((d) => chip("deck", d, d)).join("")}</div>` : ""}
+      ${!rows.length ? `<p class="empty">${Tx("No games match these filters.")}</p>` : `
       <div class="tiles">
-        <div class="tile"><b>${T.n}</b><span>games</span></div>
-        <div class="tile"><b>${pct(T.w, T.n)}</b><span>won (${T.w}–${T.n - T.w})</span></div>
-        <div class="tile"><b>${pct(T.fw, T.fn)}</b><span>won going first (${T.fn})</span></div>
-        <div class="tile"><b>${pct(T.dw, T.dn)}</b><span>won going second (${T.dn})</span></div>
+        <div class="tile"><b>${T.n}</b><span>${Tx("games")}</span></div>
+        <div class="tile"><b>${pct(T.w, T.n)}</b><span>${Tx("won ({w}–{l})", { w: T.w, l: T.n - T.w })}</span></div>
+        <div class="tile"><b>${pct(T.fw, T.fn)}</b><span>${Tx("won going first ({n})", { n: T.fn })}</span></div>
+        <div class="tile"><b>${pct(T.dw, T.dn)}</b><span>${Tx("won going second ({n})", { n: T.dn })}</span></div>
       </div>
-      ${cost.length ? `<div class="cost"><b>Matchups costing you the most</b> <span class="muted small">(8+ games; games lost beyond an even split)</span><ul>${cost.map((o) => `<li>vs ${esc(o.k)}: ${o.t.w}–${o.t.n - o.t.w}, ${pct(o.t.w, o.t.n)} won, ${o.t.n - 2 * o.t.w} games below even</li>`).join("")}</ul></div>` : ""}
-      <h3>Trend</h3>${trendSvg(rows) || `<p class="muted small">Needs games in at least two months.</p>`}
-      ${sv.deck === "all" && mine.length > 1 ? `<h3>Your decks</h3><table class="mt">${head("Your inks")}${mine.map((x) => row(x, false)).join("")}</table>` : ""}
-      <h3>Against each deck</h3><span class="muted small">Tap a row to see those games. Faded rows: under 5 games.</span>
-      <table class="mt">${head("Opponent's inks")}${opp.map((x) => row(x, true)).join("")}</table>`}
+      ${cost.length ? `<div class="cost"><b>${Tx("Matchups costing you the most")}</b> <span class="muted small">${Tx("(8+ games; games lost beyond an even split)")}</span><ul>${cost.map((o) => `<li>${esc(Tx("vs {deck}: {w}–{l}, {p} won, {d} games below even", { deck: o.k, w: o.t.w, l: o.t.n - o.t.w, p: pct(o.t.w, o.t.n), d: o.t.n - 2 * o.t.w }))}</li>`).join("")}</ul></div>` : ""}
+      <h3>${Tx("Trend")}</h3>${trendSvg(rows) || `<p class="muted small">${Tx("Needs games in at least two months.")}</p>`}
+      ${sv.deck === "all" && mine.length > 1 ? `<h3>${Tx("Your decks")}</h3><table class="mt">${head(Tx("Your inks"))}${mine.map((x) => row(x, false)).join("")}</table>` : ""}
+      <h3>${Tx("Against each deck")}</h3><span class="muted small">${Tx("Tap a row to see those games. Faded rows: under 5 games.")}</span>
+      <table class="mt">${head(Tx("Opponent's inks"))}${opp.map((x) => row(x, true)).join("")}</table>`}
     </div>`;
     $("back")?.addEventListener("click", () => { showingStats = false; $("wrap").classList.remove("reading"); renderReview(); });
     el.querySelectorAll("[data-sv]").forEach((b) => b.addEventListener("click", () => {
@@ -922,6 +1077,11 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     });
   }
   $("openStats").addEventListener("click", openStats);
+  if (window.INKWELL_I18N) {
+    const lb = $("langBtn"); lb.hidden = false;
+    lb.textContent = window.INKWELL_I18N.lang === "pt" ? "English" : "Português";
+    lb.addEventListener("click", () => window.INKWELL_I18N.setLang(window.INKWELL_I18N.lang === "pt" ? "en" : "pt"));
+  }
 
   // Games recorded together by the Lore Counter share a match id: lc-<match>-g<n>.
   function siblings(key) {
@@ -930,10 +1090,10 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
   }
   async function saveDeck(g) {
     const msg = $("deckMsg"), { list, missing } = parseDeck($("deckText").value);
-    if (missing.length && !list.length) { msg.textContent = `No cards recognized. Check the names: ${missing.slice(0, 3).join("; ")}`; return; }
+    if (missing.length && !list.length) { msg.textContent = Tx("No cards recognized. Check the names: {list}", { list: missing.slice(0, 3).join("; ") }); return; }
     const keys = $("deckAll")?.checked ? siblings(g.key) : [g.key];
     const inks = inksOf(list);
-    $("deckSave").disabled = true; msg.textContent = "Saving…";
+    $("deckSave").disabled = true; msg.textContent = Tx("Saving…");
     try {
       for (const k of keys) {
         if (db.loadGame) await db.loadGame(k);
@@ -946,8 +1106,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       }
       const n = list.reduce((t, e) => t + e.qty, 0);
       deckNotice = { key: g.key, open: missing.length > 0,
-        text: `Saved: ${n} cards${keys.length > 1 ? ` on ${keys.length} games` : ""}.${missing.length ? ` Not recognized, left out: ${missing.join("; ")}` : ""}` };
-    } catch { deckNotice = { key: g.key, open: true, text: "Couldn't save the deck list. Try again." }; }
+        text: Tx(keys.length > 1 ? "Saved: {n} cards on {g} games." : "Saved: {n} cards.", { n, g: keys.length }) + (missing.length ? Tx(" Not recognized, left out: {list}", { list: missing.join("; ") }) : "") };
+    } catch { deckNotice = { key: g.key, open: true, text: Tx("Couldn't save the deck list. Try again.") }; }
     renderReview();
   }
   function alertInline(msg) {
@@ -960,7 +1120,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     const target = vis === "public" ? "public_games" : "games";
     if (g.coll === target || !isOwner) return;
     if (db.setVisibility) {   // a store that keeps comments attached to the game
-      try { await db.setVisibility(g.key, vis); } catch { alertInline("Couldn't change who can see this game. Try again."); }
+      try { await db.setVisibility(g.key, vis); } catch { alertInline(Tx("Couldn't change who can see this game. Try again.")); }
       return;
     }
     try {
@@ -969,14 +1129,14 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       await db.collection(target).doc(g.key).set({ ...g.doc });
       for (const d of moving) { await db.collection(to).doc(d.id).set({ ...d.data() }); await db.collection(from).doc(d.id).delete(); }
       await db.collection(g.coll).doc(g.key).delete();
-    } catch { alertInline("Couldn't change who can see this game. Try again."); }
+    } catch { alertInline(Tx("Couldn't change who can see this game. Try again.")); }
   }
 
   function openGame(key) {
     current = key; composerFor = null; notes = []; showingStats = false; if (deckNotice?.key !== key) deckNotice = null;
     $("wrap").classList.add("reading");
     refreshNotes(); renderList(); renderReview();
-    if (db?.loadGame) db.loadGame(key).then(() => { if (current === key) renderReview(); }).catch(() => alertInline("Couldn't load this game. Try again."));
+    if (db?.loadGame) db.loadGame(key).then(() => { if (current === key) renderReview(); }).catch(() => alertInline(Tx("Couldn't load this game. Try again.")));
   }
   function refreshNotes() {
     const g = games.get(current);
@@ -1015,14 +1175,14 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
   async function importText(text, fromFile) {
     const st = $("addStatus");
     let parsed;
-    try { parsed = JSON.parse(text); } catch { st.textContent = fromFile ? "That file isn't a game file." : "That isn't a copied game. Copy it again from the Lore Counter or the Training Logger."; return; }
+    try { parsed = JSON.parse(text); } catch { st.textContent = Tx(fromFile ? "That file isn't a game file." : "That isn't a copied game. Copy it again from the Lore Counter or the Training Logger."); return; }
     const logs = (Array.isArray(parsed) ? parsed : parsed?.games || [parsed]).filter(isGameLog);
-    if (!logs.length) { st.textContent = `No games found in ${fromFile ? "that file" : "what you pasted"} (expected game format 1.0).`; return; }
+    if (!logs.length) { st.textContent = Tx(fromFile ? "No games found in that file (expected game format 1.0)." : "No games found in what you pasted (expected game format 1.0)."); return; }
     let r;
-    try { r = await addLogs(logs, (done, total) => { st.textContent = `Adding games: ${done} of ${total}…`; }); }
-    catch (e) { st.textContent = e?.code === "invalid_argument" ? "A game was too large or malformed to store." : "Couldn't add all the games. Try again: games already added are skipped."; return; }
+    try { r = await addLogs(logs, (done, total) => { st.textContent = Tx("Adding games: {a} of {b}…", { a: done, b: total }); }); }
+    catch (e) { st.textContent = Tx(e?.code === "invalid_argument" ? "A game was too large or malformed to store." : "Couldn't add all the games. Try again: games already added are skipped."); return; }
     $("pasteLog").value = "";
-    st.textContent = `${r.added} game${r.added === 1 ? "" : "s"} added${r.skipped ? `, ${r.skipped} already here` : ""}.`;
+    st.textContent = Tx(r.added === 1 ? "{n} game added" : "{n} games added", { n: r.added }) + (r.skipped ? Tx(", {n} already here", { n: r.skipped }) : "") + ".";
     if (r.lastKey) openGame(r.lastKey);
   }
   $("addGame").addEventListener("click", () => importText($("pasteLog").value, false));
@@ -1033,7 +1193,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       const text = /\.gz$/i.test(f.name) && "DecompressionStream" in window
         ? await new Response(f.stream().pipeThrough(new DecompressionStream("gzip"))).text() : await f.text();
       await importText(text, true);
-    } catch { $("addStatus").textContent = "Couldn't read that file."; }
+    } catch { $("addStatus").textContent = Tx("Couldn't read that file."); }
   });
 
   // ---------- Lore Counter inside Coach Review ----------
@@ -1080,13 +1240,13 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     $("openCounter").hidden = !(db && isOwner);
     let view = null; try { view = localStorage.getItem(VIEW_KEY); } catch { /* storage off */ }
     if (db && isOwner && view === "counter" && COUNTER_DOC) showCounter(true);
-    if (!db) { $("games").innerHTML = `<p class="empty">${window.INKWELL_NO_STORE_MSG || "The game store isn't available in this view. Open the page on claude.ai, signed in."}</p>`; return; }
+    if (!db) { $("games").innerHTML = `<p class="empty">${Tx(window.INKWELL_NO_STORE_MSG || "") || "The game store isn't available in this view. Open the page on claude.ai, signed in."}</p>`; return; }
     const listen = (coll) => db.collection(coll).onSnapshot((snap) => {
       for (const [k, g] of games) if (g.coll === coll) games.delete(k);
       for (const d of snap.docs) games.set(d.id, { key: d.id, coll, doc: d.data() });
       refreshNotes(); renderList();
       if (current && games.get(current)?.coll === coll) renderReview();
-    }, () => { $("games").innerHTML = `<p class="empty">Couldn't load games. Reload the page to try again.</p>`; });
+    }, () => { $("games").innerHTML = `<p class="empty">${Tx("Couldn't load games. Reload the page to try again.")}</p>`; });
     listen("games"); listen("public_games");
     for (const coll of ["notes", "public_notes"]) {
       db.collection(coll).onSnapshot((snap) => {

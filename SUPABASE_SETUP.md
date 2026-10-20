@@ -76,3 +76,10 @@ Run `supabase/community.sql`. Players choose the name others see on public
 games and comments; Coach Review's "Show" menu has "Community: public games",
 the newest 300 public games from every player, open to anyone signed in to
 read and comment.
+
+## Opponent names in public games
+
+Run `supabase/hide_names.sql`. When a game is made public, the opponent's name
+(for example a duels.ink username) is replaced by "Opponent" in the stored game;
+the real name is kept in a private table and restored if the game goes back to
+private. Coach Review also hides it on screen in the community feed.
