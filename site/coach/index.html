@@ -234,6 +234,16 @@ window.INKWELL_CLOUD = (() => {
         listeners.add(fire); reload().catch(() => {}); return () => listeners.delete(fire);
       } };
     },
+    async addGames(pairs, progress) {   // [[key, log], ...]: 25 per request; existing games are left as they are
+      if (player !== me?.id) throw Object.assign(new Error("not yours"), { code: "permission" });
+      for (let i = 0; i < pairs.length; i += 25) {
+        const body = pairs.slice(i, i + 25).map(([k, log]) => ({ user_id: me.id, game_id: k, source: log.source || "manual", played_at: log.played_at || null, log, visibility: "private" }));
+        await CLOUD.api("game_logs?on_conflict=user_id,game_id", { method: "POST", prefer: "resolution=ignore-duplicates,return=minimal", body });
+        body.forEach((b) => logs.set(b.game_id, b.log));
+        progress?.(Math.min(i + 25, pairs.length), pairs.length);
+      }
+      await reload();
+    },
     async loadGame(gameId) {
       if (logs.has(gameId)) return;
       const r = await CLOUD.api(`game_logs?user_id=eq.${enc(player)}&game_id=eq.${enc(gameId)}&select=log`);
@@ -428,6 +438,8 @@ details.add[open] { display: grid; gap: 8px; }
 .acct .row2 { display: flex; gap: 8px; align-items: center; justify-content: space-between; margin-top: 6px; }
 .acct details summary { cursor: pointer; }
 .linkbtn { background: none; border: 0; padding: 0; color: var(--gold); text-decoration: underline; cursor: pointer; font-size: inherit; }
+.filebtn { cursor: pointer; }
+.add .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .counterBtn { display: flex; align-items: center; gap: 8px; width: 100%; justify-content: center; margin: 4px 0 14px; }
 .counterView { position: fixed; inset: 0; z-index: 50; background: #17142e; }
 .counterView iframe { border: 0; width: 100%; height: 100%; display: block; }
@@ -451,7 +463,8 @@ details.add[open] { display: grid; gap: 8px; }
       <summary>Add games</summary>
       <span class="small muted">Games played in the Lore Counter above are saved automatically. From the standalone Lore Counter: Settings, Recorded matches, Copy for Coach Review. From the Training Logger: Copy game file. Then paste here.</span>
       <textarea id="pasteLog" placeholder="Paste the copied games here"></textarea>
-      <button type="button" class="btn primary small" id="addGame">Add games</button>
+      <div class="row"><button type="button" class="btn primary small" id="addGame">Add games</button>
+        <label class="btn small filebtn">Import a file<input type="file" id="addFile" accept=".json,.gz,application/json,application/gzip" hidden></label></div>
       <span class="small" id="addStatus" aria-live="polite"></span>
     </details>
   </aside>
@@ -710,7 +723,14 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
   // ---------- add a game from the Table Logger ----------
   const isGameLog = (l) => l?.format_version === "1.0" && Array.isArray(l.turns) && Array.isArray(l.players);
   // Stores game logs in the private list. Returns {added, skipped, lastKey}; throws on a storage error.
-  async function addLogs(logs) {
+  const keyOf = (log, i) => String(log.game_id || `g-${Date.now()}-${i}`).replace(/[^A-Za-z0-9_\-.~:@+]/g, "-").slice(0, 120);
+  async function addLogs(logs, progress) {
+    if (db.addGames) {   // a store that takes many games per request (large imports)
+      const fresh = [], seen = new Set();
+      logs.forEach((l, i) => { const k = keyOf(l, i); if (!games.has(k) && !seen.has(k)) { seen.add(k); fresh.push([k, l]); } });
+      await db.addGames(fresh, progress);
+      return { added: fresh.length, skipped: logs.length - fresh.length, lastKey: fresh.length === 1 ? fresh[0][0] : null };
+    }
     let added = 0, skipped = 0, lastKey = null;
     for (const log of logs) {
       const meP = log.players.find((p) => p.is_me) || log.players[0], opp = log.players.find((p) => p !== meP);
@@ -721,7 +741,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
         went_first: typeof meP.went_first === "boolean" ? meP.went_first : null,
         my_lore: lore[meP.seat] ?? 0, opp_lore: lore[opp?.seat] ?? 0,
         my_inks: (meP.deck?.inks || []).join("/"), opp_inks: (opp?.deck?.inks || []).join("/") };
-      const key = String(log.game_id || `g-${Date.now()}-${added}`).replace(/[^A-Za-z0-9_\-.~:@+]/g, "-").slice(0, 120);
+      const key = keyOf(log, added);
       if (games.has(key)) { skipped += 1; continue; }
       await db.collection("games").doc(key).set({ log, summary, played_at: log.played_at, source: log.source, added_at: new Date().toISOString() });
       games.set(key, { key, coll: "games", doc: { log, summary } });   // the snapshot replaces this; it stops double adds meanwhile
@@ -729,17 +749,28 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     }
     return { added, skipped, lastKey };
   }
-  $("addGame").addEventListener("click", async () => {
+  async function importText(text, fromFile) {
     const st = $("addStatus");
     let parsed;
-    try { parsed = JSON.parse($("pasteLog").value); } catch { st.textContent = "That isn't a copied game. Copy it again from the Lore Counter or the Training Logger."; return; }
+    try { parsed = JSON.parse(text); } catch { st.textContent = fromFile ? "That file isn't a game file." : "That isn't a copied game. Copy it again from the Lore Counter or the Training Logger."; return; }
     const logs = (Array.isArray(parsed) ? parsed : parsed?.games || [parsed]).filter(isGameLog);
-    if (!logs.length) { st.textContent = "No games found in what you pasted (expected game format 1.0)."; return; }
+    if (!logs.length) { st.textContent = `No games found in ${fromFile ? "that file" : "what you pasted"} (expected game format 1.0).`; return; }
     let r;
-    try { r = await addLogs(logs); } catch (e) { st.textContent = e?.code === "invalid_argument" ? "A game was too large or malformed to store." : "Couldn't add the games. Try again."; return; }
+    try { r = await addLogs(logs, (done, total) => { st.textContent = `Adding games: ${done} of ${total}…`; }); }
+    catch (e) { st.textContent = e?.code === "invalid_argument" ? "A game was too large or malformed to store." : "Couldn't add all the games. Try again: games already added are skipped."; return; }
     $("pasteLog").value = "";
     st.textContent = `${r.added} game${r.added === 1 ? "" : "s"} added${r.skipped ? `, ${r.skipped} already here` : ""}.`;
     if (r.lastKey) openGame(r.lastKey);
+  }
+  $("addGame").addEventListener("click", () => importText($("pasteLog").value, false));
+  $("addFile").addEventListener("change", async (e) => {
+    const f = e.target.files?.[0]; e.target.value = "";
+    if (!f) return;
+    try {
+      const text = /\.gz$/i.test(f.name) && "DecompressionStream" in window
+        ? await new Response(f.stream().pipeThrough(new DecompressionStream("gzip"))).text() : await f.text();
+      await importText(text, true);
+    } catch { $("addStatus").textContent = "Couldn't read that file."; }
   });
 
   // ---------- Lore Counter inside Coach Review ----------
