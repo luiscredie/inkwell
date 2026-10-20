@@ -131,7 +131,7 @@ window.INKWELL_NO_STORE_MSG = "Sign in above to see your games.";
     "Public games from every player. Anyone signed in can read them and comment.": "Jogos públicos de todos os jogadores. Quem estiver conectado pode ler e comentar.",
     "You're coaching {name}: you can read their games and comment.": "Você é coach de {name}: pode ler os jogos e comentar.",
     "My coaches ({n})": "Meus coaches ({n})",
-    "A coach you add can read all your games and comment, after signing in with that email.": "Um coach adicionado lê todos os seus jogos e comenta, depois de entrar com esse e-mail.",
+    "A coach you add, after signing in with that email, sees the games you share with them (\"Who can see this game\") and can comment.": "Um coach adicionado, depois de entrar com esse e-mail, vê os jogos que você compartilhar com ele (\"Quem pode ver este jogo\") e pode comentar.",
     "Remove": "Remover", "Confirm remove": "Confirmar", "Coach's email": "E-mail do coach", "Add": "Adicionar",
     "Enter your coach's email.": "Digite o e-mail do coach.", "Couldn't add the coach. Try again.": "Não foi possível adicionar o coach. Tente de novo.",
     "duels.ink sync is off.": "A sincronização com o duels.ink está desligada.",
@@ -140,7 +140,7 @@ window.INKWELL_NO_STORE_MSG = "Sign in above to see your games.";
     "duels.ink games sync every 30 minutes. Last check {when}, {n} new.": "Os jogos do duels.ink sincronizam a cada 30 minutos. Última verificação {when}, {n} novos.",
     "duels.ink games sync every 30 minutes. Last check {when}, nothing new.": "Os jogos do duels.ink sincronizam a cada 30 minutos. Última verificação {when}, nada novo.",
     " {n} more on the next runs.": " Mais {n} nas próximas verificações.",
-    "Opponent": "Oponente", "Language": "Idioma", "Home": "Início",
+    "Opponent": "Oponente", "Language": "Idioma", "Home": "Início", "Only me": "Só eu", "My coaches": "Meus coaches", "Everyone": "Todos", "Group: {name}": "Grupo: {name}", "A friend group": "Um grupo de amigos", "All my coaches": "Todos os meus coaches", "Coach: {name}": "Coach: {name}", "Coach group: {name}": "Grupo de coaches: {name}", "A coach group": "Um grupo de coaches", "By deck": "Por deck", "Deck not recorded": "Deck não registrado", "{w}–{l} · {p}%": "{w}–{l} · {p}%",
   };
   // English wording for the few keys that carry a hint to tell them apart.
   const EN = { "Public (one game)": "Public", "Friends (one game)": "Friends", "Friends game": "Friends-only game" };
@@ -277,6 +277,8 @@ window.INKWELL_CLOUD = (() => {
   let links = [];                 // coach_links rows visible to me (mine as player, and players who added me)
   let duelsSync = null;           // my automatic duels.ink sync, if set up
   const names = new Map();        // user id -> display name (public.profiles)
+  let groups = [];                // my friend groups, for "who sees this game"
+  let coachGroups = [];           // my coach groups (named sets of coach e-mails)
   let rows = [], noteRows = [];
   const logs = new Map();         // full game logs, fetched when a game is opened (the list only needs summaries)
   const stub = (r) => ({ _loading: true, format_version: "1.0", game_id: r.game_id, source: r.source, played_at: r.played_at, players: [], turns: [], result: {} });
@@ -298,13 +300,30 @@ window.INKWELL_CLOUD = (() => {
       my_lore: lore[meP.seat] ?? 0, opp_lore: lore[opp.seat] ?? 0,
       my_inks: (meP.deck?.inks || []).join("/"), opp_inks: (opp.deck?.inks || []).join("/") };
   }
+  // Who sees a game: only me / all my coaches / one coach / a coach group / friends / one friend group / everyone.
+  const AUDIENCE = [["private", "Only me"], ["coaches", "All my coaches"], ["friends", "Friends (one game)"], ["public", "Everyone"]];
+  const myCoaches = () => [...new Set(links.filter((l) => l.owner_id === me?.id).map((l) => l.coach_email))];
+  function audienceOf(r) {
+    if (r.visibility === "group") return `group:${r.group_id}`;
+    if (r.visibility === "coaches" && r.coach_group_id) return `cgroup:${r.coach_group_id}`;
+    if (r.visibility === "coaches" && r.coach_email) return `coach:${r.coach_email}`;
+    return r.visibility;
+  }
+  function audienceLabel(r) {
+    const a = audienceOf(r);
+    if (a.startsWith("group:")) { const g = groups.find((x) => x.id === r.group_id); return g ? Tx("Group: {name}", { name: g.name }) : Tx("A friend group"); }
+    if (a.startsWith("cgroup:")) { const g = coachGroups.find((x) => x.id === r.coach_group_id); return g ? Tx("Coach group: {name}", { name: g.name }) : Tx("A coach group"); }
+    if (a.startsWith("coach:")) return Tx("Coach: {name}", { name: nameOf(r.coach_email) });
+    return Tx((AUDIENCE.find(([k]) => k === a) || [null, "Only me"])[1]);
+  }
   const visOf = (gameId) => rows.find((r) => r.game_id === gameId)?.visibility;
   const snap = (docs) => ({ docs: docs.map((d) => ({ id: d.id, data: () => d.data })), size: docs.length, empty: !docs.length });
   function docsOf(coll) {
     if (coll === "games" || coll === "public_games") {
       const pub = coll === "public_games";
       return rows.filter((r) => (r.visibility === "public") === pub).map((r) => ({ id: r.game_id,
-        data: { log: logs.get(r.game_id) || stub(r), summary: r.summary || summarize(logs.get(r.game_id) || stub(r)), played_at: r.played_at, source: r.source, added_at: r.created_at, visibility: r.visibility,
+        data: { log: logs.get(r.game_id) || stub(r), summary: r.summary || summarize(logs.get(r.game_id) || stub(r)), played_at: r.played_at, source: r.source, added_at: r.created_at, visibility: r.visibility, audience: audienceOf(r),
+          audience_label: audienceLabel(r),
           ...(player === COMMUNITY ? { owner_name: r.user_id === me.id ? "You" : names.get(r.user_id) || Tx("A player") } : {}) } }));
     }
     if (coll === "notes" || coll === "public_notes") {
@@ -327,13 +346,18 @@ window.INKWELL_CLOUD = (() => {
     return s.otp[1] + s.otd[1] ? s : null;
   }
 
-  const SEL = "select=user_id,game_id,source,played_at,summary,visibility,created_at";
+  const SEL_OLD = "select=user_id,game_id,source,played_at,summary,visibility,group_id,created_at";
+  let SEL = SEL_OLD + ",coach_email,coach_group_id";
+  const games = (q) => CLOUD.api(`game_logs?${q}&${SEL}`).catch((e) => {   // database without the coach columns yet
+    if (SEL === SEL_OLD) throw e;
+    SEL = SEL_OLD; return CLOUD.api(`game_logs?${q}&${SEL}`);
+  });
   async function load() {
     if (!player) return;
     const community = player === COMMUNITY;
     const [g, l, sync] = await Promise.all([
-      community ? CLOUD.api(`game_logs?visibility=eq.public&${SEL}&order=played_at.desc.nullslast&limit=300`)
-        : CLOUD.api(`game_logs?user_id=eq.${enc(player)}&${SEL}&order=played_at.desc.nullslast&limit=5000`),
+      community ? games("visibility=eq.public&order=played_at.desc.nullslast&limit=300")
+        : games(`user_id=eq.${enc(player)}&order=played_at.desc.nullslast&limit=5000`),
       CLOUD.api("coach_links?select=owner_id,owner_email,coach_email,created_at&order=created_at"),
       player === me.id ? CLOUD.api("rpc/my_duels_sync", { method: "POST", body: {} }).catch(() => null) : Promise.resolve(null),
     ]);
@@ -349,6 +373,8 @@ window.INKWELL_CLOUD = (() => {
       n = await CLOUD.api(`game_notes?owner_id=eq.${enc(player)}&select=id,owner_id,game_id,author,author_name,anchor,body,created_at&order=created_at&limit=5000`);
     }
     duelsSync = sync?.[0] || null;
+    groups = player === me.id ? (await CLOUD.api(`friend_groups?owner_id=eq.${me.id}&select=id,name&order=name`).catch(() => [])) || [] : [];
+    coachGroups = player === me.id ? (await CLOUD.api(`coach_groups?owner_id=eq.${me.id}&select=id,name,emails&order=name`).catch(() => [])) || [] : [];
     rows = g || []; noteRows = n || []; links = l || [];
     const want = [...new Set([me.id, ...rows.map((r) => r.user_id), ...noteRows.map((x) => x.author)])].filter((id) => !names.has(id));
     for (let i = 0; i < want.length; i += 80) {
@@ -432,8 +458,26 @@ window.INKWELL_CLOUD = (() => {
         for (const p of log.players || []) if (!p.is_me) p.name = Tx("Opponent");
       if (log) { logs.set(gameId, log); for (const cb of listeners) cb(); }
     },
+    audiences() {
+      const out = [["private", Tx("Only me")]];
+      const coaches = myCoaches(), withCoachCols = SEL !== SEL_OLD;
+      if (coaches.length || !withCoachCols) out.push(["coaches", Tx("All my coaches")]);
+      if (withCoachCols) {
+        if (coaches.length > 1) for (const c of coaches) out.push([`coach:${c}`, Tx("Coach: {name}", { name: nameOf(c) })]);
+        for (const g of coachGroups) out.push([`cgroup:${g.id}`, Tx("Coach group: {name}", { name: g.name })]);
+      }
+      out.push(["friends", Tx("Friends (one game)")]);
+      for (const g of groups) out.push([`group:${g.id}`, Tx("Group: {name}", { name: g.name })]);
+      out.push(["public", Tx("Everyone")]);
+      return out.map(([value, label]) => ({ value, label }));
+    },
     async setVisibility(gameId, vis) {
-      await CLOUD.api(`game_logs?user_id=eq.${enc(me.id)}&game_id=eq.${enc(gameId)}`, { method: "PATCH", prefer: "return=minimal", body: { visibility: vis } });
+      const body = vis.startsWith("group:") ? { visibility: "group", group_id: vis.slice(6) }
+        : vis.startsWith("coach:") ? { visibility: "coaches", coach_email: vis.slice(6), coach_group_id: null, group_id: null }
+        : vis.startsWith("cgroup:") ? { visibility: "coaches", coach_group_id: vis.slice(7), coach_email: null, group_id: null }
+        : { visibility: vis, group_id: null };
+      if (!vis.includes(":") && SEL !== SEL_OLD) Object.assign(body, { coach_email: null, coach_group_id: null });
+      await CLOUD.api(`game_logs?user_id=eq.${enc(me.id)}&game_id=eq.${enc(gameId)}`, { method: "PATCH", prefer: "return=minimal", body });
       await reload();
     },
   };
@@ -501,7 +545,7 @@ window.INKWELL_CLOUD = (() => {
       <span class="small" id="dispMsg" aria-live="polite"></span>
       ${player === COMMUNITY ? `<span class="small">${Tx("Public games from every player. Anyone signed in can read them and comment.")}</span>`
         : viewing ? `<span class="small">${esc(Tx("You're coaching {name}: you can read their games and comment.", { name: names.get(viewing.owner_id) || viewing.owner_email }))}</span>` : `<details class="coaches"><summary class="small">${Tx("My coaches ({n})", { n: mine.length })}</summary>
-        <span class="small muted">${Tx("A coach you add can read all your games and comment, after signing in with that email.")}</span>
+        <span class="small muted">${Tx("A coach you add, after signing in with that email, sees the games you share with them (\"Who can see this game\") and can comment.")}</span>
         ${mine.map((l) => `<div class="small row2"><span>${esc(l.coach_email)}</span><button type="button" class="linkbtn" data-rm="${esc(l.coach_email)}">${Tx("Remove")}</button></div>`).join("")}
         <div class="row2"><input id="coachEmail" type="email" placeholder="${Tx("Coach's email")}"><button type="button" class="btn small" id="coachAdd">${Tx("Add")}</button></div>
         <span class="small" id="coachMsg" aria-live="polite"></span></details>`}
@@ -579,6 +623,13 @@ h2 { font-size: 1.05rem; font-weight: 600; margin: 0; text-wrap: balance; }
 #games { display: grid; gap: 8px; }
 .game { width: 100%; text-align: left; display: grid; grid-template-columns: 6px 1fr auto; gap: 10px; align-items: center; background: var(--panel); border: 1px solid transparent; border-radius: 12px; padding: 9px 10px 9px 0; overflow: hidden; }
 .game[aria-current=true] { border-color: var(--gold); }
+.deckgrp { display: grid; gap: 8px; }
+.deckgrp > summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 2px; font-weight: 600; }
+.deckgrp > summary::-webkit-details-marker { display: none; }
+.deckgrp > summary::before { content: "▸"; color: var(--muted); margin-right: 2px; }
+.deckgrp[open] > summary::before { content: "▾"; }
+.deckgrp > summary .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.deckgrp > summary .rec { color: var(--muted); font-size: 0.82rem; font-weight: 400; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .game .bar { align-self: stretch; }
 .game.win .bar { background: var(--win); } .game.loss .bar { background: var(--loss); }
 .game .t { font-weight: 600; min-width: 0; }
@@ -677,6 +728,7 @@ table.mt tr[data-opp]:hover td, table.mt tr[data-opp]:focus-visible td { backgro
 .linkbtn { background: none; border: 0; padding: 0; color: var(--gold); text-decoration: underline; cursor: pointer; font-size: inherit; }
 .filebtn { cursor: pointer; }
 .add .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.vissel select { width: auto; background: var(--night); border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; margin-left: 4px; }
 .counterBtn { display: flex; align-items: center; gap: 8px; width: 100%; justify-content: center; margin: 4px 0 14px; }
 .counterView { position: fixed; inset: 0; z-index: 50; background: #17142e; }
 .counterView iframe { border: 0; width: 100%; height: 100%; display: block; }
@@ -767,6 +819,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
   let filter = "all";
   let deckNotice = null;
   let showingStats = false, oppFilter = null;
+  const GROUP_KEY = "inkwell-coach-group-by-deck";
+  let byDeck = true, closedDecks = new Set();
+  try { byDeck = localStorage.getItem(GROUP_KEY) !== "date"; } catch { /* storage off */ }
   const sv = { source: "all", days: 0, deck: "all" };   // stats view filters            // {key, text, open}: survives the re-render that follows a save
 
   // ---------- list ----------
@@ -784,9 +839,15 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
   function renderFilters() {
     const opts = [["all", "All"], ["loss", "Losses"], ["win", "Wins"], ["noted", "With comments"], ["public", "Public games"]].map(([k, l]) => [k, Tx(l)]);
     $("filters").innerHTML = opts.map(([k, l]) => `<button type="button" class="chipbtn" data-f="${k}" aria-pressed="${filter === k}">${l}</button>`).join("")
+      + (db?.isCommunity ? "" : `<button type="button" class="chipbtn" id="groupChip" aria-pressed="${byDeck}">${Tx("By deck")}</button>`)
       + (oppFilter ? `<button type="button" class="chipbtn x" id="oppChip" aria-pressed="true" aria-label="${esc(Tx("Showing games against {deck}. Remove filter", { deck: oppFilter }))}">vs ${esc(oppFilter)}</button>` : "");
     $("filters").querySelectorAll("[data-f]").forEach((b) => b.onclick = () => { filter = b.dataset.f; renderFilters(); renderList(); });
     $("oppChip")?.addEventListener("click", () => { oppFilter = null; renderFilters(); renderList(); });
+    $("groupChip")?.addEventListener("click", () => {
+      byDeck = !byDeck;
+      try { localStorage.setItem(GROUP_KEY, byDeck ? "deck" : "date"); } catch { /* storage off */ }
+      renderFilters(); renderList();
+    });
   }
   function renderList() {
     const all = [...games.values()].sort((a, b) => String(b.doc.played_at).localeCompare(String(a.doc.played_at)));
@@ -803,13 +864,30 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       return;
     }
     $("openStats").hidden = !!db?.isCommunity;
-    $("games").innerHTML = shown.length ? shown.map((g) => {
+    const deckOf = (g) => { const d = summaryOf(g).my_deck; return !d || d === "Physical game" ? Tx("Deck not recorded") : d; };
+    const row = (g, grouped) => {
       const s = summaryOf(g);
       return `<button type="button" class="game ${s.result === "win" ? "win" : "loss"}" data-k="${esc(g.key)}" aria-current="${g.key === current}">
         <span class="bar"></span>
-        <span class="t">${inkDots(s.opp_inks || s.opp_deck)}${Tx("vs")} ${esc(s.opp_deck === "Unknown" || !s.opp_deck ? Tx("Unknown") : s.opp_deck)}<small>${g.doc.owner_name ? `${esc(g.doc.owner_name)} · ` : ""}${esc(s.my_deck || "")}, ${sideText(s)}, ${esc(fmtDate(g.doc.played_at))}${g.coll === "public_games" ? Tx(", public") : ""}</small></span>
+        <span class="t">${inkDots(s.opp_inks || s.opp_deck)}${Tx("vs")} ${esc(s.opp_deck === "Unknown" || !s.opp_deck ? Tx("Unknown") : s.opp_deck)}<small>${g.doc.owner_name ? `${esc(g.doc.owner_name)} · ` : ""}${grouped ? "" : `${esc(s.my_deck || "")}, `}${sideText(s)}, ${esc(fmtDate(g.doc.played_at))}${g.coll === "public_games" ? Tx(", public") : ""}</small></span>
         <span class="score">${esc(s.my_lore)}–${esc(s.opp_lore)}${noteCount(g) ? `<span class="n">${noteCount(g)} comment${noteCount(g) > 1 ? "s" : ""}</span>` : ""}</span></button>`;
-    }).join("") : `<p class="empty">${Tx("No games match this filter.")}</p>`;
+    };
+    const grouped = byDeck && !db?.isCommunity;
+    if (!shown.length) $("games").innerHTML = `<p class="empty">${Tx("No games match this filter.")}</p>`;
+    else if (!grouped) $("games").innerHTML = shown.map((g) => row(g, false)).join("");
+    else {
+      // One section per deck I played, most recently played deck first; each with its record.
+      const decks = new Map();
+      for (const g of shown) { const k = deckOf(g); if (!decks.has(k)) decks.set(k, []); decks.get(k).push(g); }
+      $("games").innerHTML = [...decks].map(([name, list]) => {
+        const w = list.filter((g) => summaryOf(g).result === "win").length, s0 = summaryOf(list[0]);
+        const open = !closedDecks.has(name) || list.some((g) => g.key === current);
+        return `<details class="deckgrp" data-deck="${esc(name)}" ${open ? "open" : ""}><summary>${inkDots(s0.my_inks || name)}<span class="nm">${esc(name)}</span>
+          <span class="rec">${esc(Tx("{w}–{l} · {p}%", { w, l: list.length - w, p: Math.round(100 * w / list.length) }))}</span></summary>
+          ${list.map((g) => row(g, true)).join("")}</details>`;
+      }).join("");
+      $("games").querySelectorAll(".deckgrp").forEach((d) => d.addEventListener("toggle", () => { d.open ? closedDecks.delete(d.dataset.deck) : closedDecks.add(d.dataset.deck); }));
+    }
     $("games").querySelectorAll(".game").forEach((b) => b.onclick = () => openGame(b.dataset.k));
   }
 
@@ -921,7 +999,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
         ].filter(Boolean).map((x) => x.replace(/^./, (c) => c.toUpperCase())).join(". "))}.</span>
       </div>
       <div class="toolbar">
-        ${isOwner ? `<span class="vis" role="group" aria-label="${Tx("Who can see this game")}">${(db?.setVisibility && g.doc.visibility ? [["private", "Private"], ["friends", "Friends (one game)"], ["public", "Public (one game)"]] : [["private", "Private"], ["public", "Public (one game)"]]).map(([k, l]) => `<button type="button" data-vis="${k}" aria-pressed="${(g.doc.visibility || (g.coll === "public_games" ? "public" : "private")) === k}">${Tx(l)}</button>`).join("")}</span>` : `<span class="muted small">${Tx(g.coll === "public_games" ? "Public game" : g.doc.visibility === "friends" ? "Friends game" : "Private game")}</span>`}
+        ${isOwner && db?.audiences ? `<label class="small vissel">${Tx("Who can see this game")} <select id="visSel">${db.audiences().map((o) => `<option value="${esc(o.value)}" ${o.value === (g.doc.audience || "private") ? "selected" : ""}>${esc(o.label)}</option>`).join("")}</select></label>` : isOwner ? `<span class="vis" role="group" aria-label="${Tx("Who can see this game")}"><button type="button" data-vis="private" aria-pressed="${g.coll === "games"}">${Tx("Private")}</button><button type="button" data-vis="public" aria-pressed="${g.coll === "public_games"}">${Tx("Public (one game)")}</button></span>` : `<span class="muted small">${esc(g.doc.audience_label || Tx(g.coll === "public_games" ? "Public game" : "Private game"))}</span>`}
         ${log.source_ref?.replay_url && !/\.\.\.$/.test(log.source_ref.replay_url) ? `<a class="btn ghost small" href="${esc(log.source_ref.replay_url)}" target="_blank" rel="noopener">${Tx("Watch replay on duels.ink")}</a>` : ""}
       </div>
       ${!db ? `<div class="notice">Comments need the shared store, which isn't available in this view. You can still read the game.</div>` : !me?.id ? `<div class="notice">${Tx("Sign in to comment.")}</div>` : canWrite === false ? `<div class="notice">You can read this game. Ask the owner to make you a Contributor to comment.</div>` : ""}
@@ -989,6 +1067,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       catch { alertInline(Tx("Couldn't delete the comment.")); }
     }));
     $("review").querySelectorAll("[data-vis]").forEach((b) => b.addEventListener("click", () => setVisibility(g, b.dataset.vis)));
+    $("visSel")?.addEventListener("change", (e) => setVisibility(g, e.target.value));
     $("deckEdit")?.addEventListener("click", () => { $("deckBox").hidden = !$("deckBox").hidden; if (!$("deckBox").hidden) $("deckText").focus(); });
     $("deckSave")?.addEventListener("click", () => saveDeck(g));
   }
@@ -1124,7 +1203,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
 
   async function setVisibility(g, vis) {
     const target = vis === "public" ? "public_games" : "games";
-    const now = g.doc.visibility || (g.coll === "public_games" ? "public" : "private");
+    const now = g.doc.audience || (g.coll === "public_games" ? "public" : "private");
     if (now === vis || !isOwner) return;
     if (db.setVisibility) {   // a store that keeps comments attached to the game
       try { await db.setVisibility(g.key, vis); } catch { alertInline(Tx("Couldn't change who can see this game. Try again.")); }
