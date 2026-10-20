@@ -92,3 +92,12 @@ valued at the site's Liga Lorcana prices. It reads the collection from
 `inkwell_profiles` to show how many copies are free after loans; it doesn't
 change the collection. Add `https://luiscredie.github.io/inkwell/trades/` to the
 Redirect URLs (or use `https://luiscredie.github.io/inkwell/**`).
+
+## Home feed and friends (`/feed/`)
+
+Run `supabase/friends.sql`. Players find each other by display name, ask and
+accept friendships, and choose who sees their new games (only me, friends,
+everyone), optionally applying it to older games. The feed shows the player's
+and their friends' shared games, newest first, with comments. Friends never see
+opponents' names. Add `https://luiscredie.github.io/inkwell/feed/` to the
+Redirect URLs (or `https://luiscredie.github.io/inkwell/**`).

@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Início · Inkwell</title>
+<meta name="description" content="Os jogos de Lorcana dos seus amigos, com comentários.">
+<meta name="theme-color" content="#17142e">
+<link rel="icon" href="../ink/icon-192.png">
+<link rel="apple-touch-icon" href="../ink/icon-192.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+</head>
+<body>
+<script>window.INKWELL_CLOUD_CONFIG = {"url": "https://sorefaetiaebmjploanp.supabase.co", "key": "sb_publishable_RkAWW-ENz70CXA6_QV7aHw_MpfD7Gn2", "redirect": "https://luiscredie.github.io/inkwell/feed/"};
+/* Inkwell Lore Counter: cloud adapter for the offline app.
+ *
+ * Talks to the Inkwell Supabase project with plain fetch (no library to cache):
+ *   sign-in   email one-time code (or the magic link, when opened in the same browser)
+ *   storage   public.game_logs, one row per game, upserted on (user_id, game_id),
+ *             so a retry after a dropped connection never creates a duplicate
+ * The counter keeps every match locally until send() resolves true.
+ * Only the public URL and publishable key are here; row-level security limits each user to their own rows.
+ */
+window.INKWELL_CLOUD = (() => {
+  const cfg = window.INKWELL_CLOUD_CONFIG || {};
+  if (!cfg.url || !cfg.key) return null;
+  const KEY = "inkwell-counter-auth";   // shared by the counter and Coach Review (same site, one sign-in)
+  const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || "null"); } catch { return null; } };
+  let sess = load();
+  const store = (x) => { sess = x; try { if (x) localStorage.setItem(KEY, JSON.stringify(x)); else localStorage.removeItem(KEY); } catch { /* private mode */ } };
+  const headers = (tok) => ({ apikey: cfg.key, "Content-Type": "application/json", ...(tok ? { Authorization: `Bearer ${tok}` } : {}) });
+  const claims = (jwt) => { try { return JSON.parse(atob(jwt.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))); } catch { return {}; } };
+  const session = (r) => {
+    const c = claims(r.access_token);
+    return { access_token: r.access_token, refresh_token: r.refresh_token,
+      expires_at: r.expires_at || c.exp || Math.floor(Date.now() / 1000) + (r.expires_in || 3600),
+      user: { id: r.user?.id || c.sub, email: r.user?.email || c.email } };
+  };
+
+  // Magic link opened in this same browser: tokens arrive in the URL fragment.
+  const h = new URLSearchParams(location.hash.slice(1));
+  if (h.get("access_token") && h.get("refresh_token")) {
+    store(session({ access_token: h.get("access_token"), refresh_token: h.get("refresh_token"), expires_in: +h.get("expires_in") || 3600 }));
+    history.replaceState(null, "", location.pathname + location.search);
+  }
+
+  async function token() {
+    if (!sess) return null;
+    if (sess.expires_at - 60 > Date.now() / 1000) return sess.access_token;
+    const r = await fetch(`${cfg.url}/auth/v1/token?grant_type=refresh_token`, { method: "POST", headers: headers(), body: JSON.stringify({ refresh_token: sess.refresh_token }) });
+    if (r.status === 400 || r.status === 401) { store(null); return null; }   // signed out elsewhere or refresh token reused
+    if (!r.ok) throw new Error(`refresh ${r.status}`);
+    store(session(await r.json()));
+    return sess.access_token;
+  }
+
+  // Authenticated call to the database's REST API (used by Coach Review). Errors carry a short code.
+  async function api(path, { method = "GET", body, prefer } = {}) {
+    const tok = await token();
+    if (!tok) throw Object.assign(new Error("signed out"), { code: "auth" });
+    const r = await fetch(`${cfg.url}/rest/v1/${path}`, {
+      method, headers: { ...headers(tok), ...(prefer ? { Prefer: prefer } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
+    if (r.status === 401) store({ ...sess, expires_at: 0 });
+    if (!r.ok) {
+      const code = r.status === 401 || r.status === 403 ? "permission" : r.status === 400 || r.status === 409 || r.status === 413 ? "invalid_argument" : "unavailable";
+      throw Object.assign(new Error(`${method} ${path.split("?")[0]} ${r.status}`), { code, status: r.status });
+    }
+    const text = await r.text();
+    return text ? JSON.parse(text) : null;
+  }
+
+  return {
+    api,
+    user: () => (sess ? { ...sess.user } : null),
+    status: () => (sess ? { signedIn: true, email: sess.user?.email || "" } : { signedIn: false }),
+    async requestCode(email) {
+      const redirect = cfg.redirect || location.href.split("#")[0];
+      const r = await fetch(`${cfg.url}/auth/v1/otp?redirect_to=${encodeURIComponent(redirect)}`, { method: "POST", headers: headers(), body: JSON.stringify({ email, create_user: true }) });
+      if (!r.ok) throw new Error(`otp ${r.status}`);
+    },
+    async verify(email, code) {
+      const r = await fetch(`${cfg.url}/auth/v1/verify`, { method: "POST", headers: headers(), body: JSON.stringify({ type: "email", email, token: String(code).replace(/\s/g, "") }) });
+      if (!r.ok) throw new Error(`verify ${r.status}`);
+      store(session(await r.json()));
+    },
+    signOut() {
+      const old = sess; store(null);
+      if (old) fetch(`${cfg.url}/auth/v1/logout`, { method: "POST", headers: headers(old.access_token) }).catch(() => {});
+    },
+    async send(logs) {
+      const tok = await token();
+      if (!tok) return false;
+      const rows = logs.map((l) => ({ user_id: sess.user.id, game_id: l.game_id, source: l.source, played_at: l.played_at, log: l }));
+      const r = await fetch(`${cfg.url}/rest/v1/game_logs?on_conflict=user_id,game_id`, {
+        method: "POST", headers: { ...headers(tok), Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify(rows) });
+      if (r.status === 401) store({ ...sess, expires_at: 0 });   // force a refresh on the next try
+      return r.ok;
+    },
+  };
+})();
+</script>
+<style>
+:root {
+  --night: #17142e; --panel: #221e40; --raised: #2b2650; --line: #3a3463;
+  --text: #f3effa; --muted: #a8a1c9; --faint: #7d76a3;
+  --gold: #e9b949; --gold-ink: #2a1f05; --win: #67c99a; --loss: #f07a7a; --opp: #8fa3ff;
+  --amber: #f2b33d; --amethyst: #9b6ad1; --emerald: #3fa36f; --ruby: #d9485a; --sapphire: #3c8fd6; --steel: #9aa8b5;
+  --font: "Bricolage Grotesque", ui-rounded, "Segoe UI", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { background: var(--night); color: var(--text); font-family: var(--font); font-size: 15px; line-height: 1.45; margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+a { color: var(--gold); }
+.page { max-width: 1040px; margin: 0 auto; padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; align-items: start; }
+.top { grid-column: 1 / -1; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+h1 { margin: 0; font-size: 1.5rem; }
+h2 { font-size: 1.02rem; margin: 0 0 8px; }
+nav.links { display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.88rem; }
+nav.links a { color: var(--muted); text-decoration: none; }
+nav.links a[aria-current=page] { color: var(--text); font-weight: 700; }
+.muted { color: var(--muted); } .small { font-size: 0.85rem; } .faint { color: var(--faint); }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--gold); text-decoration: underline; cursor: pointer; font-size: inherit; }
+.btn { border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 7px 12px; font-weight: 600; cursor: pointer; }
+.btn.primary { background: var(--gold); color: var(--gold-ink); border-color: var(--gold); }
+.btn.small { padding: 4px 9px; font-size: 0.82rem; }
+.btn:disabled { opacity: .5; cursor: default; }
+input, select, textarea { background: var(--night); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; width: 100%; }
+.panel { background: var(--panel); border-radius: 14px; padding: 12px; margin-bottom: 14px; }
+.side { position: sticky; top: 12px; }
+.post { background: var(--panel); border-radius: 16px; padding: 12px 14px; margin-bottom: 12px; }
+.who { display: flex; gap: 10px; align-items: center; }
+.av { width: 38px; height: 38px; border-radius: 50%; background: var(--raised); display: grid; place-items: center; color: var(--gold); font-weight: 800; flex: none; }
+.who b { display: block; }
+.res { margin: 10px 0 6px; font-size: 1.02rem; }
+.res .w { color: var(--win); font-weight: 700; } .res .l { color: var(--loss); font-weight: 700; }
+.score { font-variant-numeric: tabular-nums; font-weight: 800; font-size: 1.3rem; }
+.meta { display: flex; gap: 8px; flex-wrap: wrap; font-size: 0.8rem; color: var(--muted); }
+.tag { border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; }
+.inks { display: inline-flex; gap: 2px; margin-right: 5px; vertical-align: middle; }
+.inks i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.acts { display: flex; gap: 14px; border-top: 1px solid var(--line); margin-top: 10px; padding-top: 8px; font-size: 0.88rem; }
+.acts a, .acts button { color: var(--muted); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: none; font-size: inherit; }
+.cmts { margin-top: 8px; display: grid; gap: 6px; }
+.cmt { background: var(--night); border-radius: 12px; padding: 6px 10px; font-size: 0.9rem; }
+.cmt b { font-size: 0.82rem; margin-right: 6px; }
+.cmtform { display: flex; gap: 6px; margin-top: 6px; }
+.person { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line); }
+.person:first-of-type { border-top: 0; }
+.empty { color: var(--muted); padding: 8px 0; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.seg button { border: 0; background: transparent; padding: 6px 10px; cursor: pointer; color: var(--muted); font-size: 0.85rem; }
+.seg button[aria-pressed=true] { background: var(--line); color: var(--text); }
+[hidden] { display: none !important; }
+@media (max-width: 820px) { .page { grid-template-columns: minmax(0, 1fr); } .top { order: -2; } .side { position: static; order: -1; } }
+</style>
+
+<div class="page">
+  <div class="top"><h1 id="title">Home</h1>
+    <nav class="links" id="nav"></nav>
+    <button type="button" class="linkbtn small" id="langBtn"></button></div>
+  <main id="feed"></main>
+  <aside class="side" id="side"></aside>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  let lang = "pt";
+  try { lang = localStorage.getItem("inkwell-lang") || ((navigator.language || "pt").toLowerCase().startsWith("en") ? "en" : "pt"); } catch { /* */ }
+  const PT = {
+    "Home": "Início", "Coach Review": "Coach Review", "Loans and trades": "Empréstimos e trocas", "Lore Counter": "Contador", "Inkwell": "Inkwell",
+    "Sign in": "Entrar", "Use your Inkwell account email.": "Use o e-mail da sua conta Inkwell.", "Email": "E-mail", "Send code": "Enviar código",
+    "Code from the email": "Código do e-mail", "Enter your email.": "Digite seu e-mail.", "Sending…": "Enviando…",
+    "Check {email}: type the code, or open the link on this device.": "Veja {email}: digite o código ou abra o link neste aparelho.",
+    "Couldn't send the email. Check the address and your connection.": "Não foi possível enviar o e-mail. Confira o endereço e a internet.",
+    "Wrong or expired code.": "Código errado ou expirado.", "Sign out": "Sair",
+    "Loading…": "Carregando…", "Couldn't load the feed. Reload the page to try again.": "Não foi possível carregar o feed. Recarregue a página.",
+    "Choose your name": "Escolha seu nome", "Your friends find you by this name.": "Seus amigos encontram você por este nome.", "Save": "Salvar",
+    "Friends": "Amigos", "Find people by name": "Busque pessoas pelo nome", "Add friend": "Adicionar", "Requested": "Pedido enviado",
+    "Wants to be your friend": "Quer ser seu amigo", "Accept": "Aceitar", "Decline": "Recusar", "Waiting for {name}": "Aguardando {name}", "Cancel": "Cancelar",
+    "No friends yet. Search for people above.": "Nenhum amigo ainda. Busque pessoas acima.", "Remove": "Remover", "Confirm": "Confirmar",
+    "No one found with that name.": "Ninguém encontrado com esse nome.",
+    "Who sees my new games": "Quem vê meus jogos novos", "Only me": "Só eu", "Friends ": "Amigos", "Everyone": "Todos",
+    "Apply to my {n} older games too": "Aplicar também aos meus {n} jogos antigos", "Apply to my older game too": "Aplicar também ao meu jogo antigo", "Applying…": "Aplicando…", "Done.": "Pronto.",
+    "Opponents' names are never shown to others.": "O nome dos adversários nunca aparece para os outros.",
+    "won": "venceu", "lost": "perdeu", "with {deck}": "com {deck}", "against {deck}": "contra {deck}",
+    "going first": "começando", "going second": "comprando", "Lore Counter": "Contador", "duels.ink": "duels.ink",
+    "{n} turns": "{n} turnos", "Open game": "Abrir jogo", "Comment": "Comentar", "{n} comments": "{n} comentários", "1 comment": "1 comentário",
+    "Write a comment": "Escreva um comentário", "Send": "Enviar", "Couldn't send. Try again.": "Não foi possível enviar. Tente de novo.",
+    "Your timeline is empty. Add friends, and choose who sees your games.": "Sua linha do tempo está vazia. Adicione amigos e escolha quem vê seus jogos.",
+    "Show older games": "Ver jogos anteriores", "You": "Você", "A player": "Um jogador", "Someone": "Alguém",
+    "just now": "agora", "{n} min ago": "há {n} min", "{n} h ago": "há {n} h", "yesterday": "ontem",
+    "friends": "amigos", "public": "público", "Unknown": "Desconhecido", "Physical game": "Jogo físico",
+  };
+  const fill = (s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)) : s);
+  const Tx = (en, v) => fill(lang === "pt" && en in PT ? PT[en] : en.trimEnd(), v);
+  const LOC = lang === "pt" ? "pt-BR" : "en";
+  const INK = { Amber: "--amber", Amethyst: "--amethyst", Emerald: "--emerald", Ruby: "--ruby", Sapphire: "--sapphire", Steel: "--steel" };
+  const inkDots = (s) => `<span class="inks">${String(s || "").split(/[\/,]\s*/).filter(Boolean).slice(0, 2).map((c) => `<i style="background:var(${INK[c.trim()] || "--steel"})"></i>`).join("")}</span>`;
+  const ago = (iso) => {
+    const d = Date.parse(iso); if (!d) return "";
+    const m = Math.round((Date.now() - d) / 60000);
+    if (m < 1) return Tx("just now"); if (m < 60) return Tx("{n} min ago", { n: m });
+    if (m < 60 * 20) return Tx("{n} h ago", { n: Math.round(m / 60) }); if (m < 60 * 40) return Tx("yesterday");
+    return new Date(d).toLocaleDateString(LOC, { day: "numeric", month: "short", year: new Date(d).getFullYear() === new Date().getFullYear() ? undefined : "numeric" });
+  };
+
+  const CLOUD = window.INKWELL_CLOUD;
+  const me = CLOUD?.user();
+  const enc = encodeURIComponent;
+  let myProfile = null, names = new Map(), friendships = [], posts = [], notes = new Map(), olderThan = null, moreAvailable = false, searchRes = null, myGameCount = 0;
+  const PAGE = 25;
+  const friendIds = () => friendships.filter((f) => f.status === "accepted").map((f) => (f.requester === me.id ? f.addressee : f.requester));
+  const nameOf = (id) => (id === me.id ? Tx("You") : names.get(id) || Tx("A player"));
+
+  // ---------- nav + language ----------
+  const here = "home";
+  $("nav").innerHTML = [["home", "Home", "../feed/"], ["coach", "Coach Review", "../coach/"], ["trades", "Loans and trades", "../trades/"], ["counter", "Lore Counter", "../counter/"], ["site", "Inkwell", "../"]]
+    .map(([k, l, href]) => `<a href="${href}" ${k === here ? 'aria-current="page"' : ""}>${Tx(l)}</a>`).join("");
+  $("title").textContent = Tx("Home"); document.title = `${Tx("Home")} · Inkwell`; document.documentElement.lang = LOC;
+  $("langBtn").textContent = lang === "pt" ? "English" : "Português";
+  $("langBtn").onclick = () => { try { localStorage.setItem("inkwell-lang", lang === "pt" ? "en" : "pt"); } catch { /* */ } location.reload(); };
+
+  // ---------- data ----------
+  async function loadNames(ids) {
+    const want = [...new Set(ids)].filter((id) => id && !names.has(id));
+    for (let i = 0; i < want.length; i += 80) {
+      for (const p of (await CLOUD.api(`profiles?user_id=in.(${want.slice(i, i + 80).join(",")})&select=user_id,display_name`)) || []) names.set(p.user_id, p.display_name);
+    }
+  }
+  async function loadPeople() {
+    const [prof, fr, cnt] = await Promise.all([
+      CLOUD.api(`profiles?user_id=eq.${me.id}&select=user_id,display_name,default_visibility`),
+      CLOUD.api("friendships?select=*&order=created_at.desc"),
+      CLOUD.api(`game_logs?user_id=eq.${me.id}&visibility=eq.private&select=game_id&limit=5000`),
+    ]);
+    myProfile = prof?.[0] || null;
+    if (myProfile) names.set(me.id, myProfile.display_name);
+    friendships = fr || [];
+    myGameCount = (cnt || []).length;
+    await loadNames(friendships.flatMap((f) => [f.requester, f.addressee]));
+  }
+  async function loadPosts(more = false) {
+    const ids = [me.id, ...friendIds()];
+    const q = `game_logs?user_id=in.(${ids.join(",")})&visibility=in.(friends,public)&select=user_id,game_id,source,played_at,summary,visibility&order=played_at.desc.nullslast&limit=${PAGE}${more && olderThan ? `&played_at=lt.${enc(olderThan)}` : ""}`;
+    const rows = (await CLOUD.api(q)) || [];
+    posts = more ? posts.concat(rows) : rows;
+    moreAvailable = rows.length === PAGE;
+    olderThan = posts.at(-1)?.played_at || null;
+    const gids = rows.map((r) => r.game_id);
+    for (let i = 0; i < gids.length; i += 60) {
+      const part = (await CLOUD.api(`game_notes?game_id=in.(${gids.slice(i, i + 60).map((g) => `"${g}"`).join(",")})&select=id,owner_id,game_id,author,author_name,body,created_at&order=created_at`)) || [];
+      for (const n of part) { const k = `${n.owner_id}|${n.game_id}`; if (!notes.has(k)) notes.set(k, []); if (!notes.get(k).some((x) => x.id === n.id)) notes.get(k).push(n); }
+    }
+    await loadNames([...rows.map((r) => r.user_id), ...[...notes.values()].flat().map((n) => n.author)]);
+  }
+
+  // ---------- side: profile, friends, visibility ----------
+  function renderSide() {
+    const el = $("side");
+    if (!me) { el.innerHTML = ""; return; }
+    if (!myProfile) {
+      el.innerHTML = `<div class="panel"><h2>${Tx("Choose your name")}</h2><p class="small muted">${Tx("Your friends find you by this name.")}</p>
+        <div class="cmtform"><input id="myName" maxlength="40"><button type="button" class="btn primary small" id="myNameSave">${Tx("Save")}</button></div></div>`;
+      $("myNameSave").onclick = async () => {
+        const v = $("myName").value.trim(); if (v.length < 2) return;
+        await CLOUD.api("profiles?on_conflict=user_id", { method: "POST", prefer: "resolution=merge-duplicates,return=minimal", body: [{ user_id: me.id, display_name: v, updated_at: new Date().toISOString() }] });
+        await loadPeople(); renderSide(); renderFeed();
+      };
+      return;
+    }
+    const incoming = friendships.filter((f) => f.status === "pending" && f.addressee === me.id);
+    const outgoing = friendships.filter((f) => f.status === "pending" && f.requester === me.id);
+    const friends = friendIds().sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
+    const vis = myProfile.default_visibility || "private";
+    el.innerHTML = `<div class="panel"><div class="who"><span class="av">${esc(myProfile.display_name[0].toUpperCase())}</span><div><b>${esc(myProfile.display_name)}</b><span class="small muted">${esc(me.email)} · <button type="button" class="linkbtn" id="siOut">${Tx("Sign out")}</button></span></div></div></div>
+      <div class="panel"><h2>${Tx("Friends")}</h2>
+        <input id="findPeople" placeholder="${Tx("Find people by name")}" autocomplete="off">
+        <div id="found">${searchRes ? (searchRes.length ? searchRes.map((p) => {
+          const rel = friendships.find((f) => [f.requester, f.addressee].includes(p.user_id));
+          return `<div class="person"><span>${esc(p.display_name)}</span>${rel ? `<span class="small muted">${Tx(rel.status === "accepted" ? "Friends" : "Requested")}</span>` : `<button type="button" class="btn small" data-ask="${p.user_id}">${Tx("Add friend")}</button>`}</div>`;
+        }).join("") : `<p class="small muted">${Tx("No one found with that name.")}</p>`) : ""}</div>
+        ${incoming.map((f) => `<div class="person"><span><b>${esc(nameOf(f.requester))}</b><br><span class="small muted">${Tx("Wants to be your friend")}</span></span>
+          <span><button type="button" class="btn primary small" data-accept="${f.requester}">${Tx("Accept")}</button> <button type="button" class="btn small" data-decline="${f.requester}|${f.addressee}">${Tx("Decline")}</button></span></div>`).join("")}
+        ${outgoing.map((f) => `<div class="person"><span class="small muted">${esc(Tx("Waiting for {name}", { name: nameOf(f.addressee) }))}</span><button type="button" class="linkbtn small" data-decline="${f.requester}|${f.addressee}">${Tx("Cancel")}</button></div>`).join("")}
+        ${friends.length ? friends.map((id) => `<div class="person"><span>${esc(nameOf(id))}</span><button type="button" class="linkbtn small" data-unfriend="${id}">${Tx("Remove")}</button></div>`).join("")
+          : !incoming.length && !outgoing.length ? `<p class="small muted">${Tx("No friends yet. Search for people above.")}</p>` : ""}
+      </div>
+      <div class="panel"><h2>${Tx("Who sees my new games")}</h2>
+        <div class="seg" role="group">${[["private", "Only me"], ["friends", "Friends "], ["public", "Everyone"]].map(([k, l]) => `<button type="button" data-vis="${k}" aria-pressed="${vis === k}">${Tx(l)}</button>`).join("")}</div>
+        ${vis !== "private" && myGameCount ? `<p><button type="button" class="linkbtn small" id="applyOld">${esc(myGameCount === 1 ? Tx("Apply to my older game too") : Tx("Apply to my {n} older games too", { n: myGameCount }))}</button></p>` : ""}
+        <p class="small muted" id="visMsg">${Tx("Opponents' names are never shown to others.")}</p></div>`;
+    $("siOut").onclick = () => { CLOUD.signOut(); location.reload(); };
+    let t;
+    $("findPeople").addEventListener("input", (e) => {
+      clearTimeout(t);
+      const q = e.target.value.trim();
+      t = setTimeout(async () => {
+        if (q.length < 2) { searchRes = null; renderSide(); return; }
+        const res = await CLOUD.api(`profiles?display_name=ilike.*${enc(q.replace(/[*%,()]/g, " "))}*&user_id=neq.${me.id}&select=user_id,display_name&limit=10`).catch(() => []);
+        searchRes = res || []; renderSide();
+        const inp = $("findPeople"); inp.value = q; inp.focus();
+      }, 300);
+    });
+    const act = async (fn) => { try { await fn(); } finally { await loadPeople(); await loadPosts(); renderSide(); renderFeed(); } };
+    el.querySelectorAll("[data-ask]").forEach((b) => b.onclick = () => act(() => CLOUD.api("friendships", { method: "POST", prefer: "return=minimal", body: { addressee: b.dataset.ask } })));
+    el.querySelectorAll("[data-accept]").forEach((b) => b.onclick = () => act(() => CLOUD.api(`friendships?requester=eq.${b.dataset.accept}&addressee=eq.${me.id}`, { method: "PATCH", prefer: "return=minimal", body: { status: "accepted", accepted_at: new Date().toISOString() } })));
+    el.querySelectorAll("[data-decline]").forEach((b) => b.onclick = () => { const [r, a] = b.dataset.decline.split("|"); act(() => CLOUD.api(`friendships?requester=eq.${r}&addressee=eq.${a}`, { method: "DELETE" })); });
+    el.querySelectorAll("[data-unfriend]").forEach((b) => b.onclick = () => {
+      if (b.dataset.c !== "1") { b.dataset.c = "1"; b.textContent = Tx("Confirm"); return; }
+      const f = friendships.find((x) => [x.requester, x.addressee].includes(b.dataset.unfriend));
+      act(() => CLOUD.api(`friendships?requester=eq.${f.requester}&addressee=eq.${f.addressee}`, { method: "DELETE" }));
+    });
+    el.querySelectorAll("[data-vis]").forEach((b) => b.onclick = () => act(() => CLOUD.api(`profiles?user_id=eq.${me.id}`, { method: "PATCH", prefer: "return=minimal", body: { default_visibility: b.dataset.vis } })));
+    $("applyOld")?.addEventListener("click", async () => {
+      $("visMsg").textContent = Tx("Applying…");
+      await act(() => CLOUD.api(`game_logs?user_id=eq.${me.id}&visibility=eq.private`, { method: "PATCH", prefer: "return=minimal", body: { visibility: vis } }));
+      $("visMsg").textContent = Tx("Done.");
+    });
+  }
+
+  // ---------- feed ----------
+  function postHtml(r) {
+    const s = r.summary || {}, win = s.result === "win", key = `${r.user_id}|${r.game_id}`, cm = notes.get(key) || [];
+    const who = nameOf(r.user_id), first = s.went_first === true ? Tx("going first") : s.went_first === false ? Tx("going second") : "";
+    const myDeck = s.my_deck && s.my_deck !== "Physical game" ? s.my_deck : "", opp = s.opp_deck && s.opp_deck !== "Unknown" ? s.opp_deck : "";
+    return `<article class="post" data-key="${esc(key)}">
+      <div class="who"><span class="av">${esc(who[0]?.toUpperCase() || "?")}</span><div><b>${esc(who)}</b><span class="small muted">${esc(ago(r.played_at))} · ${esc(Tx(r.source === "duels_ink" ? "duels.ink" : r.source === "lore_counter" ? "Lore Counter" : r.source))} · ${esc(Tx(r.visibility))}</span></div></div>
+      <div class="res"><span class="${win ? "w" : "l"}">${Tx(win ? "won" : "lost")}</span>${myDeck ? ` ${inkDots(s.my_inks || myDeck)}${esc(Tx("with {deck}", { deck: myDeck }))}` : ""}${opp ? ` ${inkDots(s.opp_inks || opp)}${esc(Tx("against {deck}", { deck: opp }))}` : ""}</div>
+      <div class="meta"><span class="score">${esc(s.my_lore ?? 0)}–${esc(s.opp_lore ?? 0)}</span>${first ? `<span class="tag">${first}</span>` : ""}${s.turns ? `<span class="tag">${esc(Tx("{n} turns", { n: s.turns }))}</span>` : ""}</div>
+      ${cm.length ? `<div class="cmts">${cm.slice(-3).map((n) => `<div class="cmt"><b>${esc(nameOf(n.author) === Tx("A player") ? n.author_name || Tx("Someone") : nameOf(n.author))}</b><span data-body="${esc(n.id)}"></span></div>`).join("")}</div>` : ""}
+      <div class="acts"><a href="../coach/?player=${enc(r.user_id)}&game=${enc(r.game_id)}">${Tx("Open game")}</a><button type="button" data-cmt="${esc(key)}">${cm.length ? esc(cm.length === 1 ? Tx("1 comment") : Tx("{n} comments", { n: cm.length })) : Tx("Comment")}</button></div>
+      <div class="cmtform" data-form="${esc(key)}" hidden><input maxlength="1000" placeholder="${Tx("Write a comment")}"><button type="button" class="btn small" data-send="${esc(key)}">${Tx("Send")}</button></div>
+    </article>`;
+  }
+  function renderFeed() {
+    const el = $("feed");
+    if (!me || !myProfile) { el.innerHTML = me ? "" : el.innerHTML; return; }
+    el.innerHTML = posts.length ? posts.map(postHtml).join("") + (moreAvailable ? `<button type="button" class="btn" id="older">${Tx("Show older games")}</button>` : "")
+      : `<div class="panel"><p class="empty">${Tx("Your timeline is empty. Add friends, and choose who sees your games.")}</p></div>`;
+    const byId = new Map([...notes.values()].flat().map((n) => [n.id, n]));
+    el.querySelectorAll("[data-body]").forEach((s) => { s.textContent = byId.get(s.dataset.body)?.body || ""; });   // other people's text: set as text
+    el.querySelectorAll("[data-cmt]").forEach((b) => b.onclick = () => { const f = el.querySelector(`[data-form="${CSS.escape(b.dataset.cmt)}"]`); f.hidden = !f.hidden; f.querySelector("input").focus(); });
+    el.querySelectorAll("[data-send]").forEach((b) => {
+      const form = b.parentElement, input = form.querySelector("input");
+      const send = async () => {
+        const text = input.value.trim(); if (!text) return;
+        const [owner, game] = b.dataset.send.split("|");
+        b.disabled = true;
+        try {
+          await CLOUD.api("game_notes", { method: "POST", prefer: "return=minimal", body: { owner_id: owner, game_id: game, anchor: { kind: "game" }, body: text, author_name: (myProfile?.display_name || "").slice(0, 60) } });
+          notes.delete(b.dataset.send); await loadPosts(); renderFeed();
+        } catch { b.disabled = false; input.placeholder = Tx("Couldn't send. Try again."); }
+      };
+      b.onclick = send;
+      input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); send(); } });
+    });
+    $("older")?.addEventListener("click", async () => { await loadPosts(true); renderFeed(); });
+  }
+
+  // ---------- sign-in ----------
+  function signIn() {
+    $("feed").innerHTML = `<div class="panel"><h2>${Tx("Sign in")}</h2><p class="muted small">${Tx("Use your Inkwell account email.")}</p>
+      <div class="cmtform"><input id="siEmail" type="email" autocomplete="email" placeholder="${Tx("Email")}"><button type="button" class="btn primary small" id="siSend">${Tx("Send code")}</button></div>
+      <div class="cmtform" id="siCodeRow" hidden><input id="siCode" inputmode="numeric" autocomplete="one-time-code" placeholder="${Tx("Code from the email")}"><button type="button" class="btn primary small" id="siIn">${Tx("Sign in")}</button></div>
+      <p class="small" id="siMsg" aria-live="polite"></p></div>`;
+    const msg = (t) => { $("siMsg").textContent = t; };
+    $("siSend").onclick = async () => {
+      const e = $("siEmail").value.trim();
+      if (!/^\S+@\S+\.\S+$/.test(e)) { msg(Tx("Enter your email.")); return; }
+      msg(Tx("Sending…"));
+      try { await CLOUD.requestCode(e); $("siCodeRow").hidden = false; msg(Tx("Check {email}: type the code, or open the link on this device.", { email: e })); }
+      catch { msg(Tx("Couldn't send the email. Check the address and your connection.")); }
+    };
+    $("siIn").onclick = async () => { try { await CLOUD.verify($("siEmail").value.trim(), $("siCode").value); location.reload(); } catch { msg(Tx("Wrong or expired code.")); } };
+  }
+
+  // ---------- boot ----------
+  if (!me) { signIn(); return; }
+  $("feed").innerHTML = `<p class="empty">${Tx("Loading…")}</p>`;
+  (async () => {
+    try { await loadPeople(); await loadPosts(); renderSide(); renderFeed(); }
+    catch { $("feed").innerHTML = `<p class="empty">${Tx("Couldn't load the feed. Reload the page to try again.")}</p>`; }
+  })();
+  document.addEventListener("visibilitychange", async () => { if (document.visibilityState === "visible" && myProfile) { try { await loadPeople(); await loadPosts(); renderSide(); renderFeed(); } catch { /* keep what's shown */ } } });
+})();
+</script>
+
+</body>
+</html>
