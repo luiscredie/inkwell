@@ -29,7 +29,7 @@
 window.INKWELL_CLOUD = (() => {
   const cfg = window.INKWELL_CLOUD_CONFIG || {};
   if (!cfg.url || !cfg.key) return null;
-  const KEY = "inkwell-counter-auth";
+  const KEY = "inkwell-counter-auth";   // shared by the counter and Coach Review (same site, one sign-in)
   const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || "null"); } catch { return null; } };
   let sess = load();
   const store = (x) => { sess = x; try { if (x) localStorage.setItem(KEY, JSON.stringify(x)); else localStorage.removeItem(KEY); } catch { /* private mode */ } };
@@ -59,7 +59,24 @@ window.INKWELL_CLOUD = (() => {
     return sess.access_token;
   }
 
+  // Authenticated call to the database's REST API (used by Coach Review). Errors carry a short code.
+  async function api(path, { method = "GET", body, prefer } = {}) {
+    const tok = await token();
+    if (!tok) throw Object.assign(new Error("signed out"), { code: "auth" });
+    const r = await fetch(`${cfg.url}/rest/v1/${path}`, {
+      method, headers: { ...headers(tok), ...(prefer ? { Prefer: prefer } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
+    if (r.status === 401) store({ ...sess, expires_at: 0 });
+    if (!r.ok) {
+      const code = r.status === 401 || r.status === 403 ? "permission" : r.status === 400 || r.status === 409 || r.status === 413 ? "invalid_argument" : "unavailable";
+      throw Object.assign(new Error(`${method} ${path.split("?")[0]} ${r.status}`), { code, status: r.status });
+    }
+    const text = await r.text();
+    return text ? JSON.parse(text) : null;
+  }
+
   return {
+    api,
+    user: () => (sess ? { ...sess.user } : null),
     status: () => (sess ? { signedIn: true, email: sess.user?.email || "" } : { signedIn: false }),
     async requestCode(email) {
       const redirect = cfg.redirect || location.href.split("#")[0];
@@ -577,7 +594,7 @@ table.stats td.n { text-align: right; }
         { seat: "p1", name: t().you, is_me: true, ...(g.first ? { went_first: g.first === "p1" } : {}),
           deck: { ...(m.me?.name ? { name: m.me.name } : {}), inks: m.me?.inks || [], list_source: "unknown" } },
         { seat: "p2", name: t().opp, is_me: false, ...(g.first ? { went_first: g.first === "p2" } : {}),
-          deck: { archetype: deckText(m.opp), inks: m.opp?.inks || [], list_source: "unknown" } },
+          deck: { archetype: m.opp?.name || m.opp?.inks?.length ? deckText(m.opp) : "Unknown", inks: m.opp?.inks || [], list_source: "unknown" } },
       ],
       turns: [],
       result: { winner: g.winner, reason: g.reason === "concede" ? "concede" : g.reason === "lore" ? "lore" : "other", final_lore: { p1: g.lore.p1, p2: g.lore.p2 } },
