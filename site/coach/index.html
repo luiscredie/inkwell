@@ -124,6 +124,8 @@ window.INKWELL_CLOUD = (() => {
   try { const p = localStorage.getItem(PLAYER_KEY); if (p && me) player = p; } catch { /* storage off */ }
   let links = [];                 // coach_links rows visible to me (mine as player, and players who added me)
   let rows = [], noteRows = [];
+  const logs = new Map();         // full game logs, fetched when a game is opened (the list only needs summaries)
+  const stub = (r) => ({ _loading: true, format_version: "1.0", game_id: r.game_id, source: r.source, played_at: r.played_at, players: [], turns: [], result: {} });
   const listeners = new Set();
   const enc = encodeURIComponent;
 
@@ -146,7 +148,7 @@ window.INKWELL_CLOUD = (() => {
     if (coll === "games" || coll === "public_games") {
       const vis = coll === "games" ? "private" : "public";
       return rows.filter((r) => r.visibility === vis).map((r) => ({ id: r.game_id,
-        data: { log: r.log, summary: summarize(r.log), played_at: r.played_at || r.log?.played_at, source: r.source, added_at: r.created_at } }));
+        data: { log: logs.get(r.game_id) || stub(r), summary: r.summary || summarize(logs.get(r.game_id) || stub(r)), played_at: r.played_at, source: r.source, added_at: r.created_at } }));
     }
     if (coll === "notes" || coll === "public_notes") {
       const vis = coll === "notes" ? "private" : "public";
@@ -158,7 +160,7 @@ window.INKWELL_CLOUD = (() => {
   function stats() {
     const s = { otp: [0, 0], otd: [0, 0], games: rows.length, from: null, to: null, label: "recorded games" };
     for (const r of rows) {
-      const sm = summarize(r.log), at = r.played_at || r.log?.played_at;
+      const sm = r.summary || {}, at = r.played_at;
       if (sm.went_first === true) { s.otp[1] += 1; s.otp[0] += sm.result === "win" ? 1 : 0; }
       if (sm.went_first === false) { s.otd[1] += 1; s.otd[0] += sm.result === "win" ? 1 : 0; }
       if (at && (!s.from || at < s.from)) s.from = at;
@@ -170,7 +172,7 @@ window.INKWELL_CLOUD = (() => {
   async function load() {
     if (!player) return;
     const [g, n, l] = await Promise.all([
-      CLOUD.api(`game_logs?user_id=eq.${enc(player)}&select=game_id,source,played_at,log,visibility,created_at&order=played_at.desc.nullslast&limit=2000`),
+      CLOUD.api(`game_logs?user_id=eq.${enc(player)}&select=game_id,source,played_at,summary,visibility,created_at&order=played_at.desc.nullslast&limit=5000`),
       CLOUD.api(`game_notes?owner_id=eq.${enc(player)}&select=id,game_id,author,author_name,anchor,body,created_at&order=created_at&limit=5000`),
       CLOUD.api("coach_links?select=owner_id,owner_email,coach_email,created_at&order=created_at"),
     ]);
@@ -204,6 +206,7 @@ window.INKWELL_CLOUD = (() => {
             if (coll === "games" || coll === "public_games") {
               if (player !== me?.id) throw Object.assign(new Error("not yours"), { code: "permission" });
               const log = data.log;
+              if (log) logs.set(id, log);
               await CLOUD.api("game_logs?on_conflict=user_id,game_id", { method: "POST", prefer: "resolution=merge-duplicates,return=minimal",
                 body: [{ user_id: me.id, game_id: id, source: log?.source || data.source || "manual", played_at: log?.played_at || data.played_at || null, log,
                   visibility: coll === "public_games" ? "public" : "private" }] });
@@ -231,6 +234,11 @@ window.INKWELL_CLOUD = (() => {
         listeners.add(fire); reload().catch(() => {}); return () => listeners.delete(fire);
       } };
     },
+    async loadGame(gameId) {
+      if (logs.has(gameId)) return;
+      const r = await CLOUD.api(`game_logs?user_id=eq.${enc(player)}&game_id=eq.${enc(gameId)}&select=log`);
+      if (r?.[0]?.log) { logs.set(gameId, r[0].log); for (const cb of listeners) cb(); }
+    },
     async setVisibility(gameId, vis) {
       await CLOUD.api(`game_logs?user_id=eq.${enc(me.id)}&game_id=eq.${enc(gameId)}`, { method: "PATCH", prefer: "return=minimal", body: { visibility: vis } });
       await reload();
@@ -251,7 +259,7 @@ window.INKWELL_CLOUD = (() => {
 
   // Keep up with comments from a coach or the counter without a reload.
   if (me) {
-    setInterval(() => { if (document.visibilityState === "visible") reload().catch(() => {}); }, 60000);
+    setInterval(() => { if (document.visibilityState === "visible") reload().catch(() => {}); }, 120000);
     document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") reload().catch(() => {}); });
   }
 
@@ -578,6 +586,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     const g = games.get(current);
     const el = $("review");
     if (!g) { el.innerHTML = `<p class="empty">Pick a game to review it turn by turn.</p>`; return; }
+    if (g.doc.log?._loading) { el.innerHTML = `<p class="empty">Loading the game…</p>`; return; }
     const log = g.doc.log, s = summaryOf(g);
     const ids = [...new Set(notes.map((n) => n.author))];
     const profilesMap = user && ids.length ? await user.profiles(ids) : {};
@@ -691,6 +700,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     current = key; composerFor = null; notes = [];
     $("wrap").classList.add("reading");
     refreshNotes(); renderList(); renderReview();
+    if (db?.loadGame) db.loadGame(key).then(() => { if (current === key) renderReview(); }).catch(() => alertInline("Couldn't load this game. Try again."));
   }
   function refreshNotes() {
     const g = games.get(current);

@@ -48,7 +48,7 @@ Don't edit `site/counter/` by hand.
 Shows your games from `public.game_logs` (the Lore Counter sends them there),
 with comments and coach access. One-time setup:
 
-1. **SQL Editor**: run `supabase/coach_review.sql` after `game_logs.sql`.
+1. **SQL Editor**: run `supabase/coach_review.sql`, then `supabase/game_logs_summary.sql`, after `game_logs.sql`.
 2. **Authentication → URL Configuration → Redirect URLs**: add
    `https://luiscredie.github.io/inkwell/coach/` (or `https://luiscredie.github.io/inkwell/**`).
 3. A coach signs in with their own email. With Supabase's built-in email
