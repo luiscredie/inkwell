@@ -2908,7 +2908,12 @@ class Component extends DCLogic {
     if(cfg && cfg.coach_endpoint){ this.coachEndpoint=cfg.coach_endpoint; this.coachAnonKey=cfg.anon_key||''; }
     if(!cfg || !cfg.url || !cfg.anon_key){ this.setState({syncEnabled:false, syncStatus:'off'}); return; }
     if(!(window.supabase && window.supabase.createClient)){ this.setState({syncEnabled:false, syncStatus:'off', syncMsg:'Sync library failed to load.'}); return; }
-    try { this.sb = window.supabase.createClient(cfg.url, cfg.anon_key, {auth:{persistSession:true, autoRefreshToken:true}}); }
+    // One sign-in for the whole site: the community pages (Início, Coach, Trocas, Contador) keep the session under this key too.
+    // A session saved by an older version under supabase-js's default key is moved over, so nobody has to sign in again.
+    try { const SHARED='inkwell-counter-auth', ref=(new URL(cfg.url).hostname.split('.')[0]), OLD='sb-'+ref+'-auth-token';
+      if(!localStorage.getItem(SHARED) && localStorage.getItem(OLD)) localStorage.setItem(SHARED, localStorage.getItem(OLD));
+      localStorage.removeItem(OLD); } catch(e){ /* storage off */ }
+    try { this.sb = window.supabase.createClient(cfg.url, cfg.anon_key, {auth:{persistSession:true, autoRefreshToken:true, storageKey:'inkwell-counter-auth'}}); }
     catch(e){ this.setState({syncEnabled:false, syncStatus:'off'}); return; }
     this.setState({syncEnabled:true, syncStatus:'signed_out'});
     try {
