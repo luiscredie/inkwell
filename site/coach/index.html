@@ -13,6 +13,7 @@
 <body>
 <script>window.INKWELL_CLOUD_CONFIG = {"url": "https://sorefaetiaebmjploanp.supabase.co", "key": "sb_publishable_RkAWW-ENz70CXA6_QV7aHw_MpfD7Gn2", "redirect": "https://luiscredie.github.io/inkwell/coach/"};
 window.INKWELL_COUNTER_URL = "../counter/";
+window.INKWELL_HOME_URL = "../feed/";
 window.INKWELL_NO_STORE_MSG = "Sign in above to see your games.";
 </script>
 <script>
@@ -41,7 +42,7 @@ window.INKWELL_NO_STORE_MSG = "Sign in above to see your games.";
     "Import a file": "Importar arquivo",
     "Pick a game to review it turn by turn.": "Escolha um jogo para revisar turno a turno.",
     // list
-    "All": "Todos", "Losses": "Derrotas", "Wins": "Vitórias", "With comments": "Com comentários", "Public games": "Públicos", "Public (one game)": "Público",
+    "All": "Todos", "Losses": "Derrotas", "Wins": "Vitórias", "With comments": "Com comentários", "Public games": "Públicos", "Public (one game)": "Público", "Friends (one game)": "Amigos", "Friends game": "Jogo de amigos",
     "Showing games against {deck}. Remove filter": "Mostrando jogos contra {deck}. Remover filtro",
     "No games here yet. Games show up when they are imported from duels.ink.": "Nenhum jogo aqui ainda. Os jogos aparecem quando vêm do duels.ink.",
     "No games here yet. Games show up when they are imported from duels.ink or added below from the Table Logger.": "Nenhum jogo aqui ainda. Os jogos aparecem quando vêm do duels.ink ou do Contador de lore.",
@@ -139,10 +140,10 @@ window.INKWELL_NO_STORE_MSG = "Sign in above to see your games.";
     "duels.ink games sync every 30 minutes. Last check {when}, {n} new.": "Os jogos do duels.ink sincronizam a cada 30 minutos. Última verificação {when}, {n} novos.",
     "duels.ink games sync every 30 minutes. Last check {when}, nothing new.": "Os jogos do duels.ink sincronizam a cada 30 minutos. Última verificação {when}, nada novo.",
     " {n} more on the next runs.": " Mais {n} nas próximas verificações.",
-    "Opponent": "Oponente", "Language": "Idioma",
+    "Opponent": "Oponente", "Language": "Idioma", "Home": "Início",
   };
   // English wording for the few keys that carry a hint to tell them apart.
-  const EN = { "Public (one game)": "Public" };
+  const EN = { "Public (one game)": "Public", "Friends (one game)": "Friends", "Friends game": "Friends-only game" };
   const fill = (s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)) : s);
   const tr = (en, v) => fill(lang === "pt" && en in PT ? PT[en] : EN[en] || en, v);
   const locale = () => (lang === "pt" ? "pt-BR" : "en");
@@ -269,6 +270,9 @@ window.INKWELL_CLOUD = (() => {
   const me = CLOUD?.user();
   let player = me?.id || null;
   try { const p = localStorage.getItem(PLAYER_KEY); if (p && me) player = p; } catch { /* storage off */ }
+  // A link from the home feed (?player=<id>&game=<id>) opens a friend's game without changing the saved choice.
+  const urlPlayer = new URLSearchParams(location.search).get("player");
+  if (me && urlPlayer && /^[0-9a-f-]{36}$/i.test(urlPlayer)) player = urlPlayer;
   const COMMUNITY = "community";  // the "player" value for the feed of everyone's public games
   let links = [];                 // coach_links rows visible to me (mine as player, and players who added me)
   let duelsSync = null;           // my automatic duels.ink sync, if set up
@@ -298,14 +302,14 @@ window.INKWELL_CLOUD = (() => {
   const snap = (docs) => ({ docs: docs.map((d) => ({ id: d.id, data: () => d.data })), size: docs.length, empty: !docs.length });
   function docsOf(coll) {
     if (coll === "games" || coll === "public_games") {
-      const vis = coll === "games" ? "private" : "public";
-      return rows.filter((r) => r.visibility === vis).map((r) => ({ id: r.game_id,
-        data: { log: logs.get(r.game_id) || stub(r), summary: r.summary || summarize(logs.get(r.game_id) || stub(r)), played_at: r.played_at, source: r.source, added_at: r.created_at,
+      const pub = coll === "public_games";
+      return rows.filter((r) => (r.visibility === "public") === pub).map((r) => ({ id: r.game_id,
+        data: { log: logs.get(r.game_id) || stub(r), summary: r.summary || summarize(logs.get(r.game_id) || stub(r)), played_at: r.played_at, source: r.source, added_at: r.created_at, visibility: r.visibility,
           ...(player === COMMUNITY ? { owner_name: r.user_id === me.id ? "You" : names.get(r.user_id) || Tx("A player") } : {}) } }));
     }
     if (coll === "notes" || coll === "public_notes") {
-      const vis = coll === "notes" ? "private" : "public";
-      return noteRows.filter((n) => visOf(n.game_id) === vis).map((n) => ({ id: n.id,
+      const pub = coll === "public_notes";
+      return noteRows.filter((n) => (visOf(n.game_id) === "public") === pub).map((n) => ({ id: n.id,
         data: { game: n.game_id, anchor: n.anchor, text: n.body, author: n.author, at: n.created_at } }));
     }
     return [];
@@ -422,8 +426,9 @@ window.INKWELL_CLOUD = (() => {
       if (logs.has(gameId)) return;
       const r = await CLOUD.api(`game_logs?user_id=eq.${enc(ownerOf(gameId))}&game_id=eq.${enc(gameId)}&select=log`);
       const log = r?.[0]?.log;
-      // Another player's public game: never show the opponent's name (supabase/hide_names.sql removes it in the database too).
-      if (log && player === COMMUNITY && ownerOf(gameId) !== me.id)
+      // Another player's game (community or a friend): never show the opponent's name. Coaches see it.
+      const owner = ownerOf(gameId), coaching = links.some((l) => l.owner_id === owner && l.coach_email === (me.email || "").toLowerCase());
+      if (log && owner !== me.id && !coaching)
         for (const p of log.players || []) if (!p.is_me) p.name = Tx("Opponent");
       if (log) { logs.set(gameId, log); for (const cb of listeners) cb(); }
     },
@@ -527,7 +532,7 @@ window.INKWELL_CLOUD = (() => {
     });
   }
   // If I no longer coach the saved player, fall back to my own games.
-  if (me && player !== me.id && player !== COMMUNITY) {
+  if (me && player !== me.id && player !== COMMUNITY && !urlPlayer) {
     CLOUD.api(`coach_links?owner_id=eq.${enc(player)}&select=owner_id`).then((r) => {
       if (!r?.length) { try { localStorage.removeItem(PLAYER_KEY); } catch { /* */ } location.reload(); }
     }).catch(() => {});
@@ -685,7 +690,7 @@ table.mt tr[data-opp]:hover td, table.mt tr[data-opp]:focus-visible td { backgro
 
 <div class="wrap" id="wrap">
   <aside class="list" aria-label="Games">
-    <div class="titlerow"><h1 data-i18n>Coach review</h1><button type="button" class="linkbtn small" id="langBtn" hidden></button></div>
+    <div class="titlerow"><h1 data-i18n>Coach review</h1><span class="small"><a id="homeLink" class="linkbtn" hidden></a> <button type="button" class="linkbtn small" id="langBtn" hidden></button></span></div>
     <div id="accountPanel"></div>
     <button type="button" class="btn primary counterBtn" id="openCounter" hidden><span data-i18n>Lore Counter</span> <span class="small" data-i18n>· games save here</span></button>
     <div class="stats" id="stats" hidden></div>
@@ -916,7 +921,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
         ].filter(Boolean).map((x) => x.replace(/^./, (c) => c.toUpperCase())).join(". "))}.</span>
       </div>
       <div class="toolbar">
-        ${isOwner ? `<span class="vis" role="group" aria-label="${Tx("Who can see this game")}"><button type="button" data-vis="private" aria-pressed="${g.coll === "games"}">${Tx("Private")}</button><button type="button" data-vis="public" aria-pressed="${g.coll === "public_games"}">${Tx("Public (one game)")}</button></span>` : `<span class="muted small">${Tx(g.coll === "public_games" ? "Public game" : "Private game")}</span>`}
+        ${isOwner ? `<span class="vis" role="group" aria-label="${Tx("Who can see this game")}">${(db?.setVisibility && g.doc.visibility ? [["private", "Private"], ["friends", "Friends (one game)"], ["public", "Public (one game)"]] : [["private", "Private"], ["public", "Public (one game)"]]).map(([k, l]) => `<button type="button" data-vis="${k}" aria-pressed="${(g.doc.visibility || (g.coll === "public_games" ? "public" : "private")) === k}">${Tx(l)}</button>`).join("")}</span>` : `<span class="muted small">${Tx(g.coll === "public_games" ? "Public game" : g.doc.visibility === "friends" ? "Friends game" : "Private game")}</span>`}
         ${log.source_ref?.replay_url && !/\.\.\.$/.test(log.source_ref.replay_url) ? `<a class="btn ghost small" href="${esc(log.source_ref.replay_url)}" target="_blank" rel="noopener">${Tx("Watch replay on duels.ink")}</a>` : ""}
       </div>
       ${!db ? `<div class="notice">Comments need the shared store, which isn't available in this view. You can still read the game.</div>` : !me?.id ? `<div class="notice">${Tx("Sign in to comment.")}</div>` : canWrite === false ? `<div class="notice">You can read this game. Ask the owner to make you a Contributor to comment.</div>` : ""}
@@ -1077,6 +1082,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     });
   }
   $("openStats").addEventListener("click", openStats);
+  if (window.INKWELL_HOME_URL) { const hl = $("homeLink"); hl.href = window.INKWELL_HOME_URL; hl.textContent = `← ${Tx("Home")}`; hl.hidden = false; }
   if (window.INKWELL_I18N) {
     const lb = $("langBtn"); lb.hidden = false;
     lb.textContent = window.INKWELL_I18N.lang === "pt" ? "English" : "Português";
@@ -1118,7 +1124,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
 
   async function setVisibility(g, vis) {
     const target = vis === "public" ? "public_games" : "games";
-    if (g.coll === target || !isOwner) return;
+    const now = g.doc.visibility || (g.coll === "public_games" ? "public" : "private");
+    if (now === vis || !isOwner) return;
     if (db.setVisibility) {   // a store that keeps comments attached to the game
       try { await db.setVisibility(g.key, vis); } catch { alertInline(Tx("Couldn't change who can see this game. Try again.")); }
       return;
@@ -1248,6 +1255,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       if (current && games.get(current)?.coll === coll) renderReview();
     }, () => { $("games").innerHTML = `<p class="empty">${Tx("Couldn't load games. Reload the page to try again.")}</p>`; });
     listen("games"); listen("public_games");
+    // Opened from the home feed: ?game=<id> opens that game once it's loaded.
+    const wanted = new URLSearchParams(location.search).get("game");
+    if (wanted) { const tryOpen = () => { if (games.has(wanted)) { openGame(wanted); return true; } return false; }; let n = 0; const iv = setInterval(() => { if (tryOpen() || ++n > 40) clearInterval(iv); }, 250); }
     for (const coll of ["notes", "public_notes"]) {
       db.collection(coll).onSnapshot((snap) => {
         allNotes[coll] = snap.docs.map((d) => ({ id: d.id, ...d.data() }));

@@ -171,7 +171,7 @@ table.cl .n { text-align: right; }
 </style>
 
 <div class="page">
-  <div class="top"><h1 id="title">Loans and trades</h1><button type="button" class="linkbtn small" id="langBtn"></button></div>
+  <div class="top"><h1 id="title">Loans and trades</h1><span class="small"><a href="../feed/" class="linkbtn" id="homeLink">← Home</a> <button type="button" class="linkbtn small" id="langBtn"></button></span></div>
   <div id="acct" class="small muted"></div>
   <div id="app"></div>
 </div>
@@ -495,6 +495,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
   // ---------- boot ----------
   document.title = `${Tx("Loans and trades")} · Inkwell`;
   $("title").textContent = Tx("Loans and trades");
+  $("homeLink").textContent = `← ${lang === "pt" ? "Início" : "Home"}`;
   $("langBtn").textContent = lang === "pt" ? "English" : "Português";
   $("langBtn").onclick = () => { try { localStorage.setItem("inkwell-lang", lang === "pt" ? "en" : "pt"); } catch { /* */ } location.reload(); };
   document.documentElement.lang = LOC;
