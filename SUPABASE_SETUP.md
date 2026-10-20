@@ -69,3 +69,10 @@ New duels.ink games arrive in `public.game_logs` every 30 minutes (Edge Function
 function's code is in the Inkwell 2 repo (`supabase/functions/duels-sync`). The
 duels.ink token is the Edge Function secret `DUELS_TOKEN`; Coach Review shows the
 last sync and any problem (e.g. an expired token).
+
+## Community feed and display names
+
+Run `supabase/community.sql`. Players choose the name others see on public
+games and comments; Coach Review's "Show" menu has "Community: public games",
+the newest 300 public games from every player, open to anyone signed in to
+read and comment.

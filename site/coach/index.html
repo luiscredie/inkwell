@@ -112,7 +112,8 @@ window.INKWELL_CLOUD = (() => {
  *   notes / public_notes   -> public.game_notes, split by the game's visibility
  *   stats/summary          -> computed from the games (on the play / on the draw)
  * Who may read or write what is enforced by the database's row-level security, not here.
- * It also adds three small panels to the page: sign-in, "whose games", and "my coaches".
+ * It also adds small panels to the page: sign-in, display name, "whose games" (me, a player I coach,
+ * or the community feed of public games) and "my coaches".
  */
 (() => {
   "use strict";
@@ -122,8 +123,10 @@ window.INKWELL_CLOUD = (() => {
   const me = CLOUD?.user();
   let player = me?.id || null;
   try { const p = localStorage.getItem(PLAYER_KEY); if (p && me) player = p; } catch { /* storage off */ }
-  let links = [];
-  let duelsSync = null;           // my automatic duels.ink sync, if set up                 // coach_links rows visible to me (mine as player, and players who added me)
+  const COMMUNITY = "community";  // the "player" value for the feed of everyone's public games
+  let links = [];                 // coach_links rows visible to me (mine as player, and players who added me)
+  let duelsSync = null;           // my automatic duels.ink sync, if set up
+  const names = new Map();        // user id -> display name (public.profiles)
   let rows = [], noteRows = [];
   const logs = new Map();         // full game logs, fetched when a game is opened (the list only needs summaries)
   const stub = (r) => ({ _loading: true, format_version: "1.0", game_id: r.game_id, source: r.source, played_at: r.played_at, players: [], turns: [], result: {} });
@@ -131,6 +134,8 @@ window.INKWELL_CLOUD = (() => {
   const enc = encodeURIComponent;
 
   const nameOf = (email) => (email || "").split("@")[0] || "Someone";
+  const myName = () => names.get(me?.id) || nameOf(me?.email);
+  const ownerOf = (gameId) => rows.find((r) => r.game_id === gameId)?.user_id || player;
   const avatar = (name) => "data:image/svg+xml," + enc(`<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" rx="20" fill="#3b3560"/><text x="20" y="26" font-family="sans-serif" font-size="17" fill="#e9d28a" text-anchor="middle">${esc((name || "?")[0].toUpperCase())}</text></svg>`);
 
   function summarize(log) {
@@ -149,7 +154,8 @@ window.INKWELL_CLOUD = (() => {
     if (coll === "games" || coll === "public_games") {
       const vis = coll === "games" ? "private" : "public";
       return rows.filter((r) => r.visibility === vis).map((r) => ({ id: r.game_id,
-        data: { log: logs.get(r.game_id) || stub(r), summary: r.summary || summarize(logs.get(r.game_id) || stub(r)), played_at: r.played_at, source: r.source, added_at: r.created_at } }));
+        data: { log: logs.get(r.game_id) || stub(r), summary: r.summary || summarize(logs.get(r.game_id) || stub(r)), played_at: r.played_at, source: r.source, added_at: r.created_at,
+          ...(player === COMMUNITY ? { owner_name: r.user_id === me.id ? "You" : names.get(r.user_id) || "A player" } : {}) } }));
     }
     if (coll === "notes" || coll === "public_notes") {
       const vis = coll === "notes" ? "private" : "public";
@@ -159,6 +165,7 @@ window.INKWELL_CLOUD = (() => {
     return [];
   }
   function stats() {
+    if (player === COMMUNITY) return null;
     const s = { otp: [0, 0], otd: [0, 0], games: rows.length, from: null, to: null, label: "recorded games" };
     for (const r of rows) {
       const sm = r.summary || {}, at = r.played_at;
@@ -170,15 +177,33 @@ window.INKWELL_CLOUD = (() => {
     return s.otp[1] + s.otd[1] ? s : null;
   }
 
+  const SEL = "select=user_id,game_id,source,played_at,summary,visibility,created_at";
   async function load() {
     if (!player) return;
-    const [g, n, l] = await Promise.all([
-      CLOUD.api(`game_logs?user_id=eq.${enc(player)}&select=game_id,source,played_at,summary,visibility,created_at&order=played_at.desc.nullslast&limit=5000`),
-      CLOUD.api(`game_notes?owner_id=eq.${enc(player)}&select=id,game_id,author,author_name,anchor,body,created_at&order=created_at&limit=5000`),
+    const community = player === COMMUNITY;
+    const [g, l, sync] = await Promise.all([
+      community ? CLOUD.api(`game_logs?visibility=eq.public&${SEL}&order=played_at.desc.nullslast&limit=300`)
+        : CLOUD.api(`game_logs?user_id=eq.${enc(player)}&${SEL}&order=played_at.desc.nullslast&limit=5000`),
       CLOUD.api("coach_links?select=owner_id,owner_email,coach_email,created_at&order=created_at"),
       player === me.id ? CLOUD.api("rpc/my_duels_sync", { method: "POST", body: {} }).catch(() => null) : Promise.resolve(null),
-    ]).then((r) => { duelsSync = r[3]?.[0] || null; return r; });
+    ]);
+    let n = [];
+    if (community) {     // comments on the games in the feed, matched by (player, game)
+      const pairs = new Set((g || []).map((r) => `${r.user_id}|${r.game_id}`));
+      const ids = [...new Set((g || []).map((r) => r.game_id))];
+      for (let i = 0; i < ids.length; i += 80) {
+        const part = await CLOUD.api(`game_notes?game_id=in.(${ids.slice(i, i + 80).map((x) => `"${x}"`).join(",")})&select=id,owner_id,game_id,author,author_name,anchor,body,created_at&order=created_at&limit=5000`);
+        n = n.concat((part || []).filter((x) => pairs.has(`${x.owner_id}|${x.game_id}`)));
+      }
+    } else {
+      n = await CLOUD.api(`game_notes?owner_id=eq.${enc(player)}&select=id,owner_id,game_id,author,author_name,anchor,body,created_at&order=created_at&limit=5000`);
+    }
+    duelsSync = sync?.[0] || null;
     rows = g || []; noteRows = n || []; links = l || [];
+    const want = [...new Set([me.id, ...rows.map((r) => r.user_id), ...noteRows.map((x) => x.author)])].filter((id) => !names.has(id));
+    for (let i = 0; i < want.length; i += 80) {
+      for (const pr of (await CLOUD.api(`profiles?user_id=in.(${want.slice(i, i + 80).join(",")})&select=user_id,display_name`).catch(() => [])) || []) names.set(pr.user_id, pr.display_name);
+    }
     for (const cb of listeners) cb();
     panels();
   }
@@ -198,7 +223,7 @@ window.INKWELL_CLOUD = (() => {
       },
       async add(data) {
         const r = await CLOUD.api("game_notes", { method: "POST", prefer: "return=representation",
-          body: { owner_id: player, game_id: data.game, anchor: data.anchor, body: data.text, author_name: nameOf(me?.email).slice(0, 60) } });
+          body: { owner_id: ownerOf(data.game), game_id: data.game, anchor: data.anchor, body: data.text, author_name: myName().slice(0, 60) } });
         setTimeout(() => reload().catch(() => {}), 0);   // like a live store: the page hears about it after add() returns
         return { id: r?.[0]?.id };
       },
@@ -230,6 +255,7 @@ window.INKWELL_CLOUD = (() => {
 
   const db = {
     collection,
+    isCommunity: player === COMMUNITY,
     doc(path) {
       return { onSnapshot(cb) {
         const fire = () => { const s = stats(); cb({ exists: !!s, data: () => s }); };
@@ -248,7 +274,7 @@ window.INKWELL_CLOUD = (() => {
     },
     async loadGame(gameId) {
       if (logs.has(gameId)) return;
-      const r = await CLOUD.api(`game_logs?user_id=eq.${enc(player)}&game_id=eq.${enc(gameId)}&select=log`);
+      const r = await CLOUD.api(`game_logs?user_id=eq.${enc(ownerOf(gameId))}&game_id=eq.${enc(gameId)}&select=log`);
       if (r?.[0]?.log) { logs.set(gameId, r[0].log); for (const cb of listeners) cb(); }
     },
     async setVisibility(gameId, vis) {
@@ -257,12 +283,12 @@ window.INKWELL_CLOUD = (() => {
     },
   };
   const user = {
-    me: async () => ({ id: me.id, name: nameOf(me.email), email: me.email, avatarUrl: avatar(nameOf(me.email)) }),
+    me: async () => ({ id: me.id, name: myName(), email: me.email, avatarUrl: avatar(myName()) }),
     isOwner: async () => player === me.id,
     can: async () => true,
     profiles: async (ids) => Object.fromEntries(ids.map((id) => {
       const n = noteRows.find((x) => x.author === id);
-      const name = id === me.id ? nameOf(me.email) : (n?.author_name || "Someone");
+      const name = id === me.id ? myName() : names.get(id) || n?.author_name || "Someone";
       return [id, { name, avatarUrl: avatar(name) }];
     })),
   };
@@ -313,14 +339,28 @@ window.INKWELL_CLOUD = (() => {
     host.innerHTML = `<div class="acct">
       <span class="small muted">Signed in as ${esc(me.email)} · <button type="button" class="linkbtn" id="siOut">Sign out</button></span>
       ${duelsSync && player === me.id ? `<span class="small muted" id="duelsSync">${syncLine(duelsSync)}</span>` : ""}
-      ${students.length ? `<label class="small">Games of <select id="whose"><option value="${esc(me.id)}">Me</option>${students.map((l) => `<option value="${esc(l.owner_id)}" ${l.owner_id === player ? "selected" : ""}>${esc(l.owner_email || "Player")}</option>`).join("")}</select></label>` : ""}
-      ${viewing ? `<span class="small">You're coaching ${esc(viewing.owner_email)}: you can read their games and comment.</span>` : `<details class="coaches"><summary class="small">My coaches (${mine.length})</summary>
+      <label class="small">Show <select id="whose"><option value="${esc(me.id)}">My games</option><option value="${COMMUNITY}" ${player === COMMUNITY ? "selected" : ""}>Community: public games</option>${students.map((l) => `<option value="${esc(l.owner_id)}" ${l.owner_id === player ? "selected" : ""}>Games of ${esc(names.get(l.owner_id) || l.owner_email || "a player")}</option>`).join("")}</select></label>
+      ${!names.has(me.id) ? `<div class="row2"><input id="dispName" maxlength="40" placeholder="Your name for public games and comments"><button type="button" class="btn small" id="dispSave">Save</button></div>`
+        : `<span class="small muted">Your name: ${esc(names.get(me.id))} · <button type="button" class="linkbtn" id="dispEdit">Change</button></span>`}
+      <span class="small" id="dispMsg" aria-live="polite"></span>
+      ${player === COMMUNITY ? `<span class="small">Public games from every player. Anyone signed in can read them and comment.</span>`
+        : viewing ? `<span class="small">You're coaching ${esc(names.get(viewing.owner_id) || viewing.owner_email)}: you can read their games and comment.</span>` : `<details class="coaches"><summary class="small">My coaches (${mine.length})</summary>
         <span class="small muted">A coach you add can read all your games and comment, after signing in with that email.</span>
         ${mine.map((l) => `<div class="small row2"><span>${esc(l.coach_email)}</span><button type="button" class="linkbtn" data-rm="${esc(l.coach_email)}">Remove</button></div>`).join("")}
         <div class="row2"><input id="coachEmail" type="email" placeholder="Coach's email"><button type="button" class="btn small" id="coachAdd">Add</button></div>
         <span class="small" id="coachMsg" aria-live="polite"></span></details>`}
     </div>`;
     document.getElementById("siOut").onclick = () => { CLOUD.signOut(); try { localStorage.removeItem(PLAYER_KEY); } catch { /* */ } location.reload(); };
+    const saveName = async (v) => {
+      v = String(v || "").trim();
+      if (v.length < 2) { document.getElementById("dispMsg").textContent = "Use at least 2 characters."; return; }
+      try {
+        await CLOUD.api("profiles?on_conflict=user_id", { method: "POST", prefer: "resolution=merge-duplicates,return=minimal", body: [{ user_id: me.id, display_name: v.slice(0, 40), updated_at: new Date().toISOString() }] });
+        names.set(me.id, v.slice(0, 40)); panels(); for (const cb of listeners) cb();
+      } catch { document.getElementById("dispMsg").textContent = "Couldn't save the name. Try again."; }
+    };
+    document.getElementById("dispSave")?.addEventListener("click", () => saveName(document.getElementById("dispName").value));
+    document.getElementById("dispEdit")?.addEventListener("click", () => { names.delete(me.id); panels(); const i = document.getElementById("dispName"); if (i) { i.value = myName() === nameOf(me.email) ? "" : myName(); i.focus(); } });
     const whose = document.getElementById("whose");
     if (whose) whose.onchange = () => { try { localStorage.setItem(PLAYER_KEY, whose.value); } catch { /* */ } location.reload(); };
     const add = document.getElementById("coachAdd");
@@ -336,7 +376,7 @@ window.INKWELL_CLOUD = (() => {
     });
   }
   // If I no longer coach the saved player, fall back to my own games.
-  if (me && player !== me.id) {
+  if (me && player !== me.id && player !== COMMUNITY) {
     CLOUD.api(`coach_links?owner_id=eq.${enc(player)}&select=owner_id`).then((r) => {
       if (!r?.length) { try { localStorage.removeItem(PLAYER_KEY); } catch { /* */ } location.reload(); }
     }).catch(() => {});
@@ -602,12 +642,12 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       $("games").innerHTML = `<p class="empty">No games here yet. Games show up when they are imported from duels.ink${isOwner ? " or added below from the Table Logger" : ""}.</p>`;
       return;
     }
-    $("openStats").hidden = false;
+    $("openStats").hidden = !!db?.isCommunity;
     $("games").innerHTML = shown.length ? shown.map((g) => {
       const s = summaryOf(g);
       return `<button type="button" class="game ${s.result === "win" ? "win" : "loss"}" data-k="${esc(g.key)}" aria-current="${g.key === current}">
         <span class="bar"></span>
-        <span class="t">${inkDots(s.opp_inks || s.opp_deck)}vs ${esc(s.opp_deck || "Unknown")}<small>${esc(s.my_deck || "")}, ${sideText(s)}, ${esc(fmtDate(g.doc.played_at))}${g.coll === "public_games" ? ", public" : ""}</small></span>
+        <span class="t">${inkDots(s.opp_inks || s.opp_deck)}vs ${esc(s.opp_deck || "Unknown")}<small>${g.doc.owner_name ? `${esc(g.doc.owner_name)} · ` : ""}${esc(s.my_deck || "")}, ${sideText(s)}, ${esc(fmtDate(g.doc.played_at))}${g.coll === "public_games" ? ", public" : ""}</small></span>
         <span class="score">${esc(s.my_lore)}–${esc(s.opp_lore)}${noteCount(g) ? `<span class="n">${noteCount(g)} comment${noteCount(g) > 1 ? "s" : ""}</span>` : ""}</span></button>`;
     }).join("") : `<p class="empty">No games match this filter.</p>`;
     $("games").querySelectorAll(".game").forEach((b) => b.onclick = () => openGame(b.dataset.k));
@@ -710,10 +750,11 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     let html = `<button type="button" class="btn ghost small back" id="back">All games</button>
       <div class="head">
         <span class="result ${s.result}">${s.result === "win" ? "Win" : "Loss"} ${esc(s.my_lore)}–${esc(s.opp_lore)}</span>
+        ${g.doc.owner_name ? `<span class="muted small">Played by ${esc(g.doc.owner_name)}</span>` : ""}
         <h2>${inkDots(s.my_inks || s.my_deck)}${esc(s.my_deck || "Your deck")} vs ${inkDots(s.opp_inks || s.opp_deck)}${esc(s.opp_deck || "Unknown")}</h2>
         <span class="muted small">${esc([
           sideText(s).replace(/^./, (c) => c.toUpperCase()),
-          log.turns.length ? `${log.turns.length} turns` : (log.lore_track || []).length > 1 ? `Lore Counter game, about ${Math.max(1, Math.round(log.lore_track.at(-1).t / 60))} minutes` : "Lore Counter game, final lore and result only",
+          log.turns.length ? `${log.turns.length} turns` : (log.lore_track || []).length > 1 ? `Lore Counter game, ${((m) => m < 2 ? "under 2 minutes" : `about ${m} minutes`)(Math.round(log.lore_track.at(-1).t / 60))}` : "Lore Counter game, final lore and result only",
           [ev.name, ev.game_in_match ? `game ${ev.game_in_match}` : ""].filter(Boolean).join(", "),
           new Date(log.played_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }),
           `ended by ${log.result?.reason || "unknown"}`,
@@ -726,7 +767,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       ${!db ? `<div class="notice">Comments need the shared store, which isn't available in this view. You can still read the game.</div>` : !me?.id ? `<div class="notice">Sign in to comment.</div>` : canWrite === false ? `<div class="notice">You can read this game. Ask the owner to make you a Contributor to comment.</div>` : ""}
       ${log.turns.length ? `<div class="chart"><div class="legend"><span>Lore by turn</span><span><i style="background:var(--gold)"></i>${esc(seatName(log, meSeat))}</span><span><i style="background:var(--opp)"></i>${esc(seatName(log, meSeat === "p1" ? "p2" : "p1"))}</span></div>${loreChart(log)}</div>`  : (log.lore_track || []).length > 1 ? `<div class="chart"><div class="legend"><span>Lore over time</span><span><i style="background:var(--gold)"></i>${esc(seatName(log, meSeat))}</span><span><i style="background:var(--opp)"></i>${esc(seatName(log, meSeat === "p1" ? "p2" : "p1"))}</span></div>${loreTimeChart(log, meSeat)}</div>` : ""}
       <div>${add("game", "Comment on the whole game")}${notesHtml("game", profilesMap)}</div>
-      ${deck.length || isOwner ? `<details class="deck" ${!deck.length || deckNotice?.key === g.key ? "open" : ""}><summary>Your deck (${deck.length ? `${deck.reduce((n, e) => n + e.qty, 0)} cards` : "no list yet"})</summary>
+      ${deck.length || isOwner ? `<details class="deck" ${!deck.length || deckNotice?.key === g.key ? "open" : ""}><summary>${g.doc.owner_name && g.doc.owner_name !== "You" ? `${esc(g.doc.owner_name)}'s deck` : "Your deck"} (${deck.length ? `${deck.reduce((n, e) => n + e.qty, 0)} cards` : "no list yet"})</summary>
         ${isOwner ? `<div class="deckedit"><button type="button" class="btn ghost small" id="deckEdit">${deck.length ? "Edit your deck list" : "Add your deck list"}</button>
           <div id="deckBox" ${deckNotice?.key === g.key && deckNotice.open ? "" : "hidden"}><textarea id="deckText" rows="10" placeholder="One card per line, e.g.&#10;4 Elsa - Spirit of Winter&#10;4 Tipo - Growing Son">${esc(deck.map((e) => `${e.qty} ${cardName(e.card_id)}`).join("\n"))}</textarea>
           ${siblings(g.key).length > 1 ? `<label class="small"><input type="checkbox" id="deckAll" checked> All ${siblings(g.key).length} games of this match</label>` : ""}
