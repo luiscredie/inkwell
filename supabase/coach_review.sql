@@ -33,15 +33,19 @@ create policy "coaches see who shared with them" on public.coach_links for selec
 
 grant select, insert, update, delete on public.coach_links to authenticated;
 
--- 3. One check used by the comment rules (security definer so it can look at games and links)
-create or replace function public.can_read_game(p_owner uuid, p_game text) returns boolean
+-- 3. One check used by the comment rules. Security definer so it can look at games and links;
+--    kept in a schema the API doesn't expose, so it can't be called directly.
+create schema if not exists private;
+revoke all on schema private from public, anon;
+grant usage on schema private to authenticated;
+create or replace function private.can_read_game(p_owner uuid, p_game text) returns boolean
 language sql stable security definer set search_path = '' as $$
   select p_owner = (select auth.uid())
       or exists (select 1 from public.game_logs g where g.user_id = p_owner and g.game_id = p_game and g.visibility = 'public')
       or exists (select 1 from public.coach_links c where c.owner_id = p_owner and c.coach_email = lower((select auth.jwt() ->> 'email')));
 $$;
-revoke all on function public.can_read_game(uuid, text) from public, anon;
-grant execute on function public.can_read_game(uuid, text) to authenticated;
+revoke all on function private.can_read_game(uuid, text) from public, anon;
+grant execute on function private.can_read_game(uuid, text) to authenticated;
 
 -- 4. Games: the player, coaches the player added, and everyone for public games
 drop policy if exists "owners read game logs" on public.game_logs;
@@ -70,10 +74,10 @@ alter table public.game_notes enable row level security;
 
 drop policy if exists "readers see comments" on public.game_notes;
 create policy "readers see comments" on public.game_notes for select to authenticated
-  using ((select public.can_read_game(owner_id, game_id)));
+  using ((select private.can_read_game(owner_id, game_id)));
 drop policy if exists "readers add their own comments" on public.game_notes;
 create policy "readers add their own comments" on public.game_notes for insert to authenticated
-  with check (author = (select auth.uid()) and (select public.can_read_game(owner_id, game_id)));
+  with check (author = (select auth.uid()) and (select private.can_read_game(owner_id, game_id)));
 drop policy if exists "author or player deletes comments" on public.game_notes;
 create policy "author or player deletes comments" on public.game_notes for delete to authenticated
   using (author = (select auth.uid()) or owner_id = (select auth.uid()));
