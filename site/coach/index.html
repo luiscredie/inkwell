@@ -1503,7 +1503,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     ["coach", "../coach/", "Coach"],
     ["trades", "../trades/", pt ? "Trocas" : "Trades"],
     ["counter", "../counter/", pt ? "Contador" : "Counter"],
-    ["cards", "../", pt ? "Coleção" : "Collection"],
+    ["cards", "../colecao/", pt ? "Coleção" : "Collection"],
   ];
   const links = LINKS.map(([k, href, label]) => `<a href="${href}" ${k === page ? 'aria-current="page"' : ""} data-iw="${k}">${icon(k)}<span>${label}</span></a>`).join("");
   const current = () => document.documentElement.dataset.theme || "noite";

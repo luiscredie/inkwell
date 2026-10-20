@@ -2802,6 +2802,9 @@ class Component extends DCLogic {
 
   async componentDidMount() {
     this.initPwa();
+    // links from the other pages of the site: index.html#decks, #prices, #matches… open that view
+    { const openHash=()=>{ try { const h=(location.hash||'').slice(1); if(['overview','collection','prices','decks','matches','learn'].includes(h)) this.setState({view:h,selectedDeck:null,selectedCard:null}); } catch(e){} };
+      openHash(); window.addEventListener('hashchange', openHash); }
     this.syncDocumentMeta();
     let boot;
     try { boot = await this.bootData(); }
