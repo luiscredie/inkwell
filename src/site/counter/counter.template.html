@@ -1,0 +1,657 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lore Counter</title>
+<meta name="description" content="Contador de lore para Disney Lorcana: funciona sem internet.">
+<meta name="theme-color" content="#17142e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lore Counter">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="../ink/icon-192.png">
+<link rel="icon" href="../ink/icon-192.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box}body{margin:0;background:#17142e}[hidden]{display:none!important}</style>
+</head>
+<body>
+<script>window.INKWELL_CLOUD_CONFIG = {"url": "https://sorefaetiaebmjploanp.supabase.co", "key": "sb_publishable_RkAWW-ENz70CXA6_QV7aHw_MpfD7Gn2", "redirect": "https://luiscredie.github.io/inkwell/counter/"};
+/*@CLOUD_JS@*/</script>
+<title>Inkwell Lore Counter</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,500..700,100&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: the phone lies among the players. Each pane is dark glass lit from its player's edge by their inks, with slow magic (motes and ink wisps) rising from that edge; the whole pane is the button (left −, right + as its player sees it). Panes on the far side are turned to face their player. A gold sparkle in the middle opens the menu. */
+:root {
+  --night: #0a0c10; --pane: #12141b;
+  --hair: rgba(212,175,55,.28);
+  --gold: #d4af37; --gold-soft: #e9d28a;
+  --ivory: #f6f1e3; --muted: #9a9caa;
+  --sheet: #14161c; --sheet-2: #1c1f27; --line: rgba(255,255,255,.08);
+  --text: #e5e2e1; --accent: #d4af37;
+  --serif: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { margin: 0; background: var(--night); color: var(--text); font-family: var(--font); overflow: hidden; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulation; }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+.table { position: relative; height: 100%; display: grid; gap: 10px; box-sizing: border-box;
+  padding-block: 8px; padding-left: max(8px, env(safe-area-inset-left, 0px)); padding-right: max(8px, env(safe-area-inset-right, 0px)); }
+.table.n1 { grid-template: 1fr / 1fr; }
+.table.n2 { grid-template: 1fr 1fr / 1fr; }
+.table.n3 { grid-template: 1fr 1fr / 1fr 1fr; grid-template-areas: "a a" "b c"; }
+.table.n3 .half:nth-of-type(1) { grid-area: a; }
+.table.n4 { grid-template: 1fr 1fr / 1fr 1fr; }
+
+.half { position: relative; border-radius: 28px; overflow: hidden; display: grid; grid-template-columns: 1fr 1fr; color: var(--ivory); min-width: 0; min-height: 0;
+  background-color: var(--pane); box-shadow: inset 0 0 0 1px var(--hair), 0 20px 40px -10px rgba(0,0,0,.5); }
+.half::after { content: ""; position: absolute; inset: 10px; border-radius: 20px; border: 1px solid rgba(212,175,55,.10); pointer-events: none; z-index: 2; }
+.half.far { transform: rotate(180deg); }
+.half canvas.magic { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+.half .zone { position: relative; z-index: 1; background: transparent; border: 0; padding: 0; display: flex; align-items: center; font-size: 1.9rem; font-weight: 300; color: var(--gold-soft); opacity: .45; }
+.half .zone.minus { justify-content: flex-start; padding-left: 11%; }
+.half .zone.plus { justify-content: flex-end; padding-right: 11%; }
+.half .zone:active { background: radial-gradient(circle at center, rgba(255,255,255,.06), transparent 70%); }
+.half .num { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; z-index: 1; }
+.half .num output { font-family: var(--serif); font-variation-settings: "SOFT" 100, "opsz" 144; font-weight: 600; font-size: var(--numsize, min(30vh, 54vw)); line-height: .9; letter-spacing: -0.02em;
+  font-variant-numeric: lining-nums tabular-nums; color: var(--ivory); text-shadow: 0 0 40px rgba(246,241,227,.14), 0 2px 12px rgba(0,0,0,.35); }
+.table.n3, .table.n4 { --numsize: min(17vh, 26vw); }
+.table.n3 .half:nth-of-type(1) { --numsize: min(17vh, 40vw); }
+.half.won .num output { color: var(--gold-soft); text-shadow: 0 0 48px rgba(212,175,55,.5); }
+.half .delta { position: absolute; z-index: 1; top: 13%; left: 50%; transform: translateX(-50%); font-family: var(--serif); font-size: 1.7rem; font-weight: 600; color: var(--gold-soft); pointer-events: none; opacity: 0; }
+.half .delta.show { opacity: 1; }
+.half .label { position: absolute; z-index: 1; bottom: 18px; left: 0; right: 0; text-align: center; font-size: .9rem; font-weight: 500; color: var(--muted); pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 40px; }
+.half .crown { position: absolute; z-index: 1; bottom: 44px; left: 0; right: 0; text-align: center; font-family: var(--serif); font-size: 1.15rem; font-weight: 600; color: var(--gold-soft); pointer-events: none; line-height: 1.35; padding: 0 12px; }
+.half .crown small { display: block; font-family: var(--font); font-weight: 500; color: var(--muted); font-size: .85rem; }
+.half .pips { position: absolute; z-index: 1; top: 18px; left: 0; right: 0; text-align: center; color: var(--gold-soft); font-size: .8rem; letter-spacing: .3em; pointer-events: none; }
+.table.n2 .half .pips, .table.n1 .half .pips { display: none; }
+
+.hub { position: absolute; left: 50%; top: 50%; width: 0; height: 0; z-index: 3; pointer-events: none; }
+.table.n1 .hub { top: auto; bottom: 58px; }
+.menu-btn { pointer-events: auto; position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); width: 60px; height: 60px; border-radius: 50%; border: 6px solid var(--night);
+  background: radial-gradient(circle at 50% 40%, #232634, #12141b); box-shadow: inset 0 0 0 1px var(--hair); display: grid; place-items: center; color: var(--gold); }
+.menu-btn svg { width: 22px; height: 22px; }
+.pill { position: absolute; z-index: 3; top: 50%; background: var(--night); padding: 6px 13px; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--hair); display: flex; gap: 7px; align-items: center;
+  font-family: var(--serif); font-weight: 600; font-size: 1.15rem; color: var(--gold-soft); font-variant-numeric: lining-nums tabular-nums; pointer-events: none; }
+.pill.l { left: max(16px, env(safe-area-inset-left, 0px)); transform: translateY(-50%) rotate(180deg); }
+.pill.r { right: max(16px, env(safe-area-inset-right, 0px)); transform: translateY(-50%); }
+.pill i { font-style: normal; color: var(--muted); font-weight: 400; font-family: var(--font); font-size: .9rem; }
+.table:not(.n2) .pill { display: none; }
+
+/* sheets */
+.sheet { position: fixed; inset: 0; z-index: 10; display: grid; place-items: end center; background: rgba(5, 6, 9, .7); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.sheet .card { width: min(560px, 100%); max-height: 90%; overflow-y: auto; background: var(--sheet); border-radius: 28px 28px 0 0; box-shadow: inset 0 1px 0 var(--hair); box-sizing: border-box; display: grid; gap: 14px;
+  padding: 18px max(18px, env(safe-area-inset-right, 0px)) calc(18px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px)); user-select: text; -webkit-user-select: text; }
+.card h2 { margin: 0; font-family: var(--serif); font-size: 1.35rem; font-weight: 600; color: var(--ivory); text-wrap: balance; }
+.card p { margin: 0; color: var(--muted); line-height: 1.45; }
+.card p b { color: var(--ivory); }
+.grp { display: grid; gap: 8px; }
+.grp > .cap { color: var(--muted); font-size: .9rem; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.row > .btn { flex: 1 1 120px; }
+.btn { border: 1px solid var(--line); background: var(--sheet-2); border-radius: 16px; padding: 13px 14px; font-weight: 600; text-align: center; display: inline-flex; gap: 8px; align-items: center; justify-content: center; }
+.btn.primary { background: linear-gradient(180deg, #e2c35a, #c79f2c); color: #1c1503; border-color: transparent; }
+.btn.quiet { background: transparent; }
+.sync { margin: 10px 0 0; text-align: center; font-size: 14px; color: var(--gold, #d8b25c); min-height: 1.2em; }
+.muted { color: var(--muted); }
+.btn[disabled] { opacity: .45; }
+.list { display: grid; gap: 0; background: var(--sheet-2); border-radius: 16px; overflow: hidden; }
+.item { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 13px 14px; border: 0; background: none; text-align: left; width: 100%; }
+.item + .item { border-top: 1px solid var(--line); }
+.item small { display: block; color: var(--muted); font-size: .85rem; font-weight: 400; margin-top: 2px; }
+.switch { width: 50px; height: 30px; border-radius: 15px; background: var(--line); position: relative; flex: none; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: left .15s; }
+[aria-checked=true] .switch { background: var(--gold); }
+[aria-checked=true] .switch::after { left: 23px; }
+.seg { display: flex; background: var(--night); border-radius: 12px; padding: 3px; gap: 3px; flex: none; }
+.seg button { border: 0; background: transparent; color: var(--muted); padding: 7px 11px; border-radius: 9px; font-weight: 600; font-size: .9rem; }
+.seg button[aria-pressed=true] { background: var(--sheet-2); color: var(--gold-soft); box-shadow: inset 0 0 0 1px var(--hair); }
+.inks { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+.dot { aspect-ratio: 1; border-radius: 50%; border: 3px solid transparent; padding: 0; max-width: 56px; justify-self: center; width: 100%; }
+.dot[aria-pressed=true] { border-color: var(--gold-soft); box-shadow: 0 0 0 3px var(--sheet), 0 0 18px rgba(212,175,55,.35); }
+.dot-label { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; font-size: .72rem; color: var(--muted); text-align: center; margin-top: -6px; }
+input.txt, textarea.txt { background: var(--night); border: 1px solid var(--line); border-radius: 12px; padding: 12px; color: var(--text); font: inherit; width: 100%; box-sizing: border-box; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 7px 11px; font-size: .88rem; display: inline-flex; gap: 6px; align-items: center; }
+.sw { display: inline-flex; gap: 2px; }
+.sw b { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+table.stats { width: 100%; border-collapse: collapse; font-size: .92rem; font-variant-numeric: tabular-nums; }
+table.stats th, table.stats td { text-align: left; padding: 7px 4px; border-bottom: 1px solid var(--line); }
+table.stats th { color: var(--muted); font-weight: 500; }
+table.stats td.n { text-align: right; }
+@media (prefers-reduced-motion: no-preference) {
+  .half .delta { transition: opacity .25s; }
+  .half .num output { transition: transform .12s; }
+  .half .num output.tick { transform: scale(1.04); transition: transform .08s; }
+}
+</style>
+
+<div class="table n2" id="table"></div>
+<div class="sheet" id="sheet" hidden><div class="card" id="card" role="dialog" aria-modal="true"></div></div>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const KEY = "inkwell-lorecounter-v3";
+  const SEATS = ["p1", "p2", "p3", "p4"];
+  const INKS = ["Amber", "Amethyst", "Emerald", "Ruby", "Sapphire", "Steel"];
+  const HEX = { Amber: "#f59e0b", Amethyst: "#8b5cf6", Emerald: "#10b981", Ruby: "#ef4444", Sapphire: "#3b82f6", Steel: "#7c8ba1" };
+  const L = {
+    pt: { you: "Você", opp: "Oponente", player: "Jogador", undo: "Desfazer", newGame: "Novo jogo", newMatch: "Nova partida", settings: "Ajustes", judge: "Mostrar ao juiz", close: "Fechar",
+      lang: "Idioma", langName: "English", players: "Jogadores", playersSub: "1 conta só o seu lore", bestOf: "Partida", magic: "Magia animada", magicSub: "Brilhos e tinta subindo da sua borda",
+      decks: "Registrar decks", decksSub: "Seu deck no início, o do oponente no fim (2 jogadores)", tour: "Modo torneio", tourSub: "Deck do oponente só ao fim da partida (Regras §5.2)",
+      flip: "Virar os painéis do outro lado", history: "Partidas registradas", none: "Nenhuma partida registrada ainda.",
+      wonGame: "Venceu o jogo", tapNext: "Toque para o próximo jogo", iConceded: "Eu concedi", oppConceded: "Oponente concedeu", conceded: "concedeu", winnerIs: "Vencedor do jogo",
+      byLore: "20 de lore", byConcede: "concessão", won: "venceu", wentFirst: "Quem começou este jogo?", me1: "Eu comecei", opp1: "Oponente começou", skip: "Pular",
+      yourDeck: "Seu deck", oppDeck: "Deck do oponente", pick2: "Toque em até 2 tintas", name: "Nome do deck (opcional)", recent: "Recentes", save: "Salvar", noDeck: "Sem deck",
+      matchOver: "Fim da partida", copy: "Copiar histórico", copied: "Copiado.", copyFail: "Selecione e copie o texto abaixo.", winRate: "Vitórias por deck do oponente", games: "Jogos", matches: "Partidas", winPct: "% vitórias",
+      toCoach: "Copiar para o Coach Review", toCoachSub: "jogos novos", sentHow: "Copiado. Abra o Inkwell Coach Review, toque em Adicionar jogos e cole.", allSent: "Todos os jogos já foram copiados.", toCoachSync: "Enviar ao Coach Review", synced: "Salvo no Coach Review", syncWait: "Ainda não salvo no Coach Review; tentaremos de novo.", backCoach: "Coach Review", account: "Conta Inkwell", noAccount: "Sem conta: os jogos ficam só neste aparelho", toSend: "a enviar", upToDate: "tudo enviado", accountSub: "Entre com o e-mail da sua conta Inkwell. Os jogos são enviados quando houver internet; sem internet, ficam guardados aqui.", emailPh: "seu e-mail", sendCode: "Enviar código", codeSent: "Enviamos um código para", codePh: "código do e-mail", signIn: "Entrar", signOut: "Sair desta conta", sendNow: "Enviar agora", sentCloud: "Enviado ao Inkwell", offlineWait: "Sem internet: será enviado quando você conectar.", failCloud: "Não foi possível enviar agora; tentaremos de novo.", badCode: "Código inválido ou expirado.", badEmail: "Não foi possível enviar o código. Confira o e-mail e a internet.", signedAs: "Conectado como", savedHere: "Guardado neste aparelho; será enviado ao Inkwell.", toCloud: "Enviar ao Inkwell",
+      confirmNew: "Começar nova partida? O placar volta a zero.", yes: "Sim", cancel: "Cancelar", colors: "Cores", clear: "Apagar histórico", cleared: "Histórico apagado.", game: "Jogo", vs: "vs" },
+    en: { you: "You", opp: "Opponent", player: "Player", undo: "Undo", newGame: "New game", newMatch: "New match", settings: "Settings", judge: "Show the judge", close: "Close",
+      lang: "Language", langName: "Português", players: "Players", playersSub: "1 counts only your lore", bestOf: "Match", magic: "Animated magic", magicSub: "Sparkles and ink rising from your edge",
+      decks: "Track decks", decksSub: "Your deck at the start, the opponent's at the end (2 players)", tour: "Tournament mode", tourSub: "Opponent's deck only when the match ends (Rules §5.2)",
+      flip: "Turn the panes on the far side", history: "Recorded matches", none: "No matches recorded yet.",
+      wonGame: "Won the game", tapNext: "Tap for the next game", iConceded: "I conceded", oppConceded: "Opponent conceded", conceded: "conceded", winnerIs: "Game winner",
+      byLore: "20 lore", byConcede: "concession", won: "won", wentFirst: "Who went first this game?", me1: "I went first", opp1: "Opponent went first", skip: "Skip",
+      yourDeck: "Your deck", oppDeck: "Opponent's deck", pick2: "Tap up to 2 inks", name: "Deck name (optional)", recent: "Recent", save: "Save", noDeck: "No deck",
+      matchOver: "Match over", copy: "Copy history", copied: "Copied.", copyFail: "Select and copy the text below.", winRate: "Wins by opponent deck", games: "Games", matches: "Matches", winPct: "Win %",
+      toCoach: "Copy for Coach Review", toCoachSub: "new games", sentHow: "Copied. Open Inkwell Coach Review, tap Add games and paste.", allSent: "All games were already copied.", toCoachSync: "Send to Coach Review", synced: "Saved to Coach Review", syncWait: "Not saved to Coach Review yet; it will retry.", backCoach: "Coach Review", account: "Inkwell account", noAccount: "No account: games stay on this device only", toSend: "to send", upToDate: "all sent", accountSub: "Sign in with your Inkwell account email. Games are sent when there is internet; offline they are kept here.", emailPh: "your email", sendCode: "Send code", codeSent: "We sent a code to", codePh: "code from the email", signIn: "Sign in", signOut: "Sign out", sendNow: "Send now", sentCloud: "Sent to Inkwell", offlineWait: "Offline: it will be sent when you connect.", failCloud: "Couldn't send now; it will retry.", badCode: "Wrong or expired code.", badEmail: "Couldn't send the code. Check the email and the connection.", signedAs: "Signed in as", savedHere: "Saved on this device; it will be sent to Inkwell.", toCloud: "Send to Inkwell",
+      confirmNew: "Start a new match? The score goes back to zero.", yes: "Yes", cancel: "Cancel", colors: "Colors", clear: "Clear history", cleared: "History cleared.", game: "Game", vs: "vs" },
+  };
+  const SYNC = !!window.INKWELL_SYNC;
+  const CLOUD = window.INKWELL_CLOUD || null;   // offline app: sends finished matches to the Inkwell database when online   // set when the counter runs inside Coach Review
+  const JUDGE_LOCAL = `<h2>Inkwell Lore Counter</h2>
+    <p><b>PT.</b> Este app conta apenas o total de lore e o placar da partida. Não registra cartas, inkwell, mão nem anotações, funciona sem internet e não envia nada. Fica à vista dos jogadores. No modo torneio, o deck do oponente só pode ser anotado depois do fim da partida (Regras de Torneio §3.11, §5.2, §5.3).</p>
+    <p><b>EN.</b> This app counts lore totals and the match score only. It records no cards, inkwell, hand or notes, works offline and sends nothing. It stays in plain view of the players. In tournament mode the opponent's deck can only be entered after the match ends (Tournament Rules §3.11, §5.2, §5.3).</p>`;
+  const JUDGE = SYNC ? JUDGE_LOCAL.replace("funciona sem internet e não envia nada.", "Só depois do fim da partida, o placar e o lore final de cada jogo vão para o histórico privado do próprio jogador.").replace("works offline and sends nothing.", "Only after the match ends are each game's score and final lore saved to the player's own private history.") : CLOUD ? JUDGE_LOCAL.replace("funciona sem internet e não envia nada.", "Funciona sem internet. Só depois do fim da partida, o placar e o lore final de cada jogo vão para a conta Inkwell do próprio jogador.").replace("works offline and sends nothing.", "It works offline. Only after the match ends are each game's score and final lore sent to the player's own Inkwell account.") : JUDGE_LOCAL;
+
+  const zero = () => ({ p1: 0, p2: 0, p3: 0, p4: 0 });
+  const blank = () => ({ lang: (navigator.language || "pt").startsWith("pt") ? "pt" : "en", players: 2, bestOf: 3, magic: true, decks: false, tour: true, flip: true,
+    color: { p1: ["Ruby"], p2: ["Sapphire"], p3: ["Emerald"], p4: ["Amber"] }, lore: zero(), wins: zero(), log: [], won: null, matchDone: false,
+    match: null, history: [], recent: [] });
+  let s;
+  try { s = { ...blank(), ...JSON.parse(localStorage.getItem(KEY) || "{}") }; } catch { s = blank(); }
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* private mode */ } };
+  const t = () => L[s.lang] || L.pt;
+  const esc = (x) => String(x ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const seats = () => SEATS.slice(0, s.players);
+  const n = (seat) => +seat.slice(1);
+  const nm = (seat) => seat === "p1" ? t().you : s.players === 2 ? t().opp : `${t().player} ${n(seat)}`;
+  const deckText = (d) => d && (d.name || (d.inks || []).join("/")) || t().noDeck;
+  const swatch = (inks) => `<span class="sw">${(inks || []).map((i) => `<b style="background:${HEX[i]}"></b>`).join("")}</span>`;
+  const winsNeeded = () => Math.ceil(s.bestOf / 2);
+  // ---------- build the table ----------
+  const SPARK = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5c.6 5.6 4.9 9.9 10.5 10.5-5.6.6-9.9 4.9-10.5 10.5C11.4 16.9 7.1 12.6 1.5 12 7.1 11.4 11.4 7.1 12 1.5z" fill="currentColor"/></svg>`;
+  function build() {
+    const table = $("table");
+    table.className = `table n${s.players}`;
+    const order = s.players === 3 ? ["p2", "p1", "p3"] : s.players === 4 ? ["p3", "p4", "p1", "p2"] : s.players === 2 ? ["p2", "p1"] : ["p1"];
+    // 3 players: p2 across the top facing away, you (p1) bottom-left, p3 bottom-right. 4: p3 p4 on top, you and p2 below.
+    const farSet = new Set(s.players === 2 ? ["p2"] : s.players === 3 ? ["p2"] : s.players === 4 ? ["p3", "p4"] : []);
+    table.innerHTML = order.map((seat) => {
+      const i = n(seat);
+      return `<section class="half ${s.flip && farSet.has(seat) ? "far" : ""}" id="h${i}" aria-label="${esc(nm(seat))}">
+        <canvas class="magic" id="m${i}" aria-hidden="true"></canvas>
+        <button type="button" class="zone minus" data-seat="${seat}" data-d="-1" aria-label="${esc(nm(seat))} −1">−</button>
+        <button type="button" class="zone plus" data-seat="${seat}" data-d="1" aria-label="${esc(nm(seat))} +1">+</button>
+        <div class="num"><output id="o${i}" aria-live="polite">0</output></div>
+        <span class="pips" id="w${i}"></span><span class="delta" id="d${i}"></span><span class="crown" id="c${i}"></span><span class="label" id="l${i}"></span>
+      </section>`;
+    }).join("") + `<div class="pill l" id="pillL"></div><div class="pill r" id="pillR"></div>
+      <div class="hub"><button type="button" class="menu-btn" id="menuBtn" aria-label="Menu">${SPARK}</button></div>`;
+    table.querySelectorAll(".zone").forEach((z) => z.addEventListener("click", () => tap(z.dataset.seat, +z.dataset.d)));
+    $("menuBtn").addEventListener("click", menu);
+    magic.reset();
+    render();
+  }
+
+  // Ink as light: each ink glows up from the player's edge of the pane, two inks from either side.
+  function paint(el, inks) {
+    const a = HEX[inks[0]] || HEX.Ruby, b = HEX[inks[1]] || null;
+    const glow = (c, x) => `radial-gradient(130% 95% at ${x} 102%, ${c}dd 0%, ${c}66 34%, ${c}20 60%, transparent 80%)`;
+    el.style.backgroundImage = b
+      ? `${glow(a, "15%")}, ${glow(b, "85%")}, linear-gradient(180deg, #161925, #0f1117)`
+      : `${glow(a, "50%")}, linear-gradient(180deg, #161925, #0f1117)`;
+  }
+  function render() {
+    for (const seat of seats()) {
+      const i = n(seat), h = $(`h${i}`);
+      if (!h) continue;
+      paint(h, s.color[seat]);
+      $(`o${i}`).textContent = s.lore[seat];
+      h.classList.toggle("won", s.won === seat);
+      $(`w${i}`).textContent = "●".repeat(s.wins[seat]);
+      const lastG = s.match?.games?.at(-1);
+      const title = s.won === seat ? t().wonGame : (s.won && lastG?.reason === "concede" && lastG.conceded_by === seat ? `${nm(seat)} ${t().conceded}` : "");
+      $(`c${i}`).innerHTML = s.won && !s.matchDone ? `${esc(title)}<small>${t().tapNext}</small>` : esc(title);
+      const m = s.match;
+      $(`l${i}`).textContent = s.decks && s.players === 2 ? (seat === "p1" ? (m?.me ? deckText(m.me) : "") : (m?.opp && !s.tour ? deckText(m.opp) : "")) : "";
+    }
+    if (s.players === 2) {
+      $("pillL").innerHTML = `<span>${s.wins.p2}</span><i>—</i><span>${s.wins.p1}</span>`;
+      $("pillR").innerHTML = `<span>${s.wins.p1}</span><i>—</i><span>${s.wins.p2}</span>`;
+    }
+    save();
+  }
+
+  // ---------- magic (canvas) ----------
+  const magic = (() => {
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)");
+    let panes = [], raf = 0, last = 0;
+    const rnd = (a, b) => a + Math.random() * (b - a);
+    function seed(w, h, inks) {
+      const cols = inks.map((i) => HEX[i] || HEX.Ruby);
+      const motes = Array.from({ length: Math.round(w * h / 9000) + 14 }, () => ({
+        x: rnd(0, w), y: rnd(h * .2, h * 1.1), r: rnd(.6, 2.2), v: rnd(6, 22), ph: rnd(0, 6.28), sw: rnd(4, 16), c: Math.random() < .3 ? "#e9d28a" : cols[(Math.random() * cols.length) | 0] }));
+      const wisps = Array.from({ length: 3 }, (_, k) => ({ c: cols[k % cols.length], x: rnd(.15, .85), ph: rnd(0, 6.28), sp: rnd(.08, .16), amp: rnd(.08, .2) }));
+      return { motes, wisps };
+    }
+    function reset() {
+      panes = seats().map((seat) => {
+        const cv = $(`m${n(seat)}`); if (!cv) return null;
+        const dpr = Math.min(2, devicePixelRatio || 1), r = cv.getBoundingClientRect();
+        cv.width = Math.max(1, r.width * dpr); cv.height = Math.max(1, r.height * dpr);
+        const ctx = cv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return { seat, cv, ctx, w: r.width, h: r.height, ...seed(r.width, r.height, s.color[seat]) };
+      }).filter(Boolean);
+      cancelAnimationFrame(raf); last = 0;
+      if (!s.magic) { panes.forEach((p) => p.ctx.clearRect(0, 0, p.w, p.h)); return; }
+      raf = requestAnimationFrame(frame);
+    }
+    function draw(p, time, dt) {
+      const { ctx, w, h } = p;
+      ctx.clearRect(0, 0, w, h);
+      ctx.globalCompositeOperation = "lighter";
+      // ink wisps: soft ribbons curling up from the player's edge
+      for (const k of p.wisps) {
+        const x0 = w * k.x, sway = Math.sin(time * k.sp + k.ph) * w * k.amp;
+        const g = ctx.createLinearGradient(0, h, 0, h * .15);
+        g.addColorStop(0, k.c + "16"); g.addColorStop(.6, k.c + "07"); g.addColorStop(1, k.c + "00");
+        ctx.strokeStyle = g; ctx.lineCap = "round";
+        const base = Math.min(w, h) * .22;
+        // several thinner passes on top of each other feather the edges into smoke instead of bands
+        for (const f of [1, .78, .56, .36, .2]) {
+          ctx.lineWidth = base * f;
+          ctx.beginPath(); ctx.moveTo(x0, h + 20);
+          ctx.bezierCurveTo(x0 + sway, h * .7, x0 - sway * 1.3, h * .45, x0 + sway * .6, h * .12);
+          ctx.stroke();
+        }
+      }
+      // motes: specks of light rising and twinkling
+      for (const m of p.motes) {
+        if (!reduce.matches) { m.y -= m.v * dt; if (m.y < -10) { m.y = h + rnd(0, 30); m.x = rnd(0, w); } }
+        const x = m.x + Math.sin(time * .6 + m.ph) * m.sw;
+        const fade = Math.min(1, Math.max(0, (m.y / h) * 1.4)) * (.55 + .45 * Math.sin(time * 2 + m.ph * 3));
+        const rad = m.r * 4;
+        const g = ctx.createRadialGradient(x, m.y, 0, x, m.y, rad);
+        g.addColorStop(0, m.c + "ff"); g.addColorStop(.25, m.c + "88"); g.addColorStop(1, m.c + "00");
+        ctx.globalAlpha = Math.max(0, fade) * .9; ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(x, m.y, rad, 0, 6.283); ctx.fill();
+      }
+      ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+    }
+    function frame(ts) {
+      raf = requestAnimationFrame(frame);
+      if (document.hidden) return;
+      if (ts - last < 33) return; // ~30 fps is plenty and kind to the battery
+      const dt = last ? Math.min(.1, (ts - last) / 1000) : 0; last = ts;
+      const time = ts / 1000;
+      for (const p of panes) draw(p, time, dt);
+      if (reduce.matches) { cancelAnimationFrame(raf); } // one still frame when motion is reduced
+    }
+    addEventListener("resize", () => { clearTimeout(reset.tm); reset.tm = setTimeout(reset, 150); });
+    return { reset };
+  })();
+
+  // ---------- tapping ----------
+  const pending = zero(), timers = {};
+  function clearDeltas() { for (const seat of SEATS) { pending[seat] = 0; clearTimeout(timers[seat]); $(`d${n(seat)}`)?.classList.remove("show"); } }
+  function resetLore() { s.lore = zero(); s.log = []; s.gameStart = null; clearDeltas(); }
+  function tap(seat, d) {
+    if (s.matchDone) return startMatch();
+    if (s.won) return nextGame();
+    const before = s.lore[seat], after = Math.max(0, before + d);
+    if (after === before) return;
+    s.lore[seat] = after;
+    s.gameStart ||= Date.now();
+    s.log.push({ seat, from: before, to: after, at: Date.now() });
+    if (s.log.length > 300) s.log.shift();
+    pending[seat] += after - before;
+    const del = $(`d${n(seat)}`);
+    del.textContent = `${pending[seat] > 0 ? "+" : ""}${pending[seat]}`; del.classList.add("show");
+    clearTimeout(timers[seat]);
+    timers[seat] = setTimeout(() => { pending[seat] = 0; del.classList.remove("show"); }, 1400);
+    const out = $(`o${n(seat)}`); out.classList.add("tick"); setTimeout(() => out.classList.remove("tick"), 90);
+    render();
+    if (after >= 20 && before < 20) award(seat, "lore");
+  }
+  function undo() {
+    const last = s.log.pop(); if (!last) return;
+    if (last.award) {
+      s.match.games.pop(); s.wins[last.seat] -= 1; s.won = null; s.matchDone = false;
+      if (last.auto) { const tp = s.log.pop(); if (tp) s.lore[tp.seat] = tp.from; }
+    } else s.lore[last.seat] = last.from;
+    render();
+  }
+
+  // ---------- sheets ----------
+  function open(html, wire) { $("card").innerHTML = html; $("sheet").hidden = false; wire?.(); }
+  function close() { $("sheet").hidden = true; $("card").innerHTML = ""; }
+  $("sheet").addEventListener("click", (e) => { if (e.target === $("sheet")) close(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("sheet").hidden) close(); });
+  function inkPicker(id, selected) {
+    return `<div class="inks" id="${id}">${INKS.map((i) => `<button type="button" class="dot" data-ink="${i}" aria-pressed="${selected.includes(i)}" aria-label="${i}" style="background:${HEX[i]}"></button>`).join("")}</div>
+      <div class="dot-label">${INKS.map((i) => `<span>${i}</span>`).join("")}</div>`;
+  }
+  function wireInks(id, sel, onChange) {
+    $(id).querySelectorAll(".dot").forEach((b) => b.onclick = () => {
+      const ink = b.dataset.ink, i = sel.indexOf(ink);
+      if (i >= 0) sel.splice(i, 1); else { sel.push(ink); if (sel.length > 2) sel.shift(); }
+      $(id).querySelectorAll(".dot").forEach((x) => x.setAttribute("aria-pressed", sel.includes(x.dataset.ink)));
+      onChange?.(sel);
+    });
+  }
+  function pickDeck(title, initial, cb) {
+    const sel = [...(initial?.inks || [])];
+    const recent = s.recent.slice(0, 8);
+    open(`<h2>${esc(title)}</h2>
+      <div class="grp"><span class="cap">${t().pick2}</span>${inkPicker("dk", sel)}</div>
+      <input class="txt" id="dn" maxlength="40" placeholder="${t().name}" value="${esc(initial?.name || "")}">
+      ${recent.length ? `<div class="grp"><span class="cap">${t().recent}</span><div class="chips">${recent.map((d, i) => `<button type="button" class="chip" data-r="${i}">${swatch(d.inks)}${esc(deckText(d))}</button>`).join("")}</div></div>` : ""}
+      <div class="row"><button type="button" class="btn quiet" id="dSkip">${t().skip}</button><button type="button" class="btn primary" id="dOk">${t().save}</button></div>`, () => {
+      wireInks("dk", sel);
+      document.querySelectorAll("[data-r]").forEach((b) => b.onclick = () => { const d = recent[+b.dataset.r]; close(); cb({ inks: [...d.inks], name: d.name || "" }); });
+      $("dSkip").onclick = () => { close(); cb(null); };
+      $("dOk").onclick = () => {
+        const d = { inks: [...sel], name: $("dn").value.trim() };
+        close();
+        if (!d.inks.length && !d.name) return cb(null);
+        s.recent = [d, ...s.recent.filter((r) => deckText(r) !== deckText(d) || r.inks.join() !== d.inks.join())].slice(0, 12);
+        cb(d);
+      };
+    });
+  }
+
+  // ---------- games and matches ----------
+  function startMatch() {
+    s.wins = zero(); resetLore(); s.won = null; s.matchDone = false;
+    s.match = { started: new Date().toISOString(), tour: s.tour, players: s.players, best_of: s.bestOf, me: s.match?.me || null, opp: null, games: [] };
+    render();
+    if (s.decks && s.players === 2) pickDeck(t().yourDeck, s.match.me, (d) => { s.match.me = d; if (d?.inks?.length) { s.color.p1 = d.inks; magic.reset(); } render(); });
+  }
+  // A game is marked the moment someone reaches 20, or from the menu (concession). No question asked.
+  function award(w, reason = "lore", concededBy = null) {
+    if (s.won || s.matchDone) return;
+    if (!s.match) s.match = { started: new Date().toISOString(), tour: s.tour, players: s.players, best_of: s.bestOf, me: null, opp: null, games: [] };
+    // Lore totals over time: public information (Tournament Rules §5.2), kept for the lore chart in Coach Review.
+    const track = s.log.filter((e) => !e.award && e.at && s.gameStart).slice(-400).map((e) => [Math.round((e.at - s.gameStart) / 1000), e.seat, e.to]);
+    const g = { winner: w, reason, conceded_by: concededBy, lore: { ...s.lore }, first: null, ended: new Date().toISOString(), track };
+    s.match.games.push(g);
+    s.wins[w] += 1; s.won = w;
+    s.log.push({ award: true, auto: reason === "lore", seat: w });
+    clearDeltas();
+    if (s.wins[w] >= winsNeeded()) { s.matchDone = true; render(); setTimeout(finishMatch, 700); return; }
+    render();
+    if (s.decks && !s.tour && s.players === 2) {
+      open(`<h2>${t().wentFirst}</h2><div class="row"><button type="button" class="btn" id="f1">${t().me1}</button><button type="button" class="btn" id="f2">${t().opp1}</button></div><button type="button" class="btn quiet" id="fs">${t().skip}</button>`, () => {
+        const go = (f) => { g.first = f; pickDeck(t().oppDeck, s.match.opp, (d) => { if (d) { s.match.opp = d; if (d.inks.length) { s.color.p2 = d.inks; magic.reset(); } } render(); }); };
+        $("f1").onclick = () => go("p1"); $("f2").onclick = () => go("p2"); $("fs").onclick = () => go(null);
+      });
+    }
+  }
+  function nextGame() { resetLore(); s.won = null; render(); }
+  function finishMatch() {
+    const done = () => {
+      const m = s.match;
+      s.history = [{ ...m, id: `lc-${Date.now().toString(36)}`, ended: new Date().toISOString(), result: seats().map((x) => s.wins[x]).join("-"), exported: false }, ...s.history].slice(0, 300);
+      render();
+      const score = seats().map((x) => s.wins[x]).join("–");
+      open(`<h2>${t().matchOver}: ${score}</h2>${s.decks && s.players === 2 ? `<p>${swatch(m.me?.inks)} ${esc(deckText(m.me))} ${t().vs} ${swatch(m.opp?.inks)} ${esc(deckText(m.opp))}</p>` : ""}
+        <div class="row"><button type="button" class="btn primary" id="nm">${t().newMatch}</button><button type="button" class="btn quiet" id="nc">${t().close}</button></div>${(SYNC || CLOUD) && s.players === 2 ? `<p class="sync" id="syncMsg" aria-live="polite"></p>` : ""}`, () => {
+        $("nm").onclick = () => { close(); startMatch(); }; $("nc").onclick = close;
+        sync();   // after the card exists, so it can show the result
+      });
+    };
+    if (s.decks && s.tour && s.players === 2) pickDeck(t().oppDeck, s.match.opp, (d) => { s.match.opp = d; if (d?.inks?.length) { s.color.p2 = d.inks; magic.reset(); } done(); });
+    else done();
+  }
+
+  // ---------- menu ----------
+  function menu() {
+    const two = s.players === 2, locked = s.won || s.matchDone;
+    const winBtns = two
+      ? `<div class="row"><button type="button" class="btn" id="mW2" ${locked ? "disabled" : ""}>${t().iConceded}</button><button type="button" class="btn" id="mW1" ${locked ? "disabled" : ""}>${t().oppConceded}</button></div>`
+      : s.players > 2 ? `<div class="grp"><span class="cap">${t().winnerIs}</span><div class="row">${seats().map((x) => `<button type="button" class="btn" data-win="${x}" ${locked ? "disabled" : ""}>${swatch(s.color[x])} ${esc(nm(x))}</button>`).join("")}</div></div>` : "";
+    const others = seats().filter((x) => x !== "p1");
+    open(`${others.map((x) => `<div class="grp"><span class="cap">${t().colors}: ${esc(nm(x))}</span>${inkPicker(`cp${n(x)}`, s.color[x])}</div>`).join("")}
+      ${winBtns}
+      <div class="row"><button type="button" class="btn" id="mUndo" ${s.log.length ? "" : "disabled"}>${t().undo}</button><button type="button" class="btn" id="mGame">${t().newGame}</button></div>
+      <div class="row"><button type="button" class="btn" id="mMatch">${t().newMatch}</button><button type="button" class="btn" id="mSet">${t().settings}</button></div>
+      <div class="grp"><span class="cap">${t().colors}: ${t().you}</span>${inkPicker("cp1", s.color.p1)}</div>
+      ${SYNC ? `<button type="button" class="btn quiet" id="mCoach">← ${t().backCoach}</button>` : ""}`, () => {
+      if (SYNC) $("mCoach").onclick = () => { close(); parent.postMessage({ type: "inkwell-close" }, "*"); };
+      for (const x of seats()) {
+        const sel = [...s.color[x]];
+        wireInks(`cp${n(x)}`, sel, (v) => { if (v.length) { s.color[x] = [...v]; render(); magic.reset(); } });
+      }
+      if (two) {
+        $("mW1").onclick = () => { close(); award("p1", "concede", "p2"); };   // opponent conceded
+        $("mW2").onclick = () => { close(); award("p2", "concede", "p1"); };   // I conceded
+      }
+      document.querySelectorAll("[data-win]").forEach((b) => b.onclick = () => { close(); award(b.dataset.win, "other"); });
+      $("mUndo").onclick = () => { undo(); close(); };
+      $("mGame").onclick = () => { if (s.matchDone) startMatch(); else nextGame(); close(); };
+      $("mMatch").onclick = () => open(`<h2>${t().confirmNew}</h2><div class="row"><button type="button" class="btn quiet" id="nn">${t().cancel}</button><button type="button" class="btn primary" id="ny">${t().yes}</button></div>`, () => {
+        $("ny").onclick = () => { close(); startMatch(); }; $("nn").onclick = close;
+      });
+      $("mSet").onclick = settings;
+    });
+  }
+
+  // ---------- settings ----------
+  const toggle = (id, label, sub, on) => `<button type="button" class="item" id="${id}" role="switch" aria-checked="${on}"><span>${label}${sub ? `<small>${sub}</small>` : ""}</span><span class="switch"></span></button>`;
+  const seg = (id, label, sub, opts, cur) => `<div class="item"><span>${label}${sub ? `<small>${sub}</small>` : ""}</span><span class="seg" id="${id}">${opts.map(([v, l]) => `<button type="button" data-v="${v}" aria-pressed="${v === cur}">${l}</button>`).join("")}</span></div>`;
+  function settings() {
+    open(`<h2>${t().settings}</h2>
+      <div class="list">
+        ${seg("sPlayers", t().players, t().playersSub, [[1, "1"], [2, "2"], [3, "3"], [4, "4"]], s.players)}
+        ${seg("sBest", t().bestOf, "", [[1, "Bo1"], [3, "Bo3"], [5, "Bo5"]], s.bestOf)}
+        ${toggle("sMagic", t().magic, t().magicSub, s.magic)}
+        ${s.players > 1 ? toggle("sFlip", t().flip, "", s.flip) : ""}
+      </div>
+      <div class="list">
+        ${toggle("sDecks", t().decks, t().decksSub, s.decks)}
+        ${s.decks ? toggle("sTour", t().tour, t().tourSub, s.tour) : ""}
+        <button type="button" class="item" id="sLang"><span>${t().lang}</span><span>${t().langName}</span></button>
+      </div>
+      <div class="list">
+        <button type="button" class="item" id="sHist"><span>${t().history}<small>${s.history.length} ${t().matches.toLowerCase()}</small></span><span>›</span></button>
+        <button type="button" class="item" id="sJudge"><span>${t().judge}</span><span>›</span></button>
+        ${CLOUD ? `<button type="button" class="item" id="sCloud"><span>${t().account}<small>${cloudLine()}</small></span><span>›</span></button>` : ""}
+      </div>
+      <button type="button" class="btn" id="sClose">${t().close}</button>`, () => {
+      $("sPlayers").querySelectorAll("button").forEach((b) => b.onclick = () => {
+        const v = +b.dataset.v; if (v === s.players) return;
+        s.players = v; s.wins = zero(); resetLore(); s.won = null; s.matchDone = false; s.match = null;
+        build(); settings();
+      });
+      $("sBest").querySelectorAll("button").forEach((b) => b.onclick = () => {
+        s.bestOf = +b.dataset.v; if (s.match) s.match.best_of = s.bestOf;
+        if (!s.won && seats().some((x) => s.wins[x] >= winsNeeded())) { s.matchDone = true; }
+        render(); settings();
+      });
+      if (CLOUD) $("sCloud").onclick = () => account();
+      $("sMagic").onclick = () => { s.magic = !s.magic; save(); magic.reset(); settings(); };
+      if ($("sFlip")) $("sFlip").onclick = () => { s.flip = !s.flip; build(); settings(); };
+      $("sDecks").onclick = () => { s.decks = !s.decks; render(); if (s.decks && s.players === 2 && !s.match?.me) { close(); startMatch(); } else settings(); };
+      if ($("sTour")) $("sTour").onclick = () => { s.tour = !s.tour; render(); settings(); };
+      $("sLang").onclick = () => { s.lang = s.lang === "pt" ? "en" : "pt"; build(); settings(); };
+      $("sHist").onclick = history;
+      $("sJudge").onclick = () => open(JUDGE + `<button type="button" class="btn" id="jc">${t().close}</button>`, () => { $("jc").onclick = settings; });
+      $("sClose").onclick = close;
+    });
+  }
+
+  // ---------- history and export ----------
+  // Game-log 1.0 (packages/gamelog): one log per game, lore totals and result only, no turns. 2-player matches only.
+  function toLogs(m) {
+    if ((m.players || 2) !== 2) return [];
+    return m.games.map((g, i) => ({
+      format_version: "1.0", game_id: `${m.id}-g${i + 1}`, source: "lore_counter",
+      source_ref: { app: "inkwell-lore-counter 3.0", match: m.id, match_result: m.result, best_of: m.best_of || 3 },
+      played_at: g.ended || m.ended, game_format: "core",
+      event: { kind: m.tour === false ? "casual" : "other", game_in_match: i + 1 },
+      players: [
+        { seat: "p1", name: t().you, is_me: true, ...(g.first ? { went_first: g.first === "p1" } : {}),
+          deck: { ...(m.me?.name ? { name: m.me.name } : {}), inks: m.me?.inks || [], list_source: "unknown" } },
+        { seat: "p2", name: t().opp, is_me: false, ...(g.first ? { went_first: g.first === "p2" } : {}),
+          deck: { archetype: m.opp?.name || m.opp?.inks?.length ? deckText(m.opp) : "Unknown", inks: m.opp?.inks || [], list_source: "unknown" } },
+      ],
+      turns: [],
+      ...(g.track?.length ? { lore_track: g.track.filter((e) => e[1] === "p1" || e[1] === "p2").map(([tt, seat, lore]) => ({ t: tt, seat, lore: Math.min(99, lore) })) } : {}),
+      result: { winner: g.winner, reason: g.reason === "concede" ? "concede" : g.reason === "lore" ? "lore" : "other", final_lore: { p1: g.lore.p1, p2: g.lore.p2 } },
+      ...(g.conceded_by ? { notes: `${g.conceded_by === "p1" ? "I" : "Opponent"} conceded` } : {}),
+      visibility: "private",
+    }));
+  }
+  function historyText() {
+    return s.history.map((m) => `${m.ended.slice(0, 10)}  Bo${m.best_of || 3}  ${(m.players || 2) === 2 ? `${deckText(m.me)} ${t().vs} ${deckText(m.opp)}  ` : `${m.players} ${t().players.toLowerCase()}  `}${m.result}` +
+      m.games.map((g, i) => `\n   ${t().game} ${i + 1}: ${(m.players || 2) === 2 ? (g.winner === "p1" ? t().you : t().opp) : `${t().player} ${n(g.winner)}`} ${t().won} (${g.reason === "concede" ? t().byConcede : g.reason === "lore" ? t().byLore : "–"})${g.first ? ` ${g.first === "p1" ? t().me1 : t().opp1}` : ""}`).join("")).join("\n");
+  }
+  function history() {
+    const by = new Map();
+    for (const m of s.history.filter((x) => (x.players || 2) === 2)) {
+      const k = deckText(m.opp), r = by.get(k) || { inks: m.opp?.inks, m: 0, mw: 0, g: 0, gw: 0 };
+      const [a, b] = m.result.split("-").map(Number);
+      r.m += 1; r.mw += a > b ? 1 : 0;
+      for (const g of m.games) { r.g += 1; r.gw += g.winner === "p1" ? 1 : 0; }
+      by.set(k, r);
+    }
+    const rows = [...by.entries()].sort((a, b) => b[1].m - a[1].m);
+    const fresh = s.history.filter((m) => !m.exported && (m.players || 2) === 2);
+    open(`<h2>${t().history}</h2>
+      ${rows.length ? `<div class="grp"><span class="cap">${t().winRate}</span><table class="stats"><tr><th>${t().oppDeck}</th><th class="n">${t().matches}</th><th class="n">${t().games}</th><th class="n">${t().winPct}</th></tr>
+        ${rows.map(([k, r]) => `<tr><td>${swatch(r.inks)} ${esc(k)}</td><td class="n">${r.mw}/${r.m}</td><td class="n">${r.gw}/${r.g}</td><td class="n">${Math.round(100 * r.mw / r.m)}%</td></tr>`).join("")}</table></div>` : `<p>${t().none}</p>`}
+      <button type="button" class="btn primary" id="hCoach" ${fresh.length ? "" : "disabled"}>${CLOUD ? t().toCloud : SYNC ? t().toCoachSync : t().toCoach} (${fresh.reduce((k, m) => k + m.games.length, 0)} ${t().toCoachSub})</button>
+      <textarea class="txt" id="hx" rows="6" readonly hidden></textarea><p id="hs" aria-live="polite"></p>
+      <div class="row"><button type="button" class="btn" id="hCopy" ${s.history.length ? "" : "disabled"}>${t().copy}</button><button type="button" class="btn quiet" id="hClear" ${s.history.length ? "" : "disabled"}>${t().clear}</button></div>
+      <button type="button" class="btn" id="hBack">${t().close}</button>`, () => {
+      const copyOut = async (text, ok) => {
+        try { await navigator.clipboard.writeText(text); $("hs").textContent = ok; return true; }
+        catch { $("hx").hidden = false; $("hx").value = text; $("hx").select(); $("hs").textContent = t().copyFail; return false; }
+      };
+      $("hCoach").onclick = async () => {
+        if (!fresh.length) { $("hs").textContent = t().allSent; return; }
+        if (SYNC || CLOUD) { $("hs").textContent = "…"; sync(true); return; }
+        if (await copyOut(JSON.stringify(fresh.flatMap(toLogs)), t().sentHow)) { fresh.forEach((m) => { m.exported = true; }); save(); $("hCoach").disabled = true; }
+      };
+      $("hCopy").onclick = () => copyOut(historyText(), t().copied);
+      $("hClear").onclick = () => {
+        if ($("hClear").dataset.c !== "1") { $("hClear").dataset.c = "1"; $("hClear").textContent = `${t().clear}?`; return; }
+        s.history = []; save(); history(); $("hs").textContent = t().cleared;
+      };
+      $("hBack").onclick = settings;
+    });
+  }
+
+  // ---------- Coach Review sync (only inside Coach Review) ----------
+  // After a match ends, its 2-player games go to the parent page, which stores them in the private game list.
+  // A match stays "not exported" until the parent confirms, so nothing is lost if saving fails; it retries on next start.
+  const unsent = () => s.history.filter((m) => !m.exported && (m.players || 2) === 2);
+  const say = (text) => { const el = $("syncMsg") || $("hs") || $("acMsg"); if (el) el.textContent = text; };
+  let sending = false;
+  async function sync(manual) {
+    const fresh = unsent();
+    if (!fresh.length) return;
+    if (SYNC) { parent.postMessage({ type: "inkwell-games", matches: fresh.map((m) => m.id), logs: fresh.flatMap(toLogs) }, "*"); return; }
+    if (!CLOUD || sending) return;
+    if (!CLOUD.status().signedIn) { if (manual) account(); else say(t().savedHere); return; }
+    if (navigator.onLine === false) { say(t().offlineWait); return; }
+    sending = true;
+    try {
+      if (await CLOUD.send(fresh.flatMap(toLogs))) {
+        const ids = new Set(fresh.map((m) => m.id));
+        s.history.forEach((m) => { if (ids.has(m.id)) m.exported = true; }); save();
+        say(`✓ ${t().sentCloud}`);
+        if ($("hCoach")) $("hCoach").disabled = true;
+        if ($("acSend")) $("acSend").disabled = true;
+      } else say(t().failCloud);
+    } catch { say(navigator.onLine === false ? t().offlineWait : t().failCloud); }
+    finally { sending = false; }
+  }
+  function cloudLine() {
+    const st = CLOUD.status(), k = unsent().reduce((n, m) => n + m.games.length, 0);
+    return st.signedIn ? `${esc(st.email || "")} · ${k ? `${k} ${t().toSend}` : t().upToDate}` : t().noAccount;
+  }
+  function account(step, email) {
+    const st = CLOUD.status();
+    const back = `<p class="sync" id="acMsg" aria-live="polite"></p><button type="button" class="btn" id="acBack">${t().close}</button>`;
+    if (st.signedIn) {
+      open(`<h2>${t().account}</h2><p>${t().signedAs} <b>${esc(st.email || "")}</b></p><p class="muted">${cloudLine()}</p>
+        <div class="row"><button type="button" class="btn primary" id="acSend" ${unsent().length ? "" : "disabled"}>${t().sendNow}</button><button type="button" class="btn quiet" id="acOut">${t().signOut}</button></div>${back}`, () => {
+        $("acSend").onclick = () => { $("acMsg").textContent = "…"; sync(true); };
+        $("acOut").onclick = () => { CLOUD.signOut(); account(); };
+        $("acBack").onclick = settings;
+      });
+    } else if (step === "code") {
+      open(`<h2>${t().account}</h2><p>${t().codeSent} <b>${esc(email)}</b>.</p>
+        <input class="txt" id="acCode" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="${t().codePh}">
+        <div class="row"><button type="button" class="btn primary" id="acIn">${t().signIn}</button><button type="button" class="btn quiet" id="acRe">${t().sendCode}</button></div>${back}`, () => {
+        $("acIn").onclick = async () => {
+          $("acMsg").textContent = "…";
+          try { await CLOUD.verify(email, $("acCode").value); account(); setTimeout(() => sync(), 200); }
+          catch { $("acMsg").textContent = t().badCode; }
+        };
+        $("acRe").onclick = () => account();
+        $("acBack").onclick = settings;
+      });
+    } else {
+      open(`<h2>${t().account}</h2><p class="muted">${t().accountSub}</p>
+        <input class="txt" id="acEmail" type="email" autocomplete="email" placeholder="${t().emailPh}">
+        <button type="button" class="btn primary" id="acCodeBtn">${t().sendCode}</button>${back}`, () => {
+        $("acCodeBtn").onclick = async () => {
+          const e = $("acEmail").value.trim();
+          if (!/^\S+@\S+\.\S+$/.test(e)) { $("acMsg").textContent = t().badEmail; return; }
+          $("acMsg").textContent = "…";
+          try { await CLOUD.requestCode(e); account("code", e); } catch { $("acMsg").textContent = t().badEmail; }
+        };
+        $("acBack").onclick = settings;
+      });
+    }
+  }
+  if (CLOUD) {
+    window.addEventListener("online", () => sync());
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") sync(); });
+  }
+  if (SYNC) window.addEventListener("message", (e) => {
+    if (e.source !== parent || !e.data) return;
+    const msg = $("syncMsg") || $("hs");
+    if (e.data.type === "inkwell-saved") {
+      const ids = new Set(e.data.matches || []);
+      s.history.forEach((m) => { if (ids.has(m.id)) m.exported = true; }); save();
+      if (msg) msg.textContent = `✓ ${t().synced}`;
+      if ($("hCoach")) $("hCoach").disabled = true;
+    } else if (e.data.type === "inkwell-save-failed" && msg) msg.textContent = t().syncWait;
+  });
+
+  const wake = () => { try { navigator.wakeLock?.request("screen").catch(() => {}); } catch { /* not allowed */ } };
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") wake(); });
+  wake();
+  build();
+  setTimeout(sync, 1500);   // retry anything a previous session couldn't save
+})();
+</script>
+
+<script>
+if ("serviceWorker" in navigator && location.protocol !== "file:") {
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+}
+</script>
+</body>
+</html>

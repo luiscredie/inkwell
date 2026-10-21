@@ -91,6 +91,8 @@ jobs:
         run: python -m unittest tools/test_build_pages_artifact.py
       - name: Release validator against site/
         run: python tools/validate_release.py --root site --quick
+      - name: Site pages match their sources (src/site)
+        run: python tools/build_site_pages.py --check
   smoke:
     runs-on: ubuntu-latest
     steps:
