@@ -1,13 +1,21 @@
 # Site sources
 
-Sources for the new site pages that live under `site/`.
+Everything the new site's pages are built from. Edit here, never the published `site/<page>/index.html`.
 
-| File | Used by |
+| Source | Published page |
 | --- | --- |
-| `cloud.js` | sign-in and REST calls to Supabase (one session for the whole site) |
-| `shell.js` | top bar, tab bar, account menu and the sign-in sheet |
-| `decks/decks.template.html` | `/decks/` — build with `python tools/build_site_decks.py` |
+| `feed/feed.template.html` | `site/feed/` — Início |
+| `colecao/colecao.template.html` | `site/colecao/` — Coleção |
+| `decks/decks.template.html` | `site/decks/` — Decks and the Consultor |
+| `coach/coach.template.html` | `site/coach/` — Jogos (Coach Review) |
+| `trades/trades.template.html` | `site/trades/` — Trocas, empréstimos e Mural |
+| `counter/counter.template.html` | `site/counter/` — Lore Counter (offline) |
+| `cloud.js` | sign-in and REST calls, inlined in every page above |
+| `shell.js` | top bar, tab bar, account menu, sign-in sheet (all pages but the counter) |
 
-`cloud.js` and `shell.js` are the same code that is inlined in `site/feed/`, `site/colecao/`, `site/trades/` and `site/coach/`.
-Those four pages were built from sources kept outside this repo; when one of them changes, edit the built page and keep
-these two files in step.
+Build all pages (also after a card catalog update, to refresh the embedded card index):
+
+    python tools/build_site_pages.py
+
+The release checks run `python tools/build_site_pages.py --check`, which fails when a published page
+no longer matches its source. Browser tests for Decks: `tools/decks.spec.mjs`.

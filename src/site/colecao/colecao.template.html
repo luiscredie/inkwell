@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Coleção · Inkwell</title>
+<meta name="description" content="Sua coleção de Disney Lorcana: cartas, valor e empréstimos.">
+<meta name="theme-color" content="#13102a">
+<link rel="icon" href="../ink/icon-192.png">
+<link rel="apple-touch-icon" href="../ink/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="../ui/tokens.css"><script>document.documentElement.dataset.theme="noite";</script>
+</head>
+<body>
+<script>window.INKWELL_CLOUD_CONFIG = {"url": "https://sorefaetiaebmjploanp.supabase.co", "key": "sb_publishable_RkAWW-ENz70CXA6_QV7aHw_MpfD7Gn2", "redirect": "https://luiscredie.github.io/inkwell/colecao/"};
+/*@CLOUD_JS@*/</script>
+<style>
+/* layout only — components come from ../ui/tokens.css (design v2) */
+.cc-name small { display: block; color: var(--text-2); font-weight: 400; }
+#cardSheet .big { width: 176px; margin: 0 auto var(--sp-4); border-radius: 12px; }
+.load-more { display: flex; justify-content: center; margin: var(--sp-6) 0 0; }
+</style>
+
+<main class="page" id="page">
+  <div class="page-head"><div><h1 id="title">Coleção</h1><p class="sub" id="sub"></p></div><div class="actions" id="headActions"></div></div>
+  <div id="app"></div>
+</main>
+<dialog class="sheet" id="filterSheet" aria-labelledby="fT"></dialog>
+<dialog class="sheet" id="cardSheet" aria-labelledby="cT"></dialog>
+<div class="toast-host"><div class="toast" id="toast" role="status" hidden></div></div>
+
+<script>
+const CARD_INDEX = /*@CARD_INDEX@*/;
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  let lang = "pt";
+  try { lang = localStorage.getItem("inkwell-lang") || ((navigator.language || "pt").toLowerCase().startsWith("en") ? "en" : "pt"); } catch { /* */ }
+  const PT = {
+    "Collection": "Coleção", "Build decks": "Montar decks", "Loading…": "Carregando…",
+    "Sign in to see your collection": "Entre para ver sua coleção", "Use your e-mail. We send a 6-digit code, no password.": "Use seu e-mail. Mandamos um código de 6 dígitos, sem senha.", "Sign in": "Entrar",
+    "Couldn't load your collection.": "Não foi possível carregar sua coleção.", "Check your connection and try again.": "Confira a internet e tente de novo.", "Try again": "Tentar de novo",
+    "Cards": "Cartas", "Value": "Valor", "Lent out": "Emprestadas", "Search cards": "Buscar carta", "Filters": "Filtros", "{n} active": "{n} ativos",
+    "View": "Visualização", "Grid": "Grade", "List": "Lista", "Sort": "Ordenar", "Most valuable": "Mais valiosas", "Name": "Nome", "Set and number": "Set e número", "Copies": "Quantidade", "Cost": "Custo",
+    "Ink": "Tinta", "Set": "Set", "Rarity": "Raridade", "Only cards I own": "Só as que tenho", "Only foil": "Só foil", "Only lent out": "Só emprestadas", "Your cards that are with friends": "Cartas suas que estão com amigos",
+    "Clear": "Limpar", "Show {n} cards": "Ver {n} cartas", "Remove filter {f}": "Remover filtro {f}", "Close": "Fechar",
+    "No cards match these filters.": "Nenhuma carta com esses filtros.", "Clear filters": "Limpar filtros",
+    "Your collection is empty": "Sua coleção está vazia", "Turn off \"Only cards I own\" to add cards with +, or import your collection in Inkwell.": "Desligue \"Só as que tenho\" para adicionar cartas com +, ou importe sua coleção no Inkwell.",
+    "Show more": "Mostrar mais", "{n} cards": "{n} cartas", "Prices: Liga Lorcana, {d}": "Preços da Liga Lorcana de {d}",
+    "Normal": "Normal", "Foil": "Foil", "{n} free": "{n} livre(s)", "{n} lent": "{n} emprestada(s)", "Value of your {n}": "Valor das suas {n}",
+    "Remove one {k}": "Tirar uma {k}", "Add one {k}": "Pôr uma {k}", "normal": "normal", "foil": "foil", "Lent": "Emprestadas",
+    "Changes save right away. You can undo from the notice at the bottom.": "As mudanças salvam na hora. Dá para desfazer pelo aviso que aparece embaixo.",
+    "Post on the board": "Anunciar no Mural", "See": "Ver", "until {d}": "devolve até {d}", "a friend": "um amigo",
+    "Collection updated": "Coleção atualizada", "Undo": "Desfazer", "Couldn't save. Try again.": "Não foi possível salvar. Tente de novo.",
+    "{n} normal": "{n} normal(is)", "{n} foil": "{n} foil", "lent": "emprestada", "cost {c}": "custo {c}", "inkable": "inkável", "not inkable": "não inkável",
+    "Common": "Comum", "Uncommon": "Incomum", "Rare": "Rara", "Super rare": "Super rara", "Legendary": "Lendária", "Enchanted": "Encantada", "Promo": "Promo", "Epic": "Épica", "Iconic": "Icônica",
+  };
+  const fill = (s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)) : s);
+  const Tx = (en, v) => fill(lang === "pt" && en in PT ? PT[en] : en, v);
+  const LOC = lang === "pt" ? "pt-BR" : "en";
+  const money = (v) => (v ?? 0).toLocaleString(LOC, { style: "currency", currency: "BRL" });
+  const moneySplit = (v) => { const s = money(v), i = s.lastIndexOf(lang === "pt" ? "," : "."); return i > 0 ? `${esc(s.slice(0, i))}<small>${esc(s.slice(i))}</small>` : esc(s); };
+  const INKS = ["Amber", "Amethyst", "Emerald", "Ruby", "Sapphire", "Steel"];
+  const RAR = [["C", "Common"], ["U", "Uncommon"], ["R", "Rare"], ["SR", "Super rare"], ["L", "Legendary"], ["E", "Enchanted"], ["EP", "Epic"], ["I", "Iconic"], ["P", "Promo"]];
+  const rarName = (r) => Tx((RAR.find(([k]) => k === r) || [r, r])[1] || "");
+  const norm = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const inksOf = (c) => String(c.ink || "").split(/[,\/]\s*/).map((x) => x.trim()).filter(Boolean);
+  const inkDots = (c) => `<span class="inks">${inksOf(c).slice(0, 2).map((i) => `<i data-ink="${i.toLowerCase()}"></i>`).join("")}</span>`;
+  const split = (name) => { const i = name.indexOf(" - "); return i > 0 ? [name.slice(0, i), name.slice(i + 3)] : [name, ""]; };
+
+  // ---------- catalog ----------
+  const SETS = CARD_INDEX?.sets || [];
+  const setName = (code) => { const s = SETS.find((x) => x.code === code); return s ? (lang === "pt" && s.name_pt) || s.name_en || code : code; };
+  const CARDS = (CARD_INDEX?.cards || []).map(([id, name, cost, type, ink, rarity, set, num, img]) => ({ id, name, cost, type, ink, rarity, set, num, img, k: norm(`${name} ${set} ${num}`) }));
+  const BY = new Map(CARDS.map((c) => [c.id, c]));
+  const setOrder = new Map(SETS.map((s, i) => [s.code, i]));
+  const numOf = (c) => parseInt(String(c.num).replace(/\D+/g, ""), 10) || 0;
+  let PRICES = {}, pricesDate = null;
+  const priceOf = (id, foil) => { const p = PRICES[id]; if (!p) return null; return foil ? (p.fl ?? p.f ?? p.nl ?? p.n ?? null) : (p.nl ?? p.n ?? null); };
+  const imgUrl = (c) => (c.img ? `../lorcana-card-images/${encodeURI(c.img).replace(/'/g, "%27")}` : "");
+  const thumb = (c, cls = "", foil = false) => `<span class="thumb ${cls}${foil ? " foil" : ""}" data-ink="${(inksOf(c)[0] || "steel").toLowerCase()}">${c.img ? `<img src="${imgUrl(c)}" alt="" loading="lazy" decoding="async" onerror="this.remove()">` : ""}`;
+
+  // ---------- state ----------
+  const CLOUD = window.INKWELL_CLOUD;
+  const me = CLOUD?.user();
+  let profiles = [], profileName = null, lentN = new Map(), lentF = new Map(), lentWho = new Map();
+  const VIEW_KEY = "inkwell-coll-view-v2";
+  let v = { q: "", inks: [], sets: [], rar: [], cost: [], owned: true, foil: false, lent: false, sort: "value", view: "grid" };
+  try { v = { ...v, ...JSON.parse(localStorage.getItem(VIEW_KEY) || "{}") }; } catch { /* */ }
+  let shown = 120;
+  const save = () => { try { localStorage.setItem(VIEW_KEY, JSON.stringify(v)); } catch { /* */ } };
+  const prof = () => profiles.find((p) => p.profile === profileName) || profiles[0] || null;
+  const coll = () => prof()?.collection || {};
+  const owned = (id) => { const e = coll()[id] || {}; return { n: +e.n || 0, f: +e.f || 0 }; };
+  const lentOf = (id) => (lentN.get(id) || 0) + (lentF.get(id) || 0);
+
+  async function loadAll() {
+    const [p, pr, l, ul] = await Promise.all([
+      CLOUD.api("inkwell_profiles?select=profile,updated_at,collection:data->collection&order=updated_at.desc"),
+      fetch(window.INKWELL_PRICES_URL || "../data/prices.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      CLOUD.api("loans?select=direction,person,items,due_on,returned_at&returned_at=is.null").catch(() => []),
+      CLOUD.api("user_loans?select=lender,borrower,items,status,due_on&status=in.(accepted,delivered)").catch(() => []),
+    ]);
+    profiles = (p || []).map((x) => ({ ...x, collection: x.collection && typeof x.collection === "object" ? x.collection : {} }));
+    if (pr?.prices) { PRICES = pr.prices; pricesDate = pr.generated_at; }
+    lentN = new Map(); lentF = new Map(); lentWho = new Map();
+    const names = new Map();
+    const mineToFriends = (ul || []).filter((x) => x.lender === me.id);
+    const ids = [...new Set(mineToFriends.map((x) => x.borrower))];
+    if (ids.length) for (const r of (await CLOUD.api(`profiles?user_id=in.(${ids.join(",")})&select=user_id,display_name`).catch(() => [])) || []) names.set(r.user_id, r.display_name);
+    const add = (items, who, due, friend) => { for (const e of items || []) {
+      const m = e.foil ? lentF : lentN; m.set(e.card_id, (m.get(e.card_id) || 0) + (+e.qty || 0));
+      (lentWho.get(e.card_id) || lentWho.set(e.card_id, []).get(e.card_id)).push({ who, qty: +e.qty || 0, foil: !!e.foil, due, friend });
+    } };
+    for (const x of l || []) if (x.direction === "lent") add(x.items, x.person, x.due_on, false);
+    for (const x of mineToFriends) add(x.items, names.get(x.borrower) || Tx("a friend"), x.due_on, true);
+    try { profileName = localStorage.getItem("inkwell-trades-profile"); } catch { /* */ }
+    if (!profiles.some((x) => x.profile === profileName)) profileName = profiles.slice().sort((a, b) => Object.keys(b.collection).length - Object.keys(a.collection).length)[0]?.profile || null;
+  }
+
+  // ---------- filtering ----------
+  const activeCount = () => v.inks.length + v.sets.length + v.rar.length + v.cost.length + (v.foil ? 1 : 0) + (v.lent ? 1 : 0) + (v.owned ? 0 : 0);
+  function filtered(f = v) {
+    const words = norm(f.q).split(" ").filter(Boolean), c = coll();
+    const tot = (x) => (+c[x.id]?.n || 0) + (+c[x.id]?.f || 0);
+    const rows = CARDS.filter((x) => (!f.sets.length || f.sets.includes(x.set)) && (!f.inks.length || inksOf(x).some((i) => f.inks.includes(i)))
+      && (!f.rar.length || f.rar.includes(x.rarity)) && (!f.cost.length || f.cost.includes(Math.min(8, +x.cost || 0)))
+      && (!f.owned || tot(x) > 0) && (!f.foil || (+c[x.id]?.f || 0) > 0) && (!f.lent || lentOf(x.id) > 0) && (!words.length || words.every((w) => x.k.includes(w))));
+    const val = (x) => (priceOf(x.id) || 0) * (+c[x.id]?.n || 0) + (priceOf(x.id, true) || 0) * (+c[x.id]?.f || 0);
+    const bySet = (a, b) => (setOrder.get(a.set) ?? 999) - (setOrder.get(b.set) ?? 999) || numOf(a) - numOf(b) || a.id.localeCompare(b.id);
+    const unit = (x) => priceOf(x.id) || 0;
+    rows.sort(f.sort === "name" ? (a, b) => a.name.localeCompare(b.name) : f.sort === "copies" ? (a, b) => tot(b) - tot(a) || bySet(a, b)
+      : f.sort === "cost" ? (a, b) => (+a.cost || 0) - (+b.cost || 0) || a.name.localeCompare(b.name) : f.sort === "set" ? bySet
+      : f.owned ? (a, b) => val(b) - val(a) || bySet(a, b) : (a, b) => unit(b) - unit(a) || bySet(a, b));
+    return rows;
+  }
+
+  // ---------- rendering ----------
+  function stats() {
+    let cards = 0, value = 0;
+    for (const [id, e] of Object.entries(coll())) { const n = +e.n || 0, f = +e.f || 0; cards += n + f; value += (priceOf(id) || 0) * n + (priceOf(id, true) || 0) * f; }
+    const lent = [...lentN.values(), ...lentF.values()].reduce((a, b) => a + b, 0);
+    return `<div class="stats-row three" data-testid="coll-stats"><div class="stat"><b>${cards.toLocaleString(LOC)}</b><span>${Tx("Cards")}</span></div>
+      <div class="stat"><b class="money">${moneySplit(value)}</b><span>${Tx("Value")}</span></div>
+      <div class="stat"><b>${lent.toLocaleString(LOC)}</b><span>${Tx("Lent out")}</span></div></div>`;
+  }
+  const qtyText = (o, ln) => [o.n ? Tx("{n} normal", { n: o.n }) : "", o.f ? Tx("{n} foil", { n: o.f }) : "", ln ? Tx("{n} lent", { n: ln }) : ""].filter(Boolean).join(" · ");
+  function gridCard(c) {
+    const o = owned(c.id), t = o.n + o.f, ln = lentOf(c.id), p = priceOf(c.id), [a, b] = split(c.name);
+    return `<button type="button" class="ccard ${t ? "" : "none"}" data-card="${esc(c.id)}">${thumb(c, "", o.f > 0)}
+        ${t ? `<span class="pill">×${t}</span>` : ""}<span class="flags">${o.f ? `<span class="tag foil">foil</span>` : ""}${ln ? `<span class="tag info">${esc(Tx("{n} lent", { n: ln }))}</span>` : ""}</span></span>
+      <span class="nm">${esc(a)}${b ? `<small>${esc(b)}</small>` : ""}</span>
+      <span class="meta"><span>${esc(lang === "pt" ? "nº " : "#")}${esc(c.num)}</span><b>${p != null ? esc(money(p)) : "–"}</b></span></button>`;
+  }
+  function listRow(c) {
+    const o = owned(c.id), ln = lentOf(c.id), p = priceOf(c.id);
+    return `<button type="button" class="list-row" data-card="${esc(c.id)}">${thumb(c, "sm", o.f > 0)}</span>
+      <span class="t"><span>${esc(split(c.name).join(" · ").replace(/ · $/, ""))}</span><span class="meta">${esc(setName(c.set))} · nº ${esc(c.num)}</span>${o.n + o.f || ln ? `<span class="meta">${esc(qtyText(o, ln))}</span>` : ""}</span>
+      <span class="trail"><span class="money">${p != null ? esc(money(p)) : "–"}</span>${ln ? `<span class="tag info">${Tx("lent")}</span>` : ""}</span></button>`;
+  }
+  function chips() {
+    const out = [];
+    for (const i of v.inks) out.push([`ink:${i}`, `<span class="inks"><i data-ink="${i.toLowerCase()}"></i></span>${esc(i)}`, i]);
+    for (const s of v.sets) out.push([`set:${s}`, esc(setName(s)), setName(s)]);
+    for (const r of v.rar) out.push([`rar:${r}`, esc(rarName(r)), rarName(r)]);
+    for (const c of v.cost) out.push([`cost:${c}`, `${Tx("Cost")} ${c === 8 ? "8+" : c}`, `${Tx("Cost")} ${c}`]);
+    if (v.foil) out.push(["foil", Tx("Only foil"), Tx("Only foil")]);
+    if (v.lent) out.push(["lent", Tx("Only lent out"), Tx("Only lent out")]);
+    return out.map(([k, html, label]) => `<button type="button" class="chipbtn x" data-unchip="${esc(k)}" aria-label="${esc(Tx("Remove filter {f}", { f: label }))}">${html}</button>`).join("");
+  }
+  function render() {
+    const app = $("app");
+    if (!me) {
+      app.innerHTML = `<div class="empty"><img src="../ui/assets/empty/signedout.svg" alt=""><b>${Tx("Sign in to see your collection")}</b><p>${Tx("Use your e-mail. We send a 6-digit code, no password.")}</p><button type="button" class="btn primary" id="signIn">${Tx("Sign in")}</button></div>`;
+      $("signIn").onclick = () => window.INKWELL_SIGNIN?.();
+      return;
+    }
+    const rows = filtered(), n = activeCount();
+    const keep = document.activeElement?.id, caret = document.activeElement?.selectionStart;
+    const empty = !Object.values(coll()).some((e) => (+e.n || 0) + (+e.f || 0) > 0);
+    app.innerHTML = `${stats()}
+      <div class="toolbar" role="search">
+        <span class="search"><i class="ic i-search"></i><input type="search" id="q" value="${esc(v.q)}" placeholder="${Tx("Search cards")}" aria-label="${Tx("Search cards")}"></span>
+        <button type="button" class="btn icon filter-btn" id="openFilters" aria-label="${esc(Tx("Filters") + (n ? ", " + Tx("{n} active", { n }) : ""))}"><i class="ic i-filter"></i>${n ? `<span class="count">${n}</span>` : ""}</button>
+        <div class="seg icons" role="group" aria-label="${Tx("View")}"><button type="button" data-view="grid" aria-pressed="${v.view === "grid"}" aria-label="${Tx("Grid")}"><i class="ic i-grid"></i></button><button type="button" data-view="list" aria-pressed="${v.view === "list"}" aria-label="${Tx("List")}"><i class="ic i-list"></i></button></div>
+      </div>
+      <div class="row between" style="margin:-4px 0 var(--sp-4)">
+        <div class="chips">${chips()}<span class="small muted" id="count">${esc(Tx("{n} cards", { n: rows.length.toLocaleString(LOC) }))}</span></div>
+        <select class="inline" id="sort" aria-label="${Tx("Sort")}">${[["value", "Most valuable"], ["name", "Name"], ["set", "Set and number"], ["cost", "Cost"], ["copies", "Copies"]].map(([k, l]) => `<option value="${k}" ${v.sort === k ? "selected" : ""}>${Tx(l)}</option>`).join("")}</select>
+      </div>
+      ${rows.length ? (v.view === "grid" ? `<div class="cgrid" id="grid">${rows.slice(0, shown).map(gridCard).join("")}</div>` : `<div class="list" id="grid">${rows.slice(0, shown).map(listRow).join("")}</div>`)
+        + (rows.length > shown ? `<div class="load-more"><button type="button" class="btn" id="more">${Tx("Show more")}</button></div>` : "")
+        : empty && v.owned ? `<div class="empty"><img src="../ui/assets/empty/collection.svg" alt=""><b>${Tx("Your collection is empty")}</b><p>${esc(Tx("Turn off \"Only cards I own\" to add cards with +, or import your collection in Inkwell."))}</p><button type="button" class="btn primary" id="allCards">${Tx("Only cards I own")} ✕</button></div>`
+        : `<div class="empty"><img src="../ui/assets/empty/search.svg" alt=""><b>${Tx("No cards match these filters.")}</b><button type="button" class="btn" id="clearAll">${Tx("Clear filters")}</button></div>`}`;
+    wire();
+    if (keep && $(keep)) { const el = $(keep); el.focus(); try { if (caret != null) el.setSelectionRange(caret, caret); } catch { /* */ } }
+  }
+  const again = () => { shown = 120; save(); render(); };
+  function wire() {
+    $("q").addEventListener("input", (e) => { v.q = e.target.value; again(); });
+    $("sort").onchange = (e) => { v.sort = e.target.value; again(); };
+    $("openFilters").onclick = openFilters;
+    document.querySelectorAll("[data-view]").forEach((b) => b.onclick = () => { v.view = b.dataset.view; again(); });
+    document.querySelectorAll("[data-unchip]").forEach((b) => b.onclick = () => {
+      const [k, val] = b.dataset.unchip.split(":");
+      if (k === "ink") v.inks = v.inks.filter((x) => x !== val); else if (k === "set") v.sets = v.sets.filter((x) => x !== val);
+      else if (k === "rar") v.rar = v.rar.filter((x) => x !== val); else if (k === "cost") v.cost = v.cost.filter((x) => String(x) !== val);
+      else if (k === "foil") v.foil = false; else if (k === "lent") v.lent = false;
+      again();
+    });
+    $("more")?.addEventListener("click", () => { shown += 120; render(); });
+    $("clearAll")?.addEventListener("click", () => { v = { ...v, q: "", inks: [], sets: [], rar: [], cost: [], foil: false, lent: false }; again(); });
+    $("allCards")?.addEventListener("click", () => { v.owned = false; again(); });
+    $("grid")?.addEventListener("click", (e) => { const b = e.target.closest("[data-card]"); if (b) openCard(b.dataset.card, b); });
+  }
+
+  // ---------- filters sheet ----------
+  function openFilters() {
+    const sh = $("filterSheet"), f = JSON.parse(JSON.stringify(v));
+    const chip = (group, key, html, on) => `<button type="button" class="chipbtn" data-g="${group}" data-k="${esc(key)}" aria-pressed="${on}">${html}</button>`;
+    const draw = () => {
+      const n = filtered(f).length;
+      sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="fT">${Tx("Filters")}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
+        <div class="sheet-body">
+          <div class="form-block"><h3>${Tx("Ink")}</h3><div class="chips">${INKS.map((i) => chip("inks", i, `<span class="inks"><i data-ink="${i.toLowerCase()}"></i></span>${i}`, f.inks.includes(i))).join("")}</div></div>
+          <div class="form-block"><h3>${Tx("Set")}</h3><div class="chips">${SETS.filter((s) => CARDS.some((c) => c.set === s.code)).map((s) => chip("sets", s.code, esc(setName(s.code)), f.sets.includes(s.code))).join("")}</div></div>
+          <div class="form-block"><h3>${Tx("Rarity")}</h3><div class="chips">${RAR.map(([k, l]) => chip("rar", k, Tx(l), f.rar.includes(k))).join("")}</div></div>
+          <div class="form-block"><h3>${Tx("Cost")}</h3><div class="seg block" role="group" aria-label="${Tx("Cost")}">${[1, 2, 3, 4, 5, 6, 7, 8].map((c) => `<button type="button" data-g="cost" data-k="${c}" aria-pressed="${f.cost.includes(c)}">${c === 8 ? "8+" : c}</button>`).join("")}</div></div>
+          <div class="form-block" style="gap:0">
+            <label class="switch"><span>${Tx("Only cards I own")}</span><input type="checkbox" role="switch" data-sw="owned" ${f.owned ? "checked" : ""}></label>
+            <label class="switch"><span>${Tx("Only foil")}</span><input type="checkbox" role="switch" data-sw="foil" ${f.foil ? "checked" : ""}></label>
+            <label class="switch"><span>${Tx("Only lent out")}<small>${Tx("Your cards that are with friends")}</small></span><input type="checkbox" role="switch" data-sw="lent" ${f.lent ? "checked" : ""}></label>
+          </div></div>
+        <div class="sheet-foot"><button type="button" class="btn ghost" id="fClear">${Tx("Clear")}</button><button type="button" class="btn primary" id="fApply">${esc(Tx("Show {n} cards", { n: n.toLocaleString(LOC) }))}</button></div>`;
+      sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = () => sh.close());
+      sh.querySelectorAll("[data-g]").forEach((b) => b.onclick = () => {
+        const g = b.dataset.g, k = g === "cost" ? +b.dataset.k : b.dataset.k;
+        f[g] = f[g].includes(k) ? f[g].filter((x) => x !== k) : [...f[g], k]; draw(); sh.querySelector(`[data-g="${g}"][data-k="${b.dataset.k}"]`)?.focus();
+      });
+      sh.querySelectorAll("[data-sw]").forEach((x) => x.onchange = () => { f[x.dataset.sw] = x.checked; draw(); sh.querySelector(`[data-sw="${x.dataset.sw}"]`)?.focus(); });
+      $("fClear").onclick = () => { Object.assign(f, { inks: [], sets: [], rar: [], cost: [], foil: false, lent: false }); draw(); };
+      $("fApply").onclick = () => { v = f; sh.close(); again(); };
+    };
+    draw();
+    openSheet(sh, $("openFilters"));
+  }
+
+  // ---------- one card ----------
+  let pendingTimer = null, pending = new Map();   // "id:kind" -> delta, sent after 600ms
+  function openCard(id, from) {
+    const c = BY.get(id), sh = $("cardSheet"); if (!c) return;
+    const draw = () => {
+      const o = owned(id), pn = priceOf(id), pf = priceOf(id, true), [a, b] = split(c.name);
+      const value = (pn || 0) * o.n + (pf || 0) * o.f, lw = lentWho.get(id) || [];
+      const row = (k, label, n, ln) => `<div class="row between" style="min-height:60px${k === "f" ? ";border-top:1px solid var(--line)" : ""}"><div><b>${label}</b><div class="small muted">${esc([Tx("{n} free", { n: Math.max(0, n - ln) }), ln ? Tx("{n} lent", { n: ln }) : ""].filter(Boolean).join(" · "))}</div></div>
+        <div class="qty lg"><button type="button" data-d="${k}:-1" aria-label="${esc(Tx("Remove one {k}", { k: Tx(k === "f" ? "foil" : "normal") }))}" ${n <= 0 ? "disabled" : ""}>−</button><output data-n="${k}">${n}</output><button type="button" data-d="${k}:1" aria-label="${esc(Tx("Add one {k}", { k: Tx(k === "f" ? "foil" : "normal") }))}">+</button></div></div>`;
+      sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><div><h2 id="cT">${esc(a)}${b ? ` · ${esc(b)}` : ""}</h2><div class="sub">${esc(setName(c.set))} · nº ${esc(c.num)}</div></div><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
+        <div class="sheet-body">${thumb(c, "big", o.f > 0)}</span>
+          <div class="row" style="gap:var(--sp-2)">${inkDots(c)}<span class="small muted">${esc([inksOf(c).join("/"), c.cost != null ? Tx("cost {c}", { c: c.cost }) : "", rarName(c.rarity)].filter(Boolean).join(" · "))}</span></div>
+          <div class="row between" style="align-items:flex-end;margin:var(--sp-4) 0">
+            <div><div class="small muted">${esc(Tx("Value of your {n}", { n: o.n + o.f }))}</div><div class="hero-num" style="color:var(--money)" data-testid="card-value">${esc(money(value))}</div></div>
+            <div class="small muted" style="text-align:right">${Tx("Normal")} ${pn != null ? esc(money(pn)) : "–"}<br>${Tx("Foil")} ${pf != null ? esc(money(pf)) : "–"}</div></div>
+          <div class="card inset stack" style="gap:0;padding:var(--sp-2) var(--sp-3)">${row("n", Tx("Normal"), o.n, lentN.get(id) || 0)}${row("f", Tx("Foil"), o.f, lentF.get(id) || 0)}</div>
+          ${lw.length ? `<h3 style="margin:var(--sp-5) 0 var(--sp-2)">${Tx("Lent")}</h3>${lw.map((x) => `<div class="list-row on-field"><span class="av sm">${esc((x.who || "?")[0].toUpperCase())}</span><span class="t"><span>${esc(x.who)}</span><span class="meta">${esc([`${x.qty} ${Tx(x.foil ? "foil" : "normal")}`, x.due ? Tx("until {d}", { d: new Date(x.due + "T12:00:00").toLocaleDateString(LOC, { day: "numeric", month: "short" }) }) : ""].filter(Boolean).join(" · "))}</span></span><a class="btn ghost small" href="../trades/">${Tx("See")}</a></div>`).join("")}` : ""}
+          <p class="small faint" style="margin:var(--sp-3) 0 0">${Tx("Changes save right away. You can undo from the notice at the bottom.")}</p></div>
+        <div class="sheet-foot"><a class="btn" href="../trades/?tab=board&q=${encodeURIComponent(a)}"><i class="ic i-board"></i>${Tx("Post on the board")}</a></div>`;
+      sh.querySelectorAll("[data-close]").forEach((x) => x.onclick = () => sh.close());
+      sh.querySelectorAll("[data-d]").forEach((x) => x.onclick = () => { const [k, d] = x.dataset.d.split(":"); change(id, k, +d); draw(); sh.querySelector(`[data-d="${x.dataset.d}"]`)?.focus(); });
+    };
+    draw();
+    openSheet(sh, from);
+    sh.addEventListener("close", () => render(), { once: true });
+  }
+  function change(id, kind, delta, quiet) {
+    const p = prof(); if (!p) return;
+    const e = p.collection[id] = { n: 0, f: 0, ...(p.collection[id] || {}) };
+    if (e[kind] + delta < 0) return;
+    e[kind] += delta;
+    const key = `${id}:${kind}`;
+    pending.set(key, (pending.get(key) || 0) + delta);
+    clearTimeout(pendingTimer);
+    pendingTimer = setTimeout(() => flush(quiet), 600);
+  }
+  let queue = Promise.resolve(), burst = [];
+  function flush(quiet) {
+    const p = prof(); if (!p || !pending.size) return;
+    const delta = [...pending].filter(([, d]) => d).map(([k, d]) => { const [card_id, kind] = k.split(":"); return { card_id, qty: d, foil: kind === "f" }; });
+    pending = new Map();
+    if (!delta.length) return;
+    queue = queue.then(() => CLOUD.api("rpc/apply_collection_delta", { method: "POST", prefer: "return=minimal", body: { p_profile: p.profile, p_delta: delta } }))
+      .then(() => {
+        if (quiet) return;
+        burst = ($("toast").hidden ? [] : burst).concat(delta);   // "Desfazer" undoes every change since the notice appeared
+        const undoAll = burst;
+        toast(Tx("Collection updated"), () => { burst = []; for (const d of undoAll) change(d.card_id, d.foil ? "f" : "n", -d.qty, true); clearTimeout(pendingTimer); flush(true); render(); });
+      })
+      .catch(() => { for (const d of delta) { const e = p.collection[d.card_id]; if (e) e[d.foil ? "f" : "n"] -= d.qty; } toast(Tx("Couldn't save. Try again."), null, true); render(); });
+  }
+  let toastTimer = null;
+  function toast(text, undo, err) {
+    const t = $("toast");
+    t.className = `toast${err ? " err" : ""}`;
+    t.innerHTML = `<i class="ic ${err ? "i-alert" : "i-check"}"></i><span>${esc(text)}</span>${undo ? `<button type="button" class="btn ghost small" id="undo"><i class="ic i-undo"></i>${Tx("Undo")}</button>` : ""}`;
+    t.hidden = false;
+    if (undo) $("undo").onclick = () => { t.hidden = true; undo(); };
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 5000);
+  }
+  function openSheet(sh, from) {
+    if (!sh.open) sh.showModal();
+    sh.querySelector("button:not([data-close]), input, a")?.focus();
+    sh.addEventListener("close", () => from?.focus?.(), { once: true });
+    sh.onclick = (e) => { if (e.target === sh) sh.close(); };
+  }
+
+  // ---------- boot ----------
+  document.title = `${Tx("Collection")} · Inkwell`;
+  $("title").textContent = Tx("Collection");
+  document.documentElement.lang = LOC;
+  if (!me) { render(); return; }
+  $("app").innerHTML = `<div class="stats-row three"><span class="skel"></span><span class="skel"></span><span class="skel"></span></div><div class="cgrid">${"<span class=\"skel thumb\"></span>".repeat(8)}</div><p class="sr-only">${Tx("Loading…")}</p>`;
+  const go = () => loadAll().then(() => {
+    if (pricesDate) $("sub").textContent = Tx("Prices: Liga Lorcana, {d}", { d: new Date(pricesDate).toLocaleDateString(LOC, { day: "numeric", month: "short" }) });
+    render();
+  }).catch(() => {
+    $("app").innerHTML = `<div class="empty"><img src="../ui/assets/empty/error.svg" alt=""><b>${Tx("Couldn't load your collection.")}</b><p>${Tx("Check your connection and try again.")}</p><button type="button" class="btn" id="retry"><i class="ic i-refresh"></i>${Tx("Try again")}</button></div>`;
+    $("retry").onclick = go;
+  });
+  go();
+})();
+</script>
+
+<script>window.INKWELL_SHELL = {"page": "cards"};
+/*@SHELL_JS@*/</script>
+</body>
+</html>
