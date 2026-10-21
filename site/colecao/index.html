@@ -376,14 +376,19 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     clearTimeout(pendingTimer);
     pendingTimer = setTimeout(() => flush(quiet), 600);
   }
-  let queue = Promise.resolve();
+  let queue = Promise.resolve(), burst = [];
   function flush(quiet) {
     const p = prof(); if (!p || !pending.size) return;
     const delta = [...pending].filter(([, d]) => d).map(([k, d]) => { const [card_id, kind] = k.split(":"); return { card_id, qty: d, foil: kind === "f" }; });
     pending = new Map();
     if (!delta.length) return;
     queue = queue.then(() => CLOUD.api("rpc/apply_collection_delta", { method: "POST", prefer: "return=minimal", body: { p_profile: p.profile, p_delta: delta } }))
-      .then(() => { if (!quiet) toast(Tx("Collection updated"), () => { for (const d of delta) change(d.card_id, d.foil ? "f" : "n", -d.qty, true); clearTimeout(pendingTimer); flush(true); render(); }); })
+      .then(() => {
+        if (quiet) return;
+        burst = ($("toast").hidden ? [] : burst).concat(delta);   // "Desfazer" undoes every change since the notice appeared
+        const undoAll = burst;
+        toast(Tx("Collection updated"), () => { burst = []; for (const d of undoAll) change(d.card_id, d.foil ? "f" : "n", -d.qty, true); clearTimeout(pendingTimer); flush(true); render(); });
+      })
       .catch(() => { for (const d of delta) { const e = p.collection[d.card_id]; if (e) e[d.foil ? "f" : "n"] -= d.qty; } toast(Tx("Couldn't save. Try again."), null, true); render(); });
   }
   let toastTimer = null;
