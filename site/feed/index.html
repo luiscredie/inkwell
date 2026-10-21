@@ -208,7 +208,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Your games, with stats": "Seus jogos, com estatísticas", "Games from duels.ink and the lore counter, with win rate by deck and matchup.": "Jogos do duels.ink e do contador, com aproveitamento por deck e confronto.",
     "Prices in reais": "Preços em reais", "TCGplayer every day and Brazilian shop prices, with a wishlist that tells you when to buy.": "TCGplayer todo dia e preços de lojas brasileiras, com lista de desejos que avisa a hora de comprar.",
     "Trades and loans": "Trocas e empréstimos", "Lend to friends, post what you want or offer, and keep track of who has what.": "Empreste para amigos, anuncie o que procura ou oferece e saiba quem está com o quê.",
-    "What a profile looks like": "Como fica um perfil", "Meet the people": "Conheça a turma", "{n} recados": "{n} recados", "1 recado": "1 recado",
+    "What a profile looks like": "Como fica um perfil", "Meet the people": "Conheça a turma", "Communities": "Comunidades", "See all": "Ver todas", "Store": "Loja", "City": "Cidade", "Interest": "Interesse",
+    "1 member": "1 membro", "{n} members": "{n} membros", "Example · fictional community": "Exemplo · comunidade fictícia", "{n} recados": "{n} recados", "1 recado": "1 recado",
     "Your profile and your friends": "Seu perfil e seus amigos", "A page that is yours: favourite cards, your deck, your friends and the recados they leave.": "Uma página sua: cartas favoritas, seu deck, seus amigos e os recados que eles deixam.", "Examples · fictional profiles": "Exemplos · perfis fictícios", "Example · fictional profile": "Exemplo · perfil fictício",
     "How it works": "Como funciona", "Sign in with your e-mail": "Entre com seu e-mail", "A 6-digit code, no password.": "Um código de 6 dígitos, sem senha.",
     "Make your profile": "Monte seu perfil", "Private until you decide to make it public.": "Privado até você decidir deixar público.", "Invite your friends": "Convide seus amigos",
@@ -482,6 +483,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         <div class="land-cta"><button type="button" class="btn primary large" id="signIn">${Tx("Create my Inkwell")}</button><a class="btn large" href="../perfil/?u=rafa_exemplo">${Tx("See an example profile")}</a></div>
         <p class="small faint" style="margin:var(--sp-3) 0 0">${Tx("Use your e-mail. We send a 6-digit code, no password.")}</p></section>
       <section id="landEx" hidden><div class="group-head"><h2>${Tx("Meet the people")}</h2><span class="tag accent">${Tx("Examples · fictional profiles")}</span></div><div class="land-ex" id="exList"></div></section>
+      <section id="landComm" hidden><div class="group-head"><h2>${Tx("Communities")}</h2><a class="small" href="../comunidades/">${Tx("See all")}</a></div><div class="land-ex" id="commList"></div></section>
       <section><div class="group-head"><h2>${Tx("What you can do")}</h2></div>
         <div class="land-feats">${feats.map(([ic, href, t, d]) => `<a class="land-feat" href="${href}"><i class="ic i-${ic}"></i><b>${Tx(t)}</b><span>${Tx(d)}</span></a>`).join("")}</div></section>
       <section><div class="group-head"><h2>${Tx("How it works")}</h2></div>
@@ -501,6 +503,20 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
           <div class="ex-meta">${p.city ? `<span>${esc(p.city)}</span>` : ""}<span>${esc((p.friends_n ?? (p.friends || []).length) === 1 ? Tx("1 friend") : Tx("{n} friends", { n: p.friends_n ?? (p.friends || []).length }))}</span>${(p.recados || []).length ? `<span>${esc(p.recados.length === 1 ? Tx("1 recado") : Tx("{n} recados", { n: p.recados.length }))}</span>` : ""}</div>
           <span class="tag accent" style="width:max-content">${Tx("Example · fictional profile")}</span></a>`).join("");
         $("landEx").hidden = false;
+      }).catch(() => {});
+    const CM_EN = { "Taverna da Tinta (exemplo)": "Taverna da Tinta (example)", "Encantadas & Cia (exemplo)": "Encantadas & Co. (example)",
+      "Loja fictícia de exemplo. Liga às quintas, torneio casual às sextas e mesa livre no sábado à tarde.": "A fictional example store. League on Thursdays, casual tournament on Fridays and open tables on Saturday afternoon.",
+      "Comunidade fictícia de exemplo para quem coleciona Encantadas: trocas, fotos de fichário e dicas de conservação.": "A fictional example community for Enchanted collectors: trades, binder photos and care tips." };
+    const CL = (c, t) => (c.mock && lang === "en" && CM_EN[t]) || t || "";
+    fetch(`${cfg.url}/rest/v1/rpc/communities_list`, { method: "POST", headers: { apikey: cfg.key, "Content-Type": "application/json" }, body: JSON.stringify({ p_q: "", p_mine: false }) })
+      .then((r) => (r.ok ? r.json() : [])).then((list) => {
+        list = (list || []).slice(0, 4); if (!list.length) return;
+        $("commList").innerHTML = list.map((c) => `<a class="ex-card" href="../comunidades/?c=${encodeURIComponent(c.slug)}" data-testid="example-community">
+          <div class="ex-top"><span class="ex-av" style="border-radius:14px;${img(c.avatar) ? `background-image:url('${img(c.avatar)}')` : ""}"></span><div><b>${esc(CL(c, c.name))}</b><div class="small muted">${esc([Tx(c.kind === "city" ? "City" : c.kind === "interest" ? "Interest" : "Store"), c.city].filter(Boolean).join(" · "))}</div></div></div>
+          ${c.description ? `<p class="small muted" style="margin:0">${esc(CL(c, c.description))}</p>` : ""}
+          <div class="ex-meta"><span>${esc(c.members === 1 ? Tx("1 member") : Tx("{n} members", { n: c.members }))}</span></div>
+          ${c.mock ? `<span class="tag accent" style="width:max-content">${Tx("Example · fictional community")}</span>` : ""}</a>`).join("");
+        $("landComm").hidden = false;
       }).catch(() => {});
   }
 
@@ -595,6 +611,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     <div class="menu-head"><span class="av lg">${esc((profileName || me.email || "?")[0].toUpperCase())}</span><div class="t"><b>${esc(profileName || T("Sua conta", "Your account"))}</b><div class="small">${esc(me.email || "")}</div></div></div>
     <div class="menu-sep"></div>
     <a class="menu-item" role="menuitem" href="../perfil/?editar=1"><i class="ic i-users"></i>${T("Meu Inkwell", "My Inkwell")}</a>
+    <a class="menu-item" role="menuitem" href="../comunidades/"><i class="ic i-board"></i>${T("Comunidades", "Communities")}</a>
     <a class="menu-item" role="menuitem" href="../feed/#amigos"><i class="ic i-shield"></i>${T("Privacidade e amigos", "Privacy and friends")}</a>
     <a class="menu-item" role="menuitem" href="../coach/"><i class="ic i-refresh"></i>${T("Jogos do duels.ink", "duels.ink games")}${syncAgo ? `<span class="trail">${esc(syncAgo)}</span>` : ""}</a>
     ${isAdmin ? `<a class="menu-item" role="menuitem" href="../admin/"><i class="ic i-shield"></i>Admin</a>` : ""}
