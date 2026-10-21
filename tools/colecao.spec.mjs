@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test';
 const BASE = new URL('colecao/', process.env.INKWELL_URL || 'http://localhost:8080/index.html').href;
 const ME = '11111111-1111-4111-8111-111111111111';
 
-async function setup(page) {
+async function setup(page, { collection = { 'LOR10-10': { n: 2, f: 0 } }, added = [] } = {}) {
   const calls = [];
   await page.addInitScript((me) => {
     localStorage.setItem('inkwell-lang', 'pt');
@@ -17,7 +17,8 @@ async function setup(page) {
     const req = route.request(), path = new URL(req.url()).pathname.replace(/.*\/rest\/v1\//, '');
     calls.push({ path, body: req.postData() ? JSON.parse(req.postData()) : null });
     const json = (v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
-    if (path === 'inkwell_profiles') return json([{ profile: 'luiscredie', updated_at: '2026-10-20T10:00:00Z', collection: { 'LOR10-10': { n: 2, f: 0 } } }]);
+    if (path === 'inkwell_profiles') return json([{ profile: 'luiscredie', updated_at: '2026-10-20T10:00:00Z', collection }]);
+    if (path === 'collection_added') return json(added);
     if (path === 'rpc/apply_collection_delta') return route.fulfill({ status: 204, body: '' });
     if (path === 'rpc/my_duels_sync') return json(null);
     return json([]);
@@ -70,8 +71,8 @@ test('binder check mode follows the binder order and saves changes', async ({ pa
 
 // ---------- Escanear (card scanner) with a fake camera that shows one card image in the frame ----------
 const IMG = (f) => `../lorcana-card-images/images/${f}`;
-async function fakeCamera(page, { file, ocr = null, deny = false }) {
-  await page.addInitScript(([src, ocrText, denied]) => {
+async function fakeCamera(page, { file, ocr = null, deny = false, scale = 1.03 }) {
+  await page.addInitScript(([src, ocrText, denied, k]) => {
     if (ocrText !== null) window.INKWELL_SCAN_OCR = async () => ocrText;
     navigator.mediaDevices.getUserMedia = async () => {
       if (denied) throw new DOMException('denied', 'NotAllowedError');
@@ -81,30 +82,43 @@ async function fakeCamera(page, { file, ocr = null, deny = false }) {
         ctx.fillStyle = '#4a3426'; ctx.fillRect(0, 0, c.width, c.height);
         const g = window.__inkwellScanGuide?.();
         if (g && img.complete && img.naturalWidth) {   // the card a little off-centre and a little bigger than the frame, as a hand would hold it
-          const w = g.w * 1.03, h = g.h * 1.03;
+          const w = g.w * k, h = g.h * k;
           ctx.drawImage(img, g.x + g.w * 0.02 - (w - g.w) / 2, g.y - g.h * 0.015 - (h - g.h) / 2, w, h);
         }
       }, 60);
       return c.captureStream(15);
     };
-  }, [file ? IMG(file) : '', ocr, deny]);
+  }, [file ? IMG(file) : '', ocr, deny, scale]);
+}
+async function confirmList(page, n) {   // Concluir -> review -> add
+  await page.getByRole('button', { name: 'Concluir' }).click();
+  const review = page.locator('[data-testid="scan-review"]');
+  await expect(review).toBeVisible();
+  await review.getByRole('button', { name: n === 1 ? 'Adicionar 1 carta à coleção' : `Adicionar ${n} cartas à coleção` }).click();
 }
 const deltas = (calls) => calls.filter((c) => c.path === 'rpc/apply_collection_delta').flatMap((c) => c.body.p_delta);
 
-test('scanner adds a card it recognises; +1, foil and undo', async ({ page }) => {
+test('scanner lists the cards it recognises and adds them only after review; +1, foil and undo', async ({ page }) => {
   const calls = await setup(page);
   await fakeCamera(page, { file: 'Rapunzel_-_Tower_Defender__LOR13-80.jpg' });
   await page.goto(BASE);
   await page.getByRole('button', { name: 'Escanear' }).click();
   await expect(page.locator('[data-testid="scan-last"]')).toContainText('Rapunzel', { timeout: 15000 });
-  await expect(page.locator('[data-testid="scan-count"]')).toHaveText('1 adicionada');
+  await expect(page.locator('[data-testid="scan-count"]')).toHaveText('1 na lista');
   await page.getByRole('button', { name: '+1 desta' }).click();
-  await expect(page.locator('[data-testid="scan-count"]')).toHaveText('2 adicionadas');
+  await expect(page.locator('[data-testid="scan-count"]')).toHaveText('2 na lista');
   await page.locator('#scanUndo').click();
-  await expect(page.locator('[data-testid="scan-count"]')).toHaveText('1 adicionada');
+  await expect(page.locator('[data-testid="scan-count"]')).toHaveText('1 na lista');
   await page.locator('#scan [data-foil="1"]').click();
   await page.getByRole('button', { name: '+1 desta' }).click();
   await page.getByRole('button', { name: 'Concluir' }).click();
+  const review = page.locator('[data-testid="scan-review"]');
+  await expect(review.locator('[data-rev]')).toHaveCount(2);   // normal and foil
+  await page.waitForTimeout(900);
+  expect(deltas(calls)).toEqual([]);   // nothing saved before confirming
+  await review.locator('[data-rev="LOR13-80:1"] [data-rq="1"]').click();   // 2 foil
+  await review.locator('[data-rev="LOR13-80:1"] [data-rq="-1"]').click();  // back to 1
+  await review.getByRole('button', { name: 'Adicionar 2 cartas à coleção' }).click();
   await expect.poll(() => deltas(calls).length).toBeGreaterThan(0);
   const net = {}; for (const d of deltas(calls)) { const k = `${d.card_id}:${d.foil}`; net[k] = (net[k] || 0) + d.qty; }
   expect(net).toEqual({ 'LOR13-80:false': 1, 'LOR13-80:true': 1 });
@@ -116,7 +130,7 @@ test('scanner reads the collector line when two printings share the art', async 
   await page.goto(BASE);
   await page.getByRole('button', { name: 'Escanear' }).click();
   await expect(page.locator('[data-testid="scan-last"]')).toContainText('nº 7', { timeout: 15000 });
-  await page.getByRole('button', { name: 'Concluir' }).click();
+  await confirmList(page, 1);
   await expect.poll(() => deltas(calls).map((d) => d.card_id)).toEqual(['LOR9-7']);
 });
 
@@ -130,7 +144,7 @@ test('scanner asks only when it cannot tell the printings apart', async ({ page 
   await expect(pick.locator('[data-pick]')).toHaveCount(3);   // two printings + "Nenhuma destas"
   await pick.locator('[data-pick="LOR9-97"]').click();
   await expect(page.locator('[data-testid="scan-last"]')).toContainText('nº 97');
-  await page.getByRole('button', { name: 'Concluir' }).click();
+  await confirmList(page, 1);
   await expect.poll(() => deltas(calls).map((d) => d.card_id)).toEqual(['LOR9-97']);
 });
 
@@ -159,4 +173,47 @@ test('binder: rotated cards only in Infinity, reprints marked, tap shows the car
   await expect(page.locator('[data-testid="card-format"]')).toHaveText('Só no Infinito: não tem reimpressão em set do Core.');
   await page.keyboard.press('Escape');
   await expect(page.locator('[data-testid="binder-page"]')).toBeVisible();
+});
+
+test('scanner recognises a set 14 card held smaller than the frame (a picture on a screen)', async ({ page }) => {
+  const calls = await setup(page);
+  await fakeCamera(page, { file: 'Fru_Fru_-_VIP_Guest__LOR14-1.jpg', scale: 0.68 });
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Escanear' }).click();
+  await expect(page.locator('[data-testid="scan-last"]')).toContainText('Fru Fru', { timeout: 15000 });
+  await confirmList(page, 1);
+  await expect.poll(() => deltas(calls).map((d) => d.card_id)).toEqual(['LOR14-1']);
+});
+
+test('closing the scanner with cards in the list asks first; discarding saves nothing', async ({ page }) => {
+  const calls = await setup(page);
+  await fakeCamera(page, { file: 'Rapunzel_-_Tower_Defender__LOR13-80.jpg' });
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Escanear' }).click();
+  await expect(page.locator('[data-testid="scan-count"]')).toHaveText('1 na lista', { timeout: 15000 });
+  await page.keyboard.press('Escape');
+  const review = page.locator('[data-testid="scan-review"]');
+  await expect(review).toBeVisible();
+  await expect(review).toContainText('Rapunzel');
+  await review.getByRole('button', { name: 'Descartar a lista' }).click();
+  await review.getByRole('button', { name: 'Toque de novo para descartar' }).click();
+  await expect(page.locator('#scan')).not.toBeVisible();
+  await page.waitForTimeout(900);
+  expect(deltas(calls)).toEqual([]);
+});
+
+test('sort by recently added, and the MYP Cards price in the card sheet', async ({ page }) => {
+  await setup(page, {
+    collection: { 'LOR10-10': { n: 2, f: 0 }, 'LOR13-80': { n: 1, f: 0 }, 'LOR9-7': { n: 1, f: 0 } },
+    added: [{ profile: 'luiscredie', card_id: 'LOR13-80', added_at: '2026-10-21T12:00:00Z' }, { profile: 'luiscredie', card_id: 'LOR9-7', added_at: '2026-10-20T12:00:00Z' }],
+  });
+  await page.addInitScript(() => localStorage.setItem('inkwell-coll-view-v2', JSON.stringify({ view: 'list', sort: 'recent' })));
+  await page.goto(BASE);
+  const ids = await page.locator('.list-row[data-card]').evaluateAll((els) => els.map((e) => e.dataset.card));
+  expect(ids).toEqual(['LOR13-80', 'LOR9-7', 'LOR10-10']);   // newest first, undated last
+  await expect(page.locator('.list-row[data-card="LOR13-80"]')).toContainText('adicionada em');
+  await page.locator('.list-row[data-card="LOR13-80"]').click();
+  const br = page.locator('[data-testid="card-br"]');
+  await expect(br).toContainText('No Brasil a partir de');
+  await expect(br).toHaveAttribute('href', 'https://mypcards.com/lorcana/produto/363191/rapunzel-tower-defender');
 });

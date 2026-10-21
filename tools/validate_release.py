@@ -30,6 +30,7 @@ SUPPORTED = {
     "validation": {1},
     "price_history": {1, 2, 3, 4},
     "legality": {1},
+    "prices_br": {1},
 }
 ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}")
 

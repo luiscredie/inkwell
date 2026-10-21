@@ -115,6 +115,8 @@ window.INKWELL_CLOUD = (() => {
 .target { width: 104px; }
 .target input { width: 100%; text-align: right; min-height: 36px; padding: 0 8px; font-size: var(--fs-small); }
 .trail .wish-btn { min-height: 28px; height: 28px; }
+.trail .pair { display: grid; justify-items: end; line-height: 1.2; }
+.trail .br { color: var(--text-2); text-decoration: none; white-space: nowrap; } .trail .br:hover { text-decoration: underline; }
 .vchart { width: 100%; height: 180px; display: block; }
 .vchart .line { fill: none; stroke: var(--text); stroke-width: 2; }
 .vchart .area { fill: var(--surface-3); opacity: .6; }
@@ -149,7 +151,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Add a card": "Pôr carta", "Search a card": "Buscar carta", "Type at least 2 letters.": "Digite pelo menos 2 letras.", "No card found.": "Nenhuma carta encontrada.",
     "Target": "Alvo", "Now": "Agora", "buy now": "comprar agora", "{n} cards": "{n} cartas", "{n} at or below your target": "{n} no preço-alvo ou abaixo",
     "Total now": "Total agora", "Look on the board": "Procurar no Mural", "Target price for {c}": "Preço-alvo de {c}", "no price": "sem preço",
-    "you have {n}": "você tem {n}",
+    "you have {n}": "você tem {n}", "Lowest listing on MYP Cards": "Menor anúncio na MYP Cards", "On MYP Cards: {v} for the {n} cards listed there (lowest listing, normal and foil together, {d}).": "Na MYP Cards: {v} pelas {n} cartas anunciadas lá (menor anúncio, normal e foil juntos, {d}).", "Buy now uses the lower of TCGplayer and MYP Cards.": "\"Comprar agora\" usa o menor entre TCGplayer e MYP Cards.",
     "Value now": "Valor agora", "Cards": "Cartas", "Change over {n} snapshots": "Variação em {n} registros", "Most valuable cards": "Cartas mais valiosas",
     "Value by date, with today's collection at each date's prices.": "Valor por data, com a coleção de hoje nos preços de cada data.",
     "Sign in to see prices for your cards": "Entre para ver os preços das suas cartas", "Use your e-mail. We send a 6-digit code, no password.": "Use seu e-mail. Mandamos um código de 6 dígitos, sem senha.", "Sign in": "Entrar",
@@ -201,7 +203,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   // ---------- state ----------
   const CLOUD = window.INKWELL_CLOUD;
   const me = CLOUD?.user();
-  let PRICES = {}, pricesDate = null, usdBrl = null, HISTORY = null, profiles = [], profileName = null;
+  let PRICES = {}, BR = null, pricesDate = null, usdBrl = null, HISTORY = null, profiles = [], profileName = null;
   const VIEW_KEY = "inkwell-prices-view-v1";
   let v = { tab: "movers", period: "7d", owned: false, hideStale: null };
   try { v = { ...v, ...JSON.parse(localStorage.getItem(VIEW_KEY) || "{}") }; } catch { /* */ }
@@ -212,13 +214,18 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const owned = (id) => { const e = coll()[id] || {}; return (+e.n || 0) + (+e.f || 0); };
   const priceN = (id) => { const p = PRICES[id]; return p ? (p.nl ?? p.n ?? null) : null; };
   const priceF = (id) => { const p = PRICES[id]; return p ? (p.fl ?? p.f ?? p.nl ?? p.n ?? null) : null; };
+  const brOf = (id) => BR?.cards?.[id]?.[0] ?? null;   // MYP Cards lowest listing (BRL), normal and foil together
+  const brUrl = (id) => (BR?.cards?.[id] ? BR.product_url.replace("{path}", BR.cards[id][1]) : null);
+  const best = (id) => { const a = priceN(id), b = brOf(id); return a == null ? b : b == null ? a : Math.min(a, b); };
   const target = (id) => { const e = wish()[id]; return e && typeof e === "object" && typeof e.t === "number" ? e.t : null; };
 
   async function loadAll() {
-    const [pr, p] = await Promise.all([
+    const [pr, p, br] = await Promise.all([
       fetch("../data/prices.json").then((r) => (r.ok ? r.json() : Promise.reject(new Error("prices")))),
       me ? CLOUD.api("inkwell_profiles?select=profile,updated_at,collection:data->collection,wishlist:data->wishlist&order=updated_at.desc") : Promise.resolve([]),
+      fetch(window.INKWELL_PRICES_BR_URL || "../data/prices-br.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
     ]);
+    BR = br?.cards ? br : null;
     PRICES = pr?.prices || {}; pricesDate = pr?.generated_at || null; usdBrl = pr?.usd_brl || null;
     profiles = (p || []).map((x) => ({ ...x, collection: x.collection && typeof x.collection === "object" ? x.collection : {}, wishlist: x.wishlist && typeof x.wishlist === "object" ? x.wishlist : {} }));
     try { profileName = localStorage.getItem("inkwell-trades-profile"); } catch { /* */ }
@@ -273,16 +280,17 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   function wishTab() {
     if (!me) return signInBox();
     const ids = Object.keys(wish()).filter((id) => BY.has(id));
-    const rows = ids.map((id) => ({ id, c: BY.get(id), now: priceN(id), t: target(id) })).sort((a, b) => ((b.t != null && b.now != null && b.now <= b.t) - (a.t != null && a.now != null && a.now <= a.t)) || (b.now || 0) - (a.now || 0));
-    const hits = rows.filter((r) => r.t != null && r.now != null && r.now <= r.t).length, total = rows.reduce((s, r) => s + (r.now || 0), 0);
+    const rows = ids.map((id) => ({ id, c: BY.get(id), now: priceN(id), br: brOf(id), low: best(id), t: target(id) })).sort((a, b) => ((b.t != null && b.low != null && b.low <= b.t) - (a.t != null && a.low != null && a.low <= a.t)) || (b.now || 0) - (a.now || 0));
+    const hits = rows.filter((r) => r.t != null && r.low != null && r.low <= r.t).length, total = rows.reduce((s, r) => s + (r.now || 0), 0);
     const words = norm(addQ).split(" ").filter(Boolean);
     const found = addQ.trim().length >= 2 ? CARDS.filter((c) => words.every((w) => c.k.includes(w))).slice(0, 20) : [];
-    const row = (r) => { const [a, b] = split(r.c.name), hit = r.t != null && r.now != null && r.now <= r.t;
+    const row = (r) => { const [a, b] = split(r.c.name), hit = r.t != null && r.low != null && r.low <= r.t;
       return `<div class="list-row" data-wish="${esc(r.id)}">${thumb(r.c, "xs")}<span class="t"><span>${esc(a)}${b ? ` · ${esc(b)}` : ""}</span><span class="meta">${esc([setName(r.c.set), "nº " + r.c.num, owned(r.id) ? Tx("you have {n}", { n: owned(r.id) }) : ""].filter(Boolean).join(" · "))}</span>${hit ? `<span class="tag match" style="margin-top:4px;width:max-content">${Tx("buy now")}</span>` : ""}</span>
-        <span class="trail" style="gap:4px"><span class="money">${r.now != null ? esc(money(r.now)) : Tx("no price")}</span>
+        <span class="trail" style="gap:4px"><span class="pair"><span class="money">${r.now != null ? esc(money(r.now)) : Tx("no price")}</span>${r.br != null ? `<a class="small br" data-testid="wish-br" href="${esc(brUrl(r.id))}" target="_blank" rel="noopener" title="${esc(Tx("Lowest listing on MYP Cards"))}">MYP ${esc(money(r.br))}</a>` : ""}</span>
           <span class="target"><input inputmode="decimal" class="input" data-target="${esc(r.id)}" value="${r.t != null ? esc(r.t.toLocaleString(LOC, { minimumFractionDigits: 2 })) : ""}" placeholder="${Tx("Target")} R$" aria-label="${esc(Tx("Target price for {c}", { c: a }))}"></span>${starBtn(r.id)}</span></div>`; };
     return `<div class="stats-row three" data-testid="wish-stats"><div class="stat"><b>${rows.length}</b><span>${esc(Tx("{n} cards", { n: "" }).trim() || Tx("Cards"))}</span></div>
         <div class="stat"><b class="${hits ? "win" : ""}">${hits}</b><span>${esc(Tx("{n} at or below your target", { n: "" }).trim())}</span></div><div class="stat"><b class="money">${moneySplit(total)}</b><span>${Tx("Total now")}</span></div></div>
+      ${BR && rows.length ? `<p class="small faint" style="margin:var(--sp-2) 0 0">${esc(Tx("Buy now uses the lower of TCGplayer and MYP Cards."))}</p>` : ""}
       <section class="card" style="margin:var(--sp-4) 0"><div class="hd"><h3>${Tx("Add a card")}</h3></div>
         <span class="search"><i class="ic i-search"></i><input type="search" id="addQ" value="${esc(addQ)}" placeholder="${Tx("Search a card")}" aria-label="${Tx("Search a card")}" autocomplete="off"></span>
         <div class="list tight divided add-results" id="addRes">${addQ.trim().length < 2 ? `<p class="small faint" style="padding:var(--sp-2) 0">${Tx("Type at least 2 letters.")}</p>` : found.length ? found.map((c) => { const [a, b] = split(c.name), p = priceN(c.id);
@@ -301,6 +309,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     let now = 0, cards = 0; const top = [];
     for (const id in col) { const n = +col[id].n || 0, f = +col[id].f || 0, val = (priceN(id) || 0) * n + (priceF(id) || 0) * f; now += val; cards += n + f; if (val > 0 && BY.has(id)) top.push({ id, val, n, f }); }
     top.sort((a, b) => b.val - a.val);
+    let brSum = 0, brN = 0; if (BR) for (const id in col) { const q = (+col[id].n || 0) + (+col[id].f || 0), pb = brOf(id); if (q && pb != null) { brSum += pb * q; brN += q; } }
     const first = pts[0]?.v, last = pts[pts.length - 1]?.v, ch = first ? ((last - first) / first) * 100 : null;
     let chart = "";
     if (pts.length >= 2) {
@@ -312,6 +321,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     }
     return `<div class="stats-row three" data-testid="value-stats"><div class="stat"><b class="money">${moneySplit(now)}</b><span>${Tx("Value now")}</span></div><div class="stat"><b>${cards.toLocaleString(LOC)}</b><span>${Tx("Cards")}</span></div>
         <div class="stat"><b class="${ch == null ? "" : ch >= 0 ? "up" : "down"}">${ch == null ? "—" : `${ch >= 0 ? "+" : "−"}${Math.abs(ch).toLocaleString(LOC, { maximumFractionDigits: 1 })}%`}</b><span>${esc(Tx("Change over {n} snapshots", { n: pts.length }))}</span></div></div>
+      ${brN ? `<p class="small muted" style="margin:var(--sp-2) 0 0" data-testid="value-br">${esc(Tx("On MYP Cards: {v} for the {n} cards listed there (lowest listing, normal and foil together, {d}).", { v: money(brSum), n: brN.toLocaleString(LOC), d: dateFmt(BR.retrieved_at) }))}</p>` : ""}
       ${chart ? `<section class="card" style="margin-top:var(--sp-4)">${chart}<p class="small faint" style="margin:var(--sp-2) 0 0">${Tx("Value by date, with today's collection at each date's prices.")}${usdBrl ? " " + esc(Tx("The chart uses the Liga Lorcana price history, until {d}.", { d: dateFmt(pts[pts.length - 1]?.d) })) : ""}</p></section>` : ""}
       <div class="group-head"><h3>${Tx("Most valuable cards")}</h3></div>
       <div class="list" data-testid="top-cards">${top.slice(0, 20).map((t) => { const c = BY.get(t.id), [a, b] = split(c.name); return `<div class="list-row">${thumb(c, "xs")}<span class="t"><span>${esc(a)}${b ? ` · ${esc(b)}` : ""}</span><span class="meta">${esc([setName(c.set), "nº " + c.num, `${t.n ? t.n + "×" : ""}${t.f ? ` ${t.f}× foil` : ""}`.trim()].filter(Boolean).join(" · "))}</span></span><span class="trail"><span class="money">${esc(money(t.val))}</span></span></div>`; }).join("")}</div>`;
