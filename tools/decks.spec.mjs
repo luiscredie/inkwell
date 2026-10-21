@@ -28,8 +28,9 @@ function fixtures() {
   };
 }
 
-async function setup(page, { signedIn = true } = {}) {
+async function setup(page, { signedIn = true, extraDecks = [] } = {}) {
   const db = fixtures();
+  db.profiles[0].decks.push(...extraDecks);
   const calls = [];
   await page.addInitScript(([signed, me]) => {
     localStorage.setItem('inkwell-lang', 'pt');
@@ -164,4 +165,28 @@ test('delete asks for a second tap', async ({ page }) => {
   await page.locator('#mDelete').click();
   await expect.poll(() => calls.filter((c) => c.path === 'rpc/delete_deck').length).toBe(1);
   await expect(page.locator('.empty')).toContainText('Nenhum deck ainda');
+});
+
+test('advisor: shared cards, buying plan, priority and copies', async ({ page }) => {
+  const twin = { id: 'deck-b', name: 'Twin', format: 'core', colors: ['Amber'], cards: Object.fromEntries(IDS.slice(1).map((id) => [id, 4])), created_at: '2026-10-02' };
+  const calls = await setup(page, { extraDecks: [twin] });
+  await page.goto(BASE);
+  await expect(page.locator('[data-testid="plan-notice"]')).toContainText('1 das 2');
+  await page.locator('#planNotice').click();
+  await expect(page).toHaveURL(/view=plan/);
+  await expect(page.locator('[data-testid="plan-stats"]')).toContainText('1/2');
+  await expect(page.locator('[data-testid="buy-list"]')).toContainText('Gurgi');
+  await expect(page.locator('[data-testid="conflicts"]')).toContainText('você tem 4 · os decks pedem 8');
+  await page.locator('[data-prio="deck-a"]').click();
+  await expect(page.locator('[data-prio="deck-a"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => saves(calls).length).toBe(1);
+  expect(saves(calls)[0].body.p_deck).toEqual({ id: 'deck-a', name: 'Amber Test', targetCopies: 1, portfolioPriority: 1 });
+
+  await page.goto(BASE + '?deck=deck-b&tab=plan');
+  await expect(page.locator('[data-testid="plan-status"]')).toContainText('Montável junto com os outros');
+  await expect(page.locator('[data-testid="plan-shared"]')).toContainText('Amber Test');
+  await page.getByRole('button', { name: 'Pôr uma cópia' }).click();
+  await expect(page.locator('[data-testid="target"]')).toHaveText('2');
+  await expect.poll(() => saves(calls).length).toBe(2);
+  expect(saves(calls)[1].body.p_deck).toMatchObject({ id: 'deck-b', targetCopies: 2 });
 });

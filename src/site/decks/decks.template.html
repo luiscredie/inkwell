@@ -86,7 +86,24 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     "{n} cards recognised": "{n} cartas reconhecidas", "Not recognised: {l}": "Não reconhecidas: {l}", "Import deck": "Importar deck", "Imported deck": "Deck importado",
     "Rename and format": "Nome, formato e tintas", "Copy list": "Copiar lista", "List copied": "Lista copiada", "Open in the deck builder": "Abrir no montador antigo",
     "Planner and advisor": "Consultor e plano de compras", "Delete deck": "Apagar deck", "Tap again to delete": "Toque de novo para apagar", "Deck deleted": "Deck apagado",
-    "Back to decks": "Voltar para Decks", "Prices: Liga Lorcana, {d}": "Preços da Liga Lorcana de {d}",
+    "Back to decks": "Voltar para Decks",
+    "Deck advisor": "Consultor de decks", "Advisor": "Consultor", "Can you build your decks with your collection?": "Você consegue montar seus decks com sua coleção?", "Plan": "Plano",
+    "Built together": "Montáveis juntos", "{a} of {b}": "{a} de {b}", "Copies missing": "Cópias faltando", "To buy": "Para comprar",
+    "Optimized plan": "Plano otimizado", "Recommended plan": "Plano recomendado", "Optimized = best exact plan. Recommended = a good plan found within limits.": "Otimizado = melhor plano exato. Recomendado = um bom plano encontrado dentro dos limites.",
+    "With your collection you can build {b} of the {n} deck copies you asked for at the same time.": "Com sua coleção, você monta {b} das {n} cópias de decks pedidas ao mesmo tempo.",
+    "Easiest next: {deck} · {n} cards missing.": "Próximo mais fácil: {deck} · faltam {n} cartas.", "Easiest next: {deck} · {n} cards missing._1": "Próximo mais fácil: {deck} · falta 1 carta.",
+    "Your decks in the plan": "Seus decks no plano", "built {b} of {t}": "montado {b} de {t}", "out of the plan": "fora do plano", "Copies": "Cópias", "Prioritize": "Priorizar", "Prioritized": "Priorizado",
+    "Copies of this deck you want built": "Cópias deste deck que você quer montadas", "0 takes the deck out of the plan.": "0 tira o deck do plano.",
+    "Prioritize this deck": "Priorizar este deck", "Gets shared cards before the others.": "Fica com as cartas compartilhadas antes dos outros.",
+    "To build everything at once": "Para montar tudo ao mesmo tempo", "Every deck can be built at the same time.": "Todos os decks são montáveis ao mesmo tempo.",
+    "Your decks don't share more cards than you have.": "Seus decks não dividem mais cartas do que você tem.", "buy {n}": "comprar {n}", "Total": "Total",
+    "Contested cards": "Cartas disputadas", "you have {h} · decks ask for {d}": "você tem {h} · os decks pedem {d}",
+    "+1 copy completes {n} more deck copies": "+1 cópia completa mais {n} cópia(s) de deck", "+1 copy cuts {n} missing": "+1 cópia reduz {n} faltas", "No shortage": "Sem déficit",
+    "Built together with the others": "Montável junto com os outros", "Needs shared cards": "Precisa de cartas compartilhadas", "Out of the plan": "Fora do plano",
+    "{b} of {t} copies built at the same time as your other decks.": "{b} de {t} cópias montadas ao mesmo tempo que seus outros decks.",
+    "Missing to build it with the others": "Falta para montar junto com os outros", "Faltando looks at this deck alone. Here, cards taken by decks with higher priority count as in use.": "A aba Faltando olha só este deck. Aqui, as cartas já usadas por decks com prioridade maior contam como ocupadas.",
+    "Shares cards with": "Divide cartas com", "See the plan for all decks": "Ver o plano de todos os decks", "Plan updated": "Plano atualizado", "Add decks first so the advisor can plan your copies.": "Adicione decks primeiro para o consultor planejar suas cópias.",
+    "Remove one copy": "Tirar uma cópia", "Add one copy": "Pôr uma cópia", "Prices: Liga Lorcana, {d}": "Preços da Liga Lorcana de {d}",
   };
   const fill = (s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)) : s);
   const Tx = (en, v) => { const k = v && v.n === 1 && (en + "_1") in PT && lang === "pt" ? en + "_1" : en; return fill(lang === "pt" && k in PT ? PT[k] : en, v); };
@@ -119,6 +136,8 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     let best = null; for (const x of printings(c)) { const q = PRICES[x.id]; const y = q ? (q.nl ?? q.n ?? null) : null; if (y != null && (best == null || y < best)) best = y; } return best; };
   const imgUrl = (c) => (c.img ? `../lorcana-card-images/${encodeURI(c.img).replace(/'/g, "%27")}` : "");
   const thumb = (c, cls = "") => `<span class="thumb ${cls}" data-ink="${(inksOf(c)[0] || "steel").toLowerCase()}">${c.img ? `<img src="${imgUrl(c)}" alt="" loading="lazy" decoding="async" onerror="this.remove()">` : ""}</span>`;
+  // The Inkwell app's optimizer, copied in at build time (tools/build_site_decks.py)
+  const computeDeckPortfolioPlan = /*@PORTFOLIO@*/;
   const ligaUrl = (c) => "https://www.ligalorcana.com.br/?view=cards%2Fcard&card=" + encodeURIComponent(c.name).replace(/%20/g, "+") + "&tipo=1";
 
   // ---------- state ----------
@@ -213,9 +232,9 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
   const fmtName = (f) => Tx(f === "infinity" ? "Infinity" : "Core");
 
   // ---------- routing: ?deck=<id>&tab=list|analysis|missing|games ----------
-  const route = () => { const q = new URLSearchParams(location.search); return { deck: q.get("deck"), tab: q.get("tab") || "list" }; };
+  const route = () => { const q = new URLSearchParams(location.search); return { deck: q.get("deck"), tab: q.get("tab") || "list", plan: q.get("view") === "plan" }; };
   function go(deck, tab, replace) {
-    const q = new URLSearchParams(); if (deck) q.set("deck", deck); if (deck && tab && tab !== "list") q.set("tab", tab);
+    const q = new URLSearchParams(); if (deck) q.set("deck", deck); if (deck && tab && tab !== "list") q.set("tab", tab); if (!deck && tab === "plan") q.set("view", "plan");
     const url = location.pathname + (q.toString() ? "?" + q : "");
     (replace ? history.replaceState : history.pushState).call(history, null, "", url);
     if (!deck) editing = false;
@@ -235,6 +254,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     matchGames();
     const r = route();
     if (r.deck) return renderDeck(r.deck, r.tab);
+    if (r.plan) return renderPlan();
     renderList();
   }
 
@@ -262,6 +282,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     $("app").innerHTML = `${head}
       <div class="row between" style="margin-bottom:var(--sp-3)"><div class="seg" role="group" aria-label="${Tx("Format")}">${[["all", "All"], ["core", "Core"], ["infinity", "Infinity"]].map(([k, l]) => `<button type="button" data-fmt="${k}" aria-pressed="${view.fmt === k}">${Tx(l)}</button>`).join("")}</div>
       <select class="inline" id="sort" aria-label="${Tx("Sort")}">${[["recent", "Recently played"], ["wins", "Win rate"], ["name", "Name"]].map(([k, l]) => `<option value="${k}" ${view.sort === k ? "selected" : ""}>${Tx(l)}</option>`).join("")}</select></div>
+      ${planNotice()}
       ${shown.length ? `<div class="list" id="deckList" data-testid="deck-list">${shown.map(row).join("")}</div>` : emptyBox("search", Tx("No decks in this format."), "")}
       ${pricesDate ? `<p class="small faint" style="margin-top:var(--sp-4)">${esc(Tx("Prices: Liga Lorcana, {d}", { d: dateFmt(pricesDate) }))}</p>` : ""}`;
     wireHead();
@@ -270,6 +291,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     $("deckList")?.addEventListener("click", (e) => { const a = e.target.closest("[data-deck]"); if (!a || e.metaKey || e.ctrlKey) return; e.preventDefault(); go(a.dataset.deck, "list"); });
   }
   function wireHead() {
+    $("planNotice")?.addEventListener("click", (e) => { e.preventDefault(); go(null, "plan"); });
     $("new")?.addEventListener("click", () => openDeckForm(null, $("new")));
     $("import")?.addEventListener("click", () => openImport($("import")));
   }
@@ -282,11 +304,11 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
       $("back").onclick = (e) => { e.preventDefault(); go(null); };
       return;
     }
-    if (!["list", "analysis", "missing", "games"].includes(tab)) tab = "list";
+    if (!["list", "analysis", "missing", "games", "plan"].includes(tab)) tab = "list";
     const m = measure(d), inks = deckInks(d, m);
     const keep = document.activeElement?.id, caret = document.activeElement?.selectionStart;
     const when = d.updated_at ? Tx("updated {d}", { d: dateFmt(d.updated_at) }) : d.created_at ? Tx("created {d}", { d: dateFmt(d.created_at) }) : "";
-    const tabs = [["list", "List"], ["analysis", "Analysis"], ["missing", "Missing", m.missingN], ["games", "Games", 0]];
+    const tabs = [["list", "List"], ["analysis", "Analysis"], ["missing", "Missing", m.missingN], ["games", "Games", 0], ["plan", "Plan"]];
     $("app").innerHTML = `<div class="page-head"><div>${back}<h1 id="title">${esc(d.name)}</h1><p class="sub">${dots(inks)}${esc([fmtName(d.format), when].filter(Boolean).join(" · "))}</p></div>
         <div class="actions"><span class="more-wrap"><button type="button" class="btn icon" id="more" aria-haspopup="menu" aria-expanded="false" aria-label="${Tx("More options")}"><i class="ic i-more"></i></button></span>
         <button type="button" class="btn ${editing ? "" : "primary"}" id="edit" aria-pressed="${editing}"><i class="ic ${editing ? "i-check" : "i-edit"}"></i>${Tx(editing ? "Done" : "Edit list")}</button></div></div>
@@ -295,7 +317,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
         <div class="stat"><b class="money">${moneySplit(m.value)}</b><span>${Tx("Value")}</span></div>
         <div class="stat"><b class="${m.wr != null && m.wr >= 50 ? "win" : ""}">${m.wr != null ? m.wr + "%" : "—"}</b><span>${Tx("Wins")}</span></div></div>
       <div class="tabs" role="tablist" style="margin-top:var(--sp-5)">${tabs.map(([k, l, n]) => `<button type="button" class="tab" role="tab" data-tab="${k}" aria-selected="${tab === k}">${Tx(l)}${n ? `<span class="count quiet">${n}</span>` : ""}</button>`).join("")}</div>
-      <div id="tabBody" role="tabpanel">${tab === "analysis" ? analysis(d, m) : tab === "missing" ? missingTab(d, m) : tab === "games" ? gamesTab(d, m) : listTab(d, m)}</div>`;
+      <div id="tabBody" role="tabpanel">${tab === "analysis" ? analysis(d, m) : tab === "missing" ? missingTab(d, m) : tab === "games" ? gamesTab(d, m) : tab === "plan" ? planTab(d) : listTab(d, m)}</div>`;
     $("back").onclick = (e) => { e.preventDefault(); go(null); };
     document.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => go(d.id, b.dataset.tab, true));
     $("edit").onclick = () => { editing = !editing; if (editing && tab !== "list") go(d.id, "list", true); else render(); if (editing) setTimeout(() => $("addQ")?.focus(), 0); };
@@ -454,6 +476,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
       $("tabBody").querySelectorAll("[data-q]").forEach((b) => b.onclick = () => { const i = b.dataset.q.lastIndexOf(":"); setQty(d, b.dataset.q.slice(0, i), +b.dataset.q.slice(i + 1)); render(); document.querySelector(`[data-q="${CSS.escape(b.dataset.q)}"]`)?.focus(); });
     }
     if (tab === "missing") document.querySelectorAll("[data-post]").forEach((b) => b.onclick = () => postMissing(d, b.dataset.post));
+    if (tab === "plan") wirePlan();
   }
 
   // ---------- saving ----------
@@ -476,6 +499,98 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
       })
       .catch(() => { if (snap) Object.assign(d, { cards: snap.cards, colors: snap.colors, name: snap.name, format: snap.format }); toast(Tx("Couldn't save. Try again."), null, true); render(); });
     return queue;
+  }
+
+  // ---------- Consultor: the same portfolio plan as the Inkwell app ----------
+  const targetOf = (d) => (typeof d.targetCopies === "number" ? d.targetCopies : 1);
+  const prioOf = (d) => (typeof d.portfolioPriority === "number" ? d.portfolioPriority : 0);
+  const inventory = () => { const inv = {}, col = coll(); for (const id in col) { const c = BY.get(id); if (!c) continue; inv[c.key] = (inv[c.key] || 0) + (+col[id].n || 0) + (+col[id].f || 0); } return inv; };
+  const pDecks = () => decks().map((d) => ({ id: d.id, targetCopies: targetOf(d), priority: prioOf(d), needs: Object.fromEntries(deckList(d)) }));
+  const portfolio = () => computeDeckPortfolioPlan(inventory(), pDecks(), { budget: 200000 });
+  const cardOfKey = (k) => (BYNAME.get(k) || []).reduce((best, c) => (best == null || (priceOf(c) ?? 9e9) < (priceOf(best) ?? 9e9) ? c : best), null);
+  const deckName = (id) => decks().find((d) => d.id === id)?.name || "—";
+  function buyList(P, onlyDeck) {   // copies still missing in the plan, per card
+    const need = new Map();
+    for (const [id, pd] of Object.entries(P.perDeck || {})) { if (onlyDeck && id !== onlyDeck) continue;
+      for (const miss of pd.missingByInstance || []) for (const [k, n] of Object.entries(miss)) { const x = need.get(k) || { n: 0, decks: new Set() }; x.n += n; x.decks.add(id); need.set(k, x); } }
+    return [...need].map(([k, x]) => ({ k, c: cardOfKey(k), n: x.n, decks: [...x.decks] })).filter((r) => r.c).sort((a, b) => b.n - a.n || (priceOf(b.c) || 0) * b.n - (priceOf(a.c) || 0) * a.n);
+  }
+  function planNotice() {
+    if (!decks().length) return "";
+    const P = portfolio();
+    return `<a class="notice" href="?view=plan" id="planNotice" style="margin-bottom:var(--sp-3);text-decoration:none;color:inherit" data-testid="plan-notice"><i class="ic i-sparkle"></i><span class="t"><b>${esc(Tx("Deck advisor"))}</b>${esc(Tx("With your collection you can build {b} of the {n} deck copies you asked for at the same time.", { b: P.decksBuildable, n: P.decksRequested }))}</span><i class="ic i-chevron-right"></i></a>`;
+  }
+  const buyRow = (r) => { const [a, b] = split(r.c.name), p = priceOf(r.c);
+    return `<div class="list-row flat">${thumb(r.c, "xs")}<span class="t"><span>${esc(a)}${b ? ` · ${esc(b)}` : ""}</span><span class="meta">${esc([Tx("buy {n}", { n: r.n }), r.decks.map(deckName).join(", ")].join(" · "))}</span></span>
+      <span class="trail"><span class="money">${p != null ? esc(money(p * r.n)) : "–"}</span><a class="btn ghost small" href="${esc(ligaUrl(r.c))}" target="_blank" rel="noopener" aria-label="Liga Lorcana · ${esc(a)}"><i class="ic i-external"></i></a></span></div>`; };
+  function renderPlan() {
+    const back = `<a class="back" href="./" id="back">${Tx("Decks")}</a>`;
+    const head = `<div class="page-head"><div>${back}<h1 id="title">${Tx("Deck advisor")}</h1><p class="sub">${Tx("Can you build your decks with your collection?")}</p></div></div>`;
+    if (!decks().length) { $("app").innerHTML = head + emptyBox("decks", Tx("No decks yet"), Tx("Add decks first so the advisor can plan your copies.")); $("back").onclick = (e) => { e.preventDefault(); go(null); }; return; }
+    const P = portfolio(), buy = buyList(P), cost = buy.reduce((s, r) => s + (priceOf(r.c) || 0) * r.n, 0);
+    const nb = P.nextBestDeck;
+    const conflicts = (P.sharedConflicts || []).slice(0, 30).map((sc) => {
+      let impact = Tx("No shortage");
+      if (sc.demanded > sc.have) { const inv2 = inventory(); inv2[sc.card] = (inv2[sc.card] || 0) + 1; const P2 = computeDeckPortfolioPlan(inv2, pDecks(), { budget: 200000 });
+        const un = P2.decksBuildable - P.decksBuildable, red = P.missingUnits - P2.missingUnits;
+        impact = un > 0 ? Tx("+1 copy completes {n} more deck copies", { n: un }) : red > 0 ? Tx("+1 copy cuts {n} missing", { n: red }) : Tx("No shortage"); return { sc, impact, un, red }; }
+      return { sc, impact, un: 0, red: 0 };
+    }).sort((a, b) => b.un - a.un || b.red - a.red);
+    const deckRow = (d) => { const pd = P.perDeck[d.id], t = targetOf(d), m = measure(d);
+      return `<div class="list-row flat" data-plan-deck="${esc(d.id)}">${dots(deckInks(d, m), "lg pair")}<span class="t"><span>${esc(d.name)}</span><span class="meta">${esc(t ? Tx("built {b} of {t}", { b: pd?.built || 0, t }) : Tx("out of the plan"))}</span>
+        <span style="margin-top:6px"><button type="button" class="chipbtn" data-prio="${esc(d.id)}" aria-pressed="${prioOf(d) > 0}">${Tx(prioOf(d) > 0 ? "Prioritized" : "Prioritize")}</button></span></span>
+        <span class="trail"><span class="qty" aria-label="${Tx("Copies")}"><button type="button" data-tc="${esc(d.id)}:-1" aria-label="${esc(Tx("Remove one copy") + " · " + d.name)}" ${t <= 0 ? "disabled" : ""}>−</button><output>${t}</output><button type="button" data-tc="${esc(d.id)}:1" aria-label="${esc(Tx("Add one copy") + " · " + d.name)}" ${t >= 4 ? "disabled" : ""}>+</button></span></span></div>`; };
+    $("app").innerHTML = `${head}
+      <div class="stats-row three" data-testid="plan-stats"><div class="stat"><b>${P.decksBuildable}<small>/${P.decksRequested}</small></b><span>${Tx("Built together")}</span></div>
+        <div class="stat"><b>${P.missingUnits}</b><span>${Tx("Copies missing")}</span></div><div class="stat"><b class="money">${moneySplit(cost)}</b><span>${Tx("To buy")}</span></div></div>
+      <p class="small faint" style="margin:var(--sp-2) 0 var(--sp-4)" title="${esc(Tx("Optimized = best exact plan. Recommended = a good plan found within limits."))}">${Tx(P.optimal ? "Optimized plan" : "Recommended plan")} · ${esc(Tx("With your collection you can build {b} of the {n} deck copies you asked for at the same time.", { b: P.decksBuildable, n: P.decksRequested }))}</p>
+      ${nb ? `<div class="notice" data-testid="next-best"><i class="ic i-info"></i><span class="t"><b>${esc(Tx("Easiest next: {deck} · {n} cards missing.", { deck: deckName(nb.deckId), n: nb.missing }))}</b>${esc((P.purchasesToUnlockNext || []).slice(0, 6).map((x) => `${x.buy}× ${cardOfKey(x.card)?.name || x.card}`).join(" · "))}</span></div>` : ""}
+      <div class="group-head" style="margin-top:var(--sp-5)"><h3>${Tx("Your decks in the plan")}</h3></div>
+      <div class="card" style="padding:var(--sp-1) var(--sp-4)"><div class="list tight divided" id="planDecks">${decks().map(deckRow).join("")}</div></div>
+      <div class="group-head"><h3>${Tx("To build everything at once")}</h3>${buy.length ? `<span class="small muted">${esc(Tx("Total"))} <b class="money">${esc(money(cost))}</b></span>` : ""}</div>
+      ${buy.length ? `<div class="card" style="padding:var(--sp-1) var(--sp-4)"><div class="list tight divided" data-testid="buy-list">${buy.map(buyRow).join("")}</div></div>`
+        : `<div class="notice ok"><i class="ic i-check"></i><span class="t"><b>${Tx("Every deck can be built at the same time.")}</b>${Tx("Your decks don't share more cards than you have.")}</span></div>`}
+      ${conflicts.length ? `<div class="group-head"><h3>${Tx("Contested cards")}</h3><span class="small muted">${conflicts.length}</span></div>
+        <div class="card" style="padding:var(--sp-1) var(--sp-4)"><div class="list tight divided" data-testid="conflicts">${conflicts.map(({ sc, impact }) => { const c = cardOfKey(sc.card); const [a, b] = split(c?.name || sc.card);
+          return `<div class="list-row flat">${c ? thumb(c, "xs") : ""}<span class="t"><span>${esc(a)}${b ? ` · ${esc(b)}` : ""}</span><span class="meta">${esc(Tx("you have {h} · decks ask for {d}", { h: sc.have, d: sc.demanded }))} · ${esc(sc.decks.map(deckName).join(", "))}</span><span class="meta">${esc(impact)}</span></span></div>`; }).join("")}</div></div>` : ""}`;
+    $("back").onclick = (e) => { e.preventDefault(); go(null); };
+    wirePlan();
+  }
+  function planTab(d) {
+    const P = portfolio(), pd = P.perDeck[d.id], t = targetOf(d);
+    const mine = buyList(P, d.id), cost = mine.reduce((s, r) => s + (priceOf(r.c) || 0) * r.n, 0);
+    const shared = (P.sharedConflicts || []).filter((sc) => sc.decks.includes(d.id));
+    const status = !t ? ["", "Out of the plan"] : pd?.buildable ? ["match", "Built together with the others"] : ["warn", "Needs shared cards"];
+    return `<div class="stack">
+      <section class="card" data-testid="plan-status"><div class="row between" style="flex-wrap:nowrap"><b>${Tx(status[1])}</b>${status[0] ? `<span class="tag ${status[0]}">${t ? `${pd?.built || 0}/${t}` : ""}</span>` : ""}</div>
+        ${t ? `<p class="small muted" style="margin-top:4px">${esc(Tx("{b} of {t} copies built at the same time as your other decks.", { b: pd?.built || 0, t }))}</p>` : ""}
+        <div class="row between" style="margin-top:var(--sp-4);flex-wrap:nowrap"><span><b>${Tx("Copies of this deck you want built")}</b><span class="small muted" style="display:block">${Tx("0 takes the deck out of the plan.")}</span></span>
+          <span class="qty"><button type="button" data-tc="${esc(d.id)}:-1" aria-label="${Tx("Remove one copy")}" ${t <= 0 ? "disabled" : ""}>−</button><output data-testid="target">${t}</output><button type="button" data-tc="${esc(d.id)}:1" aria-label="${Tx("Add one copy")}" ${t >= 4 ? "disabled" : ""}>+</button></span></div>
+        <label class="switch" style="margin-top:var(--sp-2)"><span>${Tx("Prioritize this deck")}<small>${Tx("Gets shared cards before the others.")}</small></span><input type="checkbox" role="switch" data-prio-sw="${esc(d.id)}" ${prioOf(d) > 0 ? "checked" : ""}></label></section>
+      ${t && mine.length ? `<section class="card"><div class="hd"><h3>${Tx("Missing to build it with the others")}</h3><span class="small muted"><b class="money">${esc(money(cost))}</b></span></div>
+        <p class="small faint" style="margin:0 0 var(--sp-2)">${Tx("Faltando looks at this deck alone. Here, cards taken by decks with higher priority count as in use.")}</p>
+        <div class="list tight divided" data-testid="plan-buy">${mine.map(buyRow).join("")}</div></section>` : ""}
+      ${shared.length ? `<section class="card"><div class="hd"><h3>${Tx("Shares cards with")}</h3></div><div class="list tight divided" data-testid="plan-shared">${shared.map((sc) => { const c = cardOfKey(sc.card), [a] = split(c?.name || sc.card);
+          return `<div class="list-row flat"><span class="t"><span>${esc(a)}</span><span class="meta">${esc(Tx("you have {h} · decks ask for {d}", { h: sc.have, d: sc.demanded }))} · ${esc(sc.decks.filter((x) => x !== d.id).map(deckName).join(", "))}</span></span></div>`; }).join("")}</div></section>` : ""}
+      <a class="btn" href="?view=plan" id="toPlan"><i class="ic i-sparkle"></i>${Tx("See the plan for all decks")}</a></div>`;
+  }
+  function wirePlan() {
+    document.querySelectorAll("[data-tc]").forEach((b) => b.onclick = () => { const i = b.dataset.tc.lastIndexOf(":"), d = decks().find((x) => x.id === b.dataset.tc.slice(0, i)); if (!d) return;
+      d.targetCopies = Math.max(0, Math.min(4, targetOf(d) + +b.dataset.tc.slice(i + 1))); savePlan(d); render(); document.querySelector(`[data-tc="${CSS.escape(b.dataset.tc)}"]`)?.focus(); });
+    const prio = (id, on) => { const d = decks().find((x) => x.id === id); if (!d) return;
+      d.portfolioPriority = on ? Math.min(999, Math.max(0, ...decks().filter((x) => x.id !== id).map(prioOf)) + 1) : 0; savePlan(d); render(); };
+    document.querySelectorAll("[data-prio]").forEach((b) => b.onclick = () => { prio(b.dataset.prio, b.getAttribute("aria-pressed") !== "true"); document.querySelector(`[data-prio="${CSS.escape(b.dataset.prio)}"]`)?.focus(); });
+    document.querySelectorAll("[data-prio-sw]").forEach((x) => x.onchange = () => { prio(x.dataset.prioSw, x.checked); document.querySelector(`[data-prio-sw="${CSS.escape(x.dataset.prioSw)}"]`)?.focus(); });
+    $("toPlan")?.addEventListener("click", (e) => { e.preventDefault(); go(null, "plan"); });
+  }
+  const planTimers = new Map();
+  function savePlan(d) {
+    clearTimeout(planTimers.get(d.id));
+    planTimers.set(d.id, setTimeout(() => {
+      const p = prof(); if (!p) return;
+      queue = queue.then(() => CLOUD.api("rpc/save_deck", { method: "POST", body: { p_profile: p.profile, p_deck: { id: d.id, name: d.name, targetCopies: targetOf(d), portfolioPriority: prioOf(d) } } }))
+        .then(() => toast(Tx("Plan updated"))).catch(() => toast(Tx("Couldn't save. Try again."), null, true));
+    }, 500));
   }
 
   // ---------- sheets ----------
@@ -567,12 +682,13 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     wrap.insertAdjacentHTML("beforeend", `<div class="menu sm" role="menu">
       <button type="button" class="menu-item" role="menuitem" id="mRename"><i class="ic i-edit"></i>${Tx("Rename and format")}</button>
       <button type="button" class="menu-item" role="menuitem" id="mCopy"><i class="ic i-list"></i>${Tx("Copy list")}</button>
-      <a class="menu-item" role="menuitem" href="../#decks"><i class="ic i-decks"></i>${Tx("Planner and advisor")}</a>
+      <a class="menu-item" role="menuitem" href="?view=plan" id="mPlan"><i class="ic i-sparkle"></i>${Tx("Deck advisor")}</a>
       <div class="menu-sep"></div>
       <button type="button" class="menu-item danger" role="menuitem" id="mDelete"><i class="ic i-trash"></i>${Tx("Delete deck")}</button></div>`);
     $("more").setAttribute("aria-expanded", "true");
     const close = (e) => { if (!wrap.contains(e.target)) { wrap.querySelector(".menu")?.remove(); $("more")?.setAttribute("aria-expanded", "false"); document.removeEventListener("click", close); } };
     setTimeout(() => document.addEventListener("click", close), 0);
+    $("mPlan").onclick = (e) => { e.preventDefault(); go(null, "plan"); };
     $("mRename").onclick = () => { wrap.querySelector(".menu")?.remove(); openDeckForm(d, $("more")); };
     $("mCopy").onclick = () => {
       const text = m.known.sort((a, b) => a.c.cost - b.c.cost || a.c.name.localeCompare(b.c.name)).map((e) => `${e.q} ${e.c.name}`).join("\n");
