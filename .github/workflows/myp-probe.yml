@@ -3,7 +3,7 @@ on:
   push:
     branches: [myp-probe]
 permissions:
-  contents: read
+  contents: write
 jobs:
   probe:
     runs-on: ubuntu-latest
@@ -18,7 +18,10 @@ jobs:
           sleep 2
           curl -sSL -A "$UA" -o product.html -w "product %{http_code} %{size_download}\n" "https://mypcards.com/lorcana/produto/291659/mulan-elite-archer" || true
           ls -la
-      - uses: actions/upload-artifact@v4
+      - uses: actions/checkout@v5
         with:
-          name: myp
-          path: out
+          path: repo
+      - run: |
+          mkdir -p repo/probe && cp out/* repo/probe/ && cd repo
+          git config user.name probe; git config user.email probe@users.noreply.github.com
+          git add probe && git commit -m "probe output" && git push origin HEAD:myp-probe
