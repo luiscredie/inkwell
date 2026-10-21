@@ -48,11 +48,13 @@ def coach_index(catalog: dict) -> dict:
 
 
 PAGES = {   # site dir -> card index it embeds
-    "feed": None,
+    "feed": site_index,   # the public home shows example profiles with card art
     "colecao": site_index,
     "trades": site_index,
     "coach": coach_index,
     "precos": site_index,
+    "perfil": site_index,   # My Inkwell: profile editor and public profile
+    "admin": None,          # members, reports, example accounts (admins only)
     "counter": None,   # the Lore Counter (offline app); its sw.js and manifest are plain files next to it
 }
 

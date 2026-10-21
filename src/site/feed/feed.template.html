@@ -24,6 +24,32 @@
 #openFriends[hidden] + #feed { margin-top: 0 !important; }
 @media (min-width: 761px) { #openFriends { display: none; } }
 @media (max-width: 760px) { .page.split > aside { display: none; } }
+/* public home (signed out) */
+body.out .page-head, body.out #aside { display: none; }
+body.out .page.split { display: block; }
+.land { display: grid; gap: var(--sp-8); }
+.land-hero { position: relative; overflow: hidden; border-radius: 24px; padding: var(--sp-8) var(--sp-6); background: var(--surface-2); box-shadow: var(--e2); }
+.land-hero::before { content: ""; position: absolute; inset: 0; background: var(--hero-art, none) right -40px center / auto 135% no-repeat; opacity: .28; mask-image: linear-gradient(90deg, transparent 30%, #000 85%); -webkit-mask-image: linear-gradient(90deg, transparent 30%, #000 85%); pointer-events: none; }
+.land-hero > * { position: relative; }
+.land-hero h1 { font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1.05; margin: 0 0 var(--sp-3); max-width: 15ch; }
+.land-hero p { max-width: 52ch; color: var(--text-2); font-size: 1.05rem; margin: 0 0 var(--sp-5); }
+.land-cta { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; }
+.land-feats { display: grid; gap: var(--sp-3); grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.land-feat { display: grid; gap: 6px; align-content: start; padding: var(--sp-4); border-radius: var(--r-lg); background: var(--surface-1); border: 1px solid var(--line); color: inherit; text-decoration: none; }
+.land-feat:hover { border-color: var(--line-strong); }
+.land-feat .ic { width: 22px; height: 22px; color: var(--accent); }
+.land-feat b { font-size: var(--fs-h3); }
+.land-feat span { color: var(--text-2); font-size: var(--fs-small); }
+.land-ex { display: grid; gap: var(--sp-3); grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.ex-card { display: grid; gap: var(--sp-3); padding: var(--sp-4); border-radius: var(--r-lg); background: var(--surface-2); color: inherit; text-decoration: none; box-shadow: var(--e1); }
+.ex-card:hover { box-shadow: var(--e2); }
+.ex-top { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: var(--sp-3); align-items: center; }
+.ex-av { width: 56px; height: 56px; border-radius: 50%; background: var(--surface-3) center 20% / 210% auto no-repeat; box-shadow: 0 0 0 2px var(--gold, #e9b949); }
+.ex-show { display: flex; gap: 6px; } .ex-show .thumb { width: 64px; }
+.land-steps { display: grid; gap: var(--sp-3); grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); counter-reset: st; }
+.land-steps li { list-style: none; padding: var(--sp-4); border-radius: var(--r-lg); border: 1px dashed var(--line-strong); color: var(--text-2); }
+.land-steps li b { display: block; color: var(--text); margin-bottom: 4px; }
+.land-steps li::before { counter-increment: st; content: counter(st); display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: var(--on-accent); font-weight: 800; font-size: var(--fs-micro); margin-bottom: var(--sp-2); }
 </style>
 
 <main class="page split" id="page">
@@ -41,6 +67,7 @@
 </dialog>
 
 <script>
+const CARD_INDEX = /*@CARD_INDEX@*/;
 (() => {
   "use strict";
   const $ = (id) => document.getElementById(id);
@@ -74,6 +101,18 @@
     "Your friends' games, newest first.": "Os jogos dos seus amigos, do mais recente ao mais antigo.", "Friends and privacy": "Amigos e privacidade", "Privacy": "Privacidade",
     "{n} friends": "{n} amigos", "1 friend": "1 amigo", "your games: {v}": "seus jogos: {v}", "Close": "Fechar", "Requests": "Pedidos", "Add a friend": "Adicionar amigo",
     "Your timeline is empty": "Sua linha do tempo está vazia", "Add friends to see their games here. Your games also show up for whoever you choose.": "Adicione amigos para ver os jogos deles aqui. Os seus jogos também aparecem para quem você escolher.",
+    "Your corner of the Lorcana community": "Seu canto na comunidade de Lorcana",
+    "Show your favourite cards and your deck, invite your friends, and keep your collection, games and trades in one place. Free, made by a fan.": "Mostre suas cartas favoritas e seu deck, convide seus amigos e tenha coleção, jogos e trocas num lugar só. Grátis, feito por fã.",
+    "Create my Inkwell": "Criar meu Inkwell", "See an example profile": "Ver um perfil de exemplo", "What you can do": "O que dá para fazer",
+    "Your collection, by camera": "Sua coleção, pela câmera", "Scan cards with the phone, check your binder page by page and see what it's worth in reais.": "Escaneie cartas com o celular, confira o fichário página por página e veja quanto vale em reais.",
+    "Decks with a buying plan": "Decks com plano de compra", "See what's missing for each deck, what it costs, and which cards serve several decks.": "Veja o que falta para cada deck, quanto custa e quais cartas servem a vários decks.",
+    "Your games, with stats": "Seus jogos, com estatísticas", "Games from duels.ink and the lore counter, with win rate by deck and matchup.": "Jogos do duels.ink e do contador, com aproveitamento por deck e confronto.",
+    "Prices in reais": "Preços em reais", "TCGplayer every day and Brazilian shop prices, with a wishlist that tells you when to buy.": "TCGplayer todo dia e preços de lojas brasileiras, com lista de desejos que avisa a hora de comprar.",
+    "Trades and loans": "Trocas e empréstimos", "Lend to friends, post what you want or offer, and keep track of who has what.": "Empreste para amigos, anuncie o que procura ou oferece e saiba quem está com o quê.",
+    "What a profile looks like": "Como fica um perfil", "Examples · fictional profiles": "Exemplos · perfis fictícios", "Example · fictional profile": "Exemplo · perfil fictício",
+    "How it works": "Como funciona", "Sign in with your e-mail": "Entre com seu e-mail", "A 6-digit code, no password.": "Um código de 6 dígitos, sem senha.",
+    "Make your profile": "Monte seu perfil", "Private until you decide to make it public.": "Privado até você decidir deixar público.", "Invite your friends": "Convide seus amigos",
+    "Whoever signs in through your link becomes your friend.": "Quem entrar pelo seu link vira seu amigo.", "Fan project, free, not affiliated with Disney or Ravensburger.": "Projeto de fã, gratuito, sem vínculo com a Disney ou a Ravensburger.",
     "Add friends": "Adicionar amigos", "Sign in to see your friends' games": "Entre para ver os jogos dos amigos", "Use your e-mail. We send a 6-digit code, no password.": "Use seu e-mail. Mandamos um código de 6 dígitos, sem senha.",
     "Couldn't load the timeline.": "Não foi possível carregar a linha do tempo.", "Check your connection and try again.": "Confira a internet e tente de novo.", "Try again": "Tentar de novo",
     "Won": "Venceu", "Lost": "Perdeu", "against": "contra", "went first": "começou jogando", "went second": "começou comprando", "Confirm removal": "Confirmar remoção", "Confirm delete": "Confirmar exclusão",
@@ -317,12 +356,50 @@
     $("older")?.addEventListener("click", async () => { await loadPosts(true); renderFeed(); });
   }
 
-  // ---------- boot ----------
-  if (!me) {
-    $("feed").innerHTML = `<div class="empty"><img src="../ui/assets/empty/signedout.svg" alt=""><b>${Tx("Sign in to see your friends' games")}</b><p>${Tx("Use your e-mail. We send a 6-digit code, no password.")}</p><button type="button" class="btn primary" id="signIn">${Tx("Sign in")}</button></div>`;
+  // ---------- public home (signed out): what Inkwell is, with example profiles marked as such ----------
+  function publicHome() {
+    document.body.classList.add("out");
+    document.title = "Inkwell · " + Tx("Your corner of the Lorcana community");
+    const IDX = new Map(((typeof CARD_INDEX !== "undefined" && CARD_INDEX?.cards) || []).map((c) => [c[0], c]));
+    const img = (id) => { const c = IDX.get(id); return c && c[8] ? `../lorcana-card-images/${encodeURI(c[8]).replace(/'/g, "%27")}` : ""; };
+    const thumbOf = (id) => { const c = IDX.get(id); return `<span class="thumb">${img(id) ? `<img src="${img(id)}" alt="${esc(c ? c[1] : "")}" loading="lazy" decoding="async">` : ""}</span>`; };
+    const INKPT = { Amber: "Âmbar", Amethyst: "Ametista", Emerald: "Esmeralda", Ruby: "Rubi", Sapphire: "Safira", Steel: "Aço" };
+    const feats = [
+      ["cards", "../colecao/", "Your collection, by camera", "Scan cards with the phone, check your binder page by page and see what it's worth in reais."],
+      ["decks", "../decks/", "Decks with a buying plan", "See what's missing for each deck, what it costs, and which cards serve several decks."],
+      ["games", "../coach/", "Your games, with stats", "Games from duels.ink and the lore counter, with win rate by deck and matchup."],
+      ["chart", "../precos/", "Prices in reais", "TCGplayer every day and Brazilian shop prices, with a wishlist that tells you when to buy."],
+      ["trades", "../trades/", "Trades and loans", "Lend to friends, post what you want or offer, and keep track of who has what."],
+    ];
+    $("feed").style.marginTop = "0";
+    $("feed").innerHTML = `<div class="land" data-testid="public-home">
+      <section class="land-hero" id="landHero"><h1>${Tx("Your corner of the Lorcana community")}</h1>
+        <p>${Tx("Show your favourite cards and your deck, invite your friends, and keep your collection, games and trades in one place. Free, made by a fan.")}</p>
+        <div class="land-cta"><button type="button" class="btn primary large" id="signIn">${Tx("Create my Inkwell")}</button><a class="btn large" href="../perfil/?u=user1">${Tx("See an example profile")}</a></div>
+        <p class="small faint" style="margin:var(--sp-3) 0 0">${Tx("Use your e-mail. We send a 6-digit code, no password.")}</p></section>
+      <section><div class="group-head"><h2>${Tx("What you can do")}</h2></div>
+        <div class="land-feats">${feats.map(([ic, href, t, d]) => `<a class="land-feat" href="${href}"><i class="ic i-${ic}"></i><b>${Tx(t)}</b><span>${Tx(d)}</span></a>`).join("")}</div></section>
+      <section id="landEx" hidden><div class="group-head"><h2>${Tx("What a profile looks like")}</h2><span class="tag accent">${Tx("Examples · fictional profiles")}</span></div><div class="land-ex" id="exList"></div></section>
+      <section><div class="group-head"><h2>${Tx("How it works")}</h2></div>
+        <ol class="land-steps" style="padding:0;margin:0"><li><b>${Tx("Sign in with your e-mail")}</b>${Tx("A 6-digit code, no password.")}</li><li><b>${Tx("Make your profile")}</b>${Tx("Private until you decide to make it public.")}</li><li><b>${Tx("Invite your friends")}</b>${Tx("Whoever signs in through your link becomes your friend.")}</li></ol></section>
+      <p class="small faint">${Tx("Fan project, free, not affiliated with Disney or Ravensburger.")}</p></div>`;
     $("signIn").onclick = () => window.INKWELL_SIGNIN?.();
-    return;
+    const heroArt = img("LOR14-2"); if (heroArt) $("landHero").style.setProperty("--hero-art", `url('${heroArt}')`);
+    const cfg = window.INKWELL_CLOUD_CONFIG;
+    fetch(`${cfg.url}/rest/v1/rpc/example_profiles`, { method: "POST", headers: { apikey: cfg.key, "Content-Type": "application/json" }, body: "{}" })
+      .then((r) => (r.ok ? r.json() : [])).then((list) => {
+        list = (list || []).filter((p) => p && p.mock);
+        if (!list.length) return;
+        $("exList").innerHTML = list.map((p) => `<a class="ex-card" href="../perfil/?u=${encodeURIComponent(p.handle)}" data-testid="example-profile">
+          <div class="ex-top"><span class="ex-av" style="${img(p.avatar) ? `background-image:url('${img(p.avatar)}')` : ""}"></span><div><b>${esc(p.name)}</b><div class="small muted">@${esc(p.handle)}${(p.inks || []).length ? " · " + (p.inks || []).map((i) => (lang === "pt" ? INKPT[i] || i : i)).join(" / ") : ""}</div></div></div>
+          <div class="ex-show">${(p.showcase || []).slice(0, 3).map((s) => thumbOf(s.id)).join("")}</div>
+          <span class="tag accent" style="width:max-content">${Tx("Example · fictional profile")}</span></a>`).join("");
+        $("landEx").hidden = false;
+      }).catch(() => {});
   }
+
+  // ---------- boot ----------
+  if (!me) { publicHome(); return; }
   if (location.hash === "#amigos") setTimeout(() => { if (phone()) $("openFriends").click(); else $("findPeople")?.focus(); }, 0);
   $("feed").innerHTML = `<span class="skel" style="height:150px;border-radius:var(--r-lg)"></span><span class="skel" style="height:150px;border-radius:var(--r-lg)"></span><p class="sr-only">${Tx("Loading…")}</p>`;
   const go = async () => {

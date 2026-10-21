@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Admin · Inkwell</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#13102a">
+<link rel="icon" href="../ink/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="../ui/tokens.css"><script>document.documentElement.dataset.theme="noite";</script>
+</head>
+<body>
+<script>window.INKWELL_CLOUD_CONFIG = {"url": "https://sorefaetiaebmjploanp.supabase.co", "key": "sb_publishable_RkAWW-ENz70CXA6_QV7aHw_MpfD7Gn2", "redirect": "https://luiscredie.github.io/inkwell/admin/"};
+/*@CLOUD_JS@*/</script>
+<style>
+/* layout only — components come from ../ui/tokens.css (design v2) */
+.adm-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--sp-3); align-items: center; padding: var(--sp-3) 0; border-bottom: 1px solid var(--line); }
+.adm-row .t b { display: block; overflow-wrap: anywhere; }
+.adm-row .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.adm-acts { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+@media (max-width: 640px) { .adm-row { grid-template-columns: minmax(0, 1fr); } .adm-acts { justify-content: flex-start; } }
+.adm-reason { white-space: pre-wrap; overflow-wrap: anywhere; margin: 4px 0 0; }
+</style>
+
+<main class="page" id="page">
+  <div class="page-head"><div><h1 id="title">Admin</h1><p class="sub" id="sub"></p></div></div>
+  <div id="app"></div>
+</main>
+<div class="toast-host"><div class="toast" id="toast" role="status" hidden></div></div>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  let lang = "pt";
+  try { lang = localStorage.getItem("inkwell-lang") || ((navigator.language || "pt").toLowerCase().startsWith("en") ? "en" : "pt"); } catch { /* */ }
+  const PT = {
+    "Members, reports and example accounts.": "Membros, denúncias e contas de exemplo.", "Members": "Membros", "Reports": "Denúncias", "Loading…": "Carregando…",
+    "Sign in": "Entrar", "Sign in with an admin account.": "Entre com uma conta de administrador.", "Not allowed": "Sem permissão", "This page is only for administrators.": "Esta página é só para administradores.",
+    "Couldn't load.": "Não foi possível carregar.", "Try again": "Tentar de novo", "example": "exemplo", "public": "público", "private": "privado", "hidden": "oculto", "admin": "admin", "18+": "18+",
+    "{n} games": "{n} jogos", "{n} open reports": "{n} denúncias abertas", "joined {d}": "entrou em {d}", "last sign-in {d}": "último acesso {d}", "never signed in": "nunca entrou",
+    "Hide profile": "Ocultar perfil", "Show profile": "Mostrar perfil", "Sign out everywhere": "Desconectar de tudo", "Delete account": "Excluir conta",
+    "Tap again to confirm": "Toque de novo para confirmar", "Done": "Feito", "Couldn't do it: {e}": "Não foi possível: {e}",
+    "No reports.": "Nenhuma denúncia.", "Mark as handled": "Marcar como resolvida", "open": "aberta", "handled": "resolvida", "by {n}": "por {n}", "about {n}": "sobre {n}", "See profile": "Ver perfil",
+    "Delete all example accounts": "Excluir todas as contas de exemplo", "Example accounts": "Contas de exemplo",
+    "There is no password to reset: members sign in with a code sent to their e-mail. \"Sign out everywhere\" ends every session; they sign in again with a new code.": "Não há senha para redefinir: os membros entram com um código enviado por e-mail. \"Desconectar de tudo\" encerra todas as sessões; a pessoa entra de novo com um código novo.",
+    "Deleting removes the account and all its data (collection, decks, games, posts). It cannot be undone.": "Excluir apaga a conta e todos os dados dela (coleção, decks, jogos, anúncios). Não dá para desfazer.",
+    "Search by name or e-mail": "Buscar por nome ou e-mail", "{n} members": "{n} membros",
+  };
+  const fill = (s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)) : s);
+  const Tx = (en, v) => fill(lang === "pt" && en in PT ? PT[en] : en, v);
+  const LOC = lang === "pt" ? "pt-BR" : "en";
+  const dt = (d) => (d ? new Date(d).toLocaleDateString(LOC, { day: "numeric", month: "short", year: "numeric" }) : "");
+  const CLOUD = window.INKWELL_CLOUD, me = CLOUD?.user();
+  const rpc = (name, body = {}) => CLOUD.api(`rpc/${name}`, { method: "POST", body });
+  let users = [], reports = [], tab = "users", q = "", armed = null;
+
+  function emptyBox(img, title, text, extra = "") { return `<div class="empty"><img src="../ui/assets/empty/${img}.svg" alt=""><b>${esc(title)}</b><p>${esc(text)}</p>${extra}</div>`; }
+  async function load() { [users, reports] = await Promise.all([rpc("admin_users"), rpc("admin_reports")]); users = users || []; reports = reports || []; }
+  function render() {
+    const open = reports.filter((r) => r.status === "open").length, mocks = users.filter((u) => u.is_mock);
+    const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+    const list = users.filter((u) => words.every((w) => `${u.display_name || ""} ${u.email || ""} ${u.handle || ""}`.toLowerCase().includes(w)));
+    const btn = (u, act, label, cls = "") => `<button type="button" class="btn small ${cls}" data-act="${act}" data-u="${esc(u.id)}" ${u.is_admin && act === "delete" ? "disabled" : ""}>${armed === `${act}:${u.id}` ? Tx("Tap again to confirm") : Tx(label)}</button>`;
+    $("app").innerHTML = `<div class="tabs" role="tablist"><button type="button" class="tab" role="tab" data-tab="users" aria-selected="${tab === "users"}">${Tx("Members")} <span class="count quiet">${users.length}</span></button>
+        <button type="button" class="tab" role="tab" data-tab="reports" aria-selected="${tab === "reports"}">${Tx("Reports")} ${open ? `<span class="count">${open}</span>` : ""}</button></div>
+      ${tab === "users" ? `
+        <p class="small muted">${Tx("There is no password to reset: members sign in with a code sent to their e-mail. \"Sign out everywhere\" ends every session; they sign in again with a new code.")} ${Tx("Deleting removes the account and all its data (collection, decks, games, posts). It cannot be undone.")}</p>
+        ${mocks.length ? `<section class="card" style="margin:var(--sp-3) 0"><b>${Tx("Example accounts")}</b><p class="small muted" style="margin:4px 0 var(--sp-3)">${mocks.map((u) => "@" + esc(u.handle || u.email)).join(", ")}</p><button type="button" class="btn small danger" data-act="delmocks">${armed === "delmocks" ? Tx("Tap again to confirm") : Tx("Delete all example accounts")}</button></section>` : ""}
+        <span class="search" style="display:block;margin:var(--sp-3) 0"><i class="ic i-search"></i><input type="search" id="q" value="${esc(q)}" placeholder="${Tx("Search by name or e-mail")}" aria-label="${Tx("Search by name or e-mail")}"></span>
+        <div data-testid="users">${list.map((u) => `<div class="adm-row" data-user="${esc(u.id)}"><div class="t"><b>${esc(u.display_name || u.email || u.id)}</b><span class="small muted">${esc(u.email || "")}${u.handle ? ` · @${esc(u.handle)}` : ""}</span>
+            <div class="tags">${u.is_mock ? `<span class="tag accent">${Tx("example")}</span>` : ""}${u.is_admin ? `<span class="tag info">${Tx("admin")}</span>` : ""}<span class="tag ${u.is_public ? "match" : ""}">${Tx(u.is_public ? "public" : "private")}</span>${u.hidden ? `<span class="tag warn">${Tx("hidden")}</span>` : ""}${u.adult ? `<span class="tag">${Tx("18+")}</span>` : ""}${u.open_reports ? `<span class="tag late">${esc(Tx("{n} open reports", { n: u.open_reports }))}</span>` : ""}</div>
+            <span class="small faint">${esc([Tx("joined {d}", { d: dt(u.created_at) }), u.last_sign_in_at ? Tx("last sign-in {d}", { d: dt(u.last_sign_in_at) }) : Tx("never signed in"), Tx("{n} games", { n: u.games })].join(" · "))}</span></div>
+          <div class="adm-acts">${u.handle && u.is_public ? `<a class="btn small ghost" href="../perfil/?u=${esc(u.handle)}">${Tx("See profile")}</a>` : ""}${btn(u, u.hidden ? "unhide" : "hide", u.hidden ? "Show profile" : "Hide profile")}${btn(u, "signout", "Sign out everywhere")}${btn(u, "delete", "Delete account", "danger")}</div></div>`).join("")}</div>`
+      : `<div data-testid="reports">${reports.length ? reports.map((r) => `<div class="adm-row"><div class="t"><b>${esc(Tx("about {n}", { n: r.target_name || r.target_handle || "?" }))}</b><span class="small muted">${esc([Tx("by {n}", { n: r.reporter_name || "?" }), dt(r.created_at)].join(" · "))}</span>
+            <p class="adm-reason">${esc(r.reason)}</p><div class="tags"><span class="tag ${r.status === "open" ? "late" : "match"}">${Tx(r.status === "open" ? "open" : "handled")}</span></div></div>
+          <div class="adm-acts">${r.target_handle ? `<a class="btn small ghost" href="../perfil/?u=${esc(r.target_handle)}">${Tx("See profile")}</a>` : ""}${r.status === "open" ? `<button type="button" class="btn small" data-resolve="${esc(r.id)}">${Tx("Mark as handled")}</button>` : ""}
+            ${users.find((u) => u.id === r.target) && !users.find((u) => u.id === r.target).hidden ? btn(users.find((u) => u.id === r.target), "hide", "Hide profile") : ""}</div></div>`).join("") : `<p class="muted">${Tx("No reports.")}</p>`}</div>`}`;
+    document.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => { tab = b.dataset.tab; armed = null; render(); });
+    $("q")?.addEventListener("input", (e) => { q = e.target.value; render(); $("q").focus(); $("q").setSelectionRange(q.length, q.length); });
+    document.querySelectorAll("[data-act]").forEach((b) => b.onclick = () => act(b.dataset.act, b.dataset.u));
+    document.querySelectorAll("[data-resolve]").forEach((b) => b.onclick = () => run(() => rpc("admin_resolve_report", { p_id: b.dataset.resolve })));
+  }
+  async function run(fn) {
+    try { await fn(); await load(); armed = null; render(); toast(Tx("Done")); }
+    catch (e) { armed = null; render(); toast(Tx("Couldn't do it: {e}", { e: String(e?.message || e).slice(0, 120) }), true); }
+  }
+  function act(a, id) {
+    const key = a === "delmocks" ? "delmocks" : `${a}:${id}`;
+    if ((a === "delete" || a === "signout" || a === "delmocks") && armed !== key) { armed = key; render(); return; }   // destructive: a second tap confirms
+    if (a === "delmocks") return run(async () => { for (const u of users.filter((x) => x.is_mock)) await rpc("admin_action", { p_user: u.id, p_action: "delete" }); });
+    return run(() => rpc("admin_action", { p_user: id, p_action: a }));
+  }
+  let toastTimer = null;
+  function toast(text, err) {
+    const t = $("toast"); t.className = `toast${err ? " err" : ""}`;
+    t.innerHTML = `<i class="ic ${err ? "i-alert" : "i-check"}"></i><span>${esc(text)}</span>`; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 5000);
+  }
+
+  document.documentElement.lang = LOC;
+  $("sub").textContent = Tx("Members, reports and example accounts.");
+  if (!me) { $("app").innerHTML = emptyBox("signedout", Tx("Sign in"), Tx("Sign in with an admin account."), `<button type="button" class="btn primary" id="si">${Tx("Sign in")}</button>`); $("si").onclick = () => window.INKWELL_SIGNIN?.(); return; }
+  $("app").innerHTML = `<div class="skel" style="height:200px"></div><p class="sr-only">${Tx("Loading…")}</p>`;
+  load().then(render).catch((e) => {
+    const denied = /not allowed|42501|403|401/.test(String(e?.message || e));
+    $("app").innerHTML = denied ? emptyBox("error", Tx("Not allowed"), Tx("This page is only for administrators.")) : emptyBox("error", Tx("Couldn't load."), "", `<button type="button" class="btn" onclick="location.reload()">${Tx("Try again")}</button>`);
+  });
+})();
+</script>
+
+<script>window.INKWELL_SHELL = {"page": "admin"};
+/*@SHELL_JS@*/</script>
+</body>
+</html>
