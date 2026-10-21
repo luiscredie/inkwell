@@ -9,120 +9,7 @@
 <link rel="icon" href="../ink/icon-192.png">
 <link rel="apple-touch-icon" href="../ink/icon-192.png">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,800&family=Outfit:wght@400;600;800&display=swap"><style>/* Inkwell site shell: themes (design tokens) + the shared app bar.
-   Pages keep using --night, --panel, --raised, --line, --text, --muted, --faint, --gold, --gold-ink,
-   --win, --loss, --opp, --font; a theme only redefines them. */
-
-/* ---------- 1. Noite: the Inkwell night, refined ---------- */
-html[data-theme="noite"] {
-  --night: #13102a; --panel: #1e1a3b; --raised: #2a2552; --line: #352f60;
-  --text: #f5f1fb; --muted: #aaa3cc; --faint: #7f78a8;
-  --gold: #ecc061; --gold-ink: #241a04; --win: #6fd3a3; --loss: #f38b8b; --opp: #9aaeff;
-  --font: "Bricolage Grotesque", ui-rounded, "Segoe UI", system-ui, sans-serif;
-  --display: "Bricolage Grotesque", ui-rounded, system-ui, sans-serif;
-  --radius: 16px; --shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 8px 24px rgba(5,3,20,.35);
-  --bar: rgba(19,16,42,.82); --bg-art: radial-gradient(1200px 500px at 85% -10%, rgba(236,192,97,.10), transparent 60%), radial-gradient(900px 500px at -10% 10%, rgba(155,106,209,.16), transparent 60%);
-  color-scheme: dark;
-}
-/* ---------- 2. Pergaminho: light, Disney-minimal storybook ---------- */
-html[data-theme="pergaminho"] {
-  --night: #f6f1e6; --panel: #fffdf8; --raised: #f0e8d8; --line: #e3d8c3;
-  --text: #1d2042; --muted: #5f6080; --faint: #8b8aa3;
-  --gold: #8a5f12; --gold-ink: #ffffff; --win: #1f7a50; --loss: #b23a3a; --opp: #3552b5;
-  --font: "Nunito Sans", "Segoe UI", system-ui, sans-serif;
-  --display: "Fraunces", Georgia, "Times New Roman", serif;
-  --radius: 18px; --shadow: 0 1px 2px rgba(60,45,20,.06), 0 10px 28px rgba(60,45,20,.08);
-  --bar: rgba(246,241,230,.86); --bg-art: radial-gradient(1000px 420px at 100% -10%, rgba(201,154,58,.14), transparent 60%), radial-gradient(800px 400px at -10% 0%, rgba(53,82,181,.07), transparent 60%);
-  color-scheme: light;
-}
-/* ---------- 3. Tinta: high-contrast ink, vivid colours ---------- */
-html[data-theme="tinta"] {
-  --night: #0b0d12; --panel: #141821; --raised: #1c2230; --line: #262e3f;
-  --text: #eef3fb; --muted: #9aa6bb; --faint: #6c7890;
-  --gold: #5fd4ff; --gold-ink: #031822; --win: #4fe0a0; --loss: #ff7a8a; --opp: #c79bff;
-  --font: "Outfit", "Segoe UI", system-ui, sans-serif;
-  --display: "Outfit", system-ui, sans-serif;
-  --radius: 12px; --shadow: 0 0 0 1px rgba(95,212,255,.04), 0 12px 30px rgba(0,0,0,.45);
-  --bar: rgba(11,13,18,.85); --bg-art: linear-gradient(180deg, rgba(95,212,255,.06), transparent 320px);
-  color-scheme: dark;
-}
-
-/* ---------- shared polish (all themes) ---------- */
-html[data-theme] { background: var(--night); }
-html[data-theme] body { background: var(--night) var(--bg-art) no-repeat fixed; color: var(--text); font-family: var(--font); -webkit-font-smoothing: antialiased; }
-html[data-theme] h1, html[data-theme] h2 { font-family: var(--display); letter-spacing: -0.01em; }
-html[data-theme="pergaminho"] h1 { font-weight: 600; }
-html[data-theme] .panel, html[data-theme] .post, html[data-theme] .card { border-radius: var(--radius); box-shadow: var(--shadow); }
-html[data-theme="pergaminho"] .panel, html[data-theme="pergaminho"] .post, html[data-theme="pergaminho"] .card { border: 1px solid var(--line); }
-html[data-theme] .btn { border-radius: calc(var(--radius) - 6px); transition: transform .08s ease, filter .15s ease; }
-html[data-theme] .btn:active { transform: translateY(1px); }
-html[data-theme] .btn.primary:hover { filter: brightness(1.06); }
-html[data-theme] input, html[data-theme] select, html[data-theme] textarea { border-radius: calc(var(--radius) - 6px); }
-html[data-theme="pergaminho"] input, html[data-theme="pergaminho"] select, html[data-theme="pergaminho"] textarea { background: #fff; }
-html[data-theme] :focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
-
-/* ---------- app bar ---------- */
-.iw-bar { position: sticky; top: 0; z-index: 40; backdrop-filter: saturate(1.4) blur(10px); -webkit-backdrop-filter: saturate(1.4) blur(10px);
-  background: var(--bar); border-bottom: 1px solid var(--line); padding-top: env(safe-area-inset-top, 0px); }
-.iw-bar .in { max-width: 1040px; margin: 0 auto; display: flex; align-items: center; gap: 14px; padding: 8px 16px; }
-.iw-logo { display: inline-flex; align-items: center; gap: 8px; font-family: var(--display); font-weight: 800; font-size: 1.12rem; color: var(--text); text-decoration: none; letter-spacing: -0.02em; }
-.iw-logo svg { width: 26px; height: 26px; }
-.iw-nav { display: flex; gap: 2px; flex: 1; }
-.iw-nav a { display: inline-flex; align-items: center; gap: 6px; padding: 7px 11px; border-radius: 999px; color: var(--muted); text-decoration: none; font-size: 0.9rem; font-weight: 600; }
-.iw-nav a:hover { color: var(--text); background: var(--raised); }
-.iw-nav a[aria-current="page"] { color: var(--text); background: var(--raised); }
-.iw-nav svg { width: 18px; height: 18px; }
-.iw-theme { position: relative; }
-.iw-theme > button { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 999px; padding: 6px 10px; cursor: pointer; font: 600 0.85rem var(--font); }
-.iw-theme > button i { width: 14px; height: 14px; border-radius: 50%; background: conic-gradient(var(--gold) 0 50%, var(--night) 50% 100%); border: 1px solid var(--line); }
-.iw-pop { position: absolute; right: 0; top: calc(100% + 8px); width: 270px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 16px 40px rgba(0,0,0,.3); padding: 8px; display: grid; gap: 6px; z-index: 60; }
-.iw-pop[hidden] { display: none; }
-.iw-pop p { margin: 4px 6px; font-size: 0.78rem; color: var(--muted); }
-.iw-opt { display: grid; grid-template-columns: 54px 1fr; gap: 10px; align-items: center; text-align: left; border: 1px solid transparent; background: none; border-radius: 10px; padding: 6px; cursor: pointer; color: var(--text); font: inherit; }
-.iw-opt:hover { background: var(--raised); }
-.iw-opt[aria-pressed="true"] { border-color: var(--gold); }
-.iw-opt b { display: block; font-size: 0.9rem; } .iw-opt small { color: var(--muted); font-size: 0.75rem; line-height: 1.3; }
-.iw-sw { height: 38px; border-radius: 8px; border: 1px solid rgba(128,128,128,.3); position: relative; overflow: hidden; }
-.iw-sw::after { content: ""; position: absolute; left: 7px; right: 18px; bottom: 7px; height: 8px; border-radius: 4px; background: var(--sw-acc); }
-.iw-sw[data-t="noite"] { background: #1e1a3b; --sw-acc: #ecc061; }
-.iw-sw[data-t="pergaminho"] { background: #fffdf8; --sw-acc: #8a5f12; }
-.iw-sw[data-t="tinta"] { background: #141821; --sw-acc: #5fd4ff; }
-
-/* the shell replaces each page's own "← Home" links */
-.iw-has-shell #homeLink, .iw-has-shell #nav, .iw-has-shell #langBtn { display: none !important; }
-.iw-lang { display: flex; gap: 6px; margin: 2px 6px 4px; }
-.iw-lang button { flex: 1; border: 1px solid var(--line); background: none; color: var(--muted); border-radius: 999px; padding: 5px 8px; cursor: pointer; font: 600 0.82rem var(--font); }
-.iw-lang button[aria-pressed="true"] { color: var(--text); background: var(--raised); border-color: var(--gold); }
-
-/* phones: tabs at the bottom, thumb-reachable (a separate element: the blurred bar would trap a fixed child) */
-.iw-tabs { display: none; }
-@media (max-width: 760px) {
-  .iw-bar .iw-nav { display: none; }
-  .iw-tabs { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; justify-content: space-around; background: var(--bar);
-    backdrop-filter: saturate(1.4) blur(10px); -webkit-backdrop-filter: saturate(1.4) blur(10px); border-top: 1px solid var(--line);
-    padding: 4px 4px calc(4px + env(safe-area-inset-bottom, 0px)); }
-  .iw-tabs a { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 0.68rem; font-weight: 600; padding: 6px 2px; border-radius: 10px; flex: 1; min-width: 0;
-    color: var(--muted); text-decoration: none; white-space: nowrap; }
-  .iw-tabs a[aria-current="page"] { color: var(--gold); }
-  .iw-tabs svg { width: 22px; height: 22px; }
-  .iw-bar .in { justify-content: space-between; }
-  body.iw-has-shell { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
-}
-@media print { .iw-bar, .iw-tabs { display: none !important; } }
-</style><script>(function () {
-  var C = { noite: "#13102a", pergaminho: "#f6f1e6", tinta: "#0b0d12" }, t;
-  try { t = localStorage.getItem("inkwell-theme"); } catch (e) { /* storage off */ }
-  if (!C[t]) t = "noite";
-  window.INKWELL_SET_THEME = function (x) {
-    if (!C[x]) return;
-    document.documentElement.dataset.theme = x;
-    try { localStorage.setItem("inkwell-theme", x); } catch (e) { /* storage off */ }
-    var m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = C[x];
-  };
-  document.documentElement.dataset.theme = t;
-  var m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = C[t];
-})();
-</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="../ui/tokens.css"><script>document.documentElement.dataset.theme="noite";</script>
 </head>
 <body>
 <script>window.INKWELL_CLOUD_CONFIG = {"url": "https://sorefaetiaebmjploanp.supabase.co", "key": "sb_publishable_RkAWW-ENz70CXA6_QV7aHw_MpfD7Gn2", "redirect": "https://luiscredie.github.io/inkwell/feed/"};
@@ -223,70 +110,30 @@ window.INKWELL_CLOUD = (() => {
 })();
 </script>
 <style>
-:root {
-  --night: #17142e; --panel: #221e40; --raised: #2b2650; --line: #3a3463;
-  --text: #f3effa; --muted: #a8a1c9; --faint: #7d76a3;
-  --gold: #e9b949; --gold-ink: #2a1f05; --win: #67c99a; --loss: #f07a7a; --opp: #8fa3ff;
-  --amber: #f2b33d; --amethyst: #9b6ad1; --emerald: #3fa36f; --ruby: #d9485a; --sapphire: #3c8fd6; --steel: #9aa8b5;
-  --font: "Bricolage Grotesque", ui-rounded, "Segoe UI", system-ui, sans-serif;
-}
-* { box-sizing: border-box; }
-body { background: var(--night); color: var(--text); font-family: var(--font); font-size: 15px; line-height: 1.45; margin: 0; }
-button, input, select, textarea { font: inherit; color: inherit; }
-:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
-a { color: var(--gold); }
-.page { max-width: 1040px; margin: 0 auto; padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; align-items: start; }
-.top { grid-column: 1 / -1; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-h1 { margin: 0; font-size: 1.5rem; }
-h2 { font-size: 1.02rem; margin: 0 0 8px; }
-nav.links { display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.88rem; }
-nav.links a { color: var(--muted); text-decoration: none; }
-nav.links a[aria-current=page] { color: var(--text); font-weight: 700; }
-.muted { color: var(--muted); } .small { font-size: 0.85rem; } .faint { color: var(--faint); }
-.linkbtn { background: none; border: 0; padding: 0; color: var(--gold); text-decoration: underline; cursor: pointer; font-size: inherit; }
-.btn { border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 7px 12px; font-weight: 600; cursor: pointer; }
-.btn.primary { background: var(--gold); color: var(--gold-ink); border-color: var(--gold); }
-.btn.small { padding: 4px 9px; font-size: 0.82rem; }
-.btn:disabled { opacity: .5; cursor: default; }
-input, select, textarea { background: var(--night); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; width: 100%; }
-.panel { background: var(--panel); border-radius: 14px; padding: 12px; margin-bottom: 14px; }
-.side { position: sticky; top: 12px; }
-.post { background: var(--panel); border-radius: 16px; padding: 12px 14px; margin-bottom: 12px; }
-.who { display: flex; gap: 10px; align-items: center; }
-.av { width: 38px; height: 38px; border-radius: 50%; background: var(--raised); display: grid; place-items: center; color: var(--gold); font-weight: 800; flex: none; }
-.who b { display: block; }
-.res { margin: 10px 0 6px; font-size: 1.02rem; }
-.res .w { color: var(--win); font-weight: 700; } .res .l { color: var(--loss); font-weight: 700; }
-.score { font-variant-numeric: tabular-nums; font-weight: 800; font-size: 1.3rem; }
-.meta { display: flex; gap: 8px; flex-wrap: wrap; font-size: 0.8rem; color: var(--muted); }
-.tag { border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; }
-.inks { display: inline-flex; gap: 2px; margin-right: 5px; vertical-align: middle; }
-.inks i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
-.acts { display: flex; gap: 14px; border-top: 1px solid var(--line); margin-top: 10px; padding-top: 8px; font-size: 0.88rem; }
-.acts a, .acts button { color: var(--muted); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: none; font-size: inherit; }
-.cmts { margin-top: 8px; display: grid; gap: 6px; }
-.cmt { background: var(--night); border-radius: 12px; padding: 6px 10px; font-size: 0.9rem; }
-.cmt b { font-size: 0.82rem; margin-right: 6px; }
-.cmtform { display: flex; gap: 6px; margin-top: 6px; }
-.person { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line); }
-.person:first-of-type { border-top: 0; }
-.empty { color: var(--muted); padding: 8px 0; }
-details.grp { border-top: 1px solid var(--line); padding: 6px 0; }
-details.grp summary { cursor: pointer; }
-.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
-.seg button { border: 0; background: transparent; padding: 6px 10px; cursor: pointer; color: var(--muted); font-size: 0.85rem; }
-.seg button[aria-pressed=true] { background: var(--line); color: var(--text); }
-[hidden] { display: none !important; }
-@media (max-width: 820px) { .page { grid-template-columns: minmax(0, 1fr); } .top { order: -2; } .side { position: static; } }  /* phones: the timeline first, friends and sharing below */
+/* layout only — components come from ../ui/tokens.css (design v2) */
+#side .panel h2 { margin-bottom: var(--sp-3); }
+#side .list-row .row { flex-wrap: nowrap; }
+.post .comment span { min-width: 0; overflow-wrap: anywhere; }
+.cmtform { display: flex; gap: var(--sp-2); }
+.older { display: flex; justify-content: center; margin-top: var(--sp-4); }
+#openFriends[hidden] + #feed { margin-top: 0 !important; }
+@media (min-width: 761px) { #openFriends { display: none; } }
+@media (max-width: 760px) { .page.split > aside { display: none; } }
 </style>
 
-<div class="page">
-  <div class="top"><h1 id="title">Home</h1>
-    <nav class="links" id="nav"></nav>
-    <button type="button" class="linkbtn small" id="langBtn"></button></div>
-  <main id="feed"></main>
-  <aside class="side" id="side"></aside>
-</div>
+<main class="page split" id="page">
+  <div class="page-head"><div><h1 id="title">Início</h1><p class="sub" id="sub"></p></div></div>
+  <div>
+    <button type="button" class="list-row" id="openFriends" hidden></button>
+    <div class="stack" id="feed" style="margin-top:var(--sp-4)"></div>
+  </div>
+  <aside id="aside"><div class="stack" id="side"></div></aside>
+</main>
+<dialog class="sheet" id="friendsSheet" aria-labelledby="fpT">
+  <div class="grab"></div>
+  <div class="sheet-head"><h2 id="fpT"></h2><button type="button" class="btn ghost icon" id="fpClose"><i class="ic i-close"></i></button></div>
+  <div class="sheet-body" id="sheetBody"></div>
+</dialog>
 
 <script>
 (() => {
@@ -319,6 +166,13 @@ details.grp summary { cursor: pointer; }
     "Show older games": "Ver jogos anteriores", "You": "Você", "A player": "Um jogador", "Someone": "Alguém",
     "just now": "agora", "{n} min ago": "há {n} min", "{n} h ago": "há {n} h", "yesterday": "ontem",
     "friends": "amigos", "public": "público", "Unknown": "Desconhecido", "Physical game": "Jogo físico",
+    "Your friends' games, newest first.": "Os jogos dos seus amigos, do mais recente ao mais antigo.", "Friends and privacy": "Amigos e privacidade", "Privacy": "Privacidade",
+    "{n} friends": "{n} amigos", "1 friend": "1 amigo", "your games: {v}": "seus jogos: {v}", "Close": "Fechar", "Requests": "Pedidos", "Add a friend": "Adicionar amigo",
+    "Your timeline is empty": "Sua linha do tempo está vazia", "Add friends to see their games here. Your games also show up for whoever you choose.": "Adicione amigos para ver os jogos deles aqui. Os seus jogos também aparecem para quem você escolher.",
+    "Add friends": "Adicionar amigos", "Sign in to see your friends' games": "Entre para ver os jogos dos amigos", "Use your e-mail. We send a 6-digit code, no password.": "Use seu e-mail. Mandamos um código de 6 dígitos, sem senha.",
+    "Couldn't load the timeline.": "Não foi possível carregar a linha do tempo.", "Check your connection and try again.": "Confira a internet e tente de novo.", "Try again": "Tentar de novo",
+    "Won": "Venceu", "Lost": "Perdeu", "against": "contra", "went first": "começou jogando", "went second": "começou comprando", "Confirm removal": "Confirmar remoção", "Confirm delete": "Confirmar exclusão",
+    "Invite": "Convidar", "people": "pessoas", "Opponents' names are never shown to others. Coaches see the games shared with them. You can change it game by game in the review.": "O nome dos adversários nunca aparece para os outros. Coaches veem os jogos compartilhados com eles. Dá para mudar jogo a jogo na revisão.",
   };
   const fill = (s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)) : s);
   const Tx = (en, v) => fill(lang === "pt" && en in PT ? PT[en] : en.trimEnd(), v);
@@ -341,13 +195,11 @@ details.grp summary { cursor: pointer; }
   const friendIds = () => friendships.filter((f) => f.status === "accepted").map((f) => (f.requester === me.id ? f.addressee : f.requester));
   const nameOf = (id) => (id === me.id ? Tx("You") : names.get(id) || Tx("A player"));
 
-  // ---------- nav + language ----------
-  const here = "home";
-  $("nav").innerHTML = [["home", "Home", "../feed/"], ["coach", "Coach Review", "../coach/"], ["trades", "Loans and trades", "../trades/"], ["counter", "Lore Counter", "../counter/"], ["site", "Inkwell", "../"]]
-    .map(([k, l, href]) => `<a href="${href}" ${k === here ? 'aria-current="page"' : ""}>${Tx(l)}</a>`).join("");
   $("title").textContent = Tx("Home"); document.title = `${Tx("Home")} · Inkwell`; document.documentElement.lang = LOC;
-  $("langBtn").textContent = lang === "pt" ? "English" : "Português";
-  $("langBtn").onclick = () => { try { localStorage.setItem("inkwell-lang", lang === "pt" ? "en" : "pt"); } catch { /* */ } location.reload(); };
+  $("sub").textContent = Tx("Your friends' games, newest first.");
+  $("fpT").textContent = Tx("Friends and privacy"); $("fpClose").setAttribute("aria-label", Tx("Close"));
+  const phone = () => matchMedia("(max-width: 760px)").matches;
+  const sideEl = () => (phone() && $("friendsSheet").open ? $("sheetBody") : $("side"));
 
   // ---------- data ----------
   async function loadNames(ids) {
@@ -393,13 +245,36 @@ details.grp summary { cursor: pointer; }
     await loadNames([...rows.map((r) => r.user_id), ...[...notes.values()].flat().map((n) => n.author)]);
   }
 
-  // ---------- side: profile, friends, visibility ----------
+  // ---------- friends and privacy (aside on a computer, a sheet on a phone) ----------
+  const visLabel = () => {
+    const v = myProfile?.default_visibility || "private";
+    return ({ private: Tx("Only me"), friends: Tx("Friends "), public: Tx("Everyone"), coaches: Tx("All my coaches"), group: Tx("a group") })[v] || v;
+  };
+  function renderEntry() {
+    const b = $("openFriends");
+    if (!me || !myProfile) { b.hidden = true; return; }
+    const fr = friendIds(), pending = friendships.filter((f) => f.status === "pending" && f.addressee === me.id).length;
+    b.hidden = false;
+    b.innerHTML = `${fr.length ? `<span class="avs">${fr.slice(0, 3).map((id) => `<span class="av sm">${esc(nameOf(id)[0]?.toUpperCase() || "?")}</span>`).join("")}</span>` : `<i class="ic i-shield" style="color:var(--text-2)"></i>`}
+      <span class="t"><span>${Tx("Friends and privacy")}${pending ? ` <span class="count">${pending}</span>` : ""}</span><span class="meta">${esc([fr.length ? (fr.length === 1 ? Tx("1 friend") : Tx("{n} friends", { n: fr.length })) : "", Tx("your games: {v}", { v: visLabel().toLowerCase() })].filter(Boolean).join(" · "))}</span></span>
+      <i class="ic i-chevron-right chev"></i>`;
+  }
+  $("openFriends").onclick = () => { const d = $("friendsSheet"); d.showModal(); renderSide(); d.querySelector("input, button:not(#fpClose)")?.focus(); };
+  $("fpClose").onclick = () => $("friendsSheet").close();
+  $("friendsSheet").addEventListener("close", () => { $("sheetBody").innerHTML = ""; renderSide(); $("openFriends").focus(); });
+  $("friendsSheet").addEventListener("click", (e) => { if (e.target === $("friendsSheet")) $("friendsSheet").close(); });
+  const confirmBtn = (b, label, go) => {
+    if (b.dataset.c !== "1") { b.dataset.c = "1"; const old = b.textContent; b.textContent = Tx(label); setTimeout(() => { if (b.isConnected && b.dataset.c === "1") { b.dataset.c = ""; b.textContent = old; } }, 4000); return; }
+    go();
+  };
   function renderSide() {
-    const el = $("side");
-    if (!me) { el.innerHTML = ""; return; }
+    renderEntry();
+    $("side").innerHTML = ""; $("sheetBody").innerHTML = "";
+    const el = sideEl();
+    if (!me) return;
     if (!myProfile) {
-      el.innerHTML = `<div class="panel"><h2>${Tx("Choose your name")}</h2><p class="small muted">${Tx("Your friends find you by this name.")}</p>
-        <div class="cmtform"><input id="myName" maxlength="40"><button type="button" class="btn primary small" id="myNameSave">${Tx("Save")}</button></div></div>`;
+      el.innerHTML = `<section class="panel"><h2>${Tx("Choose your name")}</h2><p class="small muted">${Tx("Your friends find you by this name.")}</p>
+        <div class="cmtform"><input id="myName" maxlength="40" aria-label="${Tx("Choose your name")}"><button type="button" class="btn primary" id="myNameSave">${Tx("Save")}</button></div></section>`;
       $("myNameSave").onclick = async () => {
         const v = $("myName").value.trim(); if (v.length < 2) return;
         await CLOUD.api("profiles?on_conflict=user_id", { method: "POST", prefer: "resolution=merge-duplicates,return=minimal", body: [{ user_id: me.id, display_name: v, updated_at: new Date().toISOString() }] });
@@ -415,41 +290,39 @@ details.grp summary { cursor: pointer; }
       : vis === "coaches" && myProfile.default_coach_group_id ? `cgroup:${myProfile.default_coach_group_id}`
       : vis === "coaches" && myProfile.default_coach_email ? `coach:${myProfile.default_coach_email}` : vis;
     const coachName = (e) => (e || "").split("@")[0];
-    el.innerHTML = `<div class="panel"><div class="who"><span class="av">${esc(myProfile.display_name[0].toUpperCase())}</span><div><b>${esc(myProfile.display_name)}</b><span class="small muted">${esc(me.email)} · <button type="button" class="linkbtn" id="siOut">${Tx("Sign out")}</button></span></div></div></div>
-      <div class="panel"><h2>${Tx("Friends")}</h2>
-        <input id="findPeople" placeholder="${Tx("Find people by name")}" autocomplete="off">
-        <div id="found">${searchRes ? (searchRes.length ? searchRes.map((p) => {
+    const av = (id) => `<span class="av">${esc(nameOf(id)[0]?.toUpperCase() || "?")}</span>`;
+    el.innerHTML = `<section class="panel stack" aria-labelledby="hFriends"><div class="row between"><h2 id="hFriends" style="margin:0">${Tx("Friends")}</h2><span class="small muted">${friends.length}</span></div>
+        <span class="search"><i class="ic i-search"></i><input type="search" id="findPeople" placeholder="${Tx("Find people by name")}" aria-label="${Tx("Add a friend")}" autocomplete="off"></span>
+        <div id="found">${searchRes ? (searchRes.length ? `<div class="list tight">${searchRes.map((p) => {
           const rel = friendships.find((f) => [f.requester, f.addressee].includes(p.user_id));
-          return `<div class="person"><span>${esc(p.display_name)}</span>${rel ? `<span class="small muted">${Tx(rel.status === "accepted" ? "Friends" : "Requested")}</span>` : `<button type="button" class="btn small" data-ask="${p.user_id}">${Tx("Add friend")}</button>`}</div>`;
-        }).join("") : `<p class="small muted">${Tx("No one found with that name.")}</p>`) : ""}</div>
-        ${incoming.map((f) => `<div class="person"><span><b>${esc(nameOf(f.requester))}</b><br><span class="small muted">${Tx("Wants to be your friend")}</span></span>
-          <span><button type="button" class="btn primary small" data-accept="${f.requester}">${Tx("Accept")}</button> <button type="button" class="btn small" data-decline="${f.requester}|${f.addressee}">${Tx("Decline")}</button></span></div>`).join("")}
-        ${outgoing.map((f) => `<div class="person"><span class="small muted">${esc(Tx("Waiting for {name}", { name: nameOf(f.addressee) }))}</span><button type="button" class="linkbtn small" data-decline="${f.requester}|${f.addressee}">${Tx("Cancel")}</button></div>`).join("")}
-        ${friends.length ? friends.map((id) => `<div class="person"><span>${esc(nameOf(id))}</span><button type="button" class="linkbtn small" data-unfriend="${id}">${Tx("Remove")}</button></div>`).join("")
-          : !incoming.length && !outgoing.length ? `<p class="small muted">${Tx("No friends yet. Search for people above.")}</p>` : ""}
-      </div>
-      <div class="panel"><h2>${Tx("Who sees my new games")}</h2>
-        <select id="defVis">${[["private", Tx("Only me")], ["coaches", Tx("All my coaches")],
+          return `<div class="list-row flat"><span class="av sm">${esc(p.display_name[0]?.toUpperCase() || "?")}</span><span class="t"><span>${esc(p.display_name)}</span></span>${rel ? `<span class="small muted">${Tx(rel.status === "accepted" ? "Friends" : "Requested")}</span>` : `<button type="button" class="btn small" data-ask="${p.user_id}"><i class="ic i-user-plus"></i>${Tx("Invite")}</button>`}</div>`;
+        }).join("")}</div>` : `<p class="small muted">${Tx("No one found with that name.")}</p>`) : ""}</div>
+        ${incoming.length ? `<h3>${Tx("Requests")} <span class="count">${incoming.length}</span></h3>${incoming.map((f) => `<div class="list-row on-field">${av(f.requester)}<span class="t"><span>${esc(nameOf(f.requester))}</span><span class="meta">${Tx("Wants to be your friend")}</span></span>
+          <span class="row"><button type="button" class="btn ghost small" data-decline="${f.requester}|${f.addressee}">${Tx("Decline")}</button><button type="button" class="btn small" data-accept="${f.requester}">${Tx("Accept")}</button></span></div>`).join("")}` : ""}
+        ${outgoing.map((f) => `<div class="list-row flat">${av(f.addressee)}<span class="t"><span>${esc(nameOf(f.addressee))}</span><span class="meta">${esc(Tx("Waiting for {name}", { name: nameOf(f.addressee) }))}</span></span><button type="button" class="btn ghost small" data-decline="${f.requester}|${f.addressee}">${Tx("Cancel")}</button></div>`).join("")}
+        ${friends.length ? `<div class="list tight divided">${friends.map((id) => `<div class="list-row flat">${av(id)}<span class="t"><span>${esc(nameOf(id))}</span></span><button type="button" class="btn ghost small" data-unfriend="${id}">${Tx("Remove")}</button></div>`).join("")}</div>`
+          : !incoming.length && !outgoing.length ? `<p class="small muted" style="margin:0">${Tx("No friends yet. Search for people above.")}</p>` : ""}
+      </section>
+      <section class="panel stack" aria-labelledby="hPriv"><h2 id="hPriv" style="margin:0">${Tx("Privacy")}</h2>
+        <label class="field">${Tx("Who sees my new games")}<select id="defVis">${[["private", Tx("Only me")], ["coaches", Tx("All my coaches")],
             ...(coachCols && myCoaches.length > 1 ? myCoaches.map((c) => [`coach:${c}`, Tx("Coach: {name}", { name: coachName(c) })]) : []),
             ...(coachCols ? coachGroups.map((g) => [`cgroup:${g.id}`, Tx("Coach group: {name}", { name: g.name })]) : []),
             ["friends", Tx("Friends ")], ...groups.map((g) => [`group:${g.id}`, Tx("Group: {name}", { name: g.name })]), ["public", Tx("Everyone")]]
-          .map(([k, l]) => `<option value="${esc(k)}" ${k === visKey ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>
-        ${vis !== "private" && myGameCount ? `<p><button type="button" class="linkbtn small" id="applyOld">${esc(myGameCount === 1 ? Tx("Apply to my older game too") : Tx("Apply to my {n} older games too", { n: myGameCount }))}</button></p>` : ""}
-        <p class="small muted" id="visMsg">${Tx("Opponents' names are never shown to others.")}</p>
-        <p class="small muted">${Tx("Coaches only see the games you share with them, and games for everyone.")}</p></div>
-      <div class="panel"><h2>${Tx("Friend groups")}</h2>
-        ${groups.length ? groups.map((g) => `<details class="grp"><summary>${esc(g.name)} <span class="small muted">(${(g.friend_group_members || []).length})</span></summary>
-          ${friends.length ? friends.map((id) => `<label class="person small"><span>${esc(nameOf(id))}</span><input type="checkbox" style="width:auto" data-gm="${g.id}|${id}" ${(g.friend_group_members || []).some((m) => m.member === id) ? "checked" : ""}></label>`).join("") : `<p class="small muted">${Tx("Add friends first.")}</p>`}
-          <button type="button" class="linkbtn small" data-delgroup="${g.id}">${Tx("Delete group")}</button></details>`).join("")
-          : `<p class="small muted">${Tx("No groups yet. A group lets you share games with only some friends.")}</p>`}
-        <div class="cmtform"><input id="newGroup" maxlength="40" placeholder="${Tx("New group name")}"><button type="button" class="btn small" id="addGroup">${Tx("Create")}</button></div></div>
-      ${coachCols ? `<div class="panel"><h2>${Tx("Coach groups")}</h2>
-        ${coachGroups.length ? coachGroups.map((g) => `<details class="grp"><summary>${esc(g.name)} <span class="small muted">(${(g.emails || []).length})</span></summary>
-          ${myCoaches.length ? myCoaches.map((c) => `<label class="person small"><span>${esc(coachName(c))}</span><input type="checkbox" style="width:auto" data-cgm="${g.id}|${esc(c)}" ${(g.emails || []).includes(c) ? "checked" : ""}></label>`).join("") : `<p class="small muted">${Tx("Add coaches first, in Coach Review.")}</p>`}
-          <button type="button" class="linkbtn small" data-delcgroup="${g.id}">${Tx("Delete group")}</button></details>`).join("")
-          : `<p class="small muted">${Tx("No coach groups yet. A coach group lets you share games with only some of your coaches.")}</p>`}
-        <div class="cmtform"><input id="newCGroup" maxlength="40" placeholder="${Tx("New group name")}"><button type="button" class="btn small" id="addCGroup">${Tx("Create")}</button></div></div>` : ""}`;
-    $("siOut").onclick = () => { CLOUD.signOut(); location.reload(); };
+          .map(([k, l]) => `<option value="${esc(k)}" ${k === visKey ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></label>
+        ${vis !== "private" && myGameCount ? `<button type="button" class="btn small" id="applyOld">${esc(myGameCount === 1 ? Tx("Apply to my older game too") : Tx("Apply to my {n} older games too", { n: myGameCount }))}</button>` : ""}
+        <p class="small muted" id="visMsg" style="margin:0">${Tx("Opponents' names are never shown to others. Coaches see the games shared with them. You can change it game by game in the review.")}</p></section>
+      <section class="panel stack" aria-labelledby="hGroups"><h2 id="hGroups" style="margin:0">${Tx("Friend groups")}</h2>
+        ${groups.length ? groups.map((g) => `<details class="card inset"><summary class="row between"><span>${esc(g.name)}</span><span class="small muted">${(g.friend_group_members || []).length} ${Tx("people")}</span></summary>
+          <div class="stack" style="margin-top:var(--sp-2)">${friends.length ? friends.map((id) => `<label class="check"><input type="checkbox" data-gm="${g.id}|${id}" ${(g.friend_group_members || []).some((m) => m.member === id) ? "checked" : ""}>${esc(nameOf(id))}</label>`).join("") : `<p class="small muted">${Tx("Add friends first.")}</p>`}
+          <button type="button" class="btn ghost small danger-text" data-delgroup="${g.id}">${Tx("Delete group")}</button></div></details>`).join("")
+          : `<p class="small muted" style="margin:0">${Tx("No groups yet. A group lets you share games with only some friends.")}</p>`}
+        <div class="cmtform"><input id="newGroup" maxlength="40" placeholder="${Tx("New group name")}" aria-label="${Tx("New group name")}"><button type="button" class="btn" id="addGroup">${Tx("Create")}</button></div></section>
+      ${coachCols ? `<section class="panel stack" aria-labelledby="hCGroups"><h2 id="hCGroups" style="margin:0">${Tx("Coach groups")}</h2>
+        ${coachGroups.length ? coachGroups.map((g) => `<details class="card inset"><summary class="row between"><span>${esc(g.name)}</span><span class="small muted">${(g.emails || []).length}</span></summary>
+          <div class="stack" style="margin-top:var(--sp-2)">${myCoaches.length ? myCoaches.map((c) => `<label class="check"><input type="checkbox" data-cgm="${g.id}|${esc(c)}" ${(g.emails || []).includes(c) ? "checked" : ""}>${esc(coachName(c))}</label>`).join("") : `<p class="small muted">${Tx("Add coaches first, in Coach Review.")}</p>`}
+          <button type="button" class="btn ghost small" data-delcgroup="${g.id}">${Tx("Delete group")}</button></div></details>`).join("")
+          : `<p class="small muted" style="margin:0">${Tx("No coach groups yet. A coach group lets you share games with only some of your coaches.")}</p>`}
+        <div class="cmtform"><input id="newCGroup" maxlength="40" placeholder="${Tx("New group name")}" aria-label="${Tx("New group name")}"><button type="button" class="btn" id="addCGroup">${Tx("Create")}</button></div></section>` : ""}`;
     let t;
     $("findPeople").addEventListener("input", (e) => {
       clearTimeout(t);
@@ -465,11 +338,10 @@ details.grp summary { cursor: pointer; }
     el.querySelectorAll("[data-ask]").forEach((b) => b.onclick = () => act(() => CLOUD.api("friendships", { method: "POST", prefer: "return=minimal", body: { addressee: b.dataset.ask } })));
     el.querySelectorAll("[data-accept]").forEach((b) => b.onclick = () => act(() => CLOUD.api(`friendships?requester=eq.${b.dataset.accept}&addressee=eq.${me.id}`, { method: "PATCH", prefer: "return=minimal", body: { status: "accepted", accepted_at: new Date().toISOString() } })));
     el.querySelectorAll("[data-decline]").forEach((b) => b.onclick = () => { const [r, a] = b.dataset.decline.split("|"); act(() => CLOUD.api(`friendships?requester=eq.${r}&addressee=eq.${a}`, { method: "DELETE" })); });
-    el.querySelectorAll("[data-unfriend]").forEach((b) => b.onclick = () => {
-      if (b.dataset.c !== "1") { b.dataset.c = "1"; b.textContent = Tx("Confirm"); return; }
+    el.querySelectorAll("[data-unfriend]").forEach((b) => b.onclick = () => confirmBtn(b, "Confirm removal", () => {
       const f = friendships.find((x) => [x.requester, x.addressee].includes(b.dataset.unfriend));
       act(() => CLOUD.api(`friendships?requester=eq.${f.requester}&addressee=eq.${f.addressee}`, { method: "DELETE" }));
-    });
+    }));
     $("defVis").onchange = (e) => { const v = e.target.value; act(() => CLOUD.api(`profiles?user_id=eq.${me.id}`, { method: "PATCH", prefer: "return=minimal",
       body: { ...(v.startsWith("group:") ? { default_visibility: "group", default_group_id: v.slice(6) }
         : v.startsWith("coach:") ? { default_visibility: "coaches", default_group_id: null, default_coach_email: v.slice(6), default_coach_group_id: null }
@@ -479,18 +351,12 @@ details.grp summary { cursor: pointer; }
     el.querySelectorAll("[data-cgm]").forEach((c) => c.onchange = () => { const [g, e] = [c.dataset.cgm.slice(0, 36), c.dataset.cgm.slice(37)];
       const grp = coachGroups.find((x) => x.id === g); const emails = new Set(grp?.emails || []); c.checked ? emails.add(e) : emails.delete(e);
       act(() => CLOUD.api(`coach_groups?id=eq.${g}`, { method: "PATCH", prefer: "return=minimal", body: { emails: [...emails] } })); });
-    el.querySelectorAll("[data-delcgroup]").forEach((b) => b.onclick = () => {
-      if (b.dataset.c !== "1") { b.dataset.c = "1"; b.textContent = Tx("Confirm"); return; }
-      act(() => CLOUD.api(`coach_groups?id=eq.${b.dataset.delcgroup}`, { method: "DELETE" }));
-    });
+    el.querySelectorAll("[data-delcgroup]").forEach((b) => b.onclick = () => confirmBtn(b, "Confirm delete", () => act(() => CLOUD.api(`coach_groups?id=eq.${b.dataset.delcgroup}`, { method: "DELETE" }))));
     $("addGroup").onclick = () => { const n = $("newGroup").value.trim(); if (n) act(() => CLOUD.api("friend_groups", { method: "POST", prefer: "return=minimal", body: { name: n } })); };
     el.querySelectorAll("[data-gm]").forEach((c) => c.onchange = () => { const [g, m] = c.dataset.gm.split("|");
       act(() => (c.checked ? CLOUD.api("friend_group_members", { method: "POST", prefer: "return=minimal", body: { group_id: g, member: m } })
         : CLOUD.api(`friend_group_members?group_id=eq.${g}&member=eq.${m}`, { method: "DELETE" }))); });
-    el.querySelectorAll("[data-delgroup]").forEach((b) => b.onclick = () => {
-      if (b.dataset.c !== "1") { b.dataset.c = "1"; b.textContent = Tx("Confirm"); return; }
-      act(() => CLOUD.api(`friend_groups?id=eq.${b.dataset.delgroup}`, { method: "DELETE" }));
-    });
+    el.querySelectorAll("[data-delgroup]").forEach((b) => b.onclick = () => confirmBtn(b, "Confirm delete", () => act(() => CLOUD.api(`friend_groups?id=eq.${b.dataset.delgroup}`, { method: "DELETE" }))));
     $("applyOld")?.addEventListener("click", async () => {
       $("visMsg").textContent = Tx("Applying…");
       await act(() => CLOUD.api(`game_logs?user_id=eq.${me.id}&visibility=eq.private`, { method: "PATCH", prefer: "return=minimal", body: vis === "group" ? { visibility: "group", group_id: myProfile.default_group_id }
@@ -504,24 +370,28 @@ details.grp summary { cursor: pointer; }
     if (r.visibility === "group") { const own = groups.find((g) => g.id === r.group_id); return own ? Tx("Group: {name}", { name: own.name }) : otherGroups.has(r.group_id) ? Tx("Group: {name}", { name: otherGroups.get(r.group_id) }) : Tx("group"); }
     return Tx(r.visibility === "coaches" ? "coaches" : r.visibility);   // a coach-only game shows up here only for its owner
   }
+  const inks2 = (s) => `<span class="inks">${String(s || "").split(/[\/,]\s*/).filter(Boolean).slice(0, 2).map((c) => `<i data-ink="${esc(c.trim().toLowerCase())}"></i>`).join("")}</span>`;
   function postHtml(r) {
     const s = r.summary || {}, win = s.result === "win", key = `${r.user_id}|${r.game_id}`, cm = notes.get(key) || [];
-    const who = nameOf(r.user_id), first = s.went_first === true ? Tx("going first") : s.went_first === false ? Tx("going second") : "";
+    const who = nameOf(r.user_id), first = s.went_first === true ? Tx("went first") : s.went_first === false ? Tx("went second") : "";
     const myDeck = s.my_deck && s.my_deck !== "Physical game" ? s.my_deck : "", opp = s.opp_deck && s.opp_deck !== "Unknown" ? s.opp_deck : "";
-    return `<article class="post" data-key="${esc(key)}">
-      <div class="who"><span class="av">${esc(who[0]?.toUpperCase() || "?")}</span><div><b>${esc(who)}</b><span class="small muted">${esc(ago(r.played_at))} · ${esc(Tx(r.source === "duels_ink" ? "duels.ink" : r.source === "lore_counter" ? "Lore Counter" : r.source))} · ${esc(audienceTag(r))}</span></div></div>
-      <div class="res"><span class="${win ? "w" : "l"}">${Tx(win ? "won" : "lost")}</span>${myDeck ? ` ${inkDots(s.my_inks || myDeck)}${esc(Tx("with {deck}", { deck: myDeck }))}` : ""}${opp ? ` ${inkDots(s.opp_inks || opp)}${esc(Tx("against {deck}", { deck: opp }))}` : ""}</div>
-      <div class="meta"><span class="score">${esc(s.my_lore ?? 0)}–${esc(s.opp_lore ?? 0)}</span>${first ? `<span class="tag">${first}</span>` : ""}${s.turns ? `<span class="tag">${esc(Tx("{n} turns", { n: s.turns }))}</span>` : ""}</div>
-      ${cm.length ? `<div class="cmts">${cm.slice(-3).map((n) => `<div class="cmt"><b>${esc(nameOf(n.author) === Tx("A player") ? n.author_name || Tx("Someone") : nameOf(n.author))}</b><span data-body="${esc(n.id)}"></span></div>`).join("")}</div>` : ""}
-      <div class="acts"><a href="../coach/?player=${enc(r.user_id)}&game=${enc(r.game_id)}">${Tx("Open game")}</a><button type="button" data-cmt="${esc(key)}">${cm.length ? esc(cm.length === 1 ? Tx("1 comment") : Tx("{n} comments", { n: cm.length })) : Tx("Comment")}</button></div>
-      <div class="cmtform" data-form="${esc(key)}" hidden><input maxlength="1000" placeholder="${Tx("Write a comment")}"><button type="button" class="btn small" data-send="${esc(key)}">${Tx("Send")}</button></div>
+    const meta = [ago(r.played_at), s.turns ? Tx("{n} turns", { n: s.turns }) : "", first, Tx(r.source === "duels_ink" ? "duels.ink" : r.source === "lore_counter" ? "Lore Counter" : r.source), audienceTag(r)].filter(Boolean).join(" · ");
+    return `<article class="card post" data-key="${esc(key)}">
+      <div class="who"><span class="av">${esc(who[0]?.toUpperCase() || "?")}</span><div><b>${esc(who)}</b><div class="small">${esc(meta)}</div></div></div>
+      <div class="res"><span class="word ${win ? "win" : "loss"}">${Tx(win ? "Won" : "Lost")}</span><span class="score">${esc(s.my_lore ?? 0)}–${esc(s.opp_lore ?? 0)}</span></div>
+      ${myDeck || opp ? `<p class="match">${myDeck ? `${inks2(s.my_inks || myDeck)}<b>${esc(myDeck)}</b>` : ""}${opp ? ` ${Tx("against")} ${inks2(s.opp_inks || opp)}<b>${esc(opp)}</b>` : ""}</p>` : ""}
+      ${cm.slice(-3).map((n) => { const a = nameOf(n.author) === Tx("A player") ? n.author_name || Tx("Someone") : nameOf(n.author); return `<div class="comment"><span class="av sm">${esc(a[0]?.toUpperCase() || "?")}</span><span class="muted"><b>${esc(a)}</b> <span data-body="${esc(n.id)}"></span></span></div>`; }).join("")}
+      <div class="cmtform" data-form="${esc(key)}" hidden><input maxlength="1000" placeholder="${Tx("Write a comment")}" aria-label="${Tx("Write a comment")}"><button type="button" class="btn" data-send="${esc(key)}"><i class="ic i-send"></i>${Tx("Send")}</button></div>
+      <div class="acts"><a class="btn ghost small" href="../coach/?player=${enc(r.user_id)}&game=${enc(r.game_id)}"><i class="ic i-eye"></i>${Tx("Open game")}</a><button type="button" class="btn ghost small" data-cmt="${esc(key)}"><i class="ic i-comment"></i>${Tx("Comment")}${cm.length ? ` · ${cm.length}` : ""}</button></div>
     </article>`;
   }
   function renderFeed() {
     const el = $("feed");
-    if (!me || !myProfile) { el.innerHTML = me ? "" : el.innerHTML; return; }
-    el.innerHTML = posts.length ? posts.map(postHtml).join("") + (moreAvailable ? `<button type="button" class="btn" id="older">${Tx("Show older games")}</button>` : "")
-      : `<div class="panel"><p class="empty">${Tx("Your timeline is empty. Add friends, and choose who sees your games.")}</p></div>`;
+    if (!me || !myProfile) { if (me) el.innerHTML = ""; return; }
+    el.innerHTML = posts.length ? posts.map(postHtml).join("") + (moreAvailable ? `<div class="older"><button type="button" class="btn" id="older">${Tx("Show older games")}</button></div>` : "")
+      : `<div class="empty"><img src="../ui/assets/empty/feed.svg" alt=""><b>${Tx("Your timeline is empty")}</b><p>${Tx("Add friends to see their games here. Your games also show up for whoever you choose.")}</p>
+          <button type="button" class="btn primary" id="addFriends"><i class="ic i-user-plus"></i>${Tx("Add friends")}</button></div>`;
+    $("addFriends")?.addEventListener("click", () => { if (phone()) $("openFriends").click(); else $("findPeople")?.focus(); });
     const byId = new Map([...notes.values()].flat().map((n) => [n.id, n]));
     el.querySelectorAll("[data-body]").forEach((s) => { s.textContent = byId.get(s.dataset.body)?.body || ""; });   // other people's text: set as text
     el.querySelectorAll("[data-cmt]").forEach((b) => b.onclick = () => { const f = el.querySelector(`[data-form="${CSS.escape(b.dataset.cmt)}"]`); f.hidden = !f.hidden; f.querySelector("input").focus(); });
@@ -542,103 +412,205 @@ details.grp summary { cursor: pointer; }
     $("older")?.addEventListener("click", async () => { await loadPosts(true); renderFeed(); });
   }
 
-  // ---------- sign-in ----------
-  function signIn() {
-    $("feed").innerHTML = `<div class="panel"><h2>${Tx("Sign in")}</h2><p class="muted small">${Tx("Use your Inkwell account email.")}</p>
-      <div class="cmtform"><input id="siEmail" type="email" autocomplete="email" placeholder="${Tx("Email")}"><button type="button" class="btn primary small" id="siSend">${Tx("Send code")}</button></div>
-      <div class="cmtform" id="siCodeRow" hidden><input id="siCode" inputmode="numeric" autocomplete="one-time-code" placeholder="${Tx("Code from the email")}"><button type="button" class="btn primary small" id="siIn">${Tx("Sign in")}</button></div>
-      <p class="small" id="siMsg" aria-live="polite"></p></div>`;
-    const msg = (t) => { $("siMsg").textContent = t; };
-    $("siSend").onclick = async () => {
-      const e = $("siEmail").value.trim();
-      if (!/^\S+@\S+\.\S+$/.test(e)) { msg(Tx("Enter your email.")); return; }
-      msg(Tx("Sending…"));
-      try { await CLOUD.requestCode(e); $("siCodeRow").hidden = false; msg(Tx("Check {email}: type the code, or open the link on this device.", { email: e })); }
-      catch { msg(Tx("Couldn't send the email. Check the address and your connection.")); }
-    };
-    $("siIn").onclick = async () => { try { await CLOUD.verify($("siEmail").value.trim(), $("siCode").value); location.reload(); } catch { msg(Tx("Wrong or expired code.")); } };
-  }
-
   // ---------- boot ----------
-  if (!me) { signIn(); return; }
-  $("feed").innerHTML = `<p class="empty">${Tx("Loading…")}</p>`;
-  (async () => {
-    try { await loadPeople(); await loadPosts(); renderSide(); renderFeed(); }
-    catch { $("feed").innerHTML = `<p class="empty">${Tx("Couldn't load the feed. Reload the page to try again.")}</p>`; }
-  })();
-  document.addEventListener("visibilitychange", async () => { if (document.visibilityState === "visible" && myProfile) { try { await loadPeople(); await loadPosts(); renderSide(); renderFeed(); } catch { /* keep what's shown */ } } });
+  if (!me) {
+    $("feed").innerHTML = `<div class="empty"><img src="../ui/assets/empty/signedout.svg" alt=""><b>${Tx("Sign in to see your friends' games")}</b><p>${Tx("Use your e-mail. We send a 6-digit code, no password.")}</p><button type="button" class="btn primary" id="signIn">${Tx("Sign in")}</button></div>`;
+    $("signIn").onclick = () => window.INKWELL_SIGNIN?.();
+    return;
+  }
+  if (location.hash === "#amigos") setTimeout(() => { if (phone()) $("openFriends").click(); else $("findPeople")?.focus(); }, 0);
+  $("feed").innerHTML = `<span class="skel" style="height:150px;border-radius:var(--r-lg)"></span><span class="skel" style="height:150px;border-radius:var(--r-lg)"></span><p class="sr-only">${Tx("Loading…")}</p>`;
+  const go = async () => {
+    try { await loadPeople(); await loadPosts(); renderSide(); renderFeed(); if (location.hash === "#amigos") { if (phone()) $("openFriends").click(); else $("findPeople")?.focus(); } }
+    catch { $("feed").innerHTML = `<div class="empty"><img src="../ui/assets/empty/error.svg" alt=""><b>${Tx("Couldn't load the timeline.")}</b><p>${Tx("Check your connection and try again.")}</p><button type="button" class="btn" id="retry"><i class="ic i-refresh"></i>${Tx("Try again")}</button></div>`; $("retry").onclick = go; }
+  };
+  go();
+  document.addEventListener("visibilitychange", async () => { if (document.visibilityState === "visible" && myProfile && !$("friendsSheet").open) { try { await loadPeople(); await loadPosts(); renderSide(); renderFeed(); } catch { /* keep what's shown */ } } });
 })();
 </script>
 
 <script>window.INKWELL_SHELL = {"page": "feed"};
-/* Inkwell site shell: app bar + phone tab bar + appearance (theme) picker.
-   Include shell-boot (in <head>) to set the theme before paint, then this script at the end of <body>.
-   window.INKWELL_SHELL = { page: "feed" | "coach" | "trades" } */
+/* Inkwell site shell (design v2, Noite): app bar, phone tab bar, account menu and the one sign-in sheet.
+   Markup and classes follow packages/ui/tokens.css (§4 Shell, §11 Sheet); see DESIGN-CHANGES.md.
+   Pages set window.INKWELL_SHELL = { page: "feed" | "cards" | "decks" | "coach" | "trades" } and may call:
+     window.INKWELL_SIGNIN()            open the sign-in sheet
+     window.INKWELL_SHELL_BADGE(n)      set the Trocas count (requests waiting for me)
+   Sign-in uses window.INKWELL_CLOUD (cloud.js): one session for the whole site. */
 (() => {
   "use strict";
-  const KEY = "inkwell-theme";
-  const THEMES = [
-    ["noite", "Noite", "Night", "O roxo-noite e o dourado do Inkwell, refinados.", "Inkwell's night purple and gold, refined."],
-    ["pergaminho", "Pergaminho", "Parchment", "Claro e leve, tipografia de livro de histórias.", "Light and airy, storybook type."],
-    ["tinta", "Tinta", "Ink", "Alto contraste, cores vivas das tintas.", "High contrast, vivid ink colours."],
-  ];
   let lang = "pt";
   try { lang = localStorage.getItem("inkwell-lang") || ((navigator.language || "pt").toLowerCase().startsWith("en") ? "en" : "pt"); } catch { /* */ }
   const pt = lang === "pt";
+  const T = (p, e) => (pt ? p : e);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const page = (window.INKWELL_SHELL || {}).page || "";
-  const I = {
-    feed: '<path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',
-    coach: '<path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/>',
-    trades: '<path d="M7 4 3 8l4 4"/><path d="M3 8h13"/><path d="m17 12 4 4-4 4"/><path d="M21 16H8"/>',
-    counter: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/>',
-    cards: '<rect x="3" y="5" width="12" height="16" rx="2"/><path d="M8 3h10a2 2 0 0 1 2 2v13"/>',
-  };
-  const icon = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[k]}</svg>`;
-  const LINKS = [
-    ["feed", "../feed/", pt ? "Início" : "Home"],
-    ["coach", "../coach/", "Coach"],
-    ["trades", "../trades/", pt ? "Trocas" : "Trades"],
-    ["counter", "../counter/", pt ? "Contador" : "Counter"],
-    ["cards", "../colecao/", pt ? "Coleção" : "Collection"],
+  const UI = "../ui/";
+  const CLOUD = window.INKWELL_CLOUD;
+  const me = CLOUD?.user();
+  const NAV = [
+    ["feed", "../feed/", T("Início", "Home"), "home"],
+    ["cards", "../colecao/", T("Coleção", "Collection"), "cards"],
+    ["decks", "../#decks", "Decks", "decks"],
+    ["coach", "../coach/", T("Jogos", "Games"), "games"],
+    ["trades", "../trades/", T("Trocas", "Trades"), "trades"],
   ];
-  const links = LINKS.map(([k, href, label]) => `<a href="${href}" ${k === page ? 'aria-current="page"' : ""} data-iw="${k}">${icon(k)}<span>${label}</span></a>`).join("");
-  const current = () => document.documentElement.dataset.theme || "noite";
-  const logo = `<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2c5 6 9 10.5 9 16a9 9 0 0 1-18 0C7 12.5 11 8 16 2z" fill="var(--gold)"/><path d="M16 9c2.6 3.4 4.4 5.9 4.4 8.8a4.4 4.4 0 0 1-8.8 0c0-2.9 1.8-5.4 4.4-8.8z" fill="var(--night)" opacity=".55"/></svg>`;
+  const cur = (k) => (k === page ? ' aria-current="page"' : "");
 
   const bar = document.createElement("header");
-  bar.className = "iw-bar";
-  bar.innerHTML = `<div class="in"><a class="iw-logo" href="../feed/">${logo}Inkwell</a><nav class="iw-nav" aria-label="${pt ? "Seções" : "Sections"}">${links}</nav>
-    <div class="iw-theme"><button type="button" id="iwThemeBtn" aria-haspopup="true" aria-expanded="false"><i></i>${pt ? "Aparência" : "Appearance"}</button>
-      <div class="iw-pop" id="iwThemePop" hidden role="group" aria-label="${pt ? "Aparência" : "Appearance"}">
-        <p>${pt ? "Idioma" : "Language"}</p><div class="iw-lang">${[["pt", "Português"], ["en", "English"]].map(([k, l]) => `<button type="button" data-lang-pick="${k}" aria-pressed="${k === lang}">${l}</button>`).join("")}</div>
-        <p>${pt ? "Visual" : "Look"}</p>
-        ${THEMES.map(([k, ptN, enN, ptD, enD]) => `<button type="button" class="iw-opt" data-theme-pick="${k}" aria-pressed="${k === current()}"><span class="iw-sw" data-t="${k}"></span><span><b>${pt ? ptN : enN}</b><small>${pt ? ptD : enD}</small></span></button>`).join("")}
-      </div></div></div>`;
+  bar.className = "appbar";
+  bar.innerHTML = `<div class="appbar-in"><a class="brand" href="../feed/"><img src="${UI}assets/logo-mark.svg" alt="">Inkwell</a>
+    <nav class="sections" aria-label="${T("Seções", "Sections")}">${NAV.map(([k, href, label, ic]) => `<a href="${href}"${cur(k)} data-iw="${k}"><i class="ic i-${ic}"></i>${label}</a>`).join("")}</nav>
+    <div class="end">
+      <a class="btn ghost counter-btn" href="../counter/" aria-label="${T("Abrir o Contador", "Open the Counter")}"><i class="ic i-counter"></i><span>${T("Contador", "Counter")}</span></a>
+      ${me ? `<button type="button" class="av-btn" id="iwAcct" aria-label="${T("Sua conta", "Your account")}" aria-haspopup="menu" aria-expanded="false"><span class="av" id="iwAv">${esc((me.email || "?")[0].toUpperCase())}</span></button>`
+        : `<button type="button" class="btn ghost icon" id="iwLangBtn" aria-label="${T("Aparência e idioma", "Appearance and language")}" aria-haspopup="menu" aria-expanded="false"><i class="ic i-globe"></i></button>
+           <button type="button" class="btn small" id="iwSignIn">${T("Entrar", "Sign in")}</button>`}
+    </div></div>`;
   document.body.prepend(bar);
   const tabs = document.createElement("nav");
-  tabs.className = "iw-tabs";
-  tabs.setAttribute("aria-label", pt ? "Seções" : "Sections");
-  tabs.innerHTML = links;
+  tabs.className = "tabbar";
+  tabs.setAttribute("aria-label", T("Seções", "Sections"));
+  tabs.innerHTML = NAV.map(([k, href, label, ic]) => `<a href="${href}"${cur(k)} data-iw="${k}"><i class="pip"><i class="ic i-${ic}"></i></i>${label}${k === "trades" ? '<span class="count" id="iwTradesCount" hidden></span>' : ""}</a>`).join("");
   document.body.append(tabs);
   document.body.classList.add("iw-has-shell");
 
-  const btn = document.getElementById("iwThemeBtn"), pop = document.getElementById("iwThemePop");
-  const setOpen = (o) => { pop.hidden = !o; btn.setAttribute("aria-expanded", String(o)); };
-  btn.addEventListener("click", (e) => { e.stopPropagation(); setOpen(pop.hidden); });
-  document.addEventListener("click", (e) => { if (!pop.hidden && !pop.contains(e.target)) setOpen(false); });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") setOpen(false); });
-  pop.querySelectorAll("[data-theme-pick]").forEach((b) => b.addEventListener("click", () => {
-    const t = b.dataset.themePick;
-    window.INKWELL_SET_THEME(t);
-    pop.querySelectorAll("[data-theme-pick]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
-    setOpen(false);
-  }));
-  pop.querySelectorAll("[data-lang-pick]").forEach((b) => b.addEventListener("click", () => {
-    if (b.dataset.langPick === lang) return;
-    try { localStorage.setItem("inkwell-lang", b.dataset.langPick); } catch { /* */ }
-    location.reload();
-  }));
-  window.INKWELL_SET_THEME = window.INKWELL_SET_THEME || ((t) => { document.documentElement.dataset.theme = t; try { localStorage.setItem(KEY, t); } catch { /* */ } });
+  // ---------- menus ----------
+  const end = bar.querySelector(".end");
+  let menu = null, opener = null;
+  const closeMenu = () => { if (!menu) return; menu.remove(); menu = null; opener?.setAttribute("aria-expanded", "false"); opener?.focus(); opener = null; };
+  function openMenu(btn, html, cls = "") {
+    if (menu) { const same = opener === btn; closeMenu(); if (same) return; }
+    opener = btn; btn.setAttribute("aria-expanded", "true");
+    menu = document.createElement("div");
+    menu.className = `menu ${cls}`; menu.setAttribute("role", "menu");
+    menu.innerHTML = html;
+    end.append(menu);
+    menu.querySelector("[role^=menuitem], button")?.focus();
+    menu.querySelectorAll("[data-lang-pick]").forEach((b) => b.addEventListener("click", () => {
+      if (b.dataset.langPick !== lang) { try { localStorage.setItem("inkwell-lang", b.dataset.langPick); } catch { /* */ } location.reload(); }
+    }));
+    menu.querySelector("[data-signout]")?.addEventListener("click", () => { CLOUD?.signOut(); location.reload(); });
+  }
+  document.addEventListener("click", (e) => { if (menu && !menu.contains(e.target) && !opener?.contains(e.target)) closeMenu(); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeMenu();
+    if (menu && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+      const items = [...menu.querySelectorAll("[role^=menuitem], .seg button")];
+      const i = items.indexOf(document.activeElement);
+      items[(i + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length]?.focus(); e.preventDefault();
+    }
+  });
+  const langSeg = () => `<div class="menu-label">${T("Idioma", "Language")}</div>
+    <div class="seg block" role="group" aria-label="${T("Idioma", "Language")}">${[["pt", "Português"], ["en", "English"]].map(([k, l]) => `<button type="button" data-lang-pick="${k}" aria-pressed="${k === lang}">${l}</button>`).join("")}</div>`;
+  let profileName = "", syncAgo = "";
+  $("iwAcct")?.addEventListener("click", (e) => openMenu(e.currentTarget, `
+    <div class="menu-head"><span class="av lg">${esc((profileName || me.email || "?")[0].toUpperCase())}</span><div class="t"><b>${esc(profileName || T("Sua conta", "Your account"))}</b><div class="small">${esc(me.email || "")}</div></div></div>
+    <div class="menu-sep"></div>
+    <a class="menu-item" role="menuitem" href="../feed/#amigos"><i class="ic i-shield"></i>${T("Privacidade e amigos", "Privacy and friends")}</a>
+    <a class="menu-item" role="menuitem" href="../coach/"><i class="ic i-refresh"></i>${T("Jogos do duels.ink", "duels.ink games")}${syncAgo ? `<span class="trail">${esc(syncAgo)}</span>` : ""}</a>
+    ${langSeg()}
+    <div class="menu-sep"></div>
+    <button type="button" class="menu-item" role="menuitem" data-signout><i class="ic i-logout"></i>${T("Sair", "Sign out")}</button>`));
+  $("iwLangBtn")?.addEventListener("click", (e) => openMenu(e.currentTarget, `<div class="menu-label">${T("Idioma", "Language")}</div>
+    ${[["pt", "Português"], ["en", "English"]].map(([k, l]) => `<button type="button" class="menu-item" role="menuitemradio" aria-checked="${k === lang}" data-lang-pick="${k}">${l}${k === lang ? '<i class="ic i-check" style="margin-left:auto;color:var(--text)"></i>' : ""}</button>`).join("")}
+    <div class="menu-sep"></div><div class="menu-label">${T("Tema: Noite", "Theme: Night")}</div>`, "sm"));
+  function $(id) { return document.getElementById(id); }
+
+  // ---------- sign-in sheet: e-mail → 6-digit code (or the link in the e-mail) ----------
+  const sheet = document.createElement("dialog");
+  sheet.className = "sheet"; sheet.id = "iwSignSheet"; sheet.setAttribute("aria-labelledby", "iwSiT");
+  document.body.append(sheet);
+  let email = "", trigger = null;
+  function stepEmail(msg = "") {
+    sheet.innerHTML = `<div class="grab"></div>
+      <div class="sheet-head"><div><h2 id="iwSiT">${T("Entrar no Inkwell", "Sign in to Inkwell")}</h2><div class="sub">${T("Sem senha. Mandamos um código.", "No password. We e-mail you a code.")}</div></div>
+        <button type="button" class="btn ghost icon" data-close aria-label="${T("Fechar", "Close")}"><i class="ic i-close"></i></button></div>
+      <div class="sheet-body"><form class="form" id="iwSiForm" novalidate>
+        <label class="field">${T("E-mail", "E-mail")}<input id="iwSiEmail" type="email" inputmode="email" autocomplete="email" placeholder="voce@exemplo.com" value="${esc(email)}" required></label>
+        <p class="small muted">${T("Se for a primeira vez, sua conta é criada agora. Seus jogos ficam salvos e só você decide quem vê.", "If it's your first time, your account is created now. Your games are saved and only you decide who sees them.")}</p>
+        <p class="small" id="iwSiMsg" role="alert">${esc(msg)}</p>
+      </form></div>
+      <div class="sheet-foot"><button type="button" class="btn ghost" data-close>${T("Cancelar", "Cancel")}</button><button type="submit" form="iwSiForm" class="btn primary" id="iwSiSend">${T("Enviar código", "Send code")}</button></div>`;
+    wireClose();
+    $("iwSiForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      email = $("iwSiEmail").value.trim();
+      if (!/^\S+@\S+\.\S+$/.test(email)) { $("iwSiMsg").textContent = T("Digite seu e-mail.", "Enter your e-mail."); return; }
+      const b = $("iwSiSend"); b.setAttribute("aria-busy", "true"); b.disabled = true;
+      try { await CLOUD.requestCode(email); stepCode(); }
+      catch { b.removeAttribute("aria-busy"); b.disabled = false; $("iwSiMsg").textContent = T("Não foi possível enviar o e-mail. Confira o endereço e a internet.", "Couldn't send the e-mail. Check the address and your connection."); }
+    });
+    setTimeout(() => $("iwSiEmail")?.focus(), 30);
+  }
+  function stepCode(msg = "") {
+    sheet.innerHTML = `<div class="grab"></div>
+      <div class="sheet-head"><div><h2 id="iwSiT">${T("Digite o código", "Enter the code")}</h2><div class="sub">${esc(T("Enviado para ", "Sent to ") + email)}</div></div>
+        <button type="button" class="btn ghost icon" data-close aria-label="${T("Fechar", "Close")}"><i class="ic i-close"></i></button></div>
+      <div class="sheet-body"><form class="form" id="iwSiForm" novalidate>
+        <fieldset class="field"><legend>${T("Código de 6 dígitos", "6-digit code")}</legend>
+          <div class="otp">${[1, 2, 3, 4, 5, 6].map((i) => `<input inputmode="numeric" maxlength="1" autocomplete="${i === 1 ? "one-time-code" : "off"}" aria-label="${T("Dígito", "Digit")} ${i}">`).join("")}</div>
+          <span class="hint">${T("Também pode abrir o link do e-mail neste aparelho. Confira o spam.", "You can also open the link in the e-mail on this device. Check spam too.")}</span>
+        </fieldset>
+        <p class="small" id="iwSiMsg" role="alert">${esc(msg)}</p>
+        <div class="row between small"><button type="button" class="linkbtn" id="iwSiBack">${T("Trocar e-mail", "Change e-mail")}</button></div>
+      </form></div>
+      <div class="sheet-foot"><button type="button" class="btn ghost" id="iwSiBack2">${T("Voltar", "Back")}</button><button type="submit" form="iwSiForm" class="btn primary" id="iwSiIn" disabled>${T("Entrar", "Sign in")}</button></div>`;
+    wireClose();
+    const boxes = [...sheet.querySelectorAll(".otp input")];
+    const code = () => boxes.map((b) => b.value).join("");
+    const sync = () => { boxes.forEach((b) => b.classList.toggle("filled", !!b.value)); $("iwSiIn").disabled = code().length !== 6; };
+    boxes.forEach((b, i) => {
+      b.addEventListener("input", () => {
+        const d = b.value.replace(/\D/g, "");
+        if (d.length > 1) { d.slice(0, 6).split("").forEach((c, j) => { if (boxes[j]) boxes[j].value = c; }); boxes[Math.min(5, d.length - 1)].focus(); }
+        else { b.value = d; if (d && boxes[i + 1]) boxes[i + 1].focus(); }
+        sync();
+        if (code().length === 6) $("iwSiForm").requestSubmit();
+      });
+      b.addEventListener("keydown", (e) => { if (e.key === "Backspace" && !b.value && boxes[i - 1]) boxes[i - 1].focus(); });
+    });
+    const back = () => stepEmail();
+    $("iwSiBack").onclick = back; $("iwSiBack2").onclick = back;
+    $("iwSiForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const b = $("iwSiIn"); b.setAttribute("aria-busy", "true"); b.disabled = true;
+      try { await CLOUD.verify(email, code()); location.reload(); }
+      catch { boxes.forEach((x) => { x.value = ""; x.classList.add("err"); }); boxes[0].focus(); b.removeAttribute("aria-busy"); sync(); $("iwSiMsg").textContent = T("Código errado ou expirado. Tente de novo.", "Wrong or expired code. Try again."); }
+    });
+    setTimeout(() => boxes[0].focus(), 30);
+  }
+  function wireClose() { sheet.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", () => sheet.close())); }
+  sheet.addEventListener("close", () => { trigger?.focus?.(); trigger = null; });
+  sheet.addEventListener("click", (e) => { if (e.target === sheet) sheet.close(); });   // tap on the backdrop
+  window.INKWELL_SIGNIN = () => {
+    if (!CLOUD) return;
+    trigger = document.activeElement;
+    stepEmail();
+    if (!sheet.open) sheet.showModal();
+  };
+  $("iwSignIn")?.addEventListener("click", () => window.INKWELL_SIGNIN());
+
+  // ---------- Trocas count, name, last duels.ink sync (best effort) ----------
+  window.INKWELL_SHELL_BADGE = (n) => {
+    const c = $("iwTradesCount"); if (!c) return;
+    c.hidden = !n; c.textContent = n > 9 ? "9+" : String(n || "");
+    const a = c.closest("a"); if (a) a.setAttribute("aria-label", `${T("Trocas", "Trades")}${n ? ` · ${n} ${T("aguardando você", "waiting for you")}` : ""}`);
+  };
+  if (me && CLOUD) {
+    CLOUD.api(`profiles?user_id=eq.${me.id}&select=display_name`).then((r) => {
+      profileName = r?.[0]?.display_name || "";
+      if (profileName) $("iwAv").textContent = profileName.trim()[0].toUpperCase();
+    }).catch(() => {});
+    Promise.all([
+      CLOUD.api(`user_loans?select=id&status=eq.requested&created_by=neq.${me.id}`).catch(() => []),
+      CLOUD.api(`user_trades?select=id&status=eq.proposed&partner=eq.${me.id}`).catch(() => []),
+    ]).then(([a, b]) => { if (page !== "trades") window.INKWELL_SHELL_BADGE((a || []).length + (b || []).length); });
+    CLOUD.api("rpc/my_duels_sync", { method: "POST", body: {} }).then((r) => {
+      const t = Date.parse(r?.[0]?.last_run_at); if (!t) return;
+      const m = Math.max(0, Math.round((Date.now() - t) / 60000));
+      syncAgo = m < 1 ? T("agora", "now") : m < 60 ? T(`há ${m} min`, `${m} min ago`) : T(`há ${Math.round(m / 60)} h`, `${Math.round(m / 60)} h ago`);
+    }).catch(() => {});
+  }
 })();
 </script>
 </body>
