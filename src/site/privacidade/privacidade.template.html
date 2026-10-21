@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Termos e privacidade · Inkwell</title>
+<meta name="description" content="Como o Inkwell trata seus dados, quem vê o quê, regras de convivência e seus direitos.">
+<meta name="theme-color" content="#13102a">
+<link rel="icon" href="../ink/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="../ui/tokens.css"><script>document.documentElement.dataset.theme="noite";</script>
+</head>
+<body>
+<script>window.INKWELL_CLOUD_CONFIG = {"url": "https://sorefaetiaebmjploanp.supabase.co", "key": "sb_publishable_RkAWW-ENz70CXA6_QV7aHw_MpfD7Gn2", "redirect": "https://luiscredie.github.io/inkwell/privacidade/"};
+/*@CLOUD_JS@*/</script>
+<style>
+/* layout only — components come from ../ui/tokens.css (design v2) */
+.legal { max-width: 760px; }
+.legal h2 { margin: var(--sp-8) 0 var(--sp-2); font-size: var(--fs-h2); }
+.legal p, .legal li { color: var(--text-2); line-height: 1.6; }
+.legal ul { padding-left: 1.2em; }
+.legal b { color: var(--text); }
+.legal .toc { display: flex; flex-wrap: wrap; gap: 6px; margin: var(--sp-4) 0; }
+.legal .summary { padding: var(--sp-4) var(--sp-5); border-radius: var(--r-lg); background: var(--surface-2); }
+.legal .summary li { margin: 4px 0; }
+</style>
+
+<main class="page" id="page">
+  <article class="legal" id="app"></article>
+</main>
+
+<script>
+(() => {
+  "use strict";
+  let lang = "pt";
+  try { lang = localStorage.getItem("inkwell-lang") || ((navigator.language || "pt").toLowerCase().startsWith("en") ? "en" : "pt"); } catch { /* */ }
+  // Contact for privacy requests and removals. Empty: the page points to the report button.
+  const CONTACT = "";
+  const VERSION = { pt: "Versão 1 · em vigor desde 21 de outubro de 2026", en: "Version 1 · in effect since 21 October 2026" };
+  const contact = (pt) => CONTACT ? (pt ? `pelo e-mail <a href="mailto:${CONTACT}">${CONTACT}</a>` : `by e-mail at <a href="mailto:${CONTACT}">${CONTACT}</a>`)
+    : (pt ? "pelo botão <b>Denunciar</b> em qualquer perfil ou comunidade" : "with the <b>Report</b> button on any profile or community");
+  const PT = `
+    <h1>Termos e privacidade</h1>
+    <p class="small faint">${VERSION.pt}</p>
+    <div class="summary"><b>Em resumo</b><ul>
+      <li>O Inkwell é um projeto de fã, gratuito, sem anúncios. Não vendemos nem cedemos seus dados.</li>
+      <li>Tudo começa <b>privado</b>. Você escolhe o que fica público. Sua coleção nunca aparece para os outros.</li>
+      <li>Perfil público, recados e comunidades são só para quem declara ter <b>18 anos ou mais</b>.</li>
+      <li>Você pode <b>baixar todos os seus dados</b> e <b>excluir sua conta</b> a qualquer momento, em Meu Inkwell.</li>
+    </ul></div>
+    <h2 id="o-que-e">1. O que é o Inkwell</h2>
+    <p>O Inkwell é um site gratuito feito por fã para quem joga e coleciona Disney Lorcana: coleção, decks, jogos, preços, trocas, perfis e comunidades. <b>Não tem vínculo com a Disney nem com a Ravensburger.</b> As imagens das cartas pertencem aos seus donos e são usadas de acordo com a política de conteúdo de fãs da Ravensburger.</p>
+    <h2 id="quem">2. Quem pode usar</h2>
+    <p>O Inkwell é pensado para maiores de 18 anos. Recursos que mostram você a outras pessoas (perfil público, recados e comunidades) exigem que você declare ter 18 anos ou mais. Menores de 18 só devem usar o Inkwell com o acompanhamento e o consentimento dos responsáveis, e não têm acesso a esses recursos.</p>
+    <h2 id="dados">3. Quais dados guardamos</h2>
+    <ul>
+      <li><b>Conta:</b> seu e-mail (para mandar o código de entrada) e datas de criação e último acesso.</li>
+      <li><b>O que você cadastra:</b> nome, coleção, decks, lista de desejos, empréstimos e trocas, jogos (do contador ou do duels.ink, se você conectar), comentários e anotações.</li>
+      <li><b>Perfil Meu Inkwell:</b> endereço (@), lema, bio, carta do avatar, tintas, cidade, vitrine e deck em destaque.</li>
+      <li><b>Mensagens:</b> recados e publicações em comunidades.</li>
+      <li><b>Segurança:</b> denúncias enviadas e recebidas, e quando cada carta entrou na sua coleção.</li>
+    </ul>
+    <p>Não usamos cookies de rastreamento nem ferramentas de publicidade. O site guarda no seu navegador apenas preferências (idioma, filtros) e a sessão de entrada.</p>
+    <h2 id="quem-ve">4. Quem vê o quê</h2>
+    <ul>
+      <li>Seu perfil começa <b>privado</b>. Público, ele mostra só o que você escolheu. A coleção em si nunca aparece.</li>
+      <li>Seus jogos ficam com você, a menos que escolha mostrá-los a amigos, grupos ou coaches. Os nomes dos adversários nunca aparecem para os outros.</li>
+      <li>Recados só aparecem no seu perfil <b>depois que você aprova</b>. A conversa de uma comunidade é visível <b>só para os membros</b>.</li>
+      <li>Nas listas de amigos e de membros, só aparece pelo nome quem tem perfil público.</li>
+    </ul>
+    <h2 id="uso">5. Para que usamos e com quem compartilhamos</h2>
+    <p>Usamos seus dados só para fazer o Inkwell funcionar. Não há venda nem compartilhamento para marketing. Os dados ficam nos serviços que hospedam o site: <b>Supabase</b> (banco de dados e entrada por e-mail) e <b>GitHub Pages</b> (as páginas). Preços vêm de fontes públicas (TCGplayer via Lorcast, lojas brasileiras) e jogos podem vir do duels.ink, se você conectar sua conta.</p>
+    <h2 id="direitos">6. Seus direitos</h2>
+    <p>Pela Lei Geral de Proteção de Dados (LGPD), você pode, entre outros:</p>
+    <ul>
+      <li><b>Acessar e baixar</b> seus dados: Meu Inkwell → Seus dados → Baixar meus dados.</li>
+      <li><b>Corrigir</b>: edite seu perfil, coleção e decks quando quiser.</li>
+      <li><b>Excluir</b> sua conta e tudo ligado a ela: Meu Inkwell → Seus dados → Excluir minha conta. Comunidades que você criou passam para o membro mais antigo, ou são apagadas se ficarem vazias.</li>
+      <li><b>Revogar</b> o que é público: deixe o perfil privado a qualquer momento.</li>
+    </ul>
+    <p>Para outros pedidos, fale conosco ${contact(true)}.</p>
+    <h2 id="regras">7. Regras de convivência</h2>
+    <p>Para recados, perfis e comunidades:</p>
+    <ul>
+      <li>Respeito sempre. Nada de assédio, ofensas, discriminação ou ameaças.</li>
+      <li>Nada de conteúdo sexual, golpes, spam ou divulgação de dados pessoais de outras pessoas.</li>
+      <li>Não se passe por outra pessoa ou loja.</li>
+    </ul>
+    <p>Qualquer membro pode denunciar. Denúncias são analisadas pela moderação, que pode ocultar ou apagar conteúdo, ocultar perfis e comunidades e excluir contas que descumpram estas regras. Donos de comunidade também podem ocultar mensagens e remover membros.</p>
+    <h2 id="trocas">8. Trocas, vendas e empréstimos</h2>
+    <p>O Inkwell ajuda a combinar trocas e empréstimos, mas <b>não intermedeia</b> negócios nem garante entregas, pagamentos ou o estado das cartas. Combinem com cuidado e por conta própria.</p>
+    <h2 id="mudancas">9. Mudanças nesta página</h2>
+    <p>Se estas regras mudarem, a data no topo muda e avisamos no site.</p>
+    <p class="small faint" style="margin-top:var(--sp-8)">Projeto de fã, sem vínculo com a Disney ou a Ravensburger.</p>`;
+  const EN = `
+    <h1>Terms and privacy</h1>
+    <p class="small faint">${VERSION.en}</p>
+    <div class="summary"><b>In short</b><ul>
+      <li>Inkwell is a free fan project with no ads. We don't sell or hand over your data.</li>
+      <li>Everything starts <b>private</b>. You choose what is public. Your collection is never shown to others.</li>
+      <li>Public profiles, recados and communities are only for people who declare they are <b>18 or older</b>.</li>
+      <li>You can <b>download all your data</b> and <b>delete your account</b> at any time, in My Inkwell.</li>
+    </ul></div>
+    <h2>1. What Inkwell is</h2>
+    <p>Inkwell is a free, fan-made site for Disney Lorcana players and collectors: collection, decks, games, prices, trades, profiles and communities. <b>It is not affiliated with Disney or Ravensburger.</b> Card images belong to their owners and are used under Ravensburger's fan content policy.</p>
+    <h2>2. Who can use it</h2>
+    <p>Inkwell is meant for people 18 and older. Features that show you to others (public profile, recados and communities) require you to declare you are 18 or older. People under 18 should only use Inkwell with a parent's or guardian's supervision and consent, and have no access to those features.</p>
+    <h2>3. What we keep</h2>
+    <ul>
+      <li><b>Account:</b> your e-mail (to send the sign-in code), and when it was created and last used.</li>
+      <li><b>What you enter:</b> name, collection, decks, wishlist, loans and trades, games (from the counter or duels.ink, if you connect it), comments and notes.</li>
+      <li><b>My Inkwell profile:</b> address (@), motto, bio, avatar card, inks, city, showcase and featured deck.</li>
+      <li><b>Messages:</b> recados and community posts.</li>
+      <li><b>Safety:</b> reports sent and received, and when each card entered your collection.</li>
+    </ul>
+    <p>We use no tracking cookies or advertising tools. The site only keeps preferences (language, filters) and your sign-in session in your browser.</p>
+    <h2>4. Who sees what</h2>
+    <ul>
+      <li>Your profile starts <b>private</b>. When public, it shows only what you chose. The collection itself never appears.</li>
+      <li>Your games stay with you unless you choose to show them to friends, groups or coaches. Opponents' names are never shown to others.</li>
+      <li>Recados appear on your profile only <b>after you approve them</b>. A community's conversation is visible <b>to its members only</b>.</li>
+      <li>In friend and member lists, only people with a public profile are named.</li>
+    </ul>
+    <h2>5. What we use it for, and who we share it with</h2>
+    <p>We use your data only to run Inkwell. No selling, no sharing for marketing. Data lives with the services that host the site: <b>Supabase</b> (database and e-mail sign-in) and <b>GitHub Pages</b> (the pages). Prices come from public sources (TCGplayer via Lorcast, Brazilian shops), and games may come from duels.ink if you connect your account.</p>
+    <h2>6. Your rights</h2>
+    <p>Under Brazil's data protection law (LGPD) you can, among others:</p>
+    <ul>
+      <li><b>Access and download</b> your data: My Inkwell → Your data → Download my data.</li>
+      <li><b>Correct</b> it: edit your profile, collection and decks whenever you like.</li>
+      <li><b>Delete</b> your account and everything linked to it: My Inkwell → Your data → Delete my account. Communities you created pass to their longest-standing member, or are deleted if empty.</li>
+      <li><b>Withdraw</b> what is public: make your profile private at any time.</li>
+    </ul>
+    <p>For anything else, contact us ${contact(false)}.</p>
+    <h2>7. House rules</h2>
+    <ul>
+      <li>Always be respectful. No harassment, insults, discrimination or threats.</li>
+      <li>No sexual content, scams, spam or sharing other people's personal data.</li>
+      <li>Don't pretend to be another person or store.</li>
+    </ul>
+    <p>Any member can report. Reports are reviewed by moderation, which can hide or delete content, hide profiles and communities, and delete accounts that break these rules. Community owners can also hide messages and remove members.</p>
+    <h2>8. Trades, sales and loans</h2>
+    <p>Inkwell helps you arrange trades and loans but <b>does not broker</b> deals or guarantee delivery, payment or card condition. Arrange them carefully and on your own.</p>
+    <h2>9. Changes to this page</h2>
+    <p>If these rules change, the date at the top changes and we let you know on the site.</p>
+    <p class="small faint" style="margin-top:var(--sp-8)">Fan project, not affiliated with Disney or Ravensburger.</p>`;
+  document.documentElement.lang = lang === "pt" ? "pt-BR" : "en";
+  document.title = lang === "pt" ? "Termos e privacidade · Inkwell" : "Terms and privacy · Inkwell";
+  document.getElementById("app").innerHTML = lang === "pt" ? PT : EN;
+})();
+</script>
+
+<script>window.INKWELL_SHELL = {"page": "legal"};
+/*@SHELL_JS@*/</script>
+</body>
+</html>

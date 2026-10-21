@@ -35,6 +35,11 @@ async function setup(page, { signedIn = true, mine = null, admin = false, relati
     if (path === 'rpc/public_profile') return json(body.p_handle === 'rafa_exemplo' ? USER1 : body.p_handle === 'ana' ? ANA(relation) : null);
     if (path === 'rpc/example_profiles') return json([USER1, { ...USER1, handle: 'marina_exemplo', name: 'Marina (exemplo)', motto: 'Uma Encantada de cada vez.', deck: null }]);
     if (path === 'rpc/request_friend' || path === 'rpc/post_recado') return json({ ok: true });
+    if (path === 'rpc/my_data_export') return json({ account: { email: 'luis@example.com' }, games: [] });
+    if (path === 'rpc/delete_my_account') return route.fulfill({ status: 200, contentType: 'application/json', body: 'null' });
+    if (path === 'rpc/my_home') return json({ profile: { handle: null, is_public: false, adult: true }, friend_requests: [{ name: 'Ana', handle: 'ana', avatar: 'LOR14-1' }], recados_waiting: 2,
+      recados_new: [], communities: [{ slug: 'liga-campinas', name: 'Liga Campinas' }],
+      community_posts: [{ name: 'Bia', handle: null, avatar: null, body: 'Sexta tem torneio!', at: '2026-10-21T10:00:00Z', community: 'Liga Campinas', slug: 'liga-campinas', mine: false }] });
     if (path === 'rpc/my_recados') return json([{ id: 'r9', body: 'Bora jogar sexta?', status: 'pending', created_at: '2026-10-21T10:00:00Z', author_name: 'Ana', author_handle: 'ana', author_avatar: 'LOR14-1' }]);
     if (path.startsWith('recados') || path.startsWith('friendships')) return route.fulfill({ status: 204, body: '' });
     if (path === 'rpc/my_profile') return json(myRow ? { ...myRow, is_admin: admin } : null);
@@ -216,4 +221,45 @@ test('admin page refuses members who are not admins', async ({ page }) => {
   await setup(page, { mine: { display_name: 'Ana' }, admin: false });
   await page.goto(url('admin/'));
   await expect(page.locator('.empty')).toContainText('Sem permissão');
+});
+
+test('your data: download everything; deleting needs the word typed', async ({ page }) => {
+  const calls = await setup(page, { mine: { display_name: 'Luís', handle: 'luis', adult: true, invite_code: 'abc123def0' } });
+  await page.goto(url('perfil/?editar=1'));
+  const dl = page.waitForEvent('download');
+  await page.locator('#dataDl').click();
+  const file = await dl;
+  expect(file.suggestedFilename()).toMatch(/^inkwell-meus-dados-\d{4}-\d{2}-\d{2}\.json$/);
+  await page.locator('#dataDel').click();
+  await expect(page.locator('#delGo')).toBeDisabled();
+  await page.locator('#delWord').fill('excluir');
+  await expect(page.locator('#delGo')).toBeEnabled();
+  await page.locator('#delGo').click();
+  await expect(page).toHaveURL(/feed\/\?conta=excluida/);
+  expect(rpcCalls(calls, 'delete_my_account')).toEqual([{ p_confirm: 'EXCLUIR' }]);
+  const out = await page.context().browser().newPage();   // the fake session above signs in again on every load
+  await setup(out, { signedIn: false });
+  await out.goto(url('feed/?conta=excluida'));
+  await expect(out.locator('[data-testid="deleted"]')).toContainText('foram excluídos');
+});
+
+test('signed-in home: "Para você" shows what is waiting and the communities', async ({ page }) => {
+  await setup(page, { mine: { display_name: 'Luís' } });
+  await page.goto(url('feed/'));
+  const fy = page.locator('[data-testid="for-you"]');
+  await expect(fy.locator('[data-testid="fy-requests"]')).toContainText('Ana quer ser seu amigo');
+  await expect(fy.locator('[data-testid="fy-recados"]')).toContainText('2 recados esperando você');
+  await expect(fy.locator('[data-testid="fy-profile"]')).toBeVisible();
+  await expect(fy.locator('[data-testid="fy-posts"]')).toContainText('Sexta tem torneio!');
+  await expect(fy.locator('[data-testid="fy-posts"] a').first()).toHaveAttribute('href', '../comunidades/?c=liga-campinas');
+});
+
+test('terms and privacy page, linked from the sign-in sheet', async ({ page }) => {
+  await setup(page, { signedIn: false });
+  await page.goto(url('feed/'));
+  await page.locator('#iwSignIn').click();
+  await page.locator('#iwSignSheet a[href="../privacidade/"]').click();
+  await expect(page.locator('h1')).toHaveText('Termos e privacidade');
+  await expect(page.locator('#app')).toContainText('Baixar meus dados');
+  await expect(page.locator('#app')).toContainText('18 anos ou mais');
 });

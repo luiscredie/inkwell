@@ -93,7 +93,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "You already created 3 communities.": "Você já criou 3 comunidades.", "Couldn't save. Try again.": "Não foi possível salvar. Tente de novo.",
     "Members": "Membros", "Remove": "Remover", "Manage members": "Gerenciar membros", "You joined {name}.": "Você entrou em {name}.", "You left {name}.": "Você saiu de {name}.",
     "{n} min ago": "há {n} min", "{n} h ago": "há {n} h", "yesterday": "ontem", "{n} days ago": "há {n} dias", "Someone": "Alguém",
-    "Fan project, not affiliated with Disney or Ravensburger.": "Projeto de fã, sem vínculo com a Disney ou a Ravensburger.",
+    "Fan project, not affiliated with Disney or Ravensburger.": "Projeto de fã, sem vínculo com a Disney ou a Ravensburger.", "Terms and privacy": "Termos e privacidade",
   };
   const MOCK_EN = {
     "Taverna da Tinta (exemplo)": "Taverna da Tinta (example)", "Encantadas & Cia (exemplo)": "Encantadas & Co. (example)",
@@ -192,7 +192,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
           <div class="cm-people">${named.map((p) => `<a href="../perfil/?u=${encodeURIComponent(p.handle)}"><span class="pav" style="${art(p.avatar)}"></span><span>${esc(L(m, p.name))}${p.role === "owner" ? `<br><span class="faint small">${Tx("owner")}</span>` : ""}</span></a>`).join("")}</div>
           ${hiddenN ? `<p class="small faint" style="margin:var(--sp-2) 0 0">${Tx("+{n} with a private profile", { n: hiddenN })}</p>` : ""}</section>
       </div>
-      <p class="small faint" style="margin-top:var(--sp-5)">${Tx("Fan project, not affiliated with Disney or Ravensburger.")}</p>`;
+      <p class="small faint" style="margin-top:var(--sp-5)">${Tx("Fan project, not affiliated with Disney or Ravensburger.")} · <a href="../privacidade/">${Tx("Terms and privacy")}</a></p>`;
     wireOne();
   }
   function wireOne() {
