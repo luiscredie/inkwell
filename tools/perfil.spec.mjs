@@ -8,13 +8,17 @@ const url = (p) => new URL(p, ROOT).href;
 const ME = '11111111-1111-4111-8111-111111111111';
 
 const USER1 = {
-  handle: 'user1', name: 'user1 (exemplo)', bio: 'Perfil fictício de exemplo.', avatar: 'LOR14-2', inks: ['Amber', 'Steel'], city: 'São Paulo', mock: true,
+  handle: 'rafa_exemplo', name: 'Rafa (exemplo)', bio: 'Jogo Âmbar/Aço competitivo.', motto: 'Quinta é dia de liga.', avatar: 'LOR14-2', inks: ['Amber', 'Steel'], city: 'São Paulo', mock: true,
   showcase: [{ id: 'LOR13-80', own: true }, { id: 'LOR14-1', own: true }, { id: 'LOR10-10', own: false }],
-  deck: { name: 'Amber/Steel exemplo', format: 'core', colors: ['Amber', 'Steel'], cards: { 'LOR14-1': 4, 'LOR14-10': 4, 'LOR14-11': 4 } },
+  deck: { name: 'Âmbar/Aço da liga', format: 'core', colors: ['Amber', 'Steel'], cards: { 'LOR14-1': 4, 'LOR14-10': 4, 'LOR14-11': 4 } },
   record: { w: 8, l: 4 }, trade: { want: ['LOR14-3'], have: [] },
+  friends: [{ name: 'Marina (exemplo)', handle: 'marina_exemplo', avatar: 'LOR13-80' }, { name: 'Bia (exemplo)', handle: 'bia_exemplo', avatar: 'LOR14-1' }], friends_n: 3,
+  recados: [{ id: 'x1', body: 'Valeu pela troca da Mulan! Quinta tem revanche.', at: '2026-10-20T10:00:00Z', name: 'Marina (exemplo)', handle: 'marina_exemplo', avatar: 'LOR13-80' }],
+  relation: null, can_recado: null,
 };
+const ANA = (relation) => ({ ...USER1, handle: 'ana', name: 'Ana', mock: false, relation, can_recado: relation === 'friend', recados: [] });
 
-async function setup(page, { signedIn = true, mine = null, admin = false } = {}) {
+async function setup(page, { signedIn = true, mine = null, admin = false, relation = 'none', invite = { ok: true, name: 'Luís', requester: '22222222-2222-4222-8222-222222222222', status: 'pending' } } = {}) {
   const calls = [];
   await page.addInitScript(([me, signed]) => {
     localStorage.setItem('inkwell-lang', 'pt');
@@ -26,14 +30,17 @@ async function setup(page, { signedIn = true, mine = null, admin = false } = {})
   await page.route('**/rest/v1/**', async (route) => {
     const req = route.request(), path = new URL(req.url()).pathname.replace(/.*\/rest\/v1\//, '');
     const body = req.postData() ? JSON.parse(req.postData()) : null;
-    calls.push({ path, body });
+    calls.push({ path, full: path + decodeURIComponent(new URL(req.url()).search), body });
     const json = (v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
-    if (path === 'rpc/public_profile') return json(body.p_handle === 'user1' ? USER1 : body.p_handle === 'ana' ? { ...USER1, handle: 'ana', name: 'Ana', mock: false } : null);
-    if (path === 'rpc/example_profiles') return json([USER1, { ...USER1, handle: 'user2', name: 'user2 (exemplo)', deck: null }]);
+    if (path === 'rpc/public_profile') return json(body.p_handle === 'rafa_exemplo' ? USER1 : body.p_handle === 'ana' ? ANA(relation) : null);
+    if (path === 'rpc/example_profiles') return json([USER1, { ...USER1, handle: 'marina_exemplo', name: 'Marina (exemplo)', motto: 'Uma Encantada de cada vez.', deck: null }]);
+    if (path === 'rpc/request_friend' || path === 'rpc/post_recado') return json({ ok: true });
+    if (path === 'rpc/my_recados') return json([{ id: 'r9', body: 'Bora jogar sexta?', status: 'pending', created_at: '2026-10-21T10:00:00Z', author_name: 'Ana', author_handle: 'ana', author_avatar: 'LOR14-1' }]);
+    if (path.startsWith('recados') || path.startsWith('friendships')) return route.fulfill({ status: 204, body: '' });
     if (path === 'rpc/my_profile') return json(myRow ? { ...myRow, is_admin: admin } : null);
     if (path === 'rpc/save_my_profile') { myRow = { ...(myRow || {}), ...body.p, invite_code: 'abc123def0', hidden: false }; return json(myRow); }
     if (path === 'rpc/invite_info') return json(body.p_code === 'abc123def0' ? { name: 'Luís', handle: null } : null);
-    if (path === 'rpc/accept_invite') return json({ ok: true, name: 'Luís' });
+    if (path === 'rpc/accept_invite') return json(invite);
     if (path === 'rpc/report_profile') return route.fulfill({ status: 204, body: '' });
     if (path.startsWith('inkwell_profiles')) return json([{ profile: 'luiscredie', updated_at: '2026-10-21T10:00:00Z', decks: [{ id: 'd1', name: 'Steelsong', format: 'core', colors: ['Amber', 'Steel'], cards: { 'LOR14-1': 4 } }], collection: { 'LOR13-80': { n: 1, f: 0 } } }]);
     if (path === 'rpc/admin_users') return admin ? json([
@@ -54,20 +61,32 @@ test('public home explains Inkwell and shows example profiles marked as fictiona
   await page.goto(url('feed/'));
   const home = page.locator('[data-testid="public-home"]');
   await expect(home.locator('h1')).toHaveText('Seu canto na comunidade de Lorcana');
-  await expect(home.locator('.land-feat')).toHaveCount(5);
   await expect(page.locator('[data-testid="example-profile"]')).toHaveCount(2);
   await expect(page.locator('[data-testid="example-profile"]').first()).toContainText('Exemplo · perfil fictício');
+  await expect(page.locator('[data-testid="example-profile"]').first()).toContainText('“Quinta é dia de liga.”');
+  await expect(page.locator('[data-testid="example-profile"]').first()).toContainText('3 amigos');
+  const order = await home.locator(':scope > section').evaluateAll((els) => els.map((e) => e.id || e.className));
+  expect(order.slice(0, 2)).toEqual(['landHero', 'landEx']);   // examples right below the hero
+  await expect(home.locator('.land-feat')).toHaveCount(6);
   await page.locator('[data-testid="example-profile"]').first().click();
-  await expect(page).toHaveURL(/perfil\/\?u=user1/);
+  await expect(page).toHaveURL(/perfil\/\?u=rafa_exemplo/);
   await expect(page.locator('[data-testid="mock-banner"]')).toContainText('perfil fictício');
 });
 
 test('a public profile shows only what its owner picked; signed out there is no report button', async ({ page }) => {
   await setup(page, { signedIn: false });
-  await page.goto(url('perfil/?u=user1'));
+  await page.goto(url('perfil/?u=rafa_exemplo'));
   const p = page.locator('[data-testid="profile"]');
-  await expect(p.locator('.mi-name')).toHaveText('user1 (exemplo)');
-  await expect(p).toContainText('@user1');
+  await expect(p.locator('.mi-name')).toHaveText('Rafa (exemplo)');
+  await expect(p).toContainText('@rafa_exemplo');
+  await expect(page.locator('[data-testid="motto"]')).toHaveText('“Quinta é dia de liga.”');
+  await expect(page.locator('[data-testid="friends"] .mi-fgrid a')).toHaveCount(2);
+  await expect(page.locator('[data-testid="friends"]')).toContainText('+1 com perfil privado');
+  await expect(page.locator('[data-testid="recados"]')).toContainText('Valeu pela troca da Mulan!');
+  await expect(page.locator('#recForm')).toHaveCount(0);   // signed out: no form
+  await expect(page.locator('[data-testid="featured-deck"] .mi-key figure')).toHaveCount(3);
+  await page.locator('[data-testid="featured-deck"] summary').click();
+  await expect(page.locator('[data-testid="featured-deck"] .mi-list li')).toHaveCount(3);
   await expect(p).toContainText('Âmbar');
   await expect(page.locator('[data-testid="showcase"] figure')).toHaveCount(3);
   await expect(page.locator('[data-testid="showcase"] .tag.match')).toHaveCount(2);   // "tem"
@@ -88,6 +107,33 @@ test('signed in, a profile can be reported', async ({ page }) => {
   expect(rpcCalls(calls, 'report_profile')).toEqual([{ p_handle: 'ana', p_reason: 'Conteúdo ofensivo' }]);
 });
 
+test('friends: ask from a profile; a friend can leave a recado that waits for approval', async ({ page }) => {
+  let calls = await setup(page, { mine: { display_name: 'Luís', handle: 'luis', adult: true, invite_code: 'abc123def0' }, relation: 'none' });
+  await page.goto(url('perfil/?u=ana'));
+  await page.locator('#addFriend').click();
+  await expect(page.locator('[data-testid="relation"]')).toHaveText('Pedido enviado');
+  expect(rpcCalls(calls, 'request_friend')).toEqual([{ p_handle: 'ana' }]);
+
+  const page2 = await page.context().newPage();
+  calls = await setup(page2, { mine: { display_name: 'Luís', handle: 'luis', adult: true, invite_code: 'abc123def0' }, relation: 'friend' });
+  await page2.goto(url('perfil/?u=ana'));
+  await expect(page2.locator('[data-testid="relation"]')).toHaveText('Amigos');
+  await page2.locator('#recBody').fill('Bora jogar sexta?');
+  await page2.locator('#recForm button[type=submit]').click();
+  await expect(page2.locator('#toast')).toContainText('Aparece quando Ana aprovar');
+  expect(rpcCalls(calls, 'post_recado')).toEqual([{ p_handle: 'ana', p_body: 'Bora jogar sexta?' }]);
+});
+
+test('my profile: recados wait for my approval', async ({ page }) => {
+  const calls = await setup(page, { mine: { display_name: 'Luís', handle: 'luis', bio: '', motto: '', inks: [], city: '', showcase: [], is_public: false, adult: true, invite_code: 'abc123def0' } });
+  await page.goto(url('perfil/?editar=1'));
+  const box = page.locator('[data-testid="my-recados"]');
+  await expect(box).toContainText('Recados esperando você');
+  await box.locator('[data-rec="r9"] [data-ra="shown"]').click();
+  await expect(box).toContainText('No seu perfil');
+  expect(calls.find((c) => c.full.startsWith('recados?id=eq.r9')).body).toMatchObject({ status: 'shown' });
+});
+
 test('my profile: private by default; public needs an address and 18+; card and invite', async ({ page }) => {
   const calls = await setup(page, { mine: { display_name: 'Luís', handle: null, bio: '', inks: [], city: '', showcase: [], is_public: false, adult: false, show_record: true, show_trade: false, invite_code: 'abc123def0' } });
   await page.goto(url('perfil/?editar=1'));
@@ -97,6 +143,7 @@ test('my profile: private by default; public needs an address and 18+; card and 
   await page.locator('#fHandle').fill('Luis Credie!');
   await expect(page.locator('#fHandle')).toHaveValue('luiscredie');
   await page.locator('#fBio').fill('Jogo Amber/Steel.');
+  await page.locator('#fMotto').fill('Topo um BO3 sempre.');
   await page.locator('.ed-inks [data-ink="Amber"]').click();
   await page.locator('.ed-inks [data-ink="Steel"]').click();
   await page.locator('.ed-inks [data-ink="Ruby"]').click();   // a third ink replaces the oldest
@@ -115,7 +162,7 @@ test('my profile: private by default; public needs an address and 18+; card and 
   await page.locator('#edSave').click();
   await expect(page.locator('#toast')).toContainText('Salvo');
   const saved = rpcCalls(calls, 'save_my_profile')[0].p;
-  expect(saved).toMatchObject({ handle: 'luiscredie', bio: 'Jogo Amber/Steel.', inks: ['Steel', 'Ruby'], adult: true, is_public: true, city: 'São Paulo', featured_deck: 'd1',
+  expect(saved).toMatchObject({ handle: 'luiscredie', bio: 'Jogo Amber/Steel.', motto: 'Topo um BO3 sempre.', inks: ['Steel', 'Ruby'], adult: true, is_public: true, city: 'São Paulo', featured_deck: 'd1',
     showcase: [{ id: 'LOR13-80', k: 'own' }, { id: 'LOR14-1', k: 'fav' }] });
   expect(saved.avatar_card).toBeTruthy();
   await expect(page.locator('[data-testid="status"]')).toHaveText('Público');
@@ -126,7 +173,7 @@ test('my profile: private by default; public needs an address and 18+; card and 
   expect(size).toEqual([1080, 1350]);
 });
 
-test('an invite link: shown signed out, accepted after signing in', async ({ page }) => {
+test('an invite link: shown signed out; after signing in the person decides', async ({ page }) => {
   await setup(page, { signedIn: false });
   await page.goto(url('perfil/?convite=abc123def0'));
   await expect(page.locator('[data-testid="invite"]')).toContainText('Luís convidou você para o Inkwell');
@@ -135,8 +182,15 @@ test('an invite link: shown signed out, accepted after signing in', async ({ pag
   const page2 = await page.context().newPage();
   const calls = await setup(page2, { mine: { display_name: 'Ana', handle: null, invite_code: 'zzz' } });
   await page2.goto(url('perfil/?editar=1'));
+  const ask = page2.locator('[data-testid="invite-ask"]');
+  await expect(page2.locator('#sheet')).toContainText('Luís quer ser seu amigo');
+  expect(calls.filter((c) => c.path.startsWith('friendships'))).toEqual([]);   // nothing until the person decides
+  await ask.getByRole('button', { name: 'Aceitar' }).click();
   await expect(page2.locator('#toast')).toContainText('Agora você e Luís são amigos');
   expect(rpcCalls(calls, 'accept_invite')).toEqual([{ p_code: 'abc123def0' }]);
+  const f = calls.find((c) => c.path.startsWith('friendships'));
+  expect(f.full).toContain('requester=eq.22222222-2222-4222-8222-222222222222');
+  expect(f.body).toMatchObject({ status: 'accepted' });
 });
 
 test('admin: members, reports, two taps to delete', async ({ page }) => {
