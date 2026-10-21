@@ -71,24 +71,26 @@ test('binder check mode follows the binder order and saves changes', async ({ pa
 
 // ---------- Escanear (card scanner) with a fake camera that shows one card image in the frame ----------
 const IMG = (f) => `../lorcana-card-images/images/${f}`;
-async function fakeCamera(page, { file, ocr = null, deny = false, scale = 1.03 }) {
-  await page.addInitScript(([src, ocrText, denied, k]) => {
+async function fakeCamera(page, { file, ocr = null, deny = false, scale = 1.03, wobble = 0 }) {
+  await page.addInitScript(([src, ocrText, denied, k, wob]) => {
     if (ocrText !== null) window.INKWELL_SCAN_OCR = async () => ocrText;
     navigator.mediaDevices.getUserMedia = async () => {
       if (denied) throw new DOMException('denied', 'NotAllowedError');
       const c = document.createElement('canvas'); c.width = 720; c.height = 1280;
       const ctx = c.getContext('2d'), img = new Image(); img.src = src;
+      let t = 0;
       setInterval(() => {
+        t++; const jx = wob ? Math.sin(t * 1.7) * wob : 0, jy = wob ? Math.cos(t * 1.3) * wob : 0;   // a phone being moved around
         ctx.fillStyle = '#4a3426'; ctx.fillRect(0, 0, c.width, c.height);
         const g = window.__inkwellScanGuide?.();
         if (g && img.complete && img.naturalWidth) {   // the card a little off-centre and a little bigger than the frame, as a hand would hold it
           const w = g.w * k, h = g.h * k;
-          ctx.drawImage(img, g.x + g.w * 0.02 - (w - g.w) / 2, g.y - g.h * 0.015 - (h - g.h) / 2, w, h);
+          ctx.drawImage(img, g.x + g.w * (0.02 + jx) - (w - g.w) / 2, g.y + g.h * (jy - 0.015) - (h - g.h) / 2, w, h);
         }
       }, 60);
       return c.captureStream(15);
     };
-  }, [file ? IMG(file) : '', ocr, deny, scale]);
+  }, [file ? IMG(file) : '', ocr, deny, scale, wobble]);
 }
 async function confirmList(page, n) {   // Concluir -> review -> add
   await page.getByRole('button', { name: 'Concluir' }).click();
@@ -216,4 +218,13 @@ test('sort by recently added, and the MYP Cards price in the card sheet', async 
   const br = page.locator('[data-testid="card-br"]');
   await expect(br).toContainText('No Brasil a partir de');
   await expect(br).toHaveAttribute('href', 'https://mypcards.com/lorcana/produto/363191/rapunzel-tower-defender');
+});
+
+test('scanner adds nothing while the phone is moving', async ({ page }) => {
+  await setup(page);
+  await fakeCamera(page, { file: 'Rapunzel_-_Tower_Defender__LOR13-80.jpg', wobble: 0.12 });
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Escanear' }).click();
+  await page.waitForTimeout(5000);
+  await expect(page.locator('[data-testid="scan-count"]')).toHaveText('');
 });
