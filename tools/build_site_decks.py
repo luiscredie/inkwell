@@ -6,6 +6,7 @@ Sources live in this repo, so the page can always be rebuilt:
   src/site/cloud.js                    sign-in + REST adapter shared by the site pages
   src/site/shell.js                    top bar / tab bar / account menu / sign-in sheet
   site/data/cards.json                 card catalog (a compact index is embedded)
+  site/index.html                      the Inkwell app; its deck-portfolio optimizer is copied in
 
 Run after a catalog update:  python tools/build_site_decks.py
 """
@@ -39,6 +40,22 @@ def card_index(catalog: dict) -> dict:
     return {"generated_at": catalog.get("generated_at") or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "sets": sets, "cards": cards}
 
 
+def portfolio_function(app_html: str) -> str:
+    """The Inkwell app's deck-portfolio optimizer (static computeDeckPortfolioPlan), copied verbatim
+    so the Plano tab and the old Consultor always give the same answer. tools/deck-portfolio-v4.test.mjs tests it."""
+    start = app_html.index("static computeDeckPortfolioPlan(")
+    i = app_html.index("{", start)
+    depth = 0
+    for j in range(i, len(app_html)):
+        if app_html[j] == "{":
+            depth += 1
+        elif app_html[j] == "}":
+            depth -= 1
+            if depth == 0:
+                break
+    return "function " + app_html[start + len("static "):j + 1]
+
+
 def script_json(value) -> str:
     return json.dumps(value, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
 
@@ -48,12 +65,14 @@ def build(out: Path = SITE / "decks" / "index.html") -> Path:
     tpl = (SRC / "decks" / "decks.template.html").read_text(encoding="utf-8")
     cloud = (SRC / "cloud.js").read_text(encoding="utf-8")
     shell = (SRC / "shell.js").read_text(encoding="utf-8")
+    plan_fn = portfolio_function((SITE / "index.html").read_text(encoding="utf-8"))
     cfg = {**CLOUD, "redirect": "https://luiscredie.github.io/inkwell/decks/"}
     html = (tpl
             .replace("/*@CLOUD@*/", f"window.INKWELL_CLOUD_CONFIG = {json.dumps(cfg)};\n{cloud}")
             .replace("/*@CARD_INDEX@*/", f"const CARD_INDEX = {script_json(card_index(catalog))};")
+            .replace("/*@PORTFOLIO@*/", plan_fn)
             .replace("/*@SHELL@*/", f"window.INKWELL_SHELL = {json.dumps({'page': 'decks'})};\n{shell}"))
-    for marker in ("/*@CLOUD@*/", "/*@CARD_INDEX@*/", "/*@SHELL@*/"):
+    for marker in ("/*@CLOUD@*/", "/*@CARD_INDEX@*/", "/*@PORTFOLIO@*/", "/*@SHELL@*/"):
         assert marker not in html, marker
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html, encoding="utf-8")

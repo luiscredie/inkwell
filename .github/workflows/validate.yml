@@ -62,6 +62,8 @@ jobs:
         run: node tools/pwa-contract.test.mjs
       - name: Simulator readiness contract
         run: node tools/sim-readiness-contract.test.mjs
+      - name: Decks page uses the app's deck-portfolio optimizer
+        run: node tools/decks-plan-contract.test.mjs
   python:
     runs-on: ubuntu-latest
     steps:
