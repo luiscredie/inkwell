@@ -615,7 +615,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const runner = (fine.find(([, s]) => s < bs - 0.04) || [0, coarse[order[15]]])[1];
     // where the card sits in the analysed image (fractions), so the collector line can be cut out precisely
     const box = { x: (T.w / 2 - (SG.W / 2) * at.s + at.dx * SG.W) / T.w, y: (T.h / 2 - (SG.H / 2) * at.s + at.dy * SG.H) / T.h, w: SG.W * at.s / T.w, h: SG.H * at.s / T.h };
-    return { id: SCAN.ids[bi], score: bs, group, confident: (bs >= 0.70 && bs - runner >= 0.15) || (bs >= 0.80 && bs - runner >= 0.08), box };   // a glare spot lowers the gap, not the match
+    return { id: SCAN.ids[bi], score: bs, gap: bs - runner, group, confident: (bs >= 0.70 && bs - runner >= 0.15) || (bs >= 0.80 && bs - runner >= 0.08), box };   // a glare spot lowers the gap, not the match
   }
   window.__inkwellScanIdentify = (img) => (SCAN ? identify(img) : null);   // used by the browser test
 
@@ -760,16 +760,26 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       const r = videoRect(guideRect()), m = SG.M;
       const wide = { x: r.x - r.w * m, y: r.y - r.h * m, w: r.w * (1 + 2 * m), h: r.h * (1 + 2 * m) };
       const cv = grab(wide, Math.round(SG.W * (1 + 2 * m)), Math.round(SG.H * (1 + 2 * m)));
+      // Only steady frames count: a frame taken while the phone moves (between two cards, or mid-blur)
+      // can look like another card. Compare a tiny grey copy with the previous frame's.
+      const th = document.createElement("canvas"); th.width = 24; th.height = 34;
+      const tx = th.getContext("2d", { willReadFrequently: true }); tx.drawImage(cv, 0, 0, 24, 34);
+      const td = tx.getImageData(0, 0, 24, 34).data, grey = new Float32Array(24 * 34);
+      for (let i = 0; i < grey.length; i++) grey[i] = 0.299 * td[i * 4] + 0.587 * td[i * 4 + 1] + 0.114 * td[i * 4 + 2];
+      let motion = 0; if (scan.prev) { for (let i = 0; i < grey.length; i++) motion += Math.abs(grey[i] - scan.prev[i]); motion /= grey.length; } else motion = 99;
+      scan.prev = grey;
+      const steady = motion < 10;
       const res = identify(cv.getContext("2d").getImageData(0, 0, cv.width, cv.height));
       if (scan.wait) {   // after adding, wait until the card leaves the frame
         if (!(res.confident && res.group.includes(scan.last?.id))) { scan.misses++; if (scan.misses >= 2) { scan.wait = false; scan.misses = 0; scanSay(Tx("Point the camera at one card inside the frame.")); } }
         else scan.misses = 0;
         return;
       }
+      if (!steady) { scan.seen = null; scan.seenN = 0; return; }
       if (!res.confident) { scan.seen = null; scan.seenN = 0; if (res.score > 0.5) scanSay(Tx("Centre the card in the frame, with good light.")); return; }
       const key = res.group.slice().sort().join("|");
       if (scan.seen !== key) { scan.seen = key; scan.seenN = 1; scanSay(Tx("Recognising…")); return; }
-      if (++scan.seenN < 2) return;   // the same answer on two frames in a row
+      if (++scan.seenN < 3) return;   // the same answer on three steady frames in a row
       if (res.group.length === 1) return addScanned(res.id);
       scanSay(Tx("Hold still, reading the card number…"));
       const card = { x: wide.x + res.box.x * wide.w, y: wide.y + res.box.y * wide.h, w: res.box.w * wide.w, h: res.box.h * wide.h };
@@ -787,7 +797,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     } finally { scan.busy = false; }
   }
   async function openScanner(from) {
-    const sh = $("scan"); scan.added = []; scan.last = null; scan.wait = false; scan.askOpen = false; scan.seen = null; scan.review = false; scan.saved = 0;
+    const sh = $("scan"); scan.added = []; scan.last = null; scan.wait = false; scan.askOpen = false; scan.seen = null; scan.review = false; scan.saved = 0; scan.prev = null;
     drawScan(); sh.showModal(); scanSay(Tx("Starting the camera…"));
     sh.addEventListener("close", () => { clearInterval(scan.timer); scan.stream?.getTracks().forEach((t) => t.stop()); scan.stream = null; sh.innerHTML = ""; sh.oncancel = null; flush(true); renderAll(); from?.focus?.(); if (scan.saved) toast(Tx("{n} added", { n: scan.saved })); }, { once: true });
     sh.oncancel = (e) => { if (scan.added.length && !scan.review) { e.preventDefault(); showReview(); } };   // Esc / back with cards in the list: review first
