@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-21T12:00:00Z",
+  "source": "Core Constructed: Sets 9–13, plus Set 14 (Hyperia City) from its wide release on 2026-10-23; Sets 7 and 8 rotated out. Checked against Lorcast legalities on 2026-10-21.",
+  "formats": {
+    "core": {
+      "effective_from": "2026-10-23",
+      "minimum_deck_size": 60,
+      "maximum_ink_colors": 2,
+      "default_copy_limit": 4,
+      "legal_sets": ["LOR9", "LOR10", "LOR11", "LOR12", "LOR13", "LOR14", "Q2", "DLPC2"],
+      "banned_card_ids": [],
+      "banned_full_names": [],
+      "copy_limit_overrides": {}
+    },
+    "infinity": {
+      "minimum_deck_size": 60,
+      "maximum_ink_colors": 2,
+      "default_copy_limit": 4,
+      "banned_card_ids": [],
+      "banned_full_names": [],
+      "copy_limit_overrides": {}
+    }
+  }
+}
