@@ -47,7 +47,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const PT = {
     "Prices": "Preços", "Collection": "Coleção", "Loading…": "Carregando…", "Liga Lorcana prices, {d}": "Preços da Liga Lorcana de {d}",
     "These prices are from {d}, {n} days ago. They are refreshed by the price agent on Luis's computer.": "Estes preços são de {d}, há {n} dias. Eles são atualizados pelo agente de preços que roda no computador do Luis.",
-    "Hide": "Ocultar", "The chart uses the Liga Lorcana price history, until {d}.": "O gráfico usa o histórico de preços da Liga Lorcana, até {d}.", "TCGplayer prices converted at R$ {r} per dollar, {d}": "Preços do TCGplayer convertidos a R$ {r} por dólar, {d}", "Rises and drops come from the Liga Lorcana price history.": "As altas e quedas vêm do histórico de preços da Liga Lorcana.", "Movers": "Variações", "Wishlist": "Lista de desejos", "Collection value": "Valor da coleção",
+    "Hide": "Ocultar", "TCGplayer prices, in reais at each day's dollar rate.": "Preços do TCGplayer, em reais pela cotação de cada dia.", "The chart uses the Liga Lorcana price history, until {d}.": "O gráfico usa o histórico de preços da Liga Lorcana, até {d}.", "TCGplayer prices converted at R$ {r} per dollar, {d}": "Preços do TCGplayer convertidos a R$ {r} por dólar, {d}", "Rises and drops come from the Liga Lorcana price history.": "As altas e quedas vêm do histórico de preços da Liga Lorcana.", "Movers": "Variações", "Wishlist": "Lista de desejos", "Collection value": "Valor da coleção",
     "1 day": "1 dia", "7 days": "7 dias", "30 days": "30 dias", "Latest": "Última", "Period": "Período", "Only cards I own": "Só as que tenho",
     "Biggest rises": "Maiores altas", "Biggest drops": "Maiores quedas", "No changes in this period.": "Nenhuma variação neste período.",
     "{a} to {b}": "de {a} a {b}", "foil": "foil", "Add to wishlist": "Pôr na lista de desejos", "Remove from wishlist": "Tirar da lista de desejos",
@@ -86,7 +86,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   // ---------- state ----------
   const CLOUD = window.INKWELL_CLOUD;
   const me = CLOUD?.user();
-  let PRICES = {}, BR = null, pricesDate = null, usdBrl = null, HISTORY = null, profiles = [], profileName = null;
+  let PRICES = {}, BR = null, pricesDate = null, usdBrl = null, HISTORY = null, histTcg = false, profiles = [], profileName = null;
   const VIEW_KEY = "inkwell-prices-view-v1";
   let v = { tab: "movers", period: "7d", owned: false, hideStale: null };
   try { v = { ...v, ...JSON.parse(localStorage.getItem(VIEW_KEY) || "{}") }; } catch { /* */ }
@@ -117,7 +117,23 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   let historyLoading = null;
   function loadHistory() {
     if (HISTORY || historyLoading) return historyLoading;
-    historyLoading = fetch("../data/price-history.json").then((r) => (r.ok ? r.json() : null)).then((h) => { HISTORY = (h?.series || []).filter((s) => s && s.date).sort((a, b) => (a.date < b.date ? -1 : 1)); render(); }).catch(() => { HISTORY = []; render(); });
+    // With TCGplayer prices, use the TCGplayer history (one file per day, tools/prices_from_lorcast.py --history) once it
+    // has two days; before that, and with Liga prices, the Liga Lorcana history.
+    const liga = () => fetch("../data/price-history.json").then((r) => (r.ok ? r.json() : null)).then((h) => (h?.series || []).filter((s) => s && s.date));
+    const tcg = async () => {
+      if (!usdBrl) return null;
+      const idx = await fetch(window.INKWELL_TCG_HISTORY_URL || "../data/price-history-tcg.json").then((r) => (r.ok ? r.json() : null)).catch(() => null);
+      const days = (idx?.days || []).map((d) => d.date).filter(Boolean);
+      if (days.length < 2) return null;
+      const base = new URL(window.INKWELL_TCG_HISTORY_URL || "../data/price-history-tcg.json", location.href);
+      const snaps = await Promise.all(days.map((d) => fetch(new URL(idx.path.replace("{date}", d), base)).then((r) => (r.ok ? r.json() : null)).catch(() => null)));
+      const series = snaps.filter((x) => x?.date && x.prices).map((x) => { const prices = {};
+        for (const id in x.prices) { const [n, f] = x.prices[id]; const e = {}; if (n != null) e.n = n; if (f != null) e.f = f; prices[id] = e; }
+        return { date: x.date, prices }; });
+      return series.length >= 2 ? series : null;
+    };
+    historyLoading = tcg().catch(() => null).then(async (t) => { histTcg = !!t; return t || liga(); })
+      .then((series) => { HISTORY = series.sort((a, b) => (a.date < b.date ? -1 : 1)); render(); }).catch(() => { HISTORY = []; render(); });
     return historyLoading;
   }
 
@@ -154,7 +170,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     if (!M) return head + emptyBox("search", Tx("Not enough price history for this period."), "");
     const g = pick(M.gainers), l = pick(M.losers);
     if (!g.length && !l.length) return head + emptyBox("search", Tx("No changes in this period."), "");
-    return `${head}<p class="small muted" style="margin:0 0 var(--sp-3)">${esc(Tx("{a} to {b}", { a: dateFmt(M.from), b: dateFmt(M.to) }))}${usdBrl ? ` · ${esc(Tx("Rises and drops come from the Liga Lorcana price history."))}` : ""}</p>
+    return `${head}<p class="small muted" style="margin:0 0 var(--sp-3)">${esc(Tx("{a} to {b}", { a: dateFmt(M.from), b: dateFmt(M.to) }))}${usdBrl ? ` · ${esc(Tx(histTcg ? "TCGplayer prices, in reais at each day's dollar rate." : "Rises and drops come from the Liga Lorcana price history."))}` : ""}</p>
       <div class="grid2"><section><div class="group-head"><h3>${Tx("Biggest rises")}</h3></div><div class="list" data-testid="gainers">${g.map(row).join("")}</div></section>
       <section><div class="group-head"><h3>${Tx("Biggest drops")}</h3></div><div class="list" data-testid="losers">${l.map(row).join("")}</div></section></div>`;
   }
@@ -205,7 +221,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     return `<div class="stats-row three" data-testid="value-stats"><div class="stat"><b class="money">${moneySplit(now)}</b><span>${Tx("Value now")}</span></div><div class="stat"><b>${cards.toLocaleString(LOC)}</b><span>${Tx("Cards")}</span></div>
         <div class="stat"><b class="${ch == null ? "" : ch >= 0 ? "up" : "down"}">${ch == null ? "—" : `${ch >= 0 ? "+" : "−"}${Math.abs(ch).toLocaleString(LOC, { maximumFractionDigits: 1 })}%`}</b><span>${esc(Tx("Change over {n} snapshots", { n: pts.length }))}</span></div></div>
       ${brN ? `<p class="small muted" style="margin:var(--sp-2) 0 0" data-testid="value-br">${esc(Tx("On MYP Cards: {v} for the {n} cards listed there (lowest listing, normal and foil together, {d}).", { v: money(brSum), n: brN.toLocaleString(LOC), d: dateFmt(BR.retrieved_at) }))}</p>` : ""}
-      ${chart ? `<section class="card" style="margin-top:var(--sp-4)">${chart}<p class="small faint" style="margin:var(--sp-2) 0 0">${Tx("Value by date, with today's collection at each date's prices.")}${usdBrl ? " " + esc(Tx("The chart uses the Liga Lorcana price history, until {d}.", { d: dateFmt(pts[pts.length - 1]?.d) })) : ""}</p></section>` : ""}
+      ${chart ? `<section class="card" style="margin-top:var(--sp-4)">${chart}<p class="small faint" style="margin:var(--sp-2) 0 0">${Tx("Value by date, with today's collection at each date's prices.")}${usdBrl && !histTcg ? " " + esc(Tx("The chart uses the Liga Lorcana price history, until {d}.", { d: dateFmt(pts[pts.length - 1]?.d) })) : ""}</p></section>` : ""}
       <div class="group-head"><h3>${Tx("Most valuable cards")}</h3></div>
       <div class="list" data-testid="top-cards">${top.slice(0, 20).map((t) => { const c = BY.get(t.id), [a, b] = split(c.name); return `<div class="list-row">${thumb(c, "xs")}<span class="t"><span>${esc(a)}${b ? ` · ${esc(b)}` : ""}</span><span class="meta">${esc([setName(c.set), "nº " + c.num, `${t.n ? t.n + "×" : ""}${t.f ? ` ${t.f}× foil` : ""}`.trim()].filter(Boolean).join(" · "))}</span></span><span class="trail"><span class="money">${esc(money(t.val))}</span></span></div>`; }).join("")}</div>`;
   }

@@ -63,3 +63,16 @@ test('Coleção links its value to Preços', async ({ page }) => {
   await expect(page).toHaveURL(/precos\/\?tab=value/);
   await expect(page.getByRole('tab', { name: 'Valor da coleção' })).toHaveAttribute('aria-selected', 'true');
 });
+
+test('movers switch to the TCGplayer history once it has two days', async ({ page }) => {
+  await setup(page);
+  const day = (date, gurgi) => ({ date, usd_brl: 5, prices: { 'LOR10-10': [gurgi, null], 'LOR13-31': [4, 15] } });
+  await page.route('**/data/price-history-tcg.json', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ schema_version: 1, path: 'price-history-tcg/{date}.json', days: [{ date: '2026-10-21' }, { date: '2026-10-22' }] }) }));
+  await page.route('**/data/price-history-tcg/2026-10-21.json', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(day('2026-10-21', 1)) }));
+  await page.route('**/data/price-history-tcg/2026-10-22.json', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(day('2026-10-22', 2)) }));
+  await page.goto(BASE);
+  await page.locator('[data-period="latest"]').click();
+  await expect(page.locator('[data-testid="gainers"] [data-mover="LOR10-10"]')).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('[data-testid="losers"] .list-row')).toHaveCount(0);
+  await expect(page.locator('#app')).toContainText('Preços do TCGplayer, em reais pela cotação de cada dia.');
+});
