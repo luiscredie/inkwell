@@ -221,7 +221,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const BYNAME = new Map(); for (const c of CARDS) (BYNAME.get(c.key) || BYNAME.set(c.key, []).get(c.key)).push(c);
   const printings = (c) => BYNAME.get(c.key) || [c];
   // Same rules as the Inkwell app (validateDeck / LEGALITY_CONTRACT.md): Core = these sets, 60 cards, 2 inks, 4 copies per name across reprints.
-  const CORE_SETS = ["LOR7", "LOR8", "LOR9", "LOR10", "LOR11", "LOR12", "LOR13", "Q2", "DLPC2"];
+  // Core sets come from ../data/legality.json (the same file the Inkwell app reads); this list is only the fallback.
+  let CORE_SETS = ["LOR9", "LOR10", "LOR11", "LOR12", "LOR13", "LOR14", "Q2", "DLPC2"];
   const MIN = 60, MAX_INKS = 2;
   const copyLimit = (c) => (String(c?.name || "").replace(/\s*\(.*?\)\s*/g, "").trim().toLowerCase() === "dalmatian puppy - tail wagger" ? 99 : 4);
   const legal = (c, fmt) => fmt === "infinity" || !fmt || printings(c).some((p) => CORE_SETS.includes(p.set));
@@ -322,6 +323,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       CLOUD.api("listings?select=id,user_id,kind,card_id,qty,foil,price_brl&order=created_at.desc&limit=3000").catch(() => []),
       CLOUD.api("friendships?select=requester,addressee,status&status=eq.accepted").catch(() => []),
       CLOUD.api(`game_logs?select=game_id,played_at,summary,players:log->players&user_id=eq.${me.id}&order=played_at.desc&limit=400`).catch(() => { gamesOk = false; return []; }),
+      fetch("../data/legality.json").then((r) => (r.ok ? r.json() : null)).then((l) => { const ls = l?.formats?.core?.legal_sets; if (Array.isArray(ls) && ls.length) CORE_SETS = ls; }).catch(() => {}),
     ]);
     profiles = (p || []).map((x) => ({ ...x, decks: Array.isArray(x.decks) ? x.decks.filter((d) => d && d.id) : [], collection: x.collection && typeof x.collection === "object" ? x.collection : {} }));
     if (pr?.prices) { PRICES = pr.prices; pricesDate = pr.generated_at; }

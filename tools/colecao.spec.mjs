@@ -141,3 +141,22 @@ test('scanner explains a blocked camera', async ({ page }) => {
   await page.getByRole('button', { name: 'Escanear' }).click();
   await expect(page.locator('#scanSay')).toContainText('A câmera não abriu');
 });
+
+test('binder: rotated cards only in Infinity, reprints marked, tap shows the card big', async ({ page }) => {
+  await setup(page);
+  await page.goto(BASE + '?conferir=1');
+  // Amber Coil (set 7, no reprint) is Infinity only
+  await page.locator('[data-bsec="core"]').click();
+  await page.locator('[data-bink="Amber"]').click();
+  await page.locator('[data-bcost="1"]').click();
+  await expect(page.locator('[data-bcard="LOR7-41"]')).toHaveCount(0);
+  await page.locator('[data-bsec="inf"]').click();
+  await page.locator('[data-bink="Amber"]').click();
+  await page.locator('[data-bcost="1"]').click();
+  await expect(page.locator('[data-bcard="LOR7-41"]')).toHaveCount(1);
+  await page.locator('[data-bopen="LOR7-41"]').click();
+  await expect(page.locator('#cardSheet .thumb.big')).toBeVisible();
+  await expect(page.locator('[data-testid="card-format"]')).toHaveText('Só no Infinito: não tem reimpressão em set do Core.');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-testid="binder-page"]')).toBeVisible();
+});

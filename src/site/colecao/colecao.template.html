@@ -17,6 +17,7 @@
 /* layout only — components come from ../ui/tokens.css (design v2) */
 .cc-name small { display: block; color: var(--text-2); font-weight: 400; }
 #cardSheet .big { width: 176px; margin: 0 auto var(--sp-4); border-radius: 12px; }
+.binder-open { padding: 0; border: 0; background: none; border-radius: 6px; cursor: zoom-in; }
 .load-more { display: flex; justify-content: center; margin: var(--sp-6) 0 0; }
 /* card scanner */
 #scan { inset: 0; width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; border-radius: 0; background: #000; color: #fff; }
@@ -66,13 +67,14 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "Clear": "Limpar", "Show {n} cards": "Ver {n} cartas", "Remove filter {f}": "Remover filtro {f}", "Close": "Fechar",
     "No cards match these filters.": "Nenhuma carta com esses filtros.", "Clear filters": "Limpar filtros",
     "Your collection is empty": "Sua coleção está vazia", "Turn off \"Only cards I own\" to add cards with +, or import your collection in Inkwell.": "Desligue \"Só as que tenho\" para adicionar cartas com +, ou importe sua coleção no Inkwell.",
+    "Legal in Core.": "Vale no Core.", "Legal in Core through the reprint in {s}, nº {n}.": "Vale no Core pela reimpressão em {s}, nº {n}.", "Infinity only: no reprint in a Core set.": "Só no Infinito: não tem reimpressão em set do Core.", "reprint": "reimpressão", "See card {c}": "Ver carta {c}",
     "Check my binder": "Conferir fichário", "In your binder's order: Core first, then Infinity; ink, cost and name.": "Na ordem do seu fichário: Core primeiro, depois Infinito; tinta, custo e nome.",
     "Infinity": "Infinito", "Dual ink": "Duas tintas", "No ink": "Sem tinta", "cost {c}": "custo {c}", "{ink} · cost {c}": "{ink} · custo {c}",
     "{n} cards · you have {h}": "{n} cartas · você tem {h}", "Mark page as checked": "Marcar página como conferida", "Checked": "Conferida",
     "Previous page": "Página anterior", "Next page": "Próxima página", "{a} of {b} pages checked": "{a} de {b} páginas conferidas",
     "Only cards I own on this page": "Só as que tenho", "Section": "Seção", "Nothing on this page.": "Nada nesta página.", "Back to collection": "Voltar para a coleção",
     "Scan cards": "Escanear cartas", "Scan": "Escanear", "Point the camera at one card inside the frame.": "Aponte a câmera para uma carta dentro da moldura.",
-    "Recognising…": "Reconhecendo…", "Reading the card number…": "Lendo o número da carta…", "Added: {c}": "Adicionada: {c}", "Remove the card and show the next one.": "Tire a carta e mostre a próxima.",
+    "Recognising…": "Reconhecendo…", "Hold still, reading the card number…": "Segure firme, lendo o número da carta…", "Bring the phone a little closer so the number is sharp.": "Aproxime um pouco o celular para o número ficar nítido.", "Light": "Lanterna", "Reading the card number…": "Lendo o número da carta…", "Added: {c}": "Adicionada: {c}", "Remove the card and show the next one.": "Tire a carta e mostre a próxima.",
     "Not sure which printing this is. Which one?": "Não deu para ter certeza da versão. Qual é?", "None of these": "Nenhuma destas",
     "Centre the card in the frame, with good light.": "Centralize a carta na moldura, com boa luz.", "Starting the camera…": "Abrindo a câmera…",
     "The camera didn't open. Allow camera access for this site and try again.": "A câmera não abriu. Permita o acesso à câmera para este site e tente de novo.",
@@ -289,6 +291,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><div><h2 id="cT">${esc(a)}${b ? ` · ${esc(b)}` : ""}</h2><div class="sub">${esc(setName(c.set))} · nº ${esc(c.num)}</div></div><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
         <div class="sheet-body">${thumb(c, "big", o.f > 0)}</span>
           <div class="row" style="gap:var(--sp-2)">${inkDots(c)}<span class="small muted">${esc([inksOf(c).join("/"), c.cost != null ? Tx("cost {c}", { c: c.cost }) : "", rarName(c.rarity)].filter(Boolean).join(" · "))}</span></div>
+          <p class="small" style="margin:var(--sp-2) 0 0" data-testid="card-format">${esc(formatLine(c))}</p>
           <div class="row between" style="align-items:flex-end;margin:var(--sp-4) 0">
             <div><div class="small muted">${esc(Tx("Value of your {n}", { n: o.n + o.f }))}</div><div class="hero-num" style="color:var(--money)" data-testid="card-value">${esc(money(value))}</div></div>
             <div class="small muted" style="text-align:right">${Tx("Normal")} ${pn != null ? esc(money(pn)) : "–"}<br>${Tx("Foil")} ${pf != null ? esc(money(pf)) : "–"}</div></div>
@@ -301,7 +304,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     };
     draw();
     openSheet(sh, from);
-    sh.addEventListener("close", () => render(), { once: true });
+    sh.addEventListener("close", () => renderAll(), { once: true });
   }
   function change(id, kind, delta, quiet) {
     const p = prof(); if (!p) return;
@@ -345,9 +348,15 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   }
 
   // ---------- conferir fichário: Core first, then Infinity; ink, cost, name (Luis's binder order) ----------
-  const CORE_SETS = ["LOR7", "LOR8", "LOR9", "LOR10", "LOR11", "LOR12", "LOR13", "Q2", "DLPC2"];   // same list as Decks / the Inkwell app
+  let CORE_SETS = ["LOR9", "LOR10", "LOR11", "LOR12", "LOR13", "LOR14", "Q2", "DLPC2"];   // fallback; ../data/legality.json wins (same file as Decks and the Inkwell app)
+  fetch("../data/legality.json").then((r) => (r.ok ? r.json() : null)).then((l) => { const ls = l?.formats?.core?.legal_sets; if (Array.isArray(ls) && ls.length) { CORE_SETS = ls; PAGES = null; if (binderOn() && profiles.length) renderBinder(); } }).catch(() => {});
   const nkey = (n) => String(n || "").toLowerCase().replace(/\s*\(.*?\)\s*/g, "").trim();
   const BYNAME = new Map(); for (const c of CARDS) { const k = nkey(c.name); (BYNAME.get(k) || BYNAME.set(k, []).get(k)).push(c); }
+  function formatLine(c) {   // why a card counts as Core (its own set, or a reprint) or only Infinity
+    if (CORE_SETS.includes(c.set)) return Tx("Legal in Core.");
+    const r = (BYNAME.get(nkey(c.name)) || []).filter((p) => CORE_SETS.includes(p.set)).sort((a, b) => (setOrder.get(a.set) ?? 999) - (setOrder.get(b.set) ?? 999))[0];
+    return r ? Tx("Legal in Core through the reprint in {s}, nº {n}.", { s: setName(r.set), n: r.num }) : Tx("Infinity only: no reprint in a Core set.");
+  }
   const isCore = (c) => (BYNAME.get(nkey(c.name)) || [c]).some((p) => CORE_SETS.includes(p.set));
   const INK_ORDER = [...INKS, "Dual", "None"];
   const inkOf = (c) => { const i = inksOf(c).filter((x) => INKS.includes(x)); return i.length === 1 ? i[0] : i.length > 1 ? "Dual" : "None"; };
@@ -386,8 +395,8 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     const label = (p) => Tx("{ink} · cost {c}", { ink: inkLabel(p.ink), c: p.cost === 8 ? "8+" : p.cost });
     const qty = (c, k) => { const o = owned(c.id), n = o[k], [a] = split(c.name), kl = Tx(k === "f" ? "foil" : "normal");
       return `<span class="row" style="gap:6px;flex-wrap:nowrap"><span class="micro muted" style="width:38px;text-align:right">${Tx(k === "f" ? "Foil" : "Normal")}</span><span class="qty"><button type="button" data-bq="${esc(c.id)}:${k}:-1" aria-label="${esc(Tx("Remove one {k}", { k: kl }) + " · " + a)}" ${n <= 0 ? "disabled" : ""}>−</button><output>${n}</output><button type="button" data-bq="${esc(c.id)}:${k}:1" aria-label="${esc(Tx("Add one {k}", { k: kl }) + " · " + a)}">+</button></span></span>`; };
-    const row = (c) => { const [a, b] = split(c.name), p = priceOf(c.id);
-      return `<div class="list-row flat binder-row" data-bcard="${esc(c.id)}">${thumb(c, "sm", owned(c.id).f > 0)}</span><span class="t"><span>${esc(a)}${b ? `<small style="display:block;font-weight:400;color:var(--text-2)">${esc(b)}</small>` : ""}</span><span class="meta">${esc([setName(c.set), "nº " + c.num, rarName(c.rarity), p != null ? money(p) : ""].filter(Boolean).join(" · "))}</span></span>
+    const row = (c) => { const [a, b] = split(c.name), p = priceOf(c.id), viaReprint = pg.sec === "core" && !CORE_SETS.includes(c.set);
+      return `<div class="list-row flat binder-row" data-bcard="${esc(c.id)}"><button type="button" class="binder-open" data-bopen="${esc(c.id)}" aria-label="${esc(Tx("See card {c}", { c: a }))}">${thumb(c, "sm", owned(c.id).f > 0)}</span></button><span class="t"><span>${esc(a)}${b ? `<small style="display:block;font-weight:400;color:var(--text-2)">${esc(b)}</small>` : ""}</span><span class="meta">${esc([setName(c.set), "nº " + c.num, rarName(c.rarity), p != null ? money(p) : ""].filter(Boolean).join(" · "))}</span>${viaReprint ? `<span class="tag" style="margin-top:4px;width:max-content" title="${esc(formatLine(c))}">${Tx("reprint")}</span>` : ""}</span>
         <span class="trail" style="gap:6px">${qty(c, "n")}${qty(c, "f")}</span></div>`; };
     const doneN = pages.filter((p) => checked.has(pageKey(p))).length;
     $("title").textContent = Tx("Check my binder");
@@ -413,6 +422,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     document.querySelectorAll("[data-bgo]").forEach((b) => b.onclick = () => goPage(pages[+b.dataset.bgo]));
     $("bCheck").onclick = () => { const k = pageKey(pg); checked.has(k) ? checked.delete(k) : checked.add(k); bsave(); renderBinder(); $("bCheck")?.focus(); };
     $("bOwned").onchange = (e) => { bd.owned = e.target.checked; bsave(); renderBinder(); $("bOwned")?.focus(); };
+    $("bRows")?.addEventListener("click", (e) => { const o = e.target.closest("[data-bopen]"); if (o) return openCard(o.dataset.bopen, o); });
     $("bRows")?.addEventListener("click", (e) => { const b = e.target.closest("[data-bq]"); if (!b) return; const [id, k, d] = b.dataset.bq.split(":"); change(id, k, +d); renderBinder(); document.querySelector(`[data-bq="${CSS.escape(b.dataset.bq)}"]`)?.focus(); });
   }
   function renderAll() {
@@ -476,23 +486,48 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     const T = integral(img), Q = variants(T, COARSE), n = SCAN.n, coarse = new Float32Array(n);
     for (let i = 0; i < n; i++) { let best = -1; for (const q of Q) { const d = dot(i, q.v); if (d > best) best = d; } coarse[i] = best; }
     const order = [...coarse.keys()].sort((a, b) => coarse[b] - coarse[a]), top = order.slice(0, 15);
-    const F = variants(T, FINE), fine = top.map((i) => { let best = -1; for (const q of F) { const d = dot(i, q.v); if (d > best) best = d; } return [i, best]; }).sort((a, b) => b[1] - a[1]);
-    const [bi, bs] = fine[0], group = fine.filter(([, s]) => s >= bs - 0.04).map(([i]) => SCAN.ids[i]);
+    const F = variants(T, FINE), fine = top.map((i) => { let best = -1, at = null; for (const q of F) { const d = dot(i, q.v); if (d > best) { best = d; at = q; } } return [i, best, at]; }).sort((a, b) => b[1] - a[1]);
+    const [bi, bs, at] = fine[0], group = fine.filter(([, s]) => s >= bs - 0.04).map(([i]) => SCAN.ids[i]);
     const runner = (fine.find(([, s]) => s < bs - 0.04) || [0, coarse[order[15]]])[1];
-    return { id: SCAN.ids[bi], score: bs, group, confident: bs >= 0.70 && bs - runner >= 0.15 };
+    // where the card sits in the analysed image (fractions), so the collector line can be cut out precisely
+    const box = { x: (T.w / 2 - (SG.W / 2) * at.s + at.dx * SG.W) / T.w, y: (T.h / 2 - (SG.H / 2) * at.s + at.dy * SG.H) / T.h, w: SG.W * at.s / T.w, h: SG.H * at.s / T.h };
+    return { id: SCAN.ids[bi], score: bs, group, confident: bs >= 0.70 && bs - runner >= 0.15, box };
   }
   window.__inkwellScanIdentify = (img) => (SCAN ? identify(img) : null);   // used by the browser test
 
   // Same art in several printings (reprints, promos): read the collector line "29/204 · EN · 11" to pick one.
   function pickByCollector(text, group) {
+    if (String(text).includes(" | ")) {   // several readings: add up each one's evidence
+      const total = new Map(); for (const t of String(text).split(" | ")) for (const [id, sc] of collectorScores(t, group)) total.set(id, (total.get(id) || 0) + sc);
+      const r = [...total].sort((a, b) => b[1] - a[1]); return r.length && r[0][1] >= 2 && r[0][1] >= (r[1]?.[1] ?? 0) + 2 ? r[0][0] : null;
+    }
+    const r = collectorScores(text, group);
+    return r.length && r[0][1] >= 2 && r[0][1] >= (r[1]?.[1] ?? 0) + 2 ? r[0][0] : null;
+  }
+  function collectorScores(text, group) {
     const toks = String(text || "").match(/\d+/g) || [];
-    if (!toks.length) return null;
+    if (!toks.length) return [];
     const first = toks[0], nums = new Set([first, first.length > 3 ? first.slice(0, -3) : first]), last = toks[toks.length - 1];
     const score = (id) => { const m = id.match(/^LOR(\d+)-(\d+)$/); if (!m) return 0; let s = 0; if (nums.has(m[2]) || toks.includes(m[2])) s += 2; if (last === m[1]) s += 2; else if (toks.length > 1 && last.endsWith(m[1])) s += 1; return s; };
-    const r = group.map((id) => [id, score(id)]).sort((a, b) => b[1] - a[1]);
-    return r[0][1] >= 2 && r[0][1] >= (r[1]?.[1] ?? 0) + 2 ? r[0][0] : null;
+    return group.map((id) => [id, score(id)]).sort((a, b) => b[1] - a[1]);
   }
   let ocrWorker = null;
+  // The collector line is small white text on the dark border: cut it from the full-resolution video frame, enlarge it 3×,
+  // stretch the contrast and try it inverted (dark on light, what OCR reads best), thresholded and as is.
+  function collectorImages(rect) {
+    const v = $("scanVideo"), W = Math.min(1200, Math.max(300, Math.round(rect.w * 3))), H = Math.max(40, Math.round(W * rect.h / rect.w));
+    const base = document.createElement("canvas"); base.width = W; base.height = H;
+    const ctx = base.getContext("2d", { willReadFrequently: true }); ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(v, rect.x, rect.y, rect.w, rect.h, 0, 0, W, H);
+    const src = ctx.getImageData(0, 0, W, H), g = new Float32Array(W * H);
+    for (let i = 0; i < g.length; i++) g[i] = 0.299 * src.data[i * 4] + 0.587 * src.data[i * 4 + 1] + 0.114 * src.data[i * 4 + 2];
+    const sorted = Float32Array.from(g).sort(), lo = sorted[Math.floor(g.length * 0.05)], hi = sorted[Math.floor(g.length * 0.99)] || 255, k = 255 / Math.max(1, hi - lo);
+    const st = g.map((x) => Math.max(0, Math.min(255, (x - lo) * k)));
+    let sum = 0; for (const x of st) sum += x; const mean = sum / st.length;   // simple global threshold
+    const make = (f) => { const c = document.createElement("canvas"); c.width = W; c.height = H; const x = c.getContext("2d"), im = x.createImageData(W, H);
+      for (let i = 0; i < st.length; i++) { const y = f(st[i]); im.data[i * 4] = im.data[i * 4 + 1] = im.data[i * 4 + 2] = y; im.data[i * 4 + 3] = 255; } x.putImageData(im, 0, 0); return c; };
+    return [make((x) => 255 - x), make((x) => (x > mean ? 0 : 255)), make((x) => x)];
+  }
   async function readCollector(canvas) {
     if (window.INKWELL_SCAN_OCR) return window.INKWELL_SCAN_OCR(canvas);   // test hook
     if (!window.Tesseract) await new Promise((ok, no) => { const sc = document.createElement("script"); sc.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); });
@@ -501,7 +536,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   }
 
   // ---------- scanner screen ----------
-  const scan = { stream: null, timer: null, busy: false, foil: false, added: [], last: null, wait: false, seen: null, seenN: 0, askOpen: false, misses: 0 };
+  const scan = { stream: null, timer: null, busy: false, foil: false, added: [], last: null, wait: false, seen: null, seenN: 0, askOpen: false, misses: 0, reads: [], ocrTries: 0, torch: false };
   function guideRect() {   // on-screen frame, card shaped
     const st = $("scan").querySelector(".stage"), vw = st?.clientWidth || window.innerWidth, vh = st?.clientHeight || window.innerHeight;
     let h = Math.min(vh * 0.58, 560), w = h * SG.W / SG.H;
@@ -517,7 +552,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   function drawScan() {   // the camera stage, built once per opening
     const sh = $("scan"), g = guideRect();
     sh.innerHTML = `<div class="stage"><video id="scanVideo" playsinline muted autoplay></video><div class="guide" id="scanGuide" style="left:${g.x}px;top:${g.y}px;width:${g.w}px;height:${g.h}px"></div>
-      <div class="top"><button type="button" class="btn icon" data-scan-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button><h2 id="scanT">${Tx("Scan cards")}</h2>
+      <div class="top"><button type="button" class="btn icon" data-scan-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button><h2 id="scanT">${Tx("Scan cards")}</h2><button type="button" class="btn icon" id="scanTorch" hidden aria-pressed="false" aria-label="${Tx("Light")}"><i class="ic i-sparkle"></i></button>
         <div class="seg" role="group" aria-label="${Tx("Card")}"><button type="button" data-foil="0" aria-pressed="${!scan.foil}">${Tx("Normal")}</button><button type="button" data-foil="1" aria-pressed="${scan.foil}">${Tx("Foil")}</button></div></div>
       <div class="panel"><div class="say" id="scanSay" role="status" aria-live="polite">${Tx("Point the camera at one card inside the frame.")}</div><div id="scanPick"></div><div id="scanLast"></div>
         <div class="row between"><span class="small" data-testid="scan-count" id="scanCount"></span><button type="button" class="btn primary" data-scan-close>${Tx("Done scanning")}</button></div></div></div>`;
@@ -575,11 +610,19 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       if (scan.seen !== key) { scan.seen = key; scan.seenN = 1; scanSay(Tx("Recognising…")); return; }
       if (++scan.seenN < 2) return;   // the same answer on two frames in a row
       if (res.group.length === 1) return addScanned(res.id);
-      scanSay(Tx("Reading the card number…"));
-      const hi = grab({ x: r.x + r.w * 0.02, y: r.y + r.h * 0.955, w: r.w * 0.28, h: r.h * 0.037 }, 840, 111);
-      let text = ""; try { text = await readCollector(hi); } catch { text = ""; }
-      const pick = pickByCollector(text, res.group);
-      if (pick) addScanned(pick); else askWhich(res.group);
+      scanSay(Tx("Hold still, reading the card number…"));
+      const card = { x: wide.x + res.box.x * wide.w, y: wide.y + res.box.y * wide.h, w: res.box.w * wide.w, h: res.box.h * wide.h };
+      const strip = { x: card.x + card.w * 0.01, y: card.y + card.h * 0.95, w: card.w * 0.32, h: card.h * 0.047 };
+      let pick = null;
+      for (const im of collectorImages(strip)) {
+        let text = ""; try { text = await readCollector(im); } catch { text = ""; }
+        scan.reads.push(text);
+        pick = pickByCollector(scan.reads.join(" | "), res.group) || pickByCollector(text, res.group);
+        if (pick) break;
+      }
+      if (pick) { scan.reads = []; scan.ocrTries = 0; return addScanned(pick); }
+      if (++scan.ocrTries < 3) { scan.seenN = 1; scanSay(Tx("Bring the phone a little closer so the number is sharp.")); return; }   // try again on the next frames
+      scan.reads = []; scan.ocrTries = 0; askWhich(res.group);
     } finally { scan.busy = false; }
   }
   async function openScanner(from) {
@@ -588,10 +631,13 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     sh.addEventListener("close", () => { clearInterval(scan.timer); scan.stream?.getTracks().forEach((t) => t.stop()); scan.stream = null; sh.innerHTML = ""; flush(true); renderAll(); from?.focus?.(); if (scan.added.length) toast(Tx("{n} added", { n: scan.added.length })); }, { once: true });
     try { await loadScan(); } catch { scanSay(Tx("Couldn't load the card scanner."), true); return; }
     try {
-      scan.stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } } });
+      scan.stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: "environment" }, width: { ideal: 3840 }, height: { ideal: 2160 } } });
     } catch { scanSay(Tx("The camera didn't open. Allow camera access for this site and try again."), true); return; }
     if (!sh.open) { scan.stream.getTracks().forEach((t) => t.stop()); return; }
     const v = $("scanVideo"); v.srcObject = scan.stream; await v.play().catch(() => {});
+    const track = scan.stream.getVideoTracks()[0], caps = track?.getCapabilities?.() || {};
+    if ((caps.focusMode || []).includes("continuous")) track.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(() => {});   // Android Chrome; iPhone focuses on its own
+    if (caps.torch) { const b = $("scanTorch"); b.hidden = false; b.onclick = () => { scan.torch = !scan.torch; b.setAttribute("aria-pressed", String(scan.torch)); track.applyConstraints({ advanced: [{ torch: scan.torch }] }).catch(() => {}); }; }
     scanSay(Tx("Point the camera at one card inside the frame."));
     scan.timer = setInterval(tick, 350);
     window.addEventListener("resize", () => sh.open && placeGuide(), { passive: true });
