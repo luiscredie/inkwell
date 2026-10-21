@@ -140,6 +140,10 @@ window.INKWELL_CLOUD = (() => {
   .mi-col { display: contents; }
   .mi-showsec { order: 1; } .mi-friends { order: 2; } .mi-recs { order: 3; } .mi-deck { order: 4; } .mi-recsum { order: 5; } .mi-trade { order: 6; }
 }
+.mi-clist { display: grid; gap: var(--sp-2); margin-top: var(--sp-3); }
+.mi-clist a { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: var(--sp-3); align-items: center; color: var(--text); text-decoration: none; }
+.mi-clist b { display: block; } .mi-cav { display: inline-block; width: 40px; height: 40px; border-radius: 10px; background: var(--surface-3) 50% 20% / 210% auto no-repeat; box-shadow: 0 0 0 2px var(--gold, #e9b949); }
+@media (max-width: 899px) { .mi-comms { order: 2; } }
 .mi-fgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: var(--sp-3); margin-top: var(--sp-3); }
 .mi-fgrid a { display: grid; justify-items: center; gap: 6px; color: var(--text); text-decoration: none; font-size: var(--fs-small); text-align: center; overflow-wrap: anywhere; }
 .mi-av.md { width: 52px; height: 52px; box-shadow: 0 0 0 2px var(--gold, #e9b949); }
@@ -240,7 +244,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "No recados yet. Be the first.": "Nenhum recado ainda. Seja o primeiro.", "No recados yet. Friends can leave one.": "Nenhum recado ainda. Amigos podem deixar um.",
     "{n} min ago": "há {n} min", "{n} h ago": "há {n} h", "yesterday": "ontem", "{n} days ago": "há {n} dias",
     "Request sent": "Pedido enviado", "Answer the friend request": "Responder pedido de amizade", "Add friend": "Adicionar amigo", "Friend request sent.": "Pedido de amizade enviado.",
-    "Ink curve": "Curva de tinta", "See the full list": "Ver a lista completa",
+    "Ink curve": "Curva de tinta", "Communities": "Comunidades", "owner": "dono", "See the full list": "Ver a lista completa",
     "Motto": "Lema", "A short line that sums you up.": "Uma frase curta que resume você.",
     "Recados waiting for you": "Recados esperando você", "Only you see them until you approve.": "Só você vê até aprovar.", "Approve": "Aprovar", "Hide": "Ocultar", "Delete": "Excluir",
     "On your profile": "No seu perfil", "Hidden": "Ocultos", "No recados yet.": "Nenhum recado ainda.", "Show again": "Mostrar de novo",
@@ -299,7 +303,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Achei a Kida Encantada que você procurava, separei pra você.": "Found the Enchanted Kida you were after, I put it aside for you.",
     "Bem-vinda ao grupo! Sexta tem torneio casual na loja.": "Welcome to the group! Casual tournament at the store on Friday.",
     "Âmbar/Aço da liga": "League Amber/Steel", "Esmeralda/Rubi de sexta": "Friday Emerald/Ruby",
-    "Rafa (exemplo)": "Rafa (example)", "Marina (exemplo)": "Marina (example)", "Bia (exemplo)": "Bia (example)",
+    "Rafa (exemplo)": "Rafa (example)", "Marina (exemplo)": "Marina (example)", "Bia (exemplo)": "Bia (example)", "Taverna da Tinta (exemplo)": "Taverna da Tinta (example)", "Encantadas & Cia (exemplo)": "Encantadas & Co. (example)",
   };
   const L = (p, t) => (p?.mock && lang === "en" && MOCK_EN[t]) || t || "";
   const ago = (d) => { const m = (Date.now() - Date.parse(d)) / 60000; if (!(m >= 0)) return ""; if (m < 60) return Tx("{n} min ago", { n: Math.max(1, Math.round(m)) }); if (m < 1440) return Tx("{n} h ago", { n: Math.round(m / 60) }); const dd = Math.round(m / 1440); return dd === 1 ? Tx("yesterday") : Tx("{n} days ago", { n: dd }); };
@@ -365,6 +369,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         </div>
         <div class="mi-col">
           ${friendsBox}
+          ${!preview && p.communities?.length ? `<section class="card mi-sec mi-comms" data-testid="profile-communities"><div class="mi-label">${Tx("Communities")}</div><div class="mi-clist">${p.communities.map((c) => `<a href="../comunidades/?c=${encodeURIComponent(c.slug)}"><span class="mi-cav" style="${artStyle(c.avatar)}"></span><span><b>${esc(L(p, c.name))}</b><span class="small muted">${esc(c.city || "")}${c.role === "owner" ? ` · ${Tx("owner")}` : ""}</span></span></a>`).join("")}</div></section>` : ""}
           ${rec ? `<section class="card mi-sec mi-recsum" data-testid="record"><div class="mi-label">${Tx("Record")}</div><div class="mi-rec" style="margin-top:var(--sp-2)"><span><b>${rec.w || 0}</b> ${Tx("wins")}</span><span><b>${rec.l || 0}</b> ${Tx("losses")}</span>${games ? `<span class="muted">${Math.round(((rec.w || 0) / games) * 100)}%</span>` : ""}</div></section>` : ""}
           ${p.trade ? `<section class="card mi-sec mi-trade" data-testid="trade"><div class="mi-label">${Tx("Looking for")}</div>${strip(want)}<div class="mi-label" style="margin-top:var(--sp-3)">${Tx("Offering")}</div>${strip(have)}</section>` : ""}
         </div>
@@ -401,6 +406,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     try { p = await anonRpc("public_profile", { p_handle: h }); } catch { p = null; }
     if (!p) { $("app").innerHTML = emptyBox("search", Tx("Profile not found"), Tx("It doesn't exist, or its owner keeps it private.")); return; }
     document.title = `${p.name} · Inkwell`;
+    try { p.communities = await anonRpc("profile_communities", { p_handle: h }); } catch { p.communities = null; }   // supabase/communities.sql
     const own = !!(mine && mine.handle && mine.handle === p.handle);
     $("app").innerHTML = (inviteQ && !me ? await inviteBanner() : "") + profileView(p, { own });
     wireInvite(); wireView(p);
@@ -752,6 +758,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     <div class="menu-head"><span class="av lg">${esc((profileName || me.email || "?")[0].toUpperCase())}</span><div class="t"><b>${esc(profileName || T("Sua conta", "Your account"))}</b><div class="small">${esc(me.email || "")}</div></div></div>
     <div class="menu-sep"></div>
     <a class="menu-item" role="menuitem" href="../perfil/?editar=1"><i class="ic i-users"></i>${T("Meu Inkwell", "My Inkwell")}</a>
+    <a class="menu-item" role="menuitem" href="../comunidades/"><i class="ic i-board"></i>${T("Comunidades", "Communities")}</a>
     <a class="menu-item" role="menuitem" href="../feed/#amigos"><i class="ic i-shield"></i>${T("Privacidade e amigos", "Privacy and friends")}</a>
     <a class="menu-item" role="menuitem" href="../coach/"><i class="ic i-refresh"></i>${T("Jogos do duels.ink", "duels.ink games")}${syncAgo ? `<span class="trail">${esc(syncAgo)}</span>` : ""}</a>
     ${isAdmin ? `<a class="menu-item" role="menuitem" href="../admin/"><i class="ic i-shield"></i>Admin</a>` : ""}

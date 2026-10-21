@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Comunidades · Inkwell</title>
+<meta name="description" content="Lojas, cidades e grupos de Lorcana: encontre sua turma.">
+<meta name="theme-color" content="#13102a">
+<link rel="icon" href="../ink/icon-192.png">
+<link rel="apple-touch-icon" href="../ink/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="../ui/tokens.css"><script>document.documentElement.dataset.theme="noite";</script>
+</head>
+<body>
+<script>window.INKWELL_CLOUD_CONFIG = {"url": "https://sorefaetiaebmjploanp.supabase.co", "key": "sb_publishable_RkAWW-ENz70CXA6_QV7aHw_MpfD7Gn2", "redirect": "https://luiscredie.github.io/inkwell/comunidades/"};
+/*@CLOUD_JS@*/</script>
+<style>
+/* layout only — components come from ../ui/tokens.css (design v2) */
+.cm-grid { display: grid; gap: var(--sp-3); grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.cm-card { display: grid; gap: var(--sp-2); padding: var(--sp-4); border-radius: var(--r-lg); background: var(--surface-2); color: inherit; text-decoration: none; box-shadow: var(--e1); align-content: start; }
+.cm-card:hover { box-shadow: var(--e2); }
+.cm-top { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: var(--sp-3); align-items: center; }
+.cm-av { display: inline-block; width: 52px; height: 52px; border-radius: 14px; background: var(--surface-3) 50% 20% / 210% auto no-repeat; box-shadow: 0 0 0 2px var(--gold, #e9b949); }
+.cm-card p { margin: 0; color: var(--text-2); font-size: var(--fs-small); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cm-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.cm-hero { position: relative; border-radius: 20px; overflow: hidden; background: var(--surface-2); box-shadow: var(--e2); }
+.cm-cover { height: 120px; background: var(--surface-3) 50% 14% / 100% auto no-repeat; position: relative; }
+.cm-art { display: none; }
+@media (min-width: 640px) {
+  .cm-cover { height: 150px; background-image: none !important; isolation: isolate; overflow: hidden; }
+  .cm-cover::before { content: ""; position: absolute; inset: -24px; background: var(--art) 50% 20% / cover no-repeat; filter: blur(24px); opacity: .5; z-index: -1; }
+  .cm-art { display: block; position: absolute; top: 0; bottom: 0; left: 50%; width: 520px; max-width: 70%; transform: translateX(-50%); z-index: -1;
+    background: var(--art) 50% 15% / 120% auto no-repeat;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent); mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent); }
+}
+.cm-bar { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-4); } .cm-bar .search { flex: 1 1 240px; }
+.cm-cover::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(19,16,42,.1), var(--surface-2)); }
+.cm-id { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--sp-4); align-items: end; padding: 0 var(--sp-5) var(--sp-3); margin-top: -44px; }
+.cm-id .cm-av { width: 88px; height: 88px; border-radius: 22px; box-shadow: 0 0 0 4px var(--surface-2), 0 0 0 6px var(--gold, #e9b949); }
+.cm-id h1 { margin: 0; font-size: var(--fs-h1); line-height: 1.1; overflow-wrap: anywhere; }
+.cm-body { padding: 0 var(--sp-5) var(--sp-5); display: grid; gap: var(--sp-3); }
+.cm-body p { margin: 0; color: var(--text-2); max-width: 64ch; }
+.cm-acts { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.cm-cols { display: grid; gap: var(--sp-5); grid-template-columns: minmax(0, 1fr); margin-top: var(--sp-5); }
+@media (min-width: 900px) { .cm-cols { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); align-items: start; } }
+.cm-mock { display: flex; gap: var(--sp-2); align-items: center; padding: 10px var(--sp-4); border-radius: var(--r-md); background: var(--accent-soft); font-weight: 600; margin-bottom: var(--sp-4); }
+.cm-people { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: var(--sp-3); margin-top: var(--sp-3); }
+.cm-people a, .cm-people span.p { display: grid; justify-items: center; gap: 6px; color: var(--text); text-decoration: none; font-size: var(--fs-small); text-align: center; overflow-wrap: anywhere; }
+.pav { display: inline-block; width: 48px; height: 48px; border-radius: 50%; background: var(--surface-3) 50% 20% / 210% auto no-repeat; box-shadow: 0 0 0 2px var(--gold, #e9b949); }
+.pav.sm { width: 36px; height: 36px; }
+.cm-posts { display: grid; gap: var(--sp-3); }
+.cm-post { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); border-radius: var(--r-lg); background: var(--surface-1); border: 1px solid var(--line); }
+.cm-post p { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.cm-post a { color: inherit; }
+.cm-post .acts { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+.cm-compose { display: grid; gap: var(--sp-2); margin-bottom: var(--sp-4); }
+.cm-locked { padding: var(--sp-5); border-radius: var(--r-lg); border: 1px dashed var(--line-strong); color: var(--text-2); text-align: center; }
+</style>
+
+<main class="page" id="page">
+  <div class="page-head" id="head"><div><h1 id="title">Comunidades</h1><p class="sub" id="sub"></p></div><div class="actions" id="headActs"></div></div>
+  <div id="app"></div>
+</main>
+<dialog class="sheet" id="sheet" aria-labelledby="shT"></dialog>
+<div class="toast-host"><div class="toast" id="toast" role="status" hidden></div></div>
+
+<script>
+const CARD_INDEX = /*@CARD_INDEX@*/;
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  let lang = "pt";
+  try { lang = localStorage.getItem("inkwell-lang") || ((navigator.language || "pt").toLowerCase().startsWith("en") ? "en" : "pt"); } catch { /* */ }
+  const PT = {
+    "Communities": "Comunidades", "Stores, cities and groups that play Lorcana.": "Lojas, cidades e grupos que jogam Lorcana.", "Search by name or city": "Buscar por nome ou cidade",
+    "All": "Todas", "Mine": "Minhas", "Create a community": "Criar comunidade", "Store": "Loja", "City": "Cidade", "Interest": "Interesse", "{n} members": "{n} membros", "1 member": "1 membro",
+    "example": "exemplo", "member": "membro", "owner": "dono", "No community found.": "Nenhuma comunidade encontrada.", "No communities yet": "Nenhuma comunidade ainda",
+    "Create the first one for your store or your city.": "Crie a primeira para a sua loja ou a sua cidade.", "Loading…": "Carregando…",
+    "Couldn't load.": "Não foi possível carregar.", "Check your connection and try again.": "Confira a internet e tente de novo.", "Try again": "Tentar de novo",
+    "Community not found": "Comunidade não encontrada", "It doesn't exist, or it was hidden.": "Ela não existe ou foi ocultada.", "Back": "Voltar",
+    "Example · fictional community": "Exemplo · comunidade fictícia", "This is a mockup to show what a community looks like. Its people are not real.": "Isto é uma maquete para mostrar como fica uma comunidade. As pessoas não são reais.",
+    "Join": "Participar", "Leave": "Sair", "Edit": "Editar", "Share": "Compartilhar", "Link copied": "Link copiado", "Sign in to take part": "Entre para participar",
+    "To take part, confirm you are 18+ in My Inkwell.": "Para participar, confirme 18+ no Meu Inkwell.", "Open My Inkwell": "Abrir Meu Inkwell",
+    "People": "Pessoas", "+{n} with a private profile": "+{n} com perfil privado", "Conversation": "Conversa", "Write to the community": "Escreva para a comunidade", "Post": "Publicar",
+    "The conversation is for members only.": "A conversa é só para membros.", "{n} messages this week": "{n} mensagens esta semana", "1 message this week": "1 mensagem esta semana",
+    "No messages yet. Say hi!": "Nenhuma mensagem ainda. Diga oi!", "Delete": "Excluir", "Hide": "Ocultar", "Report": "Denunciar", "Tap again to confirm": "Toque de novo para confirmar",
+    "Why are you reporting this message?": "Por que você está denunciando esta mensagem?", "Send report": "Enviar denúncia", "Report sent. Thank you.": "Denúncia enviada. Obrigado.",
+    "Couldn't send. Try again.": "Não foi possível enviar. Tente de novo.", "Cancel": "Cancelar", "Close": "Fechar", "Done": "Feito",
+    "Name": "Nome", "Kind": "Tipo", "About": "Sobre", "What happens here: league days, formats, what people trade.": "O que acontece aqui: dias de liga, formatos, o que o pessoal troca.",
+    "Picture": "Imagem", "Pick a card: its art becomes the community's picture.": "Escolha uma carta: a arte vira a imagem da comunidade.", "Search a card": "Buscar carta",
+    "Type at least 2 letters.": "Digite pelo menos 2 letras.", "No card found.": "Nenhuma carta encontrada.", "Save": "Salvar", "Create": "Criar",
+    "Only members 18+ can create, join and post. You can create up to 3.": "Só membros 18+ criam, participam e publicam. Você pode criar até 3.",
+    "You already created 3 communities.": "Você já criou 3 comunidades.", "Couldn't save. Try again.": "Não foi possível salvar. Tente de novo.",
+    "Members": "Membros", "Remove": "Remover", "Manage members": "Gerenciar membros", "You joined {name}.": "Você entrou em {name}.", "You left {name}.": "Você saiu de {name}.",
+    "{n} min ago": "há {n} min", "{n} h ago": "há {n} h", "yesterday": "ontem", "{n} days ago": "há {n} dias", "Someone": "Alguém",
+    "Fan project, not affiliated with Disney or Ravensburger.": "Projeto de fã, sem vínculo com a Disney ou a Ravensburger.",
+  };
+  const MOCK_EN = {
+    "Taverna da Tinta (exemplo)": "Taverna da Tinta (example)", "Encantadas & Cia (exemplo)": "Encantadas & Co. (example)",
+    "Loja fictícia de exemplo. Liga às quintas, torneio casual às sextas e mesa livre no sábado à tarde.": "A fictional example store. League on Thursdays, casual tournament on Fridays and open tables on Saturday afternoon.",
+    "Comunidade fictícia de exemplo para quem coleciona Encantadas: trocas, fotos de fichário e dicas de conservação.": "A fictional example community for Enchanted collectors: trades, binder photos and care tips.",
+    "Quinta tem liga às 19h, formato Core, BO3. Tragam lista impressa!": "League on Thursday at 7 pm, Core format, BO3. Bring a printed list!",
+    "Primeira vez na liga, alguém me empresta um deck Esmeralda/Rubi para testar?": "First time at the league, can someone lend me an Emerald/Ruby deck to try?",
+    "Sexta levo meu fichário de Encantadas para quem quiser ver/trocar.": "On Friday I'm bringing my Enchanted binder for anyone who wants to see or trade.",
+    "Dica: sleeve dupla e fichário com folha de 9 bolsos sem PVC.": "Tip: double sleeves and a PVC-free 9-pocket binder.",
+    "Alguém tem a Kida Encantada para troca? Ofereço duas lendárias.": "Anyone have the Enchanted Kida to trade? I'm offering two Legendaries.",
+    "Rafa (exemplo)": "Rafa (example)", "Marina (exemplo)": "Marina (example)", "Bia (exemplo)": "Bia (example)",
+  };
+  const fill = (s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)) : s);
+  const Tx = (en, v) => fill(lang === "pt" && en in PT ? PT[en] : en, v);
+  const L = (mock, t) => (mock && lang === "en" && MOCK_EN[t]) || t || "";
+  const LOC = lang === "pt" ? "pt-BR" : "en";
+  const KIND = { store: "Store", city: "City", interest: "Interest" };
+  const norm = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const split = (name) => { const i = name.indexOf(" - "); return i > 0 ? [name.slice(0, i), name.slice(i + 3)] : [name, ""]; };
+  const CARDS = (CARD_INDEX?.cards || []).map(([id, name, cost, type, ink, rarity, set, num, img]) => ({ id, name: name || id, set, num, img, k: norm(`${name} ${set} ${num}`) }));
+  const BY = new Map(CARDS.map((c) => [c.id, c]));
+  const imgUrl = (c) => (c?.img ? `../lorcana-card-images/${encodeURI(c.img).replace(/'/g, "%27")}` : "");
+  const art = (id) => { const c = BY.get(id); return c?.img ? `background-image:url('${imgUrl(c)}')` : ""; };
+  const ago = (d) => { const m = (Date.now() - Date.parse(d)) / 60000; if (!(m >= 0)) return ""; if (m < 60) return Tx("{n} min ago", { n: Math.max(1, Math.round(m)) }); if (m < 1440) return Tx("{n} h ago", { n: Math.round(m / 60) }); const dd = Math.round(m / 1440); return dd === 1 ? Tx("yesterday") : Tx("{n} days ago", { n: dd }); };
+  const members = (n) => (n === 1 ? Tx("1 member") : Tx("{n} members", { n }));
+
+  const CLOUD = window.INKWELL_CLOUD, me = CLOUD?.user();
+  const qs = new URLSearchParams(location.search), slugQ = (qs.get("c") || "").toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 40);
+  let mine = null, list = [], view = null, tab = "all", q = "", armed = null;
+  async function rpc(name, body = {}) {
+    if (me) return CLOUD.api(`rpc/${name}`, { method: "POST", body });
+    const cfg = window.INKWELL_CLOUD_CONFIG;
+    const r = await fetch(`${cfg.url}/rest/v1/rpc/${name}`, { method: "POST", headers: { apikey: cfg.key, "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!r.ok) throw new Error(String(r.status)); return r.json();
+  }
+  const adult = () => !!mine?.adult && !mine?.hidden;
+
+  // ---------- list ----------
+  async function showList() {
+    $("title").textContent = Tx("Communities"); $("sub").textContent = Tx("Stores, cities and groups that play Lorcana.");
+    $("headActs").innerHTML = me && adult() ? `<button type="button" class="btn primary" id="newC"><i class="ic i-plus"></i>${Tx("Create a community")}</button>` : "";
+    $("newC")?.addEventListener("click", () => openForm(null));
+    list = (await rpc("communities_list", { p_q: "", p_mine: false })) || [];
+    drawList();
+  }
+  function drawList() {
+    const words = norm(q).split(" ").filter(Boolean);
+    const rows = list.filter((c) => (tab !== "mine" || c.mine) && words.every((w) => norm(`${c.name} ${c.city} ${c.description}`).includes(w)));
+    const keep = document.activeElement?.id;
+    $("app").innerHTML = `<div class="cm-bar"><span class="search"><i class="ic i-search"></i><input type="search" id="q" value="${esc(q)}" placeholder="${Tx("Search by name or city")}" aria-label="${Tx("Search by name or city")}"></span>
+        ${me ? `<div class="seg" role="group"><button type="button" data-tab="all" aria-pressed="${tab === "all"}">${Tx("All")}</button><button type="button" data-tab="mine" aria-pressed="${tab === "mine"}">${Tx("Mine")}</button></div>` : ""}</div>
+      ${rows.length ? `<div class="cm-grid" data-testid="communities">${rows.map((c) => `<a class="cm-card" href="?c=${encodeURIComponent(c.slug)}" data-slug="${esc(c.slug)}">
+          <div class="cm-top"><span class="cm-av" style="${art(c.avatar)}"></span><div style="min-width:0"><b>${esc(L(c.mock, c.name))}</b><div class="small muted">${esc([Tx(KIND[c.kind] || "Store"), c.city].filter(Boolean).join(" · "))}</div></div></div>
+          ${c.description ? `<p>${esc(L(c.mock, c.description))}</p>` : ""}
+          <div class="cm-tags"><span class="tag">${esc(members(c.members))}</span>${c.mine ? `<span class="tag match">${Tx("member")}</span>` : ""}${c.mock ? `<span class="tag accent">${Tx("example")}</span>` : ""}</div></a>`).join("")}</div>`
+        : list.length ? `<p class="muted">${Tx("No community found.")}</p>` : emptyBox("search", Tx("No communities yet"), Tx("Create the first one for your store or your city."))}
+      <p class="small faint" style="margin-top:var(--sp-5)">${Tx("Only members 18+ can create, join and post. You can create up to 3.")}</p>`;
+    $("q").oninput = (e) => { q = e.target.value; drawList(); };
+    document.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => { tab = b.dataset.tab; drawList(); });
+    if (keep === "q") { const i = $("q"); i.focus(); i.setSelectionRange(q.length, q.length); }
+  }
+
+  // ---------- one community ----------
+  async function showOne(slug) {
+    view = await rpc("community_view", { p_slug: slug });
+    $("head").hidden = true;
+    if (!view) { $("app").innerHTML = emptyBox("search", Tx("Community not found"), Tx("It doesn't exist, or it was hidden."), `<a class="btn" href="./">${Tx("Back")}</a>`); return; }
+    document.title = `${L(view.mock, view.name)} · Inkwell`;
+    drawOne();
+  }
+  function drawOne() {
+    const c = view, m = c.mock, isMember = !!c.role, isOwner = c.role === "owner";
+    const named = c.members || [], hiddenN = Math.max(0, (c.member_n || 0) - named.length);
+    let join = "";
+    if (!me) join = `<button type="button" class="btn primary" id="signIn">${Tx("Sign in to take part")}</button>`;
+    else if (c.can_join) join = `<button type="button" class="btn primary" id="join"><i class="ic i-user-plus"></i>${Tx("Join")}</button>`;
+    else if (isMember && !isOwner && !m) join = `<button type="button" class="btn ghost" id="leave">${armed === "leave" ? Tx("Tap again to confirm") : Tx("Leave")}</button>`;
+    else if (!isMember && !m && !adult()) join = `<a class="btn" href="../perfil/?editar=1">${Tx("Open My Inkwell")}</a><span class="small muted">${Tx("To take part, confirm you are 18+ in My Inkwell.")}</span>`;
+    const post = (p) => `<article class="cm-post" data-post="${esc(p.id)}">${p.handle ? `<a href="../perfil/?u=${encodeURIComponent(p.handle)}"><span class="pav sm" style="${art(p.avatar)}"></span></a>` : `<span class="pav sm"></span>`}
+        <div><div class="small"><b>${p.handle ? `<a href="../perfil/?u=${encodeURIComponent(p.handle)}">${esc(L(m, p.name || Tx("Someone")))}</a>` : esc(L(m, p.name || Tx("Someone")))}</b> <span class="faint">· ${esc(ago(p.at))}</span></div><p>${esc(L(m, p.body))}</p>
+        ${!m && isMember ? `<div class="acts">${p.mine || isOwner ? `<button type="button" class="btn ghost small" data-pa="delete_post">${armed === "del:" + p.id ? Tx("Tap again to confirm") : Tx("Delete")}</button>` : ""}${isOwner && !p.mine ? `<button type="button" class="btn ghost small" data-pa="hide_post">${Tx("Hide")}</button>` : ""}${!p.mine ? `<button type="button" class="btn ghost small" data-pa="report">${Tx("Report")}</button>` : ""}</div>` : ""}</div></article>`;
+    $("app").innerHTML = `${m ? `<div class="cm-mock" data-testid="mock-banner"><i class="ic i-info"></i><span>${Tx("Example · fictional community")}. ${Tx("This is a mockup to show what a community looks like. Its people are not real.")}</span></div>` : ""}
+      <a class="back" href="./">${Tx("Communities")}</a>
+      <section class="cm-hero" style="margin-top:var(--sp-3)"><div class="cm-cover" style="${art(c.avatar)};--art:${BY.get(c.avatar)?.img ? `url('${imgUrl(BY.get(c.avatar))}')` : "none"}"><i class="cm-art"></i></div>
+        <div class="cm-id"><span class="cm-av" style="${art(c.avatar)}"></span><div style="min-width:0"><h1>${esc(L(m, c.name))}</h1><div class="small muted">${esc([Tx(KIND[c.kind] || "Store"), c.city, members(c.member_n || 0)].filter(Boolean).join(" · "))}</div></div></div>
+        <div class="cm-body">${c.description ? `<p>${esc(L(m, c.description))}</p>` : ""}
+          <div class="cm-acts">${join}${isOwner ? `<button type="button" class="btn" id="edit"><i class="ic i-edit"></i>${Tx("Edit")}</button><button type="button" class="btn ghost" id="manage">${Tx("Manage members")}</button>` : ""}
+            <button type="button" class="btn ghost" id="share"><i class="ic i-send"></i>${Tx("Share")}</button></div></div></section>
+      <div class="cm-cols">
+        <section data-testid="conversation"><div class="group-head"><h2>${Tx("Conversation")}</h2></div>
+          ${c.posts ? `${isMember && !m ? `<form class="cm-compose" id="compose"><label class="sr-only" for="body">${Tx("Write to the community")}</label><textarea id="body" maxlength="1000" rows="3" placeholder="${Tx("Write to the community")}"></textarea><div class="row" style="justify-content:flex-end"><button type="submit" class="btn primary small">${Tx("Post")}</button></div></form>` : ""}
+            ${c.posts.length ? `<div class="cm-posts">${c.posts.map(post).join("")}</div>` : `<p class="muted">${Tx("No messages yet. Say hi!")}</p>`}`
+          : `<div class="cm-locked" data-testid="locked"><b>${Tx("The conversation is for members only.")}</b><div class="small" style="margin-top:4px">${c.week_posts === 1 ? Tx("1 message this week") : Tx("{n} messages this week", { n: c.week_posts || 0 })}</div></div>`}
+        </section>
+        <section class="card" data-testid="people"><div class="row between"><div class="mi-label small faint" style="font-weight:700;text-transform:uppercase;letter-spacing:.06em">${Tx("People")}</div><span class="small muted">${esc(members(c.member_n || 0))}</span></div>
+          <div class="cm-people">${named.map((p) => `<a href="../perfil/?u=${encodeURIComponent(p.handle)}"><span class="pav" style="${art(p.avatar)}"></span><span>${esc(L(m, p.name))}${p.role === "owner" ? `<br><span class="faint small">${Tx("owner")}</span>` : ""}</span></a>`).join("")}</div>
+          ${hiddenN ? `<p class="small faint" style="margin:var(--sp-2) 0 0">${Tx("+{n} with a private profile", { n: hiddenN })}</p>` : ""}</section>
+      </div>
+      <p class="small faint" style="margin-top:var(--sp-5)">${Tx("Fan project, not affiliated with Disney or Ravensburger.")}</p>`;
+    wireOne();
+  }
+  function wireOne() {
+    const c = view;
+    $("signIn")?.addEventListener("click", () => window.INKWELL_SIGNIN?.());
+    $("join")?.addEventListener("click", () => act(() => rpc("join_community", { p_slug: c.slug, p_join: true }), Tx("You joined {name}.", { name: c.name })));
+    $("leave")?.addEventListener("click", () => { if (armed !== "leave") { armed = "leave"; drawOne(); return; } act(() => rpc("join_community", { p_slug: c.slug, p_join: false }), Tx("You left {name}.", { name: c.name })); });
+    $("edit")?.addEventListener("click", () => openForm(c));
+    $("manage")?.addEventListener("click", openManage);
+    $("share")?.addEventListener("click", async () => { const u = location.href.replace(/#.*$/, ""); try { if (navigator.share) { await navigator.share({ title: c.name, url: u }); return; } } catch { return; } try { await navigator.clipboard.writeText(u); toast(Tx("Link copied")); } catch { /* */ } });
+    $("compose")?.addEventListener("submit", (e) => { e.preventDefault(); const t = $("body"), body = t.value.trim(); if (!body) { t.focus(); return; } act(() => rpc("post_in_community", { p_slug: c.slug, p_body: body })); });
+    document.querySelectorAll("[data-pa]").forEach((b) => b.onclick = () => {
+      const id = b.closest("[data-post]").dataset.post, a = b.dataset.pa;
+      if (a === "report") return openReport(id);
+      if (a === "delete_post" && armed !== "del:" + id) { armed = "del:" + id; drawOne(); return; }
+      act(() => rpc("moderate_community", { p_action: a, p_post: id }));
+    });
+  }
+  async function act(fn, msg) {
+    try { await fn(); armed = null; view = await rpc("community_view", { p_slug: view.slug }); drawOne(); toast(msg || Tx("Done")); }
+    catch (e) { armed = null; drawOne(); toast(Tx("Couldn't send. Try again."), true); }
+  }
+
+  // ---------- sheets: create/edit, manage members, report ----------
+  function openForm(c) {
+    const f = { name: c?.name || "", kind: c?.kind || "store", city: c?.city || "", description: c?.description || "", avatar_card: c?.avatar || "" };
+    let qa = "";
+    const sh = $("sheet");
+    const draw = () => {
+      const words = norm(qa).split(" ").filter(Boolean), found = qa.trim().length >= 2 ? CARDS.filter((x) => x.img && words.every((w) => x.k.includes(w))).slice(0, 8) : [];
+      sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="shT">${Tx(c ? "Edit" : "Create a community")}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
+        <div class="sheet-body"><form class="form" id="cf" novalidate>
+          <label class="field">${Tx("Name")}<input id="fN" maxlength="60" value="${esc(f.name)}" required></label>
+          <div class="field">${Tx("Kind")}<div class="seg block" role="group">${["store", "city", "interest"].map((k) => `<button type="button" data-k="${k}" aria-pressed="${f.kind === k}">${Tx(KIND[k])}</button>`).join("")}</div></div>
+          <label class="field">${Tx("City")}<input id="fC" maxlength="40" value="${esc(f.city)}"></label>
+          <label class="field">${Tx("About")}<textarea id="fD" maxlength="300" rows="3">${esc(f.description)}</textarea><span class="hint">${Tx("What happens here: league days, formats, what people trade.")}</span></label>
+          <div class="field">${Tx("Picture")}<span class="hint">${Tx("Pick a card: its art becomes the community's picture.")}</span>
+            ${f.avatar_card ? `<div class="row" style="gap:var(--sp-2)"><span class="cm-av" style="${art(f.avatar_card)};width:40px;height:40px"></span><span class="small">${esc(BY.get(f.avatar_card)?.name || "")}</span></div>` : ""}
+            <div class="picker"><input id="fQ" type="search" value="${esc(qa)}" placeholder="${Tx("Search a card")}" aria-label="${Tx("Search a card")}" autocomplete="off"></div>
+            ${qa ? `<div class="sugg static">${qa.trim().length < 2 ? `<div class="none">${Tx("Type at least 2 letters.")}</div>` : found.length ? found.map((x) => `<button type="button" data-pick="${esc(x.id)}"><span class="thumb"><img src="${imgUrl(x)}" alt=""></span><span>${esc(split(x.name).join(" · ").replace(/ · $/, ""))}<small>${esc(x.set)} · nº ${esc(x.num)}</small></span></button>`).join("") : `<div class="none">${Tx("No card found.")}</div>`}</div>` : ""}</div>
+          <p class="small" id="cfMsg" role="alert"></p></form></div>
+        <div class="sheet-foot"><button type="button" class="btn ghost" data-close>${Tx("Cancel")}</button><button type="submit" form="cf" class="btn primary" id="cfSave">${Tx(c ? "Save" : "Create")}</button></div>`;
+      sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = () => sh.close());
+      $("fN").oninput = (e) => { f.name = e.target.value; }; $("fC").oninput = (e) => { f.city = e.target.value; }; $("fD").oninput = (e) => { f.description = e.target.value; };
+      sh.querySelectorAll("[data-k]").forEach((b) => b.onclick = () => { f.kind = b.dataset.k; draw(); });
+      $("fQ").oninput = (e) => { qa = e.target.value; draw(); $("fQ").focus(); $("fQ").setSelectionRange(qa.length, qa.length); };
+      sh.querySelectorAll("[data-pick]").forEach((b) => b.onclick = () => { f.avatar_card = b.dataset.pick; qa = ""; draw(); });
+      $("cf").onsubmit = async (e) => {
+        e.preventDefault();
+        if (f.name.trim().length < 3) { $("fN").setAttribute("aria-invalid", "true"); $("fN").focus(); return; }
+        $("cfSave").disabled = true;
+        try {
+          if (c) { await rpc("update_community", { p_slug: c.slug, p: f }); sh.close(); view = await rpc("community_view", { p_slug: c.slug }); drawOne(); toast(Tx("Done")); }
+          else { const r = await rpc("create_community", { p: f }); location.href = `?c=${encodeURIComponent(r.slug)}`; }
+        } catch (err) { $("cfSave").disabled = false; $("cfMsg").textContent = /too_many/.test(String(err?.message || err)) ? Tx("You already created 3 communities.") : Tx("Couldn't save. Try again."); }
+      };
+    };
+    draw(); sh.showModal(); setTimeout(() => $("fN")?.focus(), 30);
+  }
+  function openManage() {
+    const sh = $("sheet");
+    const draw = () => {
+      sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="shT">${Tx("Members")}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
+        <div class="sheet-body"><div class="list">${(view.manage || []).map((x) => `<div class="list-row flat"><span class="t"><span>${esc(x.name || "?")}</span><span class="meta">${Tx(x.role === "owner" ? "owner" : "member")}</span></span>
+          ${x.role === "owner" ? "" : `<button type="button" class="btn small ghost" data-rm="${esc(x.uid)}">${armed === "rm:" + x.uid ? Tx("Tap again to confirm") : Tx("Remove")}</button>`}</div>`).join("")}</div></div>`;
+      sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = () => sh.close());
+      sh.querySelectorAll("[data-rm]").forEach((b) => b.onclick = async () => {
+        const uid = b.dataset.rm; if (armed !== "rm:" + uid) { armed = "rm:" + uid; draw(); return; }
+        try { await rpc("moderate_community", { p_action: "remove_member", p_slug: view.slug, p_user: uid }); armed = null; view = await rpc("community_view", { p_slug: view.slug }); draw(); drawOne(); toast(Tx("Done")); }
+        catch { armed = null; draw(); toast(Tx("Couldn't send. Try again."), true); }
+      });
+    };
+    draw(); sh.showModal();
+  }
+  function openReport(id) {
+    const sh = $("sheet");
+    sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="shT">${Tx("Report")}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
+      <div class="sheet-body"><label class="field">${Tx("Why are you reporting this message?")}<textarea id="rpWhy" maxlength="300" rows="3"></textarea></label><p class="small" id="rpMsg" role="alert"></p></div>
+      <div class="sheet-foot"><button type="button" class="btn ghost" data-close>${Tx("Cancel")}</button><button type="button" class="btn primary" id="rpSend">${Tx("Send report")}</button></div>`;
+    sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = () => sh.close());
+    $("rpSend").onclick = async () => { const why = $("rpWhy").value.trim(); if (why.length < 3) { $("rpWhy").focus(); return; }
+      try { await rpc("report_community_post", { p_post: id, p_reason: why }); sh.close(); toast(Tx("Report sent. Thank you.")); } catch { $("rpMsg").textContent = Tx("Couldn't send. Try again."); } };
+    sh.showModal(); setTimeout(() => $("rpWhy").focus(), 30);
+  }
+
+  function emptyBox(img, title, text, extra = "") { return `<div class="empty"><img src="../ui/assets/empty/${img}.svg" alt=""><b>${esc(title)}</b><p>${esc(text)}</p>${extra}</div>`; }
+  let toastTimer = null;
+  function toast(text, err) { const t = $("toast"); t.className = `toast${err ? " err" : ""}`; t.innerHTML = `<i class="ic ${err ? "i-alert" : "i-check"}"></i><span>${esc(text)}</span>`; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 5000); }
+
+  document.documentElement.lang = LOC;
+  $("app").innerHTML = `<div class="skel" style="height:220px;border-radius:20px"></div><p class="sr-only">${Tx("Loading…")}</p>`;
+  (async () => {
+    if (me) { try { mine = await CLOUD.api("rpc/my_profile", { method: "POST", body: {} }); } catch { mine = null; } }
+    try { if (slugQ) await showOne(slugQ); else await showList(); }
+    catch { $("app").innerHTML = emptyBox("error", Tx("Couldn't load."), Tx("Check your connection and try again."), `<button type="button" class="btn" onclick="location.reload()">${Tx("Try again")}</button>`); }
+  })();
+})();
+</script>
+
+<script>window.INKWELL_SHELL = {"page": "communities"};
+/*@SHELL_JS@*/</script>
+</body>
+</html>

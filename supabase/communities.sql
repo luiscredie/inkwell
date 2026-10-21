@@ -48,7 +48,7 @@ create or replace function private.is_adult(u uuid) returns boolean language sql
   select coalesce((select adult and not hidden_by_admin from public.profiles where user_id = u), false) $$;
 create or replace function private.slugify(t text) returns text language sql immutable set search_path = '' as $$
   select trim(both '-' from left(regexp_replace(lower(translate(t,
-    'áàâãäéèêëíìîïóòôõöúùûüçñÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇÑ', 'aaaaaeeeeiiiiooooouuuucnAAAAAEEEEIIIIOOOOOUUUUCN')), '[^a-z0-9]+', '-', 'g'), 40), '-') $$;
+    'áàâãäéèêëíìîïóòôõöúùûüçñÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇÑ', 'aaaaaeeeeiiiiooooouuuucnAAAAAEEEEIIIIOOOOOUUUUCN')), '[^a-z0-9]+', '-', 'g'), 40)) $$;
 -- a member's public face: name always, handle and avatar only when their own profile is public
 create or replace function private.face(u uuid) returns jsonb language sql stable security definer set search_path = '' as $$
   select jsonb_build_object('name', p.display_name,

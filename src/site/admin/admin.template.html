@@ -46,7 +46,8 @@
     "Delete all example accounts": "Excluir todas as contas de exemplo", "Example accounts": "Contas de exemplo",
     "There is no password to reset: members sign in with a code sent to their e-mail. \"Sign out everywhere\" ends every session; they sign in again with a new code.": "Não há senha para redefinir: os membros entram com um código enviado por e-mail. \"Desconectar de tudo\" encerra todas as sessões; a pessoa entra de novo com um código novo.",
     "Deleting removes the account and all its data (collection, decks, games, posts). It cannot be undone.": "Excluir apaga a conta e todos os dados dela (coleção, decks, jogos, anúncios). Não dá para desfazer.",
-    "Search by name or e-mail": "Buscar por nome ou e-mail", "{n} members": "{n} membros",
+    "Search by name or e-mail": "Buscar por nome ou e-mail", "Communities": "Comunidades", "{n} members": "{n} membros", "{n} posts": "{n} mensagens",
+    "See": "Ver", "Show": "Mostrar", "Hide": "Ocultar", "Delete": "Excluir", "No communities.": "Nenhuma comunidade.", "{n} members": "{n} membros",
   };
   const fill = (s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)) : s);
   const Tx = (en, v) => fill(lang === "pt" && en in PT ? PT[en] : en, v);
@@ -54,17 +55,18 @@
   const dt = (d) => (d ? new Date(d).toLocaleDateString(LOC, { day: "numeric", month: "short", year: "numeric" }) : "");
   const CLOUD = window.INKWELL_CLOUD, me = CLOUD?.user();
   const rpc = (name, body = {}) => CLOUD.api(`rpc/${name}`, { method: "POST", body });
-  let users = [], reports = [], tab = "users", q = "", armed = null;
+  let users = [], reports = [], comms = [], tab = "users", q = "", armed = null;
 
   function emptyBox(img, title, text, extra = "") { return `<div class="empty"><img src="../ui/assets/empty/${img}.svg" alt=""><b>${esc(title)}</b><p>${esc(text)}</p>${extra}</div>`; }
-  async function load() { [users, reports] = await Promise.all([rpc("admin_users"), rpc("admin_reports")]); users = users || []; reports = reports || []; }
+  async function load() { [users, reports, comms] = await Promise.all([rpc("admin_users"), rpc("admin_reports"), rpc("admin_communities").catch(() => [])]); users = users || []; reports = reports || []; comms = comms || []; }
   function render() {
     const open = reports.filter((r) => r.status === "open").length, mocks = users.filter((u) => u.is_mock);
     const words = q.toLowerCase().split(/\s+/).filter(Boolean);
     const list = users.filter((u) => words.every((w) => `${u.display_name || ""} ${u.email || ""} ${u.handle || ""}`.toLowerCase().includes(w)));
     const btn = (u, act, label, cls = "") => `<button type="button" class="btn small ${cls}" data-act="${act}" data-u="${esc(u.id)}" ${u.is_admin && act === "delete" ? "disabled" : ""}>${armed === `${act}:${u.id}` ? Tx("Tap again to confirm") : Tx(label)}</button>`;
     $("app").innerHTML = `<div class="tabs" role="tablist"><button type="button" class="tab" role="tab" data-tab="users" aria-selected="${tab === "users"}">${Tx("Members")} <span class="count quiet">${users.length}</span></button>
-        <button type="button" class="tab" role="tab" data-tab="reports" aria-selected="${tab === "reports"}">${Tx("Reports")} ${open ? `<span class="count">${open}</span>` : ""}</button></div>
+        <button type="button" class="tab" role="tab" data-tab="reports" aria-selected="${tab === "reports"}">${Tx("Reports")} ${open ? `<span class="count">${open}</span>` : ""}</button>
+        <button type="button" class="tab" role="tab" data-tab="comms" aria-selected="${tab === "comms"}">${Tx("Communities")} <span class="count quiet">${comms.length}</span></button></div>
       ${tab === "users" ? `
         <p class="small muted">${Tx("There is no password to reset: members sign in with a code sent to their e-mail. \"Sign out everywhere\" ends every session; they sign in again with a new code.")} ${Tx("Deleting removes the account and all its data (collection, decks, games, posts). It cannot be undone.")}</p>
         ${mocks.length ? `<section class="card" style="margin:var(--sp-3) 0"><b>${Tx("Example accounts")}</b><p class="small muted" style="margin:4px 0 var(--sp-3)">${mocks.map((u) => "@" + esc(u.handle || u.email)).join(", ")}</p><button type="button" class="btn small danger" data-act="delmocks">${armed === "delmocks" ? Tx("Tap again to confirm") : Tx("Delete all example accounts")}</button></section>` : ""}
@@ -73,6 +75,10 @@
             <div class="tags">${u.is_mock ? `<span class="tag accent">${Tx("example")}</span>` : ""}${u.is_admin ? `<span class="tag info">${Tx("admin")}</span>` : ""}<span class="tag ${u.is_public ? "match" : ""}">${Tx(u.is_public ? "public" : "private")}</span>${u.hidden ? `<span class="tag warn">${Tx("hidden")}</span>` : ""}${u.adult ? `<span class="tag">${Tx("18+")}</span>` : ""}${u.open_reports ? `<span class="tag late">${esc(Tx("{n} open reports", { n: u.open_reports }))}</span>` : ""}</div>
             <span class="small faint">${esc([Tx("joined {d}", { d: dt(u.created_at) }), u.last_sign_in_at ? Tx("last sign-in {d}", { d: dt(u.last_sign_in_at) }) : Tx("never signed in"), Tx("{n} games", { n: u.games })].join(" · "))}</span></div>
           <div class="adm-acts">${u.handle && u.is_public ? `<a class="btn small ghost" href="../perfil/?u=${esc(u.handle)}">${Tx("See profile")}</a>` : ""}${btn(u, u.hidden ? "unhide" : "hide", u.hidden ? "Show profile" : "Hide profile")}${btn(u, "signout", "Sign out everywhere")}${btn(u, "delete", "Delete account", "danger")}</div></div>`).join("")}</div>`
+      : tab === "comms" ? `<div data-testid="admin-comms">${comms.length ? comms.map((c) => `<div class="adm-row"><div class="t"><b>${esc(c.name)}</b><span class="small muted">${esc([c.city, c.owner ? Tx("by {n}", { n: c.owner }) : ""].filter(Boolean).join(" · "))}</span>
+            <div class="tags">${c.mock ? `<span class="tag accent">${Tx("example")}</span>` : ""}${c.hidden ? `<span class="tag warn">${Tx("hidden")}</span>` : ""}<span class="tag">${esc(Tx("{n} members", { n: c.members }))}</span><span class="tag">${esc(Tx("{n} posts", { n: c.posts }))}</span></div></div>
+          <div class="adm-acts">${c.hidden ? "" : `<a class="btn small ghost" href="../comunidades/?c=${esc(c.slug)}">${Tx("See")}</a>`}<button type="button" class="btn small" data-cact="${c.hidden ? "unhide" : "hide"}" data-c="${esc(c.id)}">${Tx(c.hidden ? "Show" : "Hide")}</button>
+            <button type="button" class="btn small danger" data-cact="delete" data-c="${esc(c.id)}">${armed === `cdel:${c.id}` ? Tx("Tap again to confirm") : Tx("Delete")}</button></div></div>`).join("") : `<p class="muted">${Tx("No communities.")}</p>`}</div>`
       : `<div data-testid="reports">${reports.length ? reports.map((r) => `<div class="adm-row"><div class="t"><b>${esc(Tx("about {n}", { n: r.target_name || r.target_handle || "?" }))}</b><span class="small muted">${esc([Tx("by {n}", { n: r.reporter_name || "?" }), dt(r.created_at)].join(" · "))}</span>
             <p class="adm-reason">${esc(r.reason)}</p><div class="tags"><span class="tag ${r.status === "open" ? "late" : "match"}">${Tx(r.status === "open" ? "open" : "handled")}</span></div></div>
           <div class="adm-acts">${r.target_handle ? `<a class="btn small ghost" href="../perfil/?u=${esc(r.target_handle)}">${Tx("See profile")}</a>` : ""}${r.status === "open" ? `<button type="button" class="btn small" data-resolve="${esc(r.id)}">${Tx("Mark as handled")}</button>` : ""}
@@ -80,6 +86,11 @@
     document.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => { tab = b.dataset.tab; armed = null; render(); });
     $("q")?.addEventListener("input", (e) => { q = e.target.value; render(); $("q").focus(); $("q").setSelectionRange(q.length, q.length); });
     document.querySelectorAll("[data-act]").forEach((b) => b.onclick = () => act(b.dataset.act, b.dataset.u));
+    document.querySelectorAll("[data-cact]").forEach((b) => b.onclick = () => {
+      const a = b.dataset.cact, id = b.dataset.c;
+      if (a === "delete" && armed !== `cdel:${id}`) { armed = `cdel:${id}`; render(); return; }
+      run(() => rpc("admin_community", { p_id: id, p_action: a }));
+    });
     document.querySelectorAll("[data-resolve]").forEach((b) => b.onclick = () => run(() => rpc("admin_resolve_report", { p_id: b.dataset.resolve })));
   }
   async function run(fn) {
