@@ -350,11 +350,14 @@
   },
   "DLPC1-16-P4": {
     "display_name": "Rapunzel - Escaping the Tower (Top 8)",
-    "image_file": "",
-    "image_url": "",
-    "status": "official_not_found",
-    "sha256": "",
-    "source": ""
+    "image_file": "images/Rapunzel_-_Escaping_the_Tower_(Top_8)__DLPC1-16-P4.png",
+    "image_url": "https://ravensburger.cloud/cms/gallery/lorcana-web/products/s13-attack-of-the-vine/op-cards-and-playmat/en_foil_j2h6gyfulp.png",
+    "status": "downloaded",
+    "sha256": "bcadc0d8e74ff1e8aa6f83d308ae3cc0ced1d729860114673ad9c2554855e141",
+    "source": "manual recovery 2026-10-21",
+    "bytes": 816364,
+    "width": 537,
+    "height": 750
   },
   "DLPC1-17-P1": {
     "display_name": "Robin Hood - Capable Fighter",
@@ -554,11 +557,14 @@
   },
   "DLPC1-24-P3": {
     "display_name": "Daisy Duck - Paranormal Investigator (Store Championship)",
-    "image_file": "",
-    "image_url": "",
-    "status": "official_not_found",
-    "sha256": "",
-    "source": ""
+    "image_file": "images/Daisy_Duck_-_Paranormal_Investigator_(Store_Championship)__DLPC1-24-P3.png",
+    "image_url": "https://ravensburger.cloud/cms/gallery/lorcana-web/products/s10/cards/en-us/vclcfz52u7_en.png",
+    "status": "downloaded",
+    "sha256": "5cf13bed5b20a5c7775e78a0882ee45434f23720f07444bf6a95f3565548629c",
+    "source": "manual recovery 2026-10-21",
+    "bytes": 744575,
+    "width": 537,
+    "height": 750
   },
   "DLPC1-25-P1": {
     "display_name": "Mickey Mouse - True Friend (CS Exclusive)",
@@ -10633,12 +10639,15 @@
   },
   "LOR14-100": {
     "display_name": "Belle's City Guide",
-    "image_file": "",
+    "image_file": "images/Belle's_City_Guide__LOR14-100.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/100_75970c8503d099a19b7567e5cf7df6fe96f76f93.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "bcc5b74ffe7d9bc3f71293dbbb2586b9dc365e0d1c976cbd39934585e9163ab4",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 266613,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-101": {
     "display_name": "Leaning Tower of Cheese-a",
@@ -10654,12 +10663,15 @@
   },
   "LOR14-102": {
     "display_name": "The Beanstalk - Onward and Upward",
-    "image_file": "",
+    "image_file": "images/The_Beanstalk_-_Onward_and_Upward__LOR14-102.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/102_d93d0115489b05a5dbbcd69155e9d9ed5d0224e1.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "6d4fa68bd8e84f717beb2294df44c511132139cc6b54ba664ddec365192b686c",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 269522,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-103": {
     "display_name": "HeiHei - At the Crosswalk",
@@ -10795,30 +10807,39 @@
   },
   "LOR14-113": {
     "display_name": "Cruella De Vil - Dodging Traffic",
-    "image_file": "",
+    "image_file": "images/Cruella_De_Vil_-_Dodging_Traffic__LOR14-113.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/113_95ddb79f4dd2ef106f1e29d6d4e5f3c763e40866.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "9593a5526b79224abbbbb7930865907c476bca7bb65eeb875949b28e0cf94326",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 305378,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-114": {
     "display_name": "Jasper - Dodgy Boater",
-    "image_file": "",
+    "image_file": "images/Jasper_-_Dodgy_Boater__LOR14-114.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/114_94bfa7d4fc77826c3ea6b130ab1dd39c7b32f7b4.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "8626d872878076c6e63a2fc976b8581cca7b3883d06cdb72c8cfbc57c6fb48b4",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 267895,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-115": {
     "display_name": "Peg - Late-Night Vocalist",
-    "image_file": "",
+    "image_file": "images/Peg_-_Late-Night_Vocalist__LOR14-115.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/115_051b1f1f0aee5f61c4894fadaa88f7ce034fe925.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "16813345297bff58ce9607408c158876ea886d992fce9134cb722deeb8c1102b",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 238590,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-116": {
     "display_name": "Stacey - Powerline Superfan",
@@ -10858,12 +10879,15 @@
   },
   "LOR14-119": {
     "display_name": "Pepita - Imelda's Right Hand",
-    "image_file": "",
+    "image_file": "images/Pepita_-_Imelda's_Right_Hand__LOR14-119.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/119_32f20b769d936377da14e6ebc9fa1ccf56aaa7b2.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "cc9c1142a6fa0a2033031c59cf251904ad8e9538e0d08c767df9b522b3ddb58a",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 331116,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-12": {
     "display_name": "P.J. Pete - Devoted Fan",
@@ -10987,12 +11011,15 @@
   },
   "LOR14-129": {
     "display_name": "Pushing Boundaries",
-    "image_file": "",
+    "image_file": "images/Pushing_Boundaries__LOR14-129.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/129_de7505a30f960c0d50216c7a0654de1d1503707d.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "1ec36d0143086bbf5283a464ea58ce54e70f288edffbe87ad855919343c688e0",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 297263,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-13": {
     "display_name": "Mr. Manchas - Service with a Smile",
@@ -11020,12 +11047,15 @@
   },
   "LOR14-131": {
     "display_name": "Though I Have to Say Goodbye",
-    "image_file": "",
+    "image_file": "images/Though_I_Have_to_Say_Goodbye__LOR14-131.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/131_2a5372b569ae889827eda53d9d90125e84a4641e.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "9c5b06ac2a0e30ab03e352ff0e104f259a07b78189765a2ab791858af6ee616d",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 312035,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-132": {
     "display_name": "Rivera Family Photo",
@@ -11065,12 +11095,15 @@
   },
   "LOR14-135": {
     "display_name": "Land of the Dead - Marigold Bridge",
-    "image_file": "",
+    "image_file": "images/Land_of_the_Dead_-_Marigold_Bridge__LOR14-135.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/135_70165084363e8322563e90126e14d9309adac62e.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "6044bca3dfdb517a04be80bf7d63920fd216b65dfa76929f4c2602ad0d9f4702",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 319185,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-136": {
     "display_name": "Khan Stadium - State of the Art",
@@ -11134,12 +11167,15 @@
   },
   "LOR14-140": {
     "display_name": "Baymax - Qualified Physician",
-    "image_file": "",
+    "image_file": "images/Baymax_-_Qualified_Physician__LOR14-140.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/140_c6b04ca44000ca2a507e7643c47b8b9de63a85f3.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "4831671ae6748f185de24698f5114cf2e7177837cfb66bb6d3e5a8a755ad84b5",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 281204,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-141": {
     "display_name": "King Louie - Ice Cream Virtuoso",
@@ -11191,12 +11227,15 @@
   },
   "LOR14-145": {
     "display_name": "Go Go Tomago - Working Late",
-    "image_file": "",
+    "image_file": "images/Go_Go_Tomago_-_Working_Late__LOR14-145.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/145_e0bd76a9f42fa420a858017f4b45c23b286a122b.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "b4f3d5a921751d5badfd354afa4bcfe8b0ec16f2d70300e07e15d29e7c4f2ec9",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 282440,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-146": {
     "display_name": "Madam Mim - Nosy Neighbor",
@@ -11260,12 +11299,15 @@
   },
   "LOR14-150": {
     "display_name": "Hiro Hamada - Pioneering Inventor",
-    "image_file": "",
+    "image_file": "images/Hiro_Hamada_-_Pioneering_Inventor__LOR14-150.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/150_92e268bb22f5ce632c80ae5c9fe7735281bc5dbc.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "6c995fdfc61e055d8edcfa418124c66dc9ba66c50adbcba95ab11ef197ba704b",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 299086,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-151": {
     "display_name": "Honey Lemon - Endlessly Curious",
@@ -11293,12 +11335,15 @@
   },
   "LOR14-153": {
     "display_name": "Duchess - Cosmopolitan Cat",
-    "image_file": "",
+    "image_file": "images/Duchess_-_Cosmopolitan_Cat__LOR14-153.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/153_cccad70991ee77c9e726360196efa70bb4f77145.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "e30e9364bf30bd183422bccf56d2cceb2441a4dac95f28b659728e0e0b49d4fe",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 288666,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-154": {
     "display_name": "Judy Hopps - Day Camp Instructor",
@@ -11314,12 +11359,15 @@
   },
   "LOR14-155": {
     "display_name": "Minnie Mouse - Urban Visionary",
-    "image_file": "",
+    "image_file": "images/Minnie_Mouse_-_Urban_Visionary__LOR14-155.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/155_0ee4e82613434ae8a99f0703959032471a5637b7.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "52e0dd4a76be779c9221f06d55127958d2586f4550f2801fe407cecd60c9899f",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 357223,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-156": {
     "display_name": "Ariel - Collector of Oddities",
@@ -11335,12 +11383,15 @@
   },
   "LOR14-157": {
     "display_name": "Cinderella - Unintentional Icon",
-    "image_file": "",
+    "image_file": "images/Cinderella_-_Unintentional_Icon__LOR14-157.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/157_8eb32617b851bff386f53a64ab5d057bc4c21edc.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "52bab42c5c5bd1e607df83a8742a9fcdd06b17658a824042c7430d88b1837ee5",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 333212,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-158": {
     "display_name": "Baymax - Amped Up",
@@ -11584,12 +11635,15 @@
   },
   "LOR14-176": {
     "display_name": "Tiana - Restauranteur",
-    "image_file": "",
+    "image_file": "images/Tiana_-_Restauranteur__LOR14-176.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/176_95c12141391deace51c80a831b78b77ec40dab6c.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "5b719b27a3fb747369d8754763d527db605d88fd24963afd32d43acd4a249ff7",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 279035,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-177": {
     "display_name": "Raya - Determined Explorer",
@@ -11641,12 +11695,15 @@
   },
   "LOR14-180": {
     "display_name": "Wildcat - Unconventional Mechanic",
-    "image_file": "",
+    "image_file": "images/Wildcat_-_Unconventional_Mechanic__LOR14-180.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/180_de2323ea7bc847e7964b3a588c161b22ccdfe8bf.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "22f0e99dd4b42332a839921696f18cb8dc9ed5ada6fd3c5421351ee37968e893",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 297928,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-181": {
     "display_name": "Sir Kay - Determined to Win",
@@ -11854,12 +11911,15 @@
   },
   "LOR14-197": {
     "display_name": "Jousting Match",
-    "image_file": "",
+    "image_file": "images/Jousting_Match__LOR14-197.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/197_928043df6a5864a44ec5b34bcc2348c45555f590.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "3dba5bcd75d2e98fb923281aa03f265c5c67bab04c35211ba294666813bc1409",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 278110,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-198": {
     "display_name": "Ink Explosion",
@@ -11875,12 +11935,15 @@
   },
   "LOR14-199": {
     "display_name": "Khan Transport Delivery",
-    "image_file": "",
+    "image_file": "images/Khan_Transport_Delivery__LOR14-199.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/199_9073de001a035315bcdc373a65f29d1e1951d921.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "fa492f00f2f805228da91ffe72e7e0296c4c1144a1a424be8f0fbc56d18747e1",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 250232,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-2": {
     "display_name": "Abuelita - Loving Grandmother",
@@ -11968,12 +12031,15 @@
   },
   "LOR14-205": {
     "display_name": "Nick Wilde - Providing Backup (Epic)",
-    "image_file": "",
+    "image_file": "images/Nick_Wilde_-_Providing_Backup_(Epic)__LOR14-205.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/205_9de45571c816b6cec79bf75b986c29291075a6de.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "998017cadef878569f468525f62488099915a6b6ac9331a66fa190960815537a",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 308516,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-206": {
     "display_name": "Judy Hopps - Always Vigilant (Epic)",
@@ -12049,12 +12115,15 @@
   },
   "LOR14-211": {
     "display_name": "Go Go Tomago - Extreme Tester (Epic)",
-    "image_file": "",
+    "image_file": "images/Go_Go_Tomago_-_Extreme_Tester_(Epic)__LOR14-211.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/211_496282094f5ca386a6d53d7c59a4981a168cd251.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "e854c2b1d8bab3e16ddb0985fd1150a2aab96d6008881e24f406a00aaa3aac2d",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 309314,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-212": {
     "display_name": "Belle - Reflective Writer (Epic)",
@@ -12094,12 +12163,15 @@
   },
   "LOR14-215": {
     "display_name": "Héctor Rivera - Street Musician (Epic)",
-    "image_file": "",
+    "image_file": "images/Héctor_Rivera_-_Street_Musician_(Epic)__LOR14-215.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/215_beea938c50601e085664dcd83fcb74d18fe90eb3.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "213d0a4b79ebcfbdc79cecc0da5e1da935cc7d8494e206b3265d5760e883baa5",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 315604,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-216": {
     "display_name": "Though I Have to Say Goodbye (Epic)",
@@ -12115,12 +12187,15 @@
   },
   "LOR14-217": {
     "display_name": "Daisy Duck - Savvy Investor (Epic)",
-    "image_file": "",
+    "image_file": "images/Daisy_Duck_-_Savvy_Investor_(Epic)__LOR14-217.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/217_72716024adc927d70bec1b79b19862cfb941cc3a.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "6c2de7f859ed827428b5eee4c4e2e48e6f37504d829da8d147ae5ebfdf258f1b",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 243138,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-218": {
     "display_name": "Wasabi - Future Thinker (Epic)",
@@ -12232,12 +12307,15 @@
   },
   "LOR14-226": {
     "display_name": "Rapunzel - Outgoing Artist (Enchanted)",
-    "image_file": "",
+    "image_file": "images/Rapunzel_-_Outgoing_Artist_(Enchanted)__LOR14-226.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/226_ab859eb2b27fc9d47eb0a858845698fa8e455d20.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "7a01adf41d6cd9343832eaf2259f7ec4973d9ba0400795ce91c2e8029b32f518",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 383951,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-227": {
     "display_name": "Merlin - Profoundly Curious (Enchanted)",
@@ -12505,12 +12583,15 @@
   },
   "LOR14-29": {
     "display_name": "Remember Me",
-    "image_file": "",
+    "image_file": "images/Remember_Me__LOR14-29.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/29_2dec71ec33b6f4127db60d2a7bb9cd57cad50000.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "39ea3c7cf2270c814a9ea99ac3c929db8762a352f97becb551055e92096f1a5c",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 309261,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-3": {
     "display_name": "Max Goof - Music Lover",
@@ -12526,12 +12607,15 @@
   },
   "LOR14-30": {
     "display_name": "Never Gonna Let You Cry",
-    "image_file": "",
+    "image_file": "images/Never_Gonna_Let_You_Cry__LOR14-30.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/30_f9d324add89d30d245f1db75d0f457b7ddd58b45.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "c5f9eaeb088a2a9086cb5f29e0f821e2498c3e85dd448ebf78fa096e51242677",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 316175,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-31": {
     "display_name": "Ancestral Guitar",
@@ -12547,12 +12631,15 @@
   },
   "LOR14-32": {
     "display_name": "Speaker Stack",
-    "image_file": "",
+    "image_file": "images/Speaker_Stack__LOR14-32.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/32_ad1d0bbba1380c233406612b41f458aaf584f4bf.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "fd1dacc73a36d830200a43feb87922a4a57ffad3523a2d2d43045cd58d3e1a41",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 294631,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-33": {
     "display_name": "Mamá Imelda's Blessing",
@@ -12676,12 +12763,15 @@
   },
   "LOR14-42": {
     "display_name": "Tía Victoria - Disapproving Ancestor",
-    "image_file": "",
+    "image_file": "images/Tía_Victoria_-_Disapproving_Ancestor__LOR14-42.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/42_883b768740df095cda008dc2feaa706cbe47d9ae.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "889f0da8c6c803eda8bed59f3d548e6d3c3ebed766c111f802cad5ff46bbb2e7",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 345606,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-43": {
     "display_name": "Dante - Enthusiastic Stray",
@@ -12697,12 +12787,15 @@
   },
   "LOR14-44": {
     "display_name": "Mamá Coco - Visiting the Park",
-    "image_file": "",
+    "image_file": "images/Mamá_Coco_-_Visiting_the_Park__LOR14-44.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/44_ea209130db51332b7b7194a39f7a081373e6f609.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "380e3eefac05fa6b702749dc876e79323c20b5a8f5d67c6a356880b1771df76b",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 343166,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-45": {
     "display_name": "Tinker Bell - Curious Fairy",
@@ -12742,39 +12835,51 @@
   },
   "LOR14-48": {
     "display_name": "Dante - Strange and Endearing",
-    "image_file": "",
+    "image_file": "images/Dante_-_Strange_and_Endearing__LOR14-48.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/48_09ca65dbdcacc71ed38ecba4fed41f1faf31e281.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "d12cebe70088c486759fef08af490da8743419bd69ae329202579ed305da7bc3",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 293815,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-49": {
     "display_name": "Fox Xanatos - Charismatic Outlaw",
-    "image_file": "",
+    "image_file": "images/Fox_Xanatos_-_Charismatic_Outlaw__LOR14-49.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/49_feefb55971d890d6fee4d440e53b6e3afc5017d9.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "1612b5f2aafc72458f89e1e00f7bfab73292a41b6f20b7f35b65da41ce882e36",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 257514,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-5": {
     "display_name": "Pete - Suave Showoff",
-    "image_file": "",
+    "image_file": "images/Pete_-_Suave_Showoff__LOR14-5.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/5_ea3092330fb7cb2596f9122cb2849522cc6371ec.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "6cc0a9e9c09f51f0f6e43f72da7d6cc67928b0bc5ab276f258fcd6747e9f60e6",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 312874,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-50": {
     "display_name": "Brooklyn - Full Throttle",
-    "image_file": "",
+    "image_file": "images/Brooklyn_-_Full_Throttle__LOR14-50.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/50_0c52959242c4d2d904c86d08adfadb6a6e8fb327.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "2af407798197f65cb2e22ee44a8d0aac3779501b35637f04cebbf8a1cb73ceb0",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 270540,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-51": {
     "display_name": "Mamá Imelda - No-Nonsense Ancestor",
@@ -12838,12 +12943,15 @@
   },
   "LOR14-56": {
     "display_name": "Demona - Imperious Spellcaster",
-    "image_file": "",
+    "image_file": "images/Demona_-_Imperious_Spellcaster__LOR14-56.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/56_f74016dfb84dbe9c967f2d968aa3de0f76e472cc.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "51526dd2740b27bbc8e87040bbec00ff4187bbd950e2488c14bb5312d19ab076",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 339895,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-57": {
     "display_name": "Merlin - Profoundly Curious",
@@ -12871,21 +12979,27 @@
   },
   "LOR14-59": {
     "display_name": "Madam Mim - Resourceful Trickster",
-    "image_file": "",
+    "image_file": "images/Madam_Mim_-_Resourceful_Trickster__LOR14-59.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/59_8711a5df397390abc5a733cdbd284d7fc3a8172b.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "c97e20465cc7e0b5b1d344f25baea3cf2114e1e4b7ec50ac024d494f9cb55c96",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 320731,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-6": {
     "display_name": "Miriam Mendelsohn - Front-Row Fan",
-    "image_file": "",
+    "image_file": "images/Miriam_Mendelsohn_-_Front-Row_Fan__LOR14-6.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/6_27cef22cf7c01ca1da8813ba7779c660ba1006f0.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "57166d1469fa4accbec51d2880507e2f53ccd85f2ea8d2c35be1d63765b93503",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 285101,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-60": {
     "display_name": "Everyone Knows Juanita",
@@ -12949,12 +13063,15 @@
   },
   "LOR14-65": {
     "display_name": "Creative Inspiration",
-    "image_file": "",
+    "image_file": "images/Creative_Inspiration__LOR14-65.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/65_bd2a16bbe28806544441cb0213db01197aa7a1d3.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "8762ab696a718794e7df20663b9f7199a86981e8dce152f5192cdfd8db4dec82",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 246635,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-66": {
     "display_name": "Merlin's Wand",
@@ -12994,21 +13111,27 @@
   },
   "LOR14-69": {
     "display_name": "Trusty - Along for the Ride",
-    "image_file": "",
+    "image_file": "images/Trusty_-_Along_for_the_Ride__LOR14-69.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/69_494b212ae6f7224570931b3fa7f515d54f6c2c8d.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "3ab32b7f0abb3c49cd102e3bb9e39529f5822d4cfd5f5ab894f59bb8e9d81ef8",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 232581,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-7": {
     "display_name": "Priya Mangal - Immovable Fan",
-    "image_file": "",
+    "image_file": "images/Priya_Mangal_-_Immovable_Fan__LOR14-7.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/7_d0005eb63a6ba2808ec822a1b6160006b4d5695b.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "ae7706365e682a964a29816d928005bca0972b8137e5f12eeb05bb809abaea80",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 279097,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-70": {
     "display_name": "Don Karnage - Khan's Courier",
@@ -13048,12 +13171,15 @@
   },
   "LOR14-73": {
     "display_name": "Molly Cunningham - Remembers to Share",
-    "image_file": "",
+    "image_file": "images/Molly_Cunningham_-_Remembers_to_Share__LOR14-73.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/73_dc123ee5b80eca8160990db93c3eb360ed749a7a.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "7e755ad2d0fe4b930aee02c14d00c4e2c536d724e0462a847798e98a10a56802",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 309455,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-74": {
     "display_name": "Kit Cloudkicker - Irrepressible Bear",
@@ -13105,12 +13231,15 @@
   },
   "LOR14-78": {
     "display_name": "Jock - Enjoying the Sights",
-    "image_file": "",
+    "image_file": "images/Jock_-_Enjoying_the_Sights__LOR14-78.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/78_85a5573a1f0dc8b7471df4b6d93761d92901e101.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "c50c4b5c087acade60bfe365d79217aadc6b3e15b085e579fce2952ea53b69b9",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 291225,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-79": {
     "display_name": "Lady - Relaxed and Rested",
@@ -13186,21 +13315,27 @@
   },
   "LOR14-84": {
     "display_name": "Bobby Zimuruski - Soundboard Whiz",
-    "image_file": "",
+    "image_file": "images/Bobby_Zimuruski_-_Soundboard_Whiz__LOR14-84.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/84_16927d23cfac091f9a58872ddf7450596411b294.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "dbd69e3054e9599bc35ff7131178dc93ed7e5ba2a98d28a7ccf8399a9502ca93",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 287162,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-85": {
     "display_name": "Baymax - Lab Assistant",
-    "image_file": "",
+    "image_file": "images/Baymax_-_Lab_Assistant__LOR14-85.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/85_858db452a2c0aaff3e51bed20a9c5ffe82fdf7ff.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "da9498db4f281ede9a894008b65650964196fb4c3701d74e1e2b3b3c438778d1",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 279569,
+    "width": 1468,
+    "height": 2048
   },
   "LOR14-86": {
     "display_name": "Fred - Awesome Boss",
@@ -13372,12 +13507,15 @@
   },
   "LOR14-99": {
     "display_name": "Chemical Reaction",
-    "image_file": "",
+    "image_file": "images/Chemical_Reaction__LOR14-99.jpg",
     "image_url": "https://api.lorcana.ravensburger.com/images/en/set14/99_77858f308f05a301dc4aeb538a622b09c76b0b3c.jpg",
-    "status": "pending",
-    "sha256": "",
-    "source": "lorcanajson",
-    "error": "not downloaded yet: shown from the official image URL"
+    "status": "downloaded",
+    "sha256": "7cd85e01276a6c62749753a700dc97e0522bfc27c058444c61259ffdf6c4220d",
+    "source": "manual recovery 2026-10-21",
+    "error": "not downloaded yet: shown from the official image URL",
+    "bytes": 261310,
+    "width": 1468,
+    "height": 2048
   },
   "LOR2-1": {
     "display_name": "Bashful - Hopeless Romantic",
