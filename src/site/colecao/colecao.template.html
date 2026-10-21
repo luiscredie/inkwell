@@ -670,10 +670,11 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       const th = document.createElement("canvas"); th.width = 24; th.height = 34;
       const tx = th.getContext("2d", { willReadFrequently: true }); tx.drawImage(cv, 0, 0, 24, 34);
       const td = tx.getImageData(0, 0, 24, 34).data, grey = new Float32Array(24 * 34);
-      for (let i = 0; i < grey.length; i++) grey[i] = 0.299 * td[i * 4] + 0.587 * td[i * 4 + 1] + 0.114 * td[i * 4 + 2];
+      let gm = 0; for (let i = 0; i < grey.length; i++) { grey[i] = 0.299 * td[i * 4] + 0.587 * td[i * 4 + 1] + 0.114 * td[i * 4 + 2]; gm += grey[i]; }
+      gm /= grey.length; for (let i = 0; i < grey.length; i++) grey[i] -= gm;   // brightness changes (screen, auto-exposure) don't count as movement
       let motion = 0; if (scan.prev) { for (let i = 0; i < grey.length; i++) motion += Math.abs(grey[i] - scan.prev[i]); motion /= grey.length; } else motion = 99;
       scan.prev = grey;
-      const steady = motion < 10;
+      const steady = motion < 30;   // hand tremor moves the picture ~1-4% between readings (diff 8-25); panning to the next card 10%+ (45+)
       const res = identify(cv.getContext("2d").getImageData(0, 0, cv.width, cv.height));
       if (scan.wait) {   // after adding, wait until the card leaves the frame
         if (!(res.confident && res.group.includes(scan.last?.id))) { scan.misses++; if (scan.misses >= 2) { scan.wait = false; scan.misses = 0; scanSay(Tx("Point the camera at one card inside the frame.")); } }
