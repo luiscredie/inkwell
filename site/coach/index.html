@@ -15,7 +15,7 @@
 <script>window.INKWELL_CLOUD_CONFIG = {"url": "https://sorefaetiaebmjploanp.supabase.co", "key": "sb_publishable_RkAWW-ENz70CXA6_QV7aHw_MpfD7Gn2", "redirect": "https://luiscredie.github.io/inkwell/coach/"};
 window.INKWELL_COUNTER_URL = "../counter/";
 window.INKWELL_HOME_URL = "../feed/";
-window.INKWELL_NO_STORE_MSG = "Sign in above to see your games.";
+window.INKWELL_NO_STORE_MSG = "Your games appear here after you sign in.";
 </script>
 <script>
 /* Coach Review: Portuguese / English.
@@ -30,7 +30,7 @@ window.INKWELL_NO_STORE_MSG = "Sign in above to see your games.";
   const PT = {
     // page
     "Coach review": "Coach Review",
-    "Games": "Jogos",
+    "Games": "Jogos", "Result": "Resultado", "View": "Ver", "Coaches and your name": "Coaches e seu nome", "Sign in to see your games": "Entre para ver seus jogos", "Use your e-mail. We send a 6-digit code, no password.": "Use seu e-mail. Mandamos um código de 6 dígitos, sem senha.", "{n} games": "{n} jogos",
     "Lore Counter": "Contador de lore",
     "· games save here": "· os jogos ficam salvos aqui",
     "Stats: decks, matchups, trend": "Estatísticas: decks, confrontos, evolução",
@@ -103,7 +103,7 @@ window.INKWELL_NO_STORE_MSG = "Sign in above to see your games.";
     "{n} game added": "{n} jogo adicionado", "{n} games added": "{n} jogos adicionados", ", {n} already here": ", {n} já estavam aqui",
     "Couldn't read that file.": "Não foi possível ler esse arquivo.",
     "Couldn't load games. Reload the page to try again.": "Não foi possível carregar os jogos. Recarregue a página.",
-    "Sign in above to see your games.": "Entre acima para ver seus jogos.",
+    "Sign in above to see your games.": "Entre acima para ver seus jogos.", "Your games appear here after you sign in.": "Seus jogos aparecem aqui depois que você entrar.",
     // stats
     "Stats": "Estatísticas", "Decks are named by their ink colors.": "Os decks são identificados pelas cores de tinta.",
     "Source": "Origem", "Period": "Período", "All time": "Todo o período", "Last 90 days": "Últimos 90 dias", "Last 30 days": "Últimos 30 dias",
@@ -521,46 +521,33 @@ window.INKWELL_CLOUD = (() => {
   }
 
   // ---------- panels: sign-in, whose games, my coaches ----------
+  let coachesOpen = null;   // remembers the coaches box open or closed across re-renders
   function panels() {
     const host = document.getElementById("accountPanel");
     if (!host) return;
     if (!me) {
-      host.innerHTML = `<div class="acct"><b>${Tx("Sign in")}</b><span class="small muted">${Tx("Use your Inkwell account email. Your Lore Counter games appear here.")}</span>
-        <input id="siEmail" type="email" autocomplete="email" placeholder="${Tx("Email")}"><button type="button" class="btn primary small" id="siSend">${Tx("Send code")}</button>
-        <div id="siCodeRow" hidden><input id="siCode" inputmode="numeric" autocomplete="one-time-code" placeholder="${Tx("Code from the email")}"><button type="button" class="btn primary small" id="siIn">${Tx("Sign in")}</button></div>
-        <span class="small" id="siMsg" aria-live="polite"></span></div>`;
-      const msg = (t) => { document.getElementById("siMsg").textContent = t; };
-      document.getElementById("siSend").onclick = async () => {
-        const e = document.getElementById("siEmail").value.trim();
-        if (!/^\S+@\S+\.\S+$/.test(e)) { msg(Tx("Enter your email.")); return; }
-        msg(Tx("Sending…"));
-        try { await CLOUD.requestCode(e); document.getElementById("siCodeRow").hidden = false; msg(Tx("Check {email}: type the code, or open the link on this device.", { email: e })); }
-        catch { msg(Tx("Couldn't send the email. Check the address and your connection.")); }
-      };
-      document.getElementById("siIn").onclick = async () => {
-        try { await CLOUD.verify(document.getElementById("siEmail").value.trim(), document.getElementById("siCode").value); location.reload(); }
-        catch { msg(Tx("Wrong or expired code.")); }
-      };
+      host.innerHTML = `<div class="empty"><img src="../ui/assets/empty/signedout.svg" alt=""><b>${Tx("Sign in to see your games")}</b><p>${Tx("Use your e-mail. We send a 6-digit code, no password.")}</p><button type="button" class="btn primary" id="signIn">${Tx("Sign in")}</button></div>`;
+      document.getElementById("signIn").onclick = () => window.INKWELL_SIGNIN?.();
       return;
     }
     const students = links.filter((l) => l.owner_id !== me.id);
     const mine = links.filter((l) => l.owner_id === me.id);
     const viewing = player === me.id ? null : students.find((l) => l.owner_id === player);
     host.innerHTML = `<div class="acct">
-      <span class="small muted">${esc(Tx("Signed in as {email}", { email: me.email }))} · <button type="button" class="linkbtn" id="siOut">${Tx("Sign out")}</button></span>
-      ${duelsSync && player === me.id ? `<span class="small muted" id="duelsSync">${syncLine(duelsSync)}</span>` : ""}
-      <label class="small">${Tx("Show")} <select id="whose"><option value="${esc(me.id)}">${Tx("My games")}</option><option value="${COMMUNITY}" ${player === COMMUNITY ? "selected" : ""}>${Tx("Community: public games")}</option>${students.map((l) => `<option value="${esc(l.owner_id)}" ${l.owner_id === player ? "selected" : ""}>${esc(Tx("Games of {name}", { name: names.get(l.owner_id) || l.owner_email || Tx("A player") }))}</option>`).join("")}</select></label>
-      ${!names.has(me.id) ? `<div class="row2"><input id="dispName" maxlength="40" placeholder="${Tx("Your name for public games and comments")}"><button type="button" class="btn small" id="dispSave">${Tx("Save")}</button></div>`
-        : `<span class="small muted">${esc(Tx("Your name: {name}", { name: names.get(me.id) }))} · <button type="button" class="linkbtn" id="dispEdit">${Tx("Change")}</button></span>`}
-      <span class="small" id="dispMsg" aria-live="polite"></span>
-      ${player === COMMUNITY ? `<span class="small">${Tx("Public games from every player. Anyone signed in can read them and comment.")}</span>`
-        : viewing ? `<span class="small">${esc(Tx("You're coaching {name}: you can read their games and comment.", { name: names.get(viewing.owner_id) || viewing.owner_email }))}</span>` : `<details class="coaches"><summary class="small">${Tx("My coaches ({n})", { n: mine.length })}</summary>
-        <span class="small muted">${Tx("A coach you add, after signing in with that email, sees the games you share with them (\"Who can see this game\") and can comment.")}</span>
-        ${mine.map((l) => `<div class="small row2"><span>${esc(l.coach_email)}</span><button type="button" class="linkbtn" data-rm="${esc(l.coach_email)}">${Tx("Remove")}</button></div>`).join("")}
-        <div class="row2"><input id="coachEmail" type="email" placeholder="${Tx("Coach's email")}"><button type="button" class="btn small" id="coachAdd">${Tx("Add")}</button></div>
-        <span class="small" id="coachMsg" aria-live="polite"></span></details>`}
+      <div class="viewrow"><label class="small muted" for="whose">${Tx("View")}</label><select id="whose" class="inline"><option value="${esc(me.id)}">${Tx("My games")}</option><option value="${COMMUNITY}" ${player === COMMUNITY ? "selected" : ""}>${Tx("Community: public games")}</option>${students.map((l) => `<option value="${esc(l.owner_id)}" ${l.owner_id === player ? "selected" : ""}>${esc(Tx("Games of {name}", { name: names.get(l.owner_id) || l.owner_email || Tx("A player") }))}</option>`).join("")}</select></div>
+      ${duelsSync && player === me.id ? `<span class="small" id="duelsSync">${syncLine(duelsSync)}</span>` : ""}
+      ${player === COMMUNITY ? `<span class="small muted">${Tx("Public games from every player. Anyone signed in can read them and comment.")}</span>`
+        : viewing ? `<span class="small muted">${esc(Tx("You're coaching {name}: you can read their games and comment.", { name: names.get(viewing.owner_id) || viewing.owner_email }))}</span>` : ""}
+      <details class="coaches" ${coachesOpen ?? !names.has(me.id) ? "open" : ""}><summary>${Tx("Coaches and your name")} · ${mine.length}</summary>
+        ${!names.has(me.id) ? `<div class="row2"><input id="dispName" maxlength="40" placeholder="${Tx("Your name for public games and comments")}" aria-label="${Tx("Your name for public games and comments")}"><button type="button" class="btn small" id="dispSave">${Tx("Save")}</button></div>`
+          : `<span class="small muted">${esc(Tx("Your name: {name}", { name: names.get(me.id) }))} · <button type="button" class="linkbtn" id="dispEdit">${Tx("Change")}</button></span>`}
+        <span class="small" id="dispMsg" aria-live="polite"></span>
+        ${viewing || player === COMMUNITY ? "" : `<span class="small muted">${Tx("A coach you add, after signing in with that email, sees the games you share with them (\"Who can see this game\") and can comment.")}</span>
+        ${mine.map((l) => `<div class="small row2"><span>${esc(l.coach_email)}</span><button type="button" class="btn ghost small" data-rm="${esc(l.coach_email)}">${Tx("Remove")}</button></div>`).join("")}
+        <div class="row2"><input id="coachEmail" type="email" placeholder="${Tx("Coach's email")}" aria-label="${Tx("Coach's email")}"><button type="button" class="btn small" id="coachAdd">${Tx("Add")}</button></div>
+        <span class="small" id="coachMsg" aria-live="polite"></span>`}</details>
     </div>`;
-    document.getElementById("siOut").onclick = () => { CLOUD.signOut(); try { localStorage.removeItem(PLAYER_KEY); } catch { /* */ } location.reload(); };
+    host.querySelector("details.coaches")?.addEventListener("toggle", (e) => { coachesOpen = e.target.open; });
     const saveName = async (v) => {
       v = String(v || "").trim();
       if (v.length < 2) { document.getElementById("dispMsg").textContent = Tx("Use at least 2 characters."); return; }
@@ -599,164 +586,154 @@ window.INKWELL_CLOUD = (() => {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap">
 <style>
-/* Layout: a coach's desk. Games down the left, the chosen game on the right read as a lore race over a turn-by-turn ledger; comments sit in the margin of the line they're about. One column on a phone. */
-/* :where() keeps these at zero specificity: on the site, ../ui/tokens.css (design v2, Noite) wins; in the standalone artifact these apply */
-:where(:root) {
-  --night: #17142e; --panel: #221e40; --raised: #2b2650; --line: #3a3463;
-  --text: #f3effa; --muted: #a8a1c9; --faint: #7d76a3;
-  --gold: #e9b949; --gold-ink: #2a1f05; --opp: #8fa3ff;
-  --win: #67c99a; --loss: #f07a7a;
-  --amber: #f2b33d; --amethyst: #9b6ad1; --emerald: #3fa36f; --ruby: #d9485a; --sapphire: #3c8fd6; --steel: #9aa8b5;
-  --note: #2f2a1c; --note-line: #6b5a2a;
-  --font: "Bricolage Grotesque", ui-rounded, "Segoe UI", system-ui, sans-serif;
-  color-scheme: dark;
-}
-html, body { height: 100%; }
-body { background: var(--night); color: var(--text); font-family: var(--font); font-size: 15px; line-height: 1.45; }
-button, input, textarea, select { font: inherit; color: inherit; }
-button { cursor: pointer; }
-:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
-.wrap { display: grid; grid-template-columns: minmax(250px, 320px) minmax(0, 1fr); gap: 18px; height: 100%; box-sizing: border-box;
-  padding-block: 14px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-.list, .review { min-width: 0; overflow-y: auto; }
-/* with the site shell (app bar on top, tabs at the bottom on phones) the two panes fill what is left */
-body.iw-has-shell { display: flex; flex-direction: column; box-sizing: border-box; margin: 0; }
-body.iw-has-shell > .wrap { flex: 1; min-height: 0; height: auto; max-width: var(--page-max, 1040px); width: 100%; margin: 0 auto; }
-body.iw-has-shell { background: var(--bg, var(--night)) var(--bg-art, none) no-repeat fixed; }
-.iw-has-shell #openCounter { display: none !important; }   /* the Contador lives in the site bar */
-@media (max-width: 760px) { body.iw-has-shell > .wrap { padding-bottom: calc(var(--tabbar-h, 64px) + 16px + env(safe-area-inset-bottom, 0px)); } }
-.list { display: flex; flex-direction: column; gap: 10px; }
-h1 { font-size: 1.45rem; font-weight: 800; margin: 0; letter-spacing: -0.01em; }
-h2 { font-size: 1.05rem; font-weight: 600; margin: 0; text-wrap: balance; }
-.muted { color: var(--muted); }
-.small { font-size: 0.85rem; }
-.stats { background: var(--panel); border-radius: 14px; padding: 12px; display: grid; gap: 8px; }
-.stats .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.stat b { display: block; font-size: 1.6rem; font-weight: 800; color: var(--gold); font-variant-numeric: tabular-nums; line-height: 1.1; }
-.stat span { color: var(--muted); font-size: 0.82rem; }
-.filters { display: flex; gap: 6px; flex-wrap: wrap; }
-.chipbtn { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 4px 10px; font-size: 0.82rem; color: var(--muted); }
-.chipbtn[aria-pressed=true] { background: var(--line); color: var(--text); }
-#games { display: grid; gap: 8px; }
-.game { width: 100%; text-align: left; display: grid; grid-template-columns: 6px 1fr auto; gap: 10px; align-items: center; background: var(--panel); border: 1px solid transparent; border-radius: 12px; padding: 9px 10px 9px 0; overflow: hidden; }
-.game[aria-current=true] { border-color: var(--gold); }
-.deckgrp { display: grid; gap: 8px; }
-.deckgrp > summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 2px; font-weight: 600; }
-.deckgrp > summary::-webkit-details-marker { display: none; }
-.deckgrp > summary::before { content: "▸"; color: var(--muted); margin-right: 2px; }
-.deckgrp[open] > summary::before { content: "▾"; }
-.deckgrp > summary .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.deckgrp > summary .rec { color: var(--muted); font-size: 0.82rem; font-weight: 400; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.game .bar { align-self: stretch; }
-.game.win .bar { background: var(--win); } .game.loss .bar { background: var(--loss); }
-.game .t { font-weight: 600; min-width: 0; }
-.game .t small { display: block; color: var(--muted); font-weight: 400; font-size: 0.8rem; }
-.game .score { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 0.85rem; text-align: right; }
-.game .score .n { display: block; color: var(--gold); font-size: 0.75rem; }
-.inks { display: inline-flex; gap: 3px; vertical-align: middle; margin-right: 4px; }
-.inks i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; background: var(--steel); }
-.empty { color: var(--muted); padding: 10px 2px; }
-.btn { border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 8px 12px; font-weight: 600; }
-.btn.primary { background: var(--gold); color: var(--gold-ink); border-color: var(--gold); }
-.btn.ghost { background: transparent; }
-.btn.small { padding: 5px 9px; font-size: 0.82rem; }
-textarea { background: var(--night); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; width: 100%; box-sizing: border-box; min-height: 64px; resize: vertical; }
-details.add { background: var(--panel); border-radius: 12px; padding: 10px 12px; }
-details.add summary { cursor: pointer; font-weight: 600; }
-details.add[open] { display: grid; gap: 8px; }
+/* Jogos (site). Components and tokens come from ../ui/tokens.css (design v2, Noite); this is layout plus the
+   game-review pieces. Class names that the shared stylesheet also uses (.note, .cost) are reset where needed. */
+.jg-head { margin-bottom: var(--sp-3); }
+.jg-tabs { margin-bottom: var(--sp-4); }
+.wrap { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: var(--sp-6); align-items: start; }
+.wrap > .list { position: sticky; top: calc(var(--bar-h) + var(--sp-4)); max-height: calc(100vh - var(--bar-h) - var(--sp-8)); overflow: auto;
+  scrollbar-width: thin; scrollbar-color: var(--surface-3) transparent; padding: 2px 4px var(--sp-4) 2px; margin: -2px -4px 0 -2px; display: flex; flex-direction: column; gap: var(--sp-3); }
+.review { min-width: 0; display: flex; flex-direction: column; gap: var(--sp-3); }
+.review > .empty { border: 1px dashed var(--line-strong); border-radius: var(--r-lg); }
+.titlerow, #openCounter, #langBtn, #homeLink { display: none !important; }
 
-.review { display: flex; flex-direction: column; gap: 14px; }
-.head { display: grid; gap: 4px; }
-.head .result { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
-.head .result.win { color: var(--win); } .head .result.loss { color: var(--loss); }
-.toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.vis { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
-.vis button { background: transparent; border: 0; padding: 6px 10px; font-size: 0.85rem; color: var(--muted); }
-.vis button[aria-pressed=true] { background: var(--line); color: var(--text); }
-.chart { background: var(--panel); border-radius: 14px; padding: 10px 12px 6px; }
-.chart svg { width: 100%; height: auto; display: block; }
-.legend { display: flex; gap: 14px; font-size: 0.82rem; color: var(--muted); }
-.legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
-.deck { background: var(--panel); border-radius: 14px; padding: 10px 12px; }
-.deck summary { cursor: pointer; font-weight: 600; }
-.deckedit { margin-top: 8px; display: grid; gap: 8px; }
-.deckedit #deckBox { display: grid; gap: 8px; }
+/* account, view, coaches */
+.acct { display: grid; gap: var(--sp-2); }
+.acct .viewrow { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.acct .viewrow select { flex: 1; min-width: 0; }
+.acct details.coaches { background: var(--surface-1); border-radius: var(--r-md); padding: var(--sp-2) var(--sp-3); box-shadow: var(--e1); }
+.acct details.coaches > summary { cursor: pointer; min-height: 36px; display: flex; align-items: center; color: var(--text-2); font-weight: 600; font-size: var(--fs-small); }
+.acct details.coaches[open] { display: grid; gap: var(--sp-2); }
+.acct .row2 { display: flex; gap: var(--sp-2); align-items: center; justify-content: space-between; }
+.acct .row2 input { flex: 1; min-width: 0; }
+.acct #duelsSync { color: var(--text-2); }
+
+/* list: filters, game rows, deck groups */
+#stats { display: grid; gap: var(--sp-2); }
+#stats .pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); }
+#stats[hidden], #openStats { display: none !important; }
+.filters { display: flex; flex-direction: column; gap: var(--sp-2); }
+.filters .frow { display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; }
+#games { display: grid; gap: var(--sp-2); }
+.game.list-row { width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; border: 0; }
+.game.list-row[aria-current="true"] { box-shadow: var(--e1), inset 0 0 0 1px var(--accent); }
+.game .trail { display: grid; justify-items: end; gap: 2px; }
+.game .trail .score { font-weight: 800; font-size: 1.0625rem; letter-spacing: -0.01em; font-stretch: var(--stretch-num); }
+.game .trail small { font-size: var(--fs-micro); font-weight: 600; }
+.game .meta .ic { width: 14px; height: 14px; vertical-align: -2px; }
+.deckgrp { display: grid; gap: var(--sp-2); }
+.deckgrp > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-2); padding: var(--sp-3) 2px var(--sp-1); }
+.deckgrp > summary::-webkit-details-marker { display: none; }
+.deckgrp > summary .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--display); font-weight: 700; font-size: var(--fs-h3); }
+.deckgrp > summary .nm::before { content: ""; display: inline-block; width: 14px; height: 14px; margin-right: 4px; vertical-align: -2px; background: var(--text-2);
+  -webkit-mask: url(../ui/assets/icons/chevron-right.svg) center/contain no-repeat; mask: url(../ui/assets/icons/chevron-right.svg) center/contain no-repeat; transition: transform var(--t-med) var(--ease); }
+.deckgrp[open] > summary .nm::before { transform: rotate(90deg); }
+.deckgrp > summary .rec { color: var(--text-2); font-size: var(--fs-small); white-space: nowrap; font-variant-numeric: tabular-nums; }
+details.add { background: var(--surface-1); border-radius: var(--r-lg); padding: var(--sp-3) var(--sp-4); box-shadow: var(--e1); }
+details.add > summary { cursor: pointer; font-weight: 600; min-height: 36px; display: flex; align-items: center; }
+details.add[open] { display: grid; gap: var(--sp-2); }
+details.add .row { display: flex; gap: var(--sp-2); flex-wrap: wrap; align-items: center; }
+textarea { width: 100%; min-height: 72px; resize: vertical; }
+
+/* review */
+.head { display: grid; gap: 6px; }
+.head .result { font-size: var(--fs-display); font-weight: 800; line-height: 1.1; letter-spacing: -0.025em; font-stretch: var(--stretch-num); font-variant-numeric: tabular-nums; color: var(--text); }
+.head .result.win .w, .head .result .w.win { color: var(--win); } .head .result .w.loss { color: var(--loss); }
+.head h2 { font-size: var(--fs-body); font-weight: 600; color: var(--text); }
+.head .muted.small { color: var(--text-2); }
+.rtools { display: flex; gap: var(--sp-2); align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.vissel { display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); font-size: var(--fs-small); }
+.vissel select { width: auto; min-height: 36px; }
+.vis { display: inline-flex; }
+.cchart { background: var(--surface-1); border-radius: var(--r-lg); box-shadow: var(--e1); padding: var(--sp-3) var(--sp-4) var(--sp-2); }
+.cchart svg { width: 100%; height: auto; display: block; }
+.cchart .legend { display: flex; flex-wrap: wrap; gap: var(--sp-4); font-size: var(--fs-small); color: var(--text-2); margin-bottom: var(--sp-2); }
+.cchart .legend > span:first-child { font-family: var(--display); font-weight: 700; color: var(--text); font-size: var(--fs-h3); margin-right: auto; }
+.cchart .legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+.deck { background: var(--surface-1); border-radius: var(--r-lg); box-shadow: var(--e1); padding: var(--sp-3) var(--sp-4); }
+.deck > summary { cursor: pointer; font-family: var(--display); font-weight: 700; min-height: 36px; display: flex; align-items: center; }
+.deckedit { margin-top: var(--sp-2); display: grid; gap: var(--sp-2); }
+.deckedit #deckBox { display: grid; gap: var(--sp-2); }
 .deckedit #deckBox[hidden] { display: none; }
-.decklist { columns: 2 220px; column-gap: 18px; margin-top: 8px; font-size: 0.88rem; }
-.decklist div { break-inside: avoid; display: flex; gap: 8px; padding: 2px 0; }
-.decklist .q { color: var(--gold); font-variant-numeric: tabular-nums; width: 1.4em; text-align: right; }
-.turn { border-left: 3px solid var(--line); padding: 4px 0 6px 12px; display: grid; gap: 4px; }
-.turn.me { border-left-color: var(--gold); }
-.turn .th { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
-.turn .th b { font-weight: 600; }
-.turn .th .lv { color: var(--muted); font-size: 0.85rem; font-variant-numeric: tabular-nums; }
-.act { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 6px; align-items: start; background: none; border: 0; text-align: left; padding: 2px 4px; border-radius: 8px; width: 100%; }
-.act:hover, .act:focus-visible { background: var(--raised); }
-.act .ic { color: var(--faint); font-size: 0.8rem; text-align: center; padding-top: 2px; }
-.act.quest .ic, .act.lore .ic { color: var(--gold); }
-.act.opp { color: var(--muted); }
-.act .v { color: var(--gold); font-variant-numeric: tabular-nums; }
-.act.minor { font-size: 0.85rem; color: var(--faint); }
-.addc { justify-self: start; background: none; border: 0; color: var(--faint); font-size: 0.82rem; padding: 2px 4px; }
-.addc:hover { color: var(--gold); }
-.note { background: var(--note); border: 1px solid var(--note-line); border-radius: 10px; padding: 7px 10px; display: grid; gap: 2px; margin-left: 28px; }
-.note.game-note { margin-left: 0; }
-.note .who { display: flex; gap: 6px; align-items: center; font-size: 0.8rem; color: var(--muted); }
-.note .who img { width: 18px; height: 18px; border-radius: 50%; }
-.note .who .del { margin-left: auto; background: none; border: 0; color: var(--faint); font-size: 0.78rem; }
-.note .body { white-space: pre-wrap; overflow-wrap: anywhere; }
-.composer { display: grid; gap: 6px; margin-left: 28px; }
+.deckedit .row { display: flex; justify-content: flex-end; }
+.decklist { columns: 2 220px; column-gap: var(--sp-5); margin-top: var(--sp-2); font-size: var(--fs-small); }
+.decklist div { break-inside: avoid; display: flex; gap: var(--sp-2); padding: 3px 0; border-bottom: 1px solid var(--line); }
+.decklist .q { color: var(--text-2); font-weight: 700; font-variant-numeric: tabular-nums; width: 1.6em; text-align: right; }
+.cturn { background: var(--surface-1); border-radius: var(--r-md); box-shadow: var(--e1); padding: var(--sp-2) var(--sp-3) var(--sp-3); display: grid; gap: 2px; position: relative; overflow: hidden; }
+.cturn::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 0 3px 3px 0; background: var(--line-strong); }
+.cturn.me::before { background: var(--accent); }
+.cturn .th { display: flex; justify-content: space-between; gap: var(--sp-2); align-items: baseline; padding: 4px 0 6px; }
+.cturn .th b { font-weight: 700; }
+.cturn .th .lv { color: var(--text-2); font-size: var(--fs-small); font-variant-numeric: tabular-nums; font-weight: 600; }
+.act { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 6px; align-items: start; background: none; border: 0; text-align: left; padding: 6px 6px; border-radius: var(--r-sm); width: 100%; min-height: 36px; color: var(--text); font: inherit; font-size: var(--fs-small); }
+.act:hover, .act:focus-visible { background: var(--surface-2); }
+.act .ic { width: auto; height: auto; background: none; -webkit-mask: none; mask: none; color: var(--text-3); text-align: center; padding-top: 1px; }
+.act.quest .ic, .act.lore .ic, .act .v { color: var(--accent); }
+.act.opp { color: var(--text-2); }
+.act.minor { color: var(--text-3); }
+.act:disabled { cursor: default; }
+.addc { justify-self: start; background: none; border: 0; color: var(--text-2); font-size: var(--fs-small); font-weight: 600; padding: 6px 6px; min-height: 36px; display: inline-flex; align-items: center; gap: 6px; border-radius: var(--r-sm); }
+.addc::before { content: ""; width: 16px; height: 16px; background: currentColor; -webkit-mask: url(../ui/assets/icons/comment.svg) center/contain no-repeat; mask: url(../ui/assets/icons/comment.svg) center/contain no-repeat; }
+.addc:hover { color: var(--text); background: var(--surface-2); }
+.note.cnote { display: grid; gap: 4px; grid-template-columns: none; background: var(--field); border-radius: var(--r-md); padding: var(--sp-2) var(--sp-3); margin: 4px 0 4px 28px; box-shadow: inset 3px 0 0 var(--line-strong); font-size: var(--fs-small); }
+.note.cnote.mine { box-shadow: inset 3px 0 0 var(--accent); }
+.note.cnote.game-note { margin-left: 0; }
+.note.cnote .who { display: flex; gap: 6px; align-items: center; font-size: var(--fs-micro); color: var(--text-2); }
+.note.cnote .who .nm { color: var(--text); font-weight: 600; font-size: var(--fs-small); }
+.note.cnote .who img { width: 18px; height: 18px; border-radius: 50%; }
+.note.cnote .who img[src=""] { display: none; }
+.note.cnote .who .del { margin-left: auto; background: none; border: 0; color: var(--text-3); font-size: var(--fs-micro); min-height: 28px; }
+.note.cnote .body { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text); }
+.composer { display: grid; gap: var(--sp-2); margin: 4px 0 4px 28px; }
 .composer.game-note { margin-left: 0; }
-.composer .row { display: flex; gap: 6px; justify-content: flex-end; }
-.notice { background: var(--raised); border-radius: 10px; padding: 8px 12px; color: var(--muted); font-size: 0.88rem; }
-.back { display: none; }
-.statsBtn { width: 100%; margin-top: 8px; }
-.sv h2 { margin: 0 0 4px; }
-.sv h3 { margin: 22px 0 8px; font-size: 1rem; }
-.sv .ctl { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px; }
-.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-top: 10px; }
-.tile { background: var(--panel); border-radius: 12px; padding: 10px 12px; }
-.tile b { display: block; font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums; }
-.tile span { color: var(--muted); font-size: 0.82rem; }
-.trend { background: var(--panel); border-radius: 14px; padding: 10px 12px; position: relative; }
+.composer .row { display: flex; gap: var(--sp-2); justify-content: flex-end; }
+.review .notice { color: var(--text-2); }
+.back { display: none; background: none; border: 0; padding: 0; font: inherit; font-size: var(--fs-small); font-weight: 600; cursor: pointer; justify-self: start; }
+
+/* stats */
+.sv { display: grid; gap: var(--sp-2); }
+.sv > h2 { font-size: var(--fs-h2); }
+.sv h3 { margin: var(--sp-5) 0 var(--sp-1); }
+.sv .ctl { display: flex; flex-wrap: wrap; gap: 6px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--sp-2); margin-top: var(--sp-2); }
+.tile b { font-size: var(--fs-stat); }
+.trend { background: var(--surface-1); border-radius: var(--r-lg); box-shadow: var(--e1); padding: var(--sp-3) var(--sp-4); position: relative; }
 .trend svg { width: 100%; height: auto; display: block; }
-.tip { position: absolute; pointer-events: none; background: var(--raised); border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; font-size: 0.8rem; white-space: nowrap; transform: translate(-50%, -110%); }
-table.mt { width: 100%; border-collapse: collapse; font-size: 0.88rem; font-variant-numeric: tabular-nums; }
-table.mt th { text-align: left; font-weight: 600; color: var(--muted); font-size: 0.78rem; padding: 4px 6px; border-bottom: 1px solid var(--line); }
-table.mt td { padding: 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.tip { position: absolute; pointer-events: none; background: var(--surface-3); border-radius: var(--r-sm); padding: 4px 8px; font-size: var(--fs-micro); white-space: nowrap; transform: translate(-50%, -110%); box-shadow: var(--e2); }
+table.mt { width: 100%; border-collapse: collapse; font-size: var(--fs-small); font-variant-numeric: tabular-nums; background: var(--surface-1); border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--e1); }
+table.mt th { text-align: left; font-weight: 600; color: var(--text-2); font-size: var(--fs-micro); padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--line-strong); }
+table.mt td { padding: var(--sp-3); border-bottom: 1px solid var(--line); vertical-align: middle; }
+table.mt tr:last-child td { border-bottom: 0; }
 table.mt th.n, table.mt td.n { text-align: right; }
-table.mt tr.few td { color: var(--faint); }
+table.mt tr.few td { color: var(--text-3); }
 table.mt tr[data-opp] { cursor: pointer; }
-table.mt tr[data-opp]:hover td, table.mt tr[data-opp]:focus-visible td { background: var(--raised); }
-.wbar { display: inline-block; vertical-align: middle; width: 56px; height: 6px; border-radius: 3px; background: var(--line); position: relative; margin-left: 6px; overflow: hidden; }
-.wbar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--gold); border-radius: 3px; }
-.wbar::after { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--muted); }
-.cost { background: var(--panel); border-radius: 12px; padding: 10px 12px; margin-top: 10px; }
-.cost li { margin: 2px 0; }
+table.mt tr[data-opp]:hover td, table.mt tr[data-opp]:focus-visible td { background: var(--surface-2); }
+.wbar { display: inline-block; vertical-align: middle; width: 56px; height: 6px; border-radius: 3px; background: var(--surface-3); position: relative; margin-left: 6px; overflow: hidden; }
+.wbar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--win); border-radius: 3px; }
+.wbar::after { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--text-2); }
+.cost.ccost { display: block; width: auto; height: auto; place-items: initial; font-size: var(--fs-small); font-weight: 400; background: var(--warn-soft); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); margin-top: var(--sp-2); }
+.cost.ccost::before { content: none; }
+.cost.ccost ul { margin: 4px 0 0; padding-left: 18px; list-style: disc; }
 .chipbtn.x::after { content: " ✕"; }
-@media (max-width: 520px) { .wbar { display: none; } table.mt th, table.mt td { padding: 5px 3px; } table.mt { font-size: 0.82rem; } }
-.acct { background: var(--panel); border-radius: 14px; padding: 10px 12px; display: grid; gap: 8px; margin-bottom: 12px; }
-.acct:empty, #accountPanel:empty { display: none; }
-.acct input[type=email], .acct input:not([type]), .acct select, .acct input[inputmode] { background: var(--night); border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; width: 100%; box-sizing: border-box; }
-.acct label { display: grid; gap: 4px; }
-.acct .row2 { display: flex; gap: 8px; align-items: center; justify-content: space-between; margin-top: 6px; }
-.acct details summary { cursor: pointer; }
-.titlerow { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-.linkbtn { background: none; border: 0; padding: 0; color: var(--gold); text-decoration: underline; cursor: pointer; font-size: inherit; }
-.filebtn { cursor: pointer; }
-.add .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.vissel select { width: auto; background: var(--night); border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; margin-left: 4px; }
-.counterBtn { display: flex; align-items: center; gap: 8px; width: 100%; justify-content: center; margin: 4px 0 14px; }
-.counterView { position: fixed; inset: 0; z-index: 50; background: var(--night); }
+.counterView { position: fixed; inset: 0; z-index: 80; background: var(--bg); }
 .counterView iframe { border: 0; width: 100%; height: 100%; display: block; }
 @media (max-width: 760px) {
-  .wrap { grid-template-columns: minmax(0, 1fr); height: auto; }
-  .wrap.reading .list { display: none; }
-  .wrap:not(.reading) .review { display: none; }
-  .back { display: inline-block; }
+  .wrap { grid-template-columns: minmax(0, 1fr); }
+  .wrap > .list { position: static; max-height: none; overflow: visible; margin: 0; padding: 0; }
+  .wrap.reading > .list, .page:has(.wrap.reading) .jg-head, .page:has(.wrap.reading) .jg-tabs { display: none; }
+  .wrap:not(.reading) > .review { display: none; }
+  .back { display: inline-flex; }
+  .wbar { display: none; }
+  table.mt th, table.mt td { padding: var(--sp-2) 6px; }
+  table.mt { font-size: var(--fs-micro); }
+  table.mt td .muted.small { display: none; }
+  .note.cnote, .composer { margin-left: 8px; }
 }
 </style>
 
+<main class="page" id="jgPage">
+<div class="page-head jg-head"><div><h1 id="jgTitle" data-i18n>Games</h1><p class="sub" id="jgSub"></p></div></div>
+<div class="tabs jg-tabs" role="tablist"><button type="button" class="tab" role="tab" id="tabGames" aria-selected="true" data-i18n>Games</button><button type="button" class="tab" role="tab" id="tabStats" aria-selected="false" data-i18n>Stats</button></div>
 <div class="wrap" id="wrap">
   <aside class="list" aria-label="Games">
     <div class="titlerow"><h1 data-i18n>Coach review</h1><span class="small"><a id="homeLink" class="linkbtn" hidden></a> <button type="button" class="linkbtn small" id="langBtn" hidden></button></span></div>
@@ -775,10 +752,11 @@ table.mt tr[data-opp]:hover td, table.mt tr[data-opp]:focus-visible td { backgro
       <span class="small" id="addStatus" aria-live="polite"></span>
     </details>
   </aside>
-  <main class="review" id="review" aria-live="polite">
+  <section class="review" id="review" aria-live="polite">
     <p class="empty" data-i18n>Pick a game to review it turn by turn.</p>
-  </main>
+  </section>
 </div>
+</main>
 <div class="counterView" id="counterView" hidden><iframe id="counterFrame" title="Lore Counter" allow="screen-wake-lock; clipboard-write"></iframe></div>
 
 <script>
@@ -854,11 +832,12 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       <span class="small muted">${esc(Tx(stats.label === "recorded games" ? "{n} recorded games, {from} to {to}" : "{n} duels.ink games vs people, {from} to {to}", { n: stats.games, from: fmtDate(stats.from), to: fmtDate(stats.to) }))}</span>`;
   }
   function renderFilters() {
-    const opts = [["all", "All"], ["loss", "Losses"], ["win", "Wins"], ["noted", "With comments"], ["public", "Public games"]].map(([k, l]) => [k, Tx(l)]);
-    $("filters").innerHTML = opts.map(([k, l]) => `<button type="button" class="chipbtn" data-f="${k}" aria-pressed="${filter === k}">${l}</button>`).join("")
-      + (db?.isCommunity ? "" : `<button type="button" class="chipbtn" id="groupChip" aria-pressed="${byDeck}">${Tx("By deck")}</button>`)
-      + (oppFilter ? `<button type="button" class="chipbtn x" id="oppChip" aria-pressed="true" aria-label="${esc(Tx("Showing games against {deck}. Remove filter", { deck: oppFilter }))}">vs ${esc(oppFilter)}</button>` : "");
-    $("filters").querySelectorAll("[data-f]").forEach((b) => b.onclick = () => { filter = b.dataset.f; renderFilters(); renderList(); });
+    const seg = [["all", "All"], ["win", "Wins"], ["loss", "Losses"]].map(([k, l]) => `<button type="button" data-f="${k}" aria-pressed="${filter === k}">${Tx(l)}</button>`).join("");
+    const chips = [["noted", "With comments"], ["public", "Public games"]].map(([k, l]) => `<button type="button" class="chipbtn" data-f="${k}" aria-pressed="${filter === k}">${Tx(l)}</button>`).join("");
+    $("filters").innerHTML = `<div class="frow"><div class="seg" role="group" aria-label="${Tx("Result")}">${seg}</div></div>
+      <div class="frow">${chips}${db?.isCommunity ? "" : `<button type="button" class="chipbtn" id="groupChip" aria-pressed="${byDeck}">${Tx("By deck")}</button>`}
+      ${oppFilter ? `<button type="button" class="chipbtn x" id="oppChip" aria-pressed="true" aria-label="${esc(Tx("Showing games against {deck}. Remove filter", { deck: oppFilter }))}">vs ${esc(oppFilter)}</button>` : ""}</div>`;
+    $("filters").querySelectorAll("[data-f]").forEach((b) => b.onclick = () => { filter = filter === b.dataset.f && b.dataset.f !== "all" ? "all" : b.dataset.f; renderFilters(); renderList(); });
     $("oppChip")?.addEventListener("click", () => { oppFilter = null; renderFilters(); renderList(); });
     $("groupChip")?.addEventListener("click", () => {
       byDeck = !byDeck;
@@ -868,6 +847,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
   }
   function renderList() {
     const all = [...games.values()].sort((a, b) => String(b.doc.played_at).localeCompare(String(a.doc.played_at)));
+    if ($("jgSub")) $("jgSub").textContent = all.length ? Tx("{n} games", { n: all.length.toLocaleString(LOC) }) : "";
     const shown = all.filter((g) => {
       const s = summaryOf(g);
       if (oppFilter && (s.opp_deck || "Unknown") !== oppFilter) return false;
@@ -880,14 +860,15 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       $("games").innerHTML = `<p class="empty">${Tx(isOwner ? "No games here yet. Games show up when they are imported from duels.ink or added below from the Table Logger." : "No games here yet. Games show up when they are imported from duels.ink.")}</p>`;
       return;
     }
-    $("openStats").hidden = !!db?.isCommunity;
+    $("openStats").hidden = !!db?.isCommunity; $("tabStats").hidden = !!db?.isCommunity;
     const deckOf = (g) => { const d = summaryOf(g).my_deck; return !d || d === "Physical game" ? Tx("Deck not recorded") : d; };
     const row = (g, grouped) => {
       const s = summaryOf(g);
-      return `<button type="button" class="game ${s.result === "win" ? "win" : "loss"}" data-k="${esc(g.key)}" aria-current="${g.key === current}">
-        <span class="bar"></span>
-        <span class="t">${inkDots(s.opp_inks || s.opp_deck)}${Tx("vs")} ${esc(s.opp_deck === "Unknown" || !s.opp_deck ? Tx("Unknown") : s.opp_deck)}<small>${g.doc.owner_name ? `${esc(g.doc.owner_name)} · ` : ""}${grouped ? "" : `${esc(s.my_deck || "")}, `}${sideText(s)}, ${esc(fmtDate(g.doc.played_at))}${g.coll === "public_games" ? Tx(", public") : ""}</small></span>
-        <span class="score">${esc(s.my_lore)}–${esc(s.opp_lore)}${noteCount(g) ? `<span class="n">${noteCount(g)} comment${noteCount(g) > 1 ? "s" : ""}</span>` : ""}</span></button>`;
+      const won = s.result === "win", nc = noteCount(g);
+      return `<button type="button" class="list-row game-row game ${won ? "win won" : "loss lost"}" data-k="${esc(g.key)}" aria-current="${g.key === current}">
+        ${inkDots(s.opp_inks || s.opp_deck)}
+        <span class="t"><span>${Tx("vs")} ${esc(s.opp_deck === "Unknown" || !s.opp_deck ? Tx("Unknown") : s.opp_deck)}</span><span class="meta">${g.doc.owner_name ? `${esc(g.doc.owner_name)} · ` : ""}${grouped ? "" : `${esc(s.my_deck || "")} · `}${sideText(s)} · ${esc(fmtDate(g.doc.played_at))}${g.coll === "public_games" ? Tx(", public") : ""}${nc ? ` · <i class="ic i-comment"></i> ${nc}` : ""}</span></span>
+        <span class="trail"><span class="score">${esc(s.my_lore)}–${esc(s.opp_lore)}</span><small class="${won ? "win" : "loss"}">${Tx(won ? "Win" : "Loss")}</small></span></button>`;
     };
     const grouped = byDeck && !db?.isCommunity;
     if (!shown.length) $("games").innerHTML = `<p class="empty">${Tx("No games match this filter.")}</p>`;
@@ -981,7 +962,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     return notes.filter((n) => anchorKey(n.anchor) === key).map((n) => {
       const p = profilesMap[n.author] || {};
       const mine = me?.id && n.author === me.id;
-      return `<div class="note ${key === "game" || key === "deck" ? "game-note" : ""}"><div class="who"><img alt="" src="${esc(p.avatarUrl || "")}"><span class="nm" data-author="${esc(n.author)}"></span><span>${esc(fmtDate(n.at))}</span>${mine || isOwner ? `<button type="button" class="del" data-del="${esc(n.id)}">${Tx("Delete")}</button>` : ""}</div><div class="body" data-body="${esc(n.id)}"></div></div>`;
+      return `<div class="note cnote ${mine ? "mine" : ""} ${key === "game" || key === "deck" ? "game-note" : ""}"><div class="who"><img alt="" src="${esc(p.avatarUrl || "")}"><span class="nm" data-author="${esc(n.author)}"></span><span>${esc(fmtDate(n.at))}</span>${mine || isOwner ? `<button type="button" class="del" data-del="${esc(n.id)}">${Tx("Delete")}</button>` : ""}</div><div class="body" data-body="${esc(n.id)}"></div></div>`;
     }).join("") + (composerFor === key ? `<div class="composer ${key === "game" || key === "deck" ? "game-note" : ""}">
         <textarea id="compose" placeholder="${Tx("Your comment")}"></textarea>
         <div class="row"><button type="button" class="btn ghost small" id="cancelC">${Tx("Cancel")}</button><button type="button" class="btn primary small" id="saveC">${Tx("Comment")}</button></div></div>` : "");
@@ -1002,9 +983,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     const canComment = !!db && canWrite !== false && !!me?.id;
     const add = (key, label) => canComment ? `<button type="button" class="addc" data-anchor="${key}">${label}</button>` : "";
     const ev = log.event || {};
-    let html = `<button type="button" class="btn ghost small back" id="back">${Tx("All games")}</button>
+    let html = `<button type="button" class="back" id="back">${Tx("Games")}</button>
       <div class="head">
-        <span class="result ${s.result}">${Tx(s.result === "win" ? "Win" : "Loss")} ${esc(s.my_lore)}–${esc(s.opp_lore)}</span>
+        <span class="result ${s.result}"><span class="w ${s.result === "win" ? "win" : "loss"}">${Tx(s.result === "win" ? "Win" : "Loss")}</span> ${esc(s.my_lore)}–${esc(s.opp_lore)}</span>
         ${g.doc.owner_name ? `<span class="muted small">${esc(Tx("Played by {name}", { name: g.doc.owner_name === "You" ? Tx("You") : g.doc.owner_name }))}</span>` : ""}
         <h2>${inkDots(s.my_inks || s.my_deck)}${esc(s.my_deck || Tx("Your deck"))} ${Tx("vs")} ${inkDots(s.opp_inks || s.opp_deck)}${esc(s.opp_deck === "Unknown" || !s.opp_deck ? Tx("Unknown") : s.opp_deck)}</h2>
         <span class="muted small">${esc([
@@ -1015,12 +996,12 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
           Tx("ended by {reason}", { reason: Tx(log.result?.reason || "unknown") }),
         ].filter(Boolean).map((x) => x.replace(/^./, (c) => c.toUpperCase())).join(". "))}.</span>
       </div>
-      <div class="toolbar">
+      <div class="rtools">
         ${isOwner && db?.audiences ? `<label class="small vissel">${Tx("Who can see this game")} <select id="visSel">${db.audiences().map((o) => `<option value="${esc(o.value)}" ${o.value === (g.doc.audience || "private") ? "selected" : ""}>${esc(o.label)}</option>`).join("")}</select></label>` : isOwner ? `<span class="vis" role="group" aria-label="${Tx("Who can see this game")}"><button type="button" data-vis="private" aria-pressed="${g.coll === "games"}">${Tx("Private")}</button><button type="button" data-vis="public" aria-pressed="${g.coll === "public_games"}">${Tx("Public (one game)")}</button></span>` : `<span class="muted small">${esc(g.doc.audience_label || Tx(g.coll === "public_games" ? "Public game" : "Private game"))}</span>`}
         ${log.source_ref?.replay_url && !/\.\.\.$/.test(log.source_ref.replay_url) ? `<a class="btn ghost small" href="${esc(log.source_ref.replay_url)}" target="_blank" rel="noopener">${Tx("Watch replay on duels.ink")}</a>` : ""}
       </div>
       ${!db ? `<div class="notice">Comments need the shared store, which isn't available in this view. You can still read the game.</div>` : !me?.id ? `<div class="notice">${Tx("Sign in to comment.")}</div>` : canWrite === false ? `<div class="notice">You can read this game. Ask the owner to make you a Contributor to comment.</div>` : ""}
-      ${log.turns.length ? `<div class="chart"><div class="legend"><span>${Tx("Lore by turn")}</span><span><i style="background:var(--gold)"></i>${esc(seatName(log, meSeat))}</span><span><i style="background:var(--opp)"></i>${esc(seatName(log, meSeat === "p1" ? "p2" : "p1"))}</span></div>${loreChart(log)}</div>`  : (log.lore_track || []).length > 1 ? `<div class="chart"><div class="legend"><span>${Tx("Lore over time")}</span><span><i style="background:var(--gold)"></i>${esc(seatName(log, meSeat))}</span><span><i style="background:var(--opp)"></i>${esc(seatName(log, meSeat === "p1" ? "p2" : "p1"))}</span></div>${loreTimeChart(log, meSeat)}</div>` : ""}
+      ${log.turns.length ? `<div class="cchart"><div class="legend"><span>${Tx("Lore by turn")}</span><span><i style="background:var(--gold)"></i>${esc(seatName(log, meSeat))}</span><span><i style="background:var(--opp)"></i>${esc(seatName(log, meSeat === "p1" ? "p2" : "p1"))}</span></div>${loreChart(log)}</div>`  : (log.lore_track || []).length > 1 ? `<div class="cchart"><div class="legend"><span>${Tx("Lore over time")}</span><span><i style="background:var(--gold)"></i>${esc(seatName(log, meSeat))}</span><span><i style="background:var(--opp)"></i>${esc(seatName(log, meSeat === "p1" ? "p2" : "p1"))}</span></div>${loreTimeChart(log, meSeat)}</div>` : ""}
       <div>${add("game", Tx("Comment on the whole game"))}${notesHtml("game", profilesMap)}</div>
       ${deck.length || isOwner ? `<details class="deck" ${!deck.length || deckNotice?.key === g.key ? "open" : ""}><summary>${g.doc.owner_name && g.doc.owner_name !== "You" ? esc(Tx("{name}'s deck", { name: g.doc.owner_name })) : Tx("Your deck")} (${deck.length ? Tx("{n} cards", { n: deck.reduce((n, e) => n + e.qty, 0) }) : Tx("no list yet")})</summary>
         ${isOwner ? `<div class="deckedit"><button type="button" class="btn ghost small" id="deckEdit">${Tx(deck.length ? "Edit your deck list" : "Add your deck list")}</button>
@@ -1033,7 +1014,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     for (const t of log.turns) {
       const mine = t.player === meSeat;
       const le = t.lore_end ? `${t.lore_end[meSeat]}–${t.lore_end[meSeat === "p1" ? "p2" : "p1"]}` : "";
-      html += `<section class="turn ${mine ? "me" : ""}"><div class="th"><b>${esc(Tx("Turn {n}: {name}", { n: t.number, name: seatName(log, t.player) }))}</b><span class="lv">${Tx("lore {s}", { s: le })}</span></div>`;
+      html += `<section class="cturn ${mine ? "me" : ""}"><div class="th"><b>${esc(Tx("Turn {n}: {name}", { n: t.number, name: seatName(log, t.player) }))}</b><span class="lv">${Tx("lore {s}", { s: le })}</span></div>`;
       for (const a of t.actions) {
         if (a.type === "end_turn") continue;
         const cls = [a.type === "quest" ? "quest" : a.type === "lore_adjust" ? "lore" : "", a.by !== meSeat ? "opp" : "", MINOR.has(a.type) ? "minor" : ""].join(" ");
@@ -1107,6 +1088,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
   }
   function openStats() {
     showingStats = true; current = null;
+    window.INKWELL_JOGOS_TAB?.(true);
     $("wrap").classList.add("reading");
     renderList(); renderStatsView();
   }
@@ -1144,7 +1126,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       <td class="n">${pct(x.t.w, x.t.n)}<span class="wbar" aria-hidden="true"><i style="width:${x.t.n ? (100 * x.t.w / x.t.n).toFixed(0) : 0}%"></i></span></td>
       <td class="n">${pct(x.t.fw, x.t.fn)} <span class="muted small">(${x.t.fn})</span></td><td class="n">${pct(x.t.dw, x.t.dn)} <span class="muted small">(${x.t.dn})</span></td></tr>`;
     const head = (first) => `<tr><th>${first}</th><th class="n">${Tx("Games")}</th><th class="n">${Tx("Won")}</th><th class="n">${Tx("Going first")}</th><th class="n">${Tx("Going second")}</th></tr>`;
-    el.innerHTML = `<div class="sv"><button type="button" class="btn ghost small back" id="back">${Tx("All games")}</button>
+    el.innerHTML = `<div class="sv"><button type="button" class="back" id="back">${Tx("Games")}</button>
       <h2>${Tx("Stats")}</h2><span class="muted small">${Tx("Decks are named by their ink colors.")}</span>
       <div class="ctl" role="group" aria-label="${Tx("Source")}">${chip("source", "all", Tx("All games"))}${chip("source", "duels_ink", "duels.ink")}${chip("source", "lore_counter", Tx("Lore Counter"))}</div>
       <div class="ctl" role="group" aria-label="${Tx("Period")}">${chip("days", 0, Tx("All time"))}${chip("days", 90, Tx("Last 90 days"))}${chip("days", 30, Tx("Last 30 days"))}</div>
@@ -1156,13 +1138,13 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
         <div class="tile"><b>${pct(T.fw, T.fn)}</b><span>${Tx("won going first ({n})", { n: T.fn })}</span></div>
         <div class="tile"><b>${pct(T.dw, T.dn)}</b><span>${Tx("won going second ({n})", { n: T.dn })}</span></div>
       </div>
-      ${cost.length ? `<div class="cost"><b>${Tx("Matchups costing you the most")}</b> <span class="muted small">${Tx("(8+ games; games lost beyond an even split)")}</span><ul>${cost.map((o) => `<li>${esc(Tx("vs {deck}: {w}–{l}, {p} won, {d} games below even", { deck: o.k, w: o.t.w, l: o.t.n - o.t.w, p: pct(o.t.w, o.t.n), d: o.t.n - 2 * o.t.w }))}</li>`).join("")}</ul></div>` : ""}
+      ${cost.length ? `<div class="cost ccost"><b>${Tx("Matchups costing you the most")}</b> <span class="muted small">${Tx("(8+ games; games lost beyond an even split)")}</span><ul>${cost.map((o) => `<li>${esc(Tx("vs {deck}: {w}–{l}, {p} won, {d} games below even", { deck: o.k, w: o.t.w, l: o.t.n - o.t.w, p: pct(o.t.w, o.t.n), d: o.t.n - 2 * o.t.w }))}</li>`).join("")}</ul></div>` : ""}
       <h3>${Tx("Trend")}</h3>${trendSvg(rows) || `<p class="muted small">${Tx("Needs games in at least two months.")}</p>`}
       ${sv.deck === "all" && mine.length > 1 ? `<h3>${Tx("Your decks")}</h3><table class="mt">${head(Tx("Your inks"))}${mine.map((x) => row(x, false)).join("")}</table>` : ""}
       <h3>${Tx("Against each deck")}</h3><span class="muted small">${Tx("Tap a row to see those games. Faded rows: under 5 games.")}</span>
       <table class="mt">${head(Tx("Opponent's inks"))}${opp.map((x) => row(x, true)).join("")}</table>`}
     </div>`;
-    $("back")?.addEventListener("click", () => { showingStats = false; $("wrap").classList.remove("reading"); renderReview(); });
+    $("back")?.addEventListener("click", () => { showingStats = false; window.INKWELL_JOGOS_TAB?.(false); $("wrap").classList.remove("reading"); renderReview(); });
     el.querySelectorAll("[data-sv]").forEach((b) => b.addEventListener("click", () => {
       const k = b.dataset.sv; sv[k] = k === "days" ? +b.dataset.v : b.dataset.v; renderStatsView();
     }));
@@ -1178,6 +1160,10 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     });
   }
   $("openStats").addEventListener("click", openStats);
+  const tabSel = (stats) => { $("tabGames").setAttribute("aria-selected", String(!stats)); $("tabStats").setAttribute("aria-selected", String(stats)); };
+  $("tabStats").addEventListener("click", () => { tabSel(true); openStats(); });
+  $("tabGames").addEventListener("click", () => { tabSel(false); showingStats = false; $("wrap").classList.remove("reading"); renderReview(); });
+  window.INKWELL_JOGOS_TAB = tabSel;
   if (window.INKWELL_HOME_URL) {   // on the site: the bar has Início, the menu has the language; the page is "Jogos"
     const h = document.querySelector(".titlerow h1"); if (h) h.textContent = Tx("Games");
     document.title = `${Tx("Games")} · Inkwell`;
@@ -1239,6 +1225,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
   }
 
   function openGame(key) {
+    window.INKWELL_JOGOS_TAB?.(false);
     current = key; composerFor = null; notes = []; showingStats = false; if (deckNotice?.key !== key) deckNotice = null;
     $("wrap").classList.add("reading");
     refreshNotes(); renderList(); renderReview();
@@ -1487,7 +1474,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
         <button type="button" class="btn ghost icon" data-close aria-label="${T("Fechar", "Close")}"><i class="ic i-close"></i></button></div>
       <div class="sheet-body"><form class="form" id="iwSiForm" novalidate>
         <fieldset class="field"><legend>${T("Código de 6 dígitos", "6-digit code")}</legend>
-          <div class="otp">${[1, 2, 3, 4, 5, 6].map((i) => `<input inputmode="numeric" maxlength="1" autocomplete="${i === 1 ? "one-time-code" : "off"}" aria-label="${T("Dígito", "Digit")} ${i}">`).join("")}</div>
+          <div class="otp">${[1, 2, 3, 4, 5, 6].map((i) => `<input inputmode="numeric" autocomplete="${i === 1 ? "one-time-code" : "off"}" aria-label="${T("Dígito", "Digit")} ${i}">`).join("")}</div>
           <span class="hint">${T("Também pode abrir o link do e-mail neste aparelho. Confira o spam.", "You can also open the link in the e-mail on this device. Check spam too.")}</span>
         </fieldset>
         <p class="small" id="iwSiMsg" role="alert">${esc(msg)}</p>
