@@ -180,6 +180,14 @@ end $$;
 revoke all on function public.accept_invite(text) from public, anon;
 grant execute on function public.accept_invite(text) to authenticated;
 
+-- who sent an invite (shown to the visitor before they sign in): the name, and the handle only if public
+create or replace function public.invite_info(p_code text)
+returns jsonb language sql stable security definer set search_path = '' as $$
+  select jsonb_build_object('name', display_name, 'handle', case when is_public and adult and not hidden_by_admin then handle end)
+    from public.profiles where invite_code = p_code and not is_mock and not hidden_by_admin $$;
+revoke all on function public.invite_info(text) from public;
+grant execute on function public.invite_info(text) to anon, authenticated;
+
 -- ---------- reports ----------
 create table if not exists public.reports (
   id uuid primary key default gen_random_uuid(),
