@@ -1,0 +1,65 @@
+User-agent: *
+Allow: /
+Disallow: /mensagem
+Disallow: /*/mensagem
+Disallow: /*/atendimento
+Disallow: /*/desejos
+Disallow: /estoque/create
+Disallow: /pedido
+Disallow: /usuario/pasta-outros-resultados
+Disallow: /produto/outros-resultados
+Disallow: /todos
+Disallow: /cdn-cgi/
+Disallow: /admin
+Disallow: /login
+Disallow: /logout
+Disallow: /cadastrar
+Disallow: /carrinho
+Disallow: /enderecos
+Disallow: /blacklist
+Disallow: /comprar
+Disallow: /api/
+Disallow: /midia-kit
+
+# AI Search Crawlers - allow crawlers that drive traffic back via AI search
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+# AI Training Crawlers - block crawlers that only scrape for model training
+User-agent: GPTBot
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: Applebot-Extended
+Disallow: /
+
+User-agent: Diffbot
+Disallow: /
+
+User-agent: FacebookBot
+Disallow: /
+
+User-agent: Omgilibot
+Disallow: /
+
+User-agent: cohere-ai
+Disallow: /
+
+Sitemap: https://mypcards.com/sitemap.xml
