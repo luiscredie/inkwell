@@ -70,7 +70,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     "Only {n} cards cost 1 or 2. Slow opening hands are more likely.": "Só {n} cartas de custo 1 ou 2. Mãos iniciais lentas ficam mais prováveis.",
     "{n} cards cost 1 or 2: enough early plays.": "{n} cartas de custo 1 ou 2: jogadas cedo suficientes.",
     "Only {a} of {b} are inkable. You may run short of ink.": "Só {a} de {b} são inkáveis. Pode faltar tinta.", "{a} of {b} inkable: enough ink.": "{a} de {b} inkáveis: tinta suficiente.",
-    "{n} cards missing": "{n} cartas faltando", "{n} card missing": "1 carta faltando", "{v} at Liga Lorcana": "{v} na Liga Lorcana", "{n} can come from friends": "{n} podem vir de amigos", "{n} can come from friends_1": "1 pode vir de amigos",
+    "{n} cards missing": "{n} cartas faltando", "{n} card missing": "1 carta faltando", "{v} at {s}": "{v} no {s}", "{n} can come from friends": "{n} podem vir de amigos", "{n} can come from friends_1": "1 pode vir de amigos",
     "You have every card for this deck.": "Você tem todas as cartas deste deck.", "Copies lent to friends still count as yours.": "Cópias emprestadas a amigos contam como suas.",
     "{who} lends": "{who} empresta", "{n} free": "{n} livres", "{n} free_1": "1 livre", "Ask to borrow": "Pedir emprestado", "{who} sells on the board": "{who} vende no Mural", "{v} each": "{v} cada", "See listing": "Ver anúncio",
     "None of your friends has it": "Ninguém dos seus amigos tem", "Post what's missing on the board": "Anunciar o que falta no Mural", "Looking to buy": "Procuro para comprar", "Looking to borrow": "Procuro emprestado",
@@ -103,7 +103,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     "{b} of {t} copies built at the same time as your other decks.": "{b} de {t} cópias montadas ao mesmo tempo que seus outros decks.",
     "Missing to build it with the others": "Falta para montar junto com os outros", "Faltando looks at this deck alone. Here, cards taken by decks with higher priority count as in use.": "A aba Faltando olha só este deck. Aqui, as cartas já usadas por decks com prioridade maior contam como ocupadas.",
     "Shares cards with": "Divide cartas com", "See the plan for all decks": "Ver o plano de todos os decks", "Plan updated": "Plano atualizado", "Add decks first so the advisor can plan your copies.": "Adicione decks primeiro para o consultor planejar suas cópias.",
-    "Remove one copy": "Tirar uma cópia", "Add one copy": "Pôr uma cópia", "Prices: Liga Lorcana, {d}": "Preços da Liga Lorcana de {d}",
+    "Remove one copy": "Tirar uma cópia", "Add one copy": "Pôr uma cópia", "Prices: {s}, {d}": "Preços: {s}, {d}",
   };
   const fill = (s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)) : s);
   const Tx = (en, v) => { const k = v && v.n === 1 && (en + "_1") in PT && lang === "pt" ? en + "_1" : en; return fill(lang === "pt" && k in PT ? PT[k] : en, v); };
@@ -132,7 +132,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
   const legal = (c, fmt) => fmt === "infinity" || !fmt || printings(c).some((p) => CORE_SETS.includes(p.set));
   const kind = (c) => (c.song ? "song" : c.type === "Character" ? "char" : c.type === "Action" ? "action" : "item");
   const typeName = (c) => Tx(c.song ? "Song" : c.type || "");
-  let PRICES = {}, pricesDate = null;
+  let PRICES = {}, pricesDate = null, priceSrc = "Liga Lorcana";   // "TCGplayer" while prices.json carries converted TCGplayer prices
   const priceOf = (c) => { const p = PRICES[c.id]; const v = p ? (p.nl ?? p.n ?? null) : null; if (v != null) return v;
     let best = null; for (const x of printings(c)) { const q = PRICES[x.id]; const y = q ? (q.nl ?? q.n ?? null) : null; if (y != null && (best == null || y < best)) best = y; } return best; };
   const imgUrl = (c) => (c.img ? `../lorcana-card-images/${encodeURI(c.img).replace(/'/g, "%27")}` : "");
@@ -165,7 +165,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
       fetch("../data/legality.json").then((r) => (r.ok ? r.json() : null)).then((l) => { const ls = l?.formats?.core?.legal_sets; if (Array.isArray(ls) && ls.length) CORE_SETS = ls; }).catch(() => {}),
     ]);
     profiles = (p || []).map((x) => ({ ...x, decks: Array.isArray(x.decks) ? x.decks.filter((d) => d && d.id) : [], collection: x.collection && typeof x.collection === "object" ? x.collection : {} }));
-    if (pr?.prices) { PRICES = pr.prices; pricesDate = pr.generated_at; }
+    if (pr?.prices) { PRICES = pr.prices; pricesDate = pr.generated_at; priceSrc = pr.usd_brl ? "TCGplayer" : "Liga Lorcana"; }
     listings = ls || [];
     friends = new Set((fr || []).map((f) => (f.requester === me.id ? f.addressee : f.requester)));
     const ids = [...new Set(listings.map((l) => l.user_id).filter((u) => u !== me.id))];
@@ -286,7 +286,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
       <select class="inline" id="sort" aria-label="${Tx("Sort")}">${[["recent", "Recently played"], ["wins", "Win rate"], ["name", "Name"]].map(([k, l]) => `<option value="${k}" ${view.sort === k ? "selected" : ""}>${Tx(l)}</option>`).join("")}</select></div>
       ${planNotice()}
       ${shown.length ? `<div class="list" id="deckList" data-testid="deck-list">${shown.map(row).join("")}</div>` : emptyBox("search", Tx("No decks in this format."), "")}
-      ${pricesDate ? `<p class="small faint" style="margin-top:var(--sp-4)">${esc(Tx("Prices: Liga Lorcana, {d}", { d: dateFmt(pricesDate) }))}</p>` : ""}`;
+      ${pricesDate ? `<p class="small faint" style="margin-top:var(--sp-4)">${esc(Tx("Prices: {s}, {d}", { s: priceSrc, d: dateFmt(pricesDate) }))}</p>` : ""}`;
     wireHead();
     document.querySelectorAll("[data-fmt]").forEach((b) => b.onclick = () => { view.fmt = b.dataset.fmt; saveView(); render(); });
     $("sort").onchange = (e) => { view.sort = e.target.value; saveView(); render(); };
@@ -434,11 +434,11 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
       if (!lend.length) offers.push(`<div class="list-row flat two" style="min-height:52px"><span class="t"><span class="muted" style="font-weight:400">${Tx("None of your friends has it")}</span></span><a class="btn small" href="${esc(ligaUrl(c))}" target="_blank" rel="noopener">Liga Lorcana<i class="ic i-external"></i></a></div>`);
       return `<section class="card miss" data-miss="${esc(c.id)}"><div class="row" style="flex-wrap:nowrap;align-items:flex-start;gap:var(--sp-3)">${thumb(c, "md")}<div class="grow" style="min-width:0">
         <div class="row between" style="flex-wrap:nowrap"><b>${esc(a)}${b ? ` · ${esc(b)}` : ""}</b><span class="tag warn">${esc(Tx("missing {n}", { n }))}</span></div>
-        <div class="small muted" style="margin-top:2px">Liga Lorcana <span class="money">${p != null ? esc(money(p)) : "–"}</span></div>
+        <div class="small muted" style="margin-top:2px">${esc(priceSrc)} <span class="money">${p != null ? esc(money(p)) : "–"}</span></div>
         <div class="list tight divided" style="margin-top:var(--sp-2)">${offers.join("")}</div></div></div></section>`;
     }).join("");
     const head = [Tx(m.missingN === 1 ? "{n} card missing" : "{n} cards missing", { n: m.missingN })];
-    const sub = [Tx("{v} at Liga Lorcana", { v: money(m.missingValue) }), fromFriends ? Tx("{n} can come from friends", { n: fromFriends }) : ""].filter(Boolean).join(" · ");
+    const sub = [Tx("{v} at {s}", { v: money(m.missingValue), s: priceSrc }), fromFriends ? Tx("{n} can come from friends", { n: fromFriends }) : ""].filter(Boolean).join(" · ");
     return `<div class="notice" data-testid="missing-summary"><i class="ic i-info"></i><span class="t"><b>${esc(head[0])}</b>${esc(sub)}</span></div>
       <div class="row" style="gap:var(--sp-2);margin:var(--sp-3) 0"><span class="small muted">${Tx("Post what's missing on the board")}</span><button type="button" class="btn small" data-post="buy">${Tx("Looking to buy")}</button><button type="button" class="btn small" data-post="borrow">${Tx("Looking to borrow")}</button></div>
       <div class="stack">${cards}</div>`;

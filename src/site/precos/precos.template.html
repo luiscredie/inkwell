@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Preços · Inkwell</title>
+<meta name="description" content="Preços de Disney Lorcana: maiores altas e quedas, valor da sua coleção e lista de desejos.">
+<meta name="theme-color" content="#13102a">
+<link rel="icon" href="../ink/icon-192.png">
+<link rel="apple-touch-icon" href="../ink/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="../ui/tokens.css"><script>document.documentElement.dataset.theme="noite";</script>
+</head>
+<body>
+<script>window.INKWELL_CLOUD_CONFIG = {"url": "https://sorefaetiaebmjploanp.supabase.co", "key": "sb_publishable_RkAWW-ENz70CXA6_QV7aHw_MpfD7Gn2", "redirect": "https://luiscredie.github.io/inkwell/precos/"};
+/*@CLOUD_JS@*/</script>
+<style>
+/* layout only — components come from ../ui/tokens.css (design v2) */
+.mv .trail { gap: 2px; }
+.up { color: var(--win); } .down { color: var(--loss); }
+.target { width: 104px; }
+.target input { width: 100%; text-align: right; min-height: 36px; padding: 0 8px; font-size: var(--fs-small); }
+.trail .wish-btn { min-height: 28px; height: 28px; }
+.vchart { width: 100%; height: 180px; display: block; }
+.vchart .line { fill: none; stroke: var(--text); stroke-width: 2; }
+.vchart .area { fill: var(--surface-3); opacity: .6; }
+.vchart text { fill: var(--text-2); font-size: 11px; }
+.wish-btn[aria-pressed="true"] { color: var(--accent); }
+.add-results .list-row { min-height: 52px; }
+</style>
+
+<main class="page" id="page">
+  <div class="page-head"><div><a class="back" href="../colecao/">Coleção</a><h1 id="title">Preços</h1><p class="sub" id="sub"></p></div></div>
+  <div id="app"></div>
+</main>
+<div class="toast-host"><div class="toast" id="toast" role="status" hidden></div></div>
+
+<script>
+const CARD_INDEX = /*@CARD_INDEX@*/;
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  let lang = "pt";
+  try { lang = localStorage.getItem("inkwell-lang") || ((navigator.language || "pt").toLowerCase().startsWith("en") ? "en" : "pt"); } catch { /* */ }
+  const PT = {
+    "Prices": "Preços", "Collection": "Coleção", "Loading…": "Carregando…", "Liga Lorcana prices, {d}": "Preços da Liga Lorcana de {d}",
+    "These prices are from {d}, {n} days ago. They are refreshed by the price agent on Luis's computer.": "Estes preços são de {d}, há {n} dias. Eles são atualizados pelo agente de preços que roda no computador do Luis.",
+    "Hide": "Ocultar", "The chart uses the Liga Lorcana price history, until {d}.": "O gráfico usa o histórico de preços da Liga Lorcana, até {d}.", "TCGplayer prices converted at R$ {r} per dollar, {d}": "Preços do TCGplayer convertidos a R$ {r} por dólar, {d}", "Rises and drops come from the Liga Lorcana price history.": "As altas e quedas vêm do histórico de preços da Liga Lorcana.", "Movers": "Variações", "Wishlist": "Lista de desejos", "Collection value": "Valor da coleção",
+    "1 day": "1 dia", "7 days": "7 dias", "30 days": "30 dias", "Latest": "Última", "Period": "Período", "Only cards I own": "Só as que tenho",
+    "Biggest rises": "Maiores altas", "Biggest drops": "Maiores quedas", "No changes in this period.": "Nenhuma variação neste período.",
+    "{a} to {b}": "de {a} a {b}", "foil": "foil", "Add to wishlist": "Pôr na lista de desejos", "Remove from wishlist": "Tirar da lista de desejos",
+    "Not enough price history for this period.": "Não há histórico de preços suficiente para este período.",
+    "Your wishlist is empty": "Sua lista de desejos está vazia", "Search a card below, or tap ☆ next to a card in Movers.": "Busque uma carta abaixo ou toque em ☆ ao lado de uma carta em Variações.",
+    "Add a card": "Pôr carta", "Search a card": "Buscar carta", "Type at least 2 letters.": "Digite pelo menos 2 letras.", "No card found.": "Nenhuma carta encontrada.",
+    "Target": "Alvo", "Now": "Agora", "buy now": "comprar agora", "{n} cards": "{n} cartas", "{n} at or below your target": "{n} no preço-alvo ou abaixo",
+    "Total now": "Total agora", "Look on the board": "Procurar no Mural", "Target price for {c}": "Preço-alvo de {c}", "no price": "sem preço",
+    "you have {n}": "você tem {n}",
+    "Value now": "Valor agora", "Cards": "Cartas", "Change over {n} snapshots": "Variação em {n} registros", "Most valuable cards": "Cartas mais valiosas",
+    "Value by date, with today's collection at each date's prices.": "Valor por data, com a coleção de hoje nos preços de cada data.",
+    "Sign in to see prices for your cards": "Entre para ver os preços das suas cartas", "Use your e-mail. We send a 6-digit code, no password.": "Use seu e-mail. Mandamos um código de 6 dígitos, sem senha.", "Sign in": "Entrar",
+    "Couldn't load prices.": "Não foi possível carregar os preços.", "Check your connection and try again.": "Confira a internet e tente de novo.", "Try again": "Tentar de novo",
+    "Saved": "Salvo", "Couldn't save. Try again.": "Não foi possível salvar. Tente de novo.", "Added to the wishlist": "Na lista de desejos", "Removed from the wishlist": "Fora da lista de desejos", "Undo": "Desfazer",
+  };
+  const fill = (s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)) : s);
+  const Tx = (en, v) => fill(lang === "pt" && en in PT ? PT[en] : en, v);
+  const LOC = lang === "pt" ? "pt-BR" : "en";
+  const money = (v) => (v ?? 0).toLocaleString(LOC, { style: "currency", currency: "BRL" });
+  const moneySplit = (v) => { const s = money(v), i = s.lastIndexOf(lang === "pt" ? "," : "."); return i > 0 ? `${esc(s.slice(0, i))}<small style="color:inherit">${esc(s.slice(i))}</small>` : esc(s); };
+  const dateFmt = (d) => { const x = new Date(String(d).length === 10 ? d + "T12:00:00" : d); return isNaN(x) ? "" : x.toLocaleDateString(LOC, { day: "numeric", month: "short" }); };
+  const norm = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const split = (name) => { const i = name.indexOf(" - "); return i > 0 ? [name.slice(0, i), name.slice(i + 3)] : [name, ""]; };
+  const inksOf = (c) => String(c.ink || "").split(/[,\/]\s*/).map((x) => x.trim()).filter(Boolean);
+
+  // ---------- catalog ----------
+  const SETS = CARD_INDEX?.sets || [];
+  const setName = (code) => { const s = SETS.find((x) => x.code === code); return s ? (lang === "pt" && s.name_pt) || s.name_en || code : code; };
+  const CARDS = (CARD_INDEX?.cards || []).map(([id, name, cost, type, ink, rarity, set, num, img]) => ({ id, name: name || id, cost, type, ink, rarity, set, num, img, k: norm(`${name} ${set} ${num}`) }));
+  const BY = new Map(CARDS.map((c) => [c.id, c]));
+  const imgUrl = (c) => (c.img ? `../lorcana-card-images/${encodeURI(c.img).replace(/'/g, "%27")}` : "");
+  const thumb = (c, cls = "") => `<span class="thumb ${cls}" data-ink="${(inksOf(c)[0] || "steel").toLowerCase()}">${c.img ? `<img src="${imgUrl(c)}" alt="" loading="lazy" decoding="async" onerror="this.remove()">` : ""}</span>`;
+  // Same movers rule as the Inkwell app, copied in at build time
+  const computeMovers = /*@APP_STATIC:computeMovers@*/;
+
+  // ---------- state ----------
+  const CLOUD = window.INKWELL_CLOUD;
+  const me = CLOUD?.user();
+  let PRICES = {}, pricesDate = null, usdBrl = null, HISTORY = null, profiles = [], profileName = null;
+  const VIEW_KEY = "inkwell-prices-view-v1";
+  let v = { tab: "movers", period: "7d", owned: false, hideStale: null };
+  try { v = { ...v, ...JSON.parse(localStorage.getItem(VIEW_KEY) || "{}") }; } catch { /* */ }
+  const saveV = () => { try { localStorage.setItem(VIEW_KEY, JSON.stringify(v)); } catch { /* */ } };
+  const prof = () => profiles.find((p) => p.profile === profileName) || profiles[0] || null;
+  const coll = () => prof()?.collection || {};
+  const wish = () => prof()?.wishlist || {};
+  const owned = (id) => { const e = coll()[id] || {}; return (+e.n || 0) + (+e.f || 0); };
+  const priceN = (id) => { const p = PRICES[id]; return p ? (p.nl ?? p.n ?? null) : null; };
+  const priceF = (id) => { const p = PRICES[id]; return p ? (p.fl ?? p.f ?? p.nl ?? p.n ?? null) : null; };
+  const target = (id) => { const e = wish()[id]; return e && typeof e === "object" && typeof e.t === "number" ? e.t : null; };
+
+  async function loadAll() {
+    const [pr, p] = await Promise.all([
+      fetch("../data/prices.json").then((r) => (r.ok ? r.json() : Promise.reject(new Error("prices")))),
+      me ? CLOUD.api("inkwell_profiles?select=profile,updated_at,collection:data->collection,wishlist:data->wishlist&order=updated_at.desc") : Promise.resolve([]),
+    ]);
+    PRICES = pr?.prices || {}; pricesDate = pr?.generated_at || null; usdBrl = pr?.usd_brl || null;
+    profiles = (p || []).map((x) => ({ ...x, collection: x.collection && typeof x.collection === "object" ? x.collection : {}, wishlist: x.wishlist && typeof x.wishlist === "object" ? x.wishlist : {} }));
+    try { profileName = localStorage.getItem("inkwell-trades-profile"); } catch { /* */ }
+    if (!profiles.some((x) => x.profile === profileName)) profileName = profiles.slice().sort((a, b) => Object.keys(b.collection).length - Object.keys(a.collection).length)[0]?.profile || null;
+  }
+  let historyLoading = null;
+  function loadHistory() {
+    if (HISTORY || historyLoading) return historyLoading;
+    historyLoading = fetch("../data/price-history.json").then((r) => (r.ok ? r.json() : null)).then((h) => { HISTORY = (h?.series || []).filter((s) => s && s.date).sort((a, b) => (a.date < b.date ? -1 : 1)); render(); }).catch(() => { HISTORY = []; render(); });
+    return historyLoading;
+  }
+
+  // ---------- rendering ----------
+  const emptyBox = (img, title, text, btns = "") => `<div class="empty"><img src="../ui/assets/empty/${img}.svg" alt=""><b>${esc(title)}</b>${text ? `<p>${esc(text)}</p>` : ""}${btns}</div>`;
+  function render() {
+    const keep = document.activeElement?.id, caret = document.activeElement?.selectionStart;
+    const days = pricesDate ? Math.floor((Date.now() - new Date(pricesDate)) / 864e5) : 0;
+    $("sub").textContent = !pricesDate ? "" : usdBrl ? Tx("TCGplayer prices converted at R$ {r} per dollar, {d}", { r: usdBrl.toLocaleString(LOC, { minimumFractionDigits: 2, maximumFractionDigits: 4 }), d: dateFmt(pricesDate) }) : Tx("Liga Lorcana prices, {d}", { d: dateFmt(pricesDate) });
+    const stale = days > 7 && v.hideStale !== pricesDate
+      ? `<div class="notice warn" data-testid="stale" style="margin-bottom:var(--sp-4)"><i class="ic i-alert"></i><span class="t">${esc(Tx("These prices are from {d}, {n} days ago. They are refreshed by the price agent on Luis's computer.", { d: dateFmt(pricesDate), n: days }))}</span><div class="actions"><button type="button" class="btn ghost small" id="hideStale">${Tx("Hide")}</button></div></div>` : "";
+    const wn = Object.keys(wish()).length;
+    const tabs = [["movers", "Movers"], ["wish", "Wishlist", wn], ["value", "Collection value"]];
+    $("app").innerHTML = `${stale}<div class="tabs" role="tablist">${tabs.map(([k, l, n]) => `<button type="button" class="tab" role="tab" data-tab="${k}" aria-selected="${v.tab === k}">${Tx(l)}${n ? `<span class="count quiet">${n}</span>` : ""}</button>`).join("")}</div>
+      <div id="body" role="tabpanel">${v.tab === "wish" ? wishTab() : v.tab === "value" ? valueTab() : moversTab()}</div>`;
+    $("hideStale")?.addEventListener("click", () => { v.hideStale = pricesDate; saveV(); render(); });
+    document.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => { v.tab = b.dataset.tab; saveV(); render(); });
+    wire();
+    if (keep && $(keep)) { const el = $(keep); el.focus(); try { if (caret != null) el.setSelectionRange(caret, caret); } catch { /* */ } }
+  }
+  const starBtn = (id) => { const on = !!wish()[id], c = BY.get(id), a = c ? split(c.name)[0] : id;
+    return me ? `<button type="button" class="btn ghost icon small wish-btn" data-star="${esc(id)}" aria-pressed="${on}" aria-label="${esc(Tx(on ? "Remove from wishlist" : "Add to wishlist") + " · " + a)}">${on ? "★" : "☆"}</button>` : ""; };
+
+  function moversTab() {
+    if (!HISTORY) { loadHistory(); return `<div class="list">${"<span class=\"skel\" style=\"height:56px\"></span>".repeat(5)}</div><p class="sr-only">${Tx("Loading…")}</p>`; }
+    const M = computeMovers(HISTORY, v.period, (id) => BY.get(id)?.name || id);
+    const pick = (rows) => rows.filter((r) => BY.has(r.id) && (!v.owned || owned(r.id) > 0)).slice(0, 25);
+    const row = (r) => { const c = BY.get(r.id), [a, b] = split(c.name), up = r.abs > 0;
+      return `<div class="list-row mv" data-mover="${esc(r.id)}">${thumb(c, "xs")}<span class="t"><span>${esc(a)}${b ? ` · ${esc(b)}` : ""}</span><span class="meta">${esc([setName(c.set), "nº " + c.num, r.finish === "foil" ? Tx("foil") : "", owned(r.id) ? Tx("you have {n}", { n: owned(r.id) }) : ""].filter(Boolean).join(" · "))}</span></span>
+        <span class="trail"><span class="money">${esc(money(r.now))}</span><small class="${up ? "up" : "down"}">${up ? "+" : "−"}${esc(Math.abs(r.pct).toLocaleString(LOC, { maximumFractionDigits: 1 }))}%</small>${starBtn(r.id)}</span></div>`; };
+    const periods = [["1d", "1 day"], ["7d", "7 days"], ["30d", "30 days"], ["latest", "Latest"]];
+    const head = `<div class="row between" style="margin-bottom:var(--sp-3)"><div class="seg" role="group" aria-label="${Tx("Period")}">${periods.map(([k, l]) => `<button type="button" data-period="${k}" aria-pressed="${v.period === k}">${Tx(l)}</button>`).join("")}</div>
+      ${me ? `<label class="switch" style="min-height:0"><span>${Tx("Only cards I own")}</span><input type="checkbox" role="switch" id="ownedOnly" ${v.owned ? "checked" : ""}></label>` : ""}</div>`;
+    if (!M) return head + emptyBox("search", Tx("Not enough price history for this period."), "");
+    const g = pick(M.gainers), l = pick(M.losers);
+    if (!g.length && !l.length) return head + emptyBox("search", Tx("No changes in this period."), "");
+    return `${head}<p class="small muted" style="margin:0 0 var(--sp-3)">${esc(Tx("{a} to {b}", { a: dateFmt(M.from), b: dateFmt(M.to) }))}${usdBrl ? ` · ${esc(Tx("Rises and drops come from the Liga Lorcana price history."))}` : ""}</p>
+      <div class="grid2"><section><div class="group-head"><h3>${Tx("Biggest rises")}</h3></div><div class="list" data-testid="gainers">${g.map(row).join("")}</div></section>
+      <section><div class="group-head"><h3>${Tx("Biggest drops")}</h3></div><div class="list" data-testid="losers">${l.map(row).join("")}</div></section></div>`;
+  }
+
+  let addQ = "";
+  function wishTab() {
+    if (!me) return signInBox();
+    const ids = Object.keys(wish()).filter((id) => BY.has(id));
+    const rows = ids.map((id) => ({ id, c: BY.get(id), now: priceN(id), t: target(id) })).sort((a, b) => ((b.t != null && b.now != null && b.now <= b.t) - (a.t != null && a.now != null && a.now <= a.t)) || (b.now || 0) - (a.now || 0));
+    const hits = rows.filter((r) => r.t != null && r.now != null && r.now <= r.t).length, total = rows.reduce((s, r) => s + (r.now || 0), 0);
+    const words = norm(addQ).split(" ").filter(Boolean);
+    const found = addQ.trim().length >= 2 ? CARDS.filter((c) => words.every((w) => c.k.includes(w))).slice(0, 20) : [];
+    const row = (r) => { const [a, b] = split(r.c.name), hit = r.t != null && r.now != null && r.now <= r.t;
+      return `<div class="list-row" data-wish="${esc(r.id)}">${thumb(r.c, "xs")}<span class="t"><span>${esc(a)}${b ? ` · ${esc(b)}` : ""}</span><span class="meta">${esc([setName(r.c.set), "nº " + r.c.num, owned(r.id) ? Tx("you have {n}", { n: owned(r.id) }) : ""].filter(Boolean).join(" · "))}</span>${hit ? `<span class="tag match" style="margin-top:4px;width:max-content">${Tx("buy now")}</span>` : ""}</span>
+        <span class="trail" style="gap:4px"><span class="money">${r.now != null ? esc(money(r.now)) : Tx("no price")}</span>
+          <span class="target"><input inputmode="decimal" class="input" data-target="${esc(r.id)}" value="${r.t != null ? esc(r.t.toLocaleString(LOC, { minimumFractionDigits: 2 })) : ""}" placeholder="${Tx("Target")} R$" aria-label="${esc(Tx("Target price for {c}", { c: a }))}"></span>${starBtn(r.id)}</span></div>`; };
+    return `<div class="stats-row three" data-testid="wish-stats"><div class="stat"><b>${rows.length}</b><span>${esc(Tx("{n} cards", { n: "" }).trim() || Tx("Cards"))}</span></div>
+        <div class="stat"><b class="${hits ? "win" : ""}">${hits}</b><span>${esc(Tx("{n} at or below your target", { n: "" }).trim())}</span></div><div class="stat"><b class="money">${moneySplit(total)}</b><span>${Tx("Total now")}</span></div></div>
+      <section class="card" style="margin:var(--sp-4) 0"><div class="hd"><h3>${Tx("Add a card")}</h3></div>
+        <span class="search"><i class="ic i-search"></i><input type="search" id="addQ" value="${esc(addQ)}" placeholder="${Tx("Search a card")}" aria-label="${Tx("Search a card")}" autocomplete="off"></span>
+        <div class="list tight divided add-results" id="addRes">${addQ.trim().length < 2 ? `<p class="small faint" style="padding:var(--sp-2) 0">${Tx("Type at least 2 letters.")}</p>` : found.length ? found.map((c) => { const [a, b] = split(c.name), p = priceN(c.id);
+          return `<div class="list-row flat">${thumb(c, "xs")}<span class="t"><span>${esc(a)}${b ? ` · ${esc(b)}` : ""}</span><span class="meta">${esc([setName(c.set), "nº " + c.num, p != null ? money(p) : ""].filter(Boolean).join(" · "))}</span></span>${starBtn(c.id)}</div>`; }).join("") : `<p class="small faint" style="padding:var(--sp-2) 0">${Tx("No card found.")}</p>`}</div></section>
+      ${rows.length ? `<div class="list" id="wishList" data-testid="wish-list">${rows.map(row).join("")}</div><div class="row" style="margin-top:var(--sp-4)"><a class="btn" href="../trades/?tab=board"><i class="ic i-board"></i>${Tx("Look on the board")}</a></div>`
+        : emptyBox("collection", Tx("Your wishlist is empty"), Tx("Search a card below, or tap ☆ next to a card in Movers."))}`;
+  }
+
+  function valueTab() {
+    if (!me) return signInBox();
+    if (!HISTORY) { loadHistory(); return `<div class="skel" style="height:180px"></div><p class="sr-only">${Tx("Loading…")}</p>`; }
+    const col = coll();
+    const valueAt = (pm) => { let s = 0; for (const id in col) { const p = pm[id]; if (!p) continue; const n = p.nl ?? p.n ?? null, f = p.fl ?? p.f ?? n; s += (n || 0) * (+col[id].n || 0) + (f || 0) * (+col[id].f || 0); } return Math.round(s * 100) / 100; };
+    const maxCov = Math.max(1, ...HISTORY.map((s) => Object.keys(s.prices || {}).length));
+    const pts = HISTORY.filter((s) => Object.keys(s.prices || {}).length >= maxCov * 0.5).map((s) => ({ d: s.date, v: valueAt(s.prices || {}) }));
+    let now = 0, cards = 0; const top = [];
+    for (const id in col) { const n = +col[id].n || 0, f = +col[id].f || 0, val = (priceN(id) || 0) * n + (priceF(id) || 0) * f; now += val; cards += n + f; if (val > 0 && BY.has(id)) top.push({ id, val, n, f }); }
+    top.sort((a, b) => b.val - a.val);
+    const first = pts[0]?.v, last = pts[pts.length - 1]?.v, ch = first ? ((last - first) / first) * 100 : null;
+    let chart = "";
+    if (pts.length >= 2) {
+      const W = 600, H = 180, P = 24, lo = Math.min(...pts.map((p) => p.v)), hi = Math.max(...pts.map((p) => p.v)), span = hi - lo || 1;
+      const x = (i) => P + (i * (W - 2 * P)) / (pts.length - 1), y = (val) => H - P - ((val - lo) / span) * (H - 2 * P);
+      const d = pts.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join(" ");
+      chart = `<svg class="vchart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${esc(Tx("Collection value"))}"><path class="area" d="${d} L${x(pts.length - 1)},${H - P} L${x(0)},${H - P} Z"></path><path class="line" d="${d}"></path>
+        <text x="${P}" y="${H - 6}">${esc(dateFmt(pts[0].d))}</text><text x="${W - P}" y="${H - 6}" text-anchor="end">${esc(dateFmt(pts[pts.length - 1].d))}</text><text x="${W - P}" y="14" text-anchor="end">${esc(money(hi))}</text></svg>`;
+    }
+    return `<div class="stats-row three" data-testid="value-stats"><div class="stat"><b class="money">${moneySplit(now)}</b><span>${Tx("Value now")}</span></div><div class="stat"><b>${cards.toLocaleString(LOC)}</b><span>${Tx("Cards")}</span></div>
+        <div class="stat"><b class="${ch == null ? "" : ch >= 0 ? "up" : "down"}">${ch == null ? "—" : `${ch >= 0 ? "+" : "−"}${Math.abs(ch).toLocaleString(LOC, { maximumFractionDigits: 1 })}%`}</b><span>${esc(Tx("Change over {n} snapshots", { n: pts.length }))}</span></div></div>
+      ${chart ? `<section class="card" style="margin-top:var(--sp-4)">${chart}<p class="small faint" style="margin:var(--sp-2) 0 0">${Tx("Value by date, with today's collection at each date's prices.")}${usdBrl ? " " + esc(Tx("The chart uses the Liga Lorcana price history, until {d}.", { d: dateFmt(pts[pts.length - 1]?.d) })) : ""}</p></section>` : ""}
+      <div class="group-head"><h3>${Tx("Most valuable cards")}</h3></div>
+      <div class="list" data-testid="top-cards">${top.slice(0, 20).map((t) => { const c = BY.get(t.id), [a, b] = split(c.name); return `<div class="list-row">${thumb(c, "xs")}<span class="t"><span>${esc(a)}${b ? ` · ${esc(b)}` : ""}</span><span class="meta">${esc([setName(c.set), "nº " + c.num, `${t.n ? t.n + "×" : ""}${t.f ? ` ${t.f}× foil` : ""}`.trim()].filter(Boolean).join(" · "))}</span></span><span class="trail"><span class="money">${esc(money(t.val))}</span></span></div>`; }).join("")}</div>`;
+  }
+  const signInBox = () => emptyBox("signedout", Tx("Sign in to see prices for your cards"), Tx("Use your e-mail. We send a 6-digit code, no password."), `<button type="button" class="btn primary" id="signIn">${Tx("Sign in")}</button>`);
+
+  function wire() {
+    $("signIn")?.addEventListener("click", () => window.INKWELL_SIGNIN?.());
+    document.querySelectorAll("[data-period]").forEach((b) => b.onclick = () => { v.period = b.dataset.period; saveV(); render(); });
+    $("ownedOnly")?.addEventListener("change", (e) => { v.owned = e.target.checked; saveV(); render(); $("ownedOnly")?.focus(); });
+    document.querySelectorAll("[data-star]").forEach((b) => b.onclick = () => toggleWish(b.dataset.star));
+    $("addQ")?.addEventListener("input", (e) => { addQ = e.target.value; render(); });
+    document.querySelectorAll("[data-target]").forEach((inp) => inp.addEventListener("change", () => setTarget(inp.dataset.target, inp.value)));
+  }
+
+  // ---------- saving (rpc/set_wishlist changes one entry; the Inkwell app reads the same data->wishlist) ----------
+  let queue = Promise.resolve();
+  const call = (body) => (queue = queue.then(() => CLOUD.api("rpc/set_wishlist", { method: "POST", prefer: "return=minimal", body: { p_profile: prof().profile, ...body } })));
+  function toggleWish(id) {
+    const p = prof(); if (!p) return;
+    const before = p.wishlist[id];
+    if (before) delete p.wishlist[id]; else p.wishlist[id] = 1;
+    render();
+    call(before ? { p_card_id: id, p_remove: true } : { p_card_id: id })
+      .then(() => toast(Tx(before ? "Removed from the wishlist" : "Added to the wishlist"), () => { if (before) p.wishlist[id] = before; else delete p.wishlist[id]; render(); call(before ? { p_card_id: id, p_target: typeof before === "object" ? before.t : null } : { p_card_id: id, p_remove: true }).catch(() => toast(Tx("Couldn't save. Try again."), null, true)); }))
+      .catch(() => { if (before) p.wishlist[id] = before; else delete p.wishlist[id]; render(); toast(Tx("Couldn't save. Try again."), null, true); });
+  }
+  function setTarget(id, raw) {
+    const p = prof(); if (!p) return;
+    const val = parseFloat(String(raw).replace(/[^0-9,.]/g, "").replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", "."));
+    const t = !raw || isNaN(val) || val <= 0 ? null : Math.round(val * 100) / 100, before = p.wishlist[id];
+    p.wishlist[id] = t == null ? 1 : { t };
+    render();
+    call({ p_card_id: id, p_target: t }).then(() => toast(Tx("Saved"))).catch(() => { p.wishlist[id] = before; render(); toast(Tx("Couldn't save. Try again."), null, true); });
+  }
+  let toastTimer = null;
+  function toast(text, undo, err) {
+    const t = $("toast");
+    t.className = `toast${err ? " err" : ""}`;
+    t.innerHTML = `<i class="ic ${err ? "i-alert" : "i-check"}"></i><span>${esc(text)}</span>${undo ? `<button type="button" class="btn ghost small" id="undo"><i class="ic i-undo"></i>${Tx("Undo")}</button>` : ""}`;
+    t.hidden = false;
+    if (undo) $("undo").onclick = () => { t.hidden = true; undo(); };
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 5000);
+  }
+
+  // ---------- boot ----------
+  document.title = `${Tx("Prices")} · Inkwell`;
+  $("title").textContent = Tx("Prices");
+  document.querySelector(".back").textContent = Tx("Collection");
+  document.documentElement.lang = LOC;
+  if (new URLSearchParams(location.search).get("tab")) v.tab = new URLSearchParams(location.search).get("tab");
+  $("app").innerHTML = `<div class="list">${"<span class=\"skel\" style=\"height:56px\"></span>".repeat(5)}</div><p class="sr-only">${Tx("Loading…")}</p>`;
+  const start = () => loadAll().then(render).catch(() => {
+    $("app").innerHTML = emptyBox("error", Tx("Couldn't load prices."), Tx("Check your connection and try again."), `<button type="button" class="btn" id="retry"><i class="ic i-refresh"></i>${Tx("Try again")}</button>`);
+    $("retry").onclick = start;
+  });
+  start();
+})();
+</script>
+
+<script>window.INKWELL_SHELL = {"page": "cards"};
+/*@SHELL_JS@*/</script>
+</body>
+</html>
