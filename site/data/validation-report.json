@@ -1,15 +1,15 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-21T12:44:55.323413+00:00",
+  "generated_at": "2026-10-21T16:30:48.891861+00:00",
   "status": "pass",
   "summary": {
     "cards": 3686,
     "pt_overlay_cards": 3686,
     "priced_cards": 3311,
     "errors": 0,
-    "warnings": 632,
+    "warnings": 544,
     "missing_prices": 375,
-    "missing_images": 256,
+    "missing_images": 168,
     "missing_translations": 0,
     "orphan_prices_detected": 0,
     "orphan_prices_removed": 0
@@ -18,175 +18,11 @@
   "warnings": [
     {
       "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-16-P3"
-    },
-    {
-      "code": "MISSING_IMAGE",
       "card_id": "DLPC1-16-P4"
     },
     {
       "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-17-P2"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-17-P3"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-2-C2"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-2-CC1"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-2-DIS"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-24-P2"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-24-P2b"
-    },
-    {
-      "code": "MISSING_IMAGE",
       "card_id": "DLPC1-24-P3"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-25-P1"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-25-P1b"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-3-C2"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-3-CC1"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-30-P1"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-32-P2"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-33-P2"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-34-P3"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-36-P2"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-38-P1"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-4-CC1"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-4-DIS"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-41-P1"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-5-C1"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-5-C2"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-5-CC1"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-5-P3"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-54-P3"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-56-P3"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-57-P3"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-58-P3"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-6-CC1"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-7-P2"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-8-P2"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC2-1"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC2-2"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC2-3"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC2-4"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC2-5"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC2-6"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC2-7"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR1-118-OS"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR1-5-OS"
     },
     {
       "code": "MISSING_IMAGE",
@@ -207,14 +43,6 @@
     {
       "code": "MISSING_IMAGE",
       "card_id": "LOR1-T04"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR10-241"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR10-242"
     },
     {
       "code": "MISSING_IMAGE",
@@ -374,66 +202,6 @@
     },
     {
       "code": "MISSING_IMAGE",
-      "card_id": "LOR12-106s"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR12-139s"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR12-140s"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR12-141s"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR12-184s"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR12-185s"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR12-37s"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR12-38s"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR12-39s"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR12-40s"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR12-41s"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR12-42s"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR12-43s"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR12-44s"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR12-81s"
-    },
-    {
-      "code": "MISSING_IMAGE",
       "card_id": "LOR12-T01"
     },
     {
@@ -471,30 +239,6 @@
     {
       "code": "MISSING_IMAGE",
       "card_id": "LOR12-T09"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR13-110s"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR13-111s"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR13-158s"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR13-159s"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR13-74s"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR13-75s"
     },
     {
       "code": "MISSING_IMAGE",
@@ -555,34 +299,6 @@
     {
       "code": "MISSING_IMAGE",
       "card_id": "LOR2-T04"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR3-157-OS"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR3-4a"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR3-4b"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR3-4c"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR3-4d"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR3-4e"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR3-89-OS"
     },
     {
       "code": "MISSING_IMAGE",
@@ -754,26 +470,6 @@
     },
     {
       "code": "MISSING_IMAGE",
-      "card_id": "LOR8-125b"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR8-1b"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR8-2b"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR8-3b"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "LOR8-65b"
-    },
-    {
-      "code": "MISSING_IMAGE",
       "card_id": "LOR8-HO01"
     },
     {
@@ -942,10 +638,6 @@
     },
     {
       "code": "MISSING_IMAGE",
-      "card_id": "LOR9-241"
-    },
-    {
-      "code": "MISSING_IMAGE",
       "card_id": "LOR9-PL01"
     },
     {
@@ -986,30 +678,6 @@
     },
     {
       "code": "MISSING_IMAGE",
-      "card_id": "LOR9-ZERO"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "Q1-223--half-hexwell-crown"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "Q1-223--piglet-pooh-pirate-captain"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "Q1-223--yen-sid-powerful-sorcerer"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "Q1-225"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "Q1-244"
-    },
-    {
-      "code": "MISSING_IMAGE",
       "card_id": "Q1-OS1"
     },
     {
@@ -1019,26 +687,6 @@
     {
       "code": "MISSING_IMAGE",
       "card_id": "Q1-OS3"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "Q2-223--bolt-superdog"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "Q2-223--goofy-groundbreaking-chef"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "Q2-224--elsa-ice-maker"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "Q2-224--pinocchio-strings-attached"
-    },
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "Q2-32"
     },
     {
       "code": "MISSING_PRICE",
