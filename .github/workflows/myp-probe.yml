@@ -1,0 +1,24 @@
+name: MYP probe
+on:
+  push:
+    branches: [myp-probe]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          mkdir out; cd out
+          UA="Mozilla/5.0 (compatible; inkwell-prices; +https://github.com/luiscredie/inkwell)"
+          curl -sSL -A "$UA" -o robots.txt -w "robots %{http_code}\n" https://mypcards.com/robots.txt || true
+          curl -sSL -A "$UA" -o page1.html -w "page1 %{http_code} %{size_download}\n" "https://mypcards.com/lorcana?page=1" || true
+          sleep 2
+          curl -sSL -A "$UA" -o page2.html -w "page2 %{http_code} %{size_download}\n" "https://mypcards.com/lorcana?page=2" || true
+          sleep 2
+          curl -sSL -A "$UA" -o product.html -w "product %{http_code} %{size_download}\n" "https://mypcards.com/lorcana/produto/291659/mulan-elite-archer" || true
+          ls -la
+      - uses: actions/upload-artifact@v4
+        with:
+          name: myp
+          path: out
