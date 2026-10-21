@@ -46,6 +46,11 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "Clear": "Limpar", "Show {n} cards": "Ver {n} cartas", "Remove filter {f}": "Remover filtro {f}", "Close": "Fechar",
     "No cards match these filters.": "Nenhuma carta com esses filtros.", "Clear filters": "Limpar filtros",
     "Your collection is empty": "Sua coleção está vazia", "Turn off \"Only cards I own\" to add cards with +, or import your collection in Inkwell.": "Desligue \"Só as que tenho\" para adicionar cartas com +, ou importe sua coleção no Inkwell.",
+    "Check my binder": "Conferir fichário", "In your binder's order: Core first, then Infinity; ink, cost and name.": "Na ordem do seu fichário: Core primeiro, depois Infinito; tinta, custo e nome.",
+    "Infinity": "Infinito", "Dual ink": "Duas tintas", "No ink": "Sem tinta", "cost {c}": "custo {c}", "{ink} · cost {c}": "{ink} · custo {c}",
+    "{n} cards · you have {h}": "{n} cartas · você tem {h}", "Mark page as checked": "Marcar página como conferida", "Checked": "Conferida",
+    "Previous page": "Página anterior", "Next page": "Próxima página", "{a} of {b} pages checked": "{a} de {b} páginas conferidas",
+    "Only cards I own on this page": "Só as que tenho", "Section": "Seção", "Nothing on this page.": "Nada nesta página.", "Back to collection": "Voltar para a coleção",
     "Show more": "Mostrar mais", "{n} cards": "{n} cartas", "Prices: Liga Lorcana, {d}": "Preços da Liga Lorcana de {d}",
     "Normal": "Normal", "Foil": "Foil", "{n} free": "{n} livre(s)", "{n} lent": "{n} emprestada(s)", "Value of your {n}": "Valor das suas {n}",
     "Remove one {k}": "Tirar uma {k}", "Add one {k}": "Pôr uma {k}", "normal": "normal", "foil": "foil", "Lent": "Emprestadas",
@@ -292,9 +297,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
         if (quiet) return;
         burst = ($("toast").hidden ? [] : burst).concat(delta);   // "Desfazer" undoes every change since the notice appeared
         const undoAll = burst;
-        toast(Tx("Collection updated"), () => { burst = []; for (const d of undoAll) change(d.card_id, d.foil ? "f" : "n", -d.qty, true); clearTimeout(pendingTimer); flush(true); render(); });
+        toast(Tx("Collection updated"), () => { burst = []; for (const d of undoAll) change(d.card_id, d.foil ? "f" : "n", -d.qty, true); clearTimeout(pendingTimer); flush(true); renderAll(); });
       })
-      .catch(() => { for (const d of delta) { const e = p.collection[d.card_id]; if (e) e[d.foil ? "f" : "n"] -= d.qty; } toast(Tx("Couldn't save. Try again."), null, true); render(); });
+      .catch(() => { for (const d of delta) { const e = p.collection[d.card_id]; if (e) e[d.foil ? "f" : "n"] -= d.qty; } toast(Tx("Couldn't save. Try again."), null, true); renderAll(); });
   }
   let toastTimer = null;
   function toast(text, undo, err) {
@@ -312,16 +317,92 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     sh.onclick = (e) => { if (e.target === sh) sh.close(); };
   }
 
+  // ---------- conferir fichário: Core first, then Infinity; ink, cost, name (Luis's binder order) ----------
+  const CORE_SETS = ["LOR7", "LOR8", "LOR9", "LOR10", "LOR11", "LOR12", "LOR13", "Q2", "DLPC2"];   // same list as Decks / the Inkwell app
+  const nkey = (n) => String(n || "").toLowerCase().replace(/\s*\(.*?\)\s*/g, "").trim();
+  const BYNAME = new Map(); for (const c of CARDS) { const k = nkey(c.name); (BYNAME.get(k) || BYNAME.set(k, []).get(k)).push(c); }
+  const isCore = (c) => (BYNAME.get(nkey(c.name)) || [c]).some((p) => CORE_SETS.includes(p.set));
+  const INK_ORDER = [...INKS, "Dual", "None"];
+  const inkOf = (c) => { const i = inksOf(c).filter((x) => INKS.includes(x)); return i.length === 1 ? i[0] : i.length > 1 ? "Dual" : "None"; };
+  const inkLabel = (k) => (k === "Dual" ? Tx("Dual ink") : k === "None" ? Tx("No ink") : k);
+  const costOf = (c) => Math.min(8, Math.max(0, +c.cost || 0));
+  const RAR_ORDER = ["C", "U", "R", "SR", "L", "E", "EP", "I", "P"];
+  const BKEY = "inkwell-binder-v1", CKEY = `inkwell-binder-checked-v1-${me?.id || ""}`;
+  let bd = { sec: "core", ink: "Amber", cost: 1, owned: false };
+  try { bd = { ...bd, ...JSON.parse(localStorage.getItem(BKEY) || "{}") }; } catch { /* */ }
+  let checked = new Set(); try { checked = new Set(JSON.parse(localStorage.getItem(CKEY) || "[]")); } catch { /* */ }
+  const bsave = () => { try { localStorage.setItem(BKEY, JSON.stringify(bd)); localStorage.setItem(CKEY, JSON.stringify([...checked])); } catch { /* */ } };
+  const pageKey = (p) => `${p.sec}|${p.ink}|${p.cost}`;
+  let PAGES = null;
+  function binderPages() {
+    if (PAGES) return PAGES;
+    const m = new Map();
+    for (const c of CARDS) { const p = { sec: isCore(c) ? "core" : "inf", ink: inkOf(c), cost: costOf(c) }; const k = pageKey(p); (m.get(k) || m.set(k, { ...p, cards: [] }).get(k)).cards.push(c); }
+    const secO = { core: 0, inf: 1 };
+    PAGES = [...m.values()].sort((a, b) => secO[a.sec] - secO[b.sec] || INK_ORDER.indexOf(a.ink) - INK_ORDER.indexOf(b.ink) || a.cost - b.cost);
+    for (const p of PAGES) p.cards.sort((a, b) => a.name.localeCompare(b.name) || RAR_ORDER.indexOf(a.rarity) - RAR_ORDER.indexOf(b.rarity) || (setOrder.get(a.set) ?? 999) - (setOrder.get(b.set) ?? 999) || numOf(a) - numOf(b));
+    return PAGES;
+  }
+  const binderOn = () => new URLSearchParams(location.search).get("conferir") === "1";
+  function setBinder(on) { history.pushState(null, "", location.pathname + (on ? "?conferir=1" : "")); renderAll(); window.scrollTo(0, 0); }
+  window.addEventListener("popstate", () => renderAll());
+  function renderBinder() {
+    const pages = binderPages();
+    let i = pages.findIndex((p) => p.sec === bd.sec && p.ink === bd.ink && p.cost === bd.cost);
+    if (i < 0) { i = Math.max(0, pages.findIndex((p) => p.sec === bd.sec && p.ink === bd.ink)); if (pages[i].sec !== bd.sec || pages[i].ink !== bd.ink) i = Math.max(0, pages.findIndex((p) => p.sec === bd.sec)); }
+    const pg = pages[i]; Object.assign(bd, { sec: pg.sec, ink: pg.ink, cost: pg.cost });
+    const inSec = pages.filter((p) => p.sec === pg.sec), inks = INK_ORDER.filter((k) => inSec.some((p) => p.ink === k)), costs = inSec.filter((p) => p.ink === pg.ink);
+    const allChecked = (list) => list.length && list.every((p) => checked.has(pageKey(p)));
+    const tot = (c) => { const o = owned(c.id); return o.n + o.f; };
+    const rows = pg.cards.filter((c) => !bd.owned || tot(c) > 0);
+    const have = pg.cards.reduce((s, c) => s + tot(c), 0);
+    const label = (p) => Tx("{ink} · cost {c}", { ink: inkLabel(p.ink), c: p.cost === 8 ? "8+" : p.cost });
+    const qty = (c, k) => { const o = owned(c.id), n = o[k], [a] = split(c.name), kl = Tx(k === "f" ? "foil" : "normal");
+      return `<span class="row" style="gap:6px;flex-wrap:nowrap"><span class="micro muted" style="width:38px;text-align:right">${Tx(k === "f" ? "Foil" : "Normal")}</span><span class="qty"><button type="button" data-bq="${esc(c.id)}:${k}:-1" aria-label="${esc(Tx("Remove one {k}", { k: kl }) + " · " + a)}" ${n <= 0 ? "disabled" : ""}>−</button><output>${n}</output><button type="button" data-bq="${esc(c.id)}:${k}:1" aria-label="${esc(Tx("Add one {k}", { k: kl }) + " · " + a)}">+</button></span></span>`; };
+    const row = (c) => { const [a, b] = split(c.name), p = priceOf(c.id);
+      return `<div class="list-row flat binder-row" data-bcard="${esc(c.id)}">${thumb(c, "sm", owned(c.id).f > 0)}</span><span class="t"><span>${esc(a)}${b ? `<small style="display:block;font-weight:400;color:var(--text-2)">${esc(b)}</small>` : ""}</span><span class="meta">${esc([setName(c.set), "nº " + c.num, rarName(c.rarity), p != null ? money(p) : ""].filter(Boolean).join(" · "))}</span></span>
+        <span class="trail" style="gap:6px">${qty(c, "n")}${qty(c, "f")}</span></div>`; };
+    const doneN = pages.filter((p) => checked.has(pageKey(p))).length;
+    $("title").textContent = Tx("Check my binder");
+    $("sub").textContent = Tx("In your binder's order: Core first, then Infinity; ink, cost and name.");
+    $("headActions").innerHTML = `<a class="btn" href="./" id="backColl"><i class="ic i-chevron-left"></i>${Tx("Back to collection")}</a>`;
+    $("backColl").onclick = (e) => { e.preventDefault(); setBinder(false); };
+    const prev = pages[i - 1], next = pages[i + 1];
+    $("app").innerHTML = `<div class="stack" style="gap:var(--sp-3)">
+      <div class="row between"><div class="seg" role="group" aria-label="${Tx("Section")}">${[["core", "Core"], ["inf", "Infinity"]].map(([k, l]) => `<button type="button" data-bsec="${k}" aria-pressed="${pg.sec === k}">${Tx(l)}${allChecked(pages.filter((p) => p.sec === k)) ? " ✓" : ""}</button>`).join("")}</div>
+        <span class="small muted" data-testid="binder-progress">${esc(Tx("{a} of {b} pages checked", { a: doneN, b: pages.length }))}</span></div>
+      <div class="chips" role="group" aria-label="${Tx("Ink")}">${inks.map((k) => `<button type="button" class="chipbtn" data-bink="${k}" aria-pressed="${pg.ink === k}">${INKS.includes(k) ? `<span class="inks"><i data-ink="${k.toLowerCase()}"></i></span>` : ""}${esc(inkLabel(k))}${allChecked(inSec.filter((p) => p.ink === k)) ? " ✓" : ""}</button>`).join("")}</div>
+      <div class="seg block" role="group" aria-label="${Tx("Cost")}">${costs.map((p) => `<button type="button" data-bcost="${p.cost}" aria-pressed="${p.cost === pg.cost}">${p.cost === 8 ? "8+" : p.cost}${checked.has(pageKey(p)) ? "✓" : ""}</button>`).join("")}</div>
+      <div class="row between" style="margin-top:var(--sp-2)"><div><h2 style="margin:0" data-testid="binder-page">${esc(label(pg))}</h2><div class="small muted">${esc(Tx("{n} cards · you have {h}", { n: pg.cards.length, h: have }))}</div></div>
+        <button type="button" class="btn ${checked.has(pageKey(pg)) ? "" : "primary"}" id="bCheck" aria-pressed="${checked.has(pageKey(pg))}"><i class="ic i-check"></i>${Tx(checked.has(pageKey(pg)) ? "Checked" : "Mark page as checked")}</button></div>
+      <label class="switch"><span>${Tx("Only cards I own on this page")}</span><input type="checkbox" role="switch" id="bOwned" ${bd.owned ? "checked" : ""}></label>
+      ${rows.length ? `<div class="card" style="padding:var(--sp-1) var(--sp-3)"><div class="list tight divided" id="bRows">${rows.map(row).join("")}</div></div>` : `<div class="empty plain"><b>${Tx("Nothing on this page.")}</b></div>`}
+      <div class="row between" style="margin-top:var(--sp-2)">${prev ? `<button type="button" class="btn" data-bgo="${i - 1}" aria-label="${Tx("Previous page")}"><i class="ic i-chevron-left"></i>${esc(label(prev))}</button>` : "<span></span>"}${next ? `<button type="button" class="btn" data-bgo="${i + 1}" aria-label="${Tx("Next page")}">${esc(label(next))}<i class="ic i-chevron-right"></i></button>` : "<span></span>"}</div>
+      <p class="small faint">${Tx("Changes save right away. You can undo from the notice at the bottom.")}</p></div>`;
+    const goPage = (p) => { Object.assign(bd, { sec: p.sec, ink: p.ink, cost: p.cost }); bsave(); renderBinder(); window.scrollTo(0, 0); };
+    document.querySelectorAll("[data-bsec]").forEach((b) => b.onclick = () => goPage(pages.find((p) => p.sec === b.dataset.bsec)));
+    document.querySelectorAll("[data-bink]").forEach((b) => b.onclick = () => goPage(inSec.find((p) => p.ink === b.dataset.bink)));
+    document.querySelectorAll("[data-bcost]").forEach((b) => b.onclick = () => goPage(costs.find((p) => String(p.cost) === b.dataset.bcost)));
+    document.querySelectorAll("[data-bgo]").forEach((b) => b.onclick = () => goPage(pages[+b.dataset.bgo]));
+    $("bCheck").onclick = () => { const k = pageKey(pg); checked.has(k) ? checked.delete(k) : checked.add(k); bsave(); renderBinder(); $("bCheck")?.focus(); };
+    $("bOwned").onchange = (e) => { bd.owned = e.target.checked; bsave(); renderBinder(); $("bOwned")?.focus(); };
+    $("bRows")?.addEventListener("click", (e) => { const b = e.target.closest("[data-bq]"); if (!b) return; const [id, k, d] = b.dataset.bq.split(":"); change(id, k, +d); renderBinder(); document.querySelector(`[data-bq="${CSS.escape(b.dataset.bq)}"]`)?.focus(); });
+  }
+  function renderAll() {
+    if (me && binderOn()) return renderBinder();
+    $("title").textContent = Tx("Collection");
+    $("sub").textContent = pricesDate ? Tx("Prices: Liga Lorcana, {d}", { d: new Date(pricesDate).toLocaleDateString(LOC, { day: "numeric", month: "short" }) }) : "";
+    if (me) { $("headActions").innerHTML = `<button type="button" class="btn" id="openBinder"><i class="ic i-cards"></i>${Tx("Check my binder")}</button>`; $("openBinder").onclick = () => setBinder(true); }
+    render();
+  }
+
   // ---------- boot ----------
   document.title = `${Tx("Collection")} · Inkwell`;
   $("title").textContent = Tx("Collection");
   document.documentElement.lang = LOC;
   if (!me) { render(); return; }
   $("app").innerHTML = `<div class="stats-row three"><span class="skel"></span><span class="skel"></span><span class="skel"></span></div><div class="cgrid">${"<span class=\"skel thumb\"></span>".repeat(8)}</div><p class="sr-only">${Tx("Loading…")}</p>`;
-  const go = () => loadAll().then(() => {
-    if (pricesDate) $("sub").textContent = Tx("Prices: Liga Lorcana, {d}", { d: new Date(pricesDate).toLocaleDateString(LOC, { day: "numeric", month: "short" }) });
-    render();
-  }).catch(() => {
+  const go = () => loadAll().then(renderAll).catch(() => {
     $("app").innerHTML = `<div class="empty"><img src="../ui/assets/empty/error.svg" alt=""><b>${Tx("Couldn't load your collection.")}</b><p>${Tx("Check your connection and try again.")}</p><button type="button" class="btn" id="retry"><i class="ic i-refresh"></i>${Tx("Try again")}</button></div>`;
     $("retry").onclick = go;
   });
