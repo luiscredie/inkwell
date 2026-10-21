@@ -702,6 +702,7 @@ table .cardcell small { display: block; color: var(--text-2); }
 .i-home{-webkit-mask-image:url(assets/icons/home.svg);mask-image:url(assets/icons/home.svg)}
 .i-cards{-webkit-mask-image:url(assets/icons/cards.svg);mask-image:url(assets/icons/cards.svg)}
 .i-decks{-webkit-mask-image:url(assets/icons/decks.svg);mask-image:url(assets/icons/decks.svg)}
+.i-camera{-webkit-mask-image:url(assets/icons/camera.svg);mask-image:url(assets/icons/camera.svg)}
 .i-games{-webkit-mask-image:url(assets/icons/games.svg);mask-image:url(assets/icons/games.svg)}
 .i-trades{-webkit-mask-image:url(assets/icons/trades.svg);mask-image:url(assets/icons/trades.svg)}
 .i-counter{-webkit-mask-image:url(assets/icons/counter.svg);mask-image:url(assets/icons/counter.svg)}

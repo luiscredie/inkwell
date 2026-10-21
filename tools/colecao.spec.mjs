@@ -67,3 +67,77 @@ test('binder check mode follows the binder order and saves changes', async ({ pa
   await expect(page).not.toHaveURL(/conferir/);
   await expect(page.getByRole('button', { name: 'Conferir fichário' })).toBeVisible();
 });
+
+// ---------- Escanear (card scanner) with a fake camera that shows one card image in the frame ----------
+const IMG = (f) => `../lorcana-card-images/images/${f}`;
+async function fakeCamera(page, { file, ocr = null, deny = false }) {
+  await page.addInitScript(([src, ocrText, denied]) => {
+    if (ocrText !== null) window.INKWELL_SCAN_OCR = async () => ocrText;
+    navigator.mediaDevices.getUserMedia = async () => {
+      if (denied) throw new DOMException('denied', 'NotAllowedError');
+      const c = document.createElement('canvas'); c.width = 720; c.height = 1280;
+      const ctx = c.getContext('2d'), img = new Image(); img.src = src;
+      setInterval(() => {
+        ctx.fillStyle = '#4a3426'; ctx.fillRect(0, 0, c.width, c.height);
+        const g = window.__inkwellScanGuide?.();
+        if (g && img.complete && img.naturalWidth) {   // the card a little off-centre and a little bigger than the frame, as a hand would hold it
+          const w = g.w * 1.03, h = g.h * 1.03;
+          ctx.drawImage(img, g.x + g.w * 0.02 - (w - g.w) / 2, g.y - g.h * 0.015 - (h - g.h) / 2, w, h);
+        }
+      }, 60);
+      return c.captureStream(15);
+    };
+  }, [file ? IMG(file) : '', ocr, deny]);
+}
+const deltas = (calls) => calls.filter((c) => c.path === 'rpc/apply_collection_delta').flatMap((c) => c.body.p_delta);
+
+test('scanner adds a card it recognises; +1, foil and undo', async ({ page }) => {
+  const calls = await setup(page);
+  await fakeCamera(page, { file: 'Rapunzel_-_Tower_Defender__LOR13-80.jpg' });
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Escanear' }).click();
+  await expect(page.locator('[data-testid="scan-last"]')).toContainText('Rapunzel', { timeout: 15000 });
+  await expect(page.locator('[data-testid="scan-count"]')).toHaveText('1 adicionada');
+  await page.getByRole('button', { name: '+1 desta' }).click();
+  await expect(page.locator('[data-testid="scan-count"]')).toHaveText('2 adicionadas');
+  await page.locator('#scanUndo').click();
+  await expect(page.locator('[data-testid="scan-count"]')).toHaveText('1 adicionada');
+  await page.locator('#scan [data-foil="1"]').click();
+  await page.getByRole('button', { name: '+1 desta' }).click();
+  await page.getByRole('button', { name: 'Concluir' }).click();
+  await expect.poll(() => deltas(calls).length).toBeGreaterThan(0);
+  const net = {}; for (const d of deltas(calls)) { const k = `${d.card_id}:${d.foil}`; net[k] = (net[k] || 0) + d.qty; }
+  expect(net).toEqual({ 'LOR13-80:false': 1, 'LOR13-80:true': 1 });
+});
+
+test('scanner reads the collector line when two printings share the art', async ({ page }) => {
+  const calls = await setup(page);
+  await fakeCamera(page, { file: 'The_Queen_-_Regal_Monarch__LOR9-7.jpg', ocr: '7/204 · EN · 9' });
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Escanear' }).click();
+  await expect(page.locator('[data-testid="scan-last"]')).toContainText('nº 7', { timeout: 15000 });
+  await page.getByRole('button', { name: 'Concluir' }).click();
+  await expect.poll(() => deltas(calls).map((d) => d.card_id)).toEqual(['LOR9-7']);
+});
+
+test('scanner asks only when it cannot tell the printings apart', async ({ page }) => {
+  const calls = await setup(page);
+  await fakeCamera(page, { file: 'Under_the_Sea__LOR4-95.jpg', ocr: '' });
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Escanear' }).click();
+  const pick = page.locator('[data-testid="scan-pick"]');
+  await expect(pick).toBeVisible({ timeout: 15000 });
+  await expect(pick.locator('[data-pick]')).toHaveCount(3);   // two printings + "Nenhuma destas"
+  await pick.locator('[data-pick="LOR9-97"]').click();
+  await expect(page.locator('[data-testid="scan-last"]')).toContainText('nº 97');
+  await page.getByRole('button', { name: 'Concluir' }).click();
+  await expect.poll(() => deltas(calls).map((d) => d.card_id)).toEqual(['LOR9-97']);
+});
+
+test('scanner explains a blocked camera', async ({ page }) => {
+  await setup(page);
+  await fakeCamera(page, { deny: true });
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Escanear' }).click();
+  await expect(page.locator('#scanSay')).toContainText('A câmera não abriu');
+});

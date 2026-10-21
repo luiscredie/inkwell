@@ -18,6 +18,25 @@
 .cc-name small { display: block; color: var(--text-2); font-weight: 400; }
 #cardSheet .big { width: 176px; margin: 0 auto var(--sp-4); border-radius: 12px; }
 .load-more { display: flex; justify-content: center; margin: var(--sp-6) 0 0; }
+/* card scanner */
+#scan { inset: 0; width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; border-radius: 0; background: #000; color: #fff; }
+#scan::backdrop { background: #000; }
+#scan .stage { position: absolute; inset: 0; overflow: hidden; }
+#scan video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+#scan .guide { position: absolute; border-radius: 14px; border: 2px solid rgba(255,255,255,.85); box-shadow: 0 0 0 9999px rgba(8,6,20,.55); transition: border-color .2s; pointer-events: none; }
+#scan .guide.ok { border-color: var(--win); } #scan .guide.ask { border-color: var(--accent); }
+#scan .top { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 10px; }
+#scan .top h2 { font-size: var(--fs-body); margin: 0; }
+#scan .panel { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 12px calc(env(safe-area-inset-bottom, 0px) + 12px); background: linear-gradient(180deg, transparent, rgba(8,6,20,.92) 28%); display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+#scan .panel > * { min-width: 0; }
+#scan .last .t .small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#scan .say { text-align: center; font-weight: 600; min-height: 1.4em; }
+#scan .say.err { color: var(--loss); }
+#scan .last { display: flex; align-items: center; gap: 10px; background: rgba(23,20,46,.92); border-radius: 12px; padding: 8px; }
+#scan .last .t { flex: 1; min-width: 0; } #scan .last .t b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#scan .pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+#scan .pick button { display: grid; gap: 4px; padding: 6px; border-radius: 10px; border: 1px solid var(--line); background: rgba(23,20,46,.95); color: #fff; font-size: var(--fs-micro); text-align: left; }
+#scan .pick .thumb { width: 100%; }
 </style>
 
 <main class="page" id="page">
@@ -26,6 +45,7 @@
 </main>
 <dialog class="sheet" id="filterSheet" aria-labelledby="fT"></dialog>
 <dialog class="sheet" id="cardSheet" aria-labelledby="cT"></dialog>
+<dialog id="scan" aria-labelledby="scanT"></dialog>
 <div class="toast-host"><div class="toast" id="toast" role="status" hidden></div></div>
 
 <script>
@@ -51,6 +71,13 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "{n} cards · you have {h}": "{n} cartas · você tem {h}", "Mark page as checked": "Marcar página como conferida", "Checked": "Conferida",
     "Previous page": "Página anterior", "Next page": "Próxima página", "{a} of {b} pages checked": "{a} de {b} páginas conferidas",
     "Only cards I own on this page": "Só as que tenho", "Section": "Seção", "Nothing on this page.": "Nada nesta página.", "Back to collection": "Voltar para a coleção",
+    "Scan cards": "Escanear cartas", "Scan": "Escanear", "Point the camera at one card inside the frame.": "Aponte a câmera para uma carta dentro da moldura.",
+    "Recognising…": "Reconhecendo…", "Reading the card number…": "Lendo o número da carta…", "Added: {c}": "Adicionada: {c}", "Remove the card and show the next one.": "Tire a carta e mostre a próxima.",
+    "Not sure which printing this is. Which one?": "Não deu para ter certeza da versão. Qual é?", "None of these": "Nenhuma destas",
+    "Centre the card in the frame, with good light.": "Centralize a carta na moldura, com boa luz.", "Starting the camera…": "Abrindo a câmera…",
+    "The camera didn't open. Allow camera access for this site and try again.": "A câmera não abriu. Permita o acesso à câmera para este site e tente de novo.",
+    "Couldn't load the card scanner.": "Não foi possível carregar o leitor de cartas.", "{n} added": "{n} adicionadas", "{n} added_1": "1 adicionada",
+    "+1 of this": "+1 desta", "Done scanning": "Concluir", "Card": "Carta", "Removed: {c}": "Removida: {c}",
     "Show more": "Mostrar mais", "{n} cards": "{n} cartas", "Prices: Liga Lorcana, {d}": "Preços da Liga Lorcana de {d}",
     "Normal": "Normal", "Foil": "Foil", "{n} free": "{n} livre(s)", "{n} lent": "{n} emprestada(s)", "Value of your {n}": "Valor das suas {n}",
     "Remove one {k}": "Tirar uma {k}", "Add one {k}": "Pôr uma {k}", "normal": "normal", "foil": "foil", "Lent": "Emprestadas",
@@ -61,7 +88,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "Common": "Comum", "Uncommon": "Incomum", "Rare": "Rara", "Super rare": "Super rara", "Legendary": "Lendária", "Enchanted": "Encantada", "Promo": "Promo", "Epic": "Épica", "Iconic": "Icônica",
   };
   const fill = (s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)) : s);
-  const Tx = (en, v) => fill(lang === "pt" && en in PT ? PT[en] : en, v);
+  const Tx = (en, v) => { const k = v && v.n === 1 && lang === "pt" && (en + "_1") in PT ? en + "_1" : en; return fill(lang === "pt" && k in PT ? PT[k] : en, v); };
   const LOC = lang === "pt" ? "pt-BR" : "en";
   const money = (v) => (v ?? 0).toLocaleString(LOC, { style: "currency", currency: "BRL" });
   const moneySplit = (v) => { const s = money(v), i = s.lastIndexOf(lang === "pt" ? "," : "."); return i > 0 ? `${esc(s.slice(0, i))}<small>${esc(s.slice(i))}</small>` : esc(s); };
@@ -299,7 +326,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
         const undoAll = burst;
         toast(Tx("Collection updated"), () => { burst = []; for (const d of undoAll) change(d.card_id, d.foil ? "f" : "n", -d.qty, true); clearTimeout(pendingTimer); flush(true); renderAll(); });
       })
-      .catch(() => { for (const d of delta) { const e = p.collection[d.card_id]; if (e) e[d.foil ? "f" : "n"] -= d.qty; } toast(Tx("Couldn't save. Try again."), null, true); renderAll(); });
+      .catch(() => { for (const d of delta) { const e = p.collection[d.card_id]; if (e) e[d.foil ? "f" : "n"] -= d.qty; } toast(Tx("Couldn't save. Try again."), null, true); if ($("scan").open) scanSay(Tx("Couldn't save. Try again."), true); renderAll(); });
   }
   let toastTimer = null;
   function toast(text, undo, err) {
@@ -392,8 +419,182 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     if (me && binderOn()) return renderBinder();
     $("title").textContent = Tx("Collection");
     $("sub").textContent = pricesDate ? Tx("Prices: Liga Lorcana, {d}", { d: new Date(pricesDate).toLocaleDateString(LOC, { day: "numeric", month: "short" }) }) : "";
-    if (me) { $("headActions").innerHTML = `<button type="button" class="btn" id="openBinder"><i class="ic i-cards"></i>${Tx("Check my binder")}</button>`; $("openBinder").onclick = () => setBinder(true); }
+    if (me) { $("headActions").innerHTML = `<button type="button" class="btn" id="openBinder"><i class="ic i-cards"></i>${Tx("Check my binder")}</button><button type="button" class="btn primary" id="openScan"><i class="ic i-camera"></i>${Tx("Scan")}</button>`;
+      $("openBinder").onclick = () => setBinder(true); $("openScan").onclick = () => openScanner($("openScan")); }
     render();
+  }
+
+  // ---------- escanear: recognise a card by its art (tools/build_scan_index.py builds the same fingerprint for every card image) ----------
+  const SG = { gx: 16, gy: 12, cell: 14, ax: 13, ay: 26, W: 250, H: 350, M: 0.10 };   // keep in step with tools/build_scan_index.py
+  let SCAN = null;
+  async function loadScan() {
+    if (SCAN) return SCAN;
+    const [meta, buf] = await Promise.all([fetch("../data/scan-index.json").then((r) => { if (!r.ok) throw new Error("index"); return r.json(); }),
+      fetch("../data/scan-index.bin").then((r) => { if (!r.ok) throw new Error("index"); return r.arrayBuffer(); })]);
+    const dims = meta.dims, n = meta.ids.length, D = new Int8Array(buf), norm = new Float32Array(n);
+    for (let i = 0; i < n; i++) { let q = 0; for (let k = i * dims, e = k + dims; k < e; k++) q += D[k] * D[k]; norm[i] = Math.sqrt(q) || 1; }
+    SCAN = { ids: meta.ids, D, dims, n, norm };
+    return SCAN;
+  }
+  const lin = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+  const fl = (t) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+  function lab(r, g, b) {
+    const R = lin(r), G = lin(g), B = lin(b);
+    const x = fl((R * 0.4124 + G * 0.3576 + B * 0.1805) / 0.95047), y = fl(R * 0.2126 + G * 0.7152 + B * 0.0722), z = fl((R * 0.0193 + G * 0.1192 + B * 0.9505) / 1.08883);
+    return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
+  }
+  function integral(img) {   // ImageData -> summed-area table, 3 channels
+    const { width: w, height: h, data } = img, W1 = w + 1, I = new Float64Array(W1 * (h + 1) * 3);
+    for (let y = 0; y < h; y++) { let r = 0, g = 0, b = 0;
+      for (let x = 0; x < w; x++) { const p = (y * w + x) * 4; r += data[p]; g += data[p + 1]; b += data[p + 2];
+        const o = ((y + 1) * W1 + x + 1) * 3, u = (y * W1 + x + 1) * 3; I[o] = I[u] + r; I[o + 1] = I[u + 1] + g; I[o + 2] = I[u + 2] + b; } }
+    return { I, w, h };
+  }
+  function fingerprint(T, ox, oy, s) {   // same steps as tools/build_scan_index.py: cell means -> Lab -> standardise -> unit length
+    const { I, w, h } = T, W1 = w + 1, n = SG.gx * SG.gy, v = new Float32Array(n * 3), cell = SG.cell * s, x0 = ox + SG.ax * s, y0 = oy + SG.ay * s;
+    for (let j = 0; j < SG.gy; j++) for (let i = 0; i < SG.gx; i++) {
+      let xa = Math.round(x0 + i * cell), xb = Math.round(x0 + (i + 1) * cell), ya = Math.round(y0 + j * cell), yb = Math.round(y0 + (j + 1) * cell);
+      xa = Math.max(0, xa); xb = Math.min(w, Math.max(xa + 1, xb)); ya = Math.max(0, ya); yb = Math.min(h, Math.max(ya + 1, yb));
+      const a = (yb * W1 + xb) * 3, b = (ya * W1 + xb) * 3, c = (yb * W1 + xa) * 3, d = (ya * W1 + xa) * 3, area = (xb - xa) * (yb - ya);
+      const L = lab((I[a] - I[b] - I[c] + I[d]) / area, (I[a + 1] - I[b + 1] - I[c + 1] + I[d + 1]) / area, (I[a + 2] - I[b + 2] - I[c + 2] + I[d + 2]) / area);
+      const k = (j * SG.gx + i) * 3; v[k] = L[0]; v[k + 1] = L[1]; v[k + 2] = L[2];
+    }
+    for (let ch = 0; ch < 3; ch++) { let m = 0, q = 0; for (let k = ch; k < v.length; k += 3) m += v[k]; m /= n; for (let k = ch; k < v.length; k += 3) q += (v[k] - m) ** 2;
+      const sd = Math.sqrt(q / n) + 1e-6; for (let k = ch; k < v.length; k += 3) v[k] = (v[k] - m) / sd; }
+    let q = 0; for (let k = 0; k < v.length; k++) q += v[k] * v[k]; q = Math.sqrt(q) || 1; for (let k = 0; k < v.length; k++) v[k] /= q;
+    return v;
+  }
+  const COARSE = [], FINE = [];
+  for (const s of [0.94, 1, 1.06]) for (const dx of [-0.035, 0, 0.035]) for (const dy of [-0.035, 0, 0.035]) COARSE.push([s, dx, dy]);
+  for (const s of [0.92, 0.96, 1, 1.04, 1.08]) for (const dx of [-0.05, -0.025, 0, 0.025, 0.05]) for (const dy of [-0.05, -0.025, 0, 0.025, 0.05]) FINE.push([s, dx, dy]);
+  function variants(T, grid) {
+    return grid.map(([s, dx, dy]) => { const ox = T.w / 2 - (SG.W / 2) * s + dx * SG.W, oy = T.h / 2 - (SG.H / 2) * s + dy * SG.H; return { v: fingerprint(T, ox, oy, s), s, dx, dy }; });
+  }
+  const dot = (i, v) => { const { D, dims } = SCAN; let q = 0; for (let k = 0, o = i * dims; k < dims; k++) q += D[o + k] * v[k]; return q / SCAN.norm[i]; };
+  // Returns { id, score, group: [ids with the same art], confident }
+  function identify(img) {
+    const T = integral(img), Q = variants(T, COARSE), n = SCAN.n, coarse = new Float32Array(n);
+    for (let i = 0; i < n; i++) { let best = -1; for (const q of Q) { const d = dot(i, q.v); if (d > best) best = d; } coarse[i] = best; }
+    const order = [...coarse.keys()].sort((a, b) => coarse[b] - coarse[a]), top = order.slice(0, 15);
+    const F = variants(T, FINE), fine = top.map((i) => { let best = -1; for (const q of F) { const d = dot(i, q.v); if (d > best) best = d; } return [i, best]; }).sort((a, b) => b[1] - a[1]);
+    const [bi, bs] = fine[0], group = fine.filter(([, s]) => s >= bs - 0.04).map(([i]) => SCAN.ids[i]);
+    const runner = (fine.find(([, s]) => s < bs - 0.04) || [0, coarse[order[15]]])[1];
+    return { id: SCAN.ids[bi], score: bs, group, confident: bs >= 0.70 && bs - runner >= 0.15 };
+  }
+  window.__inkwellScanIdentify = (img) => (SCAN ? identify(img) : null);   // used by the browser test
+
+  // Same art in several printings (reprints, promos): read the collector line "29/204 · EN · 11" to pick one.
+  function pickByCollector(text, group) {
+    const toks = String(text || "").match(/\d+/g) || [];
+    if (!toks.length) return null;
+    const first = toks[0], nums = new Set([first, first.length > 3 ? first.slice(0, -3) : first]), last = toks[toks.length - 1];
+    const score = (id) => { const m = id.match(/^LOR(\d+)-(\d+)$/); if (!m) return 0; let s = 0; if (nums.has(m[2]) || toks.includes(m[2])) s += 2; if (last === m[1]) s += 2; else if (toks.length > 1 && last.endsWith(m[1])) s += 1; return s; };
+    const r = group.map((id) => [id, score(id)]).sort((a, b) => b[1] - a[1]);
+    return r[0][1] >= 2 && r[0][1] >= (r[1]?.[1] ?? 0) + 2 ? r[0][0] : null;
+  }
+  let ocrWorker = null;
+  async function readCollector(canvas) {
+    if (window.INKWELL_SCAN_OCR) return window.INKWELL_SCAN_OCR(canvas);   // test hook
+    if (!window.Tesseract) await new Promise((ok, no) => { const sc = document.createElement("script"); sc.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); });
+    if (!ocrWorker) { ocrWorker = await window.Tesseract.createWorker("eng"); await ocrWorker.setParameters({ tessedit_pageseg_mode: "7", tessedit_char_whitelist: "0123456789/EN-. " }); }
+    return (await ocrWorker.recognize(canvas)).data.text;
+  }
+
+  // ---------- scanner screen ----------
+  const scan = { stream: null, timer: null, busy: false, foil: false, added: [], last: null, wait: false, seen: null, seenN: 0, askOpen: false, misses: 0 };
+  function guideRect() {   // on-screen frame, card shaped
+    const st = $("scan").querySelector(".stage"), vw = st?.clientWidth || window.innerWidth, vh = st?.clientHeight || window.innerHeight;
+    let h = Math.min(vh * 0.58, 560), w = h * SG.W / SG.H;
+    if (w > vw * 0.8) { w = vw * 0.8; h = w * SG.H / SG.W; }
+    return { x: (vw - w) / 2, y: Math.max(64, (vh - h) / 2 - vh * 0.06), w, h, vw, vh };
+  }
+  function videoRect(g) {   // the guide in video pixels (video uses object-fit: cover)
+    const v = $("scanVideo"), k = Math.max(g.vw / v.videoWidth, g.vh / v.videoHeight), ox = (v.videoWidth * k - g.vw) / 2, oy = (v.videoHeight * k - g.vh) / 2;
+    return { x: (g.x + ox) / k, y: (g.y + oy) / k, w: g.w / k, h: g.h / k };
+  }
+  window.__inkwellScanGuide = () => ($("scan").open && $("scanVideo").videoWidth ? videoRect(guideRect()) : null);   // used by the browser test
+  function scanSay(text, err) { const el = $("scanSay"); if (el) { el.textContent = text; el.className = `say${err ? " err" : ""}`; } }
+  function drawScan() {   // the camera stage, built once per opening
+    const sh = $("scan"), g = guideRect();
+    sh.innerHTML = `<div class="stage"><video id="scanVideo" playsinline muted autoplay></video><div class="guide" id="scanGuide" style="left:${g.x}px;top:${g.y}px;width:${g.w}px;height:${g.h}px"></div>
+      <div class="top"><button type="button" class="btn icon" data-scan-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button><h2 id="scanT">${Tx("Scan cards")}</h2>
+        <div class="seg" role="group" aria-label="${Tx("Card")}"><button type="button" data-foil="0" aria-pressed="${!scan.foil}">${Tx("Normal")}</button><button type="button" data-foil="1" aria-pressed="${scan.foil}">${Tx("Foil")}</button></div></div>
+      <div class="panel"><div class="say" id="scanSay" role="status" aria-live="polite">${Tx("Point the camera at one card inside the frame.")}</div><div id="scanPick"></div><div id="scanLast"></div>
+        <div class="row between"><span class="small" data-testid="scan-count" id="scanCount"></span><button type="button" class="btn primary" data-scan-close>${Tx("Done scanning")}</button></div></div></div>`;
+    sh.querySelectorAll("[data-scan-close]").forEach((b) => b.onclick = () => sh.close());
+    sh.querySelectorAll("[data-foil]").forEach((b) => b.onclick = () => { scan.foil = b.dataset.foil === "1"; sh.querySelectorAll("[data-foil]").forEach((x) => x.setAttribute("aria-pressed", String((x.dataset.foil === "1") === scan.foil))); });
+    drawLast();
+  }
+  function placeGuide() { const g = guideRect(), el = $("scanGuide"); if (el) Object.assign(el.style, { left: g.x + "px", top: g.y + "px", width: g.w + "px", height: g.h + "px" }); }
+  function drawLast() {   // last card added, "+1 desta", undo, count
+    const lastC = scan.last && BY.get(scan.last.id), box = $("scanLast"); if (!box) return;
+    box.innerHTML = lastC ? `<div class="last" data-testid="scan-last">${thumb(lastC, "xs", scan.last.foil)}</span><span class="t"><b>${esc(split(lastC.name).join(" · ").replace(/ · $/, ""))}</b><span class="small muted">${esc([setName(lastC.set), "nº " + lastC.num, Tx(scan.last.foil ? "foil" : "normal")].join(" · "))}</span></span>
+      <button type="button" class="btn small" id="scanAgain">${Tx("+1 of this")}</button><button type="button" class="btn ghost small" id="scanUndo" aria-label="${Tx("Undo")}"><i class="ic i-undo"></i></button></div>` : "";
+    $("scanCount").textContent = Tx("{n} added", { n: scan.added.length });
+    $("scanAgain")?.addEventListener("click", () => addScanned(scan.last.id));   // uses the Normal/Foil choice shown at the top
+    $("scanUndo")?.addEventListener("click", () => { const l = scan.added.pop(); if (!l) return; change(l.id, l.foil ? "f" : "n", -1, true); scan.last = scan.added[scan.added.length - 1] || null; drawLast(); const c = BY.get(l.id); scanSay(Tx("Removed: {c}", { c: c ? split(c.name)[0] : l.id })); });
+  }
+  function addScanned(id) {
+    const c = BY.get(id); if (!c) return;
+    change(id, scan.foil ? "f" : "n", 1, true);
+    scan.added.push({ id, foil: scan.foil }); scan.last = { id, foil: scan.foil }; scan.wait = true; scan.seen = null; scan.seenN = 0;
+    navigator.vibrate?.(40);
+    drawLast();
+    scanSay(Tx("Added: {c}", { c: split(c.name)[0] }) + " · " + Tx("Remove the card and show the next one."));
+    $("scanGuide")?.classList.add("ok"); setTimeout(() => $("scanGuide")?.classList.remove("ok"), 700);
+  }
+  function askWhich(group) {
+    scan.askOpen = true; $("scanGuide")?.classList.add("ask");
+    scanSay(Tx("Not sure which printing this is. Which one?"));
+    const box = $("scanPick");
+    box.innerHTML = `<div class="pick" data-testid="scan-pick">${group.slice(0, 6).map((id) => { const c = BY.get(id); return c ? `<button type="button" data-pick="${esc(id)}">${thumb(c, "", false)}</span><span>${esc(setName(c.set))} · nº ${esc(c.num)}</span></button>` : ""; }).join("")}
+      <button type="button" data-pick="">${Tx("None of these")}</button></div>`;
+    box.querySelectorAll("[data-pick]").forEach((b) => b.onclick = () => { box.innerHTML = ""; scan.askOpen = false; $("scanGuide")?.classList.remove("ask"); if (b.dataset.pick) addScanned(b.dataset.pick); else { scan.wait = true; scanSay(Tx("Remove the card and show the next one.")); } });
+  }
+  function grab(rect, outW, outH) {
+    const v = $("scanVideo"), cv = document.createElement("canvas"); cv.width = outW; cv.height = outH;
+    const ctx = cv.getContext("2d", { willReadFrequently: true }); ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(v, rect.x, rect.y, rect.w, rect.h, 0, 0, outW, outH); return cv;
+  }
+  async function tick() {
+    const v = $("scanVideo");
+    if (scan.busy || scan.askOpen || !v || !v.videoWidth || !SCAN) return;
+    scan.busy = true;
+    try {
+      const r = videoRect(guideRect()), m = SG.M;
+      const wide = { x: r.x - r.w * m, y: r.y - r.h * m, w: r.w * (1 + 2 * m), h: r.h * (1 + 2 * m) };
+      const cv = grab(wide, Math.round(SG.W * (1 + 2 * m)), Math.round(SG.H * (1 + 2 * m)));
+      const res = identify(cv.getContext("2d").getImageData(0, 0, cv.width, cv.height));
+      if (scan.wait) {   // after adding, wait until the card leaves the frame
+        if (!(res.confident && res.group.includes(scan.last?.id))) { scan.misses++; if (scan.misses >= 2) { scan.wait = false; scan.misses = 0; scanSay(Tx("Point the camera at one card inside the frame.")); } }
+        else scan.misses = 0;
+        return;
+      }
+      if (!res.confident) { scan.seen = null; scan.seenN = 0; if (res.score > 0.5) scanSay(Tx("Centre the card in the frame, with good light.")); return; }
+      const key = res.group.slice().sort().join("|");
+      if (scan.seen !== key) { scan.seen = key; scan.seenN = 1; scanSay(Tx("Recognising…")); return; }
+      if (++scan.seenN < 2) return;   // the same answer on two frames in a row
+      if (res.group.length === 1) return addScanned(res.id);
+      scanSay(Tx("Reading the card number…"));
+      const hi = grab({ x: r.x + r.w * 0.02, y: r.y + r.h * 0.955, w: r.w * 0.28, h: r.h * 0.037 }, 840, 111);
+      let text = ""; try { text = await readCollector(hi); } catch { text = ""; }
+      const pick = pickByCollector(text, res.group);
+      if (pick) addScanned(pick); else askWhich(res.group);
+    } finally { scan.busy = false; }
+  }
+  async function openScanner(from) {
+    const sh = $("scan"); scan.added = []; scan.last = null; scan.wait = false; scan.askOpen = false; scan.seen = null;
+    drawScan(); sh.showModal(); scanSay(Tx("Starting the camera…"));
+    sh.addEventListener("close", () => { clearInterval(scan.timer); scan.stream?.getTracks().forEach((t) => t.stop()); scan.stream = null; sh.innerHTML = ""; flush(true); renderAll(); from?.focus?.(); if (scan.added.length) toast(Tx("{n} added", { n: scan.added.length })); }, { once: true });
+    try { await loadScan(); } catch { scanSay(Tx("Couldn't load the card scanner."), true); return; }
+    try {
+      scan.stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } } });
+    } catch { scanSay(Tx("The camera didn't open. Allow camera access for this site and try again."), true); return; }
+    if (!sh.open) { scan.stream.getTracks().forEach((t) => t.stop()); return; }
+    const v = $("scanVideo"); v.srcObject = scan.stream; await v.play().catch(() => {});
+    scanSay(Tx("Point the camera at one card inside the frame."));
+    scan.timer = setInterval(tick, 350);
+    window.addEventListener("resize", () => sh.open && placeGuide(), { passive: true });
   }
 
   // ---------- boot ----------
