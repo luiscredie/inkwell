@@ -19,17 +19,52 @@
 /* layout only — components come from ../ui/tokens.css (design v2) */
 .mi { display: grid; gap: var(--sp-5); }
 .mi-hero { position: relative; border-radius: 20px; overflow: hidden; background: var(--surface-2); box-shadow: var(--e2); }
-.mi-cover { height: 168px; background-color: var(--surface-3); background-size: 135% auto; background-position: 50% 24%; position: relative; }
+.mi-cover { height: 132px; background-color: var(--surface-3); background-size: 100% auto; background-position: 50% 14%; background-repeat: no-repeat; position: relative; overflow: hidden; }
+.mi-art { display: none; }
+@media (min-width: 640px) {   /* wide screens: the art at its own scale in the middle, fading into a soft blur of it */
+  .mi-cover { height: 160px; background-image: none !important; isolation: isolate; }
+  .mi-cover::before { content: ""; position: absolute; inset: -24px; background: var(--art) 50% 20% / cover no-repeat; filter: blur(24px) saturate(1.1); opacity: .5; z-index: -1; }
+  .mi-art { display: block; position: absolute; top: 0; bottom: 0; left: 50%; width: 520px; max-width: 70%; transform: translateX(-50%); z-index: -1;
+    background: var(--art) 50% 15% / 120% auto no-repeat;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent); mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent); }
+}
 .mi-cover::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(19,16,42,.05) 0%, rgba(19,16,42,.35) 55%, var(--surface-2) 100%); }
-.mi-id { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--sp-4); align-items: end; padding: 0 var(--sp-5) var(--sp-5); margin-top: -56px; z-index: 1; }
-.mi-av { width: 104px; height: 104px; border-radius: 50%; background-color: var(--surface-3); background-size: 210% auto; background-position: 50% 20%; box-shadow: 0 0 0 4px var(--surface-2), 0 0 0 6px var(--gold, #e9b949); flex: none; }
+.mi-id { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--sp-4); align-items: end; padding: 0 var(--sp-5) var(--sp-3); margin-top: -56px; z-index: 1; }
+.mi-av { display: inline-block; vertical-align: middle; width: 104px; height: 104px; border-radius: 50%; background-color: var(--surface-3); background-size: 210% auto; background-position: 50% 20%; box-shadow: 0 0 0 4px var(--surface-2), 0 0 0 6px var(--gold, #e9b949); flex: none; }
 .mi-av.sm { width: 40px; height: 40px; box-shadow: 0 0 0 2px var(--gold, #e9b949); }
 .mi-name { margin: 0; font-size: var(--fs-h1); line-height: 1.1; overflow-wrap: anywhere; }
 .mi-handle { color: var(--text-2); font-weight: 600; }
 .mi-meta { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); align-items: center; margin-top: var(--sp-2); color: var(--text-2); font-size: var(--fs-small); }
 .mi-ink { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 6px; border-radius: var(--r-pill); background: var(--surface-3); color: var(--text); font-weight: 600; }
 .mi-ink i { width: 12px; height: 12px; border-radius: 50%; background: var(--ink-steel); }
-.mi-bio { margin: var(--sp-3) 0 0; color: var(--text); max-width: 60ch; overflow-wrap: anywhere; }
+.mi-bio { margin: var(--sp-3) 0 0; color: var(--text-2); max-width: 60ch; overflow-wrap: anywhere; }
+.mi-body { padding: 0 var(--sp-5) var(--sp-4); }
+.mi-motto { margin: 0 0 var(--sp-3); font-size: 1.2rem; font-weight: 700; color: var(--gold, #e9b949); font-style: italic; overflow-wrap: anywhere; }
+.mi-col { display: grid; gap: var(--sp-5); align-content: start; }
+@media (max-width: 899px) {   /* one column: showcase, friends, recados, deck, record, trade */
+  .mi-col { display: contents; }
+  .mi-showsec { order: 1; } .mi-friends { order: 2; } .mi-recs { order: 3; } .mi-deck { order: 4; } .mi-recsum { order: 5; } .mi-trade { order: 6; }
+}
+.mi-fgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: var(--sp-3); margin-top: var(--sp-3); }
+.mi-fgrid a { display: grid; justify-items: center; gap: 6px; color: var(--text); text-decoration: none; font-size: var(--fs-small); text-align: center; overflow-wrap: anywhere; }
+.mi-av.md { width: 52px; height: 52px; box-shadow: 0 0 0 2px var(--gold, #e9b949); }
+.mi-reclist { display: grid; gap: var(--sp-3); }
+.mi-rec1 { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: var(--sp-3); padding: var(--sp-3); border-radius: var(--r-lg); background: var(--surface-1); border: 1px solid var(--line); }
+.mi-rec1 p { margin: 4px 0 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.mi-rec1 a { color: inherit; text-decoration: none; } .mi-rec1 a:hover b, .mi-rec1 b a:hover { text-decoration: underline; }
+.mi-recform { display: grid; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+.mi-key { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--sp-2); }
+.mi-key figure { margin: 0; display: grid; gap: 4px; } .mi-key .thumb { width: 100%; border-radius: 8px; }
+.mi-key figcaption { font-size: var(--fs-micro); color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 560px) { .mi-key { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.mi-curve { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; align-items: end; height: 64px; margin: var(--sp-4) 0 var(--sp-2); }
+.mi-curve span { display: grid; grid-template-rows: 1fr auto; height: 100%; align-items: end; justify-items: center; gap: 2px; }
+.mi-curve i { width: 100%; min-height: 2px; border-radius: 4px 4px 0 0; background: var(--accent-soft); box-shadow: inset 0 2px 0 var(--accent); }
+.mi-curve b { font-size: var(--fs-micro); color: var(--text-3); }
+.mi-list summary { cursor: pointer; color: var(--text-2); font-size: var(--fs-small); font-weight: 600; min-height: 32px; display: flex; align-items: center; }
+.mi-list ul { list-style: none; margin: var(--sp-2) 0 0; padding: 0; columns: 2 220px; font-size: var(--fs-small); }
+.mi-list li { break-inside: avoid; padding: 3px 0; display: flex; gap: 8px; align-items: center; }
+.mi-list .cost { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--surface-3); font-size: var(--fs-micro); font-weight: 800; flex: none; }
 .mi-acts { display: flex; flex-wrap: wrap; gap: var(--sp-2); padding: 0 var(--sp-5) var(--sp-5); }
 .mi-mock { display: flex; gap: var(--sp-2); align-items: center; padding: 10px var(--sp-4); border-radius: var(--r-md); background: var(--accent-soft); color: var(--text); font-weight: 600; }
 .mi-cols { display: grid; gap: var(--sp-5); grid-template-columns: minmax(0, 1fr); }
@@ -53,7 +88,7 @@
 .invite-box { display: flex; gap: var(--sp-2); }
 .invite-box input { flex: 1; min-width: 0; font-size: var(--fs-small); }
 .pc-prev { width: 100%; max-width: 320px; border-radius: 14px; box-shadow: var(--e2); display: block; }
-@media (max-width: 560px) { .mi-cover { height: 132px; } .mi-av { width: 88px; height: 88px; } .mi-id { margin-top: -48px; padding: 0 var(--sp-4) var(--sp-4); gap: var(--sp-3); } .mi-acts { padding: 0 var(--sp-4) var(--sp-4); } }
+@media (max-width: 560px) { .mi-cover { height: 104px; } .mi-body { padding: 0 var(--sp-4) var(--sp-4); } .mi-av { width: 88px; height: 88px; } .mi-id { margin-top: -48px; padding: 0 var(--sp-4) var(--sp-4); gap: var(--sp-3); } .mi-acts { padding: 0 var(--sp-4) var(--sp-4); } }
 @media (prefers-reduced-motion: no-preference) { .mi-show .thumb { transition: transform var(--t-med) var(--ease); } .mi-show figure:hover .thumb { transform: translateY(-4px) rotate(-.6deg); } }
 </style>
 
@@ -82,7 +117,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "Profile not found": "Perfil não encontrado", "It doesn't exist, or its owner keeps it private.": "Ele não existe ou o dono deixou privado.",
     "Your corner of the Lorcana community": "Seu canto na comunidade de Lorcana", "Show your favourite cards, your deck and your games. Invite your friends.": "Mostre suas cartas favoritas, seu deck e seus jogos. Convide seus amigos.",
     "Sign in": "Entrar", "Use your e-mail. We send a 6-digit code, no password.": "Use seu e-mail. Mandamos um código de 6 dígitos, sem senha.", "See an example": "Ver um exemplo",
-    "{name} invited you to Inkwell": "{name} convidou você para o Inkwell", "Sign in and you become friends.": "Entre e vocês viram amigos.", "Someone": "Alguém",
+    "{name} invited you to Inkwell": "{name} convidou você para o Inkwell", "Sign in and you become friends.": "Entre e aceite o pedido de amizade.", "Someone": "Alguém",
     "You and {name} are now friends.": "Agora você e {name} são amigos.", "This invite link is no longer valid.": "Este convite não vale mais.",
     "Public": "Público", "Private": "Privado", "Only you see this profile.": "Só você vê este perfil.", "Anyone with the link sees this profile.": "Qualquer pessoa com o link vê este perfil.",
     "Hidden by the moderator.": "Ocultado pela moderação.", "See as others see it": "Ver como os outros veem",
@@ -104,6 +139,18 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "Check your connection and try again.": "Confira a internet e tente de novo.", "Try again": "Tentar de novo", "The profile is not available yet.": "O perfil ainda não está disponível.",
     "Fan project, not affiliated with Disney or Ravensburger.": "Projeto de fã, sem vínculo com a Disney ou a Ravensburger.", "Unsaved changes": "Alterações não salvas",
     "Which Inkwell collection": "Qual coleção do Inkwell", "Used for \"I own it\" and the featured deck.": "Usada no \"Tenho\" e no deck em destaque.", "Back": "Voltar", "Edit my profile": "Editar meu perfil",
+    "Friends": "Amigos", "1 friend": "1 amigo", "{n} friends": "{n} amigos", "Their friends keep their profiles private.": "Os amigos deixam o perfil privado.", "No friends here yet.": "Nenhum amigo aqui ainda.",
+    "+{n} with a private profile": "+{n} com perfil privado", "Recados": "Recados", "Leave a recado": "Deixar um recado", "Leave a recado for {name}": "Deixe um recado para {name}",
+    "It shows up after {name} approves it.": "Aparece depois que {name} aprovar.", "Send": "Enviar", "Sent. It shows up when {name} approves it.": "Enviado. Aparece quando {name} aprovar.",
+    "No recados yet. Be the first.": "Nenhum recado ainda. Seja o primeiro.", "No recados yet. Friends can leave one.": "Nenhum recado ainda. Amigos podem deixar um.",
+    "{n} min ago": "há {n} min", "{n} h ago": "há {n} h", "yesterday": "ontem", "{n} days ago": "há {n} dias",
+    "Request sent": "Pedido enviado", "Answer the friend request": "Responder pedido de amizade", "Add friend": "Adicionar amigo", "Friend request sent.": "Pedido de amizade enviado.",
+    "Ink curve": "Curva de tinta", "See the full list": "Ver a lista completa",
+    "Motto": "Lema", "A short line that sums you up.": "Uma frase curta que resume você.",
+    "Recados waiting for you": "Recados esperando você", "Only you see them until you approve.": "Só você vê até aprovar.", "Approve": "Aprovar", "Hide": "Ocultar", "Delete": "Excluir",
+    "On your profile": "No seu perfil", "Hidden": "Ocultos", "No recados yet.": "Nenhum recado ainda.", "Show again": "Mostrar de novo",
+    "{name} wants to be your friend": "{name} quer ser seu amigo", "You came through their invite. Accept?": "Você chegou pelo convite. Aceitar?", "Accept": "Aceitar", "Not now": "Agora não",
+    "You and {name} are friends already.": "Você e {name} já são amigos.",
   };
   const INK_PT = { Amber: "Âmbar", Amethyst: "Ametista", Emerald: "Esmeralda", Ruby: "Rubi", Sapphire: "Safira", Steel: "Aço" };
   const INKS = ["Amber", "Amethyst", "Emerald", "Ruby", "Sapphire", "Steel"];
@@ -144,37 +191,87 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   }
 
   // ---------- public view ----------
+  // Example profiles are written in Portuguese; English visitors get these (only for is_mock profiles).
+  const MOCK_EN = {
+    "Jogo Âmbar/Aço competitivo e testo listas toda semana. Topo um BO3 a qualquer hora.": "I play competitive Amber/Steel and test lists every week. Always up for a BO3.",
+    "Quinta é dia de liga.": "Thursday is league night.",
+    "Coleciono Encantadas de Ametista e Safira. Troco repetidas por cartas da minha lista.": "I collect Amethyst and Sapphire Enchanteds. I trade duplicates for cards on my list.",
+    "Uma Encantada de cada vez.": "One Enchanted at a time.",
+    "Comecei no set 10 com amigos da loja. Jogo Esmeralda/Rubi sem pressa e adoro decks temáticos.": "I started in set 10 with friends from the store. I play Emerald/Ruby at my own pace and love themed decks.",
+    "Venho pelo jogo, fico pelas pessoas.": "I come for the game, I stay for the people.",
+    "Valeu pela troca da Mulan! Quinta tem revanche.": "Thanks for the Mulan trade! Rematch on Thursday.",
+    "Me ensina aquele turno 4 de novo? 😅": "Can you teach me that turn 4 again? 😅",
+    "Achei a Kida Encantada que você procurava, separei pra você.": "Found the Enchanted Kida you were after, I put it aside for you.",
+    "Bem-vinda ao grupo! Sexta tem torneio casual na loja.": "Welcome to the group! Casual tournament at the store on Friday.",
+    "Âmbar/Aço da liga": "League Amber/Steel", "Esmeralda/Rubi de sexta": "Friday Emerald/Ruby",
+    "Rafa (exemplo)": "Rafa (example)", "Marina (exemplo)": "Marina (example)", "Bia (exemplo)": "Bia (example)",
+  };
+  const L = (p, t) => (p?.mock && lang === "en" && MOCK_EN[t]) || t || "";
+  const ago = (d) => { const m = (Date.now() - Date.parse(d)) / 60000; if (!(m >= 0)) return ""; if (m < 60) return Tx("{n} min ago", { n: Math.max(1, Math.round(m)) }); if (m < 1440) return Tx("{n} h ago", { n: Math.round(m / 60) }); const dd = Math.round(m / 1440); return dd === 1 ? Tx("yesterday") : Tx("{n} days ago", { n: dd }); };
+  const miniAv = (avatar, name, cls = "sm") => `<span class="mi-av ${cls}" style="${artStyle(avatar)}" role="img" aria-label="${esc(name || "")}"></span>`;
+  function deckView(p, deck) {
+    const cards = Object.entries(deck.cards || {}).filter(([id, n]) => BY.has(id) && n > 0).map(([id, n]) => ({ c: BY.get(id), n }));
+    const total = cards.reduce((s, x) => s + x.n, 0), curve = Array(8).fill(0);
+    for (const x of cards) curve[Math.min(7, +x.c.cost || 0)] += x.n;
+    const max = Math.max(1, ...curve.slice(1));
+    const key = cards.slice().sort((a, b) => b.n - a.n || (+b.c.cost || 0) - (+a.c.cost || 0)).slice(0, 6);
+    const list = cards.slice().sort((a, b) => (+a.c.cost || 0) - (+b.c.cost || 0) || a.c.name.localeCompare(b.c.name));
+    return `<section class="card mi-sec mi-deck" data-testid="featured-deck"><div class="mi-label">${Tx("Featured deck")}</div>
+      <div class="row between" style="margin:var(--sp-2) 0 var(--sp-3);gap:var(--sp-2);flex-wrap:wrap"><b style="font-size:var(--fs-h3)">${esc(L(p, deck.name))}</b>
+        <span class="small muted">${(deck.colors || []).map((i) => inkName(i)).join(" / ")} · ${esc(deck.format === "infinity" ? "Infinity" : "Core")} · ${Tx("{n} cards", { n: total })}</span></div>
+      <div class="mi-key">${key.map((x) => `<figure>${thumb(x.c)}<figcaption>${x.n}× ${esc(split(x.c.name)[0])}</figcaption></figure>`).join("")}</div>
+      <div class="mi-curve" aria-label="${Tx("Ink curve")}">${curve.slice(1).map((n, i) => `<span><i style="height:${Math.round((n / max) * 100)}%"></i><b>${i + 1}${i === 6 ? "+" : ""}</b></span>`).join("")}</div>
+      <details class="mi-list"><summary>${Tx("See the full list")}</summary><ul>${list.map((x) => `<li><span class="cost">${esc(x.c.cost ?? "")}</span>${x.n}× ${esc(x.c.name)}</li>`).join("")}</ul></details></section>`;
+  }
+  function relationBtn(p) {
+    if (p.mock || !p.relation || p.relation === "self") return "";
+    if (p.relation === "friend") return `<span class="tag match" data-testid="relation">${Tx("Friends")}</span>`;
+    if (p.relation === "asked") return `<span class="tag info" data-testid="relation">${Tx("Request sent")}</span>`;
+    if (p.relation === "asks_you") return `<a class="btn primary" href="../feed/#amigos" data-testid="relation">${Tx("Answer the friend request")}</a>`;
+    return `<button type="button" class="btn primary" id="addFriend" data-testid="relation"><i class="ic i-user-plus"></i>${Tx("Add friend")}</button>`;
+  }
   function profileView(p, { own = false, preview = false } = {}) {
     const show = (p.showcase || []).filter((s) => BY.has(s.id));
     const deck = p.deck && p.deck.cards ? p.deck : null;
-    const deckCards = deck ? Object.entries(deck.cards).filter(([id, n]) => BY.has(id) && n > 0).sort((a, b) => b[1] - a[1] || (+BY.get(a[0]).cost || 0) - (+BY.get(b[0]).cost || 0)) : [];
-    const deckTotal = deckCards.reduce((s, [, n]) => s + n, 0);
     const rec = p.record, games = rec ? (rec.w || 0) + (rec.l || 0) : 0;
     const want = (p.trade?.want || []).filter((id) => BY.has(id)), have = (p.trade?.have || []).filter((id) => BY.has(id));
-    const strip = (ids) => (ids.length ? `<div class="mi-strip">${ids.slice(0, 12).map((id) => thumb(BY.get(id))).join("")}</div>` : `<p class="mi-empty">${Tx("Nothing here yet.")}</p>`);
+    const strip = (ids) => (ids.length ? `<div class="mi-strip">${ids.slice(0, 8).map((id) => thumb(BY.get(id))).join("")}</div>` : `<p class="mi-empty">${Tx("Nothing here yet.")}</p>`);
+    const friends = p.friends || [], fn = p.friends_n ?? friends.length, recs = p.recados || [];
+    const friendsBox = preview ? "" : `<section class="card mi-sec mi-friends" data-testid="friends"><div class="row between"><div class="mi-label">${Tx("Friends")}</div><span class="small muted">${fn === 1 ? Tx("1 friend") : Tx("{n} friends", { n: fn })}</span></div>
+      ${friends.length ? `<div class="mi-fgrid">${friends.slice(0, 9).map((f) => `<a href="?u=${encodeURIComponent(f.handle)}">${miniAv(f.avatar, f.name, "md")}<span>${esc(L(p, f.name))}</span></a>`).join("")}</div>` : `<p class="mi-empty">${fn ? Tx("Their friends keep their profiles private.") : Tx("No friends here yet.")}</p>`}
+      ${fn > friends.length && friends.length ? `<p class="small faint" style="margin:var(--sp-2) 0 0">${Tx("+{n} with a private profile", { n: fn - friends.length })}</p>` : ""}</section>`;
+    const recBox = preview ? "" : `<section class="mi-sec mi-recs" data-testid="recados"><div class="group-head"><h3>${Tx("Recados")}</h3>${recs.length ? `<span class="small muted">${recs.length}</span>` : ""}</div>
+      ${p.can_recado ? `<form class="mi-recform" id="recForm"><label class="sr-only" for="recBody">${Tx("Leave a recado")}</label><textarea id="recBody" maxlength="500" rows="2" placeholder="${esc(Tx("Leave a recado for {name}", { name: split(p.name || "")[0] }))}"></textarea>
+        <div class="row between"><span class="small faint">${Tx("It shows up after {name} approves it.", { name: esc(p.name || "") })}</span><button type="submit" class="btn small primary">${Tx("Send")}</button></div></form>` : ""}
+      ${recs.length ? `<div class="mi-reclist">${recs.map((r) => `<article class="mi-rec1">${r.handle ? `<a href="?u=${encodeURIComponent(r.handle)}">${miniAv(r.avatar, r.name)}</a>` : miniAv(null, r.name)}
+          <div><div class="small"><b>${r.handle ? `<a href="?u=${encodeURIComponent(r.handle)}">${esc(L(p, r.name))}</a>` : esc(L(p, r.name))}</b> <span class="faint">· ${esc(ago(r.at))}</span></div><p>${esc(L(p, r.body))}</p></div></article>`).join("")}</div>`
+        : `<p class="mi-empty">${Tx(p.relation === "friend" ? "No recados yet. Be the first." : "No recados yet. Friends can leave one.")}</p>`}</section>`;
     return `<div class="mi" data-testid="profile">
       ${p.mock ? `<div class="mi-mock" data-testid="mock-banner"><i class="ic i-info"></i><span>${Tx("Example · fictional profile")}. ${Tx("This is a mockup to show what a profile looks like. It is not a real person.")}</span></div>` : ""}
       <section class="mi-hero">
-        <div class="mi-cover" style="${artStyle(p.avatar)}"></div>
+        <div class="mi-cover" style="${artStyle(p.avatar)};--art:${BY.get(p.avatar)?.img ? `url('${imgUrl(BY.get(p.avatar))}')` : "none"}"><i class="mi-art"></i></div>
         <div class="mi-id"><div class="mi-av" style="${artStyle(p.avatar)}" role="img" aria-label="${esc(p.avatar && BY.get(p.avatar) ? BY.get(p.avatar).name : "")}"></div>
-          <div><h2 class="mi-name">${esc(p.name || "")}</h2>${p.handle ? `<div class="mi-handle">@${esc(p.handle)}</div>` : ""}
-            <div class="mi-meta">${(p.inks || []).map(inkChip).join("")}${p.city ? `<span>${esc(p.city)}</span>` : ""}</div></div></div>
-        ${p.bio ? `<p class="mi-bio" style="padding:0 var(--sp-5) var(--sp-4);margin:0">${esc(p.bio)}</p>` : ""}
-        <div class="mi-acts">${own ? `<button type="button" class="btn" id="toEdit"><i class="ic i-edit"></i>${Tx("Edit my profile")}</button>` : ""}
+          <div style="min-width:0"><h2 class="mi-name">${esc(L(p, p.name))}</h2>${p.handle ? `<div class="mi-handle">@${esc(p.handle)}</div>` : ""}</div></div>
+        <div class="mi-body">
+          ${p.motto ? `<p class="mi-motto" data-testid="motto">“${esc(L(p, p.motto))}”</p>` : ""}
+          <div class="mi-meta">${(p.inks || []).map(inkChip).join("")}${p.city ? `<span>${esc(p.city)}</span>` : ""}${!preview && fn ? `<span>${fn === 1 ? Tx("1 friend") : Tx("{n} friends", { n: fn })}</span>` : ""}</div>
+          ${p.bio ? `<p class="mi-bio">${esc(L(p, p.bio))}</p>` : ""}
+        </div>
+        <div class="mi-acts">${own ? `<button type="button" class="btn" id="toEdit"><i class="ic i-edit"></i>${Tx("Edit my profile")}</button>` : ""}${preview ? "" : relationBtn(p)}
           ${!preview && p.handle ? `<button type="button" class="btn" id="copyLink"><i class="ic i-send"></i>${Tx("Share")}</button>` : ""}
           ${!preview && !own && me && !p.mock ? `<button type="button" class="btn ghost small" id="report" style="margin-left:auto"><i class="ic i-alert"></i>${Tx("Report profile")}</button>` : ""}</div>
       </section>
       <div class="mi-cols">
-        <div class="stack lg">
-          <section><div class="group-head"><h3>${Tx("Showcase")}</h3></div>
+        <div class="mi-col">
+          <section class="mi-sec mi-showsec"><div class="group-head"><h3>${Tx("Showcase")}</h3></div>
             ${show.length ? `<div class="mi-show" data-testid="showcase">${show.map((s) => { const c = BY.get(s.id); return `<figure>${thumb(c)}<figcaption>${esc(split(c.name)[0])}</figcaption><span class="tag ${s.own ? "match" : "accent"}">${Tx(s.own ? "owns it" : "favourite")}</span></figure>`; }).join("")}</div>` : `<p class="mi-empty">${Tx("Nothing here yet.")}</p>`}</section>
-          ${deck ? `<section class="card" data-testid="featured-deck"><div class="mi-label">${Tx("Featured deck")}</div>
-            <div class="row between" style="margin:var(--sp-2) 0 var(--sp-3)"><b style="font-size:var(--fs-h3)">${esc(deck.name || "")}</b><span class="small muted">${(deck.colors || []).map((i) => inkName(i)).join(" / ")} · ${esc(deck.format === "infinity" ? "Infinity" : "Core")} · ${Tx("{n} cards", { n: deckTotal })}</span></div>
-            ${strip(deckCards.map(([id]) => id))}</section>` : ""}
+          ${recBox}
+          ${deck ? deckView(p, deck) : ""}
         </div>
-        <div class="stack lg">
-          ${rec ? `<section class="card" data-testid="record"><div class="mi-label">${Tx("Record")}</div><div class="mi-rec" style="margin-top:var(--sp-2)"><span><b>${rec.w || 0}</b> ${Tx("wins")}</span><span><b>${rec.l || 0}</b> ${Tx("losses")}</span>${games ? `<span class="muted">${Math.round(((rec.w || 0) / games) * 100)}%</span>` : ""}</div></section>` : ""}
-          ${p.trade ? `<section class="card" data-testid="trade"><div class="mi-label">${Tx("Looking for")}</div>${strip(want)}<div class="mi-label" style="margin-top:var(--sp-3)">${Tx("Offering")}</div>${strip(have)}</section>` : ""}
+        <div class="mi-col">
+          ${friendsBox}
+          ${rec ? `<section class="card mi-sec mi-recsum" data-testid="record"><div class="mi-label">${Tx("Record")}</div><div class="mi-rec" style="margin-top:var(--sp-2)"><span><b>${rec.w || 0}</b> ${Tx("wins")}</span><span><b>${rec.l || 0}</b> ${Tx("losses")}</span>${games ? `<span class="muted">${Math.round(((rec.w || 0) / games) * 100)}%</span>` : ""}</div></section>` : ""}
+          ${p.trade ? `<section class="card mi-sec mi-trade" data-testid="trade"><div class="mi-label">${Tx("Looking for")}</div>${strip(want)}<div class="mi-label" style="margin-top:var(--sp-3)">${Tx("Offering")}</div>${strip(have)}</section>` : ""}
         </div>
       </div>
       <p class="small faint">${Tx("Fan project, not affiliated with Disney or Ravensburger.")}</p>
@@ -182,6 +279,18 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   }
   function wireView(p) {
     $("copyLink")?.addEventListener("click", () => shareLink(profileUrl(p.handle), p.name));
+    $("addFriend")?.addEventListener("click", async (ev) => {
+      const b = ev.currentTarget; b.disabled = true;
+      try { await rpc("request_friend", { p_handle: p.handle }); b.outerHTML = `<span class="tag info" data-testid="relation">${Tx("Request sent")}</span>`; toast(Tx("Friend request sent.")); }
+      catch { b.disabled = false; toast(Tx("Couldn't send. Try again."), true); }
+    });
+    $("recForm")?.addEventListener("submit", async (ev) => {
+      ev.preventDefault(); const t = $("recBody"), body = t.value.trim(); if (!body) { t.focus(); return; }
+      const b = ev.currentTarget.querySelector("button"); b.disabled = true;
+      try { await rpc("post_recado", { p_handle: p.handle, p_body: body }); t.value = ""; toast(Tx("Sent. It shows up when {name} approves it.", { name: p.name })); }
+      catch { toast(Tx("Couldn't send. Try again."), true); }
+      b.disabled = false;
+    });
     $("report")?.addEventListener("click", () => openReport(p.handle));
     $("toEdit")?.addEventListener("click", () => { history.replaceState(null, "", "./"); editor(); });
   }
@@ -216,14 +325,30 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     let code = null; try { code = localStorage.getItem(INVITE_KEY); } catch { /* */ }
     if (!me || !code) return;
     try { localStorage.removeItem(INVITE_KEY); } catch { /* */ }
-    try { const r = await rpc("accept_invite", { p_code: code }); if (r?.ok) toast(Tx("You and {name} are now friends.", { name: r.name })); else if (r?.reason === "unknown") toast(Tx("This invite link is no longer valid."), true); } catch { /* */ }
+    let r = null; try { r = await rpc("accept_invite", { p_code: code }); } catch { return; }
+    if (!r?.ok) { if (r?.reason === "unknown") toast(Tx("This invite link is no longer valid."), true); return; }
+    if (r.status === "accepted") { toast(Tx("You and {name} are friends already.", { name: r.name })); return; }
+    // the invite became a friend request from the inviter: the person decides
+    const sh = $("sheet");
+    sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="shT">${esc(Tx("{name} wants to be your friend", { name: r.name }))}</h2></div>
+      <div class="sheet-body"><p class="muted" style="margin:0">${Tx("You came through their invite. Accept?")}</p></div>
+      <div class="sheet-foot" data-testid="invite-ask"><button type="button" class="btn ghost" id="invNo">${Tx("Not now")}</button><button type="button" class="btn primary" id="invYes">${Tx("Accept")}</button></div>`;
+    const decide = async (yes) => {
+      try {
+        if (yes) await CLOUD.api(`friendships?requester=eq.${r.requester}&addressee=eq.${me.id}`, { method: "PATCH", prefer: "return=minimal", body: { status: "accepted", accepted_at: new Date().toISOString() } });
+        else await CLOUD.api(`friendships?requester=eq.${r.requester}&addressee=eq.${me.id}`, { method: "DELETE", prefer: "return=minimal" });
+        sh.close(); if (yes) toast(Tx("You and {name} are now friends.", { name: r.name }));
+      } catch { toast(Tx("Couldn't send. Try again."), true); }
+    };
+    $("invYes").onclick = () => decide(true); $("invNo").onclick = () => decide(false);
+    sh.showModal();
   }
 
   // ---------- signed out, no profile asked ----------
   function welcome() {
     $("app").innerHTML = `<section class="mi-hero" style="padding:var(--sp-8) var(--sp-5)"><h2 class="mi-name">${Tx("Your corner of the Lorcana community")}</h2>
       <p class="muted" style="max-width:52ch">${Tx("Show your favourite cards, your deck and your games. Invite your friends.")}</p>
-      <div class="row" style="gap:var(--sp-2);flex-wrap:wrap"><button type="button" class="btn primary" data-signin>${Tx("Sign in")}</button><a class="btn" href="?u=user1">${Tx("See an example")}</a></div>
+      <div class="row" style="gap:var(--sp-2);flex-wrap:wrap"><button type="button" class="btn primary" data-signin>${Tx("Sign in")}</button><a class="btn" href="?u=rafa_exemplo">${Tx("See an example")}</a></div>
       <p class="small faint" style="margin-top:var(--sp-3)">${Tx("Use your e-mail. We send a 6-digit code, no password.")}</p></section>`;
     wireInvite();
   }
@@ -238,7 +363,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const ownsCard = (e, id) => { const c = pickProfile(e).collection[id] || {}; return (+c.n || 0) + (+c.f || 0) > 0; };
   function asPublic(e) {   // what others would see, built locally
     const deck = pickProfile(e).decks.find((d) => d.id === e.featured_deck);
-    return { name: e.display_name, handle: e.handle, bio: e.bio, avatar: e.avatar_card, inks: e.inks, city: e.adult ? e.city : "",
+    return { name: e.display_name, handle: e.handle, bio: e.bio, motto: e.motto, avatar: e.avatar_card, inks: e.inks, city: e.adult ? e.city : "",
       showcase: (e.showcase || []).map((s) => ({ id: s.id, own: s.k === "own" && ownsCard(e, s.id) })),
       deck: deck ? { name: deck.name, format: deck.format, colors: deck.colors, cards: deck.cards } : null, record: null, trade: null, mock: false };
   }
@@ -250,7 +375,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   let qAv = "", qShow = "";
   async function editor() {
     if (!mine) { try { await loadMine(); } catch { $("app").innerHTML = emptyBox("error", Tx("The profile is not available yet."), Tx("Check your connection and try again."), `<button type="button" class="btn" id="retry"><i class="ic i-refresh"></i>${Tx("Try again")}</button>`); $("retry").onclick = () => editor(); return; } }
-    editing = editing || JSON.parse(JSON.stringify({ display_name: mine.display_name || "", handle: mine.handle || "", bio: mine.bio || "", avatar_card: mine.avatar_card || null, inks: mine.inks || [], city: mine.city || "",
+    editing = editing || JSON.parse(JSON.stringify({ display_name: mine.display_name || "", handle: mine.handle || "", bio: mine.bio || "", motto: mine.motto || "", avatar_card: mine.avatar_card || null, inks: mine.inks || [], city: mine.city || "",
       showcase: mine.showcase || [], featured_deck: mine.featured_deck || "", inkwell_profile: mine.inkwell_profile || "", is_public: !!mine.is_public, adult: !!mine.adult, show_record: mine.show_record !== false, show_trade: !!mine.show_trade }));
     drawEditor();
   }
@@ -266,6 +391,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
         <div class="form-block"><h3>${Tx("Who you are")}</h3>
           <label class="field">${Tx("Name")}<input id="fName" maxlength="40" value="${esc(e.display_name)}" autocomplete="nickname"></label>
           <label class="field">${Tx("Profile address")}<span class="prefix"><span>@</span><input id="fHandle" maxlength="20" value="${esc(e.handle)}" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="hHandle"></span><span class="hint" id="hHandle">${Tx("3 to 20 letters, numbers or _")}</span></label>
+          <label class="field">${Tx("Motto")}<input id="fMotto" maxlength="60" value="${esc(e.motto)}" autocomplete="off" aria-describedby="hMotto"><span class="hint" id="hMotto">${Tx("A short line that sums you up.")}</span></label>
           <label class="field">${Tx("About you")}<textarea id="fBio" maxlength="160" rows="2" aria-describedby="hBio">${esc(e.bio)}</textarea><span class="hint" id="hBio">${Tx("One or two lines: how you play, what you collect.")} ${e.bio.length}/160</span></label>
           <div class="field">${Tx("Favourite inks")}<div class="ed-inks" role="group" aria-label="${Tx("Favourite inks")}">${INKS.map((i) => `<button type="button" class="chipbtn" data-ink="${i}" aria-pressed="${e.inks.includes(i)}"><span class="inks"><i style="background:var(--ink-${i.toLowerCase()})"></i></span>${esc(inkName(i))}</button>`).join("")}</div><span class="hint">${Tx("Pick up to 2.")}</span></div>
           <label class="field">${Tx("City")}<input id="fCity" maxlength="40" value="${esc(e.city)}" ${e.adult ? "" : "disabled"} autocomplete="address-level2"><span class="hint">${Tx("Only shown for adults. Leave empty to hide.")}</span></label>
@@ -291,6 +417,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
         <p class="small" id="edMsg" role="alert" style="margin:0"></p>
         <div class="ed-foot">${mine.handle && mine.is_public ? `<a class="btn ghost" href="?u=${esc(mine.handle)}">${Tx("See as others see it")}</a>` : ""}<button type="submit" class="btn primary" id="edSave">${Tx("Save")}</button></div>
       </form>
+      <section class="card" style="margin-top:var(--sp-6)" data-testid="my-recados"><h3 style="margin-top:0">${Tx("Recados")}</h3><div id="myRecs">${recadosBox()}</div></section>
       <div class="grid2" style="margin-top:var(--sp-6);gap:var(--sp-5)">
         <section class="card"><h3 style="margin-top:0">${Tx("Player card")}</h3><p class="small muted">${Tx("An image to send in your groups.")}</p><div id="pcBox"></div>
           <button type="button" class="btn" id="pcMake"><i class="ic i-sparkle"></i>${Tx("Make the card")}</button></section>
@@ -300,6 +427,29 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       </div>`;
     wire();
     if (keep && $(keep)) { $(keep).focus(); try { if (caret != null) $(keep).setSelectionRange(caret, caret); } catch { /* */ } }
+  }
+  let myRecs = null;
+  function recadosBox() {
+    if (!myRecs) return `<p class="small faint">${Tx("Loading…")}</p>`;
+    const pend = myRecs.filter((r) => r.status === "pending"), shown = myRecs.filter((r) => r.status === "shown"), hid = myRecs.filter((r) => r.status === "hidden");
+    const row = (r, acts) => `<article class="mi-rec1" data-rec="${esc(r.id)}">${miniAv(r.author_avatar, r.author_name)}<div><div class="small"><b>${esc(r.author_name || "")}</b> <span class="faint">· ${esc(ago(r.created_at))}</span></div><p>${esc(r.body)}</p>
+      <div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap">${acts.map(([k, l, cls]) => `<button type="button" class="btn small ${cls || ""}" data-ra="${k}">${Tx(l)}</button>`).join("")}</div></div></article>`;
+    return `${pend.length ? `<div class="mi-label">${Tx("Recados waiting for you")}</div><p class="small faint" style="margin:4px 0 var(--sp-2)">${Tx("Only you see them until you approve.")}</p><div class="mi-reclist">${pend.map((r) => row(r, [["shown", "Approve", "primary"], ["hidden", "Hide"], ["del", "Delete", "ghost"]])).join("")}</div>` : ""}
+      ${shown.length ? `<div class="mi-label" style="margin-top:var(--sp-4)">${Tx("On your profile")}</div><div class="mi-reclist" style="margin-top:var(--sp-2)">${shown.map((r) => row(r, [["hidden", "Hide"], ["del", "Delete", "ghost"]])).join("")}</div>` : ""}
+      ${hid.length ? `<div class="mi-label" style="margin-top:var(--sp-4)">${Tx("Hidden")}</div><div class="mi-reclist" style="margin-top:var(--sp-2)">${hid.map((r) => row(r, [["shown", "Show again"], ["del", "Delete", "ghost"]])).join("")}</div>` : ""}
+      ${myRecs.length ? "" : `<p class="mi-empty">${Tx("No recados yet.")}</p>`}`;
+  }
+  function wireRecados() {
+    if (!myRecs) rpc("my_recados").then((r) => { myRecs = r || []; const b = $("myRecs"); if (b) { b.innerHTML = recadosBox(); wireRecados(); } }).catch(() => { myRecs = []; const b = $("myRecs"); if (b) b.innerHTML = recadosBox(); });
+    document.querySelectorAll("[data-ra]").forEach((b) => b.onclick = async () => {
+      const id = b.closest("[data-rec]").dataset.rec, a = b.dataset.ra; b.disabled = true;
+      try {
+        if (a === "del") await CLOUD.api(`recados?id=eq.${id}`, { method: "DELETE", prefer: "return=minimal" });
+        else await CLOUD.api(`recados?id=eq.${id}`, { method: "PATCH", prefer: "return=minimal", body: { status: a, decided_at: new Date().toISOString() } });
+        myRecs = a === "del" ? myRecs.filter((r) => r.id !== id) : myRecs.map((r) => (r.id === id ? { ...r, status: a } : r));
+        $("myRecs").innerHTML = recadosBox(); wireRecados(); toast(Tx("Saved"));
+      } catch { b.disabled = false; toast(Tx("Couldn't save. Try again."), true); }
+    });
   }
   const inviteUrl = () => `${base()}?convite=${encodeURIComponent(mine.invite_code)}${mine.handle && mine.is_public ? `&u=${encodeURIComponent(mine.handle)}` : ""}`;
   function wire() {
@@ -312,6 +462,8 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     $("fHandle").oninput = (ev) => { const v = ev.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20); if (v !== ev.target.value) ev.target.value = v; set("handle", v, false); ev.target.removeAttribute("aria-invalid"); live(); };
     $("fBio").oninput = (ev) => { set("bio", ev.target.value.slice(0, 160), false); $("hBio").textContent = `${Tx("One or two lines: how you play, what you collect.")} ${e.bio.length}/160`; live(); };
     $("fCity").oninput = (ev) => { set("city", ev.target.value.slice(0, 40), false); live(); };
+    $("fMotto").oninput = (ev) => { set("motto", ev.target.value.slice(0, 60), false); live(); };
+    wireRecados();
     document.querySelectorAll("[data-ink]").forEach((b) => b.onclick = () => { if (!b.closest(".ed-inks")) return; const i = b.dataset.ink; set("inks", e.inks.includes(i) ? e.inks.filter((x) => x !== i) : [...e.inks, i].slice(-2)); });
     $("qAv").oninput = (ev) => { qAv = ev.target.value; drawEditor(); };
     document.querySelectorAll("#avRes [data-pick]").forEach((b) => b.onclick = () => { qAv = ""; set("avatar_card", b.dataset.pick); });
@@ -364,13 +516,14 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       const sw = av.width * 0.55, sx = (av.width - sw) / 2, sy = av.height * 0.07; x.drawImage(av, sx, sy, sw, sw, W / 2 - 108, 452, 216, 216); x.restore();
     }
     x.textAlign = "center"; x.fillStyle = "#f4f1ff";
-    x.font = `800 64px ${font}`; x.fillText(String(p.name || "").slice(0, 28), W / 2, 760);
+    x.font = `800 64px ${font}`; x.fillText(String(L(p, p.name) || "").slice(0, 28), W / 2, 744);
+    if (p.motto) { x.fillStyle = col("--gold", "#e9b949"); x.font = `italic 700 34px ${font}`; x.fillText(`“${String(L(p, p.motto)).slice(0, 60)}”`, W / 2, 852); }
     x.fillStyle = "#aaa3cc"; x.font = `600 36px ${font}`;
-    x.fillText([p.handle ? "@" + p.handle : "", (p.inks || []).map(inkName).join(" / "), p.city].filter(Boolean).join("  ·  "), W / 2, 818);
+    x.fillText([p.handle ? "@" + p.handle : "", (p.inks || []).map(inkName).join(" / "), p.city].filter(Boolean).join("  ·  "), W / 2, 798);
     const show = (p.showcase || []).filter((s) => BY.has(s.id)).slice(0, 3);
     const imgs = await Promise.all(show.map((s) => loadImg(imgUrl(BY.get(s.id)))));
-    const cw = 240, ch = 336, gap = 40, n = show.length, x0 = (W - (n * cw + (n - 1) * gap)) / 2;
-    show.forEach((s, i) => { const im = imgs[i], cx = x0 + i * (cw + gap), cy = 862;
+    const cw = 220, ch = 308, gap = 40, n = show.length, x0 = (W - (n * cw + (n - 1) * gap)) / 2;
+    show.forEach((s, i) => { const im = imgs[i], cx = x0 + i * (cw + gap), cy = 884;
       x.save(); x.beginPath(); x.roundRect ? x.roundRect(cx, cy, cw, ch, 16) : x.rect(cx, cy, cw, ch); x.clip(); if (im) x.drawImage(im, cx, cy, cw, ch); else { x.fillStyle = "#2a2550"; x.fillRect(cx, cy, cw, ch); } x.restore();
       x.fillStyle = s.own ? "#7fe0a8" : col("--gold", "#e9b949"); x.font = `700 28px ${font}`; x.fillText(Tx(s.own ? "owns it" : "favourite"), cx + cw / 2, cy + ch + 36); });
     if (p.mock) { x.fillStyle = "rgba(233,185,73,.95)"; x.font = `800 34px ${font}`; x.fillText(Tx("Example · fictional profile").toUpperCase(), W / 2, 60); }

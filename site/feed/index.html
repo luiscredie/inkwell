@@ -129,7 +129,11 @@ body.out .page.split { display: block; }
 .land-hero h1 { font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1.05; margin: 0 0 var(--sp-3); max-width: 15ch; }
 .land-hero p { max-width: 52ch; color: var(--text-2); font-size: 1.05rem; margin: 0 0 var(--sp-5); }
 .land-cta { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; }
-.land-feats { display: grid; gap: var(--sp-3); grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.land-feats { display: grid; gap: var(--sp-3); grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 900px) { .land-feats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .land-feats { grid-template-columns: minmax(0, 1fr); } }
+.ex-motto { margin: 0; color: var(--gold, #e9b949); font-style: italic; font-weight: 700; }
+.ex-meta { display: flex; flex-wrap: wrap; gap: var(--sp-3); color: var(--text-2); font-size: var(--fs-small); }
 .land-feat { display: grid; gap: 6px; align-content: start; padding: var(--sp-4); border-radius: var(--r-lg); background: var(--surface-1); border: 1px solid var(--line); color: inherit; text-decoration: none; }
 .land-feat:hover { border-color: var(--line-strong); }
 .land-feat .ic { width: 22px; height: 22px; color: var(--accent); }
@@ -204,7 +208,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Your games, with stats": "Seus jogos, com estatísticas", "Games from duels.ink and the lore counter, with win rate by deck and matchup.": "Jogos do duels.ink e do contador, com aproveitamento por deck e confronto.",
     "Prices in reais": "Preços em reais", "TCGplayer every day and Brazilian shop prices, with a wishlist that tells you when to buy.": "TCGplayer todo dia e preços de lojas brasileiras, com lista de desejos que avisa a hora de comprar.",
     "Trades and loans": "Trocas e empréstimos", "Lend to friends, post what you want or offer, and keep track of who has what.": "Empreste para amigos, anuncie o que procura ou oferece e saiba quem está com o quê.",
-    "What a profile looks like": "Como fica um perfil", "Examples · fictional profiles": "Exemplos · perfis fictícios", "Example · fictional profile": "Exemplo · perfil fictício",
+    "What a profile looks like": "Como fica um perfil", "Meet the people": "Conheça a turma", "{n} recados": "{n} recados", "1 recado": "1 recado",
+    "Your profile and your friends": "Seu perfil e seus amigos", "A page that is yours: favourite cards, your deck, your friends and the recados they leave.": "Uma página sua: cartas favoritas, seu deck, seus amigos e os recados que eles deixam.", "Examples · fictional profiles": "Exemplos · perfis fictícios", "Example · fictional profile": "Exemplo · perfil fictício",
     "How it works": "Como funciona", "Sign in with your e-mail": "Entre com seu e-mail", "A 6-digit code, no password.": "Um código de 6 dígitos, sem senha.",
     "Make your profile": "Monte seu perfil", "Private until you decide to make it public.": "Privado até você decidir deixar público.", "Invite your friends": "Convide seus amigos",
     "Whoever signs in through your link becomes your friend.": "Quem entrar pelo seu link vira seu amigo.", "Fan project, free, not affiliated with Disney or Ravensburger.": "Projeto de fã, gratuito, sem vínculo com a Disney ou a Ravensburger.",
@@ -459,22 +464,26 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const img = (id) => { const c = IDX.get(id); return c && c[8] ? `../lorcana-card-images/${encodeURI(c[8]).replace(/'/g, "%27")}` : ""; };
     const thumbOf = (id) => { const c = IDX.get(id); return `<span class="thumb">${img(id) ? `<img src="${img(id)}" alt="${esc(c ? c[1] : "")}" loading="lazy" decoding="async">` : ""}</span>`; };
     const INKPT = { Amber: "Âmbar", Amethyst: "Ametista", Emerald: "Esmeralda", Ruby: "Rubi", Sapphire: "Safira", Steel: "Aço" };
+    const MOCK_EN = { "Quinta é dia de liga.": "Thursday is league night.", "Uma Encantada de cada vez.": "One Enchanted at a time.", "Venho pelo jogo, fico pelas pessoas.": "I come for the game, I stay for the people.",
+      "Rafa (exemplo)": "Rafa (example)", "Marina (exemplo)": "Marina (example)", "Bia (exemplo)": "Bia (example)" };
+    const L = (t) => (lang === "en" && MOCK_EN[t]) || t || "";
     const feats = [
       ["cards", "../colecao/", "Your collection, by camera", "Scan cards with the phone, check your binder page by page and see what it's worth in reais."],
       ["decks", "../decks/", "Decks with a buying plan", "See what's missing for each deck, what it costs, and which cards serve several decks."],
       ["games", "../coach/", "Your games, with stats", "Games from duels.ink and the lore counter, with win rate by deck and matchup."],
       ["chart", "../precos/", "Prices in reais", "TCGplayer every day and Brazilian shop prices, with a wishlist that tells you when to buy."],
       ["trades", "../trades/", "Trades and loans", "Lend to friends, post what you want or offer, and keep track of who has what."],
+      ["users", "../perfil/", "Your profile and your friends", "A page that is yours: favourite cards, your deck, your friends and the recados they leave."],
     ];
     $("feed").style.marginTop = "0";
     $("feed").innerHTML = `<div class="land" data-testid="public-home">
       <section class="land-hero" id="landHero"><h1>${Tx("Your corner of the Lorcana community")}</h1>
         <p>${Tx("Show your favourite cards and your deck, invite your friends, and keep your collection, games and trades in one place. Free, made by a fan.")}</p>
-        <div class="land-cta"><button type="button" class="btn primary large" id="signIn">${Tx("Create my Inkwell")}</button><a class="btn large" href="../perfil/?u=user1">${Tx("See an example profile")}</a></div>
+        <div class="land-cta"><button type="button" class="btn primary large" id="signIn">${Tx("Create my Inkwell")}</button><a class="btn large" href="../perfil/?u=rafa_exemplo">${Tx("See an example profile")}</a></div>
         <p class="small faint" style="margin:var(--sp-3) 0 0">${Tx("Use your e-mail. We send a 6-digit code, no password.")}</p></section>
+      <section id="landEx" hidden><div class="group-head"><h2>${Tx("Meet the people")}</h2><span class="tag accent">${Tx("Examples · fictional profiles")}</span></div><div class="land-ex" id="exList"></div></section>
       <section><div class="group-head"><h2>${Tx("What you can do")}</h2></div>
         <div class="land-feats">${feats.map(([ic, href, t, d]) => `<a class="land-feat" href="${href}"><i class="ic i-${ic}"></i><b>${Tx(t)}</b><span>${Tx(d)}</span></a>`).join("")}</div></section>
-      <section id="landEx" hidden><div class="group-head"><h2>${Tx("What a profile looks like")}</h2><span class="tag accent">${Tx("Examples · fictional profiles")}</span></div><div class="land-ex" id="exList"></div></section>
       <section><div class="group-head"><h2>${Tx("How it works")}</h2></div>
         <ol class="land-steps" style="padding:0;margin:0"><li><b>${Tx("Sign in with your e-mail")}</b>${Tx("A 6-digit code, no password.")}</li><li><b>${Tx("Make your profile")}</b>${Tx("Private until you decide to make it public.")}</li><li><b>${Tx("Invite your friends")}</b>${Tx("Whoever signs in through your link becomes your friend.")}</li></ol></section>
       <p class="small faint">${Tx("Fan project, free, not affiliated with Disney or Ravensburger.")}</p></div>`;
@@ -486,8 +495,10 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         list = (list || []).filter((p) => p && p.mock);
         if (!list.length) return;
         $("exList").innerHTML = list.map((p) => `<a class="ex-card" href="../perfil/?u=${encodeURIComponent(p.handle)}" data-testid="example-profile">
-          <div class="ex-top"><span class="ex-av" style="${img(p.avatar) ? `background-image:url('${img(p.avatar)}')` : ""}"></span><div><b>${esc(p.name)}</b><div class="small muted">@${esc(p.handle)}${(p.inks || []).length ? " · " + (p.inks || []).map((i) => (lang === "pt" ? INKPT[i] || i : i)).join(" / ") : ""}</div></div></div>
+          <div class="ex-top"><span class="ex-av" style="${img(p.avatar) ? `background-image:url('${img(p.avatar)}')` : ""}"></span><div><b>${esc(L(p.name))}</b><div class="small muted">@${esc(p.handle)}${(p.inks || []).length ? " · " + (p.inks || []).map((i) => (lang === "pt" ? INKPT[i] || i : i)).join(" / ") : ""}</div></div></div>
+          ${p.motto ? `<p class="ex-motto">“${esc(L(p.motto))}”</p>` : ""}
           <div class="ex-show">${(p.showcase || []).slice(0, 3).map((s) => thumbOf(s.id)).join("")}</div>
+          <div class="ex-meta">${p.city ? `<span>${esc(p.city)}</span>` : ""}<span>${esc((p.friends_n ?? (p.friends || []).length) === 1 ? Tx("1 friend") : Tx("{n} friends", { n: p.friends_n ?? (p.friends || []).length }))}</span>${(p.recados || []).length ? `<span>${esc(p.recados.length === 1 ? Tx("1 recado") : Tx("{n} recados", { n: p.recados.length }))}</span>` : ""}</div>
           <span class="tag accent" style="width:max-content">${Tx("Example · fictional profile")}</span></a>`).join("");
         $("landEx").hidden = false;
       }).catch(() => {});
