@@ -40,6 +40,7 @@ test('movers, wishlist and collection value', async ({ page }) => {
 
   await page.getByRole('tab', { name: /Lista de desejos/ }).click();
   await expect(page.locator('[data-wish="LOR13-31"]')).toContainText('comprar agora');
+  await expect(page.locator('[data-wish="LOR13-31"] [data-testid="wish-br"]')).toHaveAttribute('href', /^https:\/\/mypcards\.com\/lorcana\/produto\/341976\//);
   const t = page.locator('[data-target="LOR10-1"]');
   await t.fill('12,50'); await t.press('Tab');
   await expect.poll(() => wl(calls).length).toBe(2);
@@ -51,6 +52,7 @@ test('movers, wishlist and collection value', async ({ page }) => {
   await page.getByRole('tab', { name: 'Valor da coleção' }).click();
   await expect(page.locator('[data-testid="value-stats"]')).toContainText('6');
   await expect(page.locator('svg.vchart')).toBeVisible();
+  await expect(page.locator('[data-testid="value-br"]')).toContainText('Na MYP Cards');
   await expect(page.locator('[data-testid="top-cards"] .list-row')).toHaveCount(2);
 });
 

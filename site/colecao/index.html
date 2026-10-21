@@ -133,6 +133,14 @@ window.INKWELL_CLOUD = (() => {
 #scan .pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
 #scan .pick button { display: grid; gap: 4px; padding: 6px; border-radius: 10px; border: 1px solid var(--line); background: rgba(23,20,46,.95); color: #fff; font-size: var(--fs-micro); text-align: left; }
 #scan .pick .thumb { width: 100%; }
+#scan .review { position: absolute; inset: 0; z-index: 3; background: var(--bg); color: var(--text); display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
+#scan .review header { display: flex; align-items: center; gap: var(--sp-2); padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 10px; border-bottom: 1px solid var(--line); }
+#scan .review header h2 { font-size: var(--fs-body); margin: 0; flex: 1; }
+#scan .review .items { overflow: auto; padding: 8px 12px; display: grid; gap: 8px; align-content: start; }
+#scan .review .item { display: flex; align-items: center; gap: 10px; background: var(--surface-2); border-radius: 12px; padding: 8px; }
+#scan .review .item .t { flex: 1; min-width: 0; } #scan .review .item .t b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#scan .review .item .t .small { display: block; }
+#scan .review footer { display: grid; gap: 8px; padding: 12px 12px calc(env(safe-area-inset-bottom, 0px) + 12px); border-top: 1px solid var(--line); }
 </style>
 
 <main class="page" id="page">
@@ -173,7 +181,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Not sure which printing this is. Which one?": "Não deu para ter certeza da versão. Qual é?", "None of these": "Nenhuma destas",
     "Centre the card in the frame, with good light.": "Centralize a carta na moldura, com boa luz.", "Starting the camera…": "Abrindo a câmera…",
     "The camera didn't open. Allow camera access for this site and try again.": "A câmera não abriu. Permita o acesso à câmera para este site e tente de novo.",
-    "Couldn't load the card scanner.": "Não foi possível carregar o leitor de cartas.", "{n} added": "{n} adicionadas", "{n} added_1": "1 adicionada",
+    "Couldn't load the card scanner.": "Não foi possível carregar o leitor de cartas.", "{n} added": "{n} adicionadas", "{n} added_1": "1 adicionada", "{n} in the list": "{n} na lista", "In Brazil from {p}": "No Brasil a partir de {p}", "Lowest listing on MYP Cards, {d}": "Menor anúncio na MYP Cards, {d}", "{n} in the list_1": "1 na lista", "In the list: {c}": "Na lista: {c}", "Review": "Revisar", "Check before adding": "Confira antes de adicionar", "Add {n} cards to the collection": "Adicionar {n} cartas à coleção", "Add {n} cards to the collection_1": "Adicionar 1 carta à coleção", "Keep scanning": "Continuar escaneando", "Discard the list": "Descartar a lista", "Tap again to discard": "Toque de novo para descartar", "Nothing will be saved until you confirm.": "Nada é salvo antes de você confirmar.", "Remove one": "Tirar uma", "Add one": "Mais uma", "The list is empty.": "A lista está vazia.", "Recently added": "Mais recentes", "added {d}": "adicionada em {d}",
     "+1 of this": "+1 desta", "Done scanning": "Concluir", "Card": "Carta", "Removed: {c}": "Removida: {c}",
     "Show more": "Mostrar mais", "{n} cards": "{n} cartas", "Prices: {s}, {d}": "Preços: {s}, {d}",
     "Normal": "Normal", "Foil": "Foil", "{n} free": "{n} livre(s)", "{n} lent": "{n} emprestada(s)", "Value of your {n}": "Valor das suas {n}",
@@ -204,7 +212,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const BY = new Map(CARDS.map((c) => [c.id, c]));
   const setOrder = new Map(SETS.map((s, i) => [s.code, i]));
   const numOf = (c) => parseInt(String(c.num).replace(/\D+/g, ""), 10) || 0;
-  let PRICES = {}, pricesDate = null, priceSrc = "Liga Lorcana";   // "TCGplayer" while prices.json carries converted TCGplayer prices
+  let PRICES = {}, BR = null, pricesDate = null, priceSrc = "Liga Lorcana";   // "TCGplayer" while prices.json carries converted TCGplayer prices
   const priceOf = (id, foil) => { const p = PRICES[id]; if (!p) return null; return foil ? (p.fl ?? p.f ?? p.nl ?? p.n ?? null) : (p.nl ?? p.n ?? null); };
   const imgUrl = (c) => (c.img ? `../lorcana-card-images/${encodeURI(c.img).replace(/'/g, "%27")}` : "");
   const thumb = (c, cls = "", foil = false) => `<span class="thumb ${cls}${foil ? " foil" : ""}" data-ink="${(inksOf(c)[0] || "steel").toLowerCase()}">${c.img ? `<img src="${imgUrl(c)}" alt="" loading="lazy" decoding="async" onerror="this.remove()">` : ""}`;
@@ -212,7 +220,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   // ---------- state ----------
   const CLOUD = window.INKWELL_CLOUD;
   const me = CLOUD?.user();
-  let profiles = [], profileName = null, lentN = new Map(), lentF = new Map(), lentWho = new Map();
+  let profiles = [], ADDED = new Map(), profileName = null, lentN = new Map(), lentF = new Map(), lentWho = new Map();
   const VIEW_KEY = "inkwell-coll-view-v2";
   let v = { q: "", inks: [], sets: [], rar: [], cost: [], owned: true, foil: false, lent: false, sort: "value", view: "grid" };
   try { v = { ...v, ...JSON.parse(localStorage.getItem(VIEW_KEY) || "{}") }; } catch { /* */ }
@@ -224,12 +232,16 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const lentOf = (id) => (lentN.get(id) || 0) + (lentF.get(id) || 0);
 
   async function loadAll() {
-    const [p, pr, l, ul] = await Promise.all([
+    const [p, pr, l, ul, ad, br] = await Promise.all([
       CLOUD.api("inkwell_profiles?select=profile,updated_at,collection:data->collection&order=updated_at.desc"),
       fetch(window.INKWELL_PRICES_URL || "../data/prices.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
       CLOUD.api("loans?select=direction,person,items,due_on,returned_at&returned_at=is.null").catch(() => []),
       CLOUD.api("user_loans?select=lender,borrower,items,status,due_on&status=in.(accepted,delivered)").catch(() => []),
+      CLOUD.api("collection_added?select=profile,card_id,added_at").catch(() => []),
+      fetch(window.INKWELL_PRICES_BR_URL || "../data/prices-br.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),   // MYP Cards, tools/prices_from_mypcards.py   // when each card last came in (supabase/collection_added.sql)
     ]);
+    BR = br?.cards ? br : null;
+    ADDED = new Map(); for (const r of ad || []) ADDED.set(`${r.profile}|${r.card_id}`, Date.parse(r.added_at) || 0);
     profiles = (p || []).map((x) => ({ ...x, collection: x.collection && typeof x.collection === "object" ? x.collection : {} }));
     if (pr?.prices) { PRICES = pr.prices; pricesDate = pr.generated_at; priceSrc = pr.usd_brl ? "TCGplayer" : "Liga Lorcana"; }
     lentN = new Map(); lentF = new Map(); lentWho = new Map();
@@ -257,8 +269,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       && (!f.owned || tot(x) > 0) && (!f.foil || (+c[x.id]?.f || 0) > 0) && (!f.lent || lentOf(x.id) > 0) && (!words.length || words.every((w) => x.k.includes(w))));
     const val = (x) => (priceOf(x.id) || 0) * (+c[x.id]?.n || 0) + (priceOf(x.id, true) || 0) * (+c[x.id]?.f || 0);
     const bySet = (a, b) => (setOrder.get(a.set) ?? 999) - (setOrder.get(b.set) ?? 999) || numOf(a) - numOf(b) || a.id.localeCompare(b.id);
-    const unit = (x) => priceOf(x.id) || 0;
-    rows.sort(f.sort === "name" ? (a, b) => a.name.localeCompare(b.name) : f.sort === "copies" ? (a, b) => tot(b) - tot(a) || bySet(a, b)
+    const unit = (x) => priceOf(x.id) || 0, pn = prof()?.profile, when = (x) => ADDED.get(`${pn}|${x.id}`) || 0;
+    rows.sort(f.sort === "recent" ? (a, b) => when(b) - when(a) || bySet(a, b) : f.sort === "name" ? (a, b) => a.name.localeCompare(b.name) : f.sort === "copies" ? (a, b) => tot(b) - tot(a) || bySet(a, b)
       : f.sort === "cost" ? (a, b) => (+a.cost || 0) - (+b.cost || 0) || a.name.localeCompare(b.name) : f.sort === "set" ? bySet
       : f.owned ? (a, b) => val(b) - val(a) || bySet(a, b) : (a, b) => unit(b) - unit(a) || bySet(a, b));
     return rows;
@@ -279,12 +291,14 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     return `<button type="button" class="ccard ${t ? "" : "none"}" data-card="${esc(c.id)}">${thumb(c, "", o.f > 0)}
         ${t ? `<span class="pill">×${t}</span>` : ""}<span class="flags">${o.f ? `<span class="tag foil">foil</span>` : ""}${ln ? `<span class="tag info">${esc(Tx("{n} lent", { n: ln }))}</span>` : ""}</span></span>
       <span class="nm">${esc(a)}${b ? `<small>${esc(b)}</small>` : ""}</span>
-      <span class="meta"><span>${esc(lang === "pt" ? "nº " : "#")}${esc(c.num)}</span><b>${p != null ? esc(money(p)) : "–"}</b></span></button>`;
+      <span class="meta"><span>${v.sort === "recent" && ADDED.get(`${prof()?.profile}|${c.id}`) ? esc(new Date(ADDED.get(`${prof()?.profile}|${c.id}`)).toLocaleDateString(LOC, { day: "numeric", month: "short" })) : esc(lang === "pt" ? "nº " : "#") + esc(c.num)}</span><b>${p != null ? esc(money(p)) : "–"}</b></span></button>`;
   }
+  const addedText = (c) => { if (v.sort !== "recent") return ""; const t = ADDED.get(`${prof()?.profile}|${c.id}`);
+    return t ? " · " + esc(Tx("added {d}", { d: new Date(t).toLocaleDateString(LOC, { day: "numeric", month: "short" }) })) : ""; };
   function listRow(c) {
     const o = owned(c.id), ln = lentOf(c.id), p = priceOf(c.id);
     return `<button type="button" class="list-row" data-card="${esc(c.id)}">${thumb(c, "sm", o.f > 0)}</span>
-      <span class="t"><span>${esc(split(c.name).join(" · ").replace(/ · $/, ""))}</span><span class="meta">${esc(setName(c.set))} · nº ${esc(c.num)}</span>${o.n + o.f || ln ? `<span class="meta">${esc(qtyText(o, ln))}</span>` : ""}</span>
+      <span class="t"><span>${esc(split(c.name).join(" · ").replace(/ · $/, ""))}</span><span class="meta">${esc(setName(c.set))} · nº ${esc(c.num)}${addedText(c)}</span>${o.n + o.f || ln ? `<span class="meta">${esc(qtyText(o, ln))}</span>` : ""}</span>
       <span class="trail"><span class="money">${p != null ? esc(money(p)) : "–"}</span>${ln ? `<span class="tag info">${Tx("lent")}</span>` : ""}</span></button>`;
   }
   function chips() {
@@ -315,7 +329,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       </div>
       <div class="row between" style="margin:-4px 0 var(--sp-4)">
         <div class="chips">${chips()}<span class="small muted" id="count">${esc(Tx("{n} cards", { n: rows.length.toLocaleString(LOC) }))}</span></div>
-        <select class="inline" id="sort" aria-label="${Tx("Sort")}">${[["value", "Most valuable"], ["name", "Name"], ["set", "Set and number"], ["cost", "Cost"], ["copies", "Copies"]].map(([k, l]) => `<option value="${k}" ${v.sort === k ? "selected" : ""}>${Tx(l)}</option>`).join("")}</select>
+        <select class="inline" id="sort" aria-label="${Tx("Sort")}">${[["value", "Most valuable"], ["recent", "Recently added"], ["name", "Name"], ["set", "Set and number"], ["cost", "Cost"], ["copies", "Copies"]].map(([k, l]) => `<option value="${k}" ${v.sort === k ? "selected" : ""}>${Tx(l)}</option>`).join("")}</select>
       </div>
       ${rows.length ? (v.view === "grid" ? `<div class="cgrid" id="grid">${rows.slice(0, shown).map(gridCard).join("")}</div>` : `<div class="list" id="grid">${rows.slice(0, shown).map(listRow).join("")}</div>`)
         + (rows.length > shown ? `<div class="load-more"><button type="button" class="btn" id="more">${Tx("Show more")}</button></div>` : "")
@@ -374,6 +388,10 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     openSheet(sh, $("openFilters"));
   }
 
+  // MYP Cards: lowest listing in Brazil, next to the TCGplayer price (it does not separate normal and foil)
+  const brLine = (id) => { const e = BR?.cards?.[id]; if (!e) return "";
+    return `<a class="list-row on-field" data-testid="card-br" href="${esc(BR.product_url.replace("{path}", e[1]))}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;margin-bottom:var(--sp-3)">
+      <span class="t"><span>${esc(Tx("In Brazil from {p}", { p: money(e[0]) }))}</span><span class="meta">${esc(Tx("Lowest listing on MYP Cards, {d}", { d: new Date(BR.retrieved_at).toLocaleDateString(LOC, { day: "numeric", month: "short" }) }))}</span></span><i class="ic i-external"></i></a>`; };
   // ---------- one card ----------
   let pendingTimer = null, pending = new Map();   // "id:kind" -> delta, sent after 600ms
   function openCard(id, from) {
@@ -389,7 +407,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
           <p class="small" style="margin:var(--sp-2) 0 0" data-testid="card-format">${esc(formatLine(c))}</p>
           <div class="row between" style="align-items:flex-end;margin:var(--sp-4) 0">
             <div><div class="small muted">${esc(Tx("Value of your {n}", { n: o.n + o.f }))}</div><div class="hero-num" style="color:var(--money)" data-testid="card-value">${esc(money(value))}</div></div>
-            <div class="small muted" style="text-align:right">${Tx("Normal")} ${pn != null ? esc(money(pn)) : "–"}<br>${Tx("Foil")} ${pf != null ? esc(money(pf)) : "–"}</div></div>
+            <div class="small muted" style="text-align:right">${Tx("Normal")} ${pn != null ? esc(money(pn)) : "–"}<br>${Tx("Foil")} ${pf != null ? esc(money(pf)) : "–"}<br><span class="faint">${esc(priceSrc)}</span></div></div>
+          ${brLine(id)}
           <div class="card inset stack" style="gap:0;padding:var(--sp-2) var(--sp-3)">${row("n", Tx("Normal"), o.n, lentN.get(id) || 0)}${row("f", Tx("Foil"), o.f, lentF.get(id) || 0)}</div>
           ${lw.length ? `<h3 style="margin:var(--sp-5) 0 var(--sp-2)">${Tx("Lent")}</h3>${lw.map((x) => `<div class="list-row on-field"><span class="av sm">${esc((x.who || "?")[0].toUpperCase())}</span><span class="t"><span>${esc(x.who)}</span><span class="meta">${esc([`${x.qty} ${Tx(x.foil ? "foil" : "normal")}`, x.due ? Tx("until {d}", { d: new Date(x.due + "T12:00:00").toLocaleDateString(LOC, { day: "numeric", month: "short" }) }) : ""].filter(Boolean).join(" · "))}</span></span><a class="btn ghost small" href="../trades/">${Tx("See")}</a></div>`).join("")}` : ""}
           <p class="small faint" style="margin:var(--sp-3) 0 0">${Tx("Changes save right away. You can undo from the notice at the bottom.")}</p></div>
@@ -406,6 +425,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const e = p.collection[id] = { n: 0, f: 0, ...(p.collection[id] || {}) };
     if (e[kind] + delta < 0) return;
     e[kind] += delta;
+    if (delta > 0) ADDED.set(`${p.profile}|${id}`, Date.now());
     const key = `${id}:${kind}`;
     pending.set(key, (pending.get(key) || 0) + delta);
     clearTimeout(pendingTimer);
@@ -569,24 +589,33 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     let q = 0; for (let k = 0; k < v.length; k++) q += v[k] * v[k]; q = Math.sqrt(q) || 1; for (let k = 0; k < v.length; k++) v[k] /= q;
     return v;
   }
-  const COARSE = [], FINE = [];
-  for (const s of [0.94, 1, 1.06]) for (const dx of [-0.035, 0, 0.035]) for (const dy of [-0.035, 0, 0.035]) COARSE.push([s, dx, dy]);
-  for (const s of [0.92, 0.96, 1, 1.04, 1.08]) for (const dx of [-0.05, -0.025, 0, 0.025, 0.05]) for (const dy of [-0.05, -0.025, 0, 0.025, 0.05]) FINE.push([s, dx, dy]);
+  // Card size in the frame: from 60% (a card held far away, or a picture on a screen) to 110% of the guide.
+  // Coarse pass over sizes and positions; the fine pass refines around the best coarse placements.
+  const COARSE = [];
+  for (const s of [0.62, 0.7, 0.78, 0.86, 0.94, 1, 1.07]) {
+    const d = Math.max(0.035, (1.04 - s) * 0.38);   // a smaller card can sit further from the centre
+    for (const dx of [-d, 0, d]) for (const dy of [-d, 0, d]) COARSE.push([s, dx, dy]);
+  }
+  const fineAround = ([s, dx, dy]) => { const g = [];
+    for (const ks of [0.95, 0.975, 1, 1.025, 1.05]) for (const ex of [-0.03, -0.015, 0, 0.015, 0.03]) for (const ey of [-0.03, -0.015, 0, 0.015, 0.03]) g.push([s * ks, dx + ex * s, dy + ey * s]);
+    return g; };
   function variants(T, grid) {
     return grid.map(([s, dx, dy]) => { const ox = T.w / 2 - (SG.W / 2) * s + dx * SG.W, oy = T.h / 2 - (SG.H / 2) * s + dy * SG.H; return { v: fingerprint(T, ox, oy, s), s, dx, dy }; });
   }
   const dot = (i, v) => { const { D, dims } = SCAN; let q = 0; for (let k = 0, o = i * dims; k < dims; k++) q += D[o + k] * v[k]; return q / SCAN.norm[i]; };
   // Returns { id, score, group: [ids with the same art], confident }
   function identify(img) {
-    const T = integral(img), Q = variants(T, COARSE), n = SCAN.n, coarse = new Float32Array(n);
-    for (let i = 0; i < n; i++) { let best = -1; for (const q of Q) { const d = dot(i, q.v); if (d > best) best = d; } coarse[i] = best; }
+    const T = integral(img), Q = variants(T, COARSE), n = SCAN.n, coarse = new Float32Array(n), where = new Int16Array(n);
+    for (let i = 0; i < n; i++) { let best = -1, bq = 0; for (let j = 0; j < Q.length; j++) { const d = dot(i, Q[j].v); if (d > best) { best = d; bq = j; } } coarse[i] = best; where[i] = bq; }
     const order = [...coarse.keys()].sort((a, b) => coarse[b] - coarse[a]), top = order.slice(0, 15);
-    const F = variants(T, FINE), fine = top.map((i) => { let best = -1, at = null; for (const q of F) { const d = dot(i, q.v); if (d > best) { best = d; at = q; } } return [i, best, at]; }).sort((a, b) => b[1] - a[1]);
+    const seeds = [...new Set(top.slice(0, 6).map((i) => where[i]))].slice(0, 3);   // the placements the best candidates agree on
+    const F = variants(T, seeds.flatMap((j) => fineAround(COARSE[j])));
+    const fine = top.map((i) => { let best = -1, at = null; for (const q of F) { const d = dot(i, q.v); if (d > best) { best = d; at = q; } } return [i, best, at]; }).sort((a, b) => b[1] - a[1]);
     const [bi, bs, at] = fine[0], group = fine.filter(([, s]) => s >= bs - 0.04).map(([i]) => SCAN.ids[i]);
     const runner = (fine.find(([, s]) => s < bs - 0.04) || [0, coarse[order[15]]])[1];
     // where the card sits in the analysed image (fractions), so the collector line can be cut out precisely
     const box = { x: (T.w / 2 - (SG.W / 2) * at.s + at.dx * SG.W) / T.w, y: (T.h / 2 - (SG.H / 2) * at.s + at.dy * SG.H) / T.h, w: SG.W * at.s / T.w, h: SG.H * at.s / T.h };
-    return { id: SCAN.ids[bi], score: bs, group, confident: bs >= 0.70 && bs - runner >= 0.15, box };
+    return { id: SCAN.ids[bi], score: bs, group, confident: (bs >= 0.70 && bs - runner >= 0.15) || (bs >= 0.80 && bs - runner >= 0.08), box };   // a glare spot lowers the gap, not the match
   }
   window.__inkwellScanIdentify = (img) => (SCAN ? identify(img) : null);   // used by the browser test
 
@@ -650,8 +679,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       <div class="top"><button type="button" class="btn icon" data-scan-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button><h2 id="scanT">${Tx("Scan cards")}</h2><button type="button" class="btn icon" id="scanTorch" hidden aria-pressed="false" aria-label="${Tx("Light")}"><i class="ic i-sparkle"></i></button>
         <div class="seg" role="group" aria-label="${Tx("Card")}"><button type="button" data-foil="0" aria-pressed="${!scan.foil}">${Tx("Normal")}</button><button type="button" data-foil="1" aria-pressed="${scan.foil}">${Tx("Foil")}</button></div></div>
       <div class="panel"><div class="say" id="scanSay" role="status" aria-live="polite">${Tx("Point the camera at one card inside the frame.")}</div><div id="scanPick"></div><div id="scanLast"></div>
-        <div class="row between"><span class="small" data-testid="scan-count" id="scanCount"></span><button type="button" class="btn primary" data-scan-close>${Tx("Done scanning")}</button></div></div></div>`;
-    sh.querySelectorAll("[data-scan-close]").forEach((b) => b.onclick = () => sh.close());
+        <div class="row between"><span class="small" data-testid="scan-count" id="scanCount"></span><button type="button" class="btn primary" data-scan-done>${Tx("Done scanning")}</button></div></div></div>`;
+    sh.querySelectorAll("[data-scan-close], [data-scan-done]").forEach((b) => b.onclick = () => (scan.added.length ? showReview() : sh.close()));
     sh.querySelectorAll("[data-foil]").forEach((b) => b.onclick = () => { scan.foil = b.dataset.foil === "1"; sh.querySelectorAll("[data-foil]").forEach((x) => x.setAttribute("aria-pressed", String((x.dataset.foil === "1") === scan.foil))); });
     drawLast();
   }
@@ -660,18 +689,55 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const lastC = scan.last && BY.get(scan.last.id), box = $("scanLast"); if (!box) return;
     box.innerHTML = lastC ? `<div class="last" data-testid="scan-last">${thumb(lastC, "xs", scan.last.foil)}</span><span class="t"><b>${esc(split(lastC.name).join(" · ").replace(/ · $/, ""))}</b><span class="small muted">${esc([setName(lastC.set), "nº " + lastC.num, Tx(scan.last.foil ? "foil" : "normal")].join(" · "))}</span></span>
       <button type="button" class="btn small" id="scanAgain">${Tx("+1 of this")}</button><button type="button" class="btn ghost small" id="scanUndo" aria-label="${Tx("Undo")}"><i class="ic i-undo"></i></button></div>` : "";
-    $("scanCount").textContent = Tx("{n} added", { n: scan.added.length });
+    $("scanCount").textContent = scan.added.length ? Tx("{n} in the list", { n: scan.added.length }) : "";
     $("scanAgain")?.addEventListener("click", () => addScanned(scan.last.id));   // uses the Normal/Foil choice shown at the top
-    $("scanUndo")?.addEventListener("click", () => { const l = scan.added.pop(); if (!l) return; change(l.id, l.foil ? "f" : "n", -1, true); scan.last = scan.added[scan.added.length - 1] || null; drawLast(); const c = BY.get(l.id); scanSay(Tx("Removed: {c}", { c: c ? split(c.name)[0] : l.id })); });
+    $("scanUndo")?.addEventListener("click", () => { const l = scan.added.pop(); if (!l) return; scan.last = scan.added[scan.added.length - 1] || null; drawLast(); const c = BY.get(l.id); scanSay(Tx("Removed: {c}", { c: c ? split(c.name)[0] : l.id })); });
   }
   function addScanned(id) {
     const c = BY.get(id); if (!c) return;
-    change(id, scan.foil ? "f" : "n", 1, true);
     scan.added.push({ id, foil: scan.foil }); scan.last = { id, foil: scan.foil }; scan.wait = true; scan.seen = null; scan.seenN = 0;
     navigator.vibrate?.(40);
     drawLast();
-    scanSay(Tx("Added: {c}", { c: split(c.name)[0] }) + " · " + Tx("Remove the card and show the next one."));
+    scanSay(Tx("In the list: {c}", { c: split(c.name)[0] }) + " · " + Tx("Remove the card and show the next one."));
     $("scanGuide")?.classList.add("ok"); setTimeout(() => $("scanGuide")?.classList.remove("ok"), 700);
+  }
+  // Nothing reaches the collection until the list is confirmed here.
+  function reviewGroups() {
+    const m = new Map(); for (const a of scan.added) { const k = `${a.id}:${a.foil ? 1 : 0}`; m.set(k, (m.get(k) || 0) + 1); }
+    return [...m].map(([k, n]) => { const [id, f] = k.split(":"); return { id, foil: f === "1", n }; });
+  }
+  function showReview() {
+    scan.review = true; scan.discardArmed = false;
+    const stage = $("scan").querySelector(".stage"); let box = $("scanReview");
+    if (!box) { box = document.createElement("div"); box.className = "review"; box.id = "scanReview"; box.setAttribute("data-testid", "scan-review"); stage.appendChild(box); }
+    const g = reviewGroups(), total = scan.added.length;
+    box.innerHTML = `<header><button type="button" class="btn icon" id="revBack" aria-label="${Tx("Keep scanning")}"><i class="ic i-chevron-left"></i></button><h2>${Tx("Check before adding")}</h2></header>
+      <div class="items">${g.length ? g.map((x) => { const c = BY.get(x.id); return c ? `<div class="item" data-rev="${esc(x.id)}:${x.foil ? 1 : 0}">${thumb(c, "xs", x.foil)}</span>
+        <span class="t"><b>${esc(split(c.name).join(" · ").replace(/ · $/, ""))}</b><span class="small muted">${esc([setName(c.set), "nº " + c.num, Tx(x.foil ? "foil" : "normal")].join(" · "))}</span></span>
+        <div class="qty"><button type="button" data-rq="-1" aria-label="${Tx("Remove one")}">−</button><output>${x.n}</output><button type="button" data-rq="1" aria-label="${Tx("Add one")}">+</button></div></div>` : ""; }).join("")
+        : `<p class="muted" style="text-align:center">${Tx("The list is empty.")}</p>`}</div>
+      <footer><p class="small muted" style="margin:0;text-align:center">${Tx("Nothing will be saved until you confirm.")}</p>
+        <button type="button" class="btn primary" id="revAdd" ${total ? "" : "disabled"}>${Tx("Add {n} cards to the collection", { n: total })}</button>
+        <div class="row between"><button type="button" class="btn" id="revMore"><i class="ic i-camera"></i>${Tx("Keep scanning")}</button><button type="button" class="btn ghost" id="revDrop">${Tx("Discard the list")}</button></div></footer>`;
+    const back = () => { scan.review = false; box.remove(); scan.wait = false; drawLast(); scanSay(Tx("Point the camera at one card inside the frame.")); };
+    $("revBack").onclick = back; $("revMore").onclick = back;
+    box.querySelectorAll("[data-rq]").forEach((b) => b.onclick = () => {
+      const [id, f] = b.closest("[data-rev]").dataset.rev.split(":"), foil = f === "1";
+      if (b.dataset.rq === "1") scan.added.push({ id, foil });
+      else { const i = scan.added.map((a) => a.id === id && a.foil === foil).lastIndexOf(true); if (i >= 0) scan.added.splice(i, 1); }
+      scan.last = scan.added[scan.added.length - 1] || null; showReview();
+    });
+    $("revDrop").onclick = (e) => {
+      if (!scan.added.length) { $("scan").close(); return; }
+      if (!scan.discardArmed) { scan.discardArmed = true; e.currentTarget.textContent = Tx("Tap again to discard"); return; }
+      scan.added = []; scan.last = null; $("scan").close();
+    };
+    $("revAdd").onclick = () => {
+      for (const x of reviewGroups()) change(x.id, x.foil ? "f" : "n", x.n, true);
+      scan.saved = scan.added.length; scan.added = []; scan.last = null;
+      clearTimeout(pendingTimer); $("scan").close();
+    };
+    $("revAdd").focus();
   }
   function askWhich(group) {
     scan.askOpen = true; $("scanGuide")?.classList.add("ask");
@@ -688,7 +754,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   }
   async function tick() {
     const v = $("scanVideo");
-    if (scan.busy || scan.askOpen || !v || !v.videoWidth || !SCAN) return;
+    if (scan.busy || scan.askOpen || scan.review || !v || !v.videoWidth || !SCAN) return;
     scan.busy = true;
     try {
       const r = videoRect(guideRect()), m = SG.M;
@@ -721,9 +787,10 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     } finally { scan.busy = false; }
   }
   async function openScanner(from) {
-    const sh = $("scan"); scan.added = []; scan.last = null; scan.wait = false; scan.askOpen = false; scan.seen = null;
+    const sh = $("scan"); scan.added = []; scan.last = null; scan.wait = false; scan.askOpen = false; scan.seen = null; scan.review = false; scan.saved = 0;
     drawScan(); sh.showModal(); scanSay(Tx("Starting the camera…"));
-    sh.addEventListener("close", () => { clearInterval(scan.timer); scan.stream?.getTracks().forEach((t) => t.stop()); scan.stream = null; sh.innerHTML = ""; flush(true); renderAll(); from?.focus?.(); if (scan.added.length) toast(Tx("{n} added", { n: scan.added.length })); }, { once: true });
+    sh.addEventListener("close", () => { clearInterval(scan.timer); scan.stream?.getTracks().forEach((t) => t.stop()); scan.stream = null; sh.innerHTML = ""; sh.oncancel = null; flush(true); renderAll(); from?.focus?.(); if (scan.saved) toast(Tx("{n} added", { n: scan.saved })); }, { once: true });
+    sh.oncancel = (e) => { if (scan.added.length && !scan.review) { e.preventDefault(); showReview(); } };   // Esc / back with cards in the list: review first
     try { await loadScan(); } catch { scanSay(Tx("Couldn't load the card scanner."), true); return; }
     try {
       scan.stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: "environment" }, width: { ideal: 3840 }, height: { ideal: 2160 } } });
