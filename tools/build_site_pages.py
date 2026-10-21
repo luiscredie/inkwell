@@ -11,12 +11,14 @@ Three markers are filled in at build time, so shared code lives in one place:
   /*@CLOUD_JS@*/    src/site/cloud.js   sign-in and REST calls (one session for the whole site)
   /*@SHELL_JS@*/    src/site/shell.js   top bar, tab bar, account menu, sign-in sheet
   /*@CARD_INDEX@*/  compact card index from site/data/cards.json (re-run after a catalog update)
+  /*@APP_STATIC:name@*/  a pure static method copied verbatim from the Inkwell app (site/index.html), so both give the same answer
 The Decks page has its own builder (tools/build_site_decks.py), which this script also runs.
 """
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -50,6 +52,7 @@ PAGES = {   # site dir -> card index it embeds
     "colecao": site_index,
     "trades": site_index,
     "coach": coach_index,
+    "precos": site_index,
     "counter": None,   # the Lore Counter (offline app); its sw.js and manifest are plain files next to it
 }
 
@@ -58,8 +61,24 @@ def without_index(html: str) -> str:
     return "\n".join("const CARD_INDEX = …" if line.startswith("const CARD_INDEX = ") else line for line in html.split("\n"))
 
 
+def app_static(name: str) -> str:
+    """`static name(...) { ... }` from the Inkwell app, returned as `function name(...) { ... }`."""
+    app = (SITE / "index.html").read_text(encoding="utf-8")
+    start = app.index(f"static {name}(")
+    depth, j = 0, app.index("{", start)
+    for j in range(j, len(app)):
+        if app[j] == "{":
+            depth += 1
+        elif app[j] == "}":
+            depth -= 1
+            if depth == 0:
+                break
+    return "function " + app[start + len("static "):j + 1]
+
+
 def render(name: str, catalog: dict) -> str:
     html = (SRC / name / f"{name}.template.html").read_text(encoding="utf-8")
+    html = re.sub(r"/\*@APP_STATIC:(\w+)@\*/", lambda m: app_static(m.group(1)), html)
     html = html.replace("/*@CLOUD_JS@*/", (SRC / "cloud.js").read_text(encoding="utf-8"))
     html = html.replace("/*@SHELL_JS@*/", (SRC / "shell.js").read_text(encoding="utf-8"))
     if PAGES[name]:
@@ -80,9 +99,10 @@ def main() -> int:
         out = SITE / name / "index.html"
         html = render(name, catalog)
         if a.check:
-            if without_index(out.read_text(encoding="utf-8")) != without_index(html):
+            if not out.exists() or without_index(out.read_text(encoding="utf-8")) != without_index(html):
                 stale.append(str(out.relative_to(ROOT)))
         else:
+            out.parent.mkdir(parents=True, exist_ok=True)
             out.write_text(html, encoding="utf-8")
             print(out.relative_to(ROOT))
     if a.check:

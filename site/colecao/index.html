@@ -163,7 +163,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "No cards match these filters.": "Nenhuma carta com esses filtros.", "Clear filters": "Limpar filtros",
     "Your collection is empty": "Sua coleção está vazia", "Turn off \"Only cards I own\" to add cards with +, or import your collection in Inkwell.": "Desligue \"Só as que tenho\" para adicionar cartas com +, ou importe sua coleção no Inkwell.",
     "Legal in Core.": "Vale no Core.", "Legal in Core through the reprint in {s}, nº {n}.": "Vale no Core pela reimpressão em {s}, nº {n}.", "Infinity only: no reprint in a Core set.": "Só no Infinito: não tem reimpressão em set do Core.", "reprint": "reimpressão", "See card {c}": "Ver carta {c}",
-    "Check my binder": "Conferir fichário", "In your binder's order: Core first, then Infinity; ink, cost and name.": "Na ordem do seu fichário: Core primeiro, depois Infinito; tinta, custo e nome.",
+    "Check my binder": "Conferir fichário", "Prices": "Preços", "In your binder's order: Core first, then Infinity; ink, cost and name.": "Na ordem do seu fichário: Core primeiro, depois Infinito; tinta, custo e nome.",
     "Infinity": "Infinito", "Dual ink": "Duas tintas", "No ink": "Sem tinta", "cost {c}": "custo {c}", "{ink} · cost {c}": "{ink} · custo {c}",
     "{n} cards · you have {h}": "{n} cartas · você tem {h}", "Mark page as checked": "Marcar página como conferida", "Checked": "Conferida",
     "Previous page": "Página anterior", "Next page": "Próxima página", "{a} of {b} pages checked": "{a} de {b} páginas conferidas",
@@ -175,7 +175,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "The camera didn't open. Allow camera access for this site and try again.": "A câmera não abriu. Permita o acesso à câmera para este site e tente de novo.",
     "Couldn't load the card scanner.": "Não foi possível carregar o leitor de cartas.", "{n} added": "{n} adicionadas", "{n} added_1": "1 adicionada",
     "+1 of this": "+1 desta", "Done scanning": "Concluir", "Card": "Carta", "Removed: {c}": "Removida: {c}",
-    "Show more": "Mostrar mais", "{n} cards": "{n} cartas", "Prices: Liga Lorcana, {d}": "Preços da Liga Lorcana de {d}",
+    "Show more": "Mostrar mais", "{n} cards": "{n} cartas", "Prices: {s}, {d}": "Preços: {s}, {d}",
     "Normal": "Normal", "Foil": "Foil", "{n} free": "{n} livre(s)", "{n} lent": "{n} emprestada(s)", "Value of your {n}": "Valor das suas {n}",
     "Remove one {k}": "Tirar uma {k}", "Add one {k}": "Pôr uma {k}", "normal": "normal", "foil": "foil", "Lent": "Emprestadas",
     "Changes save right away. You can undo from the notice at the bottom.": "As mudanças salvam na hora. Dá para desfazer pelo aviso que aparece embaixo.",
@@ -204,7 +204,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const BY = new Map(CARDS.map((c) => [c.id, c]));
   const setOrder = new Map(SETS.map((s, i) => [s.code, i]));
   const numOf = (c) => parseInt(String(c.num).replace(/\D+/g, ""), 10) || 0;
-  let PRICES = {}, pricesDate = null;
+  let PRICES = {}, pricesDate = null, priceSrc = "Liga Lorcana";   // "TCGplayer" while prices.json carries converted TCGplayer prices
   const priceOf = (id, foil) => { const p = PRICES[id]; if (!p) return null; return foil ? (p.fl ?? p.f ?? p.nl ?? p.n ?? null) : (p.nl ?? p.n ?? null); };
   const imgUrl = (c) => (c.img ? `../lorcana-card-images/${encodeURI(c.img).replace(/'/g, "%27")}` : "");
   const thumb = (c, cls = "", foil = false) => `<span class="thumb ${cls}${foil ? " foil" : ""}" data-ink="${(inksOf(c)[0] || "steel").toLowerCase()}">${c.img ? `<img src="${imgUrl(c)}" alt="" loading="lazy" decoding="async" onerror="this.remove()">` : ""}`;
@@ -231,7 +231,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       CLOUD.api("user_loans?select=lender,borrower,items,status,due_on&status=in.(accepted,delivered)").catch(() => []),
     ]);
     profiles = (p || []).map((x) => ({ ...x, collection: x.collection && typeof x.collection === "object" ? x.collection : {} }));
-    if (pr?.prices) { PRICES = pr.prices; pricesDate = pr.generated_at; }
+    if (pr?.prices) { PRICES = pr.prices; pricesDate = pr.generated_at; priceSrc = pr.usd_brl ? "TCGplayer" : "Liga Lorcana"; }
     lentN = new Map(); lentF = new Map(); lentWho = new Map();
     const names = new Map();
     const mineToFriends = (ul || []).filter((x) => x.lender === me.id);
@@ -270,7 +270,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     for (const [id, e] of Object.entries(coll())) { const n = +e.n || 0, f = +e.f || 0; cards += n + f; value += (priceOf(id) || 0) * n + (priceOf(id, true) || 0) * f; }
     const lent = [...lentN.values(), ...lentF.values()].reduce((a, b) => a + b, 0);
     return `<div class="stats-row three" data-testid="coll-stats"><div class="stat"><b>${cards.toLocaleString(LOC)}</b><span>${Tx("Cards")}</span></div>
-      <div class="stat"><b class="money">${moneySplit(value)}</b><span>${Tx("Value")}</span></div>
+      <a class="stat" href="../precos/?tab=value" data-testid="to-prices" style="text-decoration:none;color:inherit"><b class="money">${moneySplit(value)}</b><span>${Tx("Value")} · ${Tx("Prices")} ›</span></a>
       <div class="stat"><b>${lent.toLocaleString(LOC)}</b><span>${Tx("Lent out")}</span></div></div>`;
   }
   const qtyText = (o, ln) => [o.n ? Tx("{n} normal", { n: o.n }) : "", o.f ? Tx("{n} foil", { n: o.f }) : "", ln ? Tx("{n} lent", { n: ln }) : ""].filter(Boolean).join(" · ");
@@ -523,7 +523,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   function renderAll() {
     if (me && binderOn()) return renderBinder();
     $("title").textContent = Tx("Collection");
-    $("sub").textContent = pricesDate ? Tx("Prices: Liga Lorcana, {d}", { d: new Date(pricesDate).toLocaleDateString(LOC, { day: "numeric", month: "short" }) }) : "";
+    $("sub").textContent = pricesDate ? Tx("Prices: {s}, {d}", { s: priceSrc, d: new Date(pricesDate).toLocaleDateString(LOC, { day: "numeric", month: "short" }) }) : "";
     if (me) { $("headActions").innerHTML = `<button type="button" class="btn" id="openBinder"><i class="ic i-cards"></i>${Tx("Check my binder")}</button><button type="button" class="btn primary" id="openScan"><i class="ic i-camera"></i>${Tx("Scan")}</button>`;
       $("openBinder").onclick = () => setBinder(true); $("openScan").onclick = () => openScanner($("openScan")); }
     render();

@@ -106,4 +106,4 @@ jobs:
       - name: Serve site
         run: (cd site && python3 -m http.server 8080 &) && sleep 2
       - name: Browser smoke
-        run: INKWELL_URL=http://localhost:8080/index.html npx playwright test tools/smoke.spec.mjs tools/decks.spec.mjs tools/colecao.spec.mjs
+        run: INKWELL_URL=http://localhost:8080/index.html npx playwright test tools/smoke.spec.mjs tools/decks.spec.mjs tools/colecao.spec.mjs tools/precos.spec.mjs

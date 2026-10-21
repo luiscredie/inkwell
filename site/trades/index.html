@@ -154,7 +154,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Amount (R$)": "Valor (R$)", "Who you traded with": "Com quem você trocou", "Date": "Data",
     "Given": "Dado", "Received": "Recebido", "Balance": "Saldo", "even": "equilibrada",
     "You came out R$ {v} ahead": "Você saiu R$ {v} à frente", "You came out R$ {v} behind": "Você saiu R$ {v} atrás",
-    "Prices: Liga Lorcana, {date}. Cards without a price count as R$ 0.": "Preços: Liga Lorcana, {date}. Cartas sem preço contam como R$ 0.",
+    "Prices: {s}, {date}. Cards without a price count as R$ 0.": "Preços: {s}, {date}. Cartas sem preço contam como R$ 0.",
     "No trades yet.": "Nenhuma troca ainda.", "with {person}": "com {person}", "paid R$ {v}": "pagou R$ {v}", "received R$ {v}": "recebeu R$ {v}",
 
     "From your Inkwell collection. Out of date? Update it in Inkwell.": "Da sua coleção no Inkwell. Desatualizada? Atualize no Inkwell.",
@@ -227,7 +227,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const CARDS = new Map((CARD_INDEX?.cards || []).map(([id, name, cost, type, ink, rarity, set, num, img]) => [id, { id, name, ink, rarity, set, num, img }]));
   const norm = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   const SEARCH = [...CARDS.values()].map((c) => ({ c, k: norm(`${c.name} ${c.id}`) }));
-  let PRICES = {}, pricesDate = null;
+  let PRICES = {}, pricesDate = null, priceSrc = "Liga Lorcana";   // "TCGplayer" while prices.json carries converted TCGplayer prices
   const priceOf = (id, foil) => { const p = PRICES[id]; if (!p) return null; return foil ? (p.fl ?? p.f ?? p.nl ?? p.n ?? null) : (p.nl ?? p.n ?? null); };
   const valueOf = (items) => (items || []).reduce((s, e) => s + (priceOf(e.card_id, e.foil) || 0) * e.qty, 0);
   const cardLabel = (id) => (CARDS.get(id)?.name || Tx("Unknown card")).replace(" - ", " · ");
@@ -313,7 +313,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     autoColl = !!mp?.[0]?.auto_collection;
     const want = [...new Set([...friends, ...uloans.map(other), ...utrades.map(otherT), ...listings.map((l) => l.user_id)])].filter((id) => id !== me.id && !names.has(id));
     if (want.length) for (const r of (await CLOUD.api(`profiles?user_id=in.(${want.join(",")})&select=user_id,display_name`).catch(() => [])) || []) names.set(r.user_id, r.display_name);
-    if (pr?.prices) { PRICES = pr.prices; pricesDate = pr.generated_at; }
+    if (pr?.prices) { PRICES = pr.prices; pricesDate = pr.generated_at; priceSrc = pr.usd_brl ? "TCGplayer" : "Liga Lorcana"; }
     try { profileName = localStorage.getItem("inkwell-trades-profile"); } catch { /* */ }
     if (!profiles.some((x) => x.profile === profileName)) profileName = profiles.sort((a, b) => Object.keys(b.collection).length - Object.keys(a.collection).length)[0]?.profile || null;
   }
@@ -523,7 +523,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       ${live.length ? `<div class="section-title"><h2>${Tx("With friends on the site")}</h2></div><div class="stack">${live.map(siteTradeCard).join("")}</div>` : ""}
       ${trades.length || past.length ? `<div class="section-title"><h2>${Tx("Trades")}</h2></div><div class="stack">${trades.map(tradeCard).join("")}${past.map(siteTradeCard).join("")}</div>` : ""}
       ${!waiting.length && !live.length && !trades.length && !past.length ? `<div class="empty"><img src="../ui/assets/empty/trades.svg" alt=""><b>${Tx("No trades yet.")}</b><p>${Tx("Propose a trade to a friend, or note one you made off the site.")}</p></div>` : ""}
-      <p class="small faint" style="margin-top:var(--sp-6)">${esc(Tx("Prices: Liga Lorcana, {date}. Cards without a price count as R$ 0.", { date: pricesDate ? fmtDate(pricesDate) : "–" }))} ${Tx("Changes go to your Inkwell collection; Inkwell picks them up on its next sync.")}</p>`;
+      <p class="small faint" style="margin-top:var(--sp-6)">${esc(Tx("Prices: {s}, {date}. Cards without a price count as R$ 0.", { s: priceSrc, date: pricesDate ? fmtDate(pricesDate) : "–" }))} ${Tx("Changes go to your Inkwell collection; Inkwell picks them up on its next sync.")}</p>`;
   }
 
   // ---------- public board ----------
