@@ -878,12 +878,14 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   });
   const langSeg = () => `<div class="menu-label">${T("Idioma", "Language")}</div>
     <div class="seg block" role="group" aria-label="${T("Idioma", "Language")}">${[["pt", "Português"], ["en", "English"]].map(([k, l]) => `<button type="button" data-lang-pick="${k}" aria-pressed="${k === lang}">${l}</button>`).join("")}</div>`;
-  let profileName = "", syncAgo = "";
+  let profileName = "", syncAgo = "", isAdmin = false;
   $("iwAcct")?.addEventListener("click", (e) => openMenu(e.currentTarget, `
     <div class="menu-head"><span class="av lg">${esc((profileName || me.email || "?")[0].toUpperCase())}</span><div class="t"><b>${esc(profileName || T("Sua conta", "Your account"))}</b><div class="small">${esc(me.email || "")}</div></div></div>
     <div class="menu-sep"></div>
+    <a class="menu-item" role="menuitem" href="../perfil/?editar=1"><i class="ic i-users"></i>${T("Meu Inkwell", "My Inkwell")}</a>
     <a class="menu-item" role="menuitem" href="../feed/#amigos"><i class="ic i-shield"></i>${T("Privacidade e amigos", "Privacy and friends")}</a>
     <a class="menu-item" role="menuitem" href="../coach/"><i class="ic i-refresh"></i>${T("Jogos do duels.ink", "duels.ink games")}${syncAgo ? `<span class="trail">${esc(syncAgo)}</span>` : ""}</a>
+    ${isAdmin ? `<a class="menu-item" role="menuitem" href="../admin/"><i class="ic i-shield"></i>Admin</a>` : ""}
     ${langSeg()}
     <div class="menu-sep"></div>
     <button type="button" class="menu-item" role="menuitem" data-signout><i class="ic i-logout"></i>${T("Sair", "Sign out")}</button>`));
@@ -973,10 +975,17 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const a = c.closest("a"); if (a) a.setAttribute("aria-label", `${T("Trocas", "Trades")}${n ? ` · ${n} ${T("aguardando você", "waiting for you")}` : ""}`);
   };
   if (me && CLOUD) {
-    CLOUD.api(`profiles?user_id=eq.${me.id}&select=display_name`).then((r) => {
-      profileName = r?.[0]?.display_name || "";
-      if (profileName) $("iwAv").textContent = profileName.trim()[0].toUpperCase();
-    }).catch(() => {});
+    CLOUD.api("rpc/my_profile", { method: "POST", body: {} })   // supabase/my_inkwell.sql
+      .then((p) => { profileName = p?.display_name || ""; isAdmin = !!p?.is_admin; return profileName ? null : CLOUD.api(`profiles?user_id=eq.${me.id}&select=display_name`); })
+      .catch(() => CLOUD.api(`profiles?user_id=eq.${me.id}&select=display_name`))
+      .then((r) => { if (r) profileName = r?.[0]?.display_name || ""; if (profileName) $("iwAv").textContent = profileName.trim()[0].toUpperCase(); })
+      .catch(() => {});
+    // an invite link opened before signing in (perfil/?convite=…): accept it on whichever page the sign-in lands
+    let inv = null; try { inv = localStorage.getItem("inkwell-invite"); } catch { /* */ }
+    if (inv && page !== "profile") {
+      try { localStorage.removeItem("inkwell-invite"); } catch { /* */ }
+      CLOUD.api("rpc/accept_invite", { method: "POST", body: { p_code: inv } }).catch(() => {});
+    }
     Promise.all([
       CLOUD.api(`user_loans?select=id&status=eq.requested&created_by=neq.${me.id}`).catch(() => []),
       CLOUD.api(`user_trades?select=id&status=eq.proposed&partner=eq.${me.id}`).catch(() => []),

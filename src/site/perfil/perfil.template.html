@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Meu Inkwell</title>
+<meta name="description" content="Seu canto na comunidade de Lorcana: suas cartas favoritas, seu deck, seus jogos e seus amigos.">
+<meta property="og:title" content="Inkwell · Lorcana entre amigos">
+<meta property="og:description" content="Mostre suas cartas favoritas, seu deck e seus jogos. Projeto de fã, gratuito.">
+<meta name="theme-color" content="#13102a">
+<link rel="icon" href="../ink/icon-192.png">
+<link rel="apple-touch-icon" href="../ink/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="../ui/tokens.css"><script>document.documentElement.dataset.theme="noite";</script>
+</head>
+<body>
+<script>window.INKWELL_CLOUD_CONFIG = {"url": "https://sorefaetiaebmjploanp.supabase.co", "key": "sb_publishable_RkAWW-ENz70CXA6_QV7aHw_MpfD7Gn2", "redirect": "https://luiscredie.github.io/inkwell/perfil/"};
+/*@CLOUD_JS@*/</script>
+<style>
+/* layout only — components come from ../ui/tokens.css (design v2) */
+.mi { display: grid; gap: var(--sp-5); }
+.mi-hero { position: relative; border-radius: 20px; overflow: hidden; background: var(--surface-2); box-shadow: var(--e2); }
+.mi-cover { height: 168px; background-color: var(--surface-3); background-size: 135% auto; background-position: 50% 24%; position: relative; }
+.mi-cover::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(19,16,42,.05) 0%, rgba(19,16,42,.35) 55%, var(--surface-2) 100%); }
+.mi-id { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--sp-4); align-items: end; padding: 0 var(--sp-5) var(--sp-5); margin-top: -56px; z-index: 1; }
+.mi-av { width: 104px; height: 104px; border-radius: 50%; background-color: var(--surface-3); background-size: 210% auto; background-position: 50% 20%; box-shadow: 0 0 0 4px var(--surface-2), 0 0 0 6px var(--gold, #e9b949); flex: none; }
+.mi-av.sm { width: 40px; height: 40px; box-shadow: 0 0 0 2px var(--gold, #e9b949); }
+.mi-name { margin: 0; font-size: var(--fs-h1); line-height: 1.1; overflow-wrap: anywhere; }
+.mi-handle { color: var(--text-2); font-weight: 600; }
+.mi-meta { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); align-items: center; margin-top: var(--sp-2); color: var(--text-2); font-size: var(--fs-small); }
+.mi-ink { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 6px; border-radius: var(--r-pill); background: var(--surface-3); color: var(--text); font-weight: 600; }
+.mi-ink i { width: 12px; height: 12px; border-radius: 50%; background: var(--ink-steel); }
+.mi-bio { margin: var(--sp-3) 0 0; color: var(--text); max-width: 60ch; overflow-wrap: anywhere; }
+.mi-acts { display: flex; flex-wrap: wrap; gap: var(--sp-2); padding: 0 var(--sp-5) var(--sp-5); }
+.mi-mock { display: flex; gap: var(--sp-2); align-items: center; padding: 10px var(--sp-4); border-radius: var(--r-md); background: var(--accent-soft); color: var(--text); font-weight: 600; }
+.mi-cols { display: grid; gap: var(--sp-5); grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 900px) { .mi-cols { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); align-items: start; } }
+.mi-show { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-3); }
+.mi-show figure { margin: 0; display: grid; gap: 6px; justify-items: start; }
+.mi-show .thumb { width: 100%; border-radius: 10px; box-shadow: 0 10px 24px rgba(5,3,20,.45); }
+.mi-show figcaption { font-size: var(--fs-small); color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.mi-strip { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+.mi-strip .thumb { width: 52px; }
+.mi-rec { display: flex; gap: var(--sp-5); align-items: baseline; }
+.mi-rec b { font-size: var(--fs-stat, 1.8rem); font-variant-numeric: tabular-nums; }
+.mi-label { font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); font-weight: 700; }
+.mi-empty { color: var(--text-3); font-size: var(--fs-small); }
+.ed-show { display: grid; gap: var(--sp-2); }
+.ed-show .list-row { min-height: 60px; }
+.ed-inks { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.ed-inks button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--text); }
+.ed-foot { position: sticky; bottom: calc(var(--tabbar-h, 0px) + env(safe-area-inset-bottom, 0px)); display: flex; gap: var(--sp-2); justify-content: flex-end; padding: var(--sp-3) 0; background: linear-gradient(180deg, transparent, var(--bg) 30%); z-index: 5; }
+@media (min-width: 761px) { .ed-foot { bottom: 0; } }
+.invite-box { display: flex; gap: var(--sp-2); }
+.invite-box input { flex: 1; min-width: 0; font-size: var(--fs-small); }
+.pc-prev { width: 100%; max-width: 320px; border-radius: 14px; box-shadow: var(--e2); display: block; }
+@media (max-width: 560px) { .mi-cover { height: 132px; } .mi-av { width: 88px; height: 88px; } .mi-id { margin-top: -48px; padding: 0 var(--sp-4) var(--sp-4); gap: var(--sp-3); } .mi-acts { padding: 0 var(--sp-4) var(--sp-4); } }
+@media (prefers-reduced-motion: no-preference) { .mi-show .thumb { transition: transform var(--t-med) var(--ease); } .mi-show figure:hover .thumb { transform: translateY(-4px) rotate(-.6deg); } }
+</style>
+
+<main class="page" id="page">
+  <div class="page-head"><div><h1 id="title" class="sr-only">Meu Inkwell</h1></div></div>
+  <div id="app"></div>
+</main>
+<dialog class="sheet" id="sheet" aria-labelledby="shT"></dialog>
+<div class="toast-host"><div class="toast" id="toast" role="status" hidden></div></div>
+
+<script>
+const CARD_INDEX = /*@CARD_INDEX@*/;
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  let lang = "pt";
+  try { lang = localStorage.getItem("inkwell-lang") || ((navigator.language || "pt").toLowerCase().startsWith("en") ? "en" : "pt"); } catch { /* */ }
+  const PT = {
+    "My Inkwell": "Meu Inkwell", "Loading…": "Carregando…", "Edit": "Editar", "Share": "Compartilhar", "Copy link": "Copiar link", "Link copied": "Link copiado",
+    "Example · fictional profile": "Exemplo · perfil fictício", "This is a mockup to show what a profile looks like. It is not a real person.": "Isto é uma maquete para mostrar como fica um perfil. Não é uma pessoa real.",
+    "Showcase": "Vitrine", "owns it": "tem", "favourite": "favorita", "Featured deck": "Deck em destaque", "{n} cards": "{n} cartas",
+    "Record": "Retrospecto", "wins": "vitórias", "losses": "derrotas", "Looking for": "Procura", "Offering": "Oferece", "Nothing here yet.": "Nada aqui ainda.",
+    "Report profile": "Denunciar perfil", "Why are you reporting this profile?": "Por que você está denunciando este perfil?", "Send report": "Enviar denúncia", "Cancel": "Cancelar",
+    "Report sent. Thank you.": "Denúncia enviada. Obrigado.", "Couldn't send. Try again.": "Não foi possível enviar. Tente de novo.", "Close": "Fechar",
+    "Profile not found": "Perfil não encontrado", "It doesn't exist, or its owner keeps it private.": "Ele não existe ou o dono deixou privado.",
+    "Your corner of the Lorcana community": "Seu canto na comunidade de Lorcana", "Show your favourite cards, your deck and your games. Invite your friends.": "Mostre suas cartas favoritas, seu deck e seus jogos. Convide seus amigos.",
+    "Sign in": "Entrar", "Use your e-mail. We send a 6-digit code, no password.": "Use seu e-mail. Mandamos um código de 6 dígitos, sem senha.", "See an example": "Ver um exemplo",
+    "{name} invited you to Inkwell": "{name} convidou você para o Inkwell", "Sign in and you become friends.": "Entre e vocês viram amigos.", "Someone": "Alguém",
+    "You and {name} are now friends.": "Agora você e {name} são amigos.", "This invite link is no longer valid.": "Este convite não vale mais.",
+    "Public": "Público", "Private": "Privado", "Only you see this profile.": "Só você vê este perfil.", "Anyone with the link sees this profile.": "Qualquer pessoa com o link vê este perfil.",
+    "Hidden by the moderator.": "Ocultado pela moderação.", "See as others see it": "Ver como os outros veem",
+    "Who you are": "Quem é você", "Name": "Nome", "Profile address": "Endereço do perfil", "3 to 20 letters, numbers or _": "3 a 20 letras minúsculas, números ou _",
+    "About you": "Sobre você", "One or two lines: how you play, what you collect.": "Uma ou duas linhas: como você joga, o que coleciona.", "City": "Cidade", "Only shown for adults. Leave empty to hide.": "Só aparece para maiores de idade. Deixe vazio para esconder.",
+    "Favourite inks": "Tintas favoritas", "Pick up to 2.": "Escolha até 2.",
+    "Avatar": "Avatar", "Pick a card: its art becomes your picture.": "Escolha uma carta: a arte dela vira sua foto.", "Search a card": "Buscar carta", "Type at least 2 letters.": "Digite pelo menos 2 letras.", "No card found.": "Nenhuma carta encontrada.",
+    "Up to 3 cards. Mark \"I own it\" only for cards in your collection.": "Até 3 cartas. Marque \"Tenho\" só nas que estão na sua coleção.", "I own it": "Tenho", "Favourite": "Favorita", "Remove": "Tirar", "Add a card": "Pôr carta",
+    "No deck": "Nenhum deck", "Which of your decks people see.": "Qual dos seus decks as pessoas veem.",
+    "Privacy": "Privacidade", "I am 18 or older": "Tenho 18 anos ou mais", "Required for a public profile.": "Necessário para o perfil público.",
+    "Public profile": "Perfil público", "Needs a profile address and the 18+ confirmation.": "Precisa de endereço do perfil e da confirmação de 18+.",
+    "Show my wins and losses": "Mostrar minhas vitórias e derrotas", "Totals only, never the games.": "Só os totais, nunca os jogos.",
+    "Show what I look for and offer": "Mostrar o que procuro e ofereço", "Your wishlist and your board posts.": "Sua lista de desejos e seus anúncios no Mural.",
+    "Your collection is never shown.": "Sua coleção nunca aparece.", "Save": "Salvar", "Saved": "Salvo", "That address is taken. Try another.": "Esse endereço já existe. Tente outro.",
+    "Couldn't save. Try again.": "Não foi possível salvar. Tente de novo.", "Use 3 to 20 lowercase letters, numbers or _.": "Use de 3 a 20 letras minúsculas, números ou _.",
+    "Player card": "Cartão do jogador", "An image to send in your groups.": "Uma imagem para mandar nos seus grupos.", "Make the card": "Gerar o cartão", "Send the image": "Enviar a imagem", "Download": "Baixar",
+    "Invite friends": "Convidar amigos", "Whoever signs in through your link becomes your friend.": "Quem entrar pelo seu link vira seu amigo.", "Send on WhatsApp": "Mandar no WhatsApp",
+    "Come see my Inkwell and play Lorcana with me:": "Vem ver meu Inkwell e jogar Lorcana comigo:", "Couldn't load your profile.": "Não foi possível carregar seu perfil.",
+    "Check your connection and try again.": "Confira a internet e tente de novo.", "Try again": "Tentar de novo", "The profile is not available yet.": "O perfil ainda não está disponível.",
+    "Fan project, not affiliated with Disney or Ravensburger.": "Projeto de fã, sem vínculo com a Disney ou a Ravensburger.", "Unsaved changes": "Alterações não salvas",
+    "Which Inkwell collection": "Qual coleção do Inkwell", "Used for \"I own it\" and the featured deck.": "Usada no \"Tenho\" e no deck em destaque.", "Back": "Voltar", "Edit my profile": "Editar meu perfil",
+  };
+  const INK_PT = { Amber: "Âmbar", Amethyst: "Ametista", Emerald: "Esmeralda", Ruby: "Rubi", Sapphire: "Safira", Steel: "Aço" };
+  const INKS = ["Amber", "Amethyst", "Emerald", "Ruby", "Sapphire", "Steel"];
+  const fill = (s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)) : s);
+  const Tx = (en, v) => fill(lang === "pt" && en in PT ? PT[en] : en, v);
+  const inkName = (i) => (lang === "pt" ? INK_PT[i] || i : i);
+  const LOC = lang === "pt" ? "pt-BR" : "en";
+  const norm = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const split = (name) => { const i = name.indexOf(" - "); return i > 0 ? [name.slice(0, i), name.slice(i + 3)] : [name, ""]; };
+  const inksOf = (c) => String(c.ink || "").split(/[,\/]\s*/).map((x) => x.trim()).filter(Boolean);
+
+  // ---------- catalog ----------
+  const SETS = CARD_INDEX?.sets || [];
+  const setName = (code) => { const s = SETS.find((x) => x.code === code); return s ? (lang === "pt" && s.name_pt) || s.name_en || code : code; };
+  const CARDS = (CARD_INDEX?.cards || []).map(([id, name, cost, type, ink, rarity, set, num, img]) => ({ id, name: name || id, cost, type, ink, rarity, set, num, img, k: norm(`${name} ${set} ${num}`) }));
+  const BY = new Map(CARDS.map((c) => [c.id, c]));
+  const imgUrl = (c) => (c?.img ? `../lorcana-card-images/${encodeURI(c.img).replace(/'/g, "%27")}` : "");
+  const thumb = (c, cls = "") => `<span class="thumb ${cls}" data-ink="${(inksOf(c || {})[0] || "steel").toLowerCase()}">${c?.img ? `<img src="${imgUrl(c)}" alt="${esc(c.name)}" loading="lazy" decoding="async" onerror="this.remove()">` : ""}</span>`;
+  const artStyle = (id) => { const c = BY.get(id); return c?.img ? `background-image:url('${imgUrl(c)}')` : ""; };
+  const inkChip = (i) => `<span class="mi-ink"><i data-ink="${i.toLowerCase()}" style="background:var(--ink-${i.toLowerCase()})"></i>${esc(inkName(i))}</span>`;
+
+  // ---------- state ----------
+  const CLOUD = window.INKWELL_CLOUD;
+  const me = CLOUD?.user();
+  const qs = new URLSearchParams(location.search);
+  const handleQ = (qs.get("u") || "").toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20);
+  const inviteQ = (qs.get("convite") || "").replace(/[^a-z0-9]/gi, "").slice(0, 20);
+  const INVITE_KEY = "inkwell-invite";
+  let mine = null, decksBy = [], editing = null, dirty = false;
+
+  async function rpc(name, body = {}) { return CLOUD.api(`rpc/${name}`, { method: "POST", body }); }
+  async function anonRpc(name, body) {   // public reads work signed out too
+    if (me) return rpc(name, body);
+    const cfg = window.INKWELL_CLOUD_CONFIG;
+    const r = await fetch(`${cfg.url}/rest/v1/rpc/${name}`, { method: "POST", headers: { apikey: cfg.key, "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!r.ok) throw new Error(String(r.status));
+    return r.json();
+  }
+
+  // ---------- public view ----------
+  function profileView(p, { own = false, preview = false } = {}) {
+    const show = (p.showcase || []).filter((s) => BY.has(s.id));
+    const deck = p.deck && p.deck.cards ? p.deck : null;
+    const deckCards = deck ? Object.entries(deck.cards).filter(([id, n]) => BY.has(id) && n > 0).sort((a, b) => b[1] - a[1] || (+BY.get(a[0]).cost || 0) - (+BY.get(b[0]).cost || 0)) : [];
+    const deckTotal = deckCards.reduce((s, [, n]) => s + n, 0);
+    const rec = p.record, games = rec ? (rec.w || 0) + (rec.l || 0) : 0;
+    const want = (p.trade?.want || []).filter((id) => BY.has(id)), have = (p.trade?.have || []).filter((id) => BY.has(id));
+    const strip = (ids) => (ids.length ? `<div class="mi-strip">${ids.slice(0, 12).map((id) => thumb(BY.get(id))).join("")}</div>` : `<p class="mi-empty">${Tx("Nothing here yet.")}</p>`);
+    return `<div class="mi" data-testid="profile">
+      ${p.mock ? `<div class="mi-mock" data-testid="mock-banner"><i class="ic i-info"></i><span>${Tx("Example · fictional profile")}. ${Tx("This is a mockup to show what a profile looks like. It is not a real person.")}</span></div>` : ""}
+      <section class="mi-hero">
+        <div class="mi-cover" style="${artStyle(p.avatar)}"></div>
+        <div class="mi-id"><div class="mi-av" style="${artStyle(p.avatar)}" role="img" aria-label="${esc(p.avatar && BY.get(p.avatar) ? BY.get(p.avatar).name : "")}"></div>
+          <div><h2 class="mi-name">${esc(p.name || "")}</h2>${p.handle ? `<div class="mi-handle">@${esc(p.handle)}</div>` : ""}
+            <div class="mi-meta">${(p.inks || []).map(inkChip).join("")}${p.city ? `<span>${esc(p.city)}</span>` : ""}</div></div></div>
+        ${p.bio ? `<p class="mi-bio" style="padding:0 var(--sp-5) var(--sp-4);margin:0">${esc(p.bio)}</p>` : ""}
+        <div class="mi-acts">${own ? `<button type="button" class="btn" id="toEdit"><i class="ic i-edit"></i>${Tx("Edit my profile")}</button>` : ""}
+          ${!preview && p.handle ? `<button type="button" class="btn" id="copyLink"><i class="ic i-send"></i>${Tx("Share")}</button>` : ""}
+          ${!preview && !own && me && !p.mock ? `<button type="button" class="btn ghost small" id="report" style="margin-left:auto"><i class="ic i-alert"></i>${Tx("Report profile")}</button>` : ""}</div>
+      </section>
+      <div class="mi-cols">
+        <div class="stack lg">
+          <section><div class="group-head"><h3>${Tx("Showcase")}</h3></div>
+            ${show.length ? `<div class="mi-show" data-testid="showcase">${show.map((s) => { const c = BY.get(s.id); return `<figure>${thumb(c)}<figcaption>${esc(split(c.name)[0])}</figcaption><span class="tag ${s.own ? "match" : "accent"}">${Tx(s.own ? "owns it" : "favourite")}</span></figure>`; }).join("")}</div>` : `<p class="mi-empty">${Tx("Nothing here yet.")}</p>`}</section>
+          ${deck ? `<section class="card" data-testid="featured-deck"><div class="mi-label">${Tx("Featured deck")}</div>
+            <div class="row between" style="margin:var(--sp-2) 0 var(--sp-3)"><b style="font-size:var(--fs-h3)">${esc(deck.name || "")}</b><span class="small muted">${(deck.colors || []).map((i) => inkName(i)).join(" / ")} · ${esc(deck.format === "infinity" ? "Infinity" : "Core")} · ${Tx("{n} cards", { n: deckTotal })}</span></div>
+            ${strip(deckCards.map(([id]) => id))}</section>` : ""}
+        </div>
+        <div class="stack lg">
+          ${rec ? `<section class="card" data-testid="record"><div class="mi-label">${Tx("Record")}</div><div class="mi-rec" style="margin-top:var(--sp-2)"><span><b>${rec.w || 0}</b> ${Tx("wins")}</span><span><b>${rec.l || 0}</b> ${Tx("losses")}</span>${games ? `<span class="muted">${Math.round(((rec.w || 0) / games) * 100)}%</span>` : ""}</div></section>` : ""}
+          ${p.trade ? `<section class="card" data-testid="trade"><div class="mi-label">${Tx("Looking for")}</div>${strip(want)}<div class="mi-label" style="margin-top:var(--sp-3)">${Tx("Offering")}</div>${strip(have)}</section>` : ""}
+        </div>
+      </div>
+      <p class="small faint">${Tx("Fan project, not affiliated with Disney or Ravensburger.")}</p>
+    </div>`;
+  }
+  function wireView(p) {
+    $("copyLink")?.addEventListener("click", () => shareLink(profileUrl(p.handle), p.name));
+    $("report")?.addEventListener("click", () => openReport(p.handle));
+    $("toEdit")?.addEventListener("click", () => { history.replaceState(null, "", "./"); editor(); });
+  }
+  const base = () => location.href.replace(/[?#].*$/, "").replace(/[^/]*$/, "");
+  const profileUrl = (h) => `${base()}?u=${encodeURIComponent(h)}`;
+  async function shareLink(url, title) {
+    try { if (navigator.share) { await navigator.share({ title: `${title} · Inkwell`, url }); return; } } catch { return; }
+    try { await navigator.clipboard.writeText(url); toast(Tx("Link copied")); } catch { prompt("", url); }
+  }
+
+  async function showPublic(h) {
+    let p = null;
+    try { p = await anonRpc("public_profile", { p_handle: h }); } catch { p = null; }
+    if (!p) { $("app").innerHTML = emptyBox("search", Tx("Profile not found"), Tx("It doesn't exist, or its owner keeps it private.")); return; }
+    document.title = `${p.name} · Inkwell`;
+    const own = !!(mine && mine.handle && mine.handle === p.handle);
+    $("app").innerHTML = (inviteQ && !me ? await inviteBanner() : "") + profileView(p, { own });
+    wireInvite(); wireView(p);
+  }
+
+  // ---------- invites ----------
+  async function inviteBanner() {
+    let info = null; try { info = await anonRpc("invite_info", { p_code: inviteQ }); } catch { /* */ }
+    if (!info) return `<div class="notice warn" style="margin-bottom:var(--sp-4)"><i class="ic i-alert"></i><div class="t">${Tx("This invite link is no longer valid.")}</div></div>`;
+    try { localStorage.setItem(INVITE_KEY, inviteQ); } catch { /* */ }
+    return `<section class="card" data-testid="invite" style="margin-bottom:var(--sp-5)"><h2 style="margin:0">${esc(Tx("{name} invited you to Inkwell", { name: info.name || Tx("Someone") }))}</h2>
+      <p class="muted" style="margin:var(--sp-2) 0 var(--sp-3)">${Tx("Sign in and you become friends.")} ${Tx("Use your e-mail. We send a 6-digit code, no password.")}</p>
+      <button type="button" class="btn primary" data-signin>${Tx("Sign in")}</button></section>`;
+  }
+  function wireInvite() { document.querySelectorAll("[data-signin]").forEach((b) => b.onclick = () => window.INKWELL_SIGNIN?.()); }
+  async function acceptPendingInvite() {
+    let code = null; try { code = localStorage.getItem(INVITE_KEY); } catch { /* */ }
+    if (!me || !code) return;
+    try { localStorage.removeItem(INVITE_KEY); } catch { /* */ }
+    try { const r = await rpc("accept_invite", { p_code: code }); if (r?.ok) toast(Tx("You and {name} are now friends.", { name: r.name })); else if (r?.reason === "unknown") toast(Tx("This invite link is no longer valid."), true); } catch { /* */ }
+  }
+
+  // ---------- signed out, no profile asked ----------
+  function welcome() {
+    $("app").innerHTML = `<section class="mi-hero" style="padding:var(--sp-8) var(--sp-5)"><h2 class="mi-name">${Tx("Your corner of the Lorcana community")}</h2>
+      <p class="muted" style="max-width:52ch">${Tx("Show your favourite cards, your deck and your games. Invite your friends.")}</p>
+      <div class="row" style="gap:var(--sp-2);flex-wrap:wrap"><button type="button" class="btn primary" data-signin>${Tx("Sign in")}</button><a class="btn" href="?u=user1">${Tx("See an example")}</a></div>
+      <p class="small faint" style="margin-top:var(--sp-3)">${Tx("Use your e-mail. We send a 6-digit code, no password.")}</p></section>`;
+    wireInvite();
+  }
+
+  // ---------- my profile: preview + editor ----------
+  async function loadMine() {
+    const [p, ip] = await Promise.all([rpc("my_profile"), CLOUD.api("inkwell_profiles?select=profile,updated_at,decks:data->decks,collection:data->collection&order=updated_at.desc").catch(() => [])]);
+    mine = p || { display_name: "", handle: null, bio: "", avatar_card: null, inks: [], city: "", showcase: [], featured_deck: null, is_public: false, adult: false, show_record: true, show_trade: false };
+    decksBy = (ip || []).map((x) => ({ profile: x.profile, decks: Array.isArray(x.decks) ? x.decks : [], collection: x.collection && typeof x.collection === "object" ? x.collection : {} }));
+  }
+  const pickProfile = (e) => decksBy.find((x) => x.profile === e.inkwell_profile) || decksBy.slice().sort((a, b) => b.decks.length - a.decks.length)[0] || { decks: [], collection: {} };
+  const ownsCard = (e, id) => { const c = pickProfile(e).collection[id] || {}; return (+c.n || 0) + (+c.f || 0) > 0; };
+  function asPublic(e) {   // what others would see, built locally
+    const deck = pickProfile(e).decks.find((d) => d.id === e.featured_deck);
+    return { name: e.display_name, handle: e.handle, bio: e.bio, avatar: e.avatar_card, inks: e.inks, city: e.adult ? e.city : "",
+      showcase: (e.showcase || []).map((s) => ({ id: s.id, own: s.k === "own" && ownsCard(e, s.id) })),
+      deck: deck ? { name: deck.name, format: deck.format, colors: deck.colors, cards: deck.cards } : null, record: null, trade: null, mock: false };
+  }
+  function cardSearch(id, q, onPick, disabled = () => false) {
+    const words = norm(q).split(" ").filter(Boolean);
+    const found = q.trim().length >= 2 ? CARDS.filter((c) => c.img && words.every((w) => c.k.includes(w))).slice(0, 12) : [];
+    return `<div class="sugg static" id="${id}" role="listbox">${q.trim().length < 2 ? `<div class="none">${Tx("Type at least 2 letters.")}</div>` : found.length ? found.map((c) => `<button type="button" role="option" data-pick="${esc(c.id)}" ${disabled(c.id) ? "disabled" : ""}>${thumb(c)}<span>${esc(split(c.name).join(" · ").replace(/ · $/, ""))}<small>${esc(setName(c.set))} · nº ${esc(c.num)}</small></span></button>`).join("") : `<div class="none">${Tx("No card found.")}</div>`}</div>`;
+  }
+  let qAv = "", qShow = "";
+  async function editor() {
+    if (!mine) { try { await loadMine(); } catch { $("app").innerHTML = emptyBox("error", Tx("The profile is not available yet."), Tx("Check your connection and try again."), `<button type="button" class="btn" id="retry"><i class="ic i-refresh"></i>${Tx("Try again")}</button>`); $("retry").onclick = () => editor(); return; } }
+    editing = editing || JSON.parse(JSON.stringify({ display_name: mine.display_name || "", handle: mine.handle || "", bio: mine.bio || "", avatar_card: mine.avatar_card || null, inks: mine.inks || [], city: mine.city || "",
+      showcase: mine.showcase || [], featured_deck: mine.featured_deck || "", inkwell_profile: mine.inkwell_profile || "", is_public: !!mine.is_public, adult: !!mine.adult, show_record: mine.show_record !== false, show_trade: !!mine.show_trade }));
+    drawEditor();
+  }
+  function drawEditor() {
+    const e = editing, prof = pickProfile(e), canPublic = e.adult && /^[a-z0-9_]{3,20}$/.test(e.handle || "");
+    const keep = document.activeElement?.id, caret = document.activeElement?.selectionStart;
+    $("app").innerHTML = `
+      <div class="row between" style="margin-bottom:var(--sp-4);flex-wrap:wrap;gap:var(--sp-2)"><h1 style="margin:0">${Tx("My Inkwell")}</h1>
+        <span class="tag ${mine.hidden ? "warn" : e.is_public && canPublic ? "match" : "info"}" data-testid="status">${mine.hidden ? Tx("Hidden by the moderator.") : Tx(e.is_public && canPublic ? "Public" : "Private")}</span></div>
+      <p class="muted" style="margin:0 0 var(--sp-4)">${Tx(e.is_public && canPublic ? "Anyone with the link sees this profile." : "Only you see this profile.")} ${Tx("Your collection is never shown.")}</p>
+      <div id="prev">${profileView(asPublic(e), { preview: true })}</div>
+      <form class="card" id="ed" novalidate style="margin-top:var(--sp-6)">
+        <div class="form-block"><h3>${Tx("Who you are")}</h3>
+          <label class="field">${Tx("Name")}<input id="fName" maxlength="40" value="${esc(e.display_name)}" autocomplete="nickname"></label>
+          <label class="field">${Tx("Profile address")}<span class="prefix"><span>@</span><input id="fHandle" maxlength="20" value="${esc(e.handle)}" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="hHandle"></span><span class="hint" id="hHandle">${Tx("3 to 20 letters, numbers or _")}</span></label>
+          <label class="field">${Tx("About you")}<textarea id="fBio" maxlength="160" rows="2" aria-describedby="hBio">${esc(e.bio)}</textarea><span class="hint" id="hBio">${Tx("One or two lines: how you play, what you collect.")} ${e.bio.length}/160</span></label>
+          <div class="field">${Tx("Favourite inks")}<div class="ed-inks" role="group" aria-label="${Tx("Favourite inks")}">${INKS.map((i) => `<button type="button" class="chipbtn" data-ink="${i}" aria-pressed="${e.inks.includes(i)}"><span class="inks"><i style="background:var(--ink-${i.toLowerCase()})"></i></span>${esc(inkName(i))}</button>`).join("")}</div><span class="hint">${Tx("Pick up to 2.")}</span></div>
+          <label class="field">${Tx("City")}<input id="fCity" maxlength="40" value="${esc(e.city)}" ${e.adult ? "" : "disabled"} autocomplete="address-level2"><span class="hint">${Tx("Only shown for adults. Leave empty to hide.")}</span></label>
+        </div>
+        <div class="form-block"><h3>${Tx("Avatar")}</h3><p class="small muted" style="margin:0">${Tx("Pick a card: its art becomes your picture.")}</p>
+          <div class="row" style="gap:var(--sp-3)">${e.avatar_card ? `<span class="mi-av sm" style="${artStyle(e.avatar_card)}"></span><span class="small">${esc(BY.get(e.avatar_card)?.name || "")}</span>` : ""}</div>
+          <div class="picker"><input id="qAv" type="search" value="${esc(qAv)}" placeholder="${Tx("Search a card")}" aria-label="${Tx("Search a card")}" autocomplete="off"></div>${qAv ? cardSearch("avRes", qAv) : ""}</div>
+        <div class="form-block"><h3>${Tx("Showcase")}</h3><p class="small muted" style="margin:0">${Tx("Up to 3 cards. Mark \"I own it\" only for cards in your collection.")}</p>
+          <div class="ed-show">${e.showcase.map((s, i) => { const c = BY.get(s.id); if (!c) return ""; const owns = ownsCard(e, s.id);
+            return `<div class="list-row on-field">${thumb(c, "sm")}<span class="t"><span>${esc(split(c.name).join(" · ").replace(/ · $/, ""))}</span><span class="meta">${esc(setName(c.set))} · nº ${esc(c.num)}</span></span>
+              <span class="trail" style="gap:var(--sp-2)"><span class="seg" role="group"><button type="button" data-sk="${i}:own" aria-pressed="${s.k === "own"}" ${owns ? "" : "disabled"}>${Tx("I own it")}</button><button type="button" data-sk="${i}:fav" aria-pressed="${s.k !== "own"}">${Tx("Favourite")}</button></span>
+              <button type="button" class="btn ghost icon small" data-sdel="${i}" aria-label="${Tx("Remove")}"><i class="ic i-close"></i></button></span></div>`; }).join("")}</div>
+          ${e.showcase.length < 3 ? `<div class="picker"><input id="qShow" type="search" value="${esc(qShow)}" placeholder="${Tx("Add a card")}" aria-label="${Tx("Add a card")}" autocomplete="off"></div>${qShow ? cardSearch("showRes", qShow, (id) => e.showcase.some((s) => s.id === id)) : ""}` : ""}</div>
+        <div class="form-block"><h3>${Tx("Featured deck")}</h3>
+          ${decksBy.length > 1 ? `<label class="field">${Tx("Which Inkwell collection")}<select id="fProf">${decksBy.map((x) => `<option value="${esc(x.profile)}" ${x.profile === prof.profile ? "selected" : ""}>${esc(x.profile)}</option>`).join("")}</select><span class="hint">${Tx("Used for \"I own it\" and the featured deck.")}</span></label>` : ""}
+          <label class="field">${Tx("Which of your decks people see.")}<select id="fDeck"><option value="">${Tx("No deck")}</option>${prof.decks.map((d) => `<option value="${esc(d.id)}" ${d.id === e.featured_deck ? "selected" : ""}>${esc(d.name || d.id)}</option>`).join("")}</select></label></div>
+        <div class="form-block"><h3>${Tx("Privacy")}</h3>
+          <label class="switch"><span>${Tx("I am 18 or older")}<small>${Tx("Required for a public profile.")}</small></span><input type="checkbox" role="switch" id="fAdult" ${e.adult ? "checked" : ""}></label>
+          <label class="switch"><span>${Tx("Public profile")}<small>${Tx("Needs a profile address and the 18+ confirmation.")}</small></span><input type="checkbox" role="switch" id="fPublic" ${e.is_public && canPublic ? "checked" : ""} ${canPublic && !mine.hidden ? "" : "disabled"}></label>
+          <label class="switch"><span>${Tx("Show my wins and losses")}<small>${Tx("Totals only, never the games.")}</small></span><input type="checkbox" role="switch" id="fRec" ${e.show_record ? "checked" : ""}></label>
+          <label class="switch"><span>${Tx("Show what I look for and offer")}<small>${Tx("Your wishlist and your board posts.")}</small></span><input type="checkbox" role="switch" id="fTrade" ${e.show_trade ? "checked" : ""}></label>
+          <p class="small faint" style="margin:0">${Tx("Your collection is never shown.")}</p></div>
+        <p class="small" id="edMsg" role="alert" style="margin:0"></p>
+        <div class="ed-foot">${mine.handle && mine.is_public ? `<a class="btn ghost" href="?u=${esc(mine.handle)}">${Tx("See as others see it")}</a>` : ""}<button type="submit" class="btn primary" id="edSave">${Tx("Save")}</button></div>
+      </form>
+      <div class="grid2" style="margin-top:var(--sp-6);gap:var(--sp-5)">
+        <section class="card"><h3 style="margin-top:0">${Tx("Player card")}</h3><p class="small muted">${Tx("An image to send in your groups.")}</p><div id="pcBox"></div>
+          <button type="button" class="btn" id="pcMake"><i class="ic i-sparkle"></i>${Tx("Make the card")}</button></section>
+        <section class="card" data-testid="invite-box"><h3 style="margin-top:0">${Tx("Invite friends")}</h3><p class="small muted">${Tx("Whoever signs in through your link becomes your friend.")}</p>
+          ${mine.invite_code ? `<div class="invite-box"><input id="invLink" readonly value="${esc(inviteUrl())}" aria-label="${Tx("Invite friends")}"><button type="button" class="btn" id="invCopy">${Tx("Copy link")}</button></div>
+          <a class="btn" style="margin-top:var(--sp-3)" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(Tx("Come see my Inkwell and play Lorcana with me:") + " " + inviteUrl())}">${Tx("Send on WhatsApp")}</a>` : `<p class="small faint">${Tx("Save")}…</p>`}</section>
+      </div>`;
+    wire();
+    if (keep && $(keep)) { $(keep).focus(); try { if (caret != null) $(keep).setSelectionRange(caret, caret); } catch { /* */ } }
+  }
+  const inviteUrl = () => `${base()}?convite=${encodeURIComponent(mine.invite_code)}${mine.handle && mine.is_public ? `&u=${encodeURIComponent(mine.handle)}` : ""}`;
+  function wire() {
+    const e = editing, set = (k, val, redraw = true) => { e[k] = val; dirty = true; if (redraw) drawEditor(); };
+    $("ed").addEventListener("submit", (ev) => { ev.preventDefault(); save(); });
+    // text fields refresh only the preview and the public switch, so the form keeps focus and what is typed
+    const live = () => { const ok = e.adult && /^[a-z0-9_]{3,20}$/.test(e.handle || ""); $("prev").innerHTML = profileView(asPublic(e), { preview: true });
+      $("fPublic").disabled = !ok || !!mine.hidden; if (!ok) $("fPublic").checked = false; };
+    $("fName").oninput = (ev) => { set("display_name", ev.target.value, false); live(); };
+    $("fHandle").oninput = (ev) => { const v = ev.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20); if (v !== ev.target.value) ev.target.value = v; set("handle", v, false); ev.target.removeAttribute("aria-invalid"); live(); };
+    $("fBio").oninput = (ev) => { set("bio", ev.target.value.slice(0, 160), false); $("hBio").textContent = `${Tx("One or two lines: how you play, what you collect.")} ${e.bio.length}/160`; live(); };
+    $("fCity").oninput = (ev) => { set("city", ev.target.value.slice(0, 40), false); live(); };
+    document.querySelectorAll("[data-ink]").forEach((b) => b.onclick = () => { if (!b.closest(".ed-inks")) return; const i = b.dataset.ink; set("inks", e.inks.includes(i) ? e.inks.filter((x) => x !== i) : [...e.inks, i].slice(-2)); });
+    $("qAv").oninput = (ev) => { qAv = ev.target.value; drawEditor(); };
+    document.querySelectorAll("#avRes [data-pick]").forEach((b) => b.onclick = () => { qAv = ""; set("avatar_card", b.dataset.pick); });
+    if ($("qShow")) $("qShow").oninput = (ev) => { qShow = ev.target.value; drawEditor(); };
+    document.querySelectorAll("#showRes [data-pick]").forEach((b) => b.onclick = () => { qShow = ""; const id = b.dataset.pick; set("showcase", [...e.showcase, { id, k: ownsCard(e, id) ? "own" : "fav" }].slice(0, 3)); });
+    document.querySelectorAll("[data-sk]").forEach((b) => b.onclick = () => { const [i, k] = b.dataset.sk.split(":"); const s = e.showcase.slice(); s[+i] = { ...s[+i], k }; set("showcase", s); });
+    document.querySelectorAll("[data-sdel]").forEach((b) => b.onclick = () => set("showcase", e.showcase.filter((_, i) => i !== +b.dataset.sdel)));
+    if ($("fProf")) $("fProf").onchange = (ev) => { e.inkwell_profile = ev.target.value; e.featured_deck = ""; dirty = true; drawEditor(); };
+    $("fDeck").onchange = (ev) => set("featured_deck", ev.target.value);
+    $("fAdult").onchange = (ev) => { e.adult = ev.target.checked; if (!e.adult) { e.is_public = false; } dirty = true; drawEditor(); };
+    $("fPublic").onchange = (ev) => set("is_public", ev.target.checked);
+    $("fRec").onchange = (ev) => set("show_record", ev.target.checked);
+    $("fTrade").onchange = (ev) => set("show_trade", ev.target.checked);
+    $("pcMake").onclick = () => makeCard(asPublic(e));
+    $("invCopy")?.addEventListener("click", async () => { try { await navigator.clipboard.writeText(inviteUrl()); toast(Tx("Link copied")); } catch { $("invLink").select(); } });
+    $("toEdit")?.remove();
+  }
+  async function save() {
+    const e = editing, msg = $("edMsg"), b = $("edSave");
+    if (e.handle && !/^[a-z0-9_]{3,20}$/.test(e.handle)) { msg.textContent = Tx("Use 3 to 20 lowercase letters, numbers or _."); $("fHandle").setAttribute("aria-invalid", "true"); $("fHandle").focus(); return; }
+    b.setAttribute("aria-busy", "true"); b.disabled = true; msg.textContent = "";
+    const body = { ...e, city: e.adult ? e.city : "", is_public: e.is_public && e.adult && !!e.handle };
+    try {
+      const r = await rpc("save_my_profile", { p: body });
+      mine = r || mine; editing = null; dirty = false; await editor(); toast(Tx("Saved"));
+    } catch (err) {
+      b.removeAttribute("aria-busy"); b.disabled = false;
+      msg.textContent = /handle_taken/.test(String(err?.message || err)) ? Tx("That address is taken. Try another.") : Tx("Couldn't save. Try again.");
+    }
+  }
+  window.addEventListener("beforeunload", (ev) => { if (dirty) { ev.preventDefault(); ev.returnValue = ""; } });
+
+  // ---------- player card (an image, so it travels well in WhatsApp groups) ----------
+  const loadImg = (src) => new Promise((ok) => { if (!src) return ok(null); const im = new Image(); im.onload = () => ok(im); im.onerror = () => ok(null); im.src = src; });
+  async function makeCard(p) {
+    const W = 1080, H = 1350, c = document.createElement("canvas"); c.width = W; c.height = H; const x = c.getContext("2d");
+    const css = getComputedStyle(document.documentElement), col = (v, d) => (css.getPropertyValue(v).trim() || d);
+    const font = css.getPropertyValue("--font").trim() || "system-ui, sans-serif";
+    x.fillStyle = "#13102a"; x.fillRect(0, 0, W, H);
+    const av = await loadImg(imgUrl(BY.get(p.avatar)));
+    if (av) {   // the art band: the top half of the card, cropped to cover
+      const sx = av.width * 0.16, sy = av.height * 0.09, sw = av.width * 0.8, sh = av.height * 0.41, k = Math.max(W / sw, 560 / sh);
+      x.save(); x.beginPath(); x.rect(0, 0, W, 560); x.clip();
+      x.drawImage(av, sx, sy, sw, sh, (W - sw * k) / 2, (560 - sh * k) / 2, sw * k, sh * k); x.restore();
+    }
+    const g = x.createLinearGradient(0, 260, 0, 562); g.addColorStop(0, "rgba(19,16,42,0)"); g.addColorStop(1, "#13102a"); x.fillStyle = g; x.fillRect(0, 0, W, 600);
+    if (av) {   // round avatar with a gold ring
+      x.save(); x.beginPath(); x.arc(W / 2, 560, 118, 0, Math.PI * 2); x.fillStyle = col("--gold", "#e9b949"); x.fill();
+      x.beginPath(); x.arc(W / 2, 560, 108, 0, Math.PI * 2); x.clip();
+      const sw = av.width * 0.55, sx = (av.width - sw) / 2, sy = av.height * 0.07; x.drawImage(av, sx, sy, sw, sw, W / 2 - 108, 452, 216, 216); x.restore();
+    }
+    x.textAlign = "center"; x.fillStyle = "#f4f1ff";
+    x.font = `800 64px ${font}`; x.fillText(String(p.name || "").slice(0, 28), W / 2, 760);
+    x.fillStyle = "#aaa3cc"; x.font = `600 36px ${font}`;
+    x.fillText([p.handle ? "@" + p.handle : "", (p.inks || []).map(inkName).join(" / "), p.city].filter(Boolean).join("  ·  "), W / 2, 818);
+    const show = (p.showcase || []).filter((s) => BY.has(s.id)).slice(0, 3);
+    const imgs = await Promise.all(show.map((s) => loadImg(imgUrl(BY.get(s.id)))));
+    const cw = 240, ch = 336, gap = 40, n = show.length, x0 = (W - (n * cw + (n - 1) * gap)) / 2;
+    show.forEach((s, i) => { const im = imgs[i], cx = x0 + i * (cw + gap), cy = 862;
+      x.save(); x.beginPath(); x.roundRect ? x.roundRect(cx, cy, cw, ch, 16) : x.rect(cx, cy, cw, ch); x.clip(); if (im) x.drawImage(im, cx, cy, cw, ch); else { x.fillStyle = "#2a2550"; x.fillRect(cx, cy, cw, ch); } x.restore();
+      x.fillStyle = s.own ? "#7fe0a8" : col("--gold", "#e9b949"); x.font = `700 28px ${font}`; x.fillText(Tx(s.own ? "owns it" : "favourite"), cx + cw / 2, cy + ch + 36); });
+    if (p.mock) { x.fillStyle = "rgba(233,185,73,.95)"; x.font = `800 34px ${font}`; x.fillText(Tx("Example · fictional profile").toUpperCase(), W / 2, 60); }
+    x.strokeStyle = "rgba(255,255,255,.12)"; x.beginPath(); x.moveTo(140, H - 100); x.lineTo(W - 140, H - 100); x.stroke();
+    x.fillStyle = "#f4f1ff"; x.font = `800 34px ${font}`; x.fillText("Inkwell", W / 2, H - 66);
+    x.fillStyle = "#7d77a8"; x.font = `500 24px ${font}`; x.fillText(Tx("Fan project, not affiliated with Disney or Ravensburger."), W / 2, H - 28);
+    const blob = await new Promise((ok) => c.toBlob(ok, "image/png"));
+    const url = URL.createObjectURL(blob), file = new File([blob], `inkwell-${p.handle || "card"}.png`, { type: "image/png" });
+    $("pcBox").innerHTML = `<img class="pc-prev" src="${url}" alt="${esc(Tx("Player card"))}" data-testid="player-card"><div class="row" style="gap:var(--sp-2);margin:var(--sp-3) 0">
+      ${navigator.canShare && navigator.canShare({ files: [file] }) ? `<button type="button" class="btn primary" id="pcShare"><i class="ic i-send"></i>${Tx("Send the image")}</button>` : ""}
+      <a class="btn" download="${esc(file.name)}" href="${url}">${Tx("Download")}</a></div>`;
+    $("pcShare")?.addEventListener("click", () => navigator.share({ files: [file], title: "Inkwell" }).catch(() => {}));
+  }
+
+  // ---------- report ----------
+  function openReport(h) {
+    const sh = $("sheet");
+    sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="shT">${Tx("Report profile")}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
+      <div class="sheet-body"><label class="field">${Tx("Why are you reporting this profile?")}<textarea id="rpWhy" maxlength="500" rows="4"></textarea></label><p class="small" id="rpMsg" role="alert"></p></div>
+      <div class="sheet-foot"><button type="button" class="btn ghost" data-close>${Tx("Cancel")}</button><button type="button" class="btn primary" id="rpSend">${Tx("Send report")}</button></div>`;
+    sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = () => sh.close());
+    $("rpSend").onclick = async () => {
+      const why = $("rpWhy").value.trim(); if (why.length < 3) { $("rpWhy").focus(); return; }
+      try { await rpc("report_profile", { p_handle: h, p_reason: why }); sh.close(); toast(Tx("Report sent. Thank you.")); } catch { $("rpMsg").textContent = Tx("Couldn't send. Try again."); }
+    };
+    sh.showModal(); setTimeout(() => $("rpWhy").focus(), 30);
+  }
+
+  // ---------- helpers ----------
+  function emptyBox(img, title, text, extra = "") { return `<div class="empty"><img src="../ui/assets/empty/${img}.svg" alt=""><b>${esc(title)}</b><p>${esc(text)}</p>${extra}</div>`; }
+  let toastTimer = null;
+  function toast(text, err) {
+    const t = $("toast"); t.className = `toast${err ? " err" : ""}`;
+    t.innerHTML = `<i class="ic ${err ? "i-alert" : "i-check"}"></i><span>${esc(text)}</span>`; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 5000);
+  }
+
+  // ---------- boot ----------
+  document.documentElement.lang = LOC;
+  $("title").textContent = Tx("My Inkwell");
+  $("app").innerHTML = `<div class="skel" style="height:260px;border-radius:20px"></div><p class="sr-only">${Tx("Loading…")}</p>`;
+  (async () => {
+    if (me) { try { await loadMine(); } catch { mine = null; } await acceptPendingInvite(); }
+    if (handleQ) return showPublic(handleQ);
+    if (!me) {
+      if (inviteQ) { $("app").innerHTML = await inviteBanner(); wireInvite(); return; }
+      return welcome();
+    }
+    document.title = `${Tx("My Inkwell")} · Inkwell`;
+    if (mine && mine.handle && mine.is_public && !qs.has("editar")) return showPublic(mine.handle);
+    return editor();
+  })();
+})();
+</script>
+
+<script>window.INKWELL_SHELL = {"page": "profile"};
+/*@SHELL_JS@*/</script>
+</body>
+</html>
