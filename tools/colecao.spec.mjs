@@ -228,3 +228,11 @@ test('scanner adds nothing while the phone is moving', async ({ page }) => {
   await page.waitForTimeout(5000);
   await expect(page.locator('[data-testid="scan-count"]')).toHaveText('');
 });
+
+test('a hand that shakes a little still gets the card', async ({ page }) => {
+  await setup(page);
+  await fakeCamera(page, { file: 'Judy_Hopps_-_Helpful_Officer__LOR14-9.jpg', wobble: 0.018, scale: 1.05 });
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Escanear' }).click();
+  await expect(page.locator('[data-testid="scan-last"]')).toContainText('Judy Hopps', { timeout: 15000 });
+});
