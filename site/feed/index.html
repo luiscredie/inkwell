@@ -548,7 +548,7 @@ window.INKWELL_CLOUD = (() => {
         <button type="button" class="btn ghost icon" data-close aria-label="${T("Fechar", "Close")}"><i class="ic i-close"></i></button></div>
       <div class="sheet-body"><form class="form" id="iwSiForm" novalidate>
         <fieldset class="field"><legend>${T("Código de 6 dígitos", "6-digit code")}</legend>
-          <div class="otp">${[1, 2, 3, 4, 5, 6].map((i) => `<input inputmode="numeric" maxlength="1" autocomplete="${i === 1 ? "one-time-code" : "off"}" aria-label="${T("Dígito", "Digit")} ${i}">`).join("")}</div>
+          <div class="otp">${[1, 2, 3, 4, 5, 6].map((i) => `<input inputmode="numeric" autocomplete="${i === 1 ? "one-time-code" : "off"}" aria-label="${T("Dígito", "Digit")} ${i}">`).join("")}</div>
           <span class="hint">${T("Também pode abrir o link do e-mail neste aparelho. Confira o spam.", "You can also open the link in the e-mail on this device. Check spam too.")}</span>
         </fieldset>
         <p class="small" id="iwSiMsg" role="alert">${esc(msg)}</p>
