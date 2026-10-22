@@ -17,6 +17,17 @@
 /* layout only — components come from ../ui/tokens.css (design v2) */
 .cc-name small { display: block; color: var(--text-2); font-weight: 400; }
 #cardSheet .big { width: 176px; margin: 0 auto var(--sp-4); border-radius: 12px; }
+.places { display: flex; width: 100%; max-width: 100%; overflow-x: auto; margin: 0 0 var(--sp-3); }
+.places button { white-space: nowrap; }
+@media (max-width: 480px) { .places button { padding: 0 9px; font-size: var(--fs-micro); } }
+.places .n { color: var(--text-3); font-weight: 600; margin-left: 4px; font-variant-numeric: tabular-nums; }
+.places button[aria-pressed="true"] .n { color: inherit; }
+.stock-h { display: flex; align-items: center; gap: 6px; padding: var(--sp-3) 0 var(--sp-1); font-weight: 700; border-top: 1px solid var(--line-strong); }
+.stock-h:first-child { border-top: 0; padding-top: var(--sp-1); }
+.stock-h .ic { width: 16px; height: 16px; color: var(--text-2); }
+.stock-h .muted { font-weight: 600; margin-left: auto; font-variant-numeric: tabular-nums; }
+.stock-row + .stock-row { border-top: 1px solid var(--line); }
+.mv { white-space: nowrap; }
 .binder-open { display: block; padding: 0; border: 0; background: none; border-radius: 6px; cursor: zoom-in; line-height: 0; }
 .binder-open .thumb { display: block; }
 .load-more { display: flex; justify-content: center; margin: var(--sp-6) 0 0; }
@@ -89,7 +100,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "The camera didn't open. Allow camera access for this site and try again.": "A câmera não abriu. Permita o acesso à câmera para este site e tente de novo.",
     "Couldn't load the card scanner.": "Não foi possível carregar o leitor de cartas.", "{n} added": "{n} adicionadas", "{n} added_1": "1 adicionada", "{n} in the list": "{n} na lista", "In Brazil from {p}": "No Brasil a partir de {p}", "Lowest listing on MYP Cards, {d}": "Menor anúncio na MYP Cards, {d}", "{n} in the list_1": "1 na lista", "In the list: {c}": "Na lista: {c}", "Review": "Revisar", "Check before adding": "Confira antes de adicionar", "Add {n} cards to the collection": "Adicionar {n} cartas à coleção", "Add {n} cards to the collection_1": "Adicionar 1 carta à coleção", "Keep scanning": "Continuar escaneando", "Discard the list": "Descartar a lista", "Tap again to discard": "Toque de novo para descartar", "Nothing will be saved until you confirm.": "Nada é salvo antes de você confirmar.", "Remove one": "Tirar uma", "Add one": "Mais uma", "The list is empty.": "A lista está vazia.", "Recently added": "Mais recentes", "added {d}": "adicionada em {d}",
     "+1 of this": "+1 desta", "Done scanning": "Concluir", "Card": "Carta", "Removed: {c}": "Removida: {c}",
-    "Show more": "Mostrar mais", "{n} cards": "{n} cartas", "Prices: {s}, {d}": "Preços: {s}, {d}",
+    "Show more": "Mostrar mais", "Where": "Onde", "Everything": "Tudo", "Binder": "Fichário", "Home": "Casa", "{n} at home": "{n} em casa", "→ Home": "→ Casa", "→ Binder": "→ Fichário", "Move one {k} to Home": "Mover uma {k} para Casa", "Move one {k} to the Binder": "Mover uma {k} para o Fichário", "Moved": "Movida", "Add to": "Adicionar em", "{n} cards": "{n} cartas", "Prices: {s}, {d}": "Preços: {s}, {d}",
     "Normal": "Normal", "Foil": "Foil", "{n} free": "{n} livre(s)", "{n} lent": "{n} emprestada(s)", "Value of your {n}": "Valor das suas {n}",
     "Remove one {k}": "Tirar uma {k}", "Add one {k}": "Pôr uma {k}", "normal": "normal", "foil": "foil", "Lent": "Emprestadas",
     "Changes save right away. You can undo from the notice at the bottom.": "As mudanças salvam na hora. Dá para desfazer pelo aviso que aparece embaixo.",
@@ -128,7 +139,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const me = CLOUD?.user();
   let profiles = [], ADDED = new Map(), profileName = null, lentN = new Map(), lentF = new Map(), lentWho = new Map();
   const VIEW_KEY = "inkwell-coll-view-v2";
-  let v = { q: "", inks: [], sets: [], rar: [], cost: [], owned: true, foil: false, lent: false, sort: "value", view: "grid" };
+  let v = { q: "", inks: [], sets: [], rar: [], cost: [], owned: true, foil: false, lent: false, sort: "value", view: "grid", place: "all" };
   try { v = { ...v, ...JSON.parse(localStorage.getItem(VIEW_KEY) || "{}") }; } catch { /* */ }
   let shown = 120;
   const save = () => { try { localStorage.setItem(VIEW_KEY, JSON.stringify(v)); } catch { /* */ } };
@@ -136,17 +147,29 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const coll = () => prof()?.collection || {};
   const owned = (id) => { const e = coll()[id] || {}; return { n: +e.n || 0, f: +e.f || 0 }; };
   const lentOf = (id) => (lentN.get(id) || 0) + (lentF.get(id) || 0);
+  // Three stocks: Fichário (the binder you carry), Casa (at home), Emprestadas (lent out). The collection is all you own;
+  // supabase/collection_home.sql keeps how many are at home; the binder is the rest.
+  let HOME = new Map(), homeReady = false;   // "profile|id" -> {n, f}
+  const homeOf = (id) => { const e = HOME.get(`${prof()?.profile}|${id}`) || {}; return { n: +e.n || 0, f: +e.f || 0 }; };
+  function where(id) {
+    const o = owned(id), h = homeOf(id), ln = { n: lentN.get(id) || 0, f: lentF.get(id) || 0 };
+    return { all: o, home: h, lent: ln, binder: { n: Math.max(0, o.n - h.n - ln.n), f: Math.max(0, o.f - h.f - ln.f) } };
+  }
+  const inPlace = (id, place = v.place) => (!place || place === "all" ? owned(id) : where(id)[place]);
 
   async function loadAll() {
-    const [p, pr, l, ul, ad, br] = await Promise.all([
+    const [p, pr, l, ul, ad, hm, br] = await Promise.all([
       CLOUD.api("inkwell_profiles?select=profile,updated_at,collection:data->collection&order=updated_at.desc"),
       fetch(window.INKWELL_PRICES_URL || "../data/prices.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
       CLOUD.api("loans?select=direction,person,items,due_on,returned_at&returned_at=is.null").catch(() => []),
       CLOUD.api("user_loans?select=lender,borrower,items,status,due_on&status=in.(accepted,delivered)").catch(() => []),
       CLOUD.api("collection_added?select=profile,card_id,added_at").catch(() => []),
+      CLOUD.api("collection_home?select=profile,card_id,n,f").catch(() => null),   // null: supabase/collection_home.sql not run yet
       fetch(window.INKWELL_PRICES_BR_URL || "../data/prices-br.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),   // MYP Cards, tools/prices_from_mypcards.py   // when each card last came in (supabase/collection_added.sql)
     ]);
     BR = br?.cards ? br : null;
+    homeReady = Array.isArray(hm); HOME = new Map((hm || []).map((r) => [`${r.profile}|${r.card_id}`, { n: +r.n || 0, f: +r.f || 0 }]));
+    if (!homeReady) v.place = "all";
     ADDED = new Map(); for (const r of ad || []) ADDED.set(`${r.profile}|${r.card_id}`, Date.parse(r.added_at) || 0);
     profiles = (p || []).map((x) => ({ ...x, collection: x.collection && typeof x.collection === "object" ? x.collection : {} }));
     if (pr?.prices) { PRICES = pr.prices; pricesDate = pr.generated_at; priceSrc = pr.usd_brl ? "TCGplayer" : "Liga Lorcana"; }
@@ -169,11 +192,11 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const activeCount = () => v.inks.length + v.sets.length + v.rar.length + v.cost.length + (v.foil ? 1 : 0) + (v.lent ? 1 : 0) + (v.owned ? 0 : 0);
   function filtered(f = v) {
     const words = norm(f.q).split(" ").filter(Boolean), c = coll();
-    const tot = (x) => (+c[x.id]?.n || 0) + (+c[x.id]?.f || 0);
+    const tot = (x) => { const q = inPlace(x.id, f.place); return q.n + q.f; };
     const rows = CARDS.filter((x) => (!f.sets.length || f.sets.includes(x.set)) && (!f.inks.length || inksOf(x).some((i) => f.inks.includes(i)))
       && (!f.rar.length || f.rar.includes(x.rarity)) && (!f.cost.length || f.cost.includes(Math.min(8, +x.cost || 0)))
-      && (!f.owned || tot(x) > 0) && (!f.foil || (+c[x.id]?.f || 0) > 0) && (!f.lent || lentOf(x.id) > 0) && (!words.length || words.every((w) => x.k.includes(w))));
-    const val = (x) => (priceOf(x.id) || 0) * (+c[x.id]?.n || 0) + (priceOf(x.id, true) || 0) * (+c[x.id]?.f || 0);
+      && (!f.owned || tot(x) > 0) && (!f.foil || inPlace(x.id, f.place).f > 0) && (!f.lent || lentOf(x.id) > 0) && (!words.length || words.every((w) => x.k.includes(w))));
+    const val = (x) => { const q = inPlace(x.id, f.place); return (priceOf(x.id) || 0) * q.n + (priceOf(x.id, true) || 0) * q.f; };
     const bySet = (a, b) => (setOrder.get(a.set) ?? 999) - (setOrder.get(b.set) ?? 999) || numOf(a) - numOf(b) || a.id.localeCompare(b.id);
     const unit = (x) => priceOf(x.id) || 0, pn = prof()?.profile, when = (x) => ADDED.get(`${pn}|${x.id}`) || 0;
     rows.sort(f.sort === "recent" ? (a, b) => when(b) - when(a) || bySet(a, b) : f.sort === "name" ? (a, b) => a.name.localeCompare(b.name) : f.sort === "copies" ? (a, b) => tot(b) - tot(a) || bySet(a, b)
@@ -185,15 +208,15 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   // ---------- rendering ----------
   function stats() {
     let cards = 0, value = 0;
-    for (const [id, e] of Object.entries(coll())) { const n = +e.n || 0, f = +e.f || 0; cards += n + f; value += (priceOf(id) || 0) * n + (priceOf(id, true) || 0) * f; }
+    for (const id of Object.keys(coll())) { const { n, f } = inPlace(id); cards += n + f; value += (priceOf(id) || 0) * n + (priceOf(id, true) || 0) * f; }
     const lent = [...lentN.values(), ...lentF.values()].reduce((a, b) => a + b, 0);
     return `<div class="stats-row three" data-testid="coll-stats"><div class="stat"><b>${cards.toLocaleString(LOC)}</b><span>${Tx("Cards")}</span></div>
       <a class="stat" href="../precos/?tab=value" data-testid="to-prices" style="text-decoration:none;color:inherit"><b class="money">${moneySplit(value)}</b><span>${Tx("Value")} · ${Tx("Prices")} ›</span></a>
       <div class="stat"><b>${lent.toLocaleString(LOC)}</b><span>${Tx("Lent out")}</span></div></div>`;
   }
-  const qtyText = (o, ln) => [o.n ? Tx("{n} normal", { n: o.n }) : "", o.f ? Tx("{n} foil", { n: o.f }) : "", ln ? Tx("{n} lent", { n: ln }) : ""].filter(Boolean).join(" · ");
+  const qtyText = (o, ln, hm = 0) => [o.n ? Tx("{n} normal", { n: o.n }) : "", o.f ? Tx("{n} foil", { n: o.f }) : "", hm ? Tx("{n} at home", { n: hm }) : "", ln ? Tx("{n} lent", { n: ln }) : ""].filter(Boolean).join(" · ");
   function gridCard(c) {
-    const o = owned(c.id), t = o.n + o.f, ln = lentOf(c.id), p = priceOf(c.id), [a, b] = split(c.name);
+    const o = inPlace(c.id), t = o.n + o.f, ln = lentOf(c.id), p = priceOf(c.id), [a, b] = split(c.name);
     return `<button type="button" class="ccard ${t ? "" : "none"}" data-card="${esc(c.id)}">${thumb(c, "", o.f > 0)}
         ${t ? `<span class="pill">×${t}</span>` : ""}<span class="flags">${o.f ? `<span class="tag foil">foil</span>` : ""}${ln ? `<span class="tag info">${esc(Tx("{n} lent", { n: ln }))}</span>` : ""}</span></span>
       <span class="nm">${esc(a)}${b ? `<small>${esc(b)}</small>` : ""}</span>
@@ -204,8 +227,13 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   function listRow(c) {
     const o = owned(c.id), ln = lentOf(c.id), p = priceOf(c.id);
     return `<button type="button" class="list-row" data-card="${esc(c.id)}">${thumb(c, "sm", o.f > 0)}</span>
-      <span class="t"><span>${esc(split(c.name).join(" · ").replace(/ · $/, ""))}</span><span class="meta">${esc(setName(c.set))} · nº ${esc(c.num)}${addedText(c)}</span>${o.n + o.f || ln ? `<span class="meta">${esc(qtyText(o, ln))}</span>` : ""}</span>
+      <span class="t"><span>${esc(split(c.name).join(" · ").replace(/ · $/, ""))}</span><span class="meta">${esc(setName(c.set))} · nº ${esc(c.num)}${addedText(c)}</span>${o.n + o.f || ln ? `<span class="meta">${esc(qtyText(o, ln, ((h) => h.n + h.f)(homeOf(c.id))))}</span>` : ""}</span>
       <span class="trail"><span class="money">${p != null ? esc(money(p)) : "–"}</span>${ln ? `<span class="tag info">${Tx("lent")}</span>` : ""}</span></button>`;
+  }
+  function placeSeg() {
+    const sum = (p) => Object.keys(coll()).reduce((t, id) => { const q = inPlace(id, p); return t + q.n + q.f; }, 0);
+    return `<div class="seg places" role="group" aria-label="${Tx("Where")}" data-testid="places">${[["all", "Everything"], ["binder", "Binder"], ["home", "Home"], ["lent", "Lent out"]]
+      .map(([k, l]) => `<button type="button" data-place="${k}" aria-pressed="${v.place === k}">${Tx(l)} <span class="n">${sum(k).toLocaleString(LOC)}</span></button>`).join("")}</div>`;
   }
   function chips() {
     const out = [];
@@ -233,6 +261,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
         <button type="button" class="btn icon filter-btn" id="openFilters" aria-label="${esc(Tx("Filters") + (n ? ", " + Tx("{n} active", { n }) : ""))}"><i class="ic i-filter"></i>${n ? `<span class="count">${n}</span>` : ""}</button>
         <div class="seg icons" role="group" aria-label="${Tx("View")}"><button type="button" data-view="grid" aria-pressed="${v.view === "grid"}" aria-label="${Tx("Grid")}"><i class="ic i-grid"></i></button><button type="button" data-view="list" aria-pressed="${v.view === "list"}" aria-label="${Tx("List")}"><i class="ic i-list"></i></button></div>
       </div>
+      ${homeReady ? placeSeg() : ""}
       <div class="row between" style="margin:-4px 0 var(--sp-4)">
         <div class="chips">${chips()}<span class="small muted" id="count">${esc(Tx("{n} cards", { n: rows.length.toLocaleString(LOC) }))}</span></div>
         <select class="inline" id="sort" aria-label="${Tx("Sort")}">${[["value", "Most valuable"], ["recent", "Recently added"], ["name", "Name"], ["set", "Set and number"], ["cost", "Cost"], ["copies", "Copies"]].map(([k, l]) => `<option value="${k}" ${v.sort === k ? "selected" : ""}>${Tx(l)}</option>`).join("")}</select>
@@ -250,6 +279,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     $("sort").onchange = (e) => { v.sort = e.target.value; again(); };
     $("openFilters").onclick = openFilters;
     document.querySelectorAll("[data-view]").forEach((b) => b.onclick = () => { v.view = b.dataset.view; again(); });
+    document.querySelectorAll("[data-place]").forEach((b) => b.onclick = () => { v.place = b.dataset.place; again(); });
     document.querySelectorAll("[data-unchip]").forEach((b) => b.onclick = () => {
       const [k, val] = b.dataset.unchip.split(":");
       if (k === "ink") v.inks = v.inks.filter((x) => x !== val); else if (k === "set") v.sets = v.sets.filter((x) => x !== val);
@@ -305,6 +335,20 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     const draw = () => {
       const o = owned(id), pn = priceOf(id), pf = priceOf(id, true), [a, b] = split(c.name);
       const value = (pn || 0) * o.n + (pf || 0) * o.f, lw = lentWho.get(id) || [];
+      const w = where(id);
+      // one stock: Normal and Foil with − / +, and a button that moves one copy to the other stock
+      const stockRows = (place) => ["n", "f"].map((k) => {
+        const n = w[place][k], kl = Tx(k === "f" ? "foil" : "normal"), to = place === "home" ? "binder" : "home";
+        return `<div class="row between stock-row" style="min-height:56px">
+          <div><b>${Tx(k === "f" ? "Foil" : "Normal")}</b>${place === "binder" && w.lent[k] ? `<div class="small muted">${esc(Tx("{n} lent", { n: w.lent[k] }))}</div>` : ""}</div>
+          <div class="row" style="gap:6px;flex-wrap:nowrap">
+            <button type="button" class="btn ghost small mv" data-mv="${k}:${to}" ${n <= 0 ? "disabled" : ""} aria-label="${esc(Tx(to === "home" ? "Move one {k} to Home" : "Move one {k} to the Binder", { k: kl }))}">${to === "home" ? Tx("→ Home") : Tx("→ Binder")}</button>
+            <div class="qty lg"><button type="button" data-d="${k}:-1:${place}" aria-label="${esc(Tx("Remove one {k}", { k: kl }))}" ${n <= 0 ? "disabled" : ""}>−</button><output data-n="${place}-${k}">${n}</output><button type="button" data-d="${k}:1:${place}" aria-label="${esc(Tx("Add one {k}", { k: kl }))}">+</button></div></div></div>`;
+      }).join("");
+      const stocks = `<div class="card inset stack stocks" style="gap:0;padding:var(--sp-2) var(--sp-3)" data-testid="stocks">
+        <div class="stock-h"><i class="ic i-cards"></i>${Tx("Binder")} <span class="muted">${w.binder.n + w.binder.f}</span></div>${stockRows("binder")}
+        <div class="stock-h"><i class="ic i-home"></i>${Tx("Home")} <span class="muted">${w.home.n + w.home.f}</span></div>${stockRows("home")}
+        ${w.lent.n + w.lent.f ? `<div class="stock-h"><i class="ic i-loan"></i>${Tx("Lent out")} <span class="muted">${w.lent.n + w.lent.f}</span></div>` : ""}</div>`;
       const row = (k, label, n, ln) => `<div class="row between" style="min-height:60px${k === "f" ? ";border-top:1px solid var(--line)" : ""}"><div><b>${label}</b><div class="small muted">${esc([Tx("{n} free", { n: Math.max(0, n - ln) }), ln ? Tx("{n} lent", { n: ln }) : ""].filter(Boolean).join(" · "))}</div></div>
         <div class="qty lg"><button type="button" data-d="${k}:-1" aria-label="${esc(Tx("Remove one {k}", { k: Tx(k === "f" ? "foil" : "normal") }))}" ${n <= 0 ? "disabled" : ""}>−</button><output data-n="${k}">${n}</output><button type="button" data-d="${k}:1" aria-label="${esc(Tx("Add one {k}", { k: Tx(k === "f" ? "foil" : "normal") }))}">+</button></div></div>`;
       sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><div><h2 id="cT">${esc(a)}${b ? ` · ${esc(b)}` : ""}</h2><div class="sub">${esc(setName(c.set))} · nº ${esc(c.num)}</div></div><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
@@ -315,42 +359,71 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
             <div><div class="small muted">${esc(Tx("Value of your {n}", { n: o.n + o.f }))}</div><div class="hero-num" style="color:var(--money)" data-testid="card-value">${esc(money(value))}</div></div>
             <div class="small muted" style="text-align:right">${Tx("Normal")} ${pn != null ? esc(money(pn)) : "–"}<br>${Tx("Foil")} ${pf != null ? esc(money(pf)) : "–"}<br><span class="faint">${esc(priceSrc)}</span></div></div>
           ${brLine(id)}
-          <div class="card inset stack" style="gap:0;padding:var(--sp-2) var(--sp-3)">${row("n", Tx("Normal"), o.n, lentN.get(id) || 0)}${row("f", Tx("Foil"), o.f, lentF.get(id) || 0)}</div>
+          ${homeReady ? stocks : `<div class="card inset stack" style="gap:0;padding:var(--sp-2) var(--sp-3)">${row("n", Tx("Normal"), o.n, lentN.get(id) || 0)}${row("f", Tx("Foil"), o.f, lentF.get(id) || 0)}</div>`}
           ${lw.length ? `<h3 style="margin:var(--sp-5) 0 var(--sp-2)">${Tx("Lent")}</h3>${lw.map((x) => `<div class="list-row on-field"><span class="av sm">${esc((x.who || "?")[0].toUpperCase())}</span><span class="t"><span>${esc(x.who)}</span><span class="meta">${esc([`${x.qty} ${Tx(x.foil ? "foil" : "normal")}`, x.due ? Tx("until {d}", { d: new Date(x.due + "T12:00:00").toLocaleDateString(LOC, { day: "numeric", month: "short" }) }) : ""].filter(Boolean).join(" · "))}</span></span><a class="btn ghost small" href="../trades/">${Tx("See")}</a></div>`).join("")}` : ""}
           <p class="small faint" style="margin:var(--sp-3) 0 0">${Tx("Changes save right away. You can undo from the notice at the bottom.")}</p></div>
         <div class="sheet-foot"><a class="btn" href="../trades/?tab=board&q=${encodeURIComponent(a)}"><i class="ic i-board"></i>${Tx("Post on the board")}</a></div>`;
       sh.querySelectorAll("[data-close]").forEach((x) => x.onclick = () => sh.close());
-      sh.querySelectorAll("[data-d]").forEach((x) => x.onclick = () => { const [k, d] = x.dataset.d.split(":"); change(id, k, +d); draw(); sh.querySelector(`[data-d="${x.dataset.d}"]`)?.focus(); });
+      sh.querySelectorAll("[data-d]").forEach((x) => x.onclick = () => { const [k, d, place] = x.dataset.d.split(":"); change(id, k, +d, false, place || "binder"); draw(); sh.querySelector(`[data-d="${x.dataset.d}"]`)?.focus(); });
+      sh.querySelectorAll("[data-mv]").forEach((x) => x.onclick = () => { const [k, to] = x.dataset.mv.split(":"); move(id, k, 1, to); draw(); (sh.querySelector(`[data-mv="${x.dataset.mv}"]:not([disabled])`) || sh.querySelector(`[data-mv="${k}:${to === "home" ? "binder" : "home"}"]`))?.focus(); });
     };
     draw();
     openSheet(sh, from);
     sh.addEventListener("close", () => renderAll(), { once: true });
   }
-  function change(id, kind, delta, quiet) {
+  // place: where the copies are added or removed ("binder" or "home"). Lent copies are changed in Trocas.
+  function change(id, kind, delta, quiet, place = "binder") {
+    const w = where(id);
+    if (delta < 0 && w[place === "home" ? "home" : "binder"][kind] + delta < 0) return;
+    bump(id, kind, delta, place === "home" ? delta : 0, quiet);
+  }
+  // Move copies between the binder and home: what you own stays the same.
+  function move(id, kind, qty, to, quiet) {
+    const w = where(id), from = to === "home" ? "binder" : "home";
+    if (qty <= 0 || w[from][kind] < qty) return;
+    bump(id, kind, 0, to === "home" ? qty : -qty, quiet);
+  }
+  function bump(id, kind, dTotal, dHome, quiet) {
     const p = prof(); if (!p) return;
-    const e = p.collection[id] = { n: 0, f: 0, ...(p.collection[id] || {}) };
-    if (e[kind] + delta < 0) return;
-    e[kind] += delta;
-    if (delta > 0) ADDED.set(`${p.profile}|${id}`, Date.now());
-    const key = `${id}:${kind}`;
-    pending.set(key, (pending.get(key) || 0) + delta);
+    if (dTotal) {
+      const e = p.collection[id] = { n: 0, f: 0, ...(p.collection[id] || {}) };
+      e[kind] = Math.max(0, (+e[kind] || 0) + dTotal);
+      if (dTotal > 0) ADDED.set(`${p.profile}|${id}`, Date.now());
+    }
+    if (dHome) {
+      const hk = `${p.profile}|${id}`, h = HOME.get(hk) || { n: 0, f: 0 };
+      h[kind] = Math.max(0, h[kind] + dHome); HOME.set(hk, h);
+    }
+    const key = `${id}:${kind}`, cur = pending.get(key) || { t: 0, h: 0 };
+    pending.set(key, { t: cur.t + dTotal, h: cur.h + dHome });
     clearTimeout(pendingTimer);
     pendingTimer = setTimeout(() => flush(quiet), 600);
   }
   let queue = Promise.resolve(), burst = [];
   function flush(quiet) {
     const p = prof(); if (!p || !pending.size) return;
-    const delta = [...pending].filter(([, d]) => d).map(([k, d]) => { const [card_id, kind] = k.split(":"); return { card_id, qty: d, foil: kind === "f" }; });
+    const items = [...pending].filter(([, d]) => d.t || d.h).map(([k, d]) => { const [card_id, kind] = k.split(":"); return { card_id, foil: kind === "f", t: d.t, h: d.h }; });
     pending = new Map();
-    if (!delta.length) return;
-    queue = queue.then(() => CLOUD.api("rpc/apply_collection_delta", { method: "POST", prefer: "return=minimal", body: { p_profile: p.profile, p_delta: delta } }))
+    if (!items.length) return;
+    const delta = items.filter((x) => x.t).map((x) => ({ card_id: x.card_id, qty: x.t, foil: x.foil }));
+    const home = items.filter((x) => x.h).map((x) => ({ card_id: x.card_id, qty: x.h, foil: x.foil }));
+    const call = home.length
+      ? CLOUD.api("rpc/collection_change", { method: "POST", prefer: "return=minimal", body: { p_profile: p.profile, p_delta: delta, p_home: home } })
+      : CLOUD.api("rpc/apply_collection_delta", { method: "POST", prefer: "return=minimal", body: { p_profile: p.profile, p_delta: delta } });
+    queue = queue.then(() => call)
       .then(() => {
         if (quiet) return;
-        burst = ($("toast").hidden ? [] : burst).concat(delta);   // "Desfazer" undoes every change since the notice appeared
+        burst = ($("toast").hidden ? [] : burst).concat(items);   // "Desfazer" undoes every change since the notice appeared
         const undoAll = burst;
-        toast(Tx("Collection updated"), () => { burst = []; for (const d of undoAll) change(d.card_id, d.foil ? "f" : "n", -d.qty, true); clearTimeout(pendingTimer); flush(true); renderAll(); });
+        toast(Tx(home.length && !delta.length ? "Moved" : "Collection updated"), () => { burst = []; for (const d of undoAll) bump(d.card_id, d.foil ? "f" : "n", -d.t, -d.h, true); clearTimeout(pendingTimer); flush(true); renderAll(); });
       })
-      .catch(() => { for (const d of delta) { const e = p.collection[d.card_id]; if (e) e[d.foil ? "f" : "n"] -= d.qty; } toast(Tx("Couldn't save. Try again."), null, true); if ($("scan").open) scanSay(Tx("Couldn't save. Try again."), true); renderAll(); });
+      .catch(() => {
+        for (const d of items) {
+          const k = d.foil ? "f" : "n", e = p.collection[d.card_id], h = HOME.get(`${p.profile}|${d.card_id}`);
+          if (e) e[k] = Math.max(0, e[k] - d.t); if (h) h[k] = Math.max(0, h[k] - d.h);
+        }
+        toast(Tx("Couldn't save. Try again."), null, true); if ($("scan").open) scanSay(Tx("Couldn't save. Try again."), true); renderAll();
+      });
   }
   let toastTimer = null;
   function toast(text, undo, err) {
@@ -412,14 +485,14 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     const pg = pages[i]; Object.assign(bd, { sec: pg.sec, ink: pg.ink, cost: pg.cost });
     const inSec = pages.filter((p) => p.sec === pg.sec), inks = INK_ORDER.filter((k) => inSec.some((p) => p.ink === k)), costs = inSec.filter((p) => p.ink === pg.ink);
     const allChecked = (list) => list.length && list.every((p) => checked.has(pageKey(p)));
-    const tot = (c) => { const o = owned(c.id); return o.n + o.f; };
+    const tot = (c) => { const o = where(c.id).binder; return o.n + o.f; };   // only what is in the binder
     const rows = pg.cards.filter((c) => !bd.owned || tot(c) > 0);
     const have = pg.cards.reduce((s, c) => s + tot(c), 0);
     const label = (p) => Tx("{ink} · cost {c}", { ink: inkLabel(p.ink), c: p.cost === 8 ? "8+" : p.cost });
-    const qty = (c, k) => { const o = owned(c.id), n = o[k], [a] = split(c.name), kl = Tx(k === "f" ? "foil" : "normal");
+    const qty = (c, k) => { const o = where(c.id).binder, n = o[k], [a] = split(c.name), kl = Tx(k === "f" ? "foil" : "normal");
       return `<span class="row" style="gap:6px;flex-wrap:nowrap"><span class="micro muted" style="width:38px;text-align:right">${Tx(k === "f" ? "Foil" : "Normal")}</span><span class="qty"><button type="button" data-bq="${esc(c.id)}:${k}:-1" aria-label="${esc(Tx("Remove one {k}", { k: kl }) + " · " + a)}" ${n <= 0 ? "disabled" : ""}>−</button><output>${n}</output><button type="button" data-bq="${esc(c.id)}:${k}:1" aria-label="${esc(Tx("Add one {k}", { k: kl }) + " · " + a)}">+</button></span></span>`; };
     const row = (c) => { const [a, b] = split(c.name), p = priceOf(c.id), viaReprint = pg.sec === "core" && !CORE_SETS.includes(c.set);
-      return `<div class="list-row flat binder-row" data-bcard="${esc(c.id)}"><button type="button" class="binder-open" data-bopen="${esc(c.id)}" aria-label="${esc(Tx("See card {c}", { c: a }))}">${thumb(c, "sm", owned(c.id).f > 0)}</span></button><span class="t"><span>${esc(a)}${b ? `<small style="display:block;font-weight:400;color:var(--text-2)">${esc(b)}</small>` : ""}</span><span class="meta">${esc([setName(c.set), "nº " + c.num, rarName(c.rarity), p != null ? money(p) : ""].filter(Boolean).join(" · "))}</span>${viaReprint ? `<span class="tag" style="margin-top:4px;width:max-content" title="${esc(formatLine(c))}">${Tx("reprint")}</span>` : ""}${isDual(c) ? `<span class="tag" style="margin-top:4px;width:max-content" data-testid="dual">${inkDots(c)}${esc(inksOf(c).join(" / "))}</span>` : ""}</span>
+      return `<div class="list-row flat binder-row" data-bcard="${esc(c.id)}"><button type="button" class="binder-open" data-bopen="${esc(c.id)}" aria-label="${esc(Tx("See card {c}", { c: a }))}">${thumb(c, "sm", owned(c.id).f > 0)}</span></button><span class="t"><span>${esc(a)}${b ? `<small style="display:block;font-weight:400;color:var(--text-2)">${esc(b)}</small>` : ""}</span><span class="meta">${esc([setName(c.set), "nº " + c.num, rarName(c.rarity), p != null ? money(p) : ""].filter(Boolean).join(" · "))}</span>${((h) => h.n + h.f ? `<span class="small muted" data-testid="at-home">${esc(Tx("{n} at home", { n: h.n + h.f }))}</span>` : "")(homeOf(c.id))}${viaReprint ? `<span class="tag" style="margin-top:4px;width:max-content" title="${esc(formatLine(c))}">${Tx("reprint")}</span>` : ""}${isDual(c) ? `<span class="tag" style="margin-top:4px;width:max-content" data-testid="dual">${inkDots(c)}${esc(inksOf(c).join(" / "))}</span>` : ""}</span>
         <span class="trail" style="gap:6px">${qty(c, "n")}${qty(c, "f")}</span></div>`; };
     const doneN = pages.filter((p) => checked.has(pageKey(p))).length;
     $("title").textContent = Tx("Check my binder");
@@ -614,6 +687,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     const m = new Map(); for (const a of scan.added) { const k = `${a.id}:${a.foil ? 1 : 0}`; m.set(k, (m.get(k) || 0) + 1); }
     return [...m].map(([k, n]) => { const [id, f] = k.split(":"); return { id, foil: f === "1", n }; });
   }
+  const scanPlace = () => { try { return localStorage.getItem("inkwell-scan-place") === "home" ? "home" : "binder"; } catch { return "binder"; } };
   function showReview() {
     scan.review = true; scan.discardArmed = false;
     const stage = $("scan").querySelector(".stage"); let box = $("scanReview");
@@ -624,11 +698,13 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
         <span class="t"><b>${esc(split(c.name).join(" · ").replace(/ · $/, ""))}</b><span class="small muted">${esc([setName(c.set), "nº " + c.num, Tx(x.foil ? "foil" : "normal")].join(" · "))}</span></span>
         <div class="qty"><button type="button" data-rq="-1" aria-label="${Tx("Remove one")}">−</button><output>${x.n}</output><button type="button" data-rq="1" aria-label="${Tx("Add one")}">+</button></div></div>` : ""; }).join("")
         : `<p class="muted" style="text-align:center">${Tx("The list is empty.")}</p>`}</div>
-      <footer><p class="small muted" style="margin:0;text-align:center">${Tx("Nothing will be saved until you confirm.")}</p>
+      <footer>${homeReady ? `<div class="seg" role="group" aria-label="${Tx("Add to")}" data-testid="scan-place" style="justify-self:center"><span class="small muted" style="align-self:center;padding:0 6px">${Tx("Add to")}</span>${[["binder", "Binder"], ["home", "Home"]].map(([k, l]) => `<button type="button" data-splace="${k}" aria-pressed="${scanPlace() === k}">${Tx(l)}</button>`).join("")}</div>` : ""}
+        <p class="small muted" style="margin:0;text-align:center">${Tx("Nothing will be saved until you confirm.")}</p>
         <button type="button" class="btn primary" id="revAdd" ${total ? "" : "disabled"}>${Tx("Add {n} cards to the collection", { n: total })}</button>
         <div class="row between"><button type="button" class="btn" id="revMore"><i class="ic i-camera"></i>${Tx("Keep scanning")}</button><button type="button" class="btn ghost" id="revDrop">${Tx("Discard the list")}</button></div></footer>`;
     const back = () => { scan.review = false; box.remove(); scan.wait = false; drawLast(); scanSay(Tx("Point the camera at one card inside the frame.")); };
     $("revBack").onclick = back; $("revMore").onclick = back;
+    box.querySelectorAll("[data-splace]").forEach((b) => b.onclick = () => { try { localStorage.setItem("inkwell-scan-place", b.dataset.splace); } catch { /* */ } showReview(); });
     box.querySelectorAll("[data-rq]").forEach((b) => b.onclick = () => {
       const [id, f] = b.closest("[data-rev]").dataset.rev.split(":"), foil = f === "1";
       if (b.dataset.rq === "1") scan.added.push({ id, foil });
@@ -641,7 +717,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       scan.added = []; scan.last = null; $("scan").close();
     };
     $("revAdd").onclick = () => {
-      for (const x of reviewGroups()) change(x.id, x.foil ? "f" : "n", x.n, true);
+      for (const x of reviewGroups()) change(x.id, x.foil ? "f" : "n", x.n, true, homeReady ? scanPlace() : "binder");
       scan.saved = scan.added.length; scan.added = []; scan.last = null;
       clearTimeout(pendingTimer); $("scan").close();
     };

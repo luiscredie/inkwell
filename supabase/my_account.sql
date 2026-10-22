@@ -24,6 +24,7 @@ begin
     'loans_with_friends', coalesce((select jsonb_agg(to_jsonb(x)) from public.user_loans x where u in (x.lender, x.borrower)), '[]'),
     'trades_with_friends', coalesce((select jsonb_agg(to_jsonb(x)) from public.user_trades x where u in (x.proposer, x.partner)), '[]'),
     'collection_dates', coalesce((select jsonb_agg(to_jsonb(x)) from public.collection_added x where x.user_id = u), '[]'),
+    'cards_at_home', coalesce((select jsonb_agg(to_jsonb(x)) from public.collection_home x where x.user_id = u), '[]'),
     'recados_received', coalesce((select jsonb_agg(to_jsonb(x)) from public.recados x where x.owner = u), '[]'),
     'recados_written', coalesce((select jsonb_agg(to_jsonb(x)) from public.recados x where x.author = u), '[]'),
     'communities', coalesce((select jsonb_agg(jsonb_build_object('community', c.name, 'slug', c.slug, 'role', m.role, 'joined_at', m.joined_at))

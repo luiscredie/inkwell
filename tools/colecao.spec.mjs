@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test';
 const BASE = new URL('colecao/', process.env.INKWELL_URL || 'http://localhost:8080/index.html').href;
 const ME = '11111111-1111-4111-8111-111111111111';
 
-async function setup(page, { collection = { 'LOR10-10': { n: 2, f: 0 } }, added = [] } = {}) {
+async function setup(page, { collection = { 'LOR10-10': { n: 2, f: 0 } }, added = [], home = [] } = {}) {
   const calls = [];
   await page.addInitScript((me) => {
     localStorage.setItem('inkwell-lang', 'pt');
@@ -19,6 +19,8 @@ async function setup(page, { collection = { 'LOR10-10': { n: 2, f: 0 } }, added 
     const json = (v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
     if (path === 'inkwell_profiles') return json([{ profile: 'luiscredie', updated_at: '2026-10-20T10:00:00Z', collection }]);
     if (path === 'collection_added') return json(added);
+    if (path === 'collection_home') return home === null ? route.fulfill({ status: 404, contentType: 'application/json', body: '{}' }) : json(home);
+    if (path === 'rpc/collection_change') return route.fulfill({ status: 204, body: '' });
     if (path === 'rpc/apply_collection_delta') return route.fulfill({ status: 204, body: '' });
     if (path === 'rpc/my_duels_sync') return json(null);
     return json([]);
@@ -249,4 +251,64 @@ test('binder: a dual-ink card sits on its first ink pages, where the set numbers
   const card = page.locator('[data-bcard="LOR13-27"]');   // Pocahontas & Meeko, Amber/Amethyst
   await expect(card).toHaveCount(1);
   await expect(card.locator('[data-testid="dual"]')).toHaveText('Amber / Amethyst');
+});
+
+// ---------- three stocks: Fichário, Casa, Emprestadas ----------
+const rpc = (calls, name) => calls.filter((c) => c.path === `rpc/${name}`).map((c) => c.body);
+test('stocks: binder and home counts, move a card home, binder check counts only the binder', async ({ page }) => {
+  const calls = await setup(page, { collection: { 'LOR10-10': { n: 3, f: 1 }, 'LOR13-27': { n: 1, f: 0 } }, home: [{ profile: 'luiscredie', card_id: 'LOR10-10', n: 1, f: 0 }] });
+  await page.goto(BASE);
+  const places = page.locator('[data-testid="places"]');
+  await expect(places.locator('[data-place="all"]')).toContainText('5');
+  await expect(places.locator('[data-place="binder"]')).toContainText('4');
+  await expect(places.locator('[data-place="home"]')).toContainText('1');
+  await places.locator('[data-place="home"]').click();
+  await expect(page.locator('#count')).toHaveText('1 cartas');
+  await expect(page.locator('[data-card="LOR10-10"] .pill')).toHaveText('×1');
+  await places.locator('[data-place="binder"]').click();
+  await expect(page.locator('#count')).toHaveText('2 cartas');
+  // the card sheet: 2 normal + 1 foil in the binder, 1 normal at home; move one normal home
+  await page.locator('[data-card="LOR10-10"]').click();
+  const st = page.locator('[data-testid="stocks"]');
+  await expect(st.locator('[data-n="binder-n"]')).toHaveText('2');
+  await expect(st.locator('[data-n="home-n"]')).toHaveText('1');
+  await st.locator('[data-mv="n:home"]').click();
+  await expect(st.locator('[data-n="binder-n"]')).toHaveText('1');
+  await expect(st.locator('[data-n="home-n"]')).toHaveText('2');
+  await expect.poll(() => rpc(calls, 'collection_change')).toEqual([{ p_profile: 'luiscredie', p_delta: [], p_home: [{ card_id: 'LOR10-10', qty: 1, foil: false }] }]);
+  // adding one at home: owned +1 and home +1 in one call
+  await st.locator('[data-d="f:1:home"]').click();
+  await expect.poll(() => rpc(calls, 'collection_change').at(-1)).toEqual({ p_profile: 'luiscredie', p_delta: [{ card_id: 'LOR10-10', qty: 1, foil: true }], p_home: [{ card_id: 'LOR10-10', qty: 1, foil: true }] });
+  await page.keyboard.press('Escape');
+  // Conferir fichário shows what is in the binder (3 normal − 2 at home = 1) and how many are at home
+  await page.getByRole('button', { name: 'Conferir fichário' }).click();
+  await page.locator('[data-bsec="core"]').click();
+  await page.locator('[data-bink="Amber"]').click();
+  await page.locator('[data-bcost="2"]').click();   // Gurgi, LOR10-10
+  const row = page.locator('[data-bcard="LOR10-10"]');
+  await expect(row.locator('[data-bq="LOR10-10:n:-1"] + output')).toHaveText('1');
+  await expect(row.locator('[data-testid="at-home"]')).toHaveText('3 em casa');
+});
+
+test('stocks: the scanner adds to the chosen stock; without the table nothing changes', async ({ page }) => {
+  const calls = await setup(page);
+  await fakeCamera(page, { file: 'Fru_Fru_-_VIP_Guest__LOR14-1.jpg', scale: 0.68 });
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Escanear' }).click();
+  await expect(page.locator('[data-testid="scan-last"]')).toContainText('Fru Fru', { timeout: 15000 });
+  await page.getByRole('button', { name: 'Concluir' }).click();
+  await page.locator('[data-testid="scan-place"] [data-splace="home"]').click();
+  await page.locator('[data-testid="scan-review"]').getByRole('button', { name: 'Adicionar 1 carta à coleção' }).click();
+  await expect.poll(() => rpc(calls, 'collection_change')).toEqual([{ p_profile: 'luiscredie', p_delta: [{ card_id: 'LOR14-1', qty: 1, foil: false }], p_home: [{ card_id: 'LOR14-1', qty: 1, foil: false }] }]);
+});
+
+test('stocks: before supabase/collection_home.sql runs, the page works as before', async ({ page }) => {
+  const calls = await setup(page, { home: null });
+  await page.goto(BASE);
+  await expect(page.locator('#count')).toHaveText('1 cartas');
+  await expect(page.locator('[data-testid="places"]')).toHaveCount(0);
+  await page.locator('[data-card="LOR10-10"]').click();
+  await expect(page.locator('[data-testid="stocks"]')).toHaveCount(0);
+  await page.locator('#cardSheet [data-d="n:1"]').click();
+  await expect.poll(() => rpc(calls, 'apply_collection_delta')).toEqual([{ p_profile: 'luiscredie', p_delta: [{ card_id: 'LOR10-10', qty: 1, foil: false }] }]);
 });
