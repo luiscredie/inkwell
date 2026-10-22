@@ -238,3 +238,12 @@ test('import a list into an existing deck: replaces the cards, Desfazer brings t
   await page.locator('#toast #undo').click();
   await expect.poll(() => Object.keys(saves(calls).at(-1)?.body.p_deck.cards || {}).length).toBe(15);
 });
+
+test('import recognises names with special dashes and apostrophes in the catalog', async ({ page }) => {
+  await setup(page);
+  await page.goto(BASE);
+  await page.locator('#import').click();
+  await page.locator('#iText').fill(["4 Mrs. Incredible - Super Stretchy", "2 Jack-Jack Parr - Incredible Potential", "1 Ariel's Grotto - A Secret Place",
+    "1 I Find 'Em, I Flatten 'Em", "2 Daisy Duck - Trendy Traveler", "1 Wind-Up Frog - Sid's Toy"].join("\n"));
+  await expect(page.locator('#iInfo')).toHaveText('11 cartas reconhecidas');
+});

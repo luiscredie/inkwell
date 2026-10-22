@@ -211,7 +211,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const dateFmt = (d) => { const x = new Date(String(d).length === 10 ? d + "T12:00:00" : d); return isNaN(x) ? "" : x.toLocaleDateString(LOC, { day: "numeric", month: "short" }); };
   const INKS = ["Amber", "Amethyst", "Emerald", "Ruby", "Sapphire", "Steel"];
   const norm = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-  const nameKey = (n) => String(n || "").toLowerCase().replace(/\s*\(.*?\)\s*/g, "").trim();
+  // Same card name however it's typed: "–", "‐" or "-", "’" or "'", accents, spacing; "(Enchanted)" and the like ignored
+  const nameKey = (n) => String(n || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s*\(.*?\)\s*/g, " ").replace(/[^a-z0-9]+/g, " ").trim();
   const inksOf = (c) => String(c?.ink || "").split(/[,\/-]/).map((x) => x.trim()).filter((x) => INKS.includes(x));
   const dots = (inks, cls = "") => `<span class="inks${cls ? " " + cls : ""}">${inks.slice(0, 2).map((i) => `<i data-ink="${String(i).toLowerCase()}"></i>`).join("")}</span>`;
   const split = (name) => { const i = name.indexOf(" - "); return i > 0 ? [name.slice(0, i), name.slice(i + 3)] : [name, ""]; };
