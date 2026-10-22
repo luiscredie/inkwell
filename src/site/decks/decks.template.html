@@ -51,7 +51,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     "Sort": "Ordenar", "Recently played": "Jogados recentemente", "Win rate": "Vitórias", "Name": "Nome",
     "{n} decks": "{n} decks", "{n} deck": "{n} deck", "{n} ready to play": "{n} prontos para jogar", "{n} ready to play_1": "{n} pronto para jogar",
     "{a}/{b} cards": "{a}/{b} cartas", "{p}% in your collection": "{p}% na coleção", "{n} games": "{n} jogos", "{n} game": "{n} jogo", "no games": "sem jogos",
-    "complete": "completo", "needs cards": "precisa montar", "missing {v}": "faltam {v}", "not legal": "fora do formato",
+    "complete": "completo", "needs cards": "precisa montar", "list: 1 card short": "lista: falta 1 carta", "1 missing from your collection": "falta 1 na coleção", "{n} missing from your collection": "faltam {n} na coleção", "list: {n} cards short": "lista: faltam {n} cartas", "A deck needs at least {n} cards.": "Um deck precisa de pelo menos {n} cartas.", "missing {v}": "faltam {v}", "not legal": "fora do formato",
     "Sign in to see your decks": "Entre para ver seus decks", "Use your e-mail. We send a 6-digit code, no password.": "Use seu e-mail. Mandamos um código de 6 dígitos, sem senha.", "Sign in": "Entrar",
     "Couldn't load your decks.": "Não foi possível carregar seus decks.", "Check your connection and try again.": "Confira a internet e tente de novo.", "Try again": "Tentar de novo",
     "No decks yet": "Nenhum deck ainda", "Start one from scratch or paste a list you already have.": "Comece um do zero ou cole uma lista que você já tem.",
@@ -276,10 +276,10 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
       wireHead(); return;
     }
     const row = ({ d, m }) => {
-      const status = m.total < MIN ? `<span class="tag warn">${Tx("needs cards")}</span>` : m.issues.length ? `<span class="tag late">${Tx("not legal")}</span>`
+      const status = m.total < MIN ? `<span class="tag warn" title="${esc(Tx("A deck needs at least {n} cards.", { n: MIN }))}">${esc(Tx(MIN - m.total === 1 ? "list: 1 card short" : "list: {n} cards short", { n: MIN - m.total }))}</span>` : m.issues.length ? `<span class="tag late">${Tx("not legal")}</span>`
         : m.missingN ? `<span class="tag">${esc(Tx("missing {v}", { v: money(m.missingValue) }))}</span>` : `<span class="tag match">${Tx("complete")}</span>`;
       return `<a class="list-row deck-row" href="?deck=${encodeURIComponent(d.id)}" data-deck="${esc(d.id)}">${dots(deckInks(d, m), "lg pair")}
-        <span class="t"><span>${esc(d.name)}</span><span class="meta">${esc([fmtName(d.format), Tx("{a}/{b} cards", { a: m.total, b: MIN }), m.inColl != null ? Tx("{p}% in your collection", { p: m.inColl }) : ""].filter(Boolean).join(" · "))}</span>
+        <span class="t"><span>${esc(d.name)}</span><span class="meta">${esc([fmtName(d.format), Tx("{a}/{b} cards", { a: m.total, b: MIN }), m.inColl != null ? Tx("{p}% in your collection", { p: m.inColl }) : "", m.missingN ? Tx(m.missingN === 1 ? "1 missing from your collection" : "{n} missing from your collection", { n: m.missingN }) : ""].filter(Boolean).join(" · "))}</span>
         <span class="meter${m.inColl === 100 ? " full" : ""}" style="--v:${m.inColl || 0}%;margin-top:8px;max-width:180px"><i></i></span></span>
         <span class="trail"><b class="num">${m.wr != null ? m.wr + "%" : "—"}</b><span class="micro muted">${esc(m.games.length ? Tx(m.games.length === 1 ? "{n} game" : "{n} games", { n: m.games.length }) : Tx("no games"))}</span>${status}</span></a>`;
     };

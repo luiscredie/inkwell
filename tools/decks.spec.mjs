@@ -193,3 +193,13 @@ test('advisor: shared cards, buying plan, priority and copies', async ({ page })
   await expect.poll(() => saves(calls).length).toBe(2);
   expect(saves(calls)[1].body.p_deck).toMatchObject({ id: 'deck-b', targetCopies: 2 });
 });
+
+test('a list under 60 says how many cards it is short, not that cards are missing', async ({ page }) => {
+  const cards = Object.fromEntries(IDS.map((id) => [id, 4])); cards['LOR10-26'] = 3;   // 59 cards
+  await setup(page, { extraDecks: [{ id: 'deck-59', name: 'Short List', format: 'core', colors: ['Amber'], cards, created_at: '2026-10-02' }] });
+  await page.goto(BASE);
+  const row = page.locator('[data-deck="deck-59"]');
+  await expect(row).toContainText('59/60');
+  await expect(row.locator('.tag.warn')).toHaveText('lista: falta 1 carta');
+  await expect(row).toContainText('faltam 2 na coleção');   // LOR10-1: 4 in the list, 2 in the collection
+});
