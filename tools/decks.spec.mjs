@@ -76,6 +76,7 @@ test('list shows readiness, games and what is missing', async ({ page }) => {
   await expect(row).toContainText('1 jogo');
   await expect(row).toContainText('100%');
   await expect(row).toContainText('faltam');
+  await expect(row.locator('.trail .tag')).toContainText(/^faltam 2 cartas · R\$/);
   await expect(page.locator('#sub')).toContainText('1 deck');
 });
 
