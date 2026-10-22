@@ -123,6 +123,7 @@ window.INKWELL_CLOUD = (() => {
 .stock-h .muted { font-weight: 600; margin-left: auto; font-variant-numeric: tabular-nums; }
 .stock-row + .stock-row { border-top: 1px solid var(--line); }
 .mv { white-space: nowrap; }
+.movebox { gap: 4px; padding: var(--sp-3) var(--sp-4); text-align: center; box-shadow: inset 0 0 0 1px var(--accent); }
 .binder-open { display: block; padding: 0; border: 0; background: none; border-radius: 6px; cursor: zoom-in; line-height: 0; }
 .binder-open .thumb { display: block; }
 .load-more { display: flex; justify-content: center; margin: var(--sp-6) 0 0; }
@@ -195,7 +196,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "The camera didn't open. Allow camera access for this site and try again.": "A câmera não abriu. Permita o acesso à câmera para este site e tente de novo.",
     "Couldn't load the card scanner.": "Não foi possível carregar o leitor de cartas.", "{n} added": "{n} adicionadas", "{n} added_1": "1 adicionada", "{n} in the list": "{n} na lista", "In Brazil from {p}": "No Brasil a partir de {p}", "Lowest listing on MYP Cards, {d}": "Menor anúncio na MYP Cards, {d}", "{n} in the list_1": "1 na lista", "In the list: {c}": "Na lista: {c}", "Review": "Revisar", "Check before adding": "Confira antes de adicionar", "Add {n} cards to the collection": "Adicionar {n} cartas à coleção", "Add {n} cards to the collection_1": "Adicionar 1 carta à coleção", "Keep scanning": "Continuar escaneando", "Discard the list": "Descartar a lista", "Tap again to discard": "Toque de novo para descartar", "Nothing will be saved until you confirm.": "Nada é salvo antes de você confirmar.", "Remove one": "Tirar uma", "Add one": "Mais uma", "The list is empty.": "A lista está vazia.", "Recently added": "Mais recentes", "added {d}": "adicionada em {d}",
     "+1 of this": "+1 desta", "Done scanning": "Concluir", "Card": "Carta", "Removed: {c}": "Removida: {c}",
-    "Show more": "Mostrar mais", "Where": "Onde", "Everything": "Tudo", "Binder": "Fichário", "Home": "Casa", "{n} at home": "{n} em casa", "→ Home": "→ Casa", "→ Binder": "→ Fichário", "Move one {k} to Home": "Mover uma {k} para Casa", "Move one {k} to the Binder": "Mover uma {k} para o Fichário", "Moved": "Movida", "Add to": "Adicionar em", "{n} cards": "{n} cartas", "Prices: {s}, {d}": "Preços: {s}, {d}",
+    "Show more": "Mostrar mais", "Where": "Onde", "Everything": "Tudo", "Binder": "Fichário", "Home": "Casa", "{n} at home": "{n} em casa", "→ Home": "→ Casa", "→ Binder": "→ Fichário", "Move one {k} to Home": "Mover uma {k} para Casa", "Move one {k} to the Binder": "Mover uma {k} para o Fichário", "Moved": "Movida", "Cancel": "Cancelar", "Move normal cards to Home": "Mover cartas normais para Casa", "Move foil cards to Home": "Mover cartas foil para Casa", "Move normal cards to the Binder": "Mover cartas normais para o Fichário", "Move foil cards to the Binder": "Mover cartas foil para o Fichário", "{n} in the binder": "{n} no fichário", "One less": "Uma a menos", "One more": "Uma a mais", "All ({n})": "Todas ({n})", "Move {n} to Home": "Mover {n} para Casa", "Move {n} to the Binder": "Mover {n} para o Fichário", "Add to": "Adicionar em", "{n} cards": "{n} cartas", "Prices: {s}, {d}": "Preços: {s}, {d}",
     "Normal": "Normal", "Foil": "Foil", "{n} free": "{n} livre(s)", "{n} lent": "{n} emprestada(s)", "Value of your {n}": "Valor das suas {n}",
     "Remove one {k}": "Tirar uma {k}", "Add one {k}": "Pôr uma {k}", "normal": "normal", "foil": "foil", "Lent": "Emprestadas",
     "Changes save right away. You can undo from the notice at the bottom.": "As mudanças salvam na hora. Dá para desfazer pelo aviso que aparece embaixo.",
@@ -427,6 +428,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   let pendingTimer = null, pending = new Map();   // "id:kind" -> delta, sent after 600ms
   function openCard(id, from) {
     const c = BY.get(id), sh = $("cardSheet"); if (!c) return;
+    let mv = null;   // {k, to, qty}: the "how many?" step before moving between Fichário and Casa
     const draw = () => {
       const o = owned(id), pn = priceOf(id), pf = priceOf(id, true), [a, b] = split(c.name);
       const value = (pn || 0) * o.n + (pf || 0) * o.f, lw = lentWho.get(id) || [];
@@ -444,6 +446,17 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         <div class="stock-h"><i class="ic i-cards"></i>${Tx("Binder")} <span class="muted">${w.binder.n + w.binder.f}</span></div>${stockRows("binder")}
         <div class="stock-h"><i class="ic i-home"></i>${Tx("Home")} <span class="muted">${w.home.n + w.home.f}</span></div>${stockRows("home")}
         ${w.lent.n + w.lent.f ? `<div class="stock-h"><i class="ic i-loan"></i>${Tx("Lent out")} <span class="muted">${w.lent.n + w.lent.f}</span></div>` : ""}</div>`;
+      const moveBox = () => {
+        const from = mv.to === "home" ? "binder" : "home", max = w[from][mv.k], kl = Tx(mv.k === "f" ? "foil" : "normal");
+        return `<div class="card inset stack movebox" data-testid="move-confirm" role="group" aria-labelledby="mvT">
+          <b id="mvT">${esc(Tx(`Move ${mv.k === "f" ? "foil" : "normal"} cards to ${mv.to === "home" ? "Home" : "the Binder"}`))}</b>
+          <span class="small muted">${esc(Tx(from === "home" ? "{n} at home" : "{n} in the binder", { n: max }))}</span>
+          <div class="row" style="gap:var(--sp-3);justify-content:center;margin:var(--sp-2) 0">
+            <div class="qty lg"><button type="button" data-mq="-1" aria-label="${Tx("One less")}" ${mv.qty <= 1 ? "disabled" : ""}>−</button><output id="mvQ">${mv.qty}</output><button type="button" data-mq="1" aria-label="${Tx("One more")}" ${mv.qty >= max ? "disabled" : ""}>+</button></div>
+            <button type="button" class="btn small" data-mq="all" ${mv.qty >= max ? "disabled" : ""}>${esc(Tx("All ({n})", { n: max }))}</button></div>
+          <div class="row" style="gap:var(--sp-2)"><button type="button" class="btn" id="mvCancel" style="flex:1">${Tx("Cancel")}</button>
+            <button type="button" class="btn primary" id="mvOk" style="flex:2">${esc(Tx(mv.to === "home" ? "Move {n} to Home" : "Move {n} to the Binder", { n: mv.qty }))}</button></div></div>`;
+      };
       const row = (k, label, n, ln) => `<div class="row between" style="min-height:60px${k === "f" ? ";border-top:1px solid var(--line)" : ""}"><div><b>${label}</b><div class="small muted">${esc([Tx("{n} free", { n: Math.max(0, n - ln) }), ln ? Tx("{n} lent", { n: ln }) : ""].filter(Boolean).join(" · "))}</div></div>
         <div class="qty lg"><button type="button" data-d="${k}:-1" aria-label="${esc(Tx("Remove one {k}", { k: Tx(k === "f" ? "foil" : "normal") }))}" ${n <= 0 ? "disabled" : ""}>−</button><output data-n="${k}">${n}</output><button type="button" data-d="${k}:1" aria-label="${esc(Tx("Add one {k}", { k: Tx(k === "f" ? "foil" : "normal") }))}">+</button></div></div>`;
       sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><div><h2 id="cT">${esc(a)}${b ? ` · ${esc(b)}` : ""}</h2><div class="sub">${esc(setName(c.set))} · nº ${esc(c.num)}</div></div><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
@@ -454,13 +467,20 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
             <div><div class="small muted">${esc(Tx("Value of your {n}", { n: o.n + o.f }))}</div><div class="hero-num" style="color:var(--money)" data-testid="card-value">${esc(money(value))}</div></div>
             <div class="small muted" style="text-align:right">${Tx("Normal")} ${pn != null ? esc(money(pn)) : "–"}<br>${Tx("Foil")} ${pf != null ? esc(money(pf)) : "–"}<br><span class="faint">${esc(priceSrc)}</span></div></div>
           ${brLine(id)}
-          ${homeReady ? stocks : `<div class="card inset stack" style="gap:0;padding:var(--sp-2) var(--sp-3)">${row("n", Tx("Normal"), o.n, lentN.get(id) || 0)}${row("f", Tx("Foil"), o.f, lentF.get(id) || 0)}</div>`}
+          ${homeReady ? (mv ? moveBox() : stocks) : `<div class="card inset stack" style="gap:0;padding:var(--sp-2) var(--sp-3)">${row("n", Tx("Normal"), o.n, lentN.get(id) || 0)}${row("f", Tx("Foil"), o.f, lentF.get(id) || 0)}</div>`}
           ${lw.length ? `<h3 style="margin:var(--sp-5) 0 var(--sp-2)">${Tx("Lent")}</h3>${lw.map((x) => `<div class="list-row on-field"><span class="av sm">${esc((x.who || "?")[0].toUpperCase())}</span><span class="t"><span>${esc(x.who)}</span><span class="meta">${esc([`${x.qty} ${Tx(x.foil ? "foil" : "normal")}`, x.due ? Tx("until {d}", { d: new Date(x.due + "T12:00:00").toLocaleDateString(LOC, { day: "numeric", month: "short" }) }) : ""].filter(Boolean).join(" · "))}</span></span><a class="btn ghost small" href="../trades/">${Tx("See")}</a></div>`).join("")}` : ""}
           <p class="small faint" style="margin:var(--sp-3) 0 0">${Tx("Changes save right away. You can undo from the notice at the bottom.")}</p></div>
         <div class="sheet-foot"><a class="btn" href="../trades/?tab=board&q=${encodeURIComponent(a)}"><i class="ic i-board"></i>${Tx("Post on the board")}</a></div>`;
       sh.querySelectorAll("[data-close]").forEach((x) => x.onclick = () => sh.close());
       sh.querySelectorAll("[data-d]").forEach((x) => x.onclick = () => { const [k, d, place] = x.dataset.d.split(":"); change(id, k, +d, false, place || "binder"); draw(); sh.querySelector(`[data-d="${x.dataset.d}"]`)?.focus(); });
-      sh.querySelectorAll("[data-mv]").forEach((x) => x.onclick = () => { const [k, to] = x.dataset.mv.split(":"); move(id, k, 1, to); draw(); (sh.querySelector(`[data-mv="${x.dataset.mv}"]:not([disabled])`) || sh.querySelector(`[data-mv="${k}:${to === "home" ? "binder" : "home"}"]`))?.focus(); });
+      sh.querySelectorAll("[data-mv]").forEach((x) => x.onclick = () => { const [k, to] = x.dataset.mv.split(":"); mv = { k, to, qty: 1 }; draw(); $("mvOk")?.focus(); });
+      sh.querySelectorAll("[data-mq]").forEach((x) => x.onclick = () => {
+        const max = where(id)[mv.to === "home" ? "binder" : "home"][mv.k];
+        mv.qty = x.dataset.mq === "all" ? max : Math.min(max, Math.max(1, mv.qty + +x.dataset.mq)); draw();
+        (sh.querySelector(`[data-mq="${x.dataset.mq}"]:not([disabled])`) || $("mvOk"))?.focus();
+      });
+      $("mvCancel")?.addEventListener("click", () => { const back = `[data-mv="${mv.k}:${mv.to}"]`; mv = null; draw(); sh.querySelector(back)?.focus(); });
+      $("mvOk")?.addEventListener("click", () => { const { k, to, qty } = mv; mv = null; move(id, k, qty, to); draw(); sh.querySelector(`[data-mv="${k}:${to}"]:not([disabled])`)?.focus(); });
     };
     draw();
     openSheet(sh, from);

@@ -273,6 +273,19 @@ test('stocks: binder and home counts, move a card home, binder check counts only
   await expect(st.locator('[data-n="binder-n"]')).toHaveText('2');
   await expect(st.locator('[data-n="home-n"]')).toHaveText('1');
   await st.locator('[data-mv="n:home"]').click();
+  // asks how many first; nothing moves until confirmed
+  const box = page.locator('[data-testid="move-confirm"]');
+  await expect(box).toContainText('Mover cartas normais para Casa');
+  await expect(box).toContainText('2 no fichário');
+  await box.locator('[data-mq="all"]').click();
+  await expect(box.locator('#mvQ')).toHaveText('2');
+  await box.locator('[data-mq="-1"]').click();
+  await page.locator('#mvCancel').click();
+  await expect(box).toHaveCount(0);
+  expect(rpc(calls, 'collection_change')).toEqual([]);
+  await st.locator('[data-mv="n:home"]').click();
+  await expect(page.locator('#mvOk')).toHaveText('Mover 1 para Casa');
+  await page.locator('#mvOk').click();
   await expect(st.locator('[data-n="binder-n"]')).toHaveText('1');
   await expect(st.locator('[data-n="home-n"]')).toHaveText('2');
   await expect.poll(() => rpc(calls, 'collection_change')).toEqual([{ p_profile: 'luiscredie', p_delta: [], p_home: [{ card_id: 'LOR10-10', qty: 1, foil: false }] }]);
