@@ -4,12 +4,15 @@ alter table public.game_logs add column if not exists summary jsonb;
 
 create schema if not exists private;
 create or replace function private.game_logs_summary() returns trigger language plpgsql set search_path = '' as $$
-declare me jsonb; opp jsonb; lore jsonb;
+declare me jsonb; opp jsonb; lore jsonb; list_key text;
 begin
   select p into me from jsonb_array_elements(coalesce(new.log->'players', '[]')) p where p->>'is_me' = 'true' limit 1;
   if me is null then me := new.log->'players'->0; end if;
   select p into opp from jsonb_array_elements(coalesce(new.log->'players', '[]')) p where p->>'seat' is distinct from me->>'seat' limit 1;
   lore := coalesce(new.log->'result'->'final_lore', '{}'::jsonb);
+  -- one fingerprint per distinct deck list ("deck versions" in the stats)
+  select left(md5(string_agg((e->>'card_id') || ':' || coalesce(e->>'qty', '1'), ',' order by e->>'card_id')), 10) into list_key
+    from jsonb_array_elements(case jsonb_typeof(me->'deck'->'list') when 'array' then me->'deck'->'list' else '[]'::jsonb end) e;
   new.summary := jsonb_build_object(
     'result', case when new.log->'result'->>'winner' = me->>'seat' then 'win' else 'loss' end,
     'my_deck', coalesce(nullif(me->'deck'->>'name', ''), nullif(array_to_string(array(select jsonb_array_elements_text(coalesce(me->'deck'->'inks', '[]'::jsonb))), '/'), ''), 'Physical game'),
@@ -19,7 +22,13 @@ begin
     'opp_lore', coalesce(lore->(opp->>'seat'), '0'::jsonb),
     'my_inks', array_to_string(array(select jsonb_array_elements_text(coalesce(me->'deck'->'inks', '[]'::jsonb))), '/'),
     'opp_inks', array_to_string(array(select jsonb_array_elements_text(coalesce(opp->'deck'->'inks', '[]'::jsonb))), '/'),
-    'turns', jsonb_array_length(coalesce(new.log->'turns', '[]'::jsonb)));
+    'turns', jsonb_array_length(coalesce(new.log->'turns', '[]'::jsonb)),
+    -- for the stats: queue, game number in a best-of-3 (games 1, 2, 3 in a row make a match), MMR, deck version
+    'queue', coalesce(new.log->'source_ref'->>'queue', new.log->'event'->>'name'),
+    'gim', new.log->'event'->'game_in_match',
+    'mmr_before', new.log->'source_ref'->'mmr_before',
+    'mmr_delta', new.log->'source_ref'->'mmr_delta',
+    'list_key', list_key);
   return new;
 end $$;
 revoke all on function private.game_logs_summary() from public, anon, authenticated;
@@ -27,3 +36,6 @@ revoke all on function private.game_logs_summary() from public, anon, authentica
 drop trigger if exists game_logs_summary on public.game_logs;
 create trigger game_logs_summary before insert or update of log on public.game_logs
   for each row execute function private.game_logs_summary();
+
+-- Recompute the summary of every stored game (the trigger runs on any update of log).
+update public.game_logs set log = log;

@@ -117,6 +117,7 @@ window.INKWELL_NO_STORE_MSG = "Your games appear here after you sign in.";
     "Your decks": "Seus decks", "Your inks": "Suas cores", "Against each deck": "Contra cada deck", "Opponent's inks": "Cores do oponente",
     "Tap a row to see those games. Faded rows: under 5 games.": "Toque numa linha para ver os jogos. Linhas apagadas: menos de 5 jogos.",
     "Won": "Vitórias", "Going first": "Começando", "Going second": "Comprando", "Show games against {deck}": "Mostrar jogos contra {deck}",
+    "{n} game, {w} won": "{n} jogo, {w} vitória(s)", "{n} games, {w} won": "{n} jogos, {w} vitórias", "Games per day": "Jogos por dia", "Games by hour of the day": "Jogos por hora do dia", "MMR from {a} to {b}, peak {p}": "MMR de {a} para {b}, pico {p}", "Peak {v}": "Pico {v}", "Matchup matrix": "Matriz de confrontos", "Your colors (rows) against the opponent's colors (columns). Small number: games.": "Suas cores (linhas) contra as cores do oponente (colunas). Número pequeno: jogos.", "You / Opp": "Você / Oponente", "Deck versions": "Versões do deck", "Each version is a different list found in your games with this deck.": "Cada versão é uma lista diferente encontrada nos seus jogos com este deck.", "Version": "Versão", "Version {n}": "Versão {n}", "latest": "mais recente", "Loading the list…": "Carregando a lista…", "Changes from version {n}": "Mudanças desde a versão {n}", "Last 7 days": "Últimos 7 dias", "Queue": "Fila", "All queues": "Todas as filas", "Other games": "Outros jogos", "Deck": "Deck", "All versions": "Todas as versões", "wins": "vitórias", "losses": "derrotas", "Win rate": "Vitórias", "Match win rate": "Partidas", "{w}–{l} in best-of-3": "{w}–{l} em melhor de 3", "On the play": "Começando", "On the draw": "Comprando", "Win streak": "Sequência", "Best: {n}": "Melhor: {n}", "Your best": "Sua melhor", "Play or draw": "Começar ou comprar", "Went first: {n} games ({p})": "Começou: {n} jogos ({p})", "Went second: {n} games ({p})": "Comprou: {n} jogos ({p})", "MMR": "MMR", "now": "agora", "peak": "pico", "in this period": "no período", "{n}d": "{n}d", "No games in these days.": "Nenhum jogo nesses dias.", "Peak hours ({tz})": "Horários ({tz})", "{w}W · {l}L": "{w}V · {l}D", "{w}W / {n}": "{w}V / {n}",
     // account panel (site)
     "Sign in": "Entrar", "Use your Inkwell account email. Your Lore Counter games appear here.": "Use o e-mail da sua conta Inkwell. Os jogos do Contador de lore aparecem aqui.",
     "Email": "E-mail", "Send code": "Enviar código", "Code from the email": "Código do e-mail",
@@ -308,7 +309,9 @@ window.INKWELL_CLOUD = (() => {
       opp_deck: opp.deck?.archetype || (opp.deck?.inks || []).join("/") || "Unknown",
       went_first: typeof meP.went_first === "boolean" ? meP.went_first : null,
       my_lore: lore[meP.seat] ?? 0, opp_lore: lore[opp.seat] ?? 0,
-      my_inks: (meP.deck?.inks || []).join("/"), opp_inks: (opp.deck?.inks || []).join("/") };
+      my_inks: (meP.deck?.inks || []).join("/"), opp_inks: (opp.deck?.inks || []).join("/"),
+      queue: log.source_ref?.queue || log.event?.name || null, gim: log.event?.game_in_match ?? null,
+      mmr_before: log.source_ref?.mmr_before ?? null, mmr_delta: log.source_ref?.mmr_delta ?? null };
   }
   // Who sees a game: only me / all my coaches / one coach / a coach group / friends / one friend group / everyone.
   const AUDIENCE = [["private", "Only me"], ["coaches", "All my coaches"], ["friends", "Friends (one game)"], ["public", "Everyone"]];
@@ -699,8 +702,56 @@ textarea { width: 100%; min-height: 72px; resize: vertical; }
 .sv > h2 { font-size: var(--fs-h2); }
 .sv h3 { margin: var(--sp-5) 0 var(--sp-1); }
 .sv .ctl { display: flex; flex-wrap: wrap; gap: 6px; }
-.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--sp-2); margin-top: var(--sp-2); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); gap: var(--sp-2); }
+.tiles .tile { padding: var(--sp-3); }
+.tile { background: var(--surface-1); border-radius: var(--r-lg); box-shadow: var(--e1); padding: var(--sp-3) var(--sp-4); }
 .tile b { font-size: var(--fs-stat); }
+.tile .lb { margin: 0 0 4px; font-size: var(--fs-micro); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--text-3); }
+.tile.play { box-shadow: var(--e1), inset 3px 0 0 var(--gold); } .tile.draw { box-shadow: var(--e1), inset 3px 0 0 var(--opp); }
+.sv-filters { display: grid; gap: 6px; }
+.svsel { display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); }
+.svsel select { max-width: 220px; }
+.sv-card { background: var(--surface-1); border-radius: var(--r-lg); box-shadow: var(--e1); padding: var(--sp-3) var(--sp-4); min-width: 0; }
+.sv-card > h3, .sv-card .h3row h3 { margin: 0 0 var(--sp-1); font-size: var(--fs-h3); }
+.sv-card table.mt { box-shadow: none; margin-top: var(--sp-2); background: transparent; }
+.sv-card svg { width: 100%; height: auto; display: block; margin-top: var(--sp-2); }
+.sv-card .trend { box-shadow: none; padding: 0; background: transparent; }
+.h3row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); flex-wrap: wrap; }
+.h3row .ctl .chipbtn { min-height: 28px; padding: 0 10px; font-size: var(--fs-micro); }
+.sv-two { display: grid; gap: var(--sp-2); }
+.sv-leg { display: flex; gap: var(--sp-4); margin-top: -2px; }
+.sv-leg i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; margin-right: 6px; }
+.record .rec-top { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-2); }
+.record .rec-top b { font-size: var(--fs-stat); font-weight: 800; font-variant-numeric: tabular-nums; }
+.rec-bar, .pd-bar { height: 10px; border-radius: 5px; background: var(--loss); overflow: hidden; display: flex; margin-top: var(--sp-2); }
+.rec-bar i { background: var(--win); height: 100%; }
+.pd-bar { background: var(--surface-3); gap: 2px; }
+.pd-bar i { height: 100%; } .pd-bar i.play { background: var(--gold); } .pd-bar i.draw { background: var(--opp); }
+.pd-legend { display: flex; justify-content: space-between; gap: var(--sp-2); flex-wrap: wrap; margin-top: var(--sp-1); }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin: 0 6px; } .dot.play { background: var(--gold); } .dot.draw { background: var(--opp); }
+.pd-two { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); margin-top: var(--sp-3); }
+.pd-two > div { background: var(--surface-2); border-radius: var(--r-md); padding: var(--sp-2) var(--sp-3); }
+.pd-two > div.play { box-shadow: inset 3px 0 0 var(--gold); } .pd-two > div.draw { box-shadow: inset 3px 0 0 var(--opp); }
+.pd-two span:first-child { display: block; font-size: var(--fs-micro); color: var(--text-2); }
+.pd-two b { font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.pd-two .wbar { display: block; width: 100%; margin: 6px 0 0; }
+.mmr-nums { display: flex; gap: var(--sp-5); flex-wrap: wrap; font-size: var(--fs-small); color: var(--text-2); }
+.mmr-nums b { font-size: 1.25rem; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
+.mmr-nums b.win { color: var(--win); } .mmr-nums b.loss { color: var(--loss); }
+.mx-wrap { overflow-x: auto; margin-top: var(--sp-2); }
+table.mx { border-collapse: separate; border-spacing: 3px; font-size: var(--fs-micro); font-variant-numeric: tabular-nums; }
+table.mx th { font-weight: 600; color: var(--text-2); padding: 4px; white-space: nowrap; text-align: center; }
+table.mx tr > th:first-child { text-align: left; }
+table.mx th .nm { margin-left: 2px; }
+table.mx td { min-width: 46px; height: 40px; text-align: center; border-radius: var(--r-sm); padding: 2px 4px; }
+table.mx td b { display: block; font-size: var(--fs-small); }
+table.mx td small { color: var(--text-3); }
+table.mx td.few b { color: var(--text-3); font-weight: 600; }
+table.mx td.mx-e { color: var(--text-3); background: var(--surface-2); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+tr.verlist td { background: var(--surface-2); }
+.vdiff { margin-bottom: var(--sp-2); font-size: var(--fs-small); }
+.vdiff .win { color: var(--win); } .vdiff .loss { color: var(--loss); }
 .trend { background: var(--surface-1); border-radius: var(--r-lg); box-shadow: var(--e1); padding: var(--sp-3) var(--sp-4); position: relative; }
 .trend svg { width: 100%; height: auto; display: block; }
 .tip { position: absolute; pointer-events: none; background: var(--surface-3); border-radius: var(--r-sm); padding: 4px 8px; font-size: var(--fs-micro); white-space: nowrap; transform: translate(-50%, -110%); box-shadow: var(--e2); }
@@ -731,6 +782,11 @@ table.mt tr[data-opp]:hover td, table.mt tr[data-opp]:focus-visible td { backgro
   table.mt th, table.mt td { padding: var(--sp-2) 6px; }
   table.mt { font-size: var(--fs-micro); }
   table.mt td .muted.small { display: none; }
+  .sv-card table.mt td div.muted.small { display: block; }
+  .sv-card { padding: var(--sp-3); }
+  .sv-card table.mt { width: calc(100% + 2 * var(--sp-3) - 8px); margin-left: calc(4px - var(--sp-3)); table-layout: auto; }
+  .sv-card table.mt th, .sv-card table.mt td { padding: var(--sp-2) 4px; }
+  .sv-card table.mt th { white-space: normal; }
   .note.cnote, .composer { margin-left: 8px; }
 }
 </style>
@@ -823,7 +879,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
   const GROUP_KEY = "inkwell-coach-group-by-deck";
   let byDeck = true, closedDecks = new Set();
   try { byDeck = localStorage.getItem(GROUP_KEY) !== "date"; } catch { /* storage off */ }
-  const sv = { source: "all", days: 0, deck: "all" };   // stats view filters            // {key, text, open}: survives the re-render that follows a save
+  const sv = { source: "all", days: 0, deck: "all", queue: "all", version: "all", perDay: 30, openVer: null };   // stats view filters            // {key, text, open}: survives the re-render that follows a save
 
   // ---------- list ----------
   function summaryOf(g) { return g.doc.summary || {}; }
@@ -1162,43 +1218,220 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       ${pts.map((p) => `<circle class="hit" cx="${X(p.i)}" cy="${Y(p.v)}" r="16" fill="transparent" data-tip="${esc(Tx(p.n === 1 ? "{month}: {p}% won, {n} game" : "{month}: {p}% won, {n} games", { month: label(p.m), p: Math.round(100 * p.v), n: p.n }))}"/>`).join("")}
     </svg><div class="tip" id="tip" hidden></div><span class="small muted">${Tx("Win rate by month. Hollow points: under 10 games.")}</span></div>`;
   }
+  // ---------- stats (laid out like duels.ink "My Stats") ----------
+  const DAY = 864e5, byAt = (a, b) => String(a.at).localeCompare(String(b.at));
+  const qOf = (s) => s.queue || "";
+  const inksKey = (v) => v && v !== "Physical game" ? v : null;
+  // duels.ink best-of-3: game 1, then game 2 and 3 of the same queue within the hour make one match.
+  function matchesOf(rows) {
+    const byQ = new Map(), out = [];
+    for (const r of rows.filter((r) => r.s.gim).sort(byAt)) { const q = qOf(r.s); if (!byQ.has(q)) byQ.set(q, []); byQ.get(q).push(r); }
+    for (const [q, list] of byQ) {
+      let cur = null;
+      for (const r of list) {
+        if (cur && r.s.gim === cur.games.at(-1).s.gim + 1 && Date.parse(r.at) - Date.parse(cur.games.at(-1).at) < 60 * 60e3) { cur.games.push(r); continue; }
+        cur = r.s.gim === 1 ? { q, games: [r] } : null;
+        if (cur) out.push(cur);
+      }
+    }
+    return out.filter((m) => /BO3/i.test(m.q) || m.games.length > 1).map((m) => {
+      const w = m.games.filter((r) => r.s.result === "win").length, l = m.games.length - w;
+      return { ...m, w, l, result: w > l ? "win" : l > w ? "loss" : null };
+    }).filter((m) => m.result);
+  }
+  function streaks(rows) {
+    let cur = 0, best = 0;
+    for (const r of [...rows].sort(byAt)) { if (r.s.result === "win") { cur += 1; best = Math.max(best, cur); } else cur = 0; }
+    return { cur, best };
+  }
+  const svgW = () => Math.round(Math.max(300, Math.min(640, ($("review").clientWidth || 520) - 26)));
+  const hint = (n, w) => esc(Tx(n === 1 ? "{n} game, {w} won" : "{n} games, {w} won", { n, w }));
+  // stacked bars: wins at the bottom, losses on top
+  function barsSvg(buckets, labelEvery, label, aria) {
+    const W = svgW(), H = 130, L = 26, R = 6, T = 8, B = 22, n = buckets.length;
+    const top = Math.max(2, ...buckets.map((b) => b.n)), bw = (W - L - R) / n;
+    const Y = (v) => T + (1 - v / top) * (H - T - B);
+    const ticks = [...new Set([0, Math.round(top / 2), top])];
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(aria)}">
+      ${ticks.map((v) => `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width=".7" ${v ? 'stroke-dasharray="2 4"' : ""}/><text x="${L - 5}" y="${Y(v) + 4}" text-anchor="end" font-size="11" fill="var(--faint)">${v}</text>`).join("")}
+      ${buckets.map((b, i) => {
+        const x = L + i * bw + bw * 0.15, w = Math.max(1, bw * 0.7);
+        return `<g><title>${esc(b.tip)}: ${hint(b.n, b.w)}</title>
+          ${b.w ? `<rect x="${x.toFixed(1)}" y="${Y(b.w).toFixed(1)}" width="${w.toFixed(1)}" height="${(Y(0) - Y(b.w)).toFixed(1)}" fill="var(--win)" rx="1.5"/>` : ""}
+          ${b.n - b.w ? `<rect x="${x.toFixed(1)}" y="${Y(b.n).toFixed(1)}" width="${w.toFixed(1)}" height="${(Y(b.w) - Y(b.n)).toFixed(1)}" fill="var(--loss)" rx="1.5"/>` : ""}
+          ${i % labelEvery === 0 ? `<text x="${(L + i * bw + bw / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle" font-size="11" fill="var(--faint)">${esc(label(b, i))}</text>` : ""}</g>`;
+      }).join("")}
+    </svg>`;
+  }
+  function perDaySvg(rows, days) {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const keyOf = (t) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
+    const buckets = Array.from({ length: days }, (_, i) => { const t = today.getTime() - (days - 1 - i) * DAY; return { t, n: 0, w: 0, tip: new Date(t).toLocaleDateString(LOC, { day: "numeric", month: "short" }) }; });
+    const at = new Map(buckets.map((b) => [b.t, b]));
+    for (const r of rows) { const b = at.get(keyOf(r.at)); if (b) { b.n += 1; b.w += r.s.result === "win" ? 1 : 0; } }
+    if (!buckets.some((b) => b.n)) return "";
+    return barsSvg(buckets, days <= 7 ? 1 : days <= 30 ? 5 : 15, (b) => new Date(b.t).toLocaleDateString(LOC, days <= 7 ? { weekday: "short" } : { day: "numeric", month: "numeric" }), Tx("Games per day"));
+  }
+  function hoursSvg(rows) {
+    const buckets = Array.from({ length: 24 }, (_, h) => ({ n: 0, w: 0, tip: `${h}h` }));
+    for (const r of rows) { const h = new Date(r.at).getHours(); if (!Number.isNaN(h)) { buckets[h].n += 1; buckets[h].w += r.s.result === "win" ? 1 : 0; } }
+    return barsSvg(buckets, 3, (_, i) => `${i}h`, Tx("Games by hour of the day"));
+  }
+  function mmrSvg(pts) {
+    const W = svgW(), H = 150, L = 38, R = 10, T = 10, B = 22, n = pts.length;
+    const lo = Math.min(...pts.map((p) => p.v)), hi = Math.max(...pts.map((p) => p.v)), pad = Math.max(10, (hi - lo) * 0.1);
+    const a = Math.floor((lo - pad) / 10) * 10, b = Math.ceil((hi + pad) / 10) * 10;
+    const X = (i) => L + (n === 1 ? 0.5 : i / (n - 1)) * (W - L - R), Y = (v) => T + (1 - (v - a) / (b - a)) * (H - T - B);
+    const peak = pts.reduce((m, p, i) => (p.v > pts[m].v ? i : m), 0);
+    const date = (p) => new Date(p.at).toLocaleDateString(LOC, { day: "numeric", month: "short" });
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(Tx("MMR from {a} to {b}, peak {p}", { a: pts[0].v, b: pts.at(-1).v, p: pts[peak].v }))}">
+      ${[a, Math.round((a + b) / 20) * 10, b].map((v) => `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width=".7" stroke-dasharray="2 4"/><text x="${L - 5}" y="${Y(v) + 4}" text-anchor="end" font-size="11" fill="var(--faint)">${v}</text>`).join("")}
+      <path d="${pts.map((p, i) => `${i ? "L" : "M"}${X(i).toFixed(1)} ${Y(p.v).toFixed(1)}`).join("")}" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linejoin="round"/>
+      <circle cx="${X(peak)}" cy="${Y(pts[peak].v)}" r="4" fill="var(--gold)"><title>${esc(Tx("Peak {v}", { v: pts[peak].v }))} · ${esc(date(pts[peak]))}</title></circle>
+      <circle cx="${X(n - 1)}" cy="${Y(pts.at(-1).v)}" r="4.5" fill="var(--panel)" stroke="var(--gold)" stroke-width="2"/>
+      <text x="${L}" y="${H - 6}" font-size="11" fill="var(--faint)">${esc(date(pts[0]))}</text>
+      <text x="${W - R}" y="${H - 6}" text-anchor="end" font-size="11" fill="var(--faint)">${esc(date(pts.at(-1)))}</text>
+    </svg>`;
+  }
+  function matrixHtml(rows) {
+    const mineK = (r) => inksKey(r.s.my_inks) || inksKey(r.s.my_deck), oppK = (r) => r.s.opp_inks || r.s.opp_deck || "Unknown";
+    const mine = groupBy(rows.filter(mineK), mineK).slice(0, 6), opp = groupBy(rows.filter(mineK), oppK).slice(0, 8);
+    if (!mine.length || opp.length < 2) return "";
+    const cell = new Map();
+    for (const r of rows) { const a = mineK(r); if (!a) continue; const k = `${a}|${oppK(r)}`; const c = cell.get(k) || { n: 0, w: 0 }; c.n += 1; c.w += r.s.result === "win" ? 1 : 0; cell.set(k, c); }
+    const td = (a, b) => {
+      const c = cell.get(`${a}|${b}`);
+      if (!c) return `<td class="mx-e">·</td>`;
+      const wr = c.w / c.n, tone = wr >= 0.5 ? "var(--win)" : "var(--loss)", strength = Math.round(10 + Math.abs(wr - 0.5) * 2 * 40);
+      return `<td class="${c.n < 3 ? "few" : ""}" style="background:color-mix(in srgb, ${tone} ${c.n < 3 ? 6 : strength}%, transparent)" title="${esc(`${a} vs ${b}`)}: ${hint(c.n, c.w)}"><b>${Math.round(100 * wr)}%</b><small>${c.n}</small></td>`;
+    };
+    return `<div class="sv-card"><h3>${Tx("Matchup matrix")}</h3><span class="muted small">${Tx("Your colors (rows) against the opponent's colors (columns). Small number: games.")}</span>
+      <div class="mx-wrap"><table class="mx"><tr><th>${Tx("You / Opp")}</th>${opp.map((o) => `<th>${inkDots(o.k)}<span class="sr">${esc(o.k)}</span></th>`).join("")}</tr>
+      ${mine.map((m) => `<tr><th>${inkDots(m.k)}<span class="nm">${esc(m.k)}</span></th>${opp.map((o) => td(m.k, o.k)).join("")}</tr>`).join("")}</table></div></div>`;
+  }
+  // Deck versions: each distinct list of the chosen deck, oldest = version 1.
+  function versionsOf(rows) {
+    const by = new Map();
+    for (const r of rows) { const k = r.s.list_key; if (!k) continue; if (!by.has(k)) by.set(k, []); by.get(k).push(r); }
+    return [...by].map(([k, list]) => ({ k, list: list.sort(byAt), t: tally(list.map((r) => r.s)) }))
+      .sort((a, b) => byAt(a.list[0], b.list[0])).map((v, i) => ({ ...v, n: i + 1 }));
+  }
+  async function listOfVersion(v) {
+    const key = v.list.at(-1).key;
+    if (db?.loadGame) await db.loadGame(key);
+    return (games.get(key)?.doc.log?.players?.find((p) => p.is_me)?.deck?.list || []);
+  }
+  function versionsHtml(vs) {
+    if (vs.length < 2) return "";
+    const d = (r) => new Date(r.at).toLocaleDateString(LOC, { day: "numeric", month: "short" });
+    return `<div class="sv-card"><h3>${Tx("Deck versions")}</h3><span class="muted small">${Tx("Each version is a different list found in your games with this deck.")}</span>
+      <table class="mt"><tr><th>${Tx("Version")}</th><th class="n">${Tx("Games")}</th><th class="n">${Tx("Won")}</th><th class="n">${Tx("Going first")}</th><th class="n">${Tx("Going second")}</th></tr>
+      ${[...vs].reverse().map((v) => `<tr class="${v.t.n < 5 ? "few" : ""}"><td><button type="button" class="linkbtn" data-ver="${esc(v.k)}" aria-expanded="${sv.openVer === v.k}">${esc(Tx("Version {n}", { n: v.n }))}</button>${v.n === vs.length ? ` <span class="tag">${Tx("latest")}</span>` : ""}<div class="muted small">${esc(d(v.list[0]))}${v.list.length > 1 ? ` – ${esc(d(v.list.at(-1)))}` : ""}</div></td>
+        <td class="n">${v.t.n}</td><td class="n">${pct(v.t.w, v.t.n)}</td><td class="n">${pct(v.t.fw, v.t.fn)}</td><td class="n">${pct(v.t.dw, v.t.dn)}</td></tr>
+        ${sv.openVer === v.k ? `<tr class="verlist"><td colspan="5" id="verBox">${Tx("Loading the list…")}</td></tr>` : ""}`).join("")}</table></div>`;
+  }
+  async function fillVersion(vs) {
+    const box = $("verBox"), i = vs.findIndex((v) => v.k === sv.openVer);
+    if (!box || i < 0) return;
+    try {
+      const [cur, prev] = await Promise.all([listOfVersion(vs[i]), i ? listOfVersion(vs[i - 1]) : Promise.resolve(null)]);
+      const q = (l) => new Map((l || []).map((e) => [e.card_id, e.qty || 1]));
+      const a = q(cur), b = q(prev), diff = [];
+      if (prev) for (const id of new Set([...a.keys(), ...b.keys()])) { const x = (a.get(id) || 0) - (b.get(id) || 0); if (x) diff.push({ id, x }); }
+      diff.sort((m, n) => n.x - m.x);
+      const sorted = [...cur].sort((m, n) => (CARDS.get(m.card_id)?.cost ?? 99) - (CARDS.get(n.card_id)?.cost ?? 99) || cardName(m.card_id).localeCompare(cardName(n.card_id)));
+      if ($("verBox") !== box) return;
+      box.innerHTML = `${diff.length ? `<div class="vdiff"><b>${esc(Tx("Changes from version {n}", { n: vs[i - 1].n }))}:</b> ${diff.map((e) => `<span class="${e.x > 0 ? "win" : "loss"}">${e.x > 0 ? "+" : "−"}${Math.abs(e.x)} ${esc(cardName(e.card_id || e.id))}</span>`).join(" · ")}</div>` : ""}
+        <div class="decklist">${sorted.map((e) => `<div><span class="q">${e.qty}</span><span>${esc(cardName(e.card_id))}</span></div>`).join("")}</div>`;
+    } catch { box.textContent = Tx("Couldn't load this game. Try again."); }
+  }
+
   function renderStatsView() {
     const el = $("review");
-    const since = sv.days ? Date.now() - sv.days * 864e5 : 0;
-    const all = [...games.values()].map((g) => ({ s: summaryOf(g), at: g.doc.played_at, src: g.doc.source || g.doc.log?.source }));
-    const decks = groupBy(all, (r) => r.s.my_deck).map((d) => d.k);
-    const rows = all.filter((r) => (sv.source === "all" || r.src === sv.source) && (!since || Date.parse(r.at) >= since) && (sv.deck === "all" || r.s.my_deck === sv.deck));
-    const T = tally(rows.map((r) => r.s));
+    const since = sv.days ? Date.now() - sv.days * DAY : 0;
+    const all = [...games.values()].map((g) => ({ key: g.key, s: summaryOf(g), at: g.doc.played_at, src: g.doc.source || g.doc.log?.source }));
+    const base = all.filter((r) => (sv.source === "all" || r.src === sv.source) && (!since || Date.parse(r.at) >= since));
+    const queues = groupBy(base.filter((r) => r.src === "duels_ink"), (r) => qOf(r.s) || "—").map((q) => q.k);
+    if (sv.queue !== "all" && !queues.includes(sv.queue)) sv.queue = "all";
+    const inQ = base.filter((r) => sv.queue === "all" || (qOf(r.s) || "—") === sv.queue);
+    const decks = groupBy(inQ, (r) => r.s.my_deck).map((d) => d.k);
+    if (sv.deck !== "all" && !decks.includes(sv.deck)) { sv.deck = "all"; sv.version = "all"; }
+    const deckRows = inQ.filter((r) => sv.deck === "all" || r.s.my_deck === sv.deck);
+    const vDeck = sv.deck !== "all" ? sv.deck : decks.length === 1 ? decks[0] : null, vs = vDeck ? versionsOf(inQ.filter((r) => r.s.my_deck === vDeck)) : [];
+    if (sv.version !== "all" && !vs.some((v) => v.k === sv.version)) sv.version = "all";
+    const rows = deckRows.filter((r) => sv.version === "all" || r.s.list_key === sv.version);
+    const T = tally(rows.map((r) => r.s)), M = matchesOf(rows), mw = M.filter((m) => m.result === "win").length, st = streaks(rows);
     const mine = groupBy(rows, (r) => r.s.my_deck), opp = groupBy(rows, (r) => r.s.opp_deck);
     const cost = opp.filter((o) => o.t.n >= 8 && o.t.n - 2 * o.t.w > 0).sort((a, b) => (b.t.n - 2 * b.t.w) - (a.t.n - 2 * a.t.w)).slice(0, 3);
+    // MMR: duels.ink keeps one per queue. The chosen queue, or the one with the most rated games.
+    const rated = rows.filter((r) => r.s.mmr_before != null && r.s.mmr_delta != null);
+    const mq = sv.queue !== "all" ? sv.queue : groupBy(rated, (r) => qOf(r.s) || "—")[0]?.k;
+    const mmr = rated.filter((r) => (qOf(r.s) || "—") === mq).sort(byAt).map((r) => ({ at: r.at, v: r.s.mmr_before + r.s.mmr_delta }));
     const chip = (group, v, l) => `<button type="button" class="chipbtn" data-sv="${group}" data-v="${esc(v)}" aria-pressed="${String(sv[group]) === String(v)}">${esc(l)}</button>`;
+    const sel = (id, label, cur, opts) => `<label class="small svsel">${label} <select id="${id}">${opts.map(([v, l]) => `<option value="${esc(v)}" ${v === cur ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></label>`;
     const row = (x, isOpp) => `<tr class="${x.t.n < 5 ? "few" : ""}" ${isOpp ? `data-opp="${esc(x.k)}" tabindex="0" aria-label="${esc(Tx("Show games against {deck}", { deck: x.k }))}"` : ""}>
       <td>${inkDots(x.k)}${esc(x.k)}</td><td class="n">${x.t.n}</td>
       <td class="n">${pct(x.t.w, x.t.n)}<span class="wbar" aria-hidden="true"><i style="width:${x.t.n ? (100 * x.t.w / x.t.n).toFixed(0) : 0}%"></i></span></td>
       <td class="n">${pct(x.t.fw, x.t.fn)} <span class="muted small">(${x.t.fn})</span></td><td class="n">${pct(x.t.dw, x.t.dn)} <span class="muted small">(${x.t.dn})</span></td></tr>`;
     const head = (first) => `<tr><th>${first}</th><th class="n">${Tx("Games")}</th><th class="n">${Tx("Won")}</th><th class="n">${Tx("Going first")}</th><th class="n">${Tx("Going second")}</th></tr>`;
+    const tile = (label, value, sub, cls = "") => `<div class="tile ${cls}"><span class="lb">${label}</span><b>${value}</b><span>${sub || "&nbsp;"}</span></div>`;
+    const fd = T.fn + T.dn, perDay = perDaySvg(rows, sv.perDay);
     el.innerHTML = `<div class="sv"><button type="button" class="back" id="back">${Tx("Games")}</button>
-      <h2>${Tx("Stats")}</h2><span class="muted small">${Tx("Decks are named by their ink colors.")}</span>
-      <div class="ctl" role="group" aria-label="${Tx("Source")}">${chip("source", "all", Tx("All games"))}${chip("source", "duels_ink", "duels.ink")}${chip("source", "lore_counter", Tx("Lore Counter"))}</div>
-      <div class="ctl" role="group" aria-label="${Tx("Period")}">${chip("days", 0, Tx("All time"))}${chip("days", 90, Tx("Last 90 days"))}${chip("days", 30, Tx("Last 30 days"))}</div>
-      ${decks.length > 1 ? `<div class="ctl" role="group" aria-label="Your deck">${chip("deck", "all", Tx("All my decks"))}${decks.map((d) => chip("deck", d, d)).join("")}</div>` : ""}
-      ${!rows.length ? `<p class="empty">${Tx("No games match these filters.")}</p>` : `
-      <div class="tiles">
-        <div class="tile"><b>${T.n}</b><span>${Tx("games")}</span></div>
-        <div class="tile"><b>${pct(T.w, T.n)}</b><span>${Tx("won ({w}–{l})", { w: T.w, l: T.n - T.w })}</span></div>
-        <div class="tile"><b>${pct(T.fw, T.fn)}</b><span>${Tx("won going first ({n})", { n: T.fn })}</span></div>
-        <div class="tile"><b>${pct(T.dw, T.dn)}</b><span>${Tx("won going second ({n})", { n: T.dn })}</span></div>
+      <h2>${Tx("Stats")}</h2>
+      <div class="sv-filters">
+        <div class="ctl" role="group" aria-label="${Tx("Source")}">${chip("source", "all", Tx("All games"))}${chip("source", "duels_ink", "duels.ink")}${chip("source", "lore_counter", Tx("Lore Counter"))}</div>
+        <div class="ctl" role="group" aria-label="${Tx("Period")}">${chip("days", 0, Tx("All time"))}${chip("days", 90, Tx("Last 90 days"))}${chip("days", 30, Tx("Last 30 days"))}${chip("days", 7, Tx("Last 7 days"))}</div>
+        <div class="ctl">
+          ${queues.length > 1 ? sel("svQueue", Tx("Queue"), sv.queue, [["all", Tx("All queues")], ...queues.map((q) => [q, q === "—" ? Tx("Other games") : q])]) : ""}
+          ${decks.length > 1 ? sel("svDeck", Tx("Deck"), sv.deck, [["all", Tx("All my decks")], ...decks.map((d) => [d, d])]) : ""}
+          ${vs.length > 1 ? sel("svVer", Tx("Version"), sv.version, [["all", Tx("All versions")], ...[...vs].reverse().map((v) => [v.k, Tx("Version {n}", { n: v.n }) + (v.n === vs.length ? ` (${Tx("latest")})` : "")])]) : ""}
+        </div>
       </div>
+      ${!rows.length ? `<p class="empty">${Tx("No games match these filters.")}</p>` : `
+      <div class="sv-card record" data-testid="record">
+        <div class="rec-top"><span><b class="win">${T.w}</b> ${Tx("wins")}</span><span class="muted small">${esc(Tx("{n} games", { n: T.n.toLocaleString(LOC) }))}</span><span>${Tx("losses")} <b class="loss">${T.n - T.w}</b></span></div>
+        <div class="rec-bar" aria-hidden="true"><i style="width:${(100 * T.w / T.n).toFixed(1)}%"></i></div>
+      </div>
+      <div class="tiles" data-testid="tiles">
+        ${tile(Tx("Win rate"), pct(T.w, T.n), esc(Tx("{w}W · {l}L", { w: T.w, l: T.n - T.w })))}
+        ${M.length ? tile(Tx("Match win rate"), pct(mw, M.length), esc(Tx("{w}–{l} in best-of-3", { w: mw, l: M.length - mw }))) : ""}
+        ${tile(Tx("On the play"), pct(T.fw, T.fn), T.fn ? esc(Tx("{w}W / {n}", { w: T.fw, n: T.fn })) : "", "play")}
+        ${tile(Tx("On the draw"), pct(T.dw, T.dn), T.dn ? esc(Tx("{w}W / {n}", { w: T.dw, n: T.dn })) : "", "draw")}
+        ${tile(Tx("Win streak"), st.cur, st.best > st.cur ? esc(Tx("Best: {n}", { n: st.best })) : st.best ? Tx("Your best") : "")}
+      </div>
+      ${fd ? `<div class="sv-card"><h3>${Tx("Play or draw")}</h3>
+        <div class="pd-legend small muted"><span><i class="dot play"></i>${esc(Tx("Went first: {n} games ({p})", { n: T.fn, p: pct(T.fn, fd) }))}</span><span>${esc(Tx("Went second: {n} games ({p})", { n: T.dn, p: pct(T.dn, fd) }))}<i class="dot draw"></i></span></div>
+        <div class="pd-bar" aria-hidden="true"><i class="play" style="width:${(100 * T.fn / fd).toFixed(1)}%"></i><i class="draw" style="width:${(100 * T.dn / fd).toFixed(1)}%"></i></div>
+        <div class="pd-two">
+          <div class="play"><span>${Tx("On the play")}</span><b>${pct(T.fw, T.fn)}</b><span class="wbar"><i style="width:${T.fn ? (100 * T.fw / T.fn).toFixed(0) : 0}%"></i></span></div>
+          <div class="draw"><span>${Tx("On the draw")}</span><b>${pct(T.dw, T.dn)}</b><span class="wbar"><i style="width:${T.dn ? (100 * T.dw / T.dn).toFixed(0) : 0}%"></i></span></div>
+        </div></div>` : ""}
+      ${mmr.length > 1 ? `<div class="sv-card" data-testid="mmr"><h3>${Tx("MMR")} <span class="muted small">· ${esc(mq === "—" ? Tx("Other games") : mq)}</span></h3>
+        <div class="mmr-nums"><span><b>${mmr.at(-1).v}</b> ${Tx("now")}</span><span><b>${Math.max(...mmr.map((p) => p.v))}</b> ${Tx("peak")}</span><span><b class="${mmr.at(-1).v - mmr[0].v >= 0 ? "win" : "loss"}">${mmr.at(-1).v - mmr[0].v >= 0 ? "+" : "−"}${Math.abs(mmr.at(-1).v - mmr[0].v)}</b> ${Tx("in this period")}</span></div>
+        ${mmrSvg(mmr)}</div>` : ""}
+      <div class="sv-two">
+        <div class="sv-card"><div class="h3row"><h3>${Tx("Games per day")}</h3><span class="ctl">${[7, 30, 90].map((d) => chip("perDay", d, Tx("{n}d", { n: d }))).join("")}</span></div>
+          ${perDay || `<p class="muted small">${Tx("No games in these days.")}</p>`}</div>
+        <div class="sv-card"><h3>${esc(Tx("Peak hours ({tz})", { tz: (Intl.DateTimeFormat().resolvedOptions().timeZone || "").replace(/_/g, " ") }))}</h3>${hoursSvg(rows)}</div>
+      </div>
+      <div class="legend small muted sv-leg"><span><i style="background:var(--win)"></i>${Tx("Wins")}</span><span><i style="background:var(--loss)"></i>${Tx("Losses")}</span></div>
       ${cost.length ? `<div class="cost ccost"><b>${Tx("Matchups costing you the most")}</b> <span class="muted small">${Tx("(8+ games; games lost beyond an even split)")}</span><ul>${cost.map((o) => `<li>${esc(Tx("vs {deck}: {w}–{l}, {p} won, {d} games below even", { deck: o.k, w: o.t.w, l: o.t.n - o.t.w, p: pct(o.t.w, o.t.n), d: o.t.n - 2 * o.t.w }))}</li>`).join("")}</ul></div>` : ""}
-      <h3>${Tx("Trend")}</h3>${trendSvg(rows) || `<p class="muted small">${Tx("Needs games in at least two months.")}</p>`}
-      ${sv.deck === "all" && mine.length > 1 ? `<h3>${Tx("Your decks")}</h3><table class="mt">${head(Tx("Your inks"))}${mine.map((x) => row(x, false)).join("")}</table>` : ""}
-      <h3>${Tx("Against each deck")}</h3><span class="muted small">${Tx("Tap a row to see those games. Faded rows: under 5 games.")}</span>
-      <table class="mt">${head(Tx("Opponent's inks"))}${opp.map((x) => row(x, true)).join("")}</table>`}
+      <div class="sv-card"><h3>${Tx("Against each deck")}</h3><span class="muted small">${Tx("Tap a row to see those games. Faded rows: under 5 games.")}</span>
+        <table class="mt">${head(Tx("Opponent's inks"))}${opp.map((x) => row(x, true)).join("")}</table></div>
+      ${matrixHtml(rows)}
+      ${sv.deck === "all" && mine.length > 1 ? `<div class="sv-card"><h3>${Tx("Your decks")}</h3><table class="mt">${head(Tx("Your inks"))}${mine.map((x) => row(x, false)).join("")}</table></div>` : ""}
+      ${versionsHtml(vs)}
+      <div class="sv-card"><h3>${Tx("Trend")}</h3>${trendSvg(rows) || `<p class="muted small">${Tx("Needs games in at least two months.")}</p>`}</div>`}
     </div>`;
     $("back")?.addEventListener("click", () => { showingStats = false; window.INKWELL_JOGOS_TAB?.(false); $("wrap").classList.remove("reading"); renderReview(); });
     el.querySelectorAll("[data-sv]").forEach((b) => b.addEventListener("click", () => {
-      const k = b.dataset.sv; sv[k] = k === "days" ? +b.dataset.v : b.dataset.v; renderStatsView();
+      const k = b.dataset.sv; sv[k] = k === "days" || k === "perDay" ? +b.dataset.v : b.dataset.v; renderStatsView();
     }));
+    $("svQueue")?.addEventListener("change", (e) => { sv.queue = e.target.value; renderStatsView(); });
+    $("svDeck")?.addEventListener("change", (e) => { sv.deck = e.target.value; sv.version = "all"; sv.openVer = null; renderStatsView(); });
+    $("svVer")?.addEventListener("change", (e) => { sv.version = e.target.value; renderStatsView(); });
+    el.querySelectorAll("[data-ver]").forEach((b) => b.addEventListener("click", () => { sv.openVer = sv.openVer === b.dataset.ver ? null : b.dataset.ver; renderStatsView(); }));
+    if (sv.openVer) fillVersion(vs);
     el.querySelectorAll("[data-opp]").forEach((tr) => {
       const go = () => { oppFilter = tr.dataset.opp; filter = "all"; showingStats = false; $("wrap").classList.remove("reading"); renderFilters(); renderList(); renderReview(); $("games").scrollIntoView({ block: "start" }); };
       tr.addEventListener("click", go);
