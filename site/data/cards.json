@@ -764,6 +764,44 @@
       ]
     },
     {
+      "card_id": "DLPC1-18-C2",
+      "set_code": "DLPC1",
+      "card_number": "18-C2",
+      "name_en": "Tinker Bell - Insistent Fairy (Disney Lorcana Challenge)",
+      "rarity": "P",
+      "color": "R",
+      "image_file": null,
+      "image_url": null,
+      "ink_cost": 2,
+      "ink_color": "Ruby",
+      "card_type": "Character",
+      "inkable": 1,
+      "classification": "Storyborn, Ally, Fairy",
+      "strength": 1,
+      "willpower": 1,
+      "lore": 1,
+      "ability_text": "Evasive (Only characters with Evasive can challenge this character.)\nPAY ATTENTION Whenever you play a character with 5 {s} or more, you may exert them to gain 2 lore.",
+      "tags": "character; evasive; lore-scaling",
+      "image_source": "",
+      "ability_text_raw": "Evasive (Only characters with Evasive can challenge\nthis character.)\nPAY ATTENTION Whenever you play a character with\n5 {s} or more, you may exert them to gain 2 lore.",
+      "abilities": [
+        {
+          "type": "keyword",
+          "name": "Evasive",
+          "text": "Evasive (Only characters with Evasive can challenge this character.)",
+          "reminder_text": "Only characters with Evasive can challenge this character.",
+          "ability_id": "DLPC1-18-C2-A1"
+        },
+        {
+          "type": "triggered",
+          "name": "PAY ATTENTION",
+          "text": "PAY ATTENTION Whenever you play a character with 5 {s} or more, you may exert them to gain 2 lore.",
+          "effect": "Whenever you play a character with 5 {s} or more, you may exert them to gain 2 lore.",
+          "ability_id": "DLPC1-18-C2-A2"
+        }
+      ]
+    },
+    {
       "card_id": "DLPC1-10-P1",
       "set_code": "DLPC1",
       "card_number": "10-P1",
