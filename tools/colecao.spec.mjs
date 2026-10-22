@@ -299,8 +299,21 @@ test('stocks: binder and home counts, move a card home, binder check counts only
   await page.locator('[data-bink="Amber"]').click();
   await page.locator('[data-bcost="2"]').click();   // Gurgi, LOR10-10
   const row = page.locator('[data-bcard="LOR10-10"]');
-  await expect(row.locator('[data-bq="LOR10-10:n:-1"] + output')).toHaveText('1');
-  await expect(row.locator('[data-testid="at-home"]')).toHaveText('3 em casa');
+  await expect(row.locator('[data-bn="binder-n"]')).toHaveText('1');
+  await expect(row.locator('[data-bn="home-n"]')).toHaveText('2');
+  await expect(row.locator('[data-bn="home-f"]')).toHaveText('1');
+  // + in the Casa column adds a card at home
+  await row.locator('[data-bq="LOR10-10:n:1:home"]').click();
+  await expect(row.locator('[data-bn="home-n"]')).toHaveText('3');
+  await expect.poll(() => rpc(calls, 'collection_change').at(-1)).toEqual({ p_profile: 'luiscredie', p_delta: [{ card_id: 'LOR10-10', qty: 1, foil: false }], p_home: [{ card_id: 'LOR10-10', qty: 1, foil: false }] });
+  // two separate marks per page; the binder mark keeps its old storage
+  await page.locator('#hCheck').click();
+  await expect(page.locator('#hCheck')).toHaveText('Casa conferida');
+  await expect(page.locator('#bCheck')).toHaveText('Fichário: marcar conferido');
+  await expect(page.locator('[data-bcost="2"]')).toHaveText('2⌂');
+  await page.locator('#bCheck').click();
+  await expect(page.locator('[data-bcost="2"]')).toHaveText('2✓⌂');
+  expect(await page.evaluate(() => Object.keys(localStorage).filter((k) => /checked/.test(k)).sort())).toEqual(['inkwell-binder-checked-v1-11111111-1111-4111-8111-111111111111', 'inkwell-home-checked-v1-11111111-1111-4111-8111-111111111111']);
 });
 
 test('stocks: the scanner adds to the chosen stock; without the table nothing changes', async ({ page }) => {
