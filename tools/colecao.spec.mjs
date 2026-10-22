@@ -238,3 +238,15 @@ test('a hand that shakes a little still gets the card', async ({ page }) => {
   await page.getByRole('button', { name: 'Escanear' }).click();
   await expect(page.locator('[data-testid="scan-last"]')).toContainText('Judy Hopps', { timeout: 15000 });
 });
+
+test('binder: a dual-ink card sits on its first ink pages, where the set numbers it', async ({ page }) => {
+  await setup(page);
+  await page.goto(BASE + '?conferir=1');
+  await page.locator('[data-bsec="core"]').click();
+  await expect(page.locator('[data-bink="Dual"]')).toHaveCount(0);
+  await page.locator('[data-bink="Amber"]').click();
+  await page.locator('[data-bcost="4"]').click();
+  const card = page.locator('[data-bcard="LOR13-27"]');   // Pocahontas & Meeko, Amber/Amethyst
+  await expect(card).toHaveCount(1);
+  await expect(card.locator('[data-testid="dual"]')).toHaveText('Amber / Amethyst');
+});
