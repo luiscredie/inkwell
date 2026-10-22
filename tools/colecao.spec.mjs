@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test';
 const BASE = new URL('colecao/', process.env.INKWELL_URL || 'http://localhost:8080/index.html').href;
 const ME = '11111111-1111-4111-8111-111111111111';
 
-async function setup(page, { collection = { 'LOR10-10': { n: 2, f: 0 } }, added = [], home = [] } = {}) {
+async function setup(page, { collection = { 'LOR10-10': { n: 2, f: 0 } }, added = [], home = [], failHome = false } = {}) {
   const calls = [];
   await page.addInitScript((me) => {
     localStorage.setItem('inkwell-lang', 'pt');
@@ -20,7 +20,7 @@ async function setup(page, { collection = { 'LOR10-10': { n: 2, f: 0 } }, added 
     if (path === 'inkwell_profiles') return json([{ profile: 'luiscredie', updated_at: '2026-10-20T10:00:00Z', collection }]);
     if (path === 'collection_added') return json(added);
     if (path === 'collection_home') return home === null ? route.fulfill({ status: 404, contentType: 'application/json', body: '{}' }) : json(home);
-    if (path === 'rpc/collection_change') return route.fulfill({ status: 204, body: '' });
+    if (path === 'rpc/collection_change') return failHome ? route.fulfill({ status: 400, contentType: 'application/json', body: '{"message":"x"}' }) : route.fulfill({ status: 204, body: '' });
     if (path === 'rpc/apply_collection_delta') return route.fulfill({ status: 204, body: '' });
     if (path === 'rpc/my_duels_sync') return json(null);
     return json([]);
@@ -347,4 +347,16 @@ test('scanner recognises the Tinker Bell Challenge promo (DLPC1-18-C2)', async (
   await expect(page.locator('[data-testid="scan-last"]')).toContainText('Tinker Bell', { timeout: 15000 });
   await confirmList(page, 1);
   await expect.poll(() => deltas(calls).map((d) => d.card_id)).toEqual(['DLPC1-18-C2']);
+});
+
+test('stocks: when a save fails, the card sheet goes back to the saved counts', async ({ page }) => {
+  await setup(page, { collection: { 'LOR8-136': { n: 0, f: 1 } }, home: [{ profile: 'luiscredie', card_id: 'LOR8-136', n: 0, f: 1 }], failHome: true });
+  await page.goto(BASE);
+  await page.locator('[data-card="LOR8-136"]').click();
+  const st = page.locator('[data-testid="stocks"]');
+  await expect(st.locator('[data-n="home-f"]')).toHaveText('1');
+  await st.locator('[data-d="f:-1:home"]').click();
+  await expect(st.locator('[data-n="home-f"]')).toHaveText('0');
+  await expect(page.locator('#toast')).toContainText('Não foi possível salvar');
+  await expect(st.locator('[data-n="home-f"]')).toHaveText('1');
 });

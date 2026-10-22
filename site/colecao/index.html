@@ -436,6 +436,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     return `<a class="list-row on-field" data-testid="card-br" href="${esc(BR.product_url.replace("{path}", e[1]))}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;margin-bottom:var(--sp-3)">
       <span class="t"><span>${esc(Tx("In Brazil from {p}", { p: money(e[0]) }))}</span><span class="meta">${esc(Tx("Lowest listing on MYP Cards, {d}", { d: new Date(BR.retrieved_at).toLocaleDateString(LOC, { day: "numeric", month: "short" }) }))}</span></span><i class="ic i-external"></i></a>`; };
   // ---------- one card ----------
+  let redrawSheet = null;   // the open card sheet redraws itself when a save fails and the counts go back
   let pendingTimer = null, pending = new Map();   // "id:kind" -> delta, sent after 600ms
   function openCard(id, from) {
     const c = BY.get(id), sh = $("cardSheet"); if (!c) return;
@@ -493,9 +494,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       $("mvCancel")?.addEventListener("click", () => { const back = `[data-mv="${mv.k}:${mv.to}"]`; mv = null; draw(); sh.querySelector(back)?.focus(); });
       $("mvOk")?.addEventListener("click", () => { const { k, to, qty } = mv; mv = null; move(id, k, qty, to); draw(); sh.querySelector(`[data-mv="${k}:${to}"]:not([disabled])`)?.focus(); });
     };
-    draw();
+    draw(); redrawSheet = () => { if (sh.open) { mv = null; draw(); } };
     openSheet(sh, from);
-    sh.addEventListener("close", () => renderAll(), { once: true });
+    sh.addEventListener("close", () => { redrawSheet = null; renderAll(); }, { once: true });
   }
   // place: where the copies are added or removed ("binder" or "home"). Lent copies are changed in Trocas.
   function change(id, kind, delta, quiet, place = "binder") {
@@ -548,7 +549,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
           const k = d.foil ? "f" : "n", e = p.collection[d.card_id], h = HOME.get(`${p.profile}|${d.card_id}`);
           if (e) e[k] = Math.max(0, e[k] - d.t); if (h) h[k] = Math.max(0, h[k] - d.h);
         }
-        toast(Tx("Couldn't save. Try again."), null, true); if ($("scan").open) scanSay(Tx("Couldn't save. Try again."), true); renderAll();
+        toast(Tx("Couldn't save. Try again."), null, true); if ($("scan").open) scanSay(Tx("Couldn't save. Try again."), true); renderAll(); redrawSheet?.();
       });
   }
   let toastTimer = null;
