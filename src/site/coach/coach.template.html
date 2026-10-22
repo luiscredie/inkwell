@@ -70,7 +70,7 @@ window.INKWELL_NO_STORE_MSG = "Your games appear here after you sign in.";
     "game {n}": "jogo {n}", "ended by {reason}": "terminou por {reason}",
     "lore": "lore", "concede": "concessão", "other": "outro motivo", "deck_out": "deck vazio", "time": "tempo", "unknown": "desconhecido",
     "Who can see this game": "Quem pode ver este jogo", "Private": "Privado", "Public game": "Jogo público", "Private game": "Jogo privado",
-    "Watch replay on duels.ink": "Ver replay no duels.ink",
+    "Watch replay on duels.ink": "Ver replay no duels.ink", "Watch the replay": "Assistir ao replay", "Hide replay": "Esconder replay", "Full screen": "Tela cheia", "Open in a new window": "Abrir em nova janela", "Replay on duels.ink": "Replay no duels.ink",
     "Sign in to comment.": "Entre para comentar.",
     "Lore by turn": "Lore por turno", "Game {n}": "Jogo {n}", "Match {w}–{l}": "Partida {w}–{l}", "Lore over time": "Lore ao longo do jogo",
     "Comment on the whole game": "Comentar o jogo todo", "Comment on the deck list": "Comentar a lista do deck", "Comment on this turn": "Comentar este turno",
@@ -602,6 +602,12 @@ textarea { width: 100%; min-height: 72px; resize: vertical; }
 .review .notice { color: var(--text-2); }
 .back { display: none; background: none; border: 0; padding: 0; font: inherit; font-size: var(--fs-small); font-weight: 600; cursor: pointer; justify-self: start; }
 
+.replay { background: var(--surface-1); border-radius: var(--r-lg); box-shadow: var(--e1); padding: var(--sp-2) var(--sp-3); }
+.rp-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.rp-frame { margin-top: var(--sp-2); aspect-ratio: 16 / 10; max-height: 72vh; width: 100%; border-radius: var(--r-md); overflow: hidden; background: #000; }
+.rp-frame iframe { border: 0; width: 100%; height: 100%; display: block; }
+@media (max-width: 600px) { .rp-frame { aspect-ratio: 3 / 4; } }
+.rp-frame:fullscreen { aspect-ratio: auto; max-height: none; border-radius: 0; }
 /* stats */
 .sv { display: grid; gap: var(--sp-2); }
 .sv > h2 { font-size: var(--fs-h2); }
@@ -979,6 +985,49 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
         <div class="row"><button type="button" class="btn ghost small" id="cancelC">${Tx("Cancel")}</button><button type="button" class="btn primary small" id="saveC">${Tx("Comment")}</button></div></div>` : "");
   }
 
+  // ---------- the duels.ink replay, played inside the page ----------
+  // The review redraws often (comments, games loading). Taking an iframe out of the page reloads it, so the
+  // player block stays where it is and only what is around it is replaced.
+  let rpBox = null, replayOpen = false;
+  try { replayOpen = localStorage.getItem("inkwell-replay-open") === "1"; } catch { /* storage off */ }
+  function replayBox(src) {
+    if (rpBox?.dataset.src === src) return rpBox;
+    const box = document.createElement("div");
+    box.className = "replay"; box.dataset.src = src; box.dataset.testid = "replay";
+    const draw = () => {
+      box.classList.toggle("open", replayOpen);
+      box.innerHTML = `<div class="rp-bar"><button type="button" class="btn ${replayOpen ? "ghost" : "primary"} small" data-rp="toggle" aria-expanded="${replayOpen}">${Tx(replayOpen ? "Hide replay" : "Watch the replay")}</button>
+        ${replayOpen ? `<button type="button" class="btn ghost small" data-rp="full">${Tx("Full screen")}</button>` : ""}
+        <a class="btn ghost small" href="${esc(src)}" target="_blank" rel="noopener" data-testid="replay-link">${Tx("Open in a new window")}</a></div>
+        ${replayOpen ? `<div class="rp-frame"><iframe src="${esc(src)}?embed=1&amp;autoplay=1" title="${esc(Tx("Replay on duels.ink"))}" allow="autoplay; fullscreen" allowfullscreen></iframe></div>` : ""}`;
+    };
+    box.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-rp]"); if (!b) return;
+      if (b.dataset.rp === "toggle") {
+        replayOpen = !replayOpen;
+        try { localStorage.setItem("inkwell-replay-open", replayOpen ? "1" : "0"); } catch { /* storage off */ }
+        draw();
+      } else {
+        const f = box.querySelector(".rp-frame"), go = f && (f.requestFullscreen || f.webkitRequestFullscreen);
+        if (go) go.call(f); else window.open(src, "_blank", "noopener");   // iPhone: no fullscreen for page elements
+      }
+    });
+    draw();
+    return (rpBox = box);
+  }
+  function setReviewHtml(el, html) {
+    const t = document.createElement("template"); t.innerHTML = html;
+    const slot = t.content.getElementById("rpSlot");
+    if (rpBox && rpBox.parentNode === el && slot?.dataset.src === rpBox.dataset.src) {
+      [...el.childNodes].forEach((n) => { if (n !== rpBox) n.remove(); });
+      const nodes = [...t.content.childNodes], i = nodes.indexOf(slot);
+      rpBox.before(...nodes.slice(0, i)); rpBox.after(...nodes.slice(i + 1));
+      return;
+    }
+    el.replaceChildren(t.content);
+    const s = $("rpSlot"); if (s) s.replaceWith(replayBox(s.dataset.src));
+  }
+
   async function renderReview() {
     if (showingStats && !current) { renderStatsView(); return; }
     const g = games.get(current);
@@ -994,6 +1043,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     const canComment = !!db && canWrite !== false && !!me?.id;
     const add = (key, label) => canComment ? `<button type="button" class="addc" data-anchor="${key}">${label}</button>` : "";
     const ev = log.event || {};
+    const rpSrc = log.source_ref?.replay_url && !/\.\.\.$/.test(log.source_ref.replay_url) ? replayViewer(log.source_ref.replay_url) : null;
     let html = `<button type="button" class="back" id="back">${Tx("Games")}</button>
       <div class="head">
         <span class="result ${s.result}"><span class="w ${s.result === "win" ? "win" : "loss"}">${Tx(s.result === "win" ? "Win" : "Loss")}</span> ${esc(s.my_lore)}–${esc(s.opp_lore)}</span>
@@ -1009,9 +1059,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       </div>
       <div class="rtools">
         ${isOwner && db?.audiences ? `<label class="small vissel">${Tx("Who can see this game")} <select id="visSel">${db.audiences().map((o) => `<option value="${esc(o.value)}" ${o.value === (g.doc.audience || "private") ? "selected" : ""}>${esc(o.label)}</option>`).join("")}</select></label>` : isOwner ? `<span class="vis" role="group" aria-label="${Tx("Who can see this game")}"><button type="button" data-vis="private" aria-pressed="${g.coll === "games"}">${Tx("Private")}</button><button type="button" data-vis="public" aria-pressed="${g.coll === "public_games"}">${Tx("Public (one game)")}</button></span>` : `<span class="muted small">${esc(g.doc.audience_label || Tx(g.coll === "public_games" ? "Public game" : "Private game"))}</span>`}
-        ${log.source_ref?.replay_url && !/\.\.\.$/.test(log.source_ref.replay_url) ? `<a class="btn ghost small" href="${esc(replayViewer(log.source_ref.replay_url))}" target="_blank" rel="noopener" data-testid="replay-link">${Tx("Watch replay on duels.ink")}</a>` : ""}
       </div>
       ${!db ? `<div class="notice">Comments need the shared store, which isn't available in this view. You can still read the game.</div>` : !me?.id ? `<div class="notice">${Tx("Sign in to comment.")}</div>` : canWrite === false ? `<div class="notice">You can read this game. Ask the owner to make you a Contributor to comment.</div>` : ""}
+      ${rpSrc ? `<div id="rpSlot" data-src="${esc(rpSrc)}"></div>` : ""}
       ${chartBlock(g, log, meSeat)}
       <div>${add("game", Tx("Comment on the whole game"))}${notesHtml("game", profilesMap)}</div>
       ${deck.length || isOwner ? `<details class="deck" ${!deck.length || deckNotice?.key === g.key ? "open" : ""}><summary>${g.doc.owner_name && g.doc.owner_name !== "You" ? esc(Tx("{name}'s deck", { name: g.doc.owner_name })) : Tx("Your deck")} (${deck.length ? Tx("{n} cards", { n: deck.reduce((n, e) => n + e.qty, 0) }) : Tx("no list yet")})</summary>
@@ -1035,7 +1085,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       }
       html += add(`t:${t.number}`, Tx("Comment on this turn")) + notesHtml(`t:${t.number}`, profilesMap) + `</section>`;
     }
-    el.innerHTML = html;
+    setReviewHtml(el, html);
     // names and comment bodies are other people's input: set as text
     el.querySelectorAll("[data-author]").forEach((n) => n.textContent = profilesMap[n.dataset.author]?.name || "Someone");
     const byId = new Map(notes.map((n) => [n.id, n]));
@@ -1528,6 +1578,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       for (const d of snap.docs) games.set(d.id, { key: d.id, coll, doc: d.data() });
       refreshNotes(); renderList();
       if (current && games.get(current)?.coll === coll) renderReview();
+      else if (showingStats && !current) renderStatsView();   // stats opened before the games arrived
     }, () => { $("games").innerHTML = `<p class="empty">${Tx("Couldn't load games. Reload the page to try again.")}</p>`; });
     listen("games"); listen("public_games");
     // Opened from the home feed: ?game=<id> opens that game once it's loaded.
