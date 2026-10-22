@@ -31,7 +31,7 @@ async function setup(page, { collection = { 'LOR10-10': { n: 2, f: 0 } }, added 
 test('binder check mode follows the binder order and saves changes', async ({ page }) => {
   const calls = await setup(page);
   await page.goto(BASE);
-  await page.getByRole('button', { name: 'Conferir fichário' }).click();
+  await page.getByRole('button', { name: 'Conferir estoque' }).click();
   await expect(page).toHaveURL(/conferir=1/);
   await expect(page.locator('[data-testid="binder-page"]')).toHaveText(/^Amber · custo \d$/);
   const names = await page.locator('.binder-row .t > span:first-child').allInnerTexts();
@@ -68,7 +68,7 @@ test('binder check mode follows the binder order and saves changes', async ({ pa
 
   await page.locator('#backColl').click();
   await expect(page).not.toHaveURL(/conferir/);
-  await expect(page.getByRole('button', { name: 'Conferir fichário' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Conferir estoque' })).toBeVisible();
 });
 
 // ---------- Escanear (card scanner) with a fake camera that shows one card image in the frame ----------
@@ -294,7 +294,7 @@ test('stocks: binder and home counts, move a card home, binder check counts only
   await expect.poll(() => rpc(calls, 'collection_change').at(-1)).toEqual({ p_profile: 'luiscredie', p_delta: [{ card_id: 'LOR10-10', qty: 1, foil: true }], p_home: [{ card_id: 'LOR10-10', qty: 1, foil: true }] });
   await page.keyboard.press('Escape');
   // Conferir fichário shows what is in the binder (3 normal − 2 at home = 1) and how many are at home
-  await page.getByRole('button', { name: 'Conferir fichário' }).click();
+  await page.getByRole('button', { name: 'Conferir estoque' }).click();
   await page.locator('[data-bsec="core"]').click();
   await page.locator('[data-bink="Amber"]').click();
   await page.locator('[data-bcost="2"]').click();   // Gurgi, LOR10-10
@@ -408,4 +408,24 @@ test('combo sale: add cards, keep each price, a lower total becomes the discount
   await page.locator('#aOk').click();
   await expect.poll(() => posts(calls, 'trades')).toEqual([{ person: 'Venda', traded_on: ymd(), cash_brl: -40, collection: 'applied', got: [],
     gave: [{ card_id: 'LOR10-10', qty: 1, foil: false, price: 10 }, { card_id: 'LOR13-12', qty: 2, foil: false, price: 20 }], note: 'Venda combo · desconto R$\u00a010,00' }]);
+});
+
+test('conferir estoque: pick a set; only its cards and pages; checked marks kept per set', async ({ page }) => {
+  await setup(page, { collection: { 'LOR10-10': { n: 2, f: 0 }, 'LOR13-12': { n: 3, f: 0 } } });
+  await page.goto(BASE);
+  await expect(page.locator('#openBinder')).toHaveText('Conferir estoque');
+  await page.locator('#openBinder').click();
+  await expect(page.locator('#title')).toHaveText('Conferir estoque');
+  await page.locator('[data-bsec="core"]').click();
+  await page.locator('[data-bink="Amber"]').click();
+  await page.locator('[data-bcost="2"]').click();
+  await expect(page.locator('[data-bcard="LOR10-10"]')).toHaveCount(1);   // Gurgi (set 10) and Pocahontas (set 13) share Amber · 2
+  await page.locator('#bSet').selectOption('LOR13');
+  await expect(page.locator('[data-bcard="LOR10-10"]')).toHaveCount(0);
+  await expect(page.locator('[data-bcard="LOR13-12"]')).toHaveCount(1);
+  expect(await page.locator('.binder-row').evaluateAll((r) => r.every((x) => x.dataset.bcard.startsWith('LOR13-')))).toBe(true);
+  await page.locator('#bCheck').click();   // checked for set 13 only
+  await expect(page.locator('[data-bcost="2"]')).toContainText('✓');
+  await page.locator('#bSet').selectOption('all');
+  await expect(page.locator('[data-bcost="2"]')).not.toContainText('✓');
 });
