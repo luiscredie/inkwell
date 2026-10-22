@@ -170,6 +170,8 @@ test('binder: rotated cards only in Infinity, reprints marked, tap shows the car
   await page.locator('[data-bink="Amber"]').click();
   await page.locator('[data-bcost="1"]').click();
   await expect(page.locator('[data-bcard="LOR7-41"]')).toHaveCount(1);
+  const w = await page.locator('[data-bcard="LOR7-41"] .thumb').evaluate((e) => e.getBoundingClientRect().width);
+  expect(w).toBeLessThan(60);   // small image in the row, at desktop size too
   await page.locator('[data-bopen="LOR7-41"]').click();
   await expect(page.locator('#cardSheet .thumb.big')).toBeVisible();
   await expect(page.locator('[data-testid="card-format"]')).toHaveText('Só no Infinito: não tem reimpressão em set do Core.');

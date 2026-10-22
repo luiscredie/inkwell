@@ -1388,7 +1388,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     <nav class="sections" aria-label="${T("Seções", "Sections")}">${NAV.map(([k, href, label, ic]) => `<a href="${href}"${cur(k)} data-iw="${k}"><i class="ic i-${ic}"></i>${label}</a>`).join("")}</nav>
     <div class="end">
       <a class="btn ghost counter-btn" href="../counter/" aria-label="${T("Abrir o Contador", "Open the Counter")}"><i class="ic i-counter"></i><span>${T("Contador", "Counter")}</span></a>
-      ${me ? `<button type="button" class="av-btn" id="iwAcct" aria-label="${T("Sua conta", "Your account")}" aria-haspopup="menu" aria-expanded="false"><span class="av" id="iwAv">${esc((me.email || "?")[0].toUpperCase())}</span></button>`
+      ${me ? `<button type="button" class="av-btn" id="iwAcct" aria-label="${T("Sua conta", "Your account")}" aria-haspopup="menu" aria-expanded="false"><span class="av" id="iwAv">${esc((me.email || "?")[0].toUpperCase())}</span><span class="count iw-badge" id="iwBadge" hidden></span></button>`
         : `<button type="button" class="btn ghost icon" id="iwLangBtn" aria-label="${T("Aparência e idioma", "Appearance and language")}" aria-haspopup="menu" aria-expanded="false"><i class="ic i-globe"></i></button>
            <button type="button" class="btn small" id="iwSignIn">${T("Entrar", "Sign in")}</button>`}
     </div></div>`;
@@ -1428,9 +1428,29 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
   });
   const langSeg = () => `<div class="menu-label">${T("Idioma", "Language")}</div>
     <div class="seg block" role="group" aria-label="${T("Idioma", "Language")}">${[["pt", "Português"], ["en", "English"]].map(([k, l]) => `<button type="button" data-lang-pick="${k}" aria-pressed="${k === lang}">${l}</button>`).join("")}</div>`;
-  let profileName = "", syncAgo = "", isAdmin = false;
+  let profileName = "", syncAgo = "", isAdmin = false, news = null;
+  // Notices: friend requests, recados waiting for approval, new posts in your communities (supabase/my_account.sql my_home).
+  // "New" posts are the ones after you last opened Início (kept per account in this browser).
+  const SEEN_KEY = me ? `inkwell-seen-${me.id}` : "";
+  const seenAt = () => { try { return Date.parse(localStorage.getItem(SEEN_KEY) || "") || 0; } catch { return 0; } };
+  window.INKWELL_MARK_SEEN = () => { try { localStorage.setItem(SEEN_KEY, new Date().toISOString()); } catch { /* */ } if (news) { news.posts = 0; showNews(); } };
+  function showNews() {
+    const b = $("iwBadge"); if (!b || !news) return;
+    const n = news.requests + news.recados + news.posts;
+    b.hidden = !n; b.textContent = n > 9 ? "9+" : String(n);
+    $("iwAcct")?.setAttribute("aria-label", n ? T(`Sua conta · ${n} novidades`, `Your account · ${n} new`) : T("Sua conta", "Your account"));
+  }
+  const newsMenu = () => {
+    if (!news || !(news.requests + news.recados + news.posts)) return "";
+    const item = (href, ic, text, n) => (n ? `<a class="menu-item" role="menuitem" href="${href}"><i class="ic i-${ic}"></i>${text}<span class="trail"><span class="count">${n}</span></span></a>` : "");
+    return `<div class="menu-sep"></div><div class="menu-label">${T("Novidades", "New for you")}</div>
+      ${item("../feed/#amigos", "user-plus", news.requests === 1 ? T("Pedido de amizade", "Friend request") : T("Pedidos de amizade", "Friend requests"), news.requests)}
+      ${item("../perfil/?editar=1#recados", "comment", news.recados === 1 ? T("Recado para aprovar", "Recado to approve") : T("Recados para aprovar", "Recados to approve"), news.recados)}
+      ${item("../feed/", "board", T("Mensagens nas comunidades", "Community messages"), news.posts)}`;
+  };
   $("iwAcct")?.addEventListener("click", (e) => openMenu(e.currentTarget, `
     <div class="menu-head"><span class="av lg">${esc((profileName || me.email || "?")[0].toUpperCase())}</span><div class="t"><b>${esc(profileName || T("Sua conta", "Your account"))}</b><div class="small">${esc(me.email || "")}</div></div></div>
+    ${newsMenu()}
     <div class="menu-sep"></div>
     <a class="menu-item" role="menuitem" href="../perfil/?editar=1"><i class="ic i-users"></i>${T("Meu Inkwell", "My Inkwell")}</a>
     <a class="menu-item" role="menuitem" href="../comunidades/"><i class="ic i-board"></i>${T("Comunidades", "Communities")}</a>
@@ -1533,6 +1553,15 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       .catch(() => CLOUD.api(`profiles?user_id=eq.${me.id}&select=display_name`))
       .then((r) => { if (r) profileName = r?.[0]?.display_name || ""; if (profileName) $("iwAv").textContent = profileName.trim()[0].toUpperCase(); })
       .catch(() => {});
+    CLOUD.api("rpc/my_home", { method: "POST", body: {} }).then((h) => {
+      if (!h) return;
+      let since = seenAt();
+      if (!since) { window.INKWELL_MARK_SEEN(); since = Date.now(); }   // first visit: only what comes after counts
+      news = { requests: (h.friend_requests || []).length, recados: +h.recados_waiting || 0,
+        posts: (h.community_posts || []).filter((p) => !p.mine && Date.parse(p.at) > since).length };
+      if (page === "feed") news.posts = 0;   // Início shows them in "Para você"
+      showNews();
+    }).catch(() => {});
     // an invite link opened before signing in (perfil/?convite=…): accept it on whichever page the sign-in lands
     let inv = null; try { inv = localStorage.getItem("inkwell-invite"); } catch { /* */ }
     if (inv && page !== "profile") {

@@ -203,6 +203,9 @@ img, svg { display: block; max-width: 100%; }
 .av-btn .av { width: 32px; height: 32px; font-size: .85rem; box-shadow: 0 0 0 1px var(--line-strong); transition: box-shadow var(--t-med) var(--ease); }
 .av-btn:hover .av, .av-btn[aria-expanded="true"] .av { box-shadow: 0 0 0 2px var(--text-2); }
 .av-btn:focus-visible { border-radius: 50%; }
+.av-btn { position: relative; }
+.av-btn .iw-badge { position: absolute; top: -2px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px; font-size: 11px; box-shadow: 0 0 0 2px var(--bar, var(--bg)); }
+.av-btn .iw-badge[hidden] { display: none; }
 
 .tabbar { display: none; }
 @media (max-width: 760px) {

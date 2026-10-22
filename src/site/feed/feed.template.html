@@ -467,6 +467,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       ${(h.recados_new || []).filter(Boolean).length ? `<div class="fy-posts">${h.recados_new.filter(Boolean).map((r) => `<a class="fy-post" href="../perfil/?editar=1"><span class="fy-av" style="${art(r.avatar)}"></span><span><span class="small"><b>${esc(r.name || Tx("Someone"))}</b> <span class="faint">${Tx("left you a recado")} · ${esc(when(r.at))}</span></span><p>${esc(r.body)}</p></span></a>`).join("")}</div>` : ""}
       ${posts.length ? `<div class="fy-posts" data-testid="fy-posts">${posts.slice(0, 4).map((p) => `<a class="fy-post" href="../comunidades/?c=${encodeURIComponent(p.slug)}"><span class="fy-av" style="${art(p.avatar)}"></span><span><span class="small"><b>${esc(p.name || Tx("Someone"))}</b> <span class="faint">${Tx("in")} ${esc(p.community)} · ${esc(when(p.at))}</span></span><p>${esc(p.body)}</p></span></a>`).join("")}</div>` : ""}
       ${!tiles.length && !posts.length && !(h.recados_new || []).length ? `<p class="small muted" style="margin:0">${Tx("All caught up.")}</p>` : ""}</section>`;
+    window.INKWELL_MARK_SEEN?.();   // the community messages are on screen now
     $("fyReqs")?.addEventListener("click", (e) => { e.preventDefault(); if (phone()) $("openFriends").click(); else { $("findPeople")?.scrollIntoView({ block: "center" }); $("findPeople")?.focus(); } });
   }
 

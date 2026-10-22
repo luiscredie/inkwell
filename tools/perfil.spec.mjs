@@ -264,3 +264,19 @@ test('terms and privacy page, linked from the sign-in sheet', async ({ page }) =
   await expect(page.locator('#app')).toContainText('18 anos ou mais');
   await expect(page.locator('#app a[href="mailto:inkwell.lorcana@gmail.com"]')).toHaveCount(1);
 });
+
+test('notices: a count on the avatar and the list in the menu; Início marks messages seen', async ({ page }) => {
+  await setup(page, { mine: { display_name: 'Luís' } });
+  await page.addInitScript((me) => { if (!sessionStorage.getItem('seeded')) { localStorage.setItem(`inkwell-seen-${me}`, '2026-10-01T00:00:00Z'); sessionStorage.setItem('seeded', '1'); } }, ME);
+  await page.goto(url('perfil/?u=rafa_exemplo'));
+  await expect(page.locator('#iwBadge')).toHaveText('4');   // 1 request + 2 recados + 1 new community message
+  await page.locator('#iwAcct').click();
+  const menu = page.locator('.menu');
+  await expect(menu).toContainText('Pedido de amizade');
+  await expect(menu).toContainText('Recados para aprovar');
+  await expect(menu).toContainText('Mensagens nas comunidades');
+  await page.goto(url('feed/'));
+  await expect(page.locator('[data-testid="fy-posts"]')).toBeVisible();
+  await page.goto(url('perfil/?u=rafa_exemplo'));
+  await expect(page.locator('#iwBadge')).toHaveText('3');   // the message was seen on Início
+});

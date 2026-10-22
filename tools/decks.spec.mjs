@@ -86,6 +86,9 @@ test('deck detail: list, analysis, missing with friends and board, games', async
   await expect(page.locator('[data-testid="deck-stats"]')).toContainText('60/60');
   await expect(page.locator('.dl-row').first()).toBeVisible();
   await expect(page.locator('.dl-row', { hasText: 'Baloo' })).toContainText('falta 2');
+  const img = page.locator('.dl-row', { hasText: 'Baloo' }).locator('.thumb img');   // each card in the list shows its picture
+  await expect(img).toHaveAttribute('src', /lorcana-card-images\//);
+  expect(await page.locator('.dl-row .thumb').first().evaluate((e) => e.getBoundingClientRect().width)).toBeLessThan(40);
 
   await page.getByRole('tab', { name: 'Análise' }).click();
   await expect(page).toHaveURL(/tab=analysis/);
