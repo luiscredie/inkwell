@@ -40,6 +40,7 @@ test('a best-of-3 shows one lore line per game, and each opens', async ({ page }
     if (path === 'rpc/my_profile') return json({ display_name: 'Luís', adult: true });
     return json(path.startsWith('rpc/') ? null : []);
   });
+  await page.route('https://duels.ink/**', (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<p>replay</p>' }));
   await page.goto(url('coach/?game=a2'));
   const charts = page.locator('[data-testid="match-charts"] .mgame');
   await expect(charts).toHaveCount(3);
@@ -47,6 +48,16 @@ test('a best-of-3 shows one lore line per game, and each opens', async ({ page }
   await expect(page.locator('[data-testid="match-charts"] .legend')).toContainText('Partida 2–1');
   await expect(charts.nth(1)).toHaveClass(/cur/);
   await expect(page.locator('[data-testid="replay-link"]')).toHaveAttribute('href', 'https://duels.ink/replay/a2-r');
+  // the replay plays inside the page, above the chart, and survives the review redrawing
+  await page.getByRole('button', { name: 'Assistir ao replay' }).click();
+  const frame = page.locator('[data-testid="replay"] iframe');
+  await expect(frame).toHaveAttribute('src', 'https://duels.ink/replay/a2-r?embed=1&autoplay=1');
+  await frame.evaluate((f) => { f.dataset.mark = 'same'; });
+  await page.locator('.game[data-k="a2"]').click();          // redraws this game's review
+  await expect(page.locator('[data-testid="match-charts"] .mgame')).toHaveCount(3);
+  await expect(frame).toHaveAttribute('data-mark', 'same');
+  expect(await page.evaluate(() => { const r = document.querySelector('[data-testid="replay"]'); return !!(r.compareDocumentPosition(document.querySelector('[data-testid="match-charts"]')) & Node.DOCUMENT_POSITION_FOLLOWING); })).toBe(true);
+  await expect(page.getByRole('button', { name: 'Tela cheia' })).toBeVisible();
   await charts.nth(0).locator('[data-open]').click();
   await expect(page.locator('#review .head')).toContainText('jogo 1');
   await expect(page.locator('[data-testid="match-charts"] .mgame').nth(0)).toHaveClass(/cur/);
