@@ -262,4 +262,5 @@ test('terms and privacy page, linked from the sign-in sheet', async ({ page }) =
   await expect(page.locator('h1')).toHaveText('Termos e privacidade');
   await expect(page.locator('#app')).toContainText('Baixar meus dados');
   await expect(page.locator('#app')).toContainText('18 anos ou mais');
+  await expect(page.locator('#app a[href="mailto:inkwell.lorcana@gmail.com"]')).toHaveCount(1);
 });

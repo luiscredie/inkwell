@@ -129,7 +129,7 @@ window.INKWELL_CLOUD = (() => {
   let lang = "pt";
   try { lang = localStorage.getItem("inkwell-lang") || ((navigator.language || "pt").toLowerCase().startsWith("en") ? "en" : "pt"); } catch { /* */ }
   // Contact for privacy requests and removals. Empty: the page points to the report button.
-  const CONTACT = "";
+  const CONTACT = "inkwell.lorcana@gmail.com";
   const VERSION = { pt: "Versão 1 · em vigor desde 21 de outubro de 2026", en: "Version 1 · in effect since 21 October 2026" };
   const contact = (pt) => CONTACT ? (pt ? `pelo e-mail <a href="mailto:${CONTACT}">${CONTACT}</a>` : `by e-mail at <a href="mailto:${CONTACT}">${CONTACT}</a>`)
     : (pt ? "pelo botão <b>Denunciar</b> em qualquer perfil ou comunidade" : "with the <b>Report</b> button on any profile or community");
