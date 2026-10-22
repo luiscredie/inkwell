@@ -142,7 +142,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const split = (name) => { const i = name.indexOf(" - "); return i > 0 ? [name.slice(0, i), name.slice(i + 3)] : [name, ""]; };
 
   // ---------- catalog ----------
-  const SETS = CARD_INDEX?.sets || [];
+  // Main sets by number (1, 2 … 14), then Illumineer's Quest (Q1, Q2), then the rest (promos, D100, D23) as the catalog has them
+  const setRank = (code, i) => { const m = /^LOR(\d+)$/.exec(code) || []; const q = /^Q(\d+)$/.exec(code) || []; return m[1] ? +m[1] : q[1] ? 100 + +q[1] : 200 + i; };
+  const SETS = (CARD_INDEX?.sets || []).map((x, i) => ({ ...x, rank: setRank(x.code, i) })).sort((a, b) => a.rank - b.rank);
   const setName = (code) => { const s = SETS.find((x) => x.code === code); return s ? (lang === "pt" && s.name_pt) || s.name_en || code : code; };
   const CARDS = (CARD_INDEX?.cards || []).map(([id, name, cost, type, ink, rarity, set, num, img]) => ({ id, name, cost, type, ink, rarity, set, num, img, k: norm(`${name} ${set} ${num}`) }));
   const BY = new Map(CARDS.map((c) => [c.id, c]));

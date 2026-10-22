@@ -171,7 +171,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const inksOf = (c) => String(c.ink || "").split(/[,\/]\s*/).map((x) => x.trim()).filter(Boolean);
 
   // ---------- catalog ----------
-  const SETS = CARD_INDEX?.sets || [];
+  // Main sets by number (1, 2 … 14), then Illumineer's Quest, then the rest as the catalog has them
+  const setRank = (code, i) => { const m = /^LOR(\d+)$/.exec(code) || []; const q = /^Q(\d+)$/.exec(code) || []; return m[1] ? +m[1] : q[1] ? 100 + +q[1] : 200 + i; };
+  const SETS = (CARD_INDEX?.sets || []).map((x, i) => ({ ...x, rank: setRank(x.code, i) })).sort((a, b) => a.rank - b.rank);
   const setName = (code) => { const s = SETS.find((x) => x.code === code); return s ? (lang === "pt" && s.name_pt) || s.name_en || code : code; };
   const CARDS = (CARD_INDEX?.cards || []).map(([id, name, cost, type, ink, rarity, set, num, img]) => ({ id, name: name || id, cost, type, ink, rarity, set, num, img, k: norm(`${name} ${set} ${num}`) }));
   const BY = new Map(CARDS.map((c) => [c.id, c]));

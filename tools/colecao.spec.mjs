@@ -429,3 +429,13 @@ test('conferir estoque: pick a set; only its cards and pages; checked marks kept
   await page.locator('#bSet').selectOption('all');
   await expect(page.locator('[data-bcost="2"]')).not.toContainText('✓');
 });
+
+test('sets are listed by set number', async ({ page }) => {
+  await setup(page);
+  await page.goto(BASE + '?conferir=1');
+  const codes = await page.locator('#bSet option').evaluateAll((o) => o.map((x) => x.value).filter((v) => v !== 'all'));
+  const main = codes.filter((c) => /^LOR\d+$/.test(c)).map((c) => +c.slice(3));
+  expect(main).toEqual([...main].sort((a, b) => a - b));
+  expect(codes.slice(0, 3)).toEqual(['LOR1', 'LOR2', 'LOR3']);
+  expect(codes.indexOf('LOR14')).toBeLessThan(codes.indexOf('Q1'));
+});
