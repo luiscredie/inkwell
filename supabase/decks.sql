@@ -25,7 +25,9 @@ begin
   end loop;
   if p_deck ? 'colors' and (jsonb_typeof(p_deck->'colors') <> 'array' or jsonb_array_length(p_deck->'colors') > 3) then raise exception 'bad colors'; end if;
   if length(coalesce(p_deck->>'notes', '')) > 4000 then raise exception 'bad notes'; end if;
-  if exists (select 1 from jsonb_object_keys(p_deck) fk where fk not in ('id','name','format','colors','cards','notes','targetCopies','portfolioPriority')) then raise exception 'unknown deck field'; end if;
+  if exists (select 1 from jsonb_object_keys(p_deck) fk where fk not in ('id','name','format','colors','cards','notes','targetCopies','portfolioPriority','meta')) then raise exception 'unknown deck field'; end if;
+  -- meta: the set whose metagame the deck is for (LOR12, LOR13, …); null clears it
+  if p_deck ? 'meta' and jsonb_typeof(p_deck->'meta') <> 'null' and coalesce(p_deck->>'meta', '') !~ '^LOR[0-9]{1,2}$' then raise exception 'bad meta'; end if;
   if p_deck ? 'targetCopies' and (jsonb_typeof(p_deck->'targetCopies') <> 'number' or (p_deck->>'targetCopies')::numeric not in (0,1,2,3,4,5,6,7,8,9,10)) then raise exception 'bad targetCopies'; end if;
   if p_deck ? 'portfolioPriority' and (jsonb_typeof(p_deck->'portfolioPriority') <> 'number' or abs((p_deck->>'portfolioPriority')::numeric) > 999) then raise exception 'bad priority'; end if;
 
