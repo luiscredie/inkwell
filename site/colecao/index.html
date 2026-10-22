@@ -696,7 +696,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   // ---------- conferir fichário: Core first, then Infinity; ink, cost, name (Luis's binder order) ----------
   let CORE_SETS = ["LOR9", "LOR10", "LOR11", "LOR12", "LOR13", "LOR14", "Q2", "DLPC2"];   // fallback; ../data/legality.json wins (same file as Decks and the Inkwell app)
   fetch("../data/legality.json").then((r) => (r.ok ? r.json() : null)).then((l) => { const ls = l?.formats?.core?.legal_sets; if (Array.isArray(ls) && ls.length) { CORE_SETS = ls; PAGES = null; if (binderOn() && profiles.length) renderBinder(); } }).catch(() => {});
-  const nkey = (n) => String(n || "").toLowerCase().replace(/\s*\(.*?\)\s*/g, "").trim();
+  // Same card name however it's typed: "–", "‐" or "-", "’" or "'", accents, spacing; "(Enchanted)" and the like ignored
+  const nkey = (n) => String(n || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s*\(.*?\)\s*/g, " ").replace(/[^a-z0-9]+/g, " ").trim();
   const BYNAME = new Map(); for (const c of CARDS) { const k = nkey(c.name); (BYNAME.get(k) || BYNAME.set(k, []).get(k)).push(c); }
   function formatLine(c) {   // why a card counts as Core (its own set, or a reprint) or only Infinity
     if (CORE_SETS.includes(c.set)) return Tx("Legal in Core.");
