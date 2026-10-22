@@ -147,7 +147,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Sort": "Ordenar", "Recently played": "Jogados recentemente", "Win rate": "Vitórias", "Name": "Nome",
     "{n} decks": "{n} decks", "{n} deck": "{n} deck", "{n} ready to play": "{n} prontos para jogar", "{n} ready to play_1": "{n} pronto para jogar",
     "{a}/{b} cards": "{a}/{b} cartas", "{p}% in your collection": "{p}% na coleção", "{n} games": "{n} jogos", "{n} game": "{n} jogo", "no games": "sem jogos",
-    "complete": "completo", "needs cards": "precisa montar", "list: 1 card short": "lista: falta 1 carta", "1 missing from your collection": "falta 1 na coleção", "{n} missing from your collection": "faltam {n} na coleção", "list: {n} cards short": "lista: faltam {n} cartas", "A deck needs at least {n} cards.": "Um deck precisa de pelo menos {n} cartas.", "missing {v}": "faltam {v}", "not legal": "fora do formato",
+    "complete": "completo", "needs cards": "precisa montar", "Import list": "Importar lista", "Import list into {d}": "Importar lista para {d}", "Replace the list": "Substituir a lista", "The pasted list replaces the {n} cards of {d}. You can undo it from the notice.": "A lista colada substitui as {n} cartas de {d}. Dá para desfazer pelo aviso.", "Meta": "Meta", "Set {n}": "Set {n}", "No meta": "Sem meta", "Automatic ({s})": "Automático ({s})", "Meta saved": "Meta salvo", "Meta kept on this device. To save it with the deck, run supabase/decks.sql again.": "Meta guardado neste aparelho. Para salvar junto com o deck, rode de novo o supabase/decks.sql.", "No decks with these filters.": "Nenhum deck com estes filtros.", "list: 1 card short": "lista: falta 1 carta", "1 missing from your collection": "falta 1 na coleção", "{n} missing from your collection": "faltam {n} na coleção", "list: {n} cards short": "lista: faltam {n} cartas", "A deck needs at least {n} cards.": "Um deck precisa de pelo menos {n} cartas.", "missing {v}": "faltam {v}", "not legal": "fora do formato",
     "Sign in to see your decks": "Entre para ver seus decks", "Use your e-mail. We send a 6-digit code, no password.": "Use seu e-mail. Mandamos um código de 6 dígitos, sem senha.", "Sign in": "Entrar",
     "Couldn't load your decks.": "Não foi possível carregar seus decks.", "Check your connection and try again.": "Confira a internet e tente de novo.", "Try again": "Tentar de novo",
     "No decks yet": "Nenhum deck ainda", "Start one from scratch or paste a list you already have.": "Comece um do zero ou cole uma lista que você já tem.",
@@ -309,11 +309,20 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const me = CLOUD?.user();
   let profiles = [], profileName = null, games = [], listings = [], friends = new Set(), names = new Map(), gamesOk = true;
   const VIEW_KEY = "inkwell-decks-view-v1";
-  let view = { fmt: "all", sort: "recent" };
+  let view = { fmt: "all", sort: "recent", meta: "all" };
   try { view = { ...view, ...JSON.parse(localStorage.getItem(VIEW_KEY) || "{}") }; } catch { /* */ }
   const saveView = () => { try { localStorage.setItem(VIEW_KEY, JSON.stringify(view)); } catch { /* */ } };
   const prof = () => profiles.find((p) => p.profile === profileName) || profiles[0] || null;
   const decks = () => prof()?.decks || [];
+  // Meta: the set whose metagame the deck is for (LOR12, LOR13, LOR14…). Chosen on the deck page and saved with the deck
+  // (supabase/decks.sql accepts "meta"); a copy stays in this browser in case the database doesn't take it yet.
+  // Not chosen: the newest main set among the deck's cards.
+  const META_KEY = "inkwell-deck-meta-v1";
+  let localMeta = {}; try { localMeta = JSON.parse(localStorage.getItem(META_KEY) || "{}"); } catch { /* */ }
+  const setNo = (code) => +(/^LOR(\d+)$/.exec(code || "") || [])[1] || 0;
+  const autoMeta = (d) => { let n = 0; for (const id of Object.keys(d.cards || {})) n = Math.max(n, setNo(BY.get(id)?.set)); return n ? `LOR${n}` : ""; };
+  const metaOf = (d) => d.meta || localMeta[d.id] || autoMeta(d);
+  const metaLabel = (code) => (code ? Tx("Set {n}", { n: setNo(code) }) : Tx("No meta"));
   const coll = () => prof()?.collection || {};
   const ownedName = (c) => { let n = 0; const col = coll(); for (const p of printings(c)) { const e = col[p.id]; if (e) n += (+e.n || 0) + (+e.f || 0); } return n; };
   let editing = false;
@@ -425,7 +434,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
 
   function renderList() {
     const all = decks().map((d) => ({ d, m: measure(d) }));
-    const shown = all.filter(({ d }) => view.fmt === "all" || (d.format || "core") === view.fmt);
+    const metas = [...new Set(all.map(({ d }) => metaOf(d)).filter(Boolean))].sort((a, b) => setNo(b) - setNo(a));
+    if (view.meta !== "all" && !metas.includes(view.meta)) view.meta = "all";
+    const shown = all.filter(({ d }) => (view.fmt === "all" || (d.format || "core") === view.fmt) && (view.meta === "all" || metaOf(d) === view.meta));
     const when = ({ d, m }) => m.last || d.updated_at || d.created_at || "";
     shown.sort(view.sort === "name" ? (a, b) => a.d.name.localeCompare(b.d.name) : view.sort === "wins" ? (a, b) => (b.m.wr ?? -1) - (a.m.wr ?? -1) || b.m.games.length - a.m.games.length
       : (a, b) => String(when(b)).localeCompare(String(when(a))));
@@ -440,19 +451,21 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       const status = m.total < MIN ? `<span class="tag warn" title="${esc(Tx("A deck needs at least {n} cards.", { n: MIN }))}">${esc(Tx(MIN - m.total === 1 ? "list: 1 card short" : "list: {n} cards short", { n: MIN - m.total }))}</span>` : m.issues.length ? `<span class="tag late">${Tx("not legal")}</span>`
         : m.missingN ? `<span class="tag">${esc(Tx("missing {v}", { v: money(m.missingValue) }))}</span>` : `<span class="tag match">${Tx("complete")}</span>`;
       return `<a class="list-row deck-row" href="?deck=${encodeURIComponent(d.id)}" data-deck="${esc(d.id)}">${dots(deckInks(d, m), "lg pair")}
-        <span class="t"><span>${esc(d.name)}</span><span class="meta">${esc([fmtName(d.format), Tx("{a}/{b} cards", { a: m.total, b: MIN }), m.inColl != null ? Tx("{p}% in your collection", { p: m.inColl }) : "", m.missingN ? Tx(m.missingN === 1 ? "1 missing from your collection" : "{n} missing from your collection", { n: m.missingN }) : ""].filter(Boolean).join(" · "))}</span>
+        <span class="t"><span>${esc(d.name)}</span><span class="meta">${esc([fmtName(d.format), metaOf(d) ? metaLabel(metaOf(d)) : "", Tx("{a}/{b} cards", { a: m.total, b: MIN }), m.inColl != null ? Tx("{p}% in your collection", { p: m.inColl }) : "", m.missingN ? Tx(m.missingN === 1 ? "1 missing from your collection" : "{n} missing from your collection", { n: m.missingN }) : ""].filter(Boolean).join(" · "))}</span>
         <span class="meter${m.inColl === 100 ? " full" : ""}" style="--v:${m.inColl || 0}%;margin-top:8px;max-width:180px"><i></i></span></span>
         <span class="trail"><b class="num">${m.wr != null ? m.wr + "%" : "—"}</b><span class="micro muted">${esc(m.games.length ? Tx(m.games.length === 1 ? "{n} game" : "{n} games", { n: m.games.length }) : Tx("no games"))}</span>${status}</span></a>`;
     };
     $("app").innerHTML = `${head}
       <div class="row between" style="margin-bottom:var(--sp-3)"><div class="seg" role="group" aria-label="${Tx("Format")}">${[["all", "All"], ["core", "Core"], ["infinity", "Infinity"]].map(([k, l]) => `<button type="button" data-fmt="${k}" aria-pressed="${view.fmt === k}">${Tx(l)}</button>`).join("")}</div>
+      ${metas.length > 1 ? `<label class="small svmeta">${Tx("Meta")} <select class="inline" id="metaF" data-testid="meta-filter"><option value="all">${Tx("All")}</option>${metas.map((x) => `<option value="${esc(x)}" ${view.meta === x ? "selected" : ""}>${esc(metaLabel(x))}</option>`).join("")}</select></label>` : ""}
       <select class="inline" id="sort" aria-label="${Tx("Sort")}">${[["recent", "Recently played"], ["wins", "Win rate"], ["name", "Name"]].map(([k, l]) => `<option value="${k}" ${view.sort === k ? "selected" : ""}>${Tx(l)}</option>`).join("")}</select></div>
       ${planNotice()}
-      ${shown.length ? `<div class="list" id="deckList" data-testid="deck-list">${shown.map(row).join("")}</div>` : emptyBox("search", Tx("No decks in this format."), "")}
+      ${shown.length ? `<div class="list" id="deckList" data-testid="deck-list">${shown.map(row).join("")}</div>` : emptyBox("search", Tx(view.meta !== "all" ? "No decks with these filters." : "No decks in this format."), "")}
       ${pricesDate ? `<p class="small faint" style="margin-top:var(--sp-4)">${esc(Tx("Prices: {s}, {d}", { s: priceSrc, d: dateFmt(pricesDate) }))}</p>` : ""}`;
     wireHead();
     document.querySelectorAll("[data-fmt]").forEach((b) => b.onclick = () => { view.fmt = b.dataset.fmt; saveView(); render(); });
     $("sort").onchange = (e) => { view.sort = e.target.value; saveView(); render(); };
+    $("metaF")?.addEventListener("change", (e) => { view.meta = e.target.value; saveView(); render(); });
     $("deckList")?.addEventListener("click", (e) => { const a = e.target.closest("[data-deck]"); if (!a || e.metaKey || e.ctrlKey) return; e.preventDefault(); go(a.dataset.deck, "list"); });
   }
   function wireHead() {
@@ -474,7 +487,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const keep = document.activeElement?.id, caret = document.activeElement?.selectionStart;
     const when = d.updated_at ? Tx("updated {d}", { d: dateFmt(d.updated_at) }) : d.created_at ? Tx("created {d}", { d: dateFmt(d.created_at) }) : "";
     const tabs = [["list", "List"], ["analysis", "Analysis"], ["missing", "Missing", m.missingN], ["games", "Games", 0], ["plan", "Plan"]];
-    $("app").innerHTML = `<div class="page-head"><div>${back}<h1 id="title">${esc(d.name)}</h1><p class="sub">${dots(inks)}${esc([fmtName(d.format), when].filter(Boolean).join(" · "))}</p></div>
+    $("app").innerHTML = `<div class="page-head"><div>${back}<h1 id="title">${esc(d.name)}</h1><p class="sub">${dots(inks)}${esc([fmtName(d.format), when].filter(Boolean).join(" · "))}</p>
+        <label class="small deckmeta">${Tx("Meta")} <select class="inline" id="metaSel" data-testid="deck-meta">${(() => { const top = Math.max(14, ...CARDS.map((c) => setNo(c.set))), chosen = d.meta || localMeta[d.id] || "", auto = autoMeta(d);
+          return `<option value="" ${chosen ? "" : "selected"}>${esc(auto ? Tx("Automatic ({s})", { s: metaLabel(auto) }) : Tx("No meta"))}</option>` + Array.from({ length: top }, (_, i) => `LOR${top - i}`).map((x) => `<option value="${x}" ${chosen === x ? "selected" : ""}>${esc(metaLabel(x))}</option>`).join(""); })()}</select></label></div>
         <div class="actions"><span class="more-wrap"><button type="button" class="btn icon" id="more" aria-haspopup="menu" aria-expanded="false" aria-label="${Tx("More options")}"><i class="ic i-more"></i></button></span>
         <button type="button" class="btn ${editing ? "" : "primary"}" id="edit" aria-pressed="${editing}"><i class="ic ${editing ? "i-check" : "i-edit"}"></i>${Tx(editing ? "Done" : "Edit list")}</button></div></div>
       <div class="stats-row four" data-testid="deck-stats"><div class="stat"><b>${m.total}<small>/${MIN}</small></b><span>${Tx("Cards")}</span></div>
@@ -487,6 +502,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     document.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => go(d.id, b.dataset.tab, true));
     $("edit").onclick = () => { editing = !editing; if (editing && tab !== "list") go(d.id, "list", true); else render(); if (editing) setTimeout(() => $("addQ")?.focus(), 0); };
     $("more").onclick = (e) => { e.stopPropagation(); toggleMenu(d, m); };
+    $("metaSel").onchange = (e) => saveMeta(d, e.target.value);
     wireTab(d, m, tab);
     if (keep && $(keep)) { const el = $(keep); el.focus(); try { if (caret != null) el.setSelectionRange(caret, caret); } catch { /* */ } }
   }
@@ -748,6 +764,15 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     document.querySelectorAll("[data-prio-sw]").forEach((x) => x.onchange = () => { prio(x.dataset.prioSw, x.checked); document.querySelector(`[data-prio-sw="${CSS.escape(x.dataset.prioSw)}"]`)?.focus(); });
     $("toPlan")?.addEventListener("click", (e) => { e.preventDefault(); go(null, "plan"); });
   }
+  function saveMeta(d, meta) {
+    if (meta) localMeta[d.id] = meta; else delete localMeta[d.id];
+    try { localStorage.setItem(META_KEY, JSON.stringify(localMeta)); } catch { /* */ }
+    const p = prof(); if (!p) return;
+    d.meta = meta || null;
+    queue = queue.then(() => CLOUD.api("rpc/save_deck", { method: "POST", body: { p_profile: p.profile, p_deck: { id: d.id, name: d.name, meta: meta || null } } }))
+      .then(() => toast(Tx("Meta saved")))
+      .catch(() => toast(Tx("Meta kept on this device. To save it with the deck, run supabase/decks.sql again.")));
+  }
   const planTimers = new Map();
   function savePlan(d) {
     clearTimeout(planTimers.get(d.id));
@@ -810,25 +835,33 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     }
     return { cards: Object.fromEntries(out), bad };
   }
-  function openImport(from) {
+  // target: an existing deck whose list the pasted one replaces (Desfazer brings the old list back)
+  function openImport(from, target) {
     const sh = $("sheet"); let name = "", text = "", format = "core";
     const draw = () => {
       const r = parseList(text), n = Object.values(r.cards).reduce((a, b) => a + b, 0);
       sh.className = "sheet wide";
-      sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="shT">${Tx("Import deck")}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
+      sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="shT">${esc(target ? Tx("Import list into {d}", { d: target.name }) : Tx("Import deck"))}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
         <div class="sheet-body"><div class="form">
-          <label class="field">${Tx("Deck name")}<input id="iName" maxlength="80" value="${esc(name)}" placeholder="${Tx("Imported deck")}" autocomplete="off"></label>
-          <div class="field">${Tx("Format")}<div class="seg block" role="group" aria-label="${Tx("Format")}">${[["core", "Core"], ["infinity", "Infinity"]].map(([k, l]) => `<button type="button" data-if="${k}" aria-pressed="${format === k}">${Tx(l)}</button>`).join("")}</div></div>
+          ${target ? `<p class="small" data-testid="import-replaces">${esc(Tx("The pasted list replaces the {n} cards of {d}. You can undo it from the notice.", { n: measure(target).total, d: target.name }))}</p>` : `<label class="field">${Tx("Deck name")}<input id="iName" maxlength="80" value="${esc(name)}" placeholder="${Tx("Imported deck")}" autocomplete="off"></label>
+          <div class="field">${Tx("Format")}<div class="seg block" role="group" aria-label="${Tx("Format")}">${[["core", "Core"], ["infinity", "Infinity"]].map(([k, l]) => `<button type="button" data-if="${k}" aria-pressed="${format === k}">${Tx(l)}</button>`).join("")}</div></div>`}
           <label class="field">${Tx("Paste a list")}<span class="hint">${esc(Tx("One card per line, like \"4 Stitch - Rock Star\". Lists from duels.ink, Dreamborn and Lorcanito work."))}</span><textarea class="paste" id="iText" spellcheck="false">${esc(text)}</textarea></label>
           <p class="small" id="iInfo">${esc(Tx("{n} cards recognised", { n }))}${r.bad.length ? `<br><span class="muted">${esc(Tx("Not recognised: {l}", { l: r.bad.slice(0, 5).join(" · ") + (r.bad.length > 5 ? " …" : "") }))}</span>` : ""}</p>
         </div></div>
-        <div class="sheet-foot"><button type="button" class="btn ghost" data-close>${Tx("Cancel")}</button><button type="button" class="btn primary" id="iSave" ${n ? "" : "disabled"}>${Tx("Import")}</button></div>`;
+        <div class="sheet-foot"><button type="button" class="btn ghost" data-close>${Tx("Cancel")}</button><button type="button" class="btn primary" id="iSave" ${n ? "" : "disabled"}>${Tx(target ? "Replace the list" : "Import")}</button></div>`;
       openSheet(from);
-      $("iName").oninput = (e) => { name = e.target.value; };
+      $("iName")?.addEventListener("input", (e) => { name = e.target.value; });
       $("iText").oninput = (e) => { text = e.target.value; const pos = e.target.selectionStart; draw(); const t = $("iText"); t.focus(); t.setSelectionRange(pos, pos); };
       sh.querySelectorAll("[data-if]").forEach((b) => b.onclick = () => { format = b.dataset.if; draw(); });
       $("iSave").onclick = async () => {
         const p = prof(); if (!p) return;
+        if (target) {
+          before = JSON.parse(JSON.stringify(target));
+          target.cards = r.cards; target.colors = measure(target).inks.slice(0, 2);
+          sh.close(); clearTimeout(saveTimer);
+          await flush(target);
+          return go(target.id, "list", true);
+        }
         const deck = { id: newId(), name: (name.trim() || Tx("Imported deck")).slice(0, 80), format, colors: [], cards: r.cards, notes: "" };
         deck.colors = measure(deck).inks.slice(0, 2);
         p.decks.push(deck); sh.close();
@@ -847,6 +880,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     wrap.insertAdjacentHTML("beforeend", `<div class="menu sm" role="menu">
       <button type="button" class="menu-item" role="menuitem" id="mRename"><i class="ic i-edit"></i>${Tx("Rename and format")}</button>
       <button type="button" class="menu-item" role="menuitem" id="mCopy"><i class="ic i-list"></i>${Tx("Copy list")}</button>
+      <button type="button" class="menu-item" role="menuitem" id="mImport"><i class="ic i-import"></i>${Tx("Import list")}</button>
       <a class="menu-item" role="menuitem" href="?view=plan" id="mPlan"><i class="ic i-sparkle"></i>${Tx("Deck advisor")}</a>
       <div class="menu-sep"></div>
       <button type="button" class="menu-item danger" role="menuitem" id="mDelete"><i class="ic i-trash"></i>${Tx("Delete deck")}</button></div>`);
@@ -855,6 +889,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     setTimeout(() => document.addEventListener("click", close), 0);
     $("mPlan").onclick = (e) => { e.preventDefault(); go(null, "plan"); };
     $("mRename").onclick = () => { wrap.querySelector(".menu")?.remove(); openDeckForm(d, $("more")); };
+    $("mImport").onclick = () => { wrap.querySelector(".menu")?.remove(); openImport($("more"), d); };
     $("mCopy").onclick = () => {
       const text = m.known.sort((a, b) => a.c.cost - b.c.cost || a.c.name.localeCompare(b.c.name)).map((e) => `${e.q} ${e.c.name}`).join("\n");
       navigator.clipboard?.writeText(text).then(() => toast(Tx("List copied")), () => toast(Tx("List copied")));

@@ -203,3 +203,37 @@ test('a list under 60 says how many cards it is short, not that cards are missin
   await expect(row.locator('.tag.warn')).toHaveText('lista: falta 1 carta');
   await expect(row).toContainText('faltam 2 na coleção');   // LOR10-1: 4 in the list, 2 in the collection
 });
+
+test('meta: automatic from the newest set, chosen on the deck page, filter on the list', async ({ page }) => {
+  const s13 = { 'LOR13-12': 4, 'LOR13-8': 4, 'LOR10-1': 4 };   // newest set: 13
+  const calls = await setup(page, { extraDecks: [{ id: 'deck-13', name: 'Set 13 Deck', format: 'core', colors: ['Amber'], cards: s13, created_at: '2026-10-03' }] });
+  await page.goto(BASE);
+  await expect(page.locator('[data-deck="deck-a"]')).toContainText('Set 10');
+  await expect(page.locator('[data-deck="deck-13"]')).toContainText('Set 13');
+  await page.locator('#metaF').selectOption('LOR13');
+  await expect(page.locator('[data-deck]')).toHaveCount(1);
+  await expect(page.locator('[data-deck="deck-13"]')).toBeVisible();
+  await page.locator('#metaF').selectOption('all');
+  // choose Set 14 for the Amber deck on its page
+  await page.locator('[data-deck="deck-a"]').click();
+  await expect(page.locator('#metaSel')).toHaveValue('');
+  await expect(page.locator('#metaSel option').first()).toHaveText('Automático (Set 10)');
+  await page.locator('#metaSel').selectOption('LOR14');
+  await expect.poll(() => saves(calls).map((c) => c.body.p_deck)).toContainEqual({ id: 'deck-a', name: 'Amber Test', meta: 'LOR14' });
+  await page.goto(BASE);
+  await expect(page.locator('[data-deck="deck-a"]')).toContainText('Set 14');   // kept on this device too
+});
+
+test('import a list into an existing deck: replaces the cards, Desfazer brings them back', async ({ page }) => {
+  const calls = await setup(page);
+  await page.goto(BASE + '?deck=deck-a');
+  await page.locator('#more').click();
+  await page.locator('#mImport').click();
+  await expect(page.locator('[data-testid="import-replaces"]')).toContainText('Amber Test');
+  await page.locator('#iText').fill('4 Gurgi - Apple Lover\n4 Pocahontas - Guiding the Tribe');
+  await page.locator('#iSave').click();
+  await expect.poll(() => saves(calls).at(-1)?.body.p_deck.cards).toEqual({ 'LOR10-10': 4, 'LOR13-12': 4 });
+  await expect(page.locator('[data-testid="deck-stats"]')).toContainText('8');
+  await page.locator('#toast #undo').click();
+  await expect.poll(() => Object.keys(saves(calls).at(-1)?.body.p_deck.cards || {}).length).toBe(15);
+});
