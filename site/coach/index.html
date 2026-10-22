@@ -1673,6 +1673,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       for (const d of snap.docs) games.set(d.id, { key: d.id, coll, doc: d.data() });
       refreshNotes(); renderList();
       if (current && games.get(current)?.coll === coll) renderReview();
+      else if (showingStats && !current) renderStatsView();   // stats opened before the games arrived
     }, () => { $("games").innerHTML = `<p class="empty">${Tx("Couldn't load games. Reload the page to try again.")}</p>`; });
     listen("games"); listen("public_games");
     // Opened from the home feed: ?game=<id> opens that game once it's loaded.
