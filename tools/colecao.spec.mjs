@@ -250,3 +250,20 @@ test('binder: a dual-ink card sits on its first ink pages, where the set numbers
   await expect(card).toHaveCount(1);
   await expect(card.locator('[data-testid="dual"]')).toHaveText('Amber / Amethyst');
 });
+
+test('my cards / all cards, and a search for a card you do not have offers all cards', async ({ page }) => {
+  await setup(page);
+  await page.goto(BASE);
+  const which = page.locator('[data-testid="which"]');
+  await expect(which.getByRole('button', { name: 'Minhas cartas' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#count')).toHaveText('1 cartas');
+  await which.getByRole('button', { name: 'Todas as cartas' }).click();
+  await expect.poll(async () => parseInt((await page.locator('#count').innerText()).replace(/\D/g, ''), 10)).toBeGreaterThan(1000);
+  await page.locator('[data-testid="which"]').getByRole('button', { name: 'Minhas cartas' }).click();
+  await page.locator('#q').fill('pocahontas meeko');
+  await expect(page.locator('[data-testid="not-owned"]')).toContainText('Você ainda não tem estas cartas.');
+  await page.locator('#seeAll').click();
+  await expect(page.locator('[data-card="LOR13-27"]')).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: '/tmp/claude-0/-home-claude/ba98388b-1cd5-5e26-b0aa-015deca9e67c/scratchpad/allcards-phone.png' });
+});

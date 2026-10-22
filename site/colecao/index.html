@@ -184,7 +184,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "The camera didn't open. Allow camera access for this site and try again.": "A câmera não abriu. Permita o acesso à câmera para este site e tente de novo.",
     "Couldn't load the card scanner.": "Não foi possível carregar o leitor de cartas.", "{n} added": "{n} adicionadas", "{n} added_1": "1 adicionada", "{n} in the list": "{n} na lista", "In Brazil from {p}": "No Brasil a partir de {p}", "Lowest listing on MYP Cards, {d}": "Menor anúncio na MYP Cards, {d}", "{n} in the list_1": "1 na lista", "In the list: {c}": "Na lista: {c}", "Review": "Revisar", "Check before adding": "Confira antes de adicionar", "Add {n} cards to the collection": "Adicionar {n} cartas à coleção", "Add {n} cards to the collection_1": "Adicionar 1 carta à coleção", "Keep scanning": "Continuar escaneando", "Discard the list": "Descartar a lista", "Tap again to discard": "Toque de novo para descartar", "Nothing will be saved until you confirm.": "Nada é salvo antes de você confirmar.", "Remove one": "Tirar uma", "Add one": "Mais uma", "The list is empty.": "A lista está vazia.", "Recently added": "Mais recentes", "added {d}": "adicionada em {d}",
     "+1 of this": "+1 desta", "Done scanning": "Concluir", "Card": "Carta", "Removed: {c}": "Removida: {c}",
-    "Show more": "Mostrar mais", "{n} cards": "{n} cartas", "Prices: {s}, {d}": "Preços: {s}, {d}",
+    "Show more": "Mostrar mais", "Which cards": "Quais cartas", "My cards": "Minhas cartas", "All cards": "Todas as cartas", "You don't have these cards yet.": "Você ainda não tem estas cartas.", "See {n} card among all cards": "Ver {n} carta em todas as cartas", "See {n} cards among all cards": "Ver {n} cartas em todas as cartas", "{n} cards": "{n} cartas", "Prices: {s}, {d}": "Preços: {s}, {d}",
     "Normal": "Normal", "Foil": "Foil", "{n} free": "{n} livre(s)", "{n} lent": "{n} emprestada(s)", "Value of your {n}": "Valor das suas {n}",
     "Remove one {k}": "Tirar uma {k}", "Add one {k}": "Pôr uma {k}", "normal": "normal", "foil": "foil", "Lent": "Emprestadas",
     "Changes save right away. You can undo from the notice at the bottom.": "As mudanças salvam na hora. Dá para desfazer pelo aviso que aparece embaixo.",
@@ -322,6 +322,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const rows = filtered(), n = activeCount();
     const keep = document.activeElement?.id, caret = document.activeElement?.selectionStart;
     const empty = !Object.values(coll()).some((e) => (+e.n || 0) + (+e.f || 0) > 0);
+    let others = 0;
     app.innerHTML = `${stats()}
       <div class="toolbar" role="search">
         <span class="search"><i class="ic i-search"></i><input type="search" id="q" value="${esc(v.q)}" placeholder="${Tx("Search cards")}" aria-label="${Tx("Search cards")}"></span>
@@ -329,12 +330,13 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         <div class="seg icons" role="group" aria-label="${Tx("View")}"><button type="button" data-view="grid" aria-pressed="${v.view === "grid"}" aria-label="${Tx("Grid")}"><i class="ic i-grid"></i></button><button type="button" data-view="list" aria-pressed="${v.view === "list"}" aria-label="${Tx("List")}"><i class="ic i-list"></i></button></div>
       </div>
       <div class="row between" style="margin:-4px 0 var(--sp-4)">
-        <div class="chips">${chips()}<span class="small muted" id="count">${esc(Tx("{n} cards", { n: rows.length.toLocaleString(LOC) }))}</span></div>
+        <div class="chips"><div class="seg" role="group" aria-label="${Tx("Which cards")}" data-testid="which"><button type="button" data-owned="1" aria-pressed="${v.owned}">${Tx("My cards")}</button><button type="button" data-owned="0" aria-pressed="${!v.owned}">${Tx("All cards")}</button></div>${chips()}<span class="small muted" id="count">${esc(Tx("{n} cards", { n: rows.length.toLocaleString(LOC) }))}</span></div>
         <select class="inline" id="sort" aria-label="${Tx("Sort")}">${[["value", "Most valuable"], ["recent", "Recently added"], ["name", "Name"], ["set", "Set and number"], ["cost", "Cost"], ["copies", "Copies"]].map(([k, l]) => `<option value="${k}" ${v.sort === k ? "selected" : ""}>${Tx(l)}</option>`).join("")}</select>
       </div>
       ${rows.length ? (v.view === "grid" ? `<div class="cgrid" id="grid">${rows.slice(0, shown).map(gridCard).join("")}</div>` : `<div class="list" id="grid">${rows.slice(0, shown).map(listRow).join("")}</div>`)
         + (rows.length > shown ? `<div class="load-more"><button type="button" class="btn" id="more">${Tx("Show more")}</button></div>` : "")
         : empty && v.owned ? `<div class="empty"><img src="../ui/assets/empty/collection.svg" alt=""><b>${Tx("Your collection is empty")}</b><p>${esc(Tx("Turn off \"Only cards I own\" to add cards with +, or import your collection in Inkwell."))}</p><button type="button" class="btn primary" id="allCards">${Tx("Only cards I own")} ✕</button></div>`
+        : v.owned && (others = filtered({ ...v, owned: false }).length) ? `<div class="empty" data-testid="not-owned"><img src="../ui/assets/empty/search.svg" alt=""><b>${Tx("You don't have these cards yet.")}</b><button type="button" class="btn primary" id="seeAll">${esc(Tx(others === 1 ? "See {n} card among all cards" : "See {n} cards among all cards", { n: others }))}</button></div>`
         : `<div class="empty"><img src="../ui/assets/empty/search.svg" alt=""><b>${Tx("No cards match these filters.")}</b><button type="button" class="btn" id="clearAll">${Tx("Clear filters")}</button></div>`}`;
     wire();
     if (keep && $(keep)) { const el = $(keep); el.focus(); try { if (caret != null) el.setSelectionRange(caret, caret); } catch { /* */ } }
@@ -355,6 +357,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     $("more")?.addEventListener("click", () => { shown += 120; render(); });
     $("clearAll")?.addEventListener("click", () => { v = { ...v, q: "", inks: [], sets: [], rar: [], cost: [], foil: false, lent: false }; again(); });
     $("allCards")?.addEventListener("click", () => { v.owned = false; again(); });
+    $("seeAll")?.addEventListener("click", () => { v.owned = false; again(); });
+    document.querySelectorAll("[data-owned]").forEach((b) => b.onclick = () => { v.owned = b.dataset.owned === "1"; again(); });
     $("grid")?.addEventListener("click", (e) => { const b = e.target.closest("[data-card]"); if (b) openCard(b.dataset.card, b); });
   }
 
