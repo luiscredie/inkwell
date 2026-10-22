@@ -29,11 +29,16 @@ begin
   for e in select * from jsonb_array_elements(p_home) loop
     if coalesce(e->>'card_id', '') = '' or length(e->>'card_id') > 40 or jsonb_typeof(e->'qty') <> 'number' then raise exception 'bad home item'; end if;
     k := case when coalesce((e->>'foil')::boolean, false) then 'f' else 'n' end;
-    insert into public.collection_home as h (user_id, profile, card_id, n, f)
-      values (u, p_profile, e->>'card_id', case when k = 'n' then (e->>'qty')::int else 0 end, case when k = 'f' then (e->>'qty')::int else 0 end)
-      on conflict (user_id, profile, card_id) do update
-        set n = h.n + case when k = 'n' then (e->>'qty')::int else 0 end,
-            f = h.f + case when k = 'f' then (e->>'qty')::int else 0 end, updated_at = now();
+    -- update first: an insert with a negative count fails its check before ON CONFLICT is tried
+    update public.collection_home h
+       set n = h.n + case when k = 'n' then (e->>'qty')::int else 0 end,
+           f = h.f + case when k = 'f' then (e->>'qty')::int else 0 end, updated_at = now()
+     where h.user_id = u and h.profile = p_profile and h.card_id = e->>'card_id';
+    if not found then
+      if (e->>'qty')::int < 0 then raise exception 'not at home: %', e->>'card_id'; end if;
+      insert into public.collection_home (user_id, profile, card_id, n, f)
+      values (u, p_profile, e->>'card_id', case when k = 'n' then (e->>'qty')::int else 0 end, case when k = 'f' then (e->>'qty')::int else 0 end);
+    end if;
     ids := ids || (e->>'card_id');
   end loop;
   ids := ids || array(select x->>'card_id' from jsonb_array_elements(p_delta) x);
