@@ -72,7 +72,7 @@ window.INKWELL_NO_STORE_MSG = "Your games appear here after you sign in.";
     "Who can see this game": "Quem pode ver este jogo", "Private": "Privado", "Public game": "Jogo público", "Private game": "Jogo privado",
     "Watch replay on duels.ink": "Ver replay no duels.ink",
     "Sign in to comment.": "Entre para comentar.",
-    "Lore by turn": "Lore por turno", "Lore over time": "Lore ao longo do jogo",
+    "Lore by turn": "Lore por turno", "Game {n}": "Jogo {n}", "Match {w}–{l}": "Partida {w}–{l}", "Lore over time": "Lore ao longo do jogo",
     "Comment on the whole game": "Comentar o jogo todo", "Comment on the deck list": "Comentar a lista do deck", "Comment on this turn": "Comentar este turno",
     ". Comment on this play": ". Comentar esta jogada",
     "{name}'s deck": "Deck de {name}", "{n} cards": "{n} cartas", "no list yet": "sem lista ainda",
@@ -552,6 +552,10 @@ textarea { width: 100%; min-height: 72px; resize: vertical; }
 .vis { display: inline-flex; }
 .cchart { background: var(--surface-1); border-radius: var(--r-lg); box-shadow: var(--e1); padding: var(--sp-3) var(--sp-4) var(--sp-2); }
 .cchart svg { width: 100%; height: auto; display: block; }
+.mgame { margin-top: var(--sp-2); }
+.mgame > b, .mgame > .linkbtn { display: block; font-size: var(--fs-small); margin-bottom: 2px; }
+.mgame:not(.cur) svg { opacity: .8; }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--accent, var(--gold)); font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; min-height: 28px; }
 .cchart .legend { display: flex; flex-wrap: wrap; gap: var(--sp-4); font-size: var(--fs-small); color: var(--text-2); margin-bottom: var(--sp-2); }
 .cchart .legend > span:first-child { font-family: var(--display); font-weight: 700; color: var(--text); font-size: var(--fs-h3); margin-right: auto; }
 .cchart .legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
@@ -668,6 +672,8 @@ table.mt tr[data-opp]:hover td, table.mt tr[data-opp]:focus-visible td { backgro
 const CARD_INDEX = /*@CARD_INDEX@*/;
 (() => {
   "use strict";
+  // duels.ink gives /r/<replay_id>, which downloads the replay file; the viewer that plays it is /replay/<replay_id>
+  const replayViewer = (u) => String(u || "").replace(/^(https:\/\/duels\.ink)\/r\/([\w-]+)(?:[?#].*)?$/, "$1/replay/$2");
   const $ = (id) => document.getElementById(id);
   // Portuguese / English (i18n.js); falls back to the English text when it isn't loaded.
   const Tx = window.INKWELL_I18N?.tr || ((t, v) => (v ? t.replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)) : t));
@@ -818,7 +824,51 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const MINOR = new Set(["damage", "banish", "ink"]);
   function seatName(log, seat) { return log.players.find((p) => p.seat === seat)?.name || seat; }
 
-  function loreChart(log) {
+  // A best-of-3 on duels.ink carries no match id: its games are the same queue against the same opponent,
+  // numbered 1, 2, 3 and minutes apart. Lore Counter matches share a key prefix instead (siblings()).
+  const asked = new Set();
+  function matchGames(g) {
+    const log = g.doc.log, ev = log?.event || {};
+    if (siblings(g.key).length > 1) return siblings(g.key).map((k) => games.get(k)).filter(Boolean)
+      .sort((a, b) => String(a.doc.played_at).localeCompare(String(b.doc.played_at)));
+    if (!ev.game_in_match || !ev.name) return [g];
+    const t0 = Date.parse(g.doc.played_at), near = [...games.values()].filter((x) => x.key !== g.key && x.doc.source === g.doc.source
+      && Math.abs(Date.parse(x.doc.played_at) - t0) < 75 * 60e3);
+    const todo = near.filter((x) => x.doc.log?._loading && !asked.has(x.key));
+    for (const x of todo) { asked.add(x.key); db?.loadGame?.(x.key).catch(() => {}); }
+    const opp = (l) => l?.players?.find((p) => !p.is_me)?.name;
+    const same = near.filter((x) => !x.doc.log?._loading && x.doc.log.event?.name === ev.name && opp(x.doc.log) === opp(log) && x.doc.log.event?.game_in_match)
+      .sort((a, b) => String(a.doc.played_at).localeCompare(String(b.doc.played_at)));
+    const out = [g];
+    for (let n = ev.game_in_match - 1, at = g.doc.played_at; n >= 1; n--) {
+      const x = same.filter((y) => y.doc.log.event.game_in_match === n && y.doc.played_at < at).at(-1);
+      if (!x) break; out.unshift(x); at = x.doc.played_at;
+    }
+    for (let n = ev.game_in_match + 1, at = g.doc.played_at; n <= 3; n++) {
+      const x = same.find((y) => y.doc.log.event.game_in_match === n && y.doc.played_at > at);
+      if (!x) break; out.push(x); at = x.doc.played_at;
+    }
+    return out;
+  }
+  function chartOf(log, meSeat) {
+    return log.turns.length ? loreChart(log, meSeat) : (log.lore_track || []).length > 1 ? loreTimeChart(log, meSeat) : "";
+  }
+  function chartBlock(g, log, meSeat) {
+    const legend = (label) => `<span>${label}</span><span><i style="background:var(--gold)"></i>${esc(seatName(log, meSeat))}</span><span><i style="background:var(--opp)"></i>${esc(seatName(log, meSeat === "p1" ? "p2" : "p1"))}</span>`;
+    const label = Tx(log.turns.length ? "Lore by turn" : "Lore over time");
+    const match = matchGames(g);
+    if (match.length < 2) { const c = chartOf(log, meSeat); return c ? `<div class="cchart"><div class="legend">${legend(label)}</div>${c}</div>` : ""; }
+    let w = 0, l = 0;
+    const parts = match.map((x, i) => {
+      const xl = x.doc.log, s = summaryOf(x), ms = xl.players?.find((p) => p.is_me)?.seat || "p1", won = s.result === "win";
+      won ? w++ : l++;
+      const head = `${Tx("Game {n}", { n: xl.event?.game_in_match || i + 1 })} · ${Tx(won ? "Win" : "Loss")} ${esc(s.my_lore)}–${esc(s.opp_lore)}`;
+      return `<div class="mgame ${x.key === g.key ? "cur" : ""}">${x.key === g.key ? `<b>${head}</b>` : `<button type="button" class="linkbtn" data-open="${esc(x.key)}">${head}</button>`}${chartOf(xl, ms)}</div>`;
+    });
+    return `<div class="cchart" data-testid="match-charts"><div class="legend">${legend(`${label} · ${esc(Tx("Match {w}–{l}", { w, l }))}`)}</div>${parts.join("")}</div>`;
+  }
+
+  function loreChart(log, meSeat = "p1") {
     const pts = [{ t: 0, p1: 0, p2: 0 }];
     let last = { p1: 0, p2: 0 };
     for (const t of log.turns) { last = t.lore_end || last; pts.push({ t: t.number, ...last }); }
@@ -828,13 +878,13 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     const path = (k) => pts.map((p, i) => `${i ? "L" : "M"}${X(i).toFixed(1)} ${Y(p[k]).toFixed(1)}`).join("");
     const ticks = [0, 5, 10, 15, 20].filter((v) => v <= top);
     const xt = pts.map((_, i) => i).filter((i) => i && (n <= 12 ? true : n <= 24 ? i % 2 === 0 : i % 4 === 0));
-    const endMe = pts.at(-1).p1, endOpp = pts.at(-1).p2;
+    const op = meSeat === "p1" ? "p2" : "p1", endMe = pts.at(-1)[meSeat], endOpp = pts.at(-1)[op];
     return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Lore by turn: you ${endMe}, opponent ${endOpp}">
       ${ticks.map((v) => `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width="${v === 20 ? 1.4 : 0.8}" ${v === 20 ? "" : 'stroke-dasharray="2 4"'}/>
         <text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="12" fill="var(--faint)">${v}</text>`).join("")}
       ${xt.map((i) => `<text x="${X(i)}" y="${H - 6}" text-anchor="middle" font-size="12" fill="var(--faint)">${i}</text>`).join("")}
-      <path d="${path("p2")}" fill="none" stroke="var(--opp)" stroke-width="2" stroke-linejoin="round"/>
-      <path d="${path("p1")}" fill="none" stroke="var(--gold)" stroke-width="2.6" stroke-linejoin="round"/>
+      <path d="${path(op)}" fill="none" stroke="var(--opp)" stroke-width="2" stroke-linejoin="round"/>
+      <path d="${path(meSeat)}" fill="none" stroke="var(--gold)" stroke-width="2.6" stroke-linejoin="round"/>
       <circle cx="${X(n)}" cy="${Y(endOpp)}" r="3.5" fill="var(--opp)"/><circle cx="${X(n)}" cy="${Y(endMe)}" r="4" fill="var(--gold)"/>
     </svg>`;
   }
@@ -903,10 +953,10 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       </div>
       <div class="rtools">
         ${isOwner && db?.audiences ? `<label class="small vissel">${Tx("Who can see this game")} <select id="visSel">${db.audiences().map((o) => `<option value="${esc(o.value)}" ${o.value === (g.doc.audience || "private") ? "selected" : ""}>${esc(o.label)}</option>`).join("")}</select></label>` : isOwner ? `<span class="vis" role="group" aria-label="${Tx("Who can see this game")}"><button type="button" data-vis="private" aria-pressed="${g.coll === "games"}">${Tx("Private")}</button><button type="button" data-vis="public" aria-pressed="${g.coll === "public_games"}">${Tx("Public (one game)")}</button></span>` : `<span class="muted small">${esc(g.doc.audience_label || Tx(g.coll === "public_games" ? "Public game" : "Private game"))}</span>`}
-        ${log.source_ref?.replay_url && !/\.\.\.$/.test(log.source_ref.replay_url) ? `<a class="btn ghost small" href="${esc(log.source_ref.replay_url)}" target="_blank" rel="noopener">${Tx("Watch replay on duels.ink")}</a>` : ""}
+        ${log.source_ref?.replay_url && !/\.\.\.$/.test(log.source_ref.replay_url) ? `<a class="btn ghost small" href="${esc(replayViewer(log.source_ref.replay_url))}" target="_blank" rel="noopener" data-testid="replay-link">${Tx("Watch replay on duels.ink")}</a>` : ""}
       </div>
       ${!db ? `<div class="notice">Comments need the shared store, which isn't available in this view. You can still read the game.</div>` : !me?.id ? `<div class="notice">${Tx("Sign in to comment.")}</div>` : canWrite === false ? `<div class="notice">You can read this game. Ask the owner to make you a Contributor to comment.</div>` : ""}
-      ${log.turns.length ? `<div class="cchart"><div class="legend"><span>${Tx("Lore by turn")}</span><span><i style="background:var(--gold)"></i>${esc(seatName(log, meSeat))}</span><span><i style="background:var(--opp)"></i>${esc(seatName(log, meSeat === "p1" ? "p2" : "p1"))}</span></div>${loreChart(log)}</div>`  : (log.lore_track || []).length > 1 ? `<div class="cchart"><div class="legend"><span>${Tx("Lore over time")}</span><span><i style="background:var(--gold)"></i>${esc(seatName(log, meSeat))}</span><span><i style="background:var(--opp)"></i>${esc(seatName(log, meSeat === "p1" ? "p2" : "p1"))}</span></div>${loreTimeChart(log, meSeat)}</div>` : ""}
+      ${chartBlock(g, log, meSeat)}
       <div>${add("game", Tx("Comment on the whole game"))}${notesHtml("game", profilesMap)}</div>
       ${deck.length || isOwner ? `<details class="deck" ${!deck.length || deckNotice?.key === g.key ? "open" : ""}><summary>${g.doc.owner_name && g.doc.owner_name !== "You" ? esc(Tx("{name}'s deck", { name: g.doc.owner_name })) : Tx("Your deck")} (${deck.length ? Tx("{n} cards", { n: deck.reduce((n, e) => n + e.qty, 0) }) : Tx("no list yet")})</summary>
         ${isOwner ? `<div class="deckedit"><button type="button" class="btn ghost small" id="deckEdit">${Tx(deck.length ? "Edit your deck list" : "Add your deck list")}</button>
@@ -944,6 +994,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   }
   function wireReview(g, log) {
     $("back")?.addEventListener("click", () => { $("wrap").classList.remove("reading"); });
+    $("review").querySelectorAll("[data-open]").forEach((b) => b.addEventListener("click", () => openGame(b.dataset.open)));
     $("review").querySelectorAll("[data-anchor]").forEach((b) => b.addEventListener("click", () => {
       composerFor = composerFor === b.dataset.anchor ? null : b.dataset.anchor;
       renderReview().then(() => $("compose")?.focus());
