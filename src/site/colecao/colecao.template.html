@@ -28,6 +28,12 @@
 .stock-h .muted { font-weight: 600; margin-left: auto; font-variant-numeric: tabular-nums; }
 .stock-row + .stock-row { border-top: 1px solid var(--line); }
 .mv { white-space: nowrap; }
+.act-btns { gap: var(--sp-2); margin-top: var(--sp-3); } .act-btns .btn { flex: 1; }
+.actbox { gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); box-shadow: inset 0 0 0 1px var(--accent); }
+.act-item { padding: var(--sp-2) 0; border-top: 1px solid var(--line); }
+.act-item .inline-field { display: inline-flex; align-items: center; gap: 6px; margin: 0; } .act-item .inline-field input { width: 90px; }
+.act-sum { border-top: 1px solid var(--line-strong); padding-top: var(--sp-2); display: grid; gap: 6px; }
+.act-foot { gap: var(--sp-2); flex-wrap: wrap; } .act-foot .btn { flex: 1 1 auto; } .act-foot .btn.primary { flex-grow: 2; }
 .binder-row .trail.stockcols { display: flex; flex-direction: row; gap: var(--sp-3); align-items: flex-start; flex: none; }
 .stockcol { display: grid; gap: 4px; justify-items: end; }
 .stockcol .sc-h { font-size: var(--fs-micro); font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: .04em; }
@@ -112,7 +118,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "The camera didn't open. Allow camera access for this site and try again.": "A câmera não abriu. Permita o acesso à câmera para este site e tente de novo.",
     "Couldn't load the card scanner.": "Não foi possível carregar o leitor de cartas.", "{n} added": "{n} adicionadas", "{n} added_1": "1 adicionada", "{n} in the list": "{n} na lista", "In Brazil from {p}": "No Brasil a partir de {p}", "Lowest listing on MYP Cards, {d}": "Menor anúncio na MYP Cards, {d}", "{n} in the list_1": "1 na lista", "In the list: {c}": "Na lista: {c}", "Review": "Revisar", "Check before adding": "Confira antes de adicionar", "Add {n} cards to the collection": "Adicionar {n} cartas à coleção", "Add {n} cards to the collection_1": "Adicionar 1 carta à coleção", "Keep scanning": "Continuar escaneando", "Discard the list": "Descartar a lista", "Tap again to discard": "Toque de novo para descartar", "Nothing will be saved until you confirm.": "Nada é salvo antes de você confirmar.", "Remove one": "Tirar uma", "Add one": "Mais uma", "The list is empty.": "A lista está vazia.", "Recently added": "Mais recentes", "added {d}": "adicionada em {d}",
     "+1 of this": "+1 desta", "Done scanning": "Concluir", "Card": "Carta", "Removed: {c}": "Removida: {c}",
-    "Show more": "Mostrar mais", "Where": "Onde", "Everything": "Tudo", "Binder": "Fichário", "Home": "Casa", "{n} at home": "{n} em casa", "→ Home": "→ Casa", "→ Binder": "→ Fichário", "Move one {k} to Home": "Mover uma {k} para Casa", "Move one {k} to the Binder": "Mover uma {k} para o Fichário", "Moved": "Movida", "Check binder and home": "Conferir fichário e casa", "Binder checked": "Fichário conferido", "Home checked": "Casa conferida", "Binder: mark checked": "Fichário: marcar conferido", "Home: mark checked": "Casa: marcar conferida", "Checked: binder {a}, home {h} of {b} pages": "Conferidas: fichário {a}, casa {h} de {b} páginas", "Cancel": "Cancelar", "Move normal cards to Home": "Mover cartas normais para Casa", "Move foil cards to Home": "Mover cartas foil para Casa", "Move normal cards to the Binder": "Mover cartas normais para o Fichário", "Move foil cards to the Binder": "Mover cartas foil para o Fichário", "{n} in the binder": "{n} no fichário", "One less": "Uma a menos", "One more": "Uma a mais", "All ({n})": "Todas ({n})", "Move {n} to Home": "Mover {n} para Casa", "Move {n} to the Binder": "Mover {n} para o Fichário", "Add to": "Adicionar em", "{n} cards": "{n} cartas", "Prices: {s}, {d}": "Preços: {s}, {d}",
+    "Show more": "Mostrar mais", "Where": "Onde", "Everything": "Tudo", "Binder": "Fichário", "Home": "Casa", "{n} at home": "{n} em casa", "→ Home": "→ Casa", "→ Binder": "→ Fichário", "Move one {k} to Home": "Mover uma {k} para Casa", "Move one {k} to the Binder": "Mover uma {k} para o Fichário", "Moved": "Movida", "Lend": "Emprestar", "Sell": "Vender", "Combo sale": "Venda combo", "New loan": "Novo empréstimo", "Date": "Data", "Buyer (optional)": "Comprador (opcional)", "Who is borrowing": "Para quem", "Return by (optional)": "Devolver até (opcional)", "Note (optional)": "Observação (opcional)", "Each": "Cada", "Price of {c}": "Preço de {c}", "Finish": "Acabamento", "Remove {c}": "Tirar {c}", "Add a card to the combo": "Adicionar carta ao combo", "Search your cards": "Buscar nas suas cartas", "None of your cards match.": "Nenhuma carta sua com esse nome.", "Sum of the cards": "Soma das cartas", "Total of the sale": "Total da venda", "Discount": "Desconto", "Extra": "Acréscimo", "Write who is borrowing.": "Escreva para quem é o empréstimo.", "Loan saved": "Empréstimo registrado", "Add at least one card.": "Adicione pelo menos uma carta.", "Write the total of the sale.": "Escreva o total da venda.", "You don't have that many to sell.": "Você não tem tantas para vender.", "Sale": "Venda", "discount {v}": "desconto {v}", "extra {v}": "acréscimo {v}", "Sale saved: {v}": "Venda registrada: {v}", "The cards left the collection, but the sale wasn't recorded. Add it in Trocas.": "As cartas saíram da coleção, mas a venda não foi registrada. Registre em Trocas.", "Check binder and home": "Conferir fichário e casa", "Binder checked": "Fichário conferido", "Home checked": "Casa conferida", "Binder: mark checked": "Fichário: marcar conferido", "Home: mark checked": "Casa: marcar conferida", "Checked: binder {a}, home {h} of {b} pages": "Conferidas: fichário {a}, casa {h} de {b} páginas", "Cancel": "Cancelar", "Move normal cards to Home": "Mover cartas normais para Casa", "Move foil cards to Home": "Mover cartas foil para Casa", "Move normal cards to the Binder": "Mover cartas normais para o Fichário", "Move foil cards to the Binder": "Mover cartas foil para o Fichário", "{n} in the binder": "{n} no fichário", "One less": "Uma a menos", "One more": "Uma a mais", "All ({n})": "Todas ({n})", "Move {n} to Home": "Mover {n} para Casa", "Move {n} to the Binder": "Mover {n} para o Fichário", "Add to": "Adicionar em", "{n} cards": "{n} cartas", "Prices: {s}, {d}": "Preços: {s}, {d}",
     "Normal": "Normal", "Foil": "Foil", "{n} free": "{n} livre(s)", "{n} lent": "{n} emprestada(s)", "Value of your {n}": "Valor das suas {n}",
     "Remove one {k}": "Tirar uma {k}", "Add one {k}": "Pôr uma {k}", "normal": "normal", "foil": "foil", "Lent": "Emprestadas",
     "Changes save right away. You can undo from the notice at the bottom.": "As mudanças salvam na hora. Dá para desfazer pelo aviso que aparece embaixo.",
@@ -346,6 +352,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   function openCard(id, from) {
     const c = BY.get(id), sh = $("cardSheet"); if (!c) return;
     let mv = null;   // {k, to, qty}: the "how many?" step before moving between Fichário and Casa
+    let act = null;  // {kind: "loan" | "sale", ...}: Emprestar / Vender, drawn by actPanel() below
     const draw = () => {
       const o = owned(id), pn = priceOf(id), pf = priceOf(id, true), [a, b] = split(c.name);
       const value = (pn || 0) * o.n + (pf || 0) * o.f, lw = lentWho.get(id) || [];
@@ -384,7 +391,8 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
             <div><div class="small muted">${esc(Tx("Value of your {n}", { n: o.n + o.f }))}</div><div class="hero-num" style="color:var(--money)" data-testid="card-value">${esc(money(value))}</div></div>
             <div class="small muted" style="text-align:right">${Tx("Normal")} ${pn != null ? esc(money(pn)) : "–"}<br>${Tx("Foil")} ${pf != null ? esc(money(pf)) : "–"}<br><span class="faint">${esc(priceSrc)}</span></div></div>
           ${brLine(id)}
-          ${homeReady ? (mv ? moveBox() : stocks) : `<div class="card inset stack" style="gap:0;padding:var(--sp-2) var(--sp-3)">${row("n", Tx("Normal"), o.n, lentN.get(id) || 0)}${row("f", Tx("Foil"), o.f, lentF.get(id) || 0)}</div>`}
+          ${act ? `<div id="actBox" data-testid="act-${act.kind}"></div>` : `${homeReady ? (mv ? moveBox() : stocks) : `<div class="card inset stack" style="gap:0;padding:var(--sp-2) var(--sp-3)">${row("n", Tx("Normal"), o.n, lentN.get(id) || 0)}${row("f", Tx("Foil"), o.f, lentF.get(id) || 0)}</div>`}
+          ${avail(id).n + avail(id).f ? `<div class="row act-btns"><button type="button" class="btn" id="aLoan"><i class="ic i-loan"></i>${Tx("Lend")}</button><button type="button" class="btn" id="aSale"><i class="ic i-trades"></i>${Tx("Sell")}</button></div>` : ""}`}
           ${lw.length ? `<h3 style="margin:var(--sp-5) 0 var(--sp-2)">${Tx("Lent")}</h3>${lw.map((x) => `<div class="list-row on-field"><span class="av sm">${esc((x.who || "?")[0].toUpperCase())}</span><span class="t"><span>${esc(x.who)}</span><span class="meta">${esc([`${x.qty} ${Tx(x.foil ? "foil" : "normal")}`, x.due ? Tx("until {d}", { d: new Date(x.due + "T12:00:00").toLocaleDateString(LOC, { day: "numeric", month: "short" }) }) : ""].filter(Boolean).join(" · "))}</span></span><a class="btn ghost small" href="../trades/">${Tx("See")}</a></div>`).join("")}` : ""}
           <p class="small faint" style="margin:var(--sp-3) 0 0">${Tx("Changes save right away. You can undo from the notice at the bottom.")}</p></div>
         <div class="sheet-foot"><a class="btn" href="../trades/?tab=board&q=${encodeURIComponent(a)}"><i class="ic i-board"></i>${Tx("Post on the board")}</a></div>`;
@@ -396,12 +404,124 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
         mv.qty = x.dataset.mq === "all" ? max : Math.min(max, Math.max(1, mv.qty + +x.dataset.mq)); draw();
         (sh.querySelector(`[data-mq="${x.dataset.mq}"]:not([disabled])`) || $("mvOk"))?.focus();
       });
+      $("aLoan")?.addEventListener("click", () => { const k = avail(id).n ? "n" : "f"; act = { kind: "loan", items: [{ id, k, qty: 1 }], person: "", due: "", note: "" }; draw(); });
+      $("aSale")?.addEventListener("click", () => { const k = avail(id).n ? "n" : "f"; act = { kind: "sale", combo: false, items: [{ id, k, qty: 1, price: unitPrice(id, k) }], date: today(), buyer: "", total: null, q: "" }; draw(); });
+      if (act) actPanel(sh, act, () => { act = null; draw(); });
       $("mvCancel")?.addEventListener("click", () => { const back = `[data-mv="${mv.k}:${mv.to}"]`; mv = null; draw(); sh.querySelector(back)?.focus(); });
       $("mvOk")?.addEventListener("click", () => { const { k, to, qty } = mv; mv = null; move(id, k, qty, to); draw(); sh.querySelector(`[data-mv="${k}:${to}"]:not([disabled])`)?.focus(); });
     };
-    draw(); redrawSheet = () => { if (sh.open) { mv = null; draw(); } };
+    draw(); redrawSheet = () => { if (sh.open) { mv = null; act = null; draw(); } };
     openSheet(sh, from);
     sh.addEventListener("close", () => { redrawSheet = null; renderAll(); }, { once: true });
+  }
+  // ---------- Emprestar / Vender / Venda combo (from the card sheet) ----------
+  // A loan goes to Trocas → Empréstimos; a sale is a trade where you gave the cards and received money, each card
+  // keeping its own price (trades.gave[].price) and the total allowing a discount. Sold cards leave the binder first, then home.
+  const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+  const avail = (id) => { const w = where(id); return { n: w.binder.n + w.home.n, f: w.binder.f + w.home.f }; };   // what can leave (not lent)
+  const unitPrice = (id, k) => { const v = priceOf(id, k === "f"); return v == null ? "" : (Math.round(v * 100) / 100).toFixed(2); };
+  const num = (v) => { const x = parseFloat(String(v).replace(",", ".")); return Number.isFinite(x) ? x : 0; };
+  function actPanel(sh, a, close) {
+    const box = $("actBox"), sale = a.kind === "sale";
+    const sum = () => Math.round(a.items.reduce((t, it) => t + num(it.price) * it.qty, 0) * 100) / 100;
+    const total = () => (a.total == null || a.total === "" ? sum() : num(a.total));
+    const draw = () => {
+      const item = (it, i) => {
+        const c = BY.get(it.id), [nm, ver] = split(c?.name || it.id), av = avail(it.id), both = av.n > 0 && av.f > 0, max = av[it.k];
+        return `<div class="act-item" data-i="${i}">
+          <div class="row between" style="gap:var(--sp-2)"><div style="min-width:0"><b>${esc(nm)}</b>${ver ? ` <span class="small muted">${esc(ver)}</span>` : ""}<div class="small muted">${esc(setName(c?.set))} · nº ${esc(c?.num || "")}${!both ? " · " + Tx(it.k === "f" ? "foil" : "normal") : ""}</div></div>
+            ${a.items.length > 1 ? `<button type="button" class="btn ghost icon small" data-rm="${i}" aria-label="${esc(Tx("Remove {c}", { c: nm }))}"><i class="ic i-close"></i></button>` : ""}</div>
+          <div class="row" style="gap:var(--sp-2);flex-wrap:wrap;margin-top:6px">
+            ${both ? `<div class="seg" role="group" aria-label="${Tx("Finish")}">${["n", "f"].map((k) => `<button type="button" data-fin="${i}:${k}" aria-pressed="${it.k === k}">${Tx(k === "f" ? "Foil" : "Normal")}</button>`).join("")}</div>` : ""}
+            <div class="qty"><button type="button" data-q="${i}:-1" aria-label="${Tx("One less")}" ${it.qty <= 1 ? "disabled" : ""}>−</button><output data-qn="${i}">${it.qty}</output><button type="button" data-q="${i}:1" aria-label="${Tx("One more")}" ${it.qty >= max ? "disabled" : ""}>+</button></div>
+            ${sale ? `<label class="field inline-field">${Tx("Each")}<span class="prefix"><span>R$</span><input type="text" inputmode="decimal" data-price="${i}" value="${esc(it.price)}" aria-label="${esc(Tx("Price of {c}", { c: nm }))}"></span></label>` : ""}
+          </div></div>`;
+      };
+      const results = () => {
+        const words = norm(a.q).split(" ").filter(Boolean); if (!words.length) return "";
+        const rows = CARDS.filter((x) => (avail(x.id).n + avail(x.id).f) > 0 && words.every((w) => x.k.includes(w))).slice(0, 8);
+        return rows.length ? rows.map((x) => { const [nm, ver] = split(x.name); return `<button type="button" class="list-row flat" data-add="${esc(x.id)}">${thumb(x, "xs", false)}</span><span class="t"><span>${esc(nm)}${ver ? ` · ${esc(ver)}` : ""}</span><span class="meta">${esc(setName(x.set))} · nº ${esc(x.num)}</span></span><i class="ic i-plus"></i></button>`; }).join("")
+          : `<p class="small muted">${Tx("None of your cards match.")}</p>`;
+      };
+      box.innerHTML = `<div class="card inset stack actbox">
+        <b>${sale ? Tx(a.combo ? "Combo sale" : "Sell") : Tx("New loan")}</b>
+        ${sale ? `<label class="field">${Tx("Date")}<input type="date" id="aDate" value="${esc(a.date)}"></label>
+            <label class="field">${Tx("Buyer (optional)")}<input type="text" id="aBuyer" maxlength="60" value="${esc(a.buyer)}"></label>`
+          : `<label class="field">${Tx("Who is borrowing")}<input type="text" id="aPerson" maxlength="60" value="${esc(a.person)}" required></label>
+            <label class="field">${Tx("Return by (optional)")}<input type="date" id="aDue" value="${esc(a.due)}"></label>`}
+        <div class="act-items">${a.items.map(item).join("")}</div>
+        ${sale && a.combo ? `<label class="field">${Tx("Add a card to the combo")}<input type="search" id="aQ" value="${esc(a.q)}" placeholder="${Tx("Search your cards")}" autocomplete="off"></label><div class="list tight" id="aRes">${results()}</div>` : ""}
+        ${sale ? `<div class="act-sum"><div class="row between"><span class="muted">${Tx("Sum of the cards")}</span><b id="aSum">${esc(money(sum()))}</b></div>
+            <label class="field">${Tx("Total of the sale")}<span class="prefix"><span>R$</span><input type="text" inputmode="decimal" id="aTotal" value="${esc(a.total ?? sum().toFixed(2))}"></span></label>
+            <div class="row between" id="aDiscRow"></div></div>`
+          : `<label class="field">${Tx("Note (optional)")}<input type="text" id="aNote" maxlength="300" value="${esc(a.note)}"></label>`}
+        <p class="small" id="aMsg" role="status" aria-live="polite"></p>
+        <div class="row act-foot"><button type="button" class="btn" id="aCancel">${Tx("Cancel")}</button>
+          ${sale && !a.combo ? `<button type="button" class="btn" id="aCombo">${Tx("Combo sale")}</button>` : ""}
+          <button type="button" class="btn primary" id="aOk">${sale ? Tx("Sell") : Tx("Lend")}</button></div></div>`;
+      upd();
+      wire();
+    };
+    const upd = () => {   // totals and discount, without redrawing (keeps the cursor in the field)
+      if (!sale) return;
+      const s = sum(), t = total(), d = Math.round((s - t) * 100) / 100;
+      $("aSum").textContent = money(s);
+      $("aDiscRow").innerHTML = d ? `<span class="muted">${Tx(d > 0 ? "Discount" : "Extra")}</span><b class="${d > 0 ? "good" : ""}" data-testid="discount">${esc(money(Math.abs(d)))}${s > 0 && d > 0 ? ` · ${Math.round((100 * d) / s)}%` : ""}</b>` : "";
+    };
+    const wire = () => {
+      const on = (sel, ev, fn) => box.querySelectorAll(sel).forEach((x) => x.addEventListener(ev, fn));
+      $("aCancel").onclick = close;
+      $("aCombo")?.addEventListener("click", () => { a.combo = true; draw(); $("aQ")?.focus(); });
+      $("aDate")?.addEventListener("input", (e) => { a.date = e.target.value; });
+      $("aBuyer")?.addEventListener("input", (e) => { a.buyer = e.target.value; });
+      $("aPerson")?.addEventListener("input", (e) => { a.person = e.target.value; });
+      $("aDue")?.addEventListener("input", (e) => { a.due = e.target.value; });
+      $("aNote")?.addEventListener("input", (e) => { a.note = e.target.value; });
+      $("aTotal")?.addEventListener("input", (e) => { a.total = e.target.value; upd(); });
+      $("aQ")?.addEventListener("input", (e) => { a.q = e.target.value; $("aRes").innerHTML = ""; const keep = e.target.selectionStart; draw(); const q = $("aQ"); q.focus(); q.setSelectionRange(keep, keep); });
+      on("[data-price]", "input", (e) => { a.items[+e.target.dataset.price].price = e.target.value; if (a.total == null) $("aTotal").value = sum().toFixed(2); upd(); });
+      on("[data-q]", "click", (e) => { const [i, d] = e.currentTarget.dataset.q.split(":"), it = a.items[+i]; it.qty = Math.max(1, Math.min(avail(it.id)[it.k], it.qty + +d)); draw(); });
+      on("[data-fin]", "click", (e) => { const [i, k] = e.currentTarget.dataset.fin.split(":"), it = a.items[+i]; it.k = k; it.qty = Math.min(it.qty, avail(it.id)[k]) || 1; it.price = unitPrice(it.id, k); draw(); });
+      on("[data-rm]", "click", (e) => { a.items.splice(+e.currentTarget.dataset.rm, 1); draw(); });
+      on("[data-add]", "click", (e) => {
+        const id = e.currentTarget.dataset.add, av = avail(id), k = av.n ? "n" : "f", have = a.items.find((x) => x.id === id && x.k === k);
+        if (have) have.qty = Math.min(av[k], have.qty + 1); else a.items.push({ id, k, qty: 1, price: unitPrice(id, k) });
+        a.q = ""; draw(); $("aQ")?.focus();
+      });
+      $("aOk").onclick = () => (sale ? doSale() : doLoan());
+    };
+    const fail = (t) => { $("aMsg").textContent = t; $("aMsg").className = "small bad"; };
+    async function doLoan() {
+      const person = a.person.trim(); if (!person) return fail(Tx("Write who is borrowing."));
+      const it = a.items[0], w = where(it.id), need = it.qty - w.binder[it.k];   // a loan leaves from the binder: bring the rest from home first
+      $("aOk").disabled = true;
+      try {
+        if (need > 0) { bump(it.id, it.k, 0, -need, true); clearTimeout(pendingTimer); if (!(await flush(true))) throw new Error("move"); }
+        const item = { card_id: it.id, qty: it.qty, foil: it.k === "f" };
+        await CLOUD.api("loans", { method: "POST", prefer: "return=minimal", body: { direction: "lent", person, items: [item], due_on: a.due || null, note: a.note.trim().slice(0, 500) } });
+        const m = it.k === "f" ? lentF : lentN; m.set(it.id, (m.get(it.id) || 0) + it.qty);
+        (lentWho.get(it.id) || lentWho.set(it.id, []).get(it.id)).push({ who: person, qty: it.qty, foil: it.k === "f", due: a.due || null, friend: false });
+        toast(Tx("Loan saved")); close();
+      } catch { $("aOk").disabled = false; fail(Tx("Couldn't save. Try again.")); }
+    }
+    async function doSale() {
+      const t = total();
+      if (!a.items.length) return fail(Tx("Add at least one card."));
+      if (!(t >= 0) || String(a.total ?? "0").trim() === "") return fail(Tx("Write the total of the sale."));
+      for (const it of a.items) if (avail(it.id)[it.k] < it.qty) return fail(Tx("You don't have that many to sell."));
+      $("aOk").disabled = true;
+      try {
+        for (const it of a.items) { const w = where(it.id), fromBinder = Math.min(it.qty, w.binder[it.k]); bump(it.id, it.k, -it.qty, -(it.qty - fromBinder), true); }
+        clearTimeout(pendingTimer);
+        if (!(await flush(true))) throw new Error("collection");
+        const gave = a.items.map((it) => ({ card_id: it.id, qty: it.qty, foil: it.k === "f", price: Math.round(num(it.price) * 100) / 100 }));
+        const d = Math.round((sum() - t) * 100) / 100;
+        const note = [Tx(a.items.length > 1 || a.combo ? "Combo sale" : "Sale"), d > 0 ? Tx("discount {v}", { v: money(d) }) : d < 0 ? Tx("extra {v}", { v: money(-d) }) : ""].filter(Boolean).join(" · ");
+        await CLOUD.api("trades", { method: "POST", prefer: "return=minimal", body: { person: (a.buyer.trim() || Tx("Sale")).slice(0, 60), traded_on: a.date || today(), gave, got: [], cash_brl: -Math.round(t * 100) / 100, note, collection: "applied" } });
+        toast(Tx("Sale saved: {v}", { v: money(t) })); close(); renderAll();
+      } catch (e) { $("aOk").disabled = false; fail(Tx(e?.message === "collection" ? "Couldn't save. Try again." : "The cards left the collection, but the sale wasn't recorded. Add it in Trocas.")); }
+    }
+    draw();
   }
   // place: where the copies are added or removed ("binder" or "home"). Lent copies are changed in Trocas.
   function change(id, kind, delta, quiet, place = "binder") {
@@ -433,29 +553,31 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   }
   let queue = Promise.resolve(), burst = [];
   function flush(quiet) {
-    const p = prof(); if (!p || !pending.size) return;
+    const p = prof(); if (!p || !pending.size) return Promise.resolve(true);
     const items = [...pending].filter(([, d]) => d.t || d.h).map(([k, d]) => { const [card_id, kind] = k.split(":"); return { card_id, foil: kind === "f", t: d.t, h: d.h }; });
     pending = new Map();
-    if (!items.length) return;
+    if (!items.length) return Promise.resolve(true);
     const delta = items.filter((x) => x.t).map((x) => ({ card_id: x.card_id, qty: x.t, foil: x.foil }));
     const home = items.filter((x) => x.h).map((x) => ({ card_id: x.card_id, qty: x.h, foil: x.foil }));
-    const call = home.length
+    const call = () => home.length
       ? CLOUD.api("rpc/collection_change", { method: "POST", prefer: "return=minimal", body: { p_profile: p.profile, p_delta: delta, p_home: home } })
       : CLOUD.api("rpc/apply_collection_delta", { method: "POST", prefer: "return=minimal", body: { p_profile: p.profile, p_delta: delta } });
-    queue = queue.then(() => call)
+    return (queue = queue.then(() => call())
       .then(() => {
         if (quiet) return;
         burst = ($("toast").hidden ? [] : burst).concat(items);   // "Desfazer" undoes every change since the notice appeared
         const undoAll = burst;
         toast(Tx(home.length && !delta.length ? "Moved" : "Collection updated"), () => { burst = []; for (const d of undoAll) bump(d.card_id, d.foil ? "f" : "n", -d.t, -d.h, true); clearTimeout(pendingTimer); flush(true); renderAll(); });
       })
+      .then(() => true)
       .catch(() => {
         for (const d of items) {
           const k = d.foil ? "f" : "n", e = p.collection[d.card_id], h = HOME.get(`${p.profile}|${d.card_id}`);
           if (e) e[k] = Math.max(0, e[k] - d.t); if (h) h[k] = Math.max(0, h[k] - d.h);
         }
         toast(Tx("Couldn't save. Try again."), null, true); if ($("scan").open) scanSay(Tx("Couldn't save. Try again."), true); renderAll(); redrawSheet?.();
-      });
+        return false;
+      }));
   }
   let toastTimer = null;
   function toast(text, undo, err) {

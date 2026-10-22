@@ -360,3 +360,52 @@ test('stocks: when a save fails, the card sheet goes back to the saved counts', 
   await expect(page.locator('#toast')).toContainText('Não foi possível salvar');
   await expect(st.locator('[data-n="home-f"]')).toHaveText('1');
 });
+
+// ---------- Emprestar / Vender / Venda combo ----------
+const posts = (calls, path) => calls.filter((c) => c.path === path && c.body).map((c) => c.body);
+const ymd = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+test('lend from the card sheet: a loan in Trocas, the copy shows as lent', async ({ page }) => {
+  const calls = await setup(page, { collection: { 'LOR10-10': { n: 2, f: 0 } } });
+  await page.goto(BASE);
+  await page.locator('[data-card="LOR10-10"]').click();
+  await page.locator('#aLoan').click();
+  await page.locator('#aOk').click();
+  await expect(page.locator('#aMsg')).toHaveText('Escreva para quem é o empréstimo.');
+  await page.locator('#aPerson').fill('Rafa');
+  await page.locator('#aDue').fill('2026-11-30');
+  await page.locator('#aOk').click();
+  await expect.poll(() => posts(calls, 'loans')).toEqual([{ direction: 'lent', person: 'Rafa', items: [{ card_id: 'LOR10-10', qty: 1, foil: false }], due_on: '2026-11-30', note: '' }]);
+  await expect(page.locator('[data-testid="stocks"]')).toContainText('1 emprestada');
+});
+
+test('sell one card: date is today, the price comes filled, the card leaves the collection', async ({ page }) => {
+  const calls = await setup(page, { collection: { 'LOR10-10': { n: 2, f: 0 } } });
+  await page.goto(BASE);
+  await page.locator('[data-card="LOR10-10"]').click();
+  await page.locator('#aSale').click();
+  await expect(page.locator('#aDate')).toHaveValue(ymd());
+  await page.locator('[data-price="0"]').fill('5');
+  await expect(page.locator('#aTotal')).toHaveValue('5.00');
+  await page.locator('#aOk').click();
+  await expect.poll(() => posts(calls, 'trades')).toEqual([{ person: 'Venda', traded_on: ymd(), gave: [{ card_id: 'LOR10-10', qty: 1, foil: false, price: 5 }], got: [], cash_brl: -5, note: 'Venda', collection: 'applied' }]);
+  expect(rpc(calls, 'collection_change').concat(rpc(calls, 'apply_collection_delta')).map((b) => b.p_delta)).toEqual([[{ card_id: 'LOR10-10', qty: -1, foil: false }]]);
+});
+
+test('combo sale: add cards, keep each price, a lower total becomes the discount', async ({ page }) => {
+  const calls = await setup(page, { collection: { 'LOR10-10': { n: 2, f: 0 }, 'LOR13-12': { n: 3, f: 0 } } });
+  await page.goto(BASE);
+  await page.locator('[data-card="LOR10-10"]').click();
+  await page.locator('#aSale').click();
+  await page.locator('[data-price="0"]').fill('10');
+  await page.locator('#aCombo').click();
+  await page.locator('#aQ').fill('pocahontas guiding');
+  await page.locator('[data-add="LOR13-12"]').click();
+  await page.locator('[data-price="1"]').fill('20');
+  await page.locator('[data-q="1:1"]').click();   // 2 Pocahontas
+  await expect(page.locator('#aSum')).toContainText('50,00');
+  await page.locator('#aTotal').fill('40');
+  await expect(page.locator('[data-testid="discount"]')).toContainText('10,00 · 20%');
+  await page.locator('#aOk').click();
+  await expect.poll(() => posts(calls, 'trades')).toEqual([{ person: 'Venda', traded_on: ymd(), cash_brl: -40, collection: 'applied', got: [],
+    gave: [{ card_id: 'LOR10-10', qty: 1, foil: false, price: 10 }, { card_id: 'LOR13-12', qty: 2, foil: false, price: 20 }], note: 'Venda combo · desconto R$\u00a010,00' }]);
+});
