@@ -325,3 +325,13 @@ test('stocks: before supabase/collection_home.sql runs, the page works as before
   await page.locator('#cardSheet [data-d="n:1"]').click();
   await expect.poll(() => rpc(calls, 'apply_collection_delta')).toEqual([{ p_profile: 'luiscredie', p_delta: [{ card_id: 'LOR10-10', qty: 1, foil: false }] }]);
 });
+
+test('scanner recognises the Tinker Bell Challenge promo (DLPC1-18-C2)', async ({ page }) => {
+  const calls = await setup(page);
+  await fakeCamera(page, { file: 'Tinker_Bell_-_Insistent_Fairy_(Disney_Lorcana_Challenge)__DLPC1-18-C2.jpg' });
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Escanear' }).click();
+  await expect(page.locator('[data-testid="scan-last"]')).toContainText('Tinker Bell', { timeout: 15000 });
+  await confirmList(page, 1);
+  await expect.poll(() => deltas(calls).map((d) => d.card_id)).toEqual(['DLPC1-18-C2']);
+});

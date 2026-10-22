@@ -1,25 +1,21 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-22T18:33:29.395494+00:00",
+  "generated_at": "2026-10-22T18:46:24.022358+00:00",
   "status": "pass",
   "summary": {
     "cards": 3687,
     "pt_overlay_cards": 3686,
     "priced_cards": 3583,
     "errors": 0,
-    "warnings": 273,
+    "warnings": 272,
     "missing_prices": 104,
-    "missing_images": 167,
+    "missing_images": 166,
     "missing_translations": 1,
     "orphan_prices_detected": 0,
     "orphan_prices_removed": 0
   },
   "errors": [],
   "warnings": [
-    {
-      "code": "MISSING_IMAGE",
-      "card_id": "DLPC1-18-C2"
-    },
     {
       "code": "MISSING_IMAGE",
       "card_id": "LOR1-T01"
