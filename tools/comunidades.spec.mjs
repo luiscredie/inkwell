@@ -20,7 +20,11 @@ const VIEW = {
   'liga-campinas': { slug: 'liga-campinas', name: 'Liga Campinas', kind: 'city', city: 'Campinas', description: 'Quem joga em Campinas.', avatar: 'LOR14-2', mock: false,
     member_n: 2, members: [], week_posts: 1,
     posts: [{ id: 'p9', body: 'Oi, pessoal!', at: '2026-10-21T10:00:00Z', name: 'Ana', handle: null, avatar: null, mine: false }], role: 'owner', can_join: false,
-    manage: [{ uid: ME, name: 'Luís', role: 'owner' }, { uid: '33333333-3333-4333-8333-333333333333', name: 'Ana', role: 'member' }] },
+    manage: [{ uid: ME, name: 'Luís', role: 'owner' }, { uid: '33333333-3333-4333-8333-333333333333', name: 'Ana', role: 'member', adult: true }] },
+  'loja-do-ze': { slug: 'loja-do-ze', name: 'Loja do Zé', kind: 'store', city: 'São Paulo', description: 'Liga às quintas.', avatar: null, mock: false,
+    contact: { address: 'Rua das Flores, 10', phone: '(11) 98765-4321', email: 'contato@lojadoze.com.br', site: 'https://lojadoze.com.br', instagram: 'lojadoze' },
+    member_n: 2, members: [], week_posts: 0, posts: [], role: 'owner', can_join: false,
+    manage: [{ uid: ME, name: 'Luís', role: 'owner' }, { uid: '44444444-4444-4444-8444-444444444444', name: 'Bia', role: 'member', adult: true }] },
 };
 
 async function setup(page, { signedIn = true, adult = true } = {}) {
@@ -40,7 +44,7 @@ async function setup(page, { signedIn = true, adult = true } = {}) {
     if (path === 'rpc/community_view') return json(VIEW[body.p_slug] || null);
     if (path === 'rpc/my_profile') return json({ display_name: 'Luís', adult, hidden: false });
     if (path === 'rpc/create_community') return json({ slug: 'liga-campinas' });
-    if (['rpc/join_community', 'rpc/post_in_community', 'rpc/moderate_community', 'rpc/report_community_post', 'rpc/update_community'].includes(path)) return route.fulfill({ status: 200, contentType: 'application/json', body: 'null' });
+    if (['rpc/join_community', 'rpc/post_in_community', 'rpc/moderate_community', 'rpc/report_community_post', 'rpc/update_community', 'rpc/set_community_role', 'rpc/transfer_community'].includes(path)) return route.fulfill({ status: 200, contentType: 'application/json', body: 'null' });
     if (path === 'rpc/my_duels_sync') return json(null);
     return json([]);
   });
@@ -115,4 +119,27 @@ test('owner: post, hide, report, delete with a second tap, remove a member', asy
   await page.locator('[data-rm="33333333-3333-4333-8333-333333333333"]').click();
   await page.locator('[data-rm="33333333-3333-4333-8333-333333333333"]').click();
   await expect.poll(() => rpcCalls(calls, 'moderate_community').at(-1)).toEqual({ p_action: 'remove_member', p_slug: 'liga-campinas', p_user: '33333333-3333-4333-8333-333333333333' });
+});
+
+test('store: contact for everyone; owner edits it, makes an admin and hands over the community', async ({ page }) => {
+  const calls = await setup(page);
+  await page.goto(url('comunidades/?c=loja-do-ze'));
+  const ct = page.locator('[data-testid="contact"]');
+  await expect(ct).toContainText('Rua das Flores, 10');
+  await expect(ct.locator('a[href^="https://wa.me/5511987654321"]')).toHaveCount(1);
+  await expect(ct.locator('a[href="https://instagram.com/lojadoze"]')).toContainText('@lojadoze');
+  await expect(ct.locator('a[href="https://lojadoze.com.br"]')).toHaveCount(1);
+  await page.locator('#edit').click();
+  await page.locator('[data-ct="instagram"]').fill('@lojadoze2');
+  await page.locator('#cfSave').click();
+  await expect.poll(() => rpcCalls(calls, 'update_community').length).toBe(1);
+  expect(rpcCalls(calls, 'update_community')[0].p.contact).toMatchObject({ instagram: '@lojadoze2', address: 'Rua das Flores, 10' });
+  await page.locator('#manage').click();
+  const bia = page.locator('[data-member="44444444-4444-4444-8444-444444444444"]');
+  await bia.locator('[data-role]').click();
+  await expect.poll(() => rpcCalls(calls, 'set_community_role')).toEqual([{ p_slug: 'loja-do-ze', p_user: '44444444-4444-4444-8444-444444444444', p_role: 'admin' }]);
+  await bia.locator('[data-own]').click();
+  expect(rpcCalls(calls, 'transfer_community')).toEqual([]);
+  await bia.locator('[data-own]').click();
+  await expect.poll(() => rpcCalls(calls, 'transfer_community')).toEqual([{ p_slug: 'loja-do-ze', p_user: '44444444-4444-4444-8444-444444444444' }]);
 });
