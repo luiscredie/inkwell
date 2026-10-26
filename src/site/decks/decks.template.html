@@ -43,6 +43,8 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
 .pd-row .pd-q { font-weight: 800; margin-right: 2px; }
 .pd .notice .actions { display: flex; gap: var(--sp-2); flex-wrap: wrap; margin-left: auto; }
 @media (max-width: 760px) { .pd-sum { grid-template-columns: repeat(2, minmax(0, 1fr)); } .pd .notice { flex-wrap: wrap; } .pd .notice .actions { width: 100%; margin-left: 0; } }
+.settag { font-weight: 700; margin-right: 6px; vertical-align: 1px; }
+.deck-row .t > span:first-child { white-space: normal; overflow: visible; }
 </style>
 
 <main class="page" id="page">
@@ -193,6 +195,10 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
   const setNo = (code) => +(/^LOR(\d+)$/.exec(code || "") || [])[1] || 0;
   const autoMeta = (d) => { let n = 0; for (const id of Object.keys(d.cards || {})) n = Math.max(n, setNo(BY.get(id)?.set)); return n ? `LOR${n}` : ""; };
   const metaOf = (d) => d.meta || localMeta[d.id] || autoMeta(d);
+  // the deck's meta (set) as a coloured tag before its name: each set its own colour (12 orange, 13 green, 14 yellow…)
+  const SET_COLOR = { 1: "#2f6db5", 2: "#7b3fb0", 3: "#0f8a8a", 4: "#c2185b", 5: "#3949ab", 6: "#00796b", 7: "#6d4c41", 8: "#5e35b1", 9: "#c62828", 10: "#6a1b9a", 11: "#0277bd", 12: "#ef6c00", 13: "#2e7d32", 14: "#f9a825" };
+  const metaTag = (code) => { const n = setNo(code); if (!n) return ""; const bg = SET_COLOR[n] || "#546e7a", light = n === 14;
+    return `<span class="tag settag" data-testid="meta-tag" style="background:${bg};color:${light ? "#1c1404" : "#fff"};border-color:${bg}">(${esc(Tx("Set {n}", { n }))})</span> `; };
   const metaLabel = (code) => (code ? Tx("Set {n}", { n: setNo(code) }) : Tx("No meta"));
   const coll = () => prof()?.collection || {};
   const ownedName = (c) => { let n = 0; const col = coll(); for (const p of printings(c)) { const e = col[p.id]; if (e) n += (+e.n || 0) + (+e.f || 0); } return n; };
@@ -397,7 +403,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
       const status = m.total < MIN ? `<span class="tag warn" title="${esc(Tx("A deck needs at least {n} cards.", { n: MIN }))}">${esc(Tx(MIN - m.total === 1 ? "list: 1 card short" : "list: {n} cards short", { n: MIN - m.total }))}</span>` : m.issues.length ? `<span class="tag late">${Tx("not legal")}</span>`
         : m.missingN ? `<span class="tag" title="${esc(Tx("What the missing copies cost at market price."))}">${esc(Tx(m.missingN === 1 ? "1 card missing · {v}" : "{n} cards missing · {v}", { n: m.missingN, v: money(m.missingValue) }))}</span>` : `<span class="tag match">${Tx("complete")}</span>`;
       return `<a class="list-row deck-row" href="?deck=${encodeURIComponent(d.id)}" data-deck="${esc(d.id)}">${dots(deckInks(d, m), "lg pair")}
-        <span class="t"><span>${esc(d.name)}</span><span class="meta">${esc([fmtName(d.format), metaOf(d) ? metaLabel(metaOf(d)) : "", Tx("{a}/{b} cards", { a: m.total, b: MIN }), m.inColl != null ? Tx("{p}% in your collection", { p: m.inColl }) : "", m.missingN ? Tx(m.missingN === 1 ? "1 missing from your collection" : "{n} missing from your collection", { n: m.missingN }) : ""].filter(Boolean).join(" · "))}</span>
+        <span class="t"><span>${metaTag(metaOf(d))}${esc(d.name)}</span><span class="meta">${esc([fmtName(d.format), Tx("{a}/{b} cards", { a: m.total, b: MIN }), m.inColl != null ? Tx("{p}% in your collection", { p: m.inColl }) : "", m.missingN ? Tx(m.missingN === 1 ? "1 missing from your collection" : "{n} missing from your collection", { n: m.missingN }) : ""].filter(Boolean).join(" · "))}</span>
         <span class="meter${m.inColl === 100 ? " full" : ""}" style="--v:${m.inColl || 0}%;margin-top:8px;max-width:180px"><i></i></span></span>
         <span class="trail"><b class="num">${m.wr != null ? m.wr + "%" : "—"}</b><span class="micro muted">${esc(m.games.length ? Tx(m.games.length === 1 ? "{n} game" : "{n} games", { n: m.games.length }) : Tx("no games"))}</span>${status}</span></a>`;
     };
