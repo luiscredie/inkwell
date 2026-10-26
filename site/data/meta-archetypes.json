@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-26",
+  "format": "core",
+  "source": "Archetype names as listed on inkdecks.com (Core Constructed), from decks published in September and October 2026. Edit by hand; the counter shows them as a library of deck names.",
+  "decks": [
+    { "name": "Midrange", "inks": ["Amber", "Amethyst"] },
+    { "name": "Merida", "inks": ["Amber", "Amethyst"] },
+    { "name": "Pocahontas", "inks": ["Amber", "Amethyst"] },
+    { "name": "Circle", "inks": ["Amber", "Emerald"] },
+    { "name": "Boost", "inks": ["Amber", "Ruby"] },
+    { "name": "Toys", "inks": ["Amber", "Ruby"] },
+    { "name": "Princesses", "inks": ["Amber", "Sapphire"] },
+    { "name": "Lilo & Stitch", "inks": ["Amber", "Steel"] },
+    { "name": "Steelsong", "inks": ["Amber", "Steel"] },
+    { "name": "Aggro", "inks": ["Amber", "Steel"] },
+    { "name": "Midrange", "inks": ["Amber", "Steel"] },
+    { "name": "Damaged", "inks": ["Amethyst", "Ruby"] },
+    { "name": "Evasive", "inks": ["Amethyst", "Sapphire"] },
+    { "name": "Shere Khan", "inks": ["Amethyst", "Steel"] },
+    { "name": "Bots", "inks": ["Amethyst", "Steel"] },
+    { "name": "Evasives", "inks": ["Amethyst", "Steel"] },
+    { "name": "Locations", "inks": ["Amethyst", "Steel"] },
+    { "name": "Actions", "inks": ["Emerald", "Ruby"] },
+    { "name": "Mickey & Minnie", "inks": ["Emerald", "Sapphire"] },
+    { "name": "Ward", "inks": ["Emerald", "Sapphire"] },
+    { "name": "Evasive", "inks": ["Emerald", "Steel"] },
+    { "name": "Detectives", "inks": ["Sapphire", "Steel"] }
+  ]
+}

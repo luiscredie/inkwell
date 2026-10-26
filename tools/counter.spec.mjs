@@ -87,3 +87,43 @@ test('tournament mode: no opponent question at the start', async ({ page }) => {
   await page.getByRole('button', { name: 'Circle of Life' }).click();
   await expect(page.locator('#sheet')).toBeHidden();
 });
+
+test('meta deck library: filtered by the inks chosen, picks name and inks', async ({ page }) => {
+  await setup(page);
+  await newMatch(page);
+  await page.getByRole('button', { name: 'Circle of Life' }).click();
+  await page.getByRole('button', { name: 'Não' }).click();
+  await expect(page.locator('#metaGrp')).toContainText('Decks do meta');
+  await page.locator('#dk [data-ink="Steel"]').click();
+  await expect(page.locator('#metaGrp')).toContainText('Steelsong');
+  await expect(page.locator('#metaGrp')).not.toContainText('Circle');
+  await page.locator('#metaGrp').getByRole('button', { name: 'Steelsong' }).click();
+  const st = await page.evaluate(() => JSON.parse(localStorage.getItem('inkwell-lorecounter-v3')));
+  expect(st.match.opp).toEqual({ inks: ['Amber', 'Steel'], name: 'Steelsong' });
+});
+
+async function winGame(page) {
+  const bx = await page.locator('#h1').boundingBox();
+  for (let i = 0; i < 20; i++) await page.mouse.click(bx.x + bx.width * 0.85, bx.y + bx.height / 2);
+}
+test('opponent deck skipped: asked again at the end, and can still be set from the result', async ({ page }) => {
+  await setup(page);
+  await newMatch(page);
+  await page.getByRole('button', { name: 'Circle of Life' }).click();
+  await page.getByRole('button', { name: 'Pular' }).click();                 // "O oponente usa o Inkwell?" → skip
+  await winGame(page);
+  await page.getByRole('button', { name: 'Pular' }).click();                 // who went first → skip
+  await page.getByRole('button', { name: 'Pular' }).click();                 // still unknown: asked again → skip
+  await page.locator('#sheet').waitFor({ state: 'hidden' });
+  { const bx = await page.locator('#h1').boundingBox(); await page.mouse.click(bx.x + bx.width * 0.85, bx.y + bx.height / 2); }   // a tap starts the next game
+  await winGame(page);
+  await expect(page.getByRole('heading', { name: 'O oponente usa o Inkwell?' })).toBeVisible();   // end of match, still unknown
+  await page.getByRole('button', { name: 'Pular' }).click();
+  await page.getByRole('button', { name: 'Escolher deck do oponente' }).click();
+  await page.getByRole('button', { name: 'Não' }).click();
+  await page.locator('#dk [data-ink="Ruby"]').click();
+  await page.getByRole('button', { name: 'Salvar' }).click();
+  const st = await page.evaluate(() => JSON.parse(localStorage.getItem('inkwell-lorecounter-v3')));
+  expect(st.history[0].opp.inks).toEqual(['Ruby']);
+  expect(st.history[0].exported).toBe(false);
+});
