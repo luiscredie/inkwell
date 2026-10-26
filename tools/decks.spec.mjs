@@ -210,6 +210,7 @@ test('meta: automatic from the newest set, chosen on the deck page, filter on th
   const calls = await setup(page, { extraDecks: [{ id: 'deck-13', name: 'Set 13 Deck', format: 'core', colors: ['Amber'], cards: s13, created_at: '2026-10-03' }] });
   await page.goto(BASE);
   await expect(page.locator('[data-deck="deck-a"]')).toContainText('Set 10');
+  await expect(page.locator('[data-deck="deck-a"] [data-testid="meta-tag"]')).toHaveText('(Set 10)');
   await expect(page.locator('[data-deck="deck-13"]')).toContainText('Set 13');
   await page.locator('#metaF').selectOption('LOR13');
   await expect(page.locator('[data-deck]')).toHaveCount(1);

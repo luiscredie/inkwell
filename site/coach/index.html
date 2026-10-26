@@ -80,7 +80,7 @@ window.INKWELL_NO_STORE_MSG = "Your games appear here after you sign in.";
     "One card per line, e.g.\n4 Elsa - Spirit of Winter\n4 Tipo - Growing Son": "Uma carta por linha, por exemplo\n4 Elsa - Spirit of Winter\n4 Tipo - Growing Son",
     "All {n} games of this match": "Todos os {n} jogos desta partida", "Save deck list": "Salvar lista",
     "Turn {n}: {name}": "Turno {n}: {name}", "lore {s}": "lore {s}",
-    "Your comment": "Seu comentário", "Cancel": "Cancelar", "Comment": "Comentar", "Delete": "Apagar", "Delete game": "Apagar jogo", "Not found in the catalogue: {list}": "Não encontradas no catálogo: {list}", "Delete this game and its comments?": "Apagar este jogo e os comentários?", "Couldn't delete the game. Try again.": "Não foi possível apagar o jogo. Tente de novo.", "Confirm delete": "Confirmar",
+    "Your comment": "Seu comentário", "Cancel": "Cancelar", "Comment": "Comentar", "Delete": "Apagar", "Delete game": "Apagar jogo", "or use one of my decks": "ou use um dos meus decks", "Choose a deck…": "Escolha um deck…", "Untitled deck": "Deck sem nome", "Check the list and save.": "Confira a lista e salve.", "Not found in the catalogue: {list}": "Não encontradas no catálogo: {list}", "Delete this game and its comments?": "Apagar este jogo e os comentários?", "Couldn't delete the game. Try again.": "Não foi possível apagar o jogo. Tente de novo.", "Confirm delete": "Confirmar",
     "Someone": "Alguém", "You": "Você", "A player": "Um jogador",
     "The comment store is full. Delete old comments to add new ones.": "O espaço de comentários está cheio. Apague comentários antigos.",
     "Couldn't save the comment. Try again.": "Não foi possível salvar o comentário. Tente de novo.",
@@ -544,6 +544,11 @@ window.INKWELL_CLOUD = (() => {
       await CLOUD.api(`game_logs?user_id=eq.${enc(me.id)}&game_id=eq.${enc(gameId)}`, { method: "PATCH", prefer: "return=minimal", body });
       await reload();
     },
+    // my Inkwell decks (Decks page), to fill a game's deck list in one tap
+    async myDecks() {
+      const rows = await CLOUD.collections("profile,decks:data->decks").catch(() => []);
+      return (rows || []).flatMap((r) => (Array.isArray(r.decks) ? r.decks : [])).filter((d) => d && d.cards && typeof d.cards === "object" && Object.keys(d.cards).length);
+    },
     // delete one of my games and its comments; duels.ink games stay (duels.ink is their record, and the sync would bring them back)
     canDelete: (gameId) => { const r = rows.find((x) => x.game_id === gameId && x.user_id === me.id); return player === me.id && !!r && !/^duels[._]ink$/.test(r.source || ""); },
     async deleteGame(gameId) {
@@ -973,6 +978,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
   const games = new Map();          // key -> {key, coll, doc}
   let stats = null;
   let current = null;               // game key
+  let myDeckList = null;            // my Inkwell decks, loaded once
   let notes = [];                   // comments for current game
   const allNotes = { notes: [], public_notes: [] };
   const noteCount = (g) => allNotes[notesColl(g)].filter((n) => n.game === g.key).length;
@@ -1259,7 +1265,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       ${chartBlock(g, log, meSeat)}
       <div>${add("game", Tx("Comment on the whole game"))}${notesHtml("game", profilesMap)}</div>
       ${deck.length || isOwner ? `<details class="deck" ${!deck.length || deckNotice?.key === g.key ? "open" : ""}><summary>${g.doc.owner_name && g.doc.owner_name !== "You" ? esc(Tx("{name}'s deck", { name: g.doc.owner_name })) : Tx("Your deck")} (${deck.length ? Tx("{n} cards", { n: deck.reduce((n, e) => n + e.qty, 0) }) : Tx("no list yet")})</summary>
-        ${isOwner ? `<div class="deckedit"><button type="button" class="btn ghost small" id="deckEdit">${Tx(deck.length ? "Edit your deck list" : "Add your deck list")}</button>
+        ${isOwner ? `<div class="deckedit"><div class="row" style="gap:var(--sp-2);flex-wrap:wrap;align-items:center"><button type="button" class="btn ghost small" id="deckEdit">${Tx(deck.length ? "Edit your deck list" : "Add your deck list")}</button>
+          ${myDeckList?.length ? `<label class="small" style="display:flex;gap:6px;align-items:center">${Tx("or use one of my decks")}<select id="deckPick" data-testid="deck-pick"><option value="">${Tx("Choose a deck…")}</option>${myDeckList.map((d, i) => `<option value="${i}">${esc(d.name || Tx("Untitled deck"))}</option>`).join("")}</select></label>` : ""}</div>
           <div id="deckBox" ${deckNotice?.key === g.key && deckNotice.open ? "" : "hidden"}><textarea id="deckText" rows="10" placeholder="${esc(Tx("One card per line, e.g.\n4 Elsa - Spirit of Winter\n4 Tipo - Growing Son"))}">${esc(deck.map((e) => `${e.qty} ${cardName(e.card_id)}`).join("\n"))}</textarea>
           ${siblings(g.key).length > 1 ? `<label class="small"><input type="checkbox" id="deckAll" checked> ${Tx("All {n} games of this match", { n: siblings(g.key).length })}</label>` : ""}
           <div class="row"><button type="button" class="btn primary small" id="deckSave">${Tx("Save deck list")}</button></div></div><span class="small" id="deckMsg" aria-live="polite">${deckNotice?.key === g.key ? esc(deckNotice.text) : ""}</span></div>` : ""}
@@ -1334,6 +1341,13 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       } catch { b.disabled = false; alertInline(Tx("Couldn't delete the game. Try again.")); }
     });
     $("deckEdit")?.addEventListener("click", () => { $("deckBox").hidden = !$("deckBox").hidden; if (!$("deckBox").hidden) $("deckText").focus(); });
+    $("deckPick")?.addEventListener("change", (e) => {
+      const d = myDeckList?.[+e.target.value]; if (!d) return;
+      $("deckText").value = Object.entries(d.cards).filter(([, q]) => +q > 0).map(([id, q]) => `${q} ${cardName(id)}`).join("\n");
+      $("deckBox").hidden = false; $("deckSave").focus();
+      $("deckMsg").textContent = Tx("Check the list and save.");
+    });
+    if (isOwner && db?.myDecks && myDeckList === null) { myDeckList = []; db.myDecks().then((l) => { myDeckList = l; if (l.length && current === g.key) renderReview(); }).catch(() => {}); }
     $("deckSave")?.addEventListener("click", () => saveDeck(g));
   }
   // ---------- stats view: decks, matchups, trend ----------

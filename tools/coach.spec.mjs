@@ -182,3 +182,26 @@ test('my own Lore Counter game can be deleted with two taps; duels.ink games can
   await expect(page.locator('.game[data-k="c1"]')).toHaveCount(0);
   await expect(page.locator('.game[data-k="a2"]')).toHaveCount(1);
 });
+
+test('a game without a deck list can take one of my Inkwell decks', async ({ page }) => {
+  await page.addInitScript((me) => {
+    localStorage.setItem('inkwell-lang', 'pt');
+    const exp = Math.floor(Date.now() / 1000) + 3600;
+    localStorage.setItem('inkwell-counter-auth', JSON.stringify({ access_token: 'x.' + btoa(JSON.stringify({ sub: me, exp })) + '.y', refresh_token: 'r', expires_at: exp, user: { id: me, email: 'luis@example.com' } }));
+  }, ME);
+  await page.route('**/rest/v1/**', (route) => {
+    const u = new URL(route.request().url()), path = u.pathname.replace(/.*\/rest\/v1\//, '');
+    const json = (v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+    if (path === 'game_logs') { const id = (u.searchParams.get('game_id') || '').replace(/^eq\./, ''); return json(id ? [{ log: LOGS[id] }] : ROWS); }
+    if (path === 'inkwell_profiles') return json([{ profile: 'principal', decks: [{ id: 'd1', name: 'Circle of Life', cards: { 'LOR14-1': 4, 'LOR12-195': 2 } }, { id: 'd2', name: 'Vazio', cards: {} }] }]);
+    if (path === 'rpc/my_profile') return json({ display_name: 'Luís', adult: true });
+    return json(path.startsWith('rpc/') ? null : []);
+  });
+  await page.route('https://duels.ink/**', (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<p>replay</p>' }));
+  await page.goto(url('coach/?game=a2'));
+  const pick = page.locator('[data-testid="deck-pick"]');
+  await expect(pick.locator('option')).toHaveCount(2);   // the empty deck is left out
+  await pick.selectOption({ label: 'Circle of Life' });
+  await expect(page.locator('#deckBox')).toBeVisible();
+  await expect(page.locator('#deckText')).toHaveValue(/^4 .+\n2 .+$/);
+});
