@@ -7,6 +7,18 @@
  * The counter keeps every match locally until send() resolves true.
  * Only the public URL and publishable key are here; row-level security limits each user to their own rows.
  */
+// Feature flags (off by default). ?preview=visitante turns the new guest experience on for this tab only
+// (sessionStorage); ?preview=off turns it off again. Rollback = leave guestProfile false: nothing else changes.
+window.INKWELL_FLAGS = (() => {
+  const f = { guestProfile: false };
+  try {
+    const q = new URLSearchParams(location.search).get("preview");
+    if (q === "visitante") sessionStorage.setItem("inkwell-preview", "visitante");
+    if (q === "off") sessionStorage.removeItem("inkwell-preview");
+    if (sessionStorage.getItem("inkwell-preview") === "visitante") f.guestProfile = true;
+  } catch { /* storage off: flags stay as set above */ }
+  return f;
+})();
 window.INKWELL_CLOUD = (() => {
   const cfg = window.INKWELL_CLOUD_CONFIG || {};
   if (!cfg.url || !cfg.key) return null;
@@ -31,6 +43,7 @@ window.INKWELL_CLOUD = (() => {
   if (h.get("access_token") && h.get("refresh_token")) {
     store(session({ access_token: h.get("access_token"), refresh_token: h.get("refresh_token"), expires_in: +h.get("expires_in") || 3600 }));
     history.replaceState(null, "", location.pathname + location.search);
+    window.INKWELL_FROM_LINK = true;   // this tab was opened by the e-mail link (the guest editor tells the original tab apart)
   }
 
   async function token() {

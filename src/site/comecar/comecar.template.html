@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Começar meu Inkwell</title>
+<meta name="description" content="Monte seu perfil de Lorcana: seu nome, suas tintas e suas três cartas favoritas. Crie uma conta quando quiser guardar.">
+<meta name="theme-color" content="#13102a">
+<link rel="icon" href="../ink/icon-192.png">
+<link rel="apple-touch-icon" href="../ink/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="../ui/tokens.css"><link rel="stylesheet" href="../ui/iw-public.css"><script>document.documentElement.dataset.theme="noite";</script>
+</head>
+<body>
+<script>window.INKWELL_CLOUD_CONFIG = {"url": "https://sorefaetiaebmjploanp.supabase.co", "key": "sb_publishable_RkAWW-ENz70CXA6_QV7aHw_MpfD7Gn2", "redirect": "https://luiscredie.github.io/inkwell/comecar/"};
+/*@CLOUD_JS@*/</script>
+<style>
+/* layout of this page only; components come from ../ui/tokens.css and ../ui/iw-public.css */
+.cm-head { display: grid; gap: var(--sp-2); padding-block: var(--sp-6) var(--sp-4); }
+.cm-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--sp-8); align-items: start; }
+.cm-form { display: grid; gap: var(--sp-5); }
+.cm-form fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.cm-form legend, .cm-form .lbl { font-weight: 700; margin-bottom: var(--sp-2); display: block; padding: 0; }
+.cm-form .hint { display: block; font-size: var(--fs-small); color: var(--iw-muted); margin-top: 6px; }
+.cm-form .err { color: var(--iw-danger); font-size: var(--fs-small); margin-top: 6px; }
+.cm-side { position: sticky; top: 84px; display: grid; gap: var(--sp-3); }
+.cm-notice { display: grid; gap: var(--sp-2); padding: var(--sp-4); border-radius: var(--iw-radius-small); background: var(--surface-2); border: 1px solid var(--line-strong); margin-bottom: var(--sp-4); }
+.cm-notice.err { background: rgba(255,120,140,.10); border-color: rgba(255,160,175,.5); }
+.cm-notice.ok { background: rgba(111,211,163,.10); border-color: rgba(111,211,163,.5); }
+.cm-notice .row { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.cm-review { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
+.cm-review dl { margin: 0; display: grid; gap: 4px; } .cm-review dt { font-size: var(--fs-micro); color: var(--iw-muted); } .cm-review dd { margin: 0 0 var(--sp-2); overflow-wrap: anywhere; }
+.cm-discard { margin-top: var(--sp-3); }
+.iw-zbtn { display: block; width: 100%; padding: 0; border: 0; background: none; color: inherit; cursor: zoom-in; border-radius: 10px; }
+@media (max-width: 899px) { .cm-grid { grid-template-columns: 1fr; gap: var(--sp-5); } .cm-side { position: static; } }
+@media (max-width: 767px) { .cm-review { grid-template-columns: 1fr; } }
+</style>
+
+<main class="page iw-public" id="page">
+  <div id="app" class="iw-container" aria-live="polite"></div>
+</main>
+<dialog class="iw-dialog iw-public" id="picker" aria-labelledby="pkT"></dialog>
+<dialog class="iw-dialog small iw-public" id="leave" aria-labelledby="lvT"></dialog>
+<div class="toast-host"><div class="toast" id="toast" role="status" hidden></div></div>
+
+<script>
+const CARD_INDEX = /*@CARD_INDEX@*/;
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const CLOUD = window.INKWELL_CLOUD;
+  const FLAGS = window.INKWELL_FLAGS || {};
+  // The new experience is off until Luis turns it on (or opens ?preview=visitante): keep today's site.
+  if (!FLAGS.guestProfile) { location.replace("../feed/"); return; }
+
+  let lang = "pt";
+  try { lang = localStorage.getItem("inkwell-lang") || ((navigator.language || "pt").toLowerCase().startsWith("en") ? "en" : "pt"); } catch { /* */ }
+  // Texts: handoff spec/03-textos.md (English keys, Portuguese in PT)
+  const PT = {
+    "Guest mode": "Modo visitante", "Unsaved changes": "Alterações ainda não salvas", "Create an account to save your profile and continue later.": "Crie sua conta para salvar seu perfil e continuar depois.",
+    "Create account and save": "Criar conta e salvar", "Without an account, your changes stay in this session and may be lost when you close the tab.": "Sem uma conta, suas alterações ficam nesta sessão e podem se perder ao fechar a aba.",
+    "We could not keep a draft in this tab. Reloading or leaving may erase your changes.": "Não conseguimos guardar o rascunho nesta aba. Recarregar ou sair pode apagar suas alterações.",
+    "Leave without saving?": "Sair sem salvar?", "If you leave without saving, you may lose your changes.": "Se sair sem salvar, você poderá perder as alterações que fez.",
+    "Keep editing": "Continuar editando", "Leave without saving": "Sair sem salvar",
+    "Choose your favourite cards": "Escolha suas cartas favoritas", "Search by name or character": "Buscar por nome ou personagem", "Full catalogue": "Todo o catálogo",
+    "Only cards I own": "Só cartas que possuo", "Sign in to filter by your collection.": "Entre para filtrar pela sua coleção.", "Use this card": "Usar esta carta", "Replace card": "Trocar carta",
+    "Remove from showcase": "Remover da vitrine", "No cards found. Try clearing the filters.": "Nenhuma carta encontrada. Tente limpar os filtros.", "Choose up to two inks": "Escolha até duas tintas",
+    "Saving your Inkwell…": "Salvando seu Inkwell…", "Your Inkwell has been saved.": "Seu Inkwell foi salvo.", "Could not save. Your changes are still here.": "Não foi possível salvar. Suas alterações continuam aqui.",
+    "Return to the tab where you started to save your changes.": "Volte à aba em que você começou para salvar suas alterações.", "Apply to my profile": "Aplicar ao meu perfil",
+    "Your profile starts private. You decide when to publish it.": "Seu perfil começa privado. Você decide quando publicar.",
+    "You can highlight up to two inks. Remove one to choose another.": "Você pode destacar até duas tintas. Remova uma para escolher outra.",
+    "This version is already in your showcase.": "Esta versão já está na sua vitrine.", "Loading your collection…": "Carregando sua coleção…",
+    "Your collection is empty. Explore the catalogue or add your cards.": "Sua coleção ainda está vazia. Explore o catálogo ou adicione suas cartas.",
+    "We could not load your collection. You can still explore the full catalogue.": "Não conseguimos consultar sua coleção. Você ainda pode explorar todo o catálogo.",
+    "Your account is ready, but we could not find the draft from this session.": "Sua conta está pronta, mas não encontramos o rascunho desta sessão.", "Start again": "Começar novamente",
+    "We could not open this draft. You can start again.": "Não conseguimos abrir este rascunho. Você pode começar novamente.",
+    "The account has changed. Review your changes before applying them to the new profile.": "A conta mudou. Revise suas alterações antes de aplicar ao novo perfil.",
+    "Your Inkwell starts here": "Seu Inkwell começa aqui", "Choose the cards that represent you. Create an account when you want to keep your profile.": "Escolha as cartas que representam você. Crie uma conta quando quiser guardar seu perfil.",
+    "Display name": "Nome de exibição", "How do you want to appear?": "Como você quer aparecer?", "2 to 40 characters.": "De 2 a 40 caracteres.", "Use at least 2 characters.": "Use pelo menos 2 caracteres.",
+    "Your three favourite cards": "Suas três cartas favoritas", "Any card from the catalogue, even without a copy in a collection.": "Qualquer carta do catálogo, mesmo sem ter uma cópia.",
+    "Choose card": "Escolher carta", "Move left": "Mover para a esquerda", "Move right": "Mover para a direita", "Slot {n}": "Posição {n}",
+    "Profile preview": "Prévia do seu perfil", "Your name here": "Seu nome aqui", "No inks yet": "Nenhuma tinta ainda", "Discard the draft": "Descartar rascunho",
+    "Close": "Fechar", "Set": "Set", "Ink": "Tinta", "Rarity": "Raridade", "Finish": "Acabamento", "All": "Todos", "Normal": "Normal", "Foil": "Foil", "foil": "foil",
+    "Show more": "Mostrar mais", "{n} cards": "{n} cartas", "1 card": "1 carta", "Cards from the newest set, to start with. Search for any other.": "Cartas do set mais recente, para começar. Busque qualquer outra.",
+    "See larger": "Ver maior", "Back to the results": "Voltar aos resultados", "You own this version": "Você tem esta versão", "You own another finish of this card": "Você tem esta carta em outro acabamento",
+    "This card is no longer in the catalogue. Choose another.": "Esta carta não está mais no catálogo. Escolha outra.",
+    "The card catalogue didn't load.": "O catálogo de cartas não carregou.", "Try again": "Tentar de novo",
+    "Save to my profile": "Salvar no meu perfil", "You have an account. Your full profile is in My Inkwell.": "Você já tem uma conta. Seu perfil completo fica em Meu Inkwell.", "Open My Inkwell": "Abrir Meu Inkwell",
+    "Your profile already has content. Review before applying.": "Seu perfil já tem conteúdo. Revise antes de aplicar.", "Now": "Agora", "After applying": "Depois de aplicar",
+    "Name": "Nome", "Inks": "Tintas", "Favourite cards": "Cartas favoritas", "(unchanged)": "(sem mudança)", "none": "nenhuma",
+    "See my profile": "Ver meu perfil", "Explore the community": "Explorar a comunidade", "Try saving again": "Tentar salvar novamente",
+    "The foil finish was not kept: the server doesn't take it yet. The cards were saved as normal.": "O acabamento foil não foi guardado: o servidor ainda não aceita. As cartas foram salvas como normais.",
+    "Start my Inkwell": "Começar meu Inkwell", "Saving…": "Salvando…", "Wait for the confirmation before leaving.": "Aguarde a confirmação para sair.",
+    "Choose card for slot {n}": "Escolher carta para a posição {n}", "Replace card in slot {n}": "Trocar carta da posição {n}", "Remove card from slot {n}": "Remover carta da posição {n}",
+    "Draft discarded.": "Rascunho descartado.", "Card {c}": "Carta {c}", "Example data is never copied to your draft.": "Dados de exemplo nunca entram no seu rascunho.",
+  };
+  const INKS = ["Amber", "Amethyst", "Emerald", "Ruby", "Sapphire", "Steel"];
+  const INK_PT = { Amber: "Âmbar", Amethyst: "Ametista", Emerald: "Esmeralda", Ruby: "Rubi", Sapphire: "Safira", Steel: "Aço" };
+  const INK_HEX = { Amber: "#efbd49", Amethyst: "#a784db", Emerald: "#54b78b", Ruby: "#e27683", Sapphire: "#7ca9df", Steel: "#c1c8d3" };
+  const RAR = { C: ["Common", "Comum"], U: ["Uncommon", "Incomum"], R: ["Rare", "Rara"], SR: ["Super Rare", "Super-rara"], L: ["Legendary", "Lendária"], E: ["Enchanted", "Encantada"],
+    EP: ["Epic", "Épica"], I: ["Iconic", "Icônica"], P: ["Promo", "Promo"], N: ["Special", "Especial"] };
+  const fill = (s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)) : s);
+  const Tx = (en, v) => fill(lang === "pt" && en in PT ? PT[en] : en, v);
+  const inkName = (i) => (lang === "pt" ? INK_PT[i] || i : i);
+  const rarName = (r) => (RAR[r] ? RAR[r][lang === "pt" ? 1 : 0] : r || "");
+  const norm = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const split = (name) => { const i = name.search(/\s[-–]\s/); return i > 0 ? [name.slice(0, i), name.slice(i + 3)] : [name, ""]; };
+
+  // ---------- catalogue (read-only; card ids are printings, foil is a finish of a printing) ----------
+  const setRank = (code, i) => { const m = /^LOR(\d+)$/.exec(code) || []; const q = /^Q(\d+)$/.exec(code) || []; return m[1] ? +m[1] : q[1] ? 100 + +q[1] : 200 + i; };
+  const SETS = (CARD_INDEX?.sets || []).map((x, i) => ({ ...x, rank: setRank(x.code, i) })).sort((a, b) => a.rank - b.rank);
+  const setName = (code) => { const s = SETS.find((x) => x.code === code); return s ? (lang === "pt" && s.name_pt) || s.name_en || code : code; };
+  const numOf = (c) => parseInt(String(c.num).replace(/\D+/g, ""), 10) || 0;
+  const CARDS = (CARD_INDEX?.cards || []).filter((r) => r[5] !== "T")   // tokens are not cards anyone collects
+    .map(([id, name, cost, type, ink, rarity, set, num, img]) => ({ id, name: name || id, cost, type, ink, rarity, set, num, img, k: norm(name) }));
+  const BY = new Map(CARDS.map((c) => [c.id, c]));
+  const RANK = new Map(SETS.map((s) => [s.code, s.rank]));
+  const NEWEST = SETS.filter((s) => /^LOR\d+$/.test(s.code) && CARDS.some((c) => c.set === s.code)).at(-1)?.code;
+  // Enchanted, Epic and Iconic printings exist only in foil; everything else in normal and foil.
+  const finishes = (c) => (["E", "EP", "I"].includes(c?.rarity) ? ["f"] : ["n", "f"]);
+  const inksOf = (c) => String(c?.ink || "").split(/[,\/]\s*/).map((x) => x.trim()).filter(Boolean);
+  const imgUrl = (c) => (c?.img ? `../lorcana-card-images/${encodeURI(c.img).replace(/'/g, "%27")}` : "");
+  // A real card image with its true proportions; if it is missing or breaks, its name and printing stay readable.
+  const cardFace = (c, foil, extra = "") => {
+    const [a, b] = split(c?.name || ""), label = `${a}${b ? " · " + b : ""} — ${setName(c?.set)} nº ${c?.num || ""}`;
+    return `<span class="iw-card" ${extra}>${c?.img ? `<img src="${imgUrl(c)}" alt="${esc(label)}" width="250" height="350" loading="lazy" decoding="async" onerror="this.nextElementSibling.setAttribute('aria-hidden','false');this.remove()">` : ""}
+      <span class="iw-fallback" aria-hidden="${c?.img ? "true" : "false"}">${esc(a)}${b ? `<br><small>${esc(b)}</small>` : ""}<br><small>${esc(setName(c?.set))} · nº ${esc(c?.num || "")}</small></span>
+      ${foil ? `<span class="iw-foil">${Tx("Foil")}</span>` : ""}</span>`;
+  };
+
+  // ---------- draft (spec/02: sessionStorage, versioned, never tokens; one key, never the rest of storage) ----------
+  const DRAFT_KEY = "inkwell-guest-draft-v1", INTENT_KEY = "inkwell-guest-intent-v1";
+  const blank = () => ({ schemaVersion: 1, draftId: (crypto.randomUUID?.() || String(Date.now()) + Math.random().toString(16).slice(2)), updatedAt: new Date().toISOString(), rev: 0,
+    displayName: "", preferredInks: [], favorites: [] });
+  let storageOk = true, memory = null, draftProblem = null;
+  const ss = {
+    get(k) { try { return sessionStorage.getItem(k); } catch { storageOk = false; return k === DRAFT_KEY ? memory : null; } },
+    set(k, v) { try { sessionStorage.setItem(k, v); } catch { storageOk = false; if (k === DRAFT_KEY) memory = v; } },
+    del(k) { try { sessionStorage.removeItem(k); } catch { if (k === DRAFT_KEY) memory = null; } },
+  };
+  // Read a draft and keep only what validates; anything broken is reported, never thrown.
+  function readDraft() {
+    const raw = ss.get(DRAFT_KEY);
+    if (!raw) return null;
+    let x; try { x = JSON.parse(raw); } catch { draftProblem = "invalid"; return blank(); }
+    if (!x || typeof x !== "object") { draftProblem = "invalid"; return blank(); }
+    const d = blank();
+    if (x.schemaVersion !== 1) draftProblem = "invalid";
+    if (typeof x.draftId === "string" && x.draftId.length <= 80) d.draftId = x.draftId;
+    if (Number.isInteger(x.rev) && x.rev >= 0) d.rev = x.rev;
+    if (typeof x.displayName === "string") d.displayName = x.displayName.slice(0, 40); else if (x.displayName != null) draftProblem = "invalid";
+    if (Array.isArray(x.preferredInks)) d.preferredInks = [...new Set(x.preferredInks.filter((i) => INKS.includes(i)))].slice(0, 2);
+    if (Array.isArray(x.favorites)) {
+      const seen = new Set();
+      for (const f of x.favorites.slice(0, 3)) {
+        if (!f || typeof f.id !== "string" || f.id.length > 40) { draftProblem = "invalid"; continue; }
+        const key = `${f.id}|${!!f.foil}`; if (seen.has(key)) continue; seen.add(key);
+        d.favorites.push({ id: f.id, foil: !!f.foil });   // an id no longer in the catalogue stays, marked, so it can be replaced
+      }
+    }
+    return d;
+  }
+  let draft = readDraft();
+  const hadDraft = !!draft;
+  if (!draft) draft = blank();
+  const fields = (d) => JSON.stringify({ n: d.displayName.trim(), i: [...d.preferredInks].sort(), f: d.favorites.map((f) => `${f.id}|${f.foil}`) });
+  const BASE = fields(blank());   // a guest starts from nothing; "dirty" = different from that
+  const isDirty = () => fields(draft) !== BASE;
+  function persist() {
+    draft.updatedAt = new Date().toISOString(); draft.rev += 1;
+    if (isDirty()) ss.set(DRAFT_KEY, JSON.stringify(draft)); else ss.del(DRAFT_KEY);   // back to the start = nothing to keep
+  }
+  // probe storage once, so the warning shows before any work is lost
+  try { sessionStorage.setItem("inkwell-guest-probe", "1"); sessionStorage.removeItem("inkwell-guest-probe"); } catch { storageOk = false; }
+
+  // ---------- session ----------
+  const me = () => CLOUD?.user() || null;
+  const signedIn = () => !!me()?.id;
+  let status = "edit";   // edit | authenticating | saving | review | saved | error | identity | missing | otherTab
+  let review = null, saveInfo = null, nameErr = "", inkMsg = "";
+  const intent = () => { try { const v = JSON.parse(ss.get(INTENT_KEY) || "null"); return v && v.draftId === draft.draftId && Date.now() - v.at < 30 * 60e3 ? v : null; } catch { return null; } };
+
+  // ---------- other tab: the e-mail link opens a new tab without this tab's draft ----------
+  const bc = "BroadcastChannel" in window ? new BroadcastChannel("inkwell-guest") : null;
+  bc?.addEventListener("message", (e) => { if (e.data?.type === "ping" && isDirty()) bc.postMessage({ type: "here" }); });
+  // the original tab: the session arrives through shared storage when the link is opened elsewhere
+  window.addEventListener("storage", (e) => { if (e.key === "inkwell-counter-auth" && e.newValue && intent() && status === "authenticating") location.reload(); });
+  window.addEventListener("focus", () => { if (status === "authenticating" && signedIn()) location.reload(); });
+
+  // ---------- leaving ----------
+  let leavingInside = false;
+  document.addEventListener("click", (e) => { const a = e.target.closest("a[href]"); if (a && a.origin === location.origin) leavingInside = true; }, true);
+  // Same-tab navigation keeps the draft (sessionStorage), so it never asks. Closing the tab may lose it: the browser decides how to warn.
+  window.addEventListener("beforeunload", (e) => { if (isDirty() && !leavingInside && status !== "saved") { e.preventDefault(); e.returnValue = ""; } setTimeout(() => { leavingInside = false; }, 0); });
+
+  // ---------- rendering ----------
+  const app = $("app");
+  const locked = () => status === "saving";
+  function inkDots(list) { return list.length ? `<span class="iw-inkdots" aria-hidden="true">${list.map((i) => `<i style="background:${INK_HEX[i]}"></i>`).join("")}</span>` : ""; }
+  function preview() {
+    const name = draft.displayName.trim();
+    return `<section class="iw-profile" aria-labelledby="pvT" data-testid="preview">
+      <div class="row between" style="margin-bottom:var(--sp-3)"><h2 class="iw-h3" id="pvT" style="margin:0">${Tx("Profile preview")}</h2>${signedIn() ? "" : `<span class="iw-sample-label">${Tx("Guest mode")}</span>`}</div>
+      <div class="iw-profile-head"><span class="iw-avatar" aria-hidden="true">${(() => { const c = BY.get(draft.favorites[0]?.id); return c?.img ? `<img src="${imgUrl(c)}" alt="" onerror="this.remove()">` : esc((name || "?")[0].toUpperCase()); })()}</span>
+        <div style="min-width:0"><p class="iw-name ${name ? "" : "placeholder"}" data-testid="pv-name">${esc(name || Tx("Your name here"))}</p>
+        <div class="iw-muted small" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap" data-testid="pv-inks">${draft.preferredInks.length ? inkDots(draft.preferredInks) + esc(draft.preferredInks.map(inkName).join(" · ")) : Tx("No inks yet")}</div></div></div>
+      <div class="iw-showcase" data-testid="pv-showcase">${[0, 1, 2].map((i) => { const f = draft.favorites[i], c = f && BY.get(f.id);
+        return c ? `<figure style="margin:0">${cardFace(c, f.foil)}<figcaption class="iw-card-label">${esc(split(c.name)[0])}<small>${esc(split(c.name)[1])}</small></figcaption></figure>`
+          : `<button type="button" class="iw-card empty" data-pick="${i}" ${locked() ? "disabled" : ""}>${Tx("Choose card")}</button>`; }).join("")}</div>
+      <p class="iw-muted small" style="margin:var(--sp-3) 0 0">${Tx("Your profile starts private. You decide when to publish it.")}</p></section>`;
+  }
+  function slots() {
+    return `<div class="iw-slots" data-testid="slots">${[0, 1, 2].map((i) => {
+      const f = draft.favorites[i], c = f && BY.get(f.id), n = i + 1;
+      if (!f) return `<div class="iw-slot" data-slot="${i}"><button type="button" class="iw-card empty" data-pick="${i}" aria-label="${esc(Tx("Choose card for slot {n}", { n }))}" ${locked() || i > draft.favorites.length ? "disabled" : ""}>${Tx("Choose card")}</button></div>`;
+      return `<div class="iw-slot" data-slot="${i}">${c ? cardFace(c, f.foil) : `<span class="iw-card empty" role="img" aria-label="${esc(f.id)}"></span><span class="warn" data-testid="gone">${Tx("This card is no longer in the catalogue. Choose another.")}</span>`}
+        <div class="iw-card-label">${c ? `${esc(split(c.name)[0])}<small>${esc(setName(c.set))} · nº ${esc(c.num)}${f.foil ? " · " + Tx("foil") : ""}</small>` : esc(f.id)}</div>
+        <div class="iw-actions">
+          <button type="button" class="iw-button small" data-pick="${i}" aria-label="${esc(Tx("Replace card in slot {n}", { n }))}" ${locked() ? "disabled" : ""}>${Tx("Replace card")}</button>
+          <button type="button" class="iw-button small" data-move="${i}:-1" aria-label="${esc(Tx("Move left") + " · " + Tx("Slot {n}", { n }))}" ${locked() || i === 0 ? "disabled" : ""}>◀</button>
+          <button type="button" class="iw-button small" data-move="${i}:1" aria-label="${esc(Tx("Move right") + " · " + Tx("Slot {n}", { n }))}" ${locked() || i >= draft.favorites.length - 1 ? "disabled" : ""}>▶</button>
+          <button type="button" class="iw-button small" data-remove="${i}" aria-label="${esc(Tx("Remove card from slot {n}", { n }))}" ${locked() ? "disabled" : ""}>✕</button>
+        </div></div>`;
+    }).join("")}</div>`;
+  }
+  function notices() {
+    const out = [];
+    if (!storageOk) out.push(`<div class="cm-notice err" role="alert" data-testid="storage-error">${Tx("We could not keep a draft in this tab. Reloading or leaving may erase your changes.")}</div>`);
+    if (draftProblem === "invalid") out.push(`<div class="cm-notice err" role="alert" data-testid="draft-invalid"><span>${Tx("We could not open this draft. You can start again.")}</span><div class="row"><button type="button" class="iw-button small" id="restart">${Tx("Start again")}</button></div></div>`);
+    if (signedIn() && status === "edit") out.push(`<div class="cm-notice"><span>${Tx("You have an account. Your full profile is in My Inkwell.")}</span><div class="row"><a class="iw-button small" href="../perfil/">${Tx("Open My Inkwell")}</a></div></div>`);
+    return out.join("");
+  }
+  function banner() {
+    const dirty = isDirty();
+    if (status === "saving") return `<div class="iw-guest-banner" data-testid="banner"><div><strong>${Tx("Saving your Inkwell…")}</strong><p>${Tx("Wait for the confirmation before leaving.")}</p></div><button type="button" class="iw-button iw-button-primary" disabled aria-busy="true">${Tx("Saving…")}</button></div>`;
+    if (!dirty && !signedIn()) return `<div class="iw-guest-banner" data-testid="banner"><div><strong>${Tx("Guest mode")}</strong><p>${Tx("Create an account to save your profile and continue later.")}</p></div></div>`;
+    if (!dirty) return "";
+    return `<div class="iw-guest-banner" data-testid="banner"><div><strong>${signedIn() ? "" : Tx("Guest mode") + " · "}${Tx("Unsaved changes")}</strong><p>${signedIn() ? "" : Tx("Create an account to save your profile and continue later.")}</p></div>
+      <button type="button" class="iw-button iw-button-primary" id="save">${Tx(signedIn() ? "Save to my profile" : "Create account and save")}</button></div>`;
+  }
+  function statusBox() {
+    if (status === "saved") return `<div class="cm-notice ok" role="status" data-testid="saved"><strong>${Tx("Your Inkwell has been saved.")}</strong><span>${Tx("Your profile starts private. You decide when to publish it.")}</span>
+      ${saveInfo?.lostFoil ? `<span class="small">${Tx("The foil finish was not kept: the server doesn't take it yet. The cards were saved as normal.")}</span>` : ""}
+      <div class="row"><a class="iw-button iw-button-primary small" href="../perfil/">${Tx("See my profile")}</a><a class="iw-button small" href="../comunidades/">${Tx("Explore the community")}</a></div></div>`;
+    if (status === "error") return `<div class="cm-notice err" role="alert" data-testid="save-error"><strong>${Tx("Could not save. Your changes are still here.")}</strong>
+      <div class="row"><button type="button" class="iw-button iw-button-primary small" id="retry">${Tx("Try saving again")}</button><button type="button" class="iw-button small" id="backEdit">${Tx("Keep editing")}</button></div></div>`;
+    if (status === "identity") return `<div class="cm-notice err" role="alert" data-testid="identity"><strong>${Tx("The account has changed. Review your changes before applying them to the new profile.")}</strong>
+      <div class="row"><button type="button" class="iw-button small" id="reviewNew">${Tx("Apply to my profile")}</button><button type="button" class="iw-button small" id="backEdit">${Tx("Keep editing")}</button></div></div>`;
+    if (status === "review") {
+      const cur = review.cur || {}, nm = draft.displayName.trim();
+      const favNames = (list) => list.length ? list.map((s) => { const c = BY.get(s.id); return c ? `${split(c.name)[0]}${s.foil ? " (" + Tx("foil") + ")" : ""}` : s.id; }).join(", ") : Tx("none");
+      return `<div class="cm-notice" role="region" aria-labelledby="rvT" data-testid="review"><strong id="rvT">${Tx("Your profile already has content. Review before applying.")}</strong>
+        <div class="cm-review"><dl><dt>${Tx("Now")}</dt><dd></dd><dt>${Tx("Name")}</dt><dd>${esc(cur.display_name || "—")}</dd><dt>${Tx("Inks")}</dt><dd>${esc((cur.inks || []).map(inkName).join(" · ") || Tx("none"))}</dd><dt>${Tx("Favourite cards")}</dt><dd>${esc(favNames(cur.showcase || []))}</dd></dl>
+          <dl><dt>${Tx("After applying")}</dt><dd></dd><dt>${Tx("Name")}</dt><dd>${esc(nm || Tx("(unchanged)"))}</dd><dt>${Tx("Inks")}</dt><dd>${esc(draft.preferredInks.length ? draft.preferredInks.map(inkName).join(" · ") : Tx("(unchanged)"))}</dd>
+          <dt>${Tx("Favourite cards")}</dt><dd>${esc(draft.favorites.length ? favNames(draft.favorites) : Tx("(unchanged)"))}</dd></dl></div>
+        <div class="row"><button type="button" class="iw-button iw-button-primary small" id="apply">${Tx("Apply to my profile")}</button><button type="button" class="iw-button small" id="backEdit">${Tx("Keep editing")}</button></div></div>`;
+    }
+    return "";
+  }
+  function render() {
+    if (!CARDS.length) {   // the embedded catalogue is missing: say so, never an empty grid
+      app.innerHTML = `<div class="cm-head"><h1 class="iw-h1">${Tx("Your Inkwell starts here")}</h1></div><div class="cm-notice err" role="alert" data-testid="catalog-error">${Tx("The card catalogue didn't load.")}<div class="row"><button type="button" class="iw-button small" onclick="location.reload()">${Tx("Try again")}</button></div></div>`;
+      return;
+    }
+    if (status === "missing" || status === "otherTab") {
+      app.innerHTML = `<div class="cm-head"><h1 class="iw-h1">${Tx("Your Inkwell starts here")}</h1></div>
+        <div class="cm-notice" role="status" data-testid="${status === "otherTab" ? "other-tab" : "draft-missing"}"><strong>${Tx(status === "otherTab" ? "Return to the tab where you started to save your changes." : "Your account is ready, but we could not find the draft from this session.")}</strong>
+        <div class="row">${status === "missing" ? `<button type="button" class="iw-button iw-button-primary small" id="restart">${Tx("Start again")}</button>` : ""}<a class="iw-button small" href="../perfil/">${Tx("Open My Inkwell")}</a></div></div>`;
+      $("restart")?.addEventListener("click", () => { status = "edit"; draft = blank(); render(); });
+      return;
+    }
+    const keep = document.activeElement?.id, caret = document.activeElement?.selectionStart;
+    app.innerHTML = `<div class="cm-head">${signedIn() ? "" : `<span class="iw-eyebrow">${Tx("Guest mode")}</span>`}<h1 class="iw-h1">${Tx("Your Inkwell starts here")}</h1>
+        <p class="iw-lead">${Tx("Choose the cards that represent you. Create an account when you want to keep your profile.")}</p></div>
+      ${notices()}${statusBox()}
+      <div class="cm-grid">
+        <form class="cm-form" id="form" novalidate ${locked() ? 'inert aria-busy="true"' : ""}>
+          <div><label class="lbl" for="name">${Tx("Display name")}</label><input class="iw-input" id="name" maxlength="40" autocomplete="nickname" placeholder="${esc(Tx("How do you want to appear?"))}" value="${esc(draft.displayName)}" aria-describedby="nameHint">
+            <span class="hint" id="nameHint">${Tx("2 to 40 characters.")}</span>${nameErr ? `<p class="err" role="alert" id="nameErr">${esc(nameErr)}</p>` : ""}</div>
+          <fieldset><legend>${Tx("Choose up to two inks")}</legend><div class="iw-ink-options" data-testid="inks">${INKS.map((i) => { const on = draft.preferredInks.includes(i);
+            return `<button type="button" class="iw-button iw-ink-option" data-ink="${i}" aria-pressed="${on}">${on ? '<span class="ck" aria-hidden="true">✓</span>' : ""}<i style="background:${INK_HEX[i]}" aria-hidden="true"></i>${esc(inkName(i))}</button>`; }).join("")}</div>
+            ${inkMsg ? `<p class="err" role="alert" data-testid="ink-max">${esc(inkMsg)}</p>` : ""}</fieldset>
+          <fieldset><legend>${Tx("Your three favourite cards")}</legend><span class="hint" style="margin:0 0 var(--sp-3)">${Tx("Any card from the catalogue, even without a copy in a collection.")}</span>${slots()}</fieldset>
+          <p class="iw-muted small" style="margin:0">${Tx("Without an account, your changes stay in this session and may be lost when you close the tab.")}</p>
+          ${isDirty() && !locked() ? `<div class="cm-discard"><button type="button" class="iw-link" id="discard">${Tx("Discard the draft")}</button></div>` : ""}
+        </form>
+        <aside class="cm-side">${preview()}</aside>
+      </div>
+      ${banner()}`;
+    wire();
+    if (keep && $(keep)) { const el = $(keep); el.focus(); try { if (caret != null) el.setSelectionRange(caret, caret); } catch { /* */ } }
+  }
+  function change(fn) { fn(); persist(); render(); }
+  function wire() {
+    $("name")?.addEventListener("input", (e) => {
+      const was = isDirty();
+      draft.displayName = e.target.value.slice(0, 40); nameErr = ""; persist();
+      if (was !== isDirty()) return render();   // banner and "discard" appear or go (render keeps the cursor)
+      // light update: preview name and banner only, so the cursor stays where it is
+      const nm = draft.displayName.trim(), pv = app.querySelector('[data-testid="pv-name"]');
+      if (pv) { pv.textContent = nm || Tx("Your name here"); pv.classList.toggle("placeholder", !nm); }
+      const b = app.querySelector('[data-testid="banner"]'); if (b) b.outerHTML = banner() || ""; else if (isDirty()) app.insertAdjacentHTML("beforeend", banner());
+      if (!isDirty()) app.querySelector('[data-testid="banner"]')?.remove();
+      wireBanner(); $("nameErr")?.remove();
+    });
+    app.querySelectorAll("[data-ink]").forEach((b) => b.addEventListener("click", () => {
+      const i = b.dataset.ink, on = draft.preferredInks.includes(i);
+      if (!on && draft.preferredInks.length >= 2) { inkMsg = Tx("You can highlight up to two inks. Remove one to choose another."); render(); $("form")?.querySelector(`[data-ink="${i}"]`)?.focus(); return; }
+      inkMsg = "";
+      change(() => { draft.preferredInks = on ? draft.preferredInks.filter((x) => x !== i) : [...draft.preferredInks, i]; });
+      app.querySelector(`[data-ink="${i}"]`)?.focus();
+    }));
+    app.querySelectorAll("[data-pick]").forEach((b) => b.addEventListener("click", () => openPicker(+b.dataset.pick, b)));
+    app.querySelectorAll("[data-move]").forEach((b) => b.addEventListener("click", () => {
+      const [i, d] = b.dataset.move.split(":").map(Number), j = i + d;
+      change(() => { const f = draft.favorites; [f[i], f[j]] = [f[j], f[i]]; });
+      (app.querySelector(`[data-move="${j}:${d}"]:not([disabled])`) || app.querySelector(`[data-slot="${j}"] [data-pick]`))?.focus();
+    }));
+    app.querySelectorAll("[data-remove]").forEach((b) => b.addEventListener("click", () => {
+      const i = +b.dataset.remove; change(() => draft.favorites.splice(i, 1));
+      app.querySelector(`[data-slot="${Math.min(i, draft.favorites.length)}"] [data-pick]`)?.focus();
+    }));
+    $("discard")?.addEventListener("click", () => openLeave($("discard")));
+    $("restart")?.addEventListener("click", () => { draftProblem = null; ss.del(DRAFT_KEY); draft = blank(); render(); });
+    $("retry")?.addEventListener("click", () => runSave());
+    $("apply")?.addEventListener("click", () => runSave(true));
+    $("reviewNew")?.addEventListener("click", () => runSave());
+    $("backEdit")?.addEventListener("click", () => { status = "edit"; render(); });
+    wireBanner();
+  }
+  function wireBanner() { $("save")?.addEventListener("click", () => startSave()); }
+
+  // ---------- leave dialog ----------
+  function openLeave(from) {
+    const d = $("leave");
+    d.innerHTML = `<div class="iw-dhead"><h2 class="iw-h3" id="lvT" style="margin:0">${Tx("Leave without saving?")}</h2></div>
+      <div class="iw-dbody"><p style="margin:0">${Tx("If you leave without saving, you may lose your changes.")}</p>
+        <div style="display:flex;flex-wrap:wrap;gap:8px"><button type="button" class="iw-button" id="lvKeep">${Tx("Keep editing")}</button>
+          <button type="button" class="iw-button iw-button-primary" id="lvSave">${Tx(signedIn() ? "Save to my profile" : "Create account and save")}</button>
+          <button type="button" class="iw-button" id="lvGo" style="opacity:.85">${Tx("Leave without saving")}</button></div></div>`;
+    d.showModal(); $("lvKeep").focus();
+    const close = () => { d.close(); from?.focus?.(); };
+    $("lvKeep").onclick = close;
+    $("lvSave").onclick = () => { d.close(); startSave(); };
+    $("lvGo").onclick = () => { ss.del(DRAFT_KEY); ss.del(INTENT_KEY); draft = blank(); leavingInside = true; location.href = "../feed/"; };
+    d.addEventListener("cancel", (e) => { e.preventDefault(); close(); }, { once: true });
+  }
+
+  // ---------- card picker (one dialog; zoom is a panel inside it, never a second modal) ----------
+  const PAGE = 24;
+  let pk = null, coll = { state: "off", data: {} };   // collection: off | loading | ready | empty | error (never "zero" on a failure)
+  async function loadCollection() {
+    if (!signedIn() || coll.state !== "off") return;
+    coll = { state: "loading", data: {} }; if (pk) drawPicker();
+    try {
+      const rows = await CLOUD.api("inkwell_profiles?select=profile,collection:data->collection&order=updated_at.desc");
+      let pick = null; try { pick = localStorage.getItem("inkwell-trades-profile"); } catch { /* */ }
+      const list = (rows || []).filter((r) => r.collection && typeof r.collection === "object");
+      const p = list.find((r) => r.profile === pick) || list.sort((a, b) => Object.keys(b.collection).length - Object.keys(a.collection).length)[0];
+      const data = p?.collection || {};
+      const any = Object.values(data).some((e) => (+e?.n || 0) + (+e?.f || 0) > 0);
+      coll = { state: any ? "ready" : "empty", data };
+    } catch { coll = { state: "error", data: {} }; }
+    if (pk) drawPicker();
+  }
+  const owns = (id, fin) => { const e = coll.data[id]; return coll.state === "ready" && e ? (+e[fin] || 0) > 0 : false; };
+  function results() {
+    const words = norm(pk.q).split(" ").filter(Boolean), start = !words.length && !pk.set && !pk.ink && !pk.rar && !pk.fin && pk.scope === "all";
+    let rows = CARDS.filter((c) => (!words.length || words.every((w) => c.k.includes(w))) && (!pk.set || c.set === pk.set) && (!pk.ink || inksOf(c).includes(pk.ink))
+      && (!pk.rar || c.rarity === pk.rar) && (!pk.fin || finishes(c).includes(pk.fin))
+      && (pk.scope !== "owned" || (+coll.data[c.id]?.n || 0) + (+coll.data[c.id]?.f || 0) > 0));
+    if (start && NEWEST) rows = rows.filter((c) => c.set === NEWEST);
+    rows.sort((a, b) => (RANK.get(b.set) ?? 0) - (RANK.get(a.set) ?? 0) || numOf(a) - numOf(b));
+    return { rows, start };
+  }
+  function openPicker(slot, from) {
+    if (locked()) return;
+    const cur = draft.favorites[slot];
+    pk = { slot, from, q: "", set: "", ink: "", rar: "", fin: "", scope: "all", shown: PAGE, zoom: null, fin_of: {}, msg: "" };
+    if (cur && BY.get(cur.id)) pk.fin_of[cur.id] = cur.foil ? "f" : "n";
+    const d = $("picker");
+    drawPicker(); d.showModal(); $("pkQ")?.focus();
+    loadCollection();
+  }
+  const finOf = (c) => pk.fin_of[c.id] || (pk.fin && finishes(c).includes(pk.fin) ? pk.fin : finishes(c)[0]);
+  const dupe = (c, fin) => draft.favorites.some((f, i) => i !== pk.slot && f.id === c.id && f.foil === (fin === "f"));
+  function finishSeg(c, where) {
+    const fs = finishes(c); if (fs.length < 2) return `<span class="meta">${Tx("Foil")}</span>`;
+    return `<div class="seg" role="group" aria-label="${Tx("Finish")}">${fs.map((f) => `<button type="button" data-fin="${esc(c.id)}:${f}:${where}" aria-pressed="${finOf(c) === f}">${Tx(f === "f" ? "Foil" : "Normal")}</button>`).join("")}</div>`;
+  }
+  function ownLine(c) {
+    if (coll.state !== "ready") return "";
+    const f = finOf(c), other = f === "f" ? "n" : "f";
+    return owns(c.id, f) ? `<span class="owned">${Tx("You own this version")}</span>` : owns(c.id, other) ? `<span class="meta">${Tx("You own another finish of this card")}</span>` : "";
+  }
+  function drawPicker() {
+    const d = $("picker"); if (!pk) return;
+    const keep = document.activeElement?.id, caret = document.activeElement?.selectionStart;
+    const head = `<div class="iw-dhead"><h2 class="iw-h3" id="pkT" style="margin:0">${Tx("Choose your favourite cards")}</h2><button type="button" class="iw-button small" id="pkClose">${Tx("Close")}</button></div>`;
+    if (pk.zoom) {
+      const c = BY.get(pk.zoom), f = finOf(c), [a, b] = split(c.name), dup = dupe(c, f);
+      d.innerHTML = `${head}<div class="iw-dbody"><button type="button" class="iw-link" id="pkBack" style="justify-self:start">← ${Tx("Back to the results")}</button>
+        <div class="iw-zoom" data-testid="zoom">${cardFace(c, f === "f")}<div style="display:grid;gap:var(--sp-3)"><div><h3 class="iw-h2" style="margin:0">${esc(a)}</h3>${b ? `<p class="iw-lead" style="margin:0">${esc(b)}</p>` : ""}</div>
+          <p class="meta" style="margin:0">${esc([setName(c.set), "nº " + c.num, rarName(c.rarity), inksOf(c).map(inkName).join(" / ")].filter(Boolean).join(" · "))}</p>
+          ${finishSeg(c, "z")}${ownLine(c)}
+          ${dup ? `<p class="iw-msg" role="alert">${Tx("This version is already in your showcase.")}</p>` : ""}
+          <button type="button" class="iw-button iw-button-primary" data-use="${esc(c.id)}" ${dup ? "disabled" : ""}>${Tx("Use this card")}</button></div></div></div>`;
+    } else {
+      const { rows, start } = results(), show = rows.slice(0, pk.shown);
+      const opt = (v, l, cur) => `<option value="${esc(v)}" ${cur === v ? "selected" : ""}>${esc(l)}</option>`;
+      const usedRar = [...new Set(CARDS.map((c) => c.rarity))].filter((r) => RAR[r]);
+      const ownedBtn = signedIn() ? "" : 'disabled aria-describedby="ownHint"';
+      d.innerHTML = `${head}<div class="iw-dbody">
+        <label for="pkQ" class="lbl" style="font-weight:700">${Tx("Search by name or character")}</label>
+        <input class="iw-input" id="pkQ" type="search" autocomplete="off" value="${esc(pk.q)}" placeholder="${esc(Tx("Search by name or character"))}">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><div class="seg" role="group" aria-label="${Tx("Full catalogue")}">
+          <button type="button" data-scope="all" aria-pressed="${pk.scope === "all"}">${Tx("Full catalogue")}</button>
+          <button type="button" data-scope="owned" aria-pressed="${pk.scope === "owned"}" ${ownedBtn} ${coll.state === "loading" ? 'aria-busy="true"' : ""}>${Tx("Only cards I own")}</button></div>
+          ${signedIn() ? "" : `<span class="small" id="ownHint" style="color:var(--iw-muted)">${Tx("Sign in to filter by your collection.")}</span>`}</div>
+        ${pk.scope === "owned" && coll.state === "loading" ? `<p class="iw-msg" role="status" data-testid="coll-loading">${Tx("Loading your collection…")}</p>` : ""}
+        ${pk.scope === "owned" && coll.state === "empty" ? `<p class="iw-msg" role="status" data-testid="coll-empty">${Tx("Your collection is empty. Explore the catalogue or add your cards.")}</p>` : ""}
+        ${pk.scope === "owned" && coll.state === "error" ? `<p class="iw-msg err" role="alert" data-testid="coll-error">${Tx("We could not load your collection. You can still explore the full catalogue.")}</p>` : ""}
+        <div class="iw-filters">
+          <label>${Tx("Set")}<select id="pkSet">${opt("", Tx("All"), pk.set)}${SETS.filter((s) => CARDS.some((c) => c.set === s.code)).map((s) => opt(s.code, setName(s.code), pk.set)).join("")}</select></label>
+          <label>${Tx("Ink")}<select id="pkInk">${opt("", Tx("All"), pk.ink)}${INKS.map((i) => opt(i, inkName(i), pk.ink)).join("")}</select></label>
+          <label>${Tx("Rarity")}<select id="pkRar">${opt("", Tx("All"), pk.rar)}${usedRar.map((r) => opt(r, rarName(r), pk.rar)).join("")}</select></label>
+          <label>${Tx("Finish")}<select id="pkFin">${opt("", Tx("All"), pk.fin)}${opt("n", Tx("Normal"), pk.fin)}${opt("f", Tx("Foil"), pk.fin)}</select></label>
+        </div>
+        <p class="small" style="margin:0;color:var(--iw-muted)" data-testid="pk-count">${start ? esc(Tx("Cards from the newest set, to start with. Search for any other.")) + " · " : ""}${esc(rows.length === 1 ? Tx("1 card") : Tx("{n} cards", { n: rows.length.toLocaleString(lang === "pt" ? "pt-BR" : "en") }))}</p>
+        ${rows.length ? `<div class="iw-results" data-testid="results">${show.map((c) => { const f = finOf(c), dup = dupe(c, f), [a, b] = split(c.name);
+            return `<div class="iw-result" data-card="${esc(c.id)}"><button type="button" class="iw-zbtn" data-zoom="${esc(c.id)}" aria-label="${esc(Tx("See larger") + " · " + a + (b ? " · " + b : ""))}">${cardFace(c, f === "f")}</button>
+              <strong style="overflow-wrap:anywhere">${esc(a)}</strong>${b ? `<span class="small">${esc(b)}</span>` : ""}<span class="meta">${esc(setName(c.set))} · nº ${esc(c.num)} · ${esc(rarName(c.rarity))}</span>
+              ${finishSeg(c, "r")}${ownLine(c)}
+              <button type="button" class="iw-button ${dup ? "" : "iw-button-primary"} small" data-use="${esc(c.id)}" ${dup ? 'disabled title="' + esc(Tx("This version is already in your showcase.")) + '"' : ""}>${Tx(dup ? "This version is already in your showcase." : "Use this card")}</button></div>`; }).join("")}</div>
+          ${rows.length > pk.shown ? `<button type="button" class="iw-button" id="pkMore" style="justify-self:center">${Tx("Show more")}</button>` : ""}`
+          : `<p class="iw-msg" role="status" data-testid="no-results">${Tx("No cards found. Try clearing the filters.")}</p>`}
+      </div>`;
+    }
+    wirePicker();
+    if (keep && $(keep)) { const el = $(keep); el.focus(); try { if (caret != null && el.setSelectionRange) el.setSelectionRange(caret, caret); } catch { /* */ } }
+  }
+  function wirePicker() {
+    const d = $("picker");
+    $("pkClose").onclick = () => d.close();
+    $("pkQ")?.addEventListener("input", (e) => { pk.q = e.target.value; pk.shown = PAGE; drawPicker(); });
+    for (const [id, k] of [["pkSet", "set"], ["pkInk", "ink"], ["pkRar", "rar"], ["pkFin", "fin"]]) $(id)?.addEventListener("change", (e) => { pk[k] = e.target.value; pk.shown = PAGE; drawPicker(); });
+    d.querySelectorAll("[data-scope]").forEach((b) => b.addEventListener("click", () => { if (b.disabled) return; pk.scope = b.dataset.scope; pk.shown = PAGE; drawPicker(); }));
+    $("pkMore")?.addEventListener("click", () => { const n = pk.shown; pk.shown += PAGE; drawPicker(); d.querySelectorAll(".iw-result [data-zoom]")[n]?.focus(); });
+    d.querySelectorAll("[data-zoom]").forEach((b) => b.addEventListener("click", () => { pk.zoom = b.dataset.zoom; drawPicker(); $("pkBack")?.focus(); }));
+    $("pkBack")?.addEventListener("click", () => { const id = pk.zoom; pk.zoom = null; drawPicker(); d.querySelector(`[data-zoom="${CSS.escape(id)}"]`)?.focus(); });
+    d.querySelectorAll("[data-fin]").forEach((b) => b.addEventListener("click", () => { const [id, f] = b.dataset.fin.split(":"); pk.fin_of[id] = f; drawPicker(); d.querySelector(`[data-fin="${CSS.escape(b.dataset.fin)}"]`)?.focus(); }));
+    d.querySelectorAll("[data-use]").forEach((b) => b.addEventListener("click", () => {
+      const c = BY.get(b.dataset.use), f = finOf(c);
+      if (dupe(c, f)) return;
+      const slot = Math.min(pk.slot, draft.favorites.length), from = pk.from;
+      change(() => { draft.favorites[slot] = { id: c.id, foil: f === "f" }; });
+      d.close();
+      (app.querySelector(`[data-slot="${slot}"] [data-pick]`) || from)?.focus();
+    }));
+  }
+  $("picker").addEventListener("close", () => { const f = pk?.from; pk = null; if (f && document.contains(f)) f.focus(); });
+
+  // ---------- save (spec/02 "Cadastro e transferência") ----------
+  const profileHasContent = (p) => !!p && (!!(p.inks || []).length || !!(p.showcase || []).length || !!p.bio || !!p.motto || !!p.handle || !!p.avatar_card
+    || (!!p.display_name && p.display_name !== "Jogador"));
+  function payload(applyOnly) {
+    const nm = draft.displayName.trim(), p = {};
+    if (nm) p.display_name = nm;
+    if (!applyOnly || draft.preferredInks.length) p.inks = draft.preferredInks;
+    const fav = draft.favorites.filter((f) => BY.has(f.id)).map((f) => ({ id: f.id, k: "fav", ...(f.foil ? { foil: true } : {}) }));
+    if (!applyOnly || fav.length) p.showcase = fav;
+    return p;
+  }
+  function validate() {
+    const nm = draft.displayName.trim();
+    if (nm && nm.length < 2) { nameErr = Tx("Use at least 2 characters."); status = "edit"; render(); $("name")?.focus(); return false; }
+    return true;
+  }
+  function startSave() {
+    if (locked() || !validate()) return;
+    ss.set(DRAFT_KEY, JSON.stringify(draft));   // the draft is written before anything else happens
+    if (signedIn()) return runSave();
+    ss.set(INTENT_KEY, JSON.stringify({ draftId: draft.draftId, at: Date.now() }));
+    status = "authenticating";
+    if (!window.INKWELL_SIGNIN) { status = "error"; render(); return; }
+    window.INKWELL_SIGNIN();
+    // closing the sign-in sheet (or a wrong code) leaves the draft as it is
+    const sheet = document.querySelector("dialog.sheet");
+    sheet?.addEventListener("close", () => { if (status === "authenticating" && !signedIn()) { status = "edit"; render(); } }, { once: true });
+  }
+  let saving = false;
+  async function runSave(confirmed) {
+    if (saving || !validate()) return;
+    const who = me()?.id; if (!who) return startSave();
+    saving = true; status = "saving"; render();
+    const snap = { rev: draft.rev, draftId: draft.draftId };
+    try {
+      const cur = await CLOUD.api("rpc/my_profile", { method: "POST", body: {} });
+      if (me()?.id !== who) { saving = false; status = "identity"; render(); return; }
+      const existing = profileHasContent(cur);
+      if (existing && !confirmed) { saving = false; review = { cur }; status = "review"; render(); $("apply")?.focus(); return; }
+      const body = payload(existing);
+      const res = await CLOUD.api("rpc/save_my_profile", { method: "POST", body: { p: body } });
+      if (me()?.id !== who) { saving = false; status = "identity"; render(); return; }   // started for A: never clear or report B
+      saveInfo = { lostFoil: (body.showcase || []).some((s) => s.foil) && !((res?.showcase) || []).some((s) => s.foil) };
+      if (draft.rev === snap.rev && draft.draftId === snap.draftId) { ss.del(DRAFT_KEY); draft = blank(); }
+      ss.del(INTENT_KEY);
+      saving = false; status = "saved"; render();
+      $("app").querySelector('[data-testid="saved"] a')?.focus();
+    } catch {
+      saving = false; status = "error"; render(); $("retry")?.focus();
+    }
+  }
+
+  // ---------- start ----------
+  const fromLink = !!window.INKWELL_FROM_LINK;
+  if (fromLink && !hadDraft) {
+    // opened by the e-mail link: ask the other tabs whether the draft is there
+    status = "missing";
+    let answered = false;
+    bc?.addEventListener("message", (e) => { if (e.data?.type === "here" && !answered) { answered = true; status = "otherTab"; render(); } });
+    bc?.postMessage({ type: "ping" });
+  } else if (signedIn() && hadDraft && intent()) {
+    render(); runSave();
+  }
+  render();
+})();
+</script>
+<script>window.INKWELL_SHELL = {"page": "start"};
+/*@SHELL_JS@*/</script>
+</body>
+</html>

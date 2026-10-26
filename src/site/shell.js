@@ -57,7 +57,10 @@
     menu.querySelectorAll("[data-lang-pick]").forEach((b) => b.addEventListener("click", () => {
       if (b.dataset.langPick !== lang) { try { localStorage.setItem("inkwell-lang", b.dataset.langPick); } catch { /* */ } location.reload(); }
     }));
-    menu.querySelector("[data-signout]")?.addEventListener("click", () => { CLOUD?.signOut(); location.reload(); });
+    menu.querySelector("[data-signout]")?.addEventListener("click", () => {
+      try { sessionStorage.removeItem("inkwell-guest-intent-v1"); } catch { /* */ }   // signing out cancels a pending "save after sign-in"; the draft stays
+      CLOUD?.signOut(); location.reload();
+    });
   }
   document.addEventListener("click", (e) => { if (menu && !menu.contains(e.target) && !opener?.contains(e.target)) closeMenu(); });
   document.addEventListener("keydown", (e) => {
@@ -182,6 +185,21 @@
     if (!sheet.open) sheet.showModal();
   };
   $("iwSignIn")?.addEventListener("click", () => window.INKWELL_SIGNIN());
+
+  // ---------- guest draft (Começar meu Inkwell, behind INKWELL_FLAGS.guestProfile) ----------
+  if ((window.INKWELL_FLAGS || {}).guestProfile && page !== "start") {
+    const main = document.querySelector("main");
+    const note = (html, id) => { if (!main || document.getElementById(id)) return; const d = document.createElement("div"); d.id = id; d.className = "notice"; d.setAttribute("role", "status"); d.innerHTML = html; main.prepend(d); };
+    let draft = null; try { draft = JSON.parse(sessionStorage.getItem("inkwell-guest-draft-v1") || "null"); } catch { /* */ }
+    // the draft lives in this tab: other pages remind, never ask
+    if (draft && typeof draft === "object") note(`<span>${T("Seu Inkwell ainda não foi salvo.", "Your Inkwell isn't saved yet.")}</span> <a href="../comecar/">${T("Continuar", "Continue")}</a>`, "iwDraftNote");
+    // opened by the e-mail link: if the tab with the draft is still open, send the person back there
+    if (window.INKWELL_FROM_LINK && "BroadcastChannel" in window) {
+      const bc = new BroadcastChannel("inkwell-guest");
+      bc.addEventListener("message", (e) => { if (e.data?.type === "here") note(T("Volte à aba em que você começou para salvar suas alterações.", "Return to the tab where you started to save your changes."), "iwOtherTab"); });
+      bc.postMessage({ type: "ping" });
+    }
+  }
 
   // ---------- Trocas count, name, last duels.ink sync (best effort) ----------
   window.INKWELL_SHELL_BADGE = (n) => {
