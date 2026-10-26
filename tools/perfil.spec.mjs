@@ -337,6 +337,31 @@ test('tapping a card thumbnail shows the card large', async ({ page }) => {
   await expect(page.locator('#iwZoom')).toBeHidden();
 });
 
+test('profile background: pick a Location, it shows turned sideways; saved apart', async ({ page }) => {
+  const calls = await setup(page, { mine: { display_name: 'Luís', handle: 'luis', adult: true, is_public: false, invite_code: 'abc123def0', showcase: [] } });
+  const covers = [];
+  await page.route('**/rest/v1/rpc/set_my_cover', (route) => { covers.push(JSON.parse(route.request().postData())); return route.fulfill({ status: 204, body: '' }); });
+  await page.goto(url('perfil/?editar=1'));
+  await page.locator('#coverPick').click();
+  await page.locator('#pkQ').fill('white agony plains');
+  await page.locator('#cardPicker [data-card="LOR10-102"] [data-use]').click();
+  await expect(page.locator('[data-testid="ed-cover"]')).toContainText('Local');
+  const cover = page.locator('#prev [data-testid="cover"]');
+  await expect(cover).toHaveClass(/loc/);
+  expect(await cover.locator('img.mi-loc').evaluate((i) => getComputedStyle(i).transform)).toMatch(/matrix\(0, 1, -1, 0|matrix\([-0-9.e]+, 1, -1/);
+  await page.locator('#edSave').click();
+  await expect(page.locator('#toast')).toContainText('Salvo');
+  expect(rpcCalls(calls, 'save_my_profile').at(-1).p).not.toHaveProperty('cover_card');
+  await expect.poll(() => covers).toEqual([{ p_card: 'LOR10-102' }]);
+});
+
+test('public profile shows its background card', async ({ page }) => {
+  await setup(page, { signedIn: false });
+  await page.route('**/rest/v1/rpc/profile_cover', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify('LOR12-195') }));
+  await page.goto(url('perfil/?u=rafa_exemplo'));
+  await expect(page.locator('[data-testid="cover"]')).toHaveAttribute('data-card', 'LOR12-195');
+});
+
 test('terms and privacy page, linked from the sign-in sheet', async ({ page }) => {
   await setup(page, { signedIn: false });
   await page.goto(url('feed/'));
