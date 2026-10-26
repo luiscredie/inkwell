@@ -202,7 +202,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     const [l, t, p, pr] = await Promise.all([
       CLOUD.api("loans?select=*&order=lent_on.desc,created_at.desc&limit=2000"),
       CLOUD.api("trades?select=*&order=traded_on.desc,created_at.desc&limit=2000"),
-      CLOUD.api("inkwell_profiles?select=profile,updated_at,collection:data->collection&order=updated_at.desc").catch(() => []),
+      CLOUD.collections("profile,updated_at,collection:data->collection").catch(() => []),
       fetch(window.INKWELL_PRICES_URL || "../data/prices.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
     ]);
     loans = l || []; trades = t || []; profiles = (p || []).filter((x) => x.collection && typeof x.collection === "object");

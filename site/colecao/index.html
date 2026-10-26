@@ -78,8 +78,21 @@ window.INKWELL_CLOUD = (() => {
     return text ? JSON.parse(text) : null;
   }
 
+  // The player's collections (public.inkwell_profiles). A new account has none yet, and every collection, deck
+  // and wishlist save needs one, so the first visit creates an empty "principal" collection, then reads again.
+  async function collections(select) {
+    const q = `inkwell_profiles?select=${select}&order=updated_at.desc`;
+    const r = await api(q);
+    if (Array.isArray(r) && r.length) return r;
+    const id = load()?.user?.id;
+    if (!id) return r;
+    await api("inkwell_profiles?on_conflict=user_id,profile", { method: "POST", prefer: "resolution=ignore-duplicates,return=minimal",
+      body: { user_id: id, profile: "principal", schema: 2, data: { _schema: 2, collection: {}, decks: [], wishlist: {} } } });
+    return api(q);
+  }
+
   return {
-    api,
+    api, collections,
     user: () => { sess = load(); return sess ? { id: sess.user?.id, email: sess.user?.email } : null; },
     status: () => { sess = load(); return sess ? { signedIn: true, email: sess.user?.email || "" } : { signedIn: false }; },
     async requestCode(email) {
@@ -275,7 +288,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
 
   async function loadAll() {
     const [p, pr, l, ul, ad, hm, br] = await Promise.all([
-      CLOUD.api("inkwell_profiles?select=profile,updated_at,collection:data->collection&order=updated_at.desc"),
+      CLOUD.collections("profile,updated_at,collection:data->collection"),
       fetch(window.INKWELL_PRICES_URL || "../data/prices.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
       CLOUD.api("loans?select=direction,person,items,due_on,returned_at&returned_at=is.null").catch(() => []),
       CLOUD.api("user_loans?select=lender,borrower,items,status,due_on&status=in.(accepted,delivered)").catch(() => []),
@@ -634,7 +647,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     bump(id, kind, 0, to === "home" ? qty : -qty, quiet);
   }
   function bump(id, kind, dTotal, dHome, quiet) {
-    const p = prof(); if (!p) return;
+    const p = prof(); if (!p) { toast(Tx("Couldn't save. Try again."), null, true); if ($("scan").open) scanSay(Tx("Couldn't save. Try again."), true); return; }
     if (dTotal) {
       const e = p.collection[id] = { n: 0, f: 0, ...(p.collection[id] || {}) };
       e[kind] = Math.max(0, (+e[kind] || 0) + dTotal);
