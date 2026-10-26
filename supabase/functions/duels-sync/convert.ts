@@ -27,6 +27,8 @@ export class Catalog {
     const id = String(duelsId || "");
     const hit = this.resolve(id, name);
     if (hit) return hit;
+    const cc = /^(\d+)-([A-Za-z]+\d*)-(\d+)$/.exec(id);   // 9-CC1-4 on duels.ink is DLPC1-4-CC1 here
+    if (cc) for (const x of this.ids) if (x.endsWith(`-${cc[3]}-${cc[2].toUpperCase()}`)) return x;
     const m = /^([A-Za-z]*)(\d+)-(\d+)/.exec(id);
     if (m) {
       const bases = m[1] ? [`${m[1].toUpperCase()}${m[2]}-${m[3]}`] : [`LOR${m[2]}-${m[3]}`];
