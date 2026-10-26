@@ -6,7 +6,8 @@ import { test, expect } from '@playwright/test';
 const BASE = new URL('colecao/', process.env.INKWELL_URL || 'http://localhost:8080/index.html').href;
 const ME = '11111111-1111-4111-8111-111111111111';
 
-async function setup(page, { collection = { 'LOR10-10': { n: 2, f: 0 } }, added = [], home = [], failHome = false } = {}) {
+async function setup(page, { collection = { 'LOR10-10': { n: 2, f: 0 } }, added = [], home = [], failHome = false, fresh = false } = {}) {
+  let created = false;
   const calls = [];
   await page.addInitScript((me) => {
     localStorage.setItem('inkwell-lang', 'pt');
@@ -17,7 +18,8 @@ async function setup(page, { collection = { 'LOR10-10': { n: 2, f: 0 } }, added 
     const req = route.request(), path = new URL(req.url()).pathname.replace(/.*\/rest\/v1\//, '');
     calls.push({ path, body: req.postData() ? JSON.parse(req.postData()) : null });
     const json = (v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
-    if (path === 'inkwell_profiles') return json([{ profile: 'luiscredie', updated_at: '2026-10-20T10:00:00Z', collection }]);
+    if (path === 'inkwell_profiles' && req.method() === 'POST') { created = true; return route.fulfill({ status: 201, body: '' }); }
+    if (path === 'inkwell_profiles') return json(fresh && !created ? [] : [{ profile: fresh ? 'principal' : 'luiscredie', updated_at: '2026-10-20T10:00:00Z', collection: fresh ? {} : collection }]);
     if (path === 'collection_added') return json(added);
     if (path === 'collection_home') return home === null ? route.fulfill({ status: 404, contentType: 'application/json', body: '{}' }) : json(home);
     if (path === 'rpc/collection_change') return failHome ? route.fulfill({ status: 400, contentType: 'application/json', body: '{"message":"x"}' }) : route.fulfill({ status: 204, body: '' });
@@ -438,4 +440,12 @@ test('sets are listed by set number', async ({ page }) => {
   expect(main).toEqual([...main].sort((a, b) => a - b));
   expect(codes.slice(0, 3)).toEqual(['LOR1', 'LOR2', 'LOR3']);
   expect(codes.indexOf('LOR14')).toBeLessThan(codes.indexOf('Q1'));
+});
+
+test('a new account gets an empty collection, so its first card saves', async ({ page }) => {
+  const calls = await setup(page, { fresh: true });
+  await page.goto(BASE);
+  await expect.poll(() => calls.filter((c) => c.path === 'inkwell_profiles' && c.body).length).toBe(1);
+  const made = calls.find((c) => c.path === 'inkwell_profiles' && c.body).body;
+  expect(made).toMatchObject({ user_id: ME, profile: 'principal', data: { collection: {} } });
 });

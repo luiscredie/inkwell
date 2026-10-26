@@ -169,7 +169,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
 
   async function loadAll() {
     const [p, pr, ls, fr, gl] = await Promise.all([
-      CLOUD.api("inkwell_profiles?select=profile,updated_at,decks:data->decks,collection:data->collection&order=updated_at.desc"),
+      CLOUD.collections("profile,updated_at,decks:data->decks,collection:data->collection"),
       fetch(window.INKWELL_PRICES_URL || "../data/prices.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
       CLOUD.api("listings?select=id,user_id,kind,card_id,qty,foil,price_brl&order=created_at.desc&limit=3000").catch(() => []),
       CLOUD.api("friendships?select=requester,addressee,status&status=eq.accepted").catch(() => []),

@@ -107,7 +107,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   async function loadAll() {
     const [pr, p, br] = await Promise.all([
       fetch("../data/prices.json").then((r) => (r.ok ? r.json() : Promise.reject(new Error("prices")))),
-      me ? CLOUD.api("inkwell_profiles?select=profile,updated_at,collection:data->collection,wishlist:data->wishlist&order=updated_at.desc") : Promise.resolve([]),
+      me ? CLOUD.collections("profile,updated_at,collection:data->collection,wishlist:data->wishlist") : Promise.resolve([]),
       fetch(window.INKWELL_PRICES_BR_URL || "../data/prices-br.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
     ]);
     BR = br?.cards ? br : null;
