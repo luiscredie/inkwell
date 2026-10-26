@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Inkwell Coach Review</title>
 <meta name="description" content="Review Lorcana games turn by turn and comment with your coach.">
-<meta name="theme-color" content="#17142e">
+<meta name="theme-color" content="#0b192c">
 <link rel="icon" href="../ink/icon-192.png">
 <link rel="apple-touch-icon" href="../ink/icon-192.png">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box}body{margin:0;background:#17142e}[hidden]{display:none!important}</style>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="../ui/tokens.css"><script>document.documentElement.dataset.theme="noite";</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="../ui/tokens.css"><script>try{document.documentElement.dataset.theme=localStorage.getItem("inkwell-theme")==="noite"?"noite":"dia"}catch(e){document.documentElement.dataset.theme="dia"}</script>
 </head>
 <body>
 <script>window.INKWELL_CLOUD_CONFIG = {"url": "https://sorefaetiaebmjploanp.supabase.co", "key": "sb_publishable_RkAWW-ENz70CXA6_QV7aHw_MpfD7Gn2", "redirect": "https://luiscredie.github.io/inkwell/coach/"};
@@ -552,12 +552,12 @@ window.INKWELL_NO_STORE_MSG = "Your games appear here after you sign in.";
 .titlerow, #openCounter, #langBtn, #homeLink { display: none !important; }
 
 /* account, view, coaches */
-.acct { display: grid; gap: var(--sp-2); }
+.acct { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-2); }
 .acct .viewrow { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
 .acct .viewrow select { flex: 1; min-width: 0; }
 .acct details.coaches { background: var(--surface-1); border-radius: var(--r-md); padding: var(--sp-2) var(--sp-3); box-shadow: var(--e1); }
 .acct details.coaches > summary { cursor: pointer; min-height: 36px; display: flex; align-items: center; color: var(--text-2); font-weight: 600; font-size: var(--fs-small); }
-.acct details.coaches[open] { display: grid; gap: var(--sp-2); }
+.acct details.coaches[open] { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-2); }
 .acct .row2 { display: flex; gap: var(--sp-2); align-items: center; justify-content: space-between; }
 .acct .row2 input { flex: 1; min-width: 0; }
 .acct #duelsSync { color: var(--text-2); }
@@ -585,7 +585,7 @@ window.INKWELL_NO_STORE_MSG = "Your games appear here after you sign in.";
 .deckgrp > summary .rec { color: var(--text-2); font-size: var(--fs-small); white-space: nowrap; font-variant-numeric: tabular-nums; }
 details.add { background: var(--surface-1); border-radius: var(--r-lg); padding: var(--sp-3) var(--sp-4); box-shadow: var(--e1); }
 details.add > summary { cursor: pointer; font-weight: 600; min-height: 36px; display: flex; align-items: center; }
-details.add[open] { display: grid; gap: var(--sp-2); }
+details.add[open] { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-2); }
 details.add .row { display: flex; gap: var(--sp-2); flex-wrap: wrap; align-items: center; }
 textarea { width: 100%; min-height: 72px; resize: vertical; }
 

@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Coleção · Inkwell</title>
 <meta name="description" content="Sua coleção de Disney Lorcana: cartas, valor e empréstimos.">
-<meta name="theme-color" content="#13102a">
+<meta name="theme-color" content="#0b192c">
 <link rel="icon" href="../ink/icon-192.png">
 <link rel="apple-touch-icon" href="../ink/icon-192.png">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="../ui/tokens.css"><script>document.documentElement.dataset.theme="noite";</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="../ui/tokens.css"><script>try{document.documentElement.dataset.theme=localStorage.getItem("inkwell-theme")==="noite"?"noite":"dia"}catch(e){document.documentElement.dataset.theme="dia"}</script>
 </head>
 <body>
 <script>window.INKWELL_CLOUD_CONFIG = {"url": "https://sorefaetiaebmjploanp.supabase.co", "key": "sb_publishable_RkAWW-ENz70CXA6_QV7aHw_MpfD7Gn2", "redirect": "https://luiscredie.github.io/inkwell/colecao/"};
@@ -1144,20 +1144,28 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const UI = "../ui/";
   const CLOUD = window.INKWELL_CLOUD;
   const me = CLOUD?.user();
+  // Every module stays in the top bar (design "The Great Illuminary", 26/10/2026). On phones the bottom bar has
+  // the four main places plus "Mais", which lists the rest; nothing is hidden behind the account menu only.
   const NAV = [
     ["feed", "../feed/", T("Início", "Home"), "home"],
     ["cards", "../colecao/", T("Coleção", "Collection"), "cards"],
     ["decks", "../decks/", "Decks", "decks"],
+    ["communities", "../comunidades/", T("Comunidades", "Communities"), "users"],
     ["coach", "../coach/", T("Jogos", "Games"), "games"],
     ["trades", "../trades/", T("Trocas", "Trades"), "trades"],
+    ["prices", "../precos/", T("Preços", "Prices"), "coins"],
   ];
+  const TABS = ["feed", "cards", "decks", "communities"];
+  const MORE = NAV.filter(([k]) => !TABS.includes(k));
+  let theme = "dia"; try { theme = localStorage.getItem("inkwell-theme") === "noite" ? "noite" : "dia"; } catch { /* */ }
   const cur = (k) => (k === page ? ' aria-current="page"' : "");
 
   const bar = document.createElement("header");
   bar.className = "appbar";
-  bar.innerHTML = `<div class="appbar-in"><a class="brand" href="../feed/"><img src="${UI}assets/logo-mark.svg" alt="">Inkwell</a>
-    <nav class="sections" aria-label="${T("Seções", "Sections")}">${NAV.map(([k, href, label, ic]) => `<a href="${href}"${cur(k)} data-iw="${k}"><i class="ic i-${ic}"></i>${label}</a>`).join("")}</nav>
+  bar.innerHTML = `<div class="appbar-in"><a class="brand" href="../feed/"><img src="../ink/logo-coin.png" alt="" width="32" height="32">Inkwell</a>
+    <nav class="sections" aria-label="${T("Seções", "Sections")}">${NAV.map(([k, href, label, ic]) => `<a href="${href}"${cur(k)} data-iw="${k}"><i class="ic i-${ic}"></i>${label}${k === "trades" ? '<span class="count" data-trades-count hidden></span>' : ""}</a>`).join("")}</nav>
     <div class="end">
+      <button type="button" class="btn ghost icon" id="iwTheme" aria-pressed="${theme === "noite"}" aria-label="${theme === "noite" ? T("Usar o tema claro", "Use the light theme") : T("Usar o tema escuro", "Use the dark theme")}"><i class="ic ${theme === "noite" ? "i-sun" : "i-moon"}"></i></button>
       <a class="btn ghost counter-btn" href="../counter/" aria-label="${T("Abrir o Contador", "Open the Counter")}"><i class="ic i-counter"></i><span>${T("Contador", "Counter")}</span></a>
       ${me ? `<button type="button" class="av-btn" id="iwAcct" aria-label="${T("Sua conta", "Your account")}" aria-haspopup="menu" aria-expanded="false"><span class="av" id="iwAv">${esc((me.email || "?")[0].toUpperCase())}</span><span class="count iw-badge" id="iwBadge" hidden></span></button>`
         : `<button type="button" class="btn ghost icon" id="iwLangBtn" aria-label="${T("Aparência e idioma", "Appearance and language")}" aria-haspopup="menu" aria-expanded="false"><i class="ic i-globe"></i></button>
@@ -1167,7 +1175,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const tabs = document.createElement("nav");
   tabs.className = "tabbar";
   tabs.setAttribute("aria-label", T("Seções", "Sections"));
-  tabs.innerHTML = NAV.map(([k, href, label, ic]) => `<a href="${href}"${cur(k)} data-iw="${k}"><i class="pip"><i class="ic i-${ic}"></i></i>${label}${k === "trades" ? '<span class="count" id="iwTradesCount" hidden></span>' : ""}</a>`).join("");
+  const inMore = MORE.some(([k]) => k === page);
+  tabs.innerHTML = NAV.filter(([k]) => TABS.includes(k)).map(([k, href, label, ic]) => `<a href="${href}"${cur(k)} data-iw="${k}"><i class="pip"><i class="ic i-${ic}"></i></i>${label}</a>`).join("")
+    + `<button type="button" id="iwMore" class="tab-more" aria-haspopup="dialog" aria-expanded="false"${inMore ? ' aria-current="page"' : ""}><i class="pip"><i class="ic i-more"></i></i>${T("Mais", "More")}<span class="count" data-trades-count hidden></span></button>`;
   document.body.append(tabs);
   document.body.classList.add("iw-has-shell");
 
@@ -1237,8 +1247,34 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     <button type="button" class="menu-item" role="menuitem" data-signout><i class="ic i-logout"></i>${T("Sair", "Sign out")}</button>`));
   $("iwLangBtn")?.addEventListener("click", (e) => openMenu(e.currentTarget, `<div class="menu-label">${T("Idioma", "Language")}</div>
     ${[["pt", "Português"], ["en", "English"]].map(([k, l]) => `<button type="button" class="menu-item" role="menuitemradio" aria-checked="${k === lang}" data-lang-pick="${k}">${l}${k === lang ? '<i class="ic i-check" style="margin-left:auto;color:var(--text)"></i>' : ""}</button>`).join("")}
-    <div class="menu-sep"></div><div class="menu-label">${T("Tema: Noite", "Theme: Night")}</div>`, "sm"));
+`, "sm"));
   function $(id) { return document.getElementById(id); }
+
+  // ---------- light / dark ----------
+  $("iwTheme")?.addEventListener("click", () => {
+    theme = theme === "noite" ? "dia" : "noite";
+    try { localStorage.setItem("inkwell-theme", theme); } catch { /* the choice lasts this page only */ }
+    document.documentElement.dataset.theme = theme;
+    const b = $("iwTheme");
+    b.setAttribute("aria-pressed", String(theme === "noite"));
+    b.setAttribute("aria-label", theme === "noite" ? T("Usar o tema claro", "Use the light theme") : T("Usar o tema escuro", "Use the dark theme"));
+    b.innerHTML = `<i class="ic ${theme === "noite" ? "i-sun" : "i-moon"}"></i>`;
+  });
+
+  // ---------- "Mais" on phones: the modules that are not in the bottom bar ----------
+  const more = document.createElement("dialog");
+  more.className = "sheet"; more.id = "iwMoreSheet"; more.setAttribute("aria-labelledby", "iwMoreT");
+  more.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="iwMoreT">${T("Mais", "More")}</h2>
+      <button type="button" class="btn ghost icon" data-close aria-label="${T("Fechar", "Close")}"><i class="ic i-close"></i></button></div>
+    <div class="sheet-body"><nav class="more-list" aria-label="${T("Mais seções", "More sections")}">
+      ${MORE.map(([k, href, label, ic]) => `<a class="menu-item" href="${href}"${cur(k)} data-iw="${k}"><i class="ic i-${ic}"></i>${label}${k === "trades" ? '<span class="trail"><span class="count" data-trades-count hidden></span></span>' : ""}</a>`).join("")}
+      <a class="menu-item" href="../counter/"><i class="ic i-counter"></i>${T("Contador de lore", "Lore counter")}</a>
+    </nav></div>`;
+  document.body.append(more);
+  more.querySelector("[data-close]").addEventListener("click", () => more.close());
+  more.addEventListener("click", (e) => { if (e.target === more) more.close(); });
+  more.addEventListener("close", () => { $("iwMore")?.setAttribute("aria-expanded", "false"); $("iwMore")?.focus(); });
+  $("iwMore")?.addEventListener("click", () => { more.showModal(); $("iwMore").setAttribute("aria-expanded", "true"); more.querySelector("a")?.focus(); });
 
   // ---------- sign-in sheet: e-mail → code from the e-mail (or the link in it) ----------
   const sheet = document.createElement("dialog");
@@ -1375,9 +1411,11 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
 
   // ---------- Trocas count, name, last duels.ink sync (best effort) ----------
   window.INKWELL_SHELL_BADGE = (n) => {
-    const c = $("iwTradesCount"); if (!c) return;
-    c.hidden = !n; c.textContent = n > 9 ? "9+" : String(n || "");
-    const a = c.closest("a"); if (a) a.setAttribute("aria-label", `${T("Trocas", "Trades")}${n ? ` · ${n} ${T("aguardando você", "waiting for you")}` : ""}`);
+    document.querySelectorAll("[data-trades-count]").forEach((c) => {
+      c.hidden = !n; c.textContent = n > 9 ? "9+" : String(n || "");
+      const a = c.closest("a, button");
+      if (a) a.setAttribute("aria-label", a.id === "iwMore" ? `${T("Mais", "More")}${n ? ` · ${n} ${T("trocas aguardando você", "trades waiting for you")}` : ""}` : `${T("Trocas", "Trades")}${n ? ` · ${n} ${T("aguardando você", "waiting for you")}` : ""}`);
+    });
   };
   if (me && CLOUD) {
     CLOUD.api("rpc/my_profile", { method: "POST", body: {} })   // supabase/my_inkwell.sql
