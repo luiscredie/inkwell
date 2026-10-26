@@ -9,7 +9,7 @@
 <link rel="icon" href="../ink/icon-192.png">
 <link rel="apple-touch-icon" href="../ink/icon-192.png">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="../ui/tokens.css"><script>document.documentElement.dataset.theme="noite";</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="../ui/tokens.css"><link rel="stylesheet" href="../ui/iw-public.css"><script>document.documentElement.dataset.theme="noite";</script>
 </head>
 <body>
 <script>window.INKWELL_CLOUD_CONFIG = {"url": "https://sorefaetiaebmjploanp.supabase.co", "key": "sb_publishable_RkAWW-ENz70CXA6_QV7aHw_MpfD7Gn2", "redirect": "https://luiscredie.github.io/inkwell/feed/"};
@@ -22,6 +22,18 @@
  * The counter keeps every match locally until send() resolves true.
  * Only the public URL and publishable key are here; row-level security limits each user to their own rows.
  */
+// Feature flags (off by default). ?preview=visitante turns the new guest experience on for this tab only
+// (sessionStorage); ?preview=off turns it off again. Rollback = leave guestProfile false: nothing else changes.
+window.INKWELL_FLAGS = (() => {
+  const f = { guestProfile: false };
+  try {
+    const q = new URLSearchParams(location.search).get("preview");
+    if (q === "visitante") sessionStorage.setItem("inkwell-preview", "visitante");
+    if (q === "off") sessionStorage.removeItem("inkwell-preview");
+    if (sessionStorage.getItem("inkwell-preview") === "visitante") f.guestProfile = true;
+  } catch { /* storage off: flags stay as set above */ }
+  return f;
+})();
 window.INKWELL_CLOUD = (() => {
   const cfg = window.INKWELL_CLOUD_CONFIG || {};
   if (!cfg.url || !cfg.key) return null;
@@ -46,6 +58,7 @@ window.INKWELL_CLOUD = (() => {
   if (h.get("access_token") && h.get("refresh_token")) {
     store(session({ access_token: h.get("access_token"), refresh_token: h.get("refresh_token"), expires_in: +h.get("expires_in") || 3600 }));
     history.replaceState(null, "", location.pathname + location.search);
+    window.INKWELL_FROM_LINK = true;   // this tab was opened by the e-mail link (the guest editor tells the original tab apart)
   }
 
   async function token() {
@@ -226,6 +239,15 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Your friends' games, newest first.": "Os jogos dos seus amigos, do mais recente ao mais antigo.", "What your friends and communities are up to.": "O que seus amigos e suas comunidades andam fazendo.", "Friends and privacy": "Amigos e privacidade", "Privacy": "Privacidade",
     "{n} friends": "{n} amigos", "1 friend": "1 amigo", "your games: {v}": "seus jogos: {v}", "Close": "Fechar", "Requests": "Pedidos", "Add a friend": "Adicionar amigo",
     "Your timeline is empty": "Sua linha do tempo está vazia", "Add friends to see their games here. Your games also show up for whoever you choose.": "Adicione amigos para ver os jogos deles aqui. Os seus jogos também aparecem para quem você escolher.",
+    "Your place in the Lorcana community.": "Seu lugar no mundo de Lorcana.", "Your favourite cards and your people, in a profile that feels like you.": "Suas cartas favoritas e sua turma, em um perfil com a sua cara.",
+    "Start my Inkwell": "Começar meu Inkwell", "Explore the community": "Explorar a comunidade", "Demo with fictional data": "Demonstração com dados fictícios",
+    "Already have an account? Sign in": "Já tem conta? Entrar", "Example recado": "Recado de exemplo", "Build your profile": "Monte seu perfil",
+    "Your name": "Seu nome", "How you want to appear. Your real name and e-mail never show.": "Como você quer aparecer. Seu nome real e seu e-mail nunca aparecem.",
+    "Up to two inks": "Até duas tintas", "The colours you play, from the six real inks.": "As cores que você joga, entre as seis tintas reais.",
+    "Three favourite cards": "Três cartas favoritas", "Any card from the whole catalogue, in the exact printing and finish.": "Qualquer carta do catálogo inteiro, na edição e no acabamento exatos.",
+    "Try it without an account. Create one only when you want to keep it.": "Experimente sem conta. Crie uma só quando quiser guardar.",
+    "An example deck": "Um deck de exemplo", "Illustrative deck from a fictional profile: the full list is on the profile page. Not a tournament list.": "Deck ilustrativo de um perfil fictício: a lista completa está na página do perfil. Não é uma lista de torneio.",
+    "See the deck": "Ver o deck", "Rafa (example)": "Rafa (exemplo)", "Thursday is league night. Who's in?": "Quinta é dia de liga. Quem topa?",
     "Your corner of the Lorcana community": "Seu canto na comunidade de Lorcana",
     "Show your favourite cards and your deck, invite your friends, and keep your collection, games and trades in one place. Free, made by a fan.": "Mostre suas cartas favoritas e seu deck, convide seus amigos e tenha coleção, jogos e trocas num lugar só. Grátis, feito por fã.",
     "Create my Inkwell": "Criar meu Inkwell", "See an example profile": "Ver um perfil de exemplo", "What you can do": "O que dá para fazer",
@@ -507,10 +529,37 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       ["trades", "../trades/", "Trades and loans", "Lend to friends, post what you want or offer, and keep track of who has what."],
       ["users", "../perfil/", "Your profile and your friends", "A page that is yours: favourite cards, your deck, your friends and the recados they leave."],
     ];
+    // New public home (handoff v1.1), behind INKWELL_FLAGS.guestProfile. The demo uses real catalogue cards
+    // and says it is a demonstration; nothing in it is copied to a visitor's draft.
+    const GUEST = !!(window.INKWELL_FLAGS || {}).guestProfile;
+    const INK_HEX = { Amber: "#efbd49", Amethyst: "#a784db", Emerald: "#54b78b", Ruby: "#e27683", Sapphire: "#7ca9df", Steel: "#c1c8d3" };
+    const demoCard = (id) => { const c = IDX.get(id), src = img(id), nm = c ? c[1] : id, [a, b] = nm.split(" - ");
+      return `<figure style="margin:0"><span class="iw-card">${src ? `<img src="${src}" alt="${esc(nm)}" width="250" height="350" loading="lazy" decoding="async" onerror="this.remove()">` : ""}<span class="iw-fallback">${esc(nm)}</span></span>
+        <figcaption class="iw-card-label">${esc(a)}${b ? `<small>${esc(b)}</small>` : ""}</figcaption></figure>`; };
+    const newHero = () => `<div class="iw-public" data-testid="new-hero"><section class="iw-hero" aria-labelledby="nhT">
+        <div><h1 class="iw-h1" id="nhT">${Tx("Your place in the Lorcana community.")}</h1>
+          <p class="iw-lead">${Tx("Your favourite cards and your people, in a profile that feels like you.")}</p>
+          <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:var(--sp-5)"><a class="iw-button iw-button-primary" href="../comecar/" data-testid="start">${Tx("Start my Inkwell")}</a>
+            <a class="iw-button" href="../comunidades/">${Tx("Explore the community")}</a></div>
+          <p style="margin:var(--sp-4) 0 0"><button type="button" class="iw-link" id="signIn2">${Tx("Already have an account? Sign in")}</button></p></div>
+        <div class="iw-profile" aria-label="${esc(Tx("Demo with fictional data"))}">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:var(--sp-3)"><span class="iw-sample-label">${Tx("Demo with fictional data")}</span></div>
+          <div class="iw-profile-head"><span class="iw-avatar" aria-hidden="true">${img("LOR14-2") ? `<img src="${img("LOR14-2")}" alt="">` : "R"}</span>
+            <div><p class="iw-name">${Tx("Rafa (example)")}</p><span class="iw-inkdots" aria-label="${esc(lang === "pt" ? "Âmbar · Ametista" : "Amber · Amethyst")}"><i style="background:${INK_HEX.Amber}"></i><i style="background:${INK_HEX.Amethyst}"></i></span></div></div>
+          <div class="iw-showcase">${["LOR13-27", "LOR12-195", "LOR10-17"].map(demoCard).join("")}</div>
+          <blockquote class="iw-quote"><span class="iw-sample-label" style="font-style:normal;margin-bottom:6px">${Tx("Example recado")}</span><br>“${Tx("Thursday is league night. Who's in?")}”</blockquote></div></section>
+      <section class="iw-section" aria-labelledby="bpT"><h2 class="iw-h2" id="bpT">${Tx("Build your profile")}</h2>
+        <div class="iw-grid3" style="margin-top:var(--sp-4)">${[["Your name", "How you want to appear. Your real name and e-mail never show."], ["Up to two inks", "The colours you play, from the six real inks."], ["Three favourite cards", "Any card from the whole catalogue, in the exact printing and finish."]]
+          .map(([t, d], i) => `<div class="iw-tile"><span class="iw-eyebrow">${i + 1}</span><h3 class="iw-h3">${Tx(t)}</h3><p class="iw-muted" style="margin:0">${Tx(d)}</p></div>`).join("")}</div>
+        <p style="margin:var(--sp-4) 0 0" class="iw-muted">${Tx("Try it without an account. Create one only when you want to keep it.")} <a class="iw-link" href="../comecar/">${Tx("Start my Inkwell")}</a></p></section>
+      <section class="iw-section" aria-labelledby="dkT" style="padding-top:0"><div class="iw-tile" style="display:grid;gap:var(--sp-2)"><span class="iw-sample-label" style="justify-self:start">${Tx("Demo with fictional data")}</span>
+        <h2 class="iw-h2" id="dkT">${Tx("An example deck")}</h2><p class="iw-muted" style="margin:0">${Tx("Illustrative deck from a fictional profile: the full list is on the profile page. Not a tournament list.")}</p>
+        <a class="iw-button" style="justify-self:start" href="../perfil/?u=rafa_exemplo">${Tx("See the deck")}</a></div></section></div>`;
     $("feed").style.marginTop = "0";
     $("feed").innerHTML = `<div class="land" data-testid="public-home">
       ${new URLSearchParams(location.search).get("conta") === "excluida" ? `<div class="notice ok" data-testid="deleted"><i class="ic i-check"></i><div class="t">${Tx("Your account and its data were deleted.")}</div></div>` : ""}
-      <section class="land-hero" id="landHero"><h1>${Tx("Your corner of the Lorcana community")}</h1>
+      ${GUEST ? newHero() : ""}
+      <section class="land-hero" id="landHero" ${GUEST ? "hidden" : ""}><h1>${Tx("Your corner of the Lorcana community")}</h1>
         <p>${Tx("Show your favourite cards and your deck, invite your friends, and keep your collection, games and trades in one place. Free, made by a fan.")}</p>
         <div class="land-cta"><button type="button" class="btn primary large" id="signIn">${Tx("Create my Inkwell")}</button><a class="btn large" href="../perfil/?u=rafa_exemplo">${Tx("See an example profile")}</a></div>
         <p class="small faint" style="margin:var(--sp-3) 0 0">${Tx("Use your e-mail. We send a 6-digit code, no password.")}</p></section>
@@ -522,6 +571,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         <ol class="land-steps" style="padding:0;margin:0"><li><b>${Tx("Sign in with your e-mail")}</b>${Tx("A 6-digit code, no password.")}</li><li><b>${Tx("Make your profile")}</b>${Tx("Private until you decide to make it public.")}</li><li><b>${Tx("Invite your friends")}</b>${Tx("Whoever signs in through your link gets your friend request.")}</li></ol></section>
       <p class="small faint">${Tx("Fan project, free, not affiliated with Disney or Ravensburger.")} · <a href="../privacidade/">${Tx("Terms and privacy")}</a></p></div>`;
     $("signIn").onclick = () => window.INKWELL_SIGNIN?.();
+    $("signIn2")?.addEventListener("click", () => window.INKWELL_SIGNIN?.());
     const heroArt = img("LOR14-2"); if (heroArt) $("landHero").style.setProperty("--hero-art", `url('${heroArt}')`);
     const cfg = window.INKWELL_CLOUD_CONFIG;
     fetch(`${cfg.url}/rest/v1/rpc/example_profiles`, { method: "POST", headers: { apikey: cfg.key, "Content-Type": "application/json" }, body: "{}" })
@@ -649,7 +699,10 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     menu.querySelectorAll("[data-lang-pick]").forEach((b) => b.addEventListener("click", () => {
       if (b.dataset.langPick !== lang) { try { localStorage.setItem("inkwell-lang", b.dataset.langPick); } catch { /* */ } location.reload(); }
     }));
-    menu.querySelector("[data-signout]")?.addEventListener("click", () => { CLOUD?.signOut(); location.reload(); });
+    menu.querySelector("[data-signout]")?.addEventListener("click", () => {
+      try { sessionStorage.removeItem("inkwell-guest-intent-v1"); } catch { /* */ }   // signing out cancels a pending "save after sign-in"; the draft stays
+      CLOUD?.signOut(); location.reload();
+    });
   }
   document.addEventListener("click", (e) => { if (menu && !menu.contains(e.target) && !opener?.contains(e.target)) closeMenu(); });
   document.addEventListener("keydown", (e) => {
@@ -774,6 +827,21 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     if (!sheet.open) sheet.showModal();
   };
   $("iwSignIn")?.addEventListener("click", () => window.INKWELL_SIGNIN());
+
+  // ---------- guest draft (Começar meu Inkwell, behind INKWELL_FLAGS.guestProfile) ----------
+  if ((window.INKWELL_FLAGS || {}).guestProfile && page !== "start") {
+    const main = document.querySelector("main");
+    const note = (html, id) => { if (!main || document.getElementById(id)) return; const d = document.createElement("div"); d.id = id; d.className = "notice"; d.setAttribute("role", "status"); d.innerHTML = html; main.prepend(d); };
+    let draft = null; try { draft = JSON.parse(sessionStorage.getItem("inkwell-guest-draft-v1") || "null"); } catch { /* */ }
+    // the draft lives in this tab: other pages remind, never ask
+    if (draft && typeof draft === "object") note(`<span>${T("Seu Inkwell ainda não foi salvo.", "Your Inkwell isn't saved yet.")}</span> <a href="../comecar/">${T("Continuar", "Continue")}</a>`, "iwDraftNote");
+    // opened by the e-mail link: if the tab with the draft is still open, send the person back there
+    if (window.INKWELL_FROM_LINK && "BroadcastChannel" in window) {
+      const bc = new BroadcastChannel("inkwell-guest");
+      bc.addEventListener("message", (e) => { if (e.data?.type === "here") note(T("Volte à aba em que você começou para salvar suas alterações.", "Return to the tab where you started to save your changes."), "iwOtherTab"); });
+      bc.postMessage({ type: "ping" });
+    }
+  }
 
   // ---------- Trocas count, name, last duels.ink sync (best effort) ----------
   window.INKWELL_SHELL_BADGE = (n) => {
