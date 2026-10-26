@@ -748,3 +748,8 @@ table .cardcell small { display: block; color: var(--text-2); }
 .i-loan{-webkit-mask-image:url(assets/icons/loan.svg);mask-image:url(assets/icons/loan.svg)}
 .i-chart{-webkit-mask-image:url(assets/icons/chart.svg);mask-image:url(assets/icons/chart.svg)}
 .i-refresh{-webkit-mask-image:url(assets/icons/refresh.svg);mask-image:url(assets/icons/refresh.svg)}
+
+/* rights note at the end of every page (shell.js) */
+.iw-legal { max-width: var(--page-max); margin: 0 auto; padding: 0 var(--sp-4) calc(var(--tabbar-h) + var(--sp-6) + env(safe-area-inset-bottom, 0px)); color: var(--text-2); font-size: .75rem; line-height: 1.5; opacity: .75; }
+.iw-legal a { color: inherit; }
+@media (min-width: 761px) { .iw-legal { padding-bottom: var(--sp-6); } }
