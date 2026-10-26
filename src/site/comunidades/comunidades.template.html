@@ -42,6 +42,9 @@
 .cm-acts { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
 .cm-cols { display: grid; gap: var(--sp-5); grid-template-columns: minmax(0, 1fr); margin-top: var(--sp-5); }
 @media (min-width: 900px) { .cm-cols { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); align-items: start; } }
+.cm-contact { list-style: none; margin: 0 0 var(--sp-3); padding: 0; display: grid; gap: 6px; font-size: var(--fs-small); }
+.cm-contact li { display: flex; gap: 8px; align-items: center; min-width: 0; } .cm-contact li span { min-width: 0; overflow-wrap: anywhere; }
+.cm-contact .ic { width: 16px; height: 16px; color: var(--text-2); flex: none; }
 .cm-mock { display: flex; gap: var(--sp-2); align-items: center; padding: 10px var(--sp-4); border-radius: var(--r-md); background: var(--accent-soft); font-weight: 600; margin-bottom: var(--sp-4); }
 .cm-people { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: var(--sp-3); margin-top: var(--sp-3); }
 .cm-people a, .cm-people span.p { display: grid; justify-items: center; gap: 6px; color: var(--text); text-decoration: none; font-size: var(--fs-small); text-align: center; overflow-wrap: anywhere; }
@@ -74,7 +77,13 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const PT = {
     "Communities": "Comunidades", "Stores, cities and groups that play Lorcana.": "Lojas, cidades e grupos que jogam Lorcana.", "Search by name or city": "Buscar por nome ou cidade",
     "All": "Todas", "Mine": "Minhas", "Create a community": "Criar comunidade", "Store": "Loja", "City": "Cidade", "Interest": "Interesse", "{n} members": "{n} membros", "1 member": "1 membro",
-    "example": "exemplo", "member": "membro", "owner": "dono", "No community found.": "Nenhuma comunidade encontrada.", "No communities yet": "Nenhuma comunidade ainda",
+    "example": "exemplo", "member": "membro", "owner": "dono", "admin": "admin", "you": "você",
+    "Store details": "Dados da loja", "Shown to everyone on the community page. Use the store's details, not personal ones.": "Aparecem para todos na página da comunidade. Use os dados da loja, não os pessoais.",
+    "Address": "Endereço", "Phone / WhatsApp": "Telefone / WhatsApp", "E-mail": "E-mail", "Website": "Site", "Instagram": "Instagram", "Map": "Mapa", "Check the e-mail.": "Confira o e-mail.",
+    "Make admin": "Tornar admin", "Remove admin": "Tirar admin", "Make owner": "Tornar dono", "Tap again: they become the owner": "Toque de novo: vira o dono",
+    "Ownership handed over. You stay as admin.": "Comunidade transferida. Você continua como admin.",
+    "Admins edit the details and moderate, like you. Only the owner picks admins and can hand the community to someone else.": "Admins editam os dados e moderam, como você. Só o dono escolhe os admins e pode passar a comunidade para outra pessoa.",
+    "Admins edit the details and moderate. The owner picks the admins.": "Admins editam os dados e moderam. O dono escolhe os admins.", "No community found.": "Nenhuma comunidade encontrada.", "No communities yet": "Nenhuma comunidade ainda",
     "Create the first one for your store or your city.": "Crie a primeira para a sua loja ou a sua cidade.", "Loading…": "Carregando…",
     "Couldn't load.": "Não foi possível carregar.", "Check your connection and try again.": "Confira a internet e tente de novo.", "Try again": "Tentar de novo",
     "Community not found": "Comunidade não encontrada", "It doesn't exist, or it was hidden.": "Ela não existe ou foi ocultada.", "Back": "Voltar",
@@ -164,8 +173,21 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     document.title = `${L(view.mock, view.name)} · Inkwell`;
     drawOne();
   }
+  // store details: shown to everyone, like a shop sign; links only to web and Instagram addresses we built
+  function contactHtml(c) {
+    const k = c.contact || {};
+    if (!k || !Object.keys(k).length) return "";
+    const tel = String(k.phone || "").replace(/[^\d+]/g, ""), wa = tel.replace(/\D/g, "");
+    const row = (ic, html) => `<li><i class="ic i-${ic}"></i><span>${html}</span></li>`;
+    return `<ul class="cm-contact" data-testid="contact">
+      ${k.address ? row("info", `${esc(k.address)} · <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(k.address + (c.city ? ", " + c.city : ""))}" target="_blank" rel="noopener">${Tx("Map")}</a>`) : ""}
+      ${k.phone ? row("comment", `<a href="tel:${esc(tel)}">${esc(k.phone)}</a>${wa.length >= 10 ? ` · <a href="https://wa.me/${wa.length <= 11 ? "55" + wa : wa}" target="_blank" rel="noopener">WhatsApp</a>` : ""}`) : ""}
+      ${k.email ? row("mail", `<a href="mailto:${esc(k.email)}">${esc(k.email)}</a>`) : ""}
+      ${/^https?:\/\//i.test(k.site || "") ? row("globe", `<a href="${esc(k.site)}" target="_blank" rel="noopener nofollow">${esc(String(k.site).replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, ""))}</a>`) : ""}
+      ${k.instagram ? row("external", `<a href="https://instagram.com/${encodeURIComponent(k.instagram)}" target="_blank" rel="noopener nofollow">@${esc(k.instagram)}</a>`) : ""}</ul>`;
+  }
   function drawOne() {
-    const c = view, m = c.mock, isMember = !!c.role, isOwner = c.role === "owner";
+    const c = view, m = c.mock, isMember = !!c.role, isOwner = c.role === "owner", canManage = isOwner || c.role === "admin";
     const named = c.members || [], hiddenN = Math.max(0, (c.member_n || 0) - named.length);
     let join = "";
     if (!me) join = `<button type="button" class="btn primary" id="signIn">${Tx("Sign in to take part")}</button>`;
@@ -174,13 +196,14 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     else if (!isMember && !m && !adult()) join = `<a class="btn" href="../perfil/?editar=1">${Tx("Open My Inkwell")}</a><span class="small muted">${Tx("To take part, confirm you are 18+ in My Inkwell.")}</span>`;
     const post = (p) => `<article class="cm-post" data-post="${esc(p.id)}">${p.handle ? `<a href="../perfil/?u=${encodeURIComponent(p.handle)}"><span class="pav sm" style="${art(p.avatar)}"></span></a>` : `<span class="pav sm"></span>`}
         <div><div class="small"><b>${p.handle ? `<a href="../perfil/?u=${encodeURIComponent(p.handle)}">${esc(L(m, p.name || Tx("Someone")))}</a>` : esc(L(m, p.name || Tx("Someone")))}</b> <span class="faint">· ${esc(ago(p.at))}</span></div><p>${esc(L(m, p.body))}</p>
-        ${!m && isMember ? `<div class="acts">${p.mine || isOwner ? `<button type="button" class="btn ghost small" data-pa="delete_post">${armed === "del:" + p.id ? Tx("Tap again to confirm") : Tx("Delete")}</button>` : ""}${isOwner && !p.mine ? `<button type="button" class="btn ghost small" data-pa="hide_post">${Tx("Hide")}</button>` : ""}${!p.mine ? `<button type="button" class="btn ghost small" data-pa="report">${Tx("Report")}</button>` : ""}</div>` : ""}</div></article>`;
+        ${!m && isMember ? `<div class="acts">${p.mine || canManage ? `<button type="button" class="btn ghost small" data-pa="delete_post">${armed === "del:" + p.id ? Tx("Tap again to confirm") : Tx("Delete")}</button>` : ""}${canManage && !p.mine ? `<button type="button" class="btn ghost small" data-pa="hide_post">${Tx("Hide")}</button>` : ""}${!p.mine ? `<button type="button" class="btn ghost small" data-pa="report">${Tx("Report")}</button>` : ""}</div>` : ""}</div></article>`;
     $("app").innerHTML = `${m ? `<div class="cm-mock" data-testid="mock-banner"><i class="ic i-info"></i><span>${Tx("Example · fictional community")}. ${Tx("This is a mockup to show what a community looks like. Its people are not real.")}</span></div>` : ""}
       <a class="back" href="./">${Tx("Communities")}</a>
       <section class="cm-hero" style="margin-top:var(--sp-3)"><div class="cm-cover" style="${art(c.avatar)};--art:${BY.get(c.avatar)?.img ? `url('${imgUrl(BY.get(c.avatar))}')` : "none"}"><i class="cm-art"></i></div>
         <div class="cm-id"><span class="cm-av" style="${art(c.avatar)}"></span><div style="min-width:0"><h1>${esc(L(m, c.name))}</h1><div class="small muted">${esc([Tx(KIND[c.kind] || "Store"), c.city, members(c.member_n || 0)].filter(Boolean).join(" · "))}</div></div></div>
         <div class="cm-body">${c.description ? `<p>${esc(L(m, c.description))}</p>` : ""}
-          <div class="cm-acts">${join}${isOwner ? `<button type="button" class="btn" id="edit"><i class="ic i-edit"></i>${Tx("Edit")}</button><button type="button" class="btn ghost" id="manage">${Tx("Manage members")}</button>` : ""}
+          ${contactHtml(c)}
+          <div class="cm-acts">${join}${canManage ? `<button type="button" class="btn" id="edit"><i class="ic i-edit"></i>${Tx("Edit")}</button><button type="button" class="btn ghost" id="manage">${Tx("Manage members")}</button>` : ""}
             <button type="button" class="btn ghost" id="share"><i class="ic i-send"></i>${Tx("Share")}</button></div></div></section>
       <div class="cm-cols">
         <section data-testid="conversation"><div class="group-head"><h2>${Tx("Conversation")}</h2></div>
@@ -189,7 +212,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
           : `<div class="cm-locked" data-testid="locked"><b>${Tx("The conversation is for members only.")}</b><div class="small" style="margin-top:4px">${c.week_posts === 1 ? Tx("1 message this week") : Tx("{n} messages this week", { n: c.week_posts || 0 })}</div></div>`}
         </section>
         <section class="card" data-testid="people"><div class="row between"><div class="mi-label small faint" style="font-weight:700;text-transform:uppercase;letter-spacing:.06em">${Tx("People")}</div><span class="small muted">${esc(members(c.member_n || 0))}</span></div>
-          <div class="cm-people">${named.map((p) => `<a href="../perfil/?u=${encodeURIComponent(p.handle)}"><span class="pav" style="${art(p.avatar)}"></span><span>${esc(L(m, p.name))}${p.role === "owner" ? `<br><span class="faint small">${Tx("owner")}</span>` : ""}</span></a>`).join("")}</div>
+          <div class="cm-people">${named.map((p) => `<a href="../perfil/?u=${encodeURIComponent(p.handle)}"><span class="pav" style="${art(p.avatar)}"></span><span>${esc(L(m, p.name))}${p.role === "owner" || p.role === "admin" ? `<br><span class="faint small">${Tx(p.role)}</span>` : ""}</span></a>`).join("")}</div>
           ${hiddenN ? `<p class="small faint" style="margin:var(--sp-2) 0 0">${Tx("+{n} with a private profile", { n: hiddenN })}</p>` : ""}</section>
       </div>`;
     wireOne();
@@ -217,7 +240,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
 
   // ---------- sheets: create/edit, manage members, report ----------
   function openForm(c) {
-    const f = { name: c?.name || "", kind: c?.kind || "store", city: c?.city || "", description: c?.description || "", avatar_card: c?.avatar || "" };
+    const f = { name: c?.name || "", kind: c?.kind || "store", city: c?.city || "", description: c?.description || "", avatar_card: c?.avatar || "", contact: { ...(c?.contact || {}) } };
     let qa = "";
     const sh = $("sheet");
     const draw = () => {
@@ -227,6 +250,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
           <label class="field">${Tx("Name")}<input id="fN" maxlength="60" value="${esc(f.name)}" required></label>
           <div class="field">${Tx("Kind")}<div class="seg block" role="group">${["store", "city", "interest"].map((k) => `<button type="button" data-k="${k}" aria-pressed="${f.kind === k}">${Tx(KIND[k])}</button>`).join("")}</div></div>
           <label class="field">${Tx("City")}<input id="fC" maxlength="40" value="${esc(f.city)}"></label>
+          ${f.kind === "store" ? `<fieldset class="field cm-store" style="border:0;padding:0;margin:0"><legend style="font-weight:700;padding:0">${Tx("Store details")}</legend><span class="hint">${Tx("Shown to everyone on the community page. Use the store's details, not personal ones.")}</span>
+            ${[["address", "Address", 160, "text", "street-address"], ["phone", "Phone / WhatsApp", 30, "tel", "tel"], ["email", "E-mail", 120, "email", "email"], ["site", "Website", 200, "url", "url"], ["instagram", "Instagram", 60, "text", "off"]]
+              .map(([k, l, n, t, ac]) => `<label class="field">${Tx(l)}<input data-ct="${k}" type="${t}" maxlength="${n}" autocomplete="${ac}" value="${esc(f.contact[k] || "")}"${k === "instagram" ? ' placeholder="@loja"' : k === "site" ? ' placeholder="https://"' : ""}></label>`).join("")}</fieldset>` : ""}
           <label class="field">${Tx("About")}<textarea id="fD" maxlength="300" rows="3">${esc(f.description)}</textarea><span class="hint">${Tx("What happens here: league days, formats, what people trade.")}</span></label>
           <div class="field">${Tx("Picture")}<span class="hint">${Tx("Pick a card: its art becomes the community's picture.")}</span>
             ${f.avatar_card ? `<div class="row" style="gap:var(--sp-2)"><span class="cm-av" style="${art(f.avatar_card)};width:40px;height:40px"></span><span class="small">${esc(BY.get(f.avatar_card)?.name || "")}</span></div>` : ""}
@@ -237,6 +263,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = () => sh.close());
       $("fN").oninput = (e) => { f.name = e.target.value; }; $("fC").oninput = (e) => { f.city = e.target.value; }; $("fD").oninput = (e) => { f.description = e.target.value; };
       sh.querySelectorAll("[data-k]").forEach((b) => b.onclick = () => { f.kind = b.dataset.k; draw(); });
+      sh.querySelectorAll("[data-ct]").forEach((i) => i.oninput = () => { f.contact[i.dataset.ct] = i.value; });
       $("fQ").oninput = (e) => { qa = e.target.value; draw(); $("fQ").focus(); $("fQ").setSelectionRange(qa.length, qa.length); };
       sh.querySelectorAll("[data-pick]").forEach((b) => b.onclick = () => { f.avatar_card = b.dataset.pick; qa = ""; draw(); });
       $("cf").onsubmit = async (e) => {
@@ -244,24 +271,38 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
         if (f.name.trim().length < 3) { $("fN").setAttribute("aria-invalid", "true"); $("fN").focus(); return; }
         $("cfSave").disabled = true;
         try {
-          if (c) { await rpc("update_community", { p_slug: c.slug, p: f }); sh.close(); view = await rpc("community_view", { p_slug: c.slug }); drawOne(); toast(Tx("Done")); }
-          else { const r = await rpc("create_community", { p: f }); location.href = `?c=${encodeURIComponent(r.slug)}`; }
-        } catch (err) { $("cfSave").disabled = false; $("cfMsg").textContent = /too_many/.test(String(err?.message || err)) ? Tx("You already created 3 communities.") : Tx("Couldn't save. Try again."); }
+          if (c) { await rpc("update_community", { p_slug: c.slug, p: { ...f, contact: f.kind === "store" ? f.contact : {} } }); sh.close(); view = await rpc("community_view", { p_slug: c.slug }); drawOne(); toast(Tx("Done")); }
+          else { const { contact, ...base } = f; const r = await rpc("create_community", { p: base }); if (f.kind === "store" && Object.values(contact).some((v) => String(v || "").trim())) await rpc("update_community", { p_slug: r.slug, p: { contact } }).catch(() => {}); location.href = `?c=${encodeURIComponent(r.slug)}`; }
+        } catch (err) { $("cfSave").disabled = false; const t = String(err?.message || err); $("cfMsg").textContent = /too_many/.test(t) ? Tx("You already created 3 communities.") : /bad email/.test(t) ? Tx("Check the e-mail.") : Tx("Couldn't save. Try again."); }
       };
     };
     draw(); sh.showModal(); setTimeout(() => $("fN")?.focus(), 30);
   }
   function openManage() {
-    const sh = $("sheet");
+    const sh = $("sheet"), owner = view.role === "owner";
+    const roleName = (r) => Tx(r === "owner" ? "owner" : r === "admin" ? "admin" : "member");
     const draw = () => {
       sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="shT">${Tx("Members")}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
-        <div class="sheet-body"><div class="list">${(view.manage || []).map((x) => `<div class="list-row flat"><span class="t"><span>${esc(x.name || "?")}</span><span class="meta">${Tx(x.role === "owner" ? "owner" : "member")}</span></span>
-          ${x.role === "owner" ? "" : `<button type="button" class="btn small ghost" data-rm="${esc(x.uid)}">${armed === "rm:" + x.uid ? Tx("Tap again to confirm") : Tx("Remove")}</button>`}</div>`).join("")}</div></div>`;
+        <div class="sheet-body"><p class="small muted" style="margin:0 0 var(--sp-3)">${Tx(owner ? "Admins edit the details and moderate, like you. Only the owner picks admins and can hand the community to someone else." : "Admins edit the details and moderate. The owner picks the admins.")}</p>
+        <div class="list" data-testid="manage">${(view.manage || []).map((x) => { const self = x.uid === me?.id, u = esc(x.uid);
+          const btns = x.role === "owner" || self ? "" : [
+            owner ? `<button type="button" class="btn small" data-role="${u}:${x.role === "admin" ? "member" : "admin"}">${Tx(x.role === "admin" ? "Remove admin" : "Make admin")}</button>` : "",
+            owner && x.adult ? `<button type="button" class="btn small ghost" data-own="${u}">${armed === "own:" + x.uid ? Tx("Tap again: they become the owner") : Tx("Make owner")}</button>` : "",
+            owner || x.role === "member" ? `<button type="button" class="btn small ghost" data-rm="${u}">${armed === "rm:" + x.uid ? Tx("Tap again to confirm") : Tx("Remove")}</button>` : ""].join("");
+          return `<div class="list-row flat" data-member="${u}"><span class="t"><span>${esc(x.name || "?")}${self ? ` · ${Tx("you")}` : ""}</span><span class="meta">${roleName(x.role)}</span></span><span class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">${btns}</span></div>`; }).join("")}</div></div>`;
       sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = () => sh.close());
-      sh.querySelectorAll("[data-rm]").forEach((b) => b.onclick = async () => {
-        const uid = b.dataset.rm; if (armed !== "rm:" + uid) { armed = "rm:" + uid; draw(); return; }
-        try { await rpc("moderate_community", { p_action: "remove_member", p_slug: view.slug, p_user: uid }); armed = null; view = await rpc("community_view", { p_slug: view.slug }); draw(); drawOne(); toast(Tx("Done")); }
+      const run = async (fn, msg) => {
+        try { await fn(); armed = null; view = await rpc("community_view", { p_slug: view.slug }); if (view.role !== "owner" && view.role !== "admin") sh.close(); else draw(); drawOne(); toast(msg || Tx("Done")); }
         catch { armed = null; draw(); toast(Tx("Couldn't send. Try again."), true); }
+      };
+      sh.querySelectorAll("[data-rm]").forEach((b) => b.onclick = () => {
+        const uid = b.dataset.rm; if (armed !== "rm:" + uid) { armed = "rm:" + uid; draw(); return; }
+        run(() => rpc("moderate_community", { p_action: "remove_member", p_slug: view.slug, p_user: uid }));
+      });
+      sh.querySelectorAll("[data-role]").forEach((b) => b.onclick = () => { const [uid, r] = b.dataset.role.split(":"); run(() => rpc("set_community_role", { p_slug: view.slug, p_user: uid, p_role: r })); });
+      sh.querySelectorAll("[data-own]").forEach((b) => b.onclick = () => {
+        const uid = b.dataset.own; if (armed !== "own:" + uid) { armed = "own:" + uid; draw(); return; }
+        run(() => rpc("transfer_community", { p_slug: view.slug, p_user: uid }), Tx("Ownership handed over. You stay as admin."));
       });
     };
     draw(); sh.showModal();
