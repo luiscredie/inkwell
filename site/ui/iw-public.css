@@ -8,10 +8,10 @@
 .iw-public {
   --iw-bg: var(--bg); --iw-surface: var(--surface-1); --iw-surface-raised: var(--surface-2);
   --iw-paper: #faf3e6; --iw-paper-text: #242033;
-  --iw-text: var(--text); --iw-muted: #c9c2de; --iw-gold: var(--accent); --iw-gold-text: var(--on-accent);
-  --iw-border: var(--line-strong); --iw-focus: #f6db95; --iw-danger: #ffc2c8; --iw-ok: var(--win, #6fd3a3);
+  --iw-text: var(--text); --iw-muted: var(--iw-muted-c, #c9c2de); --iw-gold: var(--accent); --iw-gold-text: var(--on-accent); --iw-gold-ink: var(--accent-ink);
+  --iw-border: var(--line-strong); --iw-focus: var(--iw-focus-c, #f6db95); --iw-danger: var(--iw-danger-c, #ffc2c8); --iw-ok: var(--win, #6fd3a3);
   --iw-radius: 20px; --iw-radius-small: 12px; --iw-max: 1200px;
-  --iw-editorial: Georgia, "Times New Roman", serif;   /* big titles and quotes only */
+  --iw-editorial: var(--display);   /* big titles (Epilogue) */
   color: var(--iw-text);
 }
 .iw-public *, .iw-public *::before, .iw-public *::after { box-sizing: border-box; }
@@ -23,7 +23,7 @@
 .iw-public .iw-h3 { font-size: var(--fs-h3); font-weight: 700; margin: 0 0 var(--sp-2); }
 .iw-public .iw-lead { font-size: 1.125rem; color: var(--iw-muted); max-width: 46ch; margin: 0; }
 .iw-public .iw-muted { color: var(--iw-muted); }
-.iw-public .iw-eyebrow { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-micro); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--iw-gold); }
+.iw-public .iw-eyebrow { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-micro); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--iw-gold-ink); }
 
 /* ---------- buttons ---------- */
 .iw-public .iw-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 10px 20px;
@@ -34,7 +34,7 @@
 .iw-public .iw-button-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 .iw-public .iw-button:disabled, .iw-public .iw-button[aria-disabled="true"] { opacity: .55; cursor: not-allowed; }
 .iw-public .iw-button.small { min-height: 44px; padding: 8px 14px; font-size: var(--fs-small); }
-.iw-public .iw-link { color: var(--iw-gold); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; background: none; border: 0; padding: 0; font: inherit; cursor: pointer; min-height: 44px; }
+.iw-public .iw-link { color: var(--iw-gold-ink); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; background: none; border: 0; padding: 0; font: inherit; cursor: pointer; min-height: 44px; }
 
 /* ---------- layout ---------- */
 .iw-public .iw-container { width: min(var(--iw-max), calc(100% - 48px)); margin-inline: auto; }
@@ -52,7 +52,7 @@
   background-image: radial-gradient(120% 80% at 100% 0%, rgba(236,192,97,.10), transparent 60%); }
 .iw-public .iw-profile-head { display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-4); }
 .iw-public .iw-avatar { width: 56px; height: 56px; flex: none; border-radius: 50%; display: grid; place-items: center; font: 700 1.4rem/1 var(--iw-editorial);
-  background: var(--surface-3); border: 2px solid var(--iw-gold); color: var(--iw-gold); overflow: hidden; }
+  background: var(--surface-3); border: 2px solid var(--iw-gold); color: var(--iw-gold-ink); overflow: hidden; }
 .iw-public .iw-avatar img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 22%; }
 .iw-public .iw-name { font: 600 1.4rem/1.2 var(--iw-editorial); margin: 0; overflow-wrap: anywhere; }
 .iw-public .iw-name.placeholder { color: var(--iw-muted); font-style: italic; }
@@ -69,7 +69,7 @@
   background: linear-gradient(90deg, #f6db95, #b9a3ff, #8fe3d0); color: #1b1630; }
 .iw-public .iw-card-label { font-size: var(--fs-small); overflow-wrap: anywhere; margin-top: 6px; }
 .iw-public .iw-card-label small { display: block; color: var(--iw-muted); }
-.iw-public .iw-quote { margin: var(--sp-4) 0 0; padding: var(--sp-3) var(--sp-4); border-left: 3px solid var(--iw-gold); background: rgba(255,255,255,.04); border-radius: 0 12px 12px 0;
+.iw-public .iw-quote { margin: var(--sp-4) 0 0; padding: var(--sp-3) var(--sp-4); border-left: 3px solid var(--iw-gold); background: var(--hover-tint); border-radius: 0 12px 12px 0;
   font: italic 1rem/1.5 var(--iw-editorial); }
 
 /* ---------- ink chooser ---------- */
@@ -116,10 +116,10 @@
 .iw-dialog .iw-zoom { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: var(--sp-5); align-items: start; }
 .iw-dialog .iw-zoom .iw-card { max-width: 360px; }
 .iw-dialog .iw-msg { padding: var(--sp-3) var(--sp-4); border-radius: 12px; background: var(--surface-2); }
-.iw-dialog .iw-msg.err { background: rgba(255,120,140,.12); color: #ffd3d9; }
+.iw-dialog .iw-msg.err { background: var(--loss-soft); color: var(--iw-danger); }
 /* the dialog lives outside .iw-public: reuse its pieces */
-.iw-dialog { --iw-gold: var(--accent); --iw-gold-text: var(--on-accent); --iw-border: var(--line-strong); --iw-muted: #c9c2de; --iw-focus: #f6db95; }
-.iw-dialog :is(button, a, input, select):focus-visible { outline: 3px solid #f6db95; outline-offset: 4px; }
+.iw-dialog { --iw-gold: var(--accent); --iw-gold-text: var(--on-accent); --iw-gold-ink: var(--accent-ink); --iw-border: var(--line-strong); --iw-muted: var(--iw-muted-c, #c9c2de); --iw-focus: var(--iw-focus-c, #f6db95); }
+.iw-dialog :is(button, a, input, select):focus-visible { outline: 3px solid var(--iw-focus-c, #f6db95); outline-offset: 4px; }
 
 /* ---------- phones and tablets ---------- */
 @media (max-width: 1023px) { .iw-public .iw-hero { gap: 24px; padding-block: 32px 48px; } }
@@ -136,3 +136,8 @@
   .iw-dialog .iw-zoom { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) { .iw-public *, .iw-dialog * { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+/* light theme (Dia): readable muted text, navy focus, dark-red errors */
+html[data-theme="dia"] { --iw-muted-c: #4a5568; --iw-focus-c: #1e3e62; --iw-danger-c: #b42335; }
+html[data-theme="dia"] .iw-public .iw-inkdots i, html[data-theme="dia"] .iw-public .iw-ink-option i { border-color: rgba(11,25,44,.25); }
+html[data-theme="dia"] .iw-public .iw-guest-banner { box-shadow: 0 -8px 24px rgba(11,25,44,.12); }
