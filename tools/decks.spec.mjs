@@ -247,3 +247,79 @@ test('import recognises names with special dashes and apostrophes in the catalog
     "1 I Find 'Em, I Flatten 'Em", "2 Daisy Duck - Trendy Traveler", "1 Wind-Up Frog - Sid's Toy"].join("\n"));
   await expect(page.locator('#iInfo')).toHaveText('11 cartas reconhecidas');
 });
+
+// ---------- trying a list without an account ----------
+const LIST = '4 Elsa - Snow Queen\n4 Stitch - Rock Star\n2 Elza Snow Quen';
+async function publicSetup(page, prices) {
+  const calls = await setup(page, { signedIn: false });
+  if (prices) await page.route('**/data/prices.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(prices) }));
+  return calls;
+}
+
+test('signed out: paste a list and see the cards, the rules used and the price', async ({ page }) => {
+  const calls = await publicSetup(page);
+  await page.goto(BASE);
+  await page.getByTestId('public-text').fill(LIST);
+  await expect(page.getByTestId('public-summary')).toContainText('8/60');
+  await expect(page.getByTestId('public-legal')).toContainText('ainda não é legal');
+  await expect(page.getByTestId('public-rules')).toContainText('Validado no formato Core: sets 9, 10, 11, 12, 13, 14');
+  await expect(page.getByTestId('public-issues')).toContainText('faltam 52 cartas');
+  await expect(page.getByTestId('public-list').locator('.pd-row')).toHaveCount(2);
+  await expect(page.getByTestId('public-prices')).toContainText('TCGplayer');
+  await page.getByRole('button', { name: 'Infinito' }).click();
+  await expect(page.getByTestId('public-rules')).toContainText('Infinity: todos os sets');
+  expect(calls.filter((c) => c.method === 'POST')).toHaveLength(0);   // nothing is saved without an account
+});
+
+test('signed out: a line not recognised can be fixed by picking the card', async ({ page }) => {
+  await publicSetup(page);
+  await page.goto(BASE);
+  await page.getByTestId('public-text').fill(LIST);
+  const fix = page.getByTestId('public-fixes');
+  await expect(fix).toContainText('2 Elza Snow Quen');
+  await fix.getByRole('button', { name: 'Elsa - Snow Queen' }).click();
+  await expect(page.getByTestId('public-fixes')).toHaveCount(0);
+  await expect(page.getByTestId('public-text')).toHaveValue(/2 Elsa - Snow Queen/);
+  await expect(page.getByTestId('public-summary')).toContainText('10/60');
+});
+
+test('signed out: a card with no price is "sem preço", left out of the total, never R$ 0', async ({ page }) => {
+  await publicSetup(page, { generated_at: '2026-10-25T00:00:00Z', currency: 'BRL', prices: { 'LOR9-3': { n: 3, nl: 3 } } });
+  await page.goto(BASE);
+  await page.getByTestId('public-text').fill('4 Stitch - Rock Star\n4 Elsa - Snow Queen');
+  await expect(page.getByTestId('public-total')).toHaveText('R$ 12,00');
+  await expect(page.getByTestId('public-summary')).toContainText('4 de 8 cartas com preço');
+  await expect(page.getByTestId('no-price')).toHaveCount(1);
+});
+
+test('the list stays through a reload and sign-up, then becomes a deck only when asked', async ({ page }) => {
+  await publicSetup(page);
+  await page.goto(BASE);
+  await page.getByTestId('public-text').fill('4 Stitch - Rock Star');
+  await page.reload();
+  await expect(page.getByTestId('public-text')).toHaveValue('4 Stitch - Rock Star');
+  await page.getByTestId('public-save').click();
+  await expect(page.locator('#iwSignSheet')).toBeVisible();
+  // signed in now (same browser): the list is offered, not saved by itself
+  const calls = await setup(page);
+  await page.addInitScript((me) => {
+    const exp = Math.floor(Date.now() / 1000) + 3600;
+    localStorage.setItem('inkwell-counter-auth', JSON.stringify({ access_token: 'x.' + btoa(JSON.stringify({ sub: me, exp })) + '.y', refresh_token: 'r', expires_at: exp, user: { id: me } }));
+  }, ME);
+  await page.goto(BASE);
+  await expect(page.getByTestId('pending-deck')).toContainText('4 cartas');
+  expect(saves(calls)).toHaveLength(0);
+  await page.getByRole('button', { name: 'Salvar como deck' }).click();
+  await page.locator('#iSave').click();
+  await expect.poll(() => saves(calls).length).toBe(1);
+  expect(Object.values(saves(calls)[0].body.p_deck.cards)).toEqual([4]);
+  await expect(page.getByTestId('pending-deck')).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem('inkwell-public-deck-v1'))).toBeNull();
+});
+
+test('a list older than a day is gone', async ({ page }) => {
+  await publicSetup(page);
+  await page.addInitScript(() => localStorage.setItem('inkwell-public-deck-v1', JSON.stringify({ v: 1, text: '4 Stitch - Rock Star', format: 'core', at: Date.now() - 2 * 864e5 })));
+  await page.goto(BASE);
+  await expect(page.getByTestId('public-text')).toHaveValue('');
+});

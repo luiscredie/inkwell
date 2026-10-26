@@ -30,6 +30,19 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
 .health li { align-items: flex-start; }
 .health .tag { flex: none; }
 .sub .inks { margin-right: 6px; vertical-align: -1px; }
+/* try a list without an account */
+.pd { display: grid; gap: var(--sp-4); }
+.pd-sum { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-3); }
+.pd-sum .stat { display: grid; gap: 4px; padding: var(--sp-3) var(--sp-4); border-radius: var(--r-md); background: var(--surface-2); min-width: 0; }
+.pd-sum .stat > span { color: var(--text-2); font-size: var(--fs-small); overflow-wrap: anywhere; }
+.pd-sum .stat b { font-size: 1.25rem; }
+.pd-issues { margin: 0; padding-left: 1.2em; color: var(--text-2); }
+.pd-fixes { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-3); }
+.pd-fix { display: grid; gap: 6px; padding: var(--sp-3); border-radius: var(--r-md); border: 1px dashed var(--line-strong); }
+.pd-fix .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pd-row .pd-q { font-weight: 800; margin-right: 2px; }
+.pd .notice .actions { display: flex; gap: var(--sp-2); flex-wrap: wrap; margin-left: auto; }
+@media (max-width: 760px) { .pd-sum { grid-template-columns: repeat(2, minmax(0, 1fr)); } .pd .notice { flex-wrap: wrap; } .pd .notice .actions { width: 100%; margin-left: 0; } }
 </style>
 
 <main class="page" id="page">
@@ -47,6 +60,24 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
   let lang = "pt";
   try { lang = localStorage.getItem("inkwell-lang") || ((navigator.language || "pt").toLowerCase().startsWith("en") ? "en" : "pt"); } catch { /* */ }
   const PT = {
+    "Try a deck list without an account: see the cards, whether it's legal and what it costs.": "Teste uma lista de deck sem conta: veja as cartas, se ela é legal e quanto custa.",
+    "cards": "cartas", "no inks yet": "nenhuma tinta ainda", "legal": "legal", "not legal yet": "ainda não é legal", "{a} of {b} cards priced": "{a} de {b} cartas com preço", "all cards priced": "todas as cartas com preço",
+    "check": "conferir", "no price": "sem preço", "each": "cada", "other printing": "outra edição",
+    "Checked as Infinity: every set, at least 60 cards, up to 2 inks, up to 4 copies of each card (counting reprints).": "Validado no formato Infinity: todos os sets, no mínimo 60 cartas, até 2 tintas, até 4 cópias de cada carta (somando reimpressões).",
+    "Checked as Core: sets {s}; at least 60 cards, up to 2 inks, up to 4 copies of each card (counting reprints).": "Validado no formato Core: sets {s}; no mínimo 60 cartas, até 2 tintas, até 4 cópias de cada carta (somando reimpressões).",
+    "Rules as of {d}.": "Regras de {d}.",
+    "1 line not recognised: pick the right card": "1 linha não reconhecida: escolha a carta certa", "{n} lines not recognised: pick the right card": "{n} linhas não reconhecidas: escolha a carta certa",
+    "Search for the right card for: {l}": "Buscar a carta certa para: {l}", "No card with that name.": "Nenhuma carta com esse nome.",
+    "Prices: {s}, updated {d}. Market price per copy; a card with no price is left out of the total, never counted as zero.": "Preços: {s}, atualizados em {d}. Preço de mercado por cópia; carta sem preço fica fora do total, nunca conta como zero.",
+    "Prices didn't load. The list and the rules still work.": "Os preços não carregaram. A lista e as regras continuam funcionando.",
+    "“Other printing”: this printing has no price, so the cheapest reprint's is used.": "“Outra edição”: esta edição não tem preço, então usamos o da reimpressão mais barata.",
+    "TCGplayer market price converted at R$ {r} per dollar (Liga Lorcana where TCGplayer has none)": "preço de mercado do TCGplayer convertido a R$ {r} por dólar (Liga Lorcana quando o TCGplayer não tem)",
+    "Save it and compare with your collection": "Salve e compare com sua coleção",
+    "Create your account with a code by e-mail. This list stays in this browser for a day, so it's here when you come back.": "Crie sua conta com um código por e-mail. Esta lista fica neste navegador por um dia, então ela estará aqui quando você voltar.",
+    "Create account and save": "Criar conta e salvar", "Clear": "Limpar",
+    "You have a list from before you signed in (1 card).": "Você tem uma lista de antes de entrar (1 carta).", "You have a list from before you signed in ({n} cards).": "Você tem uma lista de antes de entrar ({n} cartas).",
+    "Save as a deck": "Salvar como deck", "Discard": "Descartar",
+    "Amber": "Âmbar", "Amethyst": "Ametista", "Emerald": "Esmeralda", "Ruby": "Rubi", "Sapphire": "Safira", "Steel": "Aço",
     "Decks": "Decks", "Loading…": "Carregando…", "Import": "Importar", "New deck": "Novo deck", "Format": "Formato", "All": "Todos", "Core": "Core", "Infinity": "Infinito",
     "Sort": "Ordenar", "Recently played": "Jogados recentemente", "Win rate": "Vitórias", "Name": "Nome",
     "{n} decks": "{n} decks", "{n} deck": "{n} deck", "{n} ready to play": "{n} prontos para jogar", "{n} ready to play_1": "{n} pronto para jogar",
@@ -135,7 +166,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
   const legal = (c, fmt) => fmt === "infinity" || !fmt || printings(c).some((p) => CORE_SETS.includes(p.set));
   const kind = (c) => (c.song ? "song" : c.type === "Character" ? "char" : c.type === "Action" ? "action" : "item");
   const typeName = (c) => Tx(c.song ? "Song" : c.type || "");
-  let PRICES = {}, pricesDate = null, priceSrc = "Liga Lorcana";   // "TCGplayer" while prices.json carries converted TCGplayer prices
+  let PRICES = {}, pricesDate = null, priceSrc = "Liga Lorcana", PRICE_SOURCE = "";   // "TCGplayer" while prices.json carries converted TCGplayer prices
   const priceOf = (c) => { const p = PRICES[c.id]; const v = p ? (p.nl ?? p.n ?? null) : null; if (v != null) return v;
     let best = null; for (const x of printings(c)) { const q = PRICES[x.id]; const y = q ? (q.nl ?? q.n ?? null) : null; if (y != null && (best == null || y < best)) best = y; } return best; };
   const imgUrl = (c) => (c.img ? `../lorcana-card-images/${encodeURI(c.img).replace(/'/g, "%27")}` : "");
@@ -258,13 +289,88 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
 
   // ---------- rendering ----------
   const emptyBox = (img, title, text, btns = "") => `<div class="empty"><img src="../ui/assets/empty/${img}.svg" alt=""><b>${esc(title)}</b>${text ? `<p>${esc(text)}</p>` : ""}${btns}</div>`;
+  // ---------- try a list without an account: paste, see the cards, legality and price; an account saves it ----------
+  // The list stays in this browser for a day (localStorage), so signing in (code or e-mail link) doesn't lose it.
+  const PUB_KEY = "inkwell-public-deck-v1", PUB_TTL = 864e5;
+  let LEGAL = null;   // ../data/legality.json, for the rules shown with the result
+  const pubLoad = () => { try { const x = JSON.parse(localStorage.getItem(PUB_KEY) || "null");
+    if (!x || x.v !== 1 || typeof x.text !== "string" || Date.now() - (+x.at || 0) > PUB_TTL) { localStorage.removeItem(PUB_KEY); return null; }
+    return { text: x.text.slice(0, 20000), format: x.format === "infinity" ? "infinity" : "core", at: +x.at }; } catch { return null; } };
+  const pubSave = (x) => { try { if (x.text.trim()) localStorage.setItem(PUB_KEY, JSON.stringify({ v: 1, text: x.text, format: x.format, at: Date.now() })); else localStorage.removeItem(PUB_KEY); } catch { /* storage off: the list stays on the page */ } };
+  const pubDrop = () => { try { localStorage.removeItem(PUB_KEY); } catch { /* */ } };
+  let pub = pubLoad() || { text: "", format: "core" }, pubFix = null;
+  const ownPrice = (c) => { const p = PRICES[c.id]; return p ? (p.nl ?? p.n ?? null) : null; };
+  const lineQty = (line) => { const m = String(line).trim().match(/^(\d{1,2})\s*x?\s+/i); return m ? +m[1] : 1; };
+  const lineName = (line) => String(line).trim().replace(/^(\d{1,2})\s*x?\s+/i, "");
+  function rulesText(fmt) {
+    if (fmt === "infinity") return Tx("Checked as Infinity: every set, at least 60 cards, up to 2 inks, up to 4 copies of each card (counting reprints).");
+    const sets = (LEGAL?.formats?.core?.legal_sets || CORE_SETS).map((x) => (/^LOR\d+$/.test(x) ? x.replace("LOR", "") : x)).join(", ");
+    return Tx("Checked as Core: sets {s}; at least 60 cards, up to 2 inks, up to 4 copies of each card (counting reprints).", { s: sets })
+      + (LEGAL?.generated_at ? " " + Tx("Rules as of {d}.", { d: dateFmt(LEGAL.generated_at).replace(/\.$/, "") }) : "");
+  }
+  function renderPublic() {
+    const r = parseList(pub.text), d = { id: "public", name: "", format: pub.format, colors: [], cards: r.cards }, m = measure(d);
+    const known = m.known.slice().sort((a, b) => a.c.cost - b.c.cost || a.c.name.localeCompare(b.c.name));
+    let priced = 0, unpriced = 0, other = 0, total = 0;
+    for (const e of known) { const own = ownPrice(e.c), v = priceOf(e.c); if (v == null) unpriced += e.q; else { priced += e.q; total += v * e.q; if (own == null) other += e.q; } }
+    const issues = m.issues.slice(); if (m.total && m.total < MIN) issues.unshift({ text: Tx(MIN - m.total === 1 ? "list: 1 card short" : "list: {n} cards short", { n: MIN - m.total }) });
+    const row = (e) => { const own = ownPrice(e.c), v = priceOf(e.c), [a, b] = split(e.c.name);
+      return `<div class="list-row pd-row" data-card="${esc(e.id)}">${thumb(e.c, "sm")}
+        <span class="t"><span><b class="num pd-q">${e.q}×</b> ${esc(a)}${m.bad.has(e.id) ? ` <span class="tag late">${Tx("check")}</span>` : ""}</span><span class="meta">${esc([b, Tx("Set {n}", { n: setNo(e.c.set) || e.c.set }) + " · nº " + e.c.num, typeName(e.c)].filter(Boolean).join(" · "))}</span></span>
+        <span class="trail">${v == null ? `<span class="tag" data-testid="no-price">${Tx("no price")}</span>` : `<b class="num">${esc(money(v * e.q))}</b><span class="micro muted">${esc(money(v))} ${Tx("each")}${own == null ? " · " + Tx("other printing") : ""}</span>`}</span></div>`; };
+    const fixBox = (line, i) => { const q = pubFix?.i === i ? pubFix.q : lineName(line), words = norm(q).split(" ").filter(Boolean);
+      // forgiving: a word counts when the name has it, or a word starting with its first 3 letters ("Elza Snow Quen" finds Elsa - Snow Queen)
+      const hit = (c, w) => c.k.includes(w) || (w.length >= 3 && c.k.split(" ").some((x) => x.startsWith(w.slice(0, 3))));
+      const best = new Map();
+      if (words.length) for (const c of CARDS) { if (best.has(c.key)) continue; const n = words.filter((w) => hit(c, w)).length; if (n) best.set(c.key, { c, n }); }
+      const sug = [...best.values()].sort((a, b) => b.n - a.n || a.c.name.localeCompare(b.c.name)).slice(0, 6).map((x) => x.c);
+      return `<li class="pd-fix" data-line="${i}"><span class="small"><b>${esc(line)}</b></span>
+        <input type="search" class="inline" data-fixq="${i}" value="${esc(q)}" aria-label="${esc(Tx("Search for the right card for: {l}", { l: line }))}" autocomplete="off">
+        <span class="chips">${sug.length ? sug.map((c) => `<button type="button" class="chipbtn" data-fixpick="${i}" data-id="${esc(c.id)}">${esc(c.name)}</button>`).join("") : `<span class="small muted">${Tx("No card with that name.")}</span>`}</span></li>`; };
+    const lines = String(pub.text).split(/\r?\n/);
+    const badIdx = []; lines.forEach((l, i) => { if (r.bad.includes(l.trim())) badIdx.push(i); });
+    $("app").innerHTML = `<div class="page-head"><div><h1>${Tx("Decks")}</h1><p class="sub">${Tx("Try a deck list without an account: see the cards, whether it's legal and what it costs.")}</p></div>
+        <div class="actions"><button type="button" class="btn" id="signIn">${Tx("Sign in")}</button></div></div>
+      <section class="pd" data-testid="public-deck">
+        <div class="form">
+          <label class="field">${Tx("Paste a list")}<span class="hint">${esc(Tx("One card per line, like \"4 Stitch - Rock Star\". Lists from duels.ink, Dreamborn and Lorcanito work."))}</span>
+            <textarea class="paste" id="pText" spellcheck="false" data-testid="public-text">${esc(pub.text)}</textarea></label>
+          <div class="field">${Tx("Format")}<div class="seg" role="group" aria-label="${Tx("Format")}">${[["core", "Core"], ["infinity", "Infinity"]].map(([k, l]) => `<button type="button" data-pf="${k}" aria-pressed="${pub.format === k}">${Tx(l)}</button>`).join("")}</div></div>
+        </div>
+        ${pub.text.trim() ? `
+        <div class="pd-sum" data-testid="public-summary">
+          <div class="stat"><b class="num">${m.total}/${MIN}</b><span>${Tx("cards")}</span></div>
+          <div class="stat"><b>${m.inks.length ? dots(m.inks, "lg pair") : "—"}</b><span>${esc(m.inks.map((i) => Tx(i)).join(" · ") || Tx("no inks yet"))}</span></div>
+          <div class="stat"><b data-testid="public-legal">${m.total >= MIN && !m.issues.length ? `<span class="tag match">${Tx("legal")}</span>` : `<span class="tag late">${Tx("not legal yet")}</span>`}</b><span>${esc(fmtName(pub.format))}</span></div>
+          <div class="stat"><b class="num" data-testid="public-total">${priced ? esc(money(total)) : "—"}</b><span>${esc(unpriced ? Tx("{a} of {b} cards priced", { a: priced, b: priced + unpriced }) : Tx("all cards priced"))}</span></div>
+        </div>
+        <p class="small muted" data-testid="public-rules">${esc(rulesText(pub.format))}</p>
+        ${issues.length ? `<ul class="pd-issues" data-testid="public-issues">${issues.map((i) => `<li>${esc(i.text)}</li>`).join("")}</ul>` : ""}
+        ${badIdx.length ? `<div class="notice warn"><i class="ic i-alert"></i><span class="t"><b>${esc(Tx(badIdx.length === 1 ? "1 line not recognised: pick the right card" : "{n} lines not recognised: pick the right card", { n: badIdx.length }))}</b></span></div>
+          <ul class="pd-fixes" data-testid="public-fixes">${badIdx.map((i) => fixBox(lines[i], i)).join("")}</ul>` : ""}
+        ${known.length ? `<div class="list" data-testid="public-list">${known.map(row).join("")}</div>` : ""}
+        <p class="small faint" data-testid="public-prices">${esc(pricesDate ? Tx("Prices: {s}, updated {d}. Market price per copy; a card with no price is left out of the total, never counted as zero.", { s: PRICE_SOURCE || priceSrc, d: dateFmt(pricesDate).replace(/\.$/, "") }) : Tx("Prices didn't load. The list and the rules still work."))}${other ? " " + esc(Tx("“Other printing”: this printing has no price, so the cheapest reprint's is used.")) : ""}</p>
+        <div class="notice"><i class="ic i-info"></i><span class="t"><b>${Tx("Save it and compare with your collection")}</b><span>${Tx("Create your account with a code by e-mail. This list stays in this browser for a day, so it's here when you come back.")}</span></span>
+          <span class="actions"><button type="button" class="btn primary" id="pSave" data-testid="public-save">${Tx("Create account and save")}</button><button type="button" class="btn ghost" id="pClear">${Tx("Clear")}</button></span></div>` : `
+        <p class="small muted">${esc(rulesText(pub.format))}</p>`}
+      </section>`;
+    const t = $("pText");
+    t.oninput = () => { pub.text = t.value; pubSave(pub); const pos = t.selectionStart; renderPublic(); const x = $("pText"); x.focus(); x.setSelectionRange(pos, pos); };
+    document.querySelectorAll("[data-pf]").forEach((b) => b.onclick = () => { pub.format = b.dataset.pf; pubSave(pub); renderPublic(); });
+    document.querySelectorAll("[data-fixq]").forEach((inp) => inp.oninput = () => { pubFix = { i: +inp.dataset.fixq, q: inp.value }; const pos = inp.selectionStart; renderPublic();
+      const x = document.querySelector(`[data-fixq="${inp.dataset.fixq}"]`); x?.focus(); x?.setSelectionRange(pos, pos); });
+    document.querySelectorAll("[data-fixpick]").forEach((b) => b.onclick = () => {
+      const i = +b.dataset.fixpick, c = BY.get(b.dataset.id), ls = String(pub.text).split(/\r?\n/);
+      ls[i] = `${lineQty(ls[i])} ${c.name}`; pub.text = ls.join("\n"); pubFix = null; pubSave(pub); renderPublic();
+    });
+    $("signIn").onclick = () => window.INKWELL_SIGNIN?.();
+    $("pSave")?.addEventListener("click", () => { pubSave(pub); window.INKWELL_SIGNIN?.(); });
+    $("pClear")?.addEventListener("click", () => { pub = { text: "", format: pub.format }; pubDrop(); renderPublic(); $("pText").focus(); });
+  }
+
   function render() {
     const app = $("app");
-    if (!me) {
-      app.innerHTML = `<div class="page-head"><div><h1>${Tx("Decks")}</h1></div></div>` + emptyBox("signedout", Tx("Sign in to see your decks"), Tx("Use your e-mail. We e-mail you a code, no password."), `<button type="button" class="btn primary" id="signIn">${Tx("Sign in")}</button>`);
-      $("signIn").onclick = () => window.INKWELL_SIGNIN?.();
-      return;
-    }
+    if (!me) return renderPublic();
     matchGames();
     const r = route();
     if (r.deck) return renderDeck(r.deck, r.tab);
@@ -284,7 +390,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     const head = `<div class="page-head"><div><h1 id="title">${Tx("Decks")}</h1><p class="sub" id="sub">${esc([Tx(all.length === 1 ? "{n} deck" : "{n} decks", { n: all.length }), all.length ? Tx("{n} ready to play", { n: ready }) : ""].filter(Boolean).join(" · "))}</p></div>
       <div class="actions"><button type="button" class="btn" id="import"><i class="ic i-import"></i>${Tx("Import")}</button><button type="button" class="btn primary" id="new"><i class="ic i-plus"></i>${Tx("New deck")}</button></div></div>`;
     if (!all.length) {
-      $("app").innerHTML = head + emptyBox("decks", Tx("No decks yet"), Tx("Start one from scratch or paste a list you already have."));
+      $("app").innerHTML = head + pendingNotice() + emptyBox("decks", Tx("No decks yet"), Tx("Start one from scratch or paste a list you already have."));
       wireHead(); return;
     }
     const row = ({ d, m }) => {
@@ -299,7 +405,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
       <div class="row between" style="margin-bottom:var(--sp-3)"><div class="seg" role="group" aria-label="${Tx("Format")}">${[["all", "All"], ["core", "Core"], ["infinity", "Infinity"]].map(([k, l]) => `<button type="button" data-fmt="${k}" aria-pressed="${view.fmt === k}">${Tx(l)}</button>`).join("")}</div>
       ${metas.length > 1 ? `<label class="small svmeta">${Tx("Meta")} <select class="inline" id="metaF" data-testid="meta-filter"><option value="all">${Tx("All")}</option>${metas.map((x) => `<option value="${esc(x)}" ${view.meta === x ? "selected" : ""}>${esc(metaLabel(x))}</option>`).join("")}</select></label>` : ""}
       <select class="inline" id="sort" aria-label="${Tx("Sort")}">${[["recent", "Recently played"], ["wins", "Win rate"], ["name", "Name"]].map(([k, l]) => `<option value="${k}" ${view.sort === k ? "selected" : ""}>${Tx(l)}</option>`).join("")}</select></div>
-      ${planNotice()}
+      ${planNotice()}${pendingNotice()}
       ${shown.length ? `<div class="list" id="deckList" data-testid="deck-list">${shown.map(row).join("")}</div>` : emptyBox("search", Tx(view.meta !== "all" ? "No decks with these filters." : "No decks in this format."), "")}
       ${pricesDate ? `<p class="small faint" style="margin-top:var(--sp-4)">${esc(Tx("Prices: {s}, {d}", { s: priceSrc, d: dateFmt(pricesDate) }))}</p>` : ""}`;
     wireHead();
@@ -308,7 +414,16 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     $("metaF")?.addEventListener("change", (e) => { view.meta = e.target.value; saveView(); render(); });
     $("deckList")?.addEventListener("click", (e) => { const a = e.target.closest("[data-deck]"); if (!a || e.metaKey || e.ctrlKey) return; e.preventDefault(); go(a.dataset.deck, "list"); });
   }
+  // a list tried before signing in (renderPublic): offer to keep it as a deck, never saved by itself
+  function pendingNotice() {
+    const x = pubLoad(); if (!x || !x.text.trim()) return "";
+    const n = Object.values(parseList(x.text).cards).reduce((a, b) => a + b, 0);
+    return `<div class="notice" data-testid="pending-deck" style="margin-bottom:var(--sp-3)"><i class="ic i-info"></i><span class="t"><b>${esc(Tx(n === 1 ? "You have a list from before you signed in (1 card)." : "You have a list from before you signed in ({n} cards).", { n }))}</b></span>
+      <span class="actions"><button type="button" class="btn primary small" id="pendKeep">${Tx("Save as a deck")}</button><button type="button" class="btn ghost small" id="pendDrop">${Tx("Discard")}</button></span></div>`;
+  }
   function wireHead() {
+    $("pendKeep")?.addEventListener("click", (e) => { const x = pubLoad(); if (x) openImport(e.currentTarget, null, x); });
+    $("pendDrop")?.addEventListener("click", () => { pubDrop(); render(); });
     $("planNotice")?.addEventListener("click", (e) => { e.preventDefault(); go(null, "plan"); });
     $("new")?.addEventListener("click", () => openDeckForm(null, $("new")));
     $("import")?.addEventListener("click", () => openImport($("import")));
@@ -676,8 +791,8 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     return { cards: Object.fromEntries(out), bad };
   }
   // target: an existing deck whose list the pasted one replaces (Desfazer brings the old list back)
-  function openImport(from, target) {
-    const sh = $("sheet"); let name = "", text = "", format = "core";
+  function openImport(from, target, initial) {
+    const sh = $("sheet"); let name = "", text = initial?.text || "", format = initial?.format || "core";
     const draw = () => {
       const r = parseList(text), n = Object.values(r.cards).reduce((a, b) => a + b, 0);
       sh.className = "sheet wide";
@@ -706,6 +821,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
         deck.colors = measure(deck).inks.slice(0, 2);
         p.decks.push(deck); sh.close();
         await flush(deck, true);
+        if (initial) pubDrop();
         go(deck.id, "list");
       };
     };
@@ -762,7 +878,19 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
   // ---------- boot ----------
   document.title = `${Tx("Decks")} · Inkwell`;
   document.documentElement.lang = LOC;
-  if (!me) { render(); return; }
+  if (!me) {
+    render();
+    Promise.all([
+      fetch(window.INKWELL_PRICES_URL || "../data/prices.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      fetch("../data/legality.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+    ]).then(([pr, l]) => {
+      if (pr?.prices) { PRICES = pr.prices; pricesDate = pr.generated_at; priceSrc = pr.usd_brl ? "TCGplayer" : "Liga Lorcana";
+        PRICE_SOURCE = pr.usd_brl ? Tx("TCGplayer market price converted at R$ {r} per dollar (Liga Lorcana where TCGplayer has none)", { r: String(pr.usd_brl).replace(".", lang === "pt" ? "," : ".") }) : "Liga Lorcana"; }
+      const ls = l?.formats?.core?.legal_sets; if (Array.isArray(ls) && ls.length) { CORE_SETS = ls; LEGAL = l; }
+      if (!$("pText") || document.activeElement !== $("pText")) render(); else { const x = $("pText"), pos = x.selectionStart; render(); const y = $("pText"); y.focus(); y.setSelectionRange(pos, pos); }
+    });
+    return;
+  }
   $("app").innerHTML = `<div class="page-head"><div><h1>${Tx("Decks")}</h1></div></div><div class="list">${"<span class=\"skel\" style=\"height:76px\"></span>".repeat(4)}</div><p class="sr-only">${Tx("Loading…")}</p>`;
   const start = () => loadAll().then(render).catch(() => {
     $("app").innerHTML = `<div class="page-head"><div><h1>${Tx("Decks")}</h1></div></div>` + emptyBox("error", Tx("Couldn't load your decks."), Tx("Check your connection and try again."), `<button type="button" class="btn" id="retry"><i class="ic i-refresh"></i>${Tx("Try again")}</button>`);
