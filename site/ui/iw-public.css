@@ -82,9 +82,11 @@
 
 /* ---------- editor slots ---------- */
 .iw-public .iw-slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-3); }
-.iw-public .iw-slot { min-width: 0; display: grid; gap: 6px; align-content: start; }
-.iw-public .iw-slot .iw-actions { display: flex; flex-wrap: wrap; gap: 4px; }
-.iw-public .iw-slot .iw-actions .iw-button { flex: 1 1 auto; padding-inline: 8px; min-width: 44px; }
+.iw-public .iw-slot { min-width: 0; display: grid; gap: 6px; grid-template-rows: auto 1fr auto; }
+.iw-public .iw-slot .iw-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.iw-public .iw-slot .iw-actions .iw-button { padding-inline: 4px; min-width: 0; }
+.iw-public .iw-slot .iw-actions [data-pick] { grid-column: 1 / -1; }
+.iw-public .iw-slot .iw-actions { align-self: end; }
 .iw-public .iw-slot .warn { color: var(--iw-danger); font-size: var(--fs-small); }
 
 /* ---------- guest banner ---------- */

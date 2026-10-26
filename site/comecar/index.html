@@ -91,8 +91,21 @@ window.INKWELL_CLOUD = (() => {
     return text ? JSON.parse(text) : null;
   }
 
+  // The player's collections (public.inkwell_profiles). A new account has none yet, and every collection, deck
+  // and wishlist save needs one, so the first visit creates an empty "principal" collection, then reads again.
+  async function collections(select) {
+    const q = `inkwell_profiles?select=${select}&order=updated_at.desc`;
+    const r = await api(q);
+    if (Array.isArray(r) && r.length) return r;
+    const id = load()?.user?.id;
+    if (!id) return r;
+    await api("inkwell_profiles?on_conflict=user_id,profile", { method: "POST", prefer: "resolution=ignore-duplicates,return=minimal",
+      body: { user_id: id, profile: "principal", schema: 2, data: { _schema: 2, collection: {}, decks: [], wishlist: {} } } });
+    return api(q);
+  }
+
   return {
-    api,
+    api, collections,
     user: () => { sess = load(); return sess ? { id: sess.user?.id, email: sess.user?.email } : null; },
     status: () => { sess = load(); return sess ? { signedIn: true, email: sess.user?.email || "" } : { signedIn: false }; },
     async requestCode(email) {

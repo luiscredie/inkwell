@@ -208,6 +208,8 @@ img, svg { display: block; max-width: 100%; }
 .av-btn .iw-badge[hidden] { display: none; }
 
 .tabbar { display: none; }
+/* between phone and wide desktop the bar's links and buttons need less room, or the page scrolls sideways */
+@media (min-width: 761px) and (max-width: 979px) { .appbar-in { gap: var(--sp-3); } .sections a { padding: 0 8px; } .sections a .ic { display: none; } .appbar .counter-btn span { display: none; } }
 @media (max-width: 760px) {
   .appbar-in { gap: var(--sp-2); padding-right: var(--sp-2); }
   .sections { display: none; }
