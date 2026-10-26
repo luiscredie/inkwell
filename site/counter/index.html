@@ -116,11 +116,11 @@ window.INKWELL_CLOUD = (() => {
     async requestCode(email) {
       const redirect = cfg.redirect || location.href.split("#")[0];
       const r = await fetch(`${cfg.url}/auth/v1/otp?redirect_to=${encodeURIComponent(redirect)}`, { method: "POST", headers: headers(), body: JSON.stringify({ email, create_user: true }) });
-      if (!r.ok) throw new Error(`otp ${r.status}`);
+      if (!r.ok) throw Object.assign(new Error(`otp ${r.status}`), { status: r.status });
     },
     async verify(email, code) {
       const r = await fetch(`${cfg.url}/auth/v1/verify`, { method: "POST", headers: headers(), body: JSON.stringify({ type: "email", email, token: String(code).replace(/\s/g, "") }) });
-      if (!r.ok) throw new Error(`verify ${r.status}`);
+      if (!r.ok) throw Object.assign(new Error(`verify ${r.status}`), { status: r.status });
       store(session(await r.json()));
     },
     signOut() {

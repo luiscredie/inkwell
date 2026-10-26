@@ -433,6 +433,8 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); width: 18
 .otp { display: grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap: var(--sp-2); }
 .otp input { min-height: 56px; padding: 0; text-align: center; font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums; caret-color: var(--accent); }
 .otp input.filled { border-color: var(--text-2); }
+.otp-one { min-height: 56px; font-size: 1.5rem; font-weight: 800; letter-spacing: .12em; font-variant-numeric: tabular-nums; caret-color: var(--accent); }
+.otp-one.err { border-color: var(--loss); }
 
 /* busca de carta */
 .picker { position: relative; }

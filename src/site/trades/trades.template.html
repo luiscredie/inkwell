@@ -115,7 +115,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "Kind": "Tipo", "Search the board": "Buscar no Mural", "With whom": "Com quem", "Direction": "Direção", "Dates": "Datas", "Money and balance": "Dinheiro e saldo",
     "E.g. I'll hand them over at the store, before the tournament": "Ex.: entrego na loja, antes do torneio", "{name} gets the request and needs to accept.": "{name} recebe o pedido e precisa aceitar.",
     "{name} confirms the trade on their side.": "{name} confirma a troca do lado dele.", "Your friend": "Seu amigo", "Save trade": "Salvar troca", "Add at least one card.": "Adicione pelo menos uma carta.",
-    "Sign in to lend and trade with friends": "Entre para emprestar e trocar com amigos", "Use your e-mail. We send a 6-digit code, no password.": "Use seu e-mail. Mandamos um código de 6 dígitos, sem senha.",
+    "Sign in to lend and trade with friends": "Entre para emprestar e trocar com amigos", "Use your e-mail. We e-mail you a code, no password.": "Use seu e-mail. Mandamos um código por e-mail, sem senha.",
     "Couldn't load your data.": "Não foi possível carregar seus dados.", "Check your connection and try again.": "Confira a internet e tente de novo.", "Try again": "Tentar de novo", "Close": "Fechar", "Confirm cancel": "Confirmar cancelamento", "Confirm decline": "Confirmar recusa",
   };
   const fill = (s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)) : s);
@@ -556,7 +556,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     const app = $("app");
     if (!me) {
       $("headActions").innerHTML = "";
-      app.innerHTML = `<div class="empty"><img src="../ui/assets/empty/signedout.svg" alt=""><b>${Tx("Sign in to lend and trade with friends")}</b><p>${Tx("Use your e-mail. We send a 6-digit code, no password.")}</p><button type="button" class="btn primary" id="signIn">${Tx("Sign in")}</button></div>`;
+      app.innerHTML = `<div class="empty"><img src="../ui/assets/empty/signedout.svg" alt=""><b>${Tx("Sign in to lend and trade with friends")}</b><p>${Tx("Use your e-mail. We e-mail you a code, no password.")}</p><button type="button" class="btn primary" id="signIn">${Tx("Sign in")}</button></div>`;
       $("signIn").onclick = () => window.INKWELL_SIGNIN?.();
       return;
     }

@@ -59,7 +59,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "you have {n}": "você tem {n}", "Lowest listing on MYP Cards": "Menor anúncio na MYP Cards", "On MYP Cards: {v} for the {n} cards listed there (lowest listing, normal and foil together, {d}).": "Na MYP Cards: {v} pelas {n} cartas anunciadas lá (menor anúncio, normal e foil juntos, {d}).", "Buy now uses the lower of TCGplayer and MYP Cards.": "\"Comprar agora\" usa o menor entre TCGplayer e MYP Cards.",
     "Value now": "Valor agora", "Cards": "Cartas", "Change over {n} snapshots": "Variação em {n} registros", "Most valuable cards": "Cartas mais valiosas",
     "Value by date, with today's collection at each date's prices.": "Valor por data, com a coleção de hoje nos preços de cada data.",
-    "Sign in to see prices for your cards": "Entre para ver os preços das suas cartas", "Use your e-mail. We send a 6-digit code, no password.": "Use seu e-mail. Mandamos um código de 6 dígitos, sem senha.", "Sign in": "Entrar",
+    "Sign in to see prices for your cards": "Entre para ver os preços das suas cartas", "Use your e-mail. We e-mail you a code, no password.": "Use seu e-mail. Mandamos um código por e-mail, sem senha.", "Sign in": "Entrar",
     "Couldn't load prices.": "Não foi possível carregar os preços.", "Check your connection and try again.": "Confira a internet e tente de novo.", "Try again": "Tentar de novo",
     "Saved": "Salvo", "Couldn't save. Try again.": "Não foi possível salvar. Tente de novo.", "Added to the wishlist": "Na lista de desejos", "Removed from the wishlist": "Fora da lista de desejos", "Undo": "Desfazer",
   };
@@ -227,7 +227,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       <div class="group-head"><h3>${Tx("Most valuable cards")}</h3></div>
       <div class="list" data-testid="top-cards">${top.slice(0, 20).map((t) => { const c = BY.get(t.id), [a, b] = split(c.name); return `<div class="list-row">${thumb(c, "xs")}<span class="t"><span>${esc(a)}${b ? ` · ${esc(b)}` : ""}</span><span class="meta">${esc([setName(c.set), "nº " + c.num, `${t.n ? t.n + "×" : ""}${t.f ? ` ${t.f}× foil` : ""}`.trim()].filter(Boolean).join(" · "))}</span></span><span class="trail"><span class="money">${esc(money(t.val))}</span></span></div>`; }).join("")}</div>`;
   }
-  const signInBox = () => emptyBox("signedout", Tx("Sign in to see prices for your cards"), Tx("Use your e-mail. We send a 6-digit code, no password."), `<button type="button" class="btn primary" id="signIn">${Tx("Sign in")}</button>`);
+  const signInBox = () => emptyBox("signedout", Tx("Sign in to see prices for your cards"), Tx("Use your e-mail. We e-mail you a code, no password."), `<button type="button" class="btn primary" id="signIn">${Tx("Sign in")}</button>`);
 
   function wire() {
     $("signIn")?.addEventListener("click", () => window.INKWELL_SIGNIN?.());

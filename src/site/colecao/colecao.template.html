@@ -98,7 +98,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   try { lang = localStorage.getItem("inkwell-lang") || ((navigator.language || "pt").toLowerCase().startsWith("en") ? "en" : "pt"); } catch { /* */ }
   const PT = {
     "Collection": "Coleção", "Build decks": "Montar decks", "Loading…": "Carregando…",
-    "Sign in to see your collection": "Entre para ver sua coleção", "Use your e-mail. We send a 6-digit code, no password.": "Use seu e-mail. Mandamos um código de 6 dígitos, sem senha.", "Sign in": "Entrar",
+    "Sign in to see your collection": "Entre para ver sua coleção", "Use your e-mail. We e-mail you a code, no password.": "Use seu e-mail. Mandamos um código por e-mail, sem senha.", "Sign in": "Entrar",
     "Couldn't load your collection.": "Não foi possível carregar sua coleção.", "Check your connection and try again.": "Confira a internet e tente de novo.", "Try again": "Tentar de novo",
     "Cards": "Cartas", "Value": "Valor", "Lent out": "Emprestadas", "Search cards": "Buscar carta", "Filters": "Filtros", "{n} active": "{n} ativos",
     "View": "Visualização", "Grid": "Grade", "List": "Lista", "Sort": "Ordenar", "Most valuable": "Mais valiosas", "Name": "Nome", "Set and number": "Set e número", "Copies": "Quantidade", "Cost": "Custo",
@@ -269,7 +269,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   function render() {
     const app = $("app");
     if (!me) {
-      app.innerHTML = `<div class="empty"><img src="../ui/assets/empty/signedout.svg" alt=""><b>${Tx("Sign in to see your collection")}</b><p>${Tx("Use your e-mail. We send a 6-digit code, no password.")}</p><button type="button" class="btn primary" id="signIn">${Tx("Sign in")}</button></div>`;
+      app.innerHTML = `<div class="empty"><img src="../ui/assets/empty/signedout.svg" alt=""><b>${Tx("Sign in to see your collection")}</b><p>${Tx("Use your e-mail. We e-mail you a code, no password.")}</p><button type="button" class="btn primary" id="signIn">${Tx("Sign in")}</button></div>`;
       $("signIn").onclick = () => window.INKWELL_SIGNIN?.();
       return;
     }

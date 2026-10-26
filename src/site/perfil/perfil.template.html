@@ -120,7 +120,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "Report sent. Thank you.": "Denúncia enviada. Obrigado.", "Couldn't send. Try again.": "Não foi possível enviar. Tente de novo.", "Close": "Fechar",
     "Profile not found": "Perfil não encontrado", "It doesn't exist, or its owner keeps it private.": "Ele não existe ou o dono deixou privado.",
     "Your corner of the Lorcana community": "Seu canto na comunidade de Lorcana", "Show your favourite cards, your deck and your games. Invite your friends.": "Mostre suas cartas favoritas, seu deck e seus jogos. Convide seus amigos.",
-    "Sign in": "Entrar", "Use your e-mail. We send a 6-digit code, no password.": "Use seu e-mail. Mandamos um código de 6 dígitos, sem senha.", "See an example": "Ver um exemplo",
+    "Sign in": "Entrar", "Use your e-mail. We e-mail you a code, no password.": "Use seu e-mail. Mandamos um código por e-mail, sem senha.", "See an example": "Ver um exemplo",
     "{name} invited you to Inkwell": "{name} convidou você para o Inkwell", "Sign in and you become friends.": "Entre e aceite o pedido de amizade.", "Someone": "Alguém",
     "You and {name} are now friends.": "Agora você e {name} são amigos.", "This invite link is no longer valid.": "Este convite não vale mais.",
     "Public": "Público", "Private": "Privado", "Only you see this profile.": "Só você vê este perfil.", "Anyone with the link sees this profile.": "Qualquer pessoa com o link vê este perfil.",
@@ -329,7 +329,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     if (!info) return `<div class="notice warn" style="margin-bottom:var(--sp-4)"><i class="ic i-alert"></i><div class="t">${Tx("This invite link is no longer valid.")}</div></div>`;
     try { localStorage.setItem(INVITE_KEY, inviteQ); } catch { /* */ }
     return `<section class="card" data-testid="invite" style="margin-bottom:var(--sp-5)"><h2 style="margin:0">${esc(Tx("{name} invited you to Inkwell", { name: info.name || Tx("Someone") }))}</h2>
-      <p class="muted" style="margin:var(--sp-2) 0 var(--sp-3)">${Tx("Sign in and you become friends.")} ${Tx("Use your e-mail. We send a 6-digit code, no password.")}</p>
+      <p class="muted" style="margin:var(--sp-2) 0 var(--sp-3)">${Tx("Sign in and you become friends.")} ${Tx("Use your e-mail. We e-mail you a code, no password.")}</p>
       <button type="button" class="btn primary" data-signin>${Tx("Sign in")}</button></section>`;
   }
   function wireInvite() { document.querySelectorAll("[data-signin]").forEach((b) => b.onclick = () => window.INKWELL_SIGNIN?.()); }
@@ -361,7 +361,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     $("app").innerHTML = `<section class="mi-hero" style="padding:var(--sp-8) var(--sp-5)"><h2 class="mi-name">${Tx("Your corner of the Lorcana community")}</h2>
       <p class="muted" style="max-width:52ch">${Tx("Show your favourite cards, your deck and your games. Invite your friends.")}</p>
       <div class="row" style="gap:var(--sp-2);flex-wrap:wrap"><button type="button" class="btn primary" data-signin>${Tx("Sign in")}</button><a class="btn" href="?u=rafa_exemplo">${Tx("See an example")}</a></div>
-      <p class="small faint" style="margin-top:var(--sp-3)">${Tx("Use your e-mail. We send a 6-digit code, no password.")}</p></section>`;
+      <p class="small faint" style="margin-top:var(--sp-3)">${Tx("Use your e-mail. We e-mail you a code, no password.")}</p></section>`;
     wireInvite();
   }
 

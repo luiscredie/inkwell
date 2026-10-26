@@ -28,7 +28,7 @@ async function setup(page, { signedIn = false, profile = null, saveDelay = 0, fa
     if (path.endsWith('/otp')) return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
     if (path.endsWith('/verify')) {
       const body = JSON.parse(route.request().postData());
-      if (body.token !== '123456') return route.fulfill({ status: 400, contentType: 'application/json', body: '{"msg":"bad"}' });
+      if (body.token !== '12345678') return route.fulfill({ status: 400, contentType: 'application/json', body: '{"msg":"bad"}' });
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ access_token: jwt(ME), refresh_token: 'r', expires_in: 3600, user: { id: ME, email: 'a@b.c' } }) });
     }
     return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
@@ -230,8 +230,9 @@ test('sign-up cancelled or wrong code: draft intact, no false success (A12)', as
   await page.locator('#save').click();
   await sheet.locator('#iwSiEmail').fill('ana@example.com');
   await sheet.getByRole('button', { name: 'Enviar código' }).click();
-  await sheet.locator('.otp input').first().fill('999999');
-  await expect(sheet.locator('#iwSiMsg')).toContainText('Código errado');
+  await sheet.locator('#iwSiCode').fill('99999999');
+  await sheet.getByRole('button', { name: 'Entrar' }).click();
+  await expect(sheet.locator('#iwSiMsg')).toContainText('Esse código não vale');
   expect((await draftOf(page)).displayName).toBe('Ana');
   expect(saves(calls)).toHaveLength(0);
 });
@@ -246,7 +247,8 @@ test('confirm the code in the same tab: the draft is saved as a private profile,
   const sheet = page.locator('#iwSignSheet');
   await sheet.locator('#iwSiEmail').fill('ana@example.com');
   await sheet.getByRole('button', { name: 'Enviar código' }).click();
-  await sheet.locator('.otp input').first().fill('123456');
+  await sheet.locator('#iwSiCode').fill('12345678');
+  await sheet.getByRole('button', { name: 'Entrar' }).click();
   await expect(page.getByTestId('saved')).toBeVisible();
   expect(saves(calls)).toHaveLength(1);
   const p = saves(calls)[0].body.p;
