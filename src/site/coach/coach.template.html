@@ -30,7 +30,7 @@ window.INKWELL_NO_STORE_MSG = "Your games appear here after you sign in.";
   const PT = {
     // page
     "Coach review": "Coach Review",
-    "Games": "Jogos", "Result": "Resultado", "View": "Ver", "Coaches and your name": "Coaches e seu nome", "Sign in to see your games": "Entre para ver seus jogos", "Use your e-mail. We send a 6-digit code, no password.": "Use seu e-mail. Mandamos um código de 6 dígitos, sem senha.", "{n} games": "{n} jogos",
+    "Games": "Jogos", "Result": "Resultado", "View": "Ver", "Coaches and your name": "Coaches e seu nome", "Sign in to see your games": "Entre para ver seus jogos", "Use your e-mail. We e-mail you a code, no password.": "Use seu e-mail. Mandamos um código por e-mail, sem senha.", "{n} games": "{n} jogos",
     "Lore Counter": "Contador de lore",
     "· games save here": "· os jogos ficam salvos aqui",
     "Stats: decks, matchups, trend": "Estatísticas: decks, confrontos, evolução",
@@ -479,7 +479,7 @@ window.INKWELL_NO_STORE_MSG = "Your games appear here after you sign in.";
     const host = document.getElementById("accountPanel");
     if (!host) return;
     if (!me) {
-      host.innerHTML = `<div class="empty"><img src="../ui/assets/empty/signedout.svg" alt=""><b>${Tx("Sign in to see your games")}</b><p>${Tx("Use your e-mail. We send a 6-digit code, no password.")}</p><button type="button" class="btn primary" id="signIn">${Tx("Sign in")}</button></div>`;
+      host.innerHTML = `<div class="empty"><img src="../ui/assets/empty/signedout.svg" alt=""><b>${Tx("Sign in to see your games")}</b><p>${Tx("Use your e-mail. We e-mail you a code, no password.")}</p><button type="button" class="btn primary" id="signIn">${Tx("Sign in")}</button></div>`;
       document.getElementById("signIn").onclick = () => window.INKWELL_SIGNIN?.();
       return;
     }

@@ -60,6 +60,11 @@ window.INKWELL_CLOUD = (() => {
     store(session({ access_token: h.get("access_token"), refresh_token: h.get("refresh_token"), expires_in: +h.get("expires_in") || 3600 }));
     history.replaceState(null, "", location.pathname + location.search);
     window.INKWELL_FROM_LINK = true;   // this tab was opened by the e-mail link (the guest editor tells the original tab apart)
+  } else if (h.get("error_code") || h.get("error")) {
+    // The e-mail link didn't work (already used or expired): Supabase sends back #error=…&error_code=otp_expired.
+    // Some mail services (Outlook/Hotmail) open links by themselves to scan them, which uses the link up.
+    history.replaceState(null, "", location.pathname + location.search);
+    window.INKWELL_LINK_FAILED = h.get("error_code") || h.get("error");
   }
 
   async function token() {
@@ -112,12 +117,21 @@ window.INKWELL_CLOUD = (() => {
     status: () => { sess = load(); return sess ? { signedIn: true, email: sess.user?.email || "" } : { signedIn: false }; },
     async requestCode(email) {
       const redirect = cfg.redirect || location.href.split("#")[0];
+      // where to come back after the confirmation page (/entrar/), same site only
+      try { localStorage.setItem("inkwell-return", JSON.stringify({ path: location.pathname + location.search, at: Date.now() })); } catch { /* private mode */ }
       const r = await fetch(`${cfg.url}/auth/v1/otp?redirect_to=${encodeURIComponent(redirect)}`, { method: "POST", headers: headers(), body: JSON.stringify({ email, create_user: true }) });
-      if (!r.ok) throw new Error(`otp ${r.status}`);
+      if (!r.ok) throw Object.assign(new Error(`otp ${r.status}`), { status: r.status });
     },
     async verify(email, code) {
       const r = await fetch(`${cfg.url}/auth/v1/verify`, { method: "POST", headers: headers(), body: JSON.stringify({ type: "email", email, token: String(code).replace(/\s/g, "") }) });
-      if (!r.ok) throw new Error(`verify ${r.status}`);
+      if (!r.ok) throw Object.assign(new Error(`verify ${r.status}`), { status: r.status });
+      store(session(await r.json()));
+    },
+    // The e-mail's own link to /entrar/?h=<token hash>: signs in only when the person presses the button there,
+    // so a mail scanner that just opens the link doesn't use it up.
+    async verifyHash(tokenHash, type = "email") {
+      const r = await fetch(`${cfg.url}/auth/v1/verify`, { method: "POST", headers: headers(), body: JSON.stringify({ type, token_hash: String(tokenHash) }) });
+      if (!r.ok) throw Object.assign(new Error(`verify ${r.status}`), { status: r.status });
       store(session(await r.json()));
     },
     signOut() {
@@ -241,7 +255,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Report sent. Thank you.": "Denúncia enviada. Obrigado.", "Couldn't send. Try again.": "Não foi possível enviar. Tente de novo.", "Close": "Fechar",
     "Profile not found": "Perfil não encontrado", "It doesn't exist, or its owner keeps it private.": "Ele não existe ou o dono deixou privado.",
     "Your corner of the Lorcana community": "Seu canto na comunidade de Lorcana", "Show your favourite cards, your deck and your games. Invite your friends.": "Mostre suas cartas favoritas, seu deck e seus jogos. Convide seus amigos.",
-    "Sign in": "Entrar", "Use your e-mail. We send a 6-digit code, no password.": "Use seu e-mail. Mandamos um código de 6 dígitos, sem senha.", "See an example": "Ver um exemplo",
+    "Sign in": "Entrar", "Use your e-mail. We e-mail you a code, no password.": "Use seu e-mail. Mandamos um código por e-mail, sem senha.", "See an example": "Ver um exemplo",
     "{name} invited you to Inkwell": "{name} convidou você para o Inkwell", "Sign in and you become friends.": "Entre e aceite o pedido de amizade.", "Someone": "Alguém",
     "You and {name} are now friends.": "Agora você e {name} são amigos.", "This invite link is no longer valid.": "Este convite não vale mais.",
     "Public": "Público", "Private": "Privado", "Only you see this profile.": "Só você vê este perfil.", "Anyone with the link sees this profile.": "Qualquer pessoa com o link vê este perfil.",
@@ -450,7 +464,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     if (!info) return `<div class="notice warn" style="margin-bottom:var(--sp-4)"><i class="ic i-alert"></i><div class="t">${Tx("This invite link is no longer valid.")}</div></div>`;
     try { localStorage.setItem(INVITE_KEY, inviteQ); } catch { /* */ }
     return `<section class="card" data-testid="invite" style="margin-bottom:var(--sp-5)"><h2 style="margin:0">${esc(Tx("{name} invited you to Inkwell", { name: info.name || Tx("Someone") }))}</h2>
-      <p class="muted" style="margin:var(--sp-2) 0 var(--sp-3)">${Tx("Sign in and you become friends.")} ${Tx("Use your e-mail. We send a 6-digit code, no password.")}</p>
+      <p class="muted" style="margin:var(--sp-2) 0 var(--sp-3)">${Tx("Sign in and you become friends.")} ${Tx("Use your e-mail. We e-mail you a code, no password.")}</p>
       <button type="button" class="btn primary" data-signin>${Tx("Sign in")}</button></section>`;
   }
   function wireInvite() { document.querySelectorAll("[data-signin]").forEach((b) => b.onclick = () => window.INKWELL_SIGNIN?.()); }
@@ -482,7 +496,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     $("app").innerHTML = `<section class="mi-hero" style="padding:var(--sp-8) var(--sp-5)"><h2 class="mi-name">${Tx("Your corner of the Lorcana community")}</h2>
       <p class="muted" style="max-width:52ch">${Tx("Show your favourite cards, your deck and your games. Invite your friends.")}</p>
       <div class="row" style="gap:var(--sp-2);flex-wrap:wrap"><button type="button" class="btn primary" data-signin>${Tx("Sign in")}</button><a class="btn" href="?u=rafa_exemplo">${Tx("See an example")}</a></div>
-      <p class="small faint" style="margin-top:var(--sp-3)">${Tx("Use your e-mail. We send a 6-digit code, no password.")}</p></section>`;
+      <p class="small faint" style="margin-top:var(--sp-3)">${Tx("Use your e-mail. We e-mail you a code, no password.")}</p></section>`;
     wireInvite();
   }
 
@@ -858,7 +872,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     <div class="menu-sep"></div><div class="menu-label">${T("Tema: Noite", "Theme: Night")}</div>`, "sm"));
   function $(id) { return document.getElementById(id); }
 
-  // ---------- sign-in sheet: e-mail → 6-digit code (or the link in the e-mail) ----------
+  // ---------- sign-in sheet: e-mail → code from the e-mail (or the link in it) ----------
   const sheet = document.createElement("dialog");
   sheet.className = "sheet"; sheet.id = "iwSignSheet"; sheet.setAttribute("aria-labelledby", "iwSiT");
   document.body.append(sheet);
@@ -880,47 +894,72 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       email = $("iwSiEmail").value.trim();
       if (!/^\S+@\S+\.\S+$/.test(email)) { $("iwSiMsg").textContent = T("Digite seu e-mail.", "Enter your e-mail."); return; }
       const b = $("iwSiSend"); b.setAttribute("aria-busy", "true"); b.disabled = true;
-      try { await CLOUD.requestCode(email); stepCode(); }
+      try { await CLOUD.requestCode(email); sentAt = Date.now(); stepCode(); }
       catch { b.removeAttribute("aria-busy"); b.disabled = false; $("iwSiMsg").textContent = T("Não foi possível enviar o e-mail. Confira o endereço e a internet.", "Couldn't send the e-mail. Check the address and your connection."); }
     });
     setTimeout(() => $("iwSiEmail")?.focus(), 30);
   }
+  // The e-mail code: Supabase sends 6 to 10 digits (Authentication → Providers → Email → "Email OTP Length").
+  // One field takes the whole code, typed or pasted, and never cuts it; nothing is sent until "Entrar".
+  const OTP_MIN = 6, OTP_MAX = 10, RESEND_WAIT = 60;
+  let sentAt = 0;
   function stepCode(msg = "") {
     sheet.innerHTML = `<div class="grab"></div>
       <div class="sheet-head"><div><h2 id="iwSiT">${T("Digite o código", "Enter the code")}</h2><div class="sub">${esc(T("Enviado para ", "Sent to ") + email)}</div></div>
         <button type="button" class="btn ghost icon" data-close aria-label="${T("Fechar", "Close")}"><i class="ic i-close"></i></button></div>
       <div class="sheet-body"><form class="form" id="iwSiForm" novalidate>
-        <fieldset class="field"><legend>${T("Código de 6 dígitos", "6-digit code")}</legend>
-          <div class="otp">${[1, 2, 3, 4, 5, 6].map((i) => `<input inputmode="numeric" autocomplete="${i === 1 ? "one-time-code" : "off"}" aria-label="${T("Dígito", "Digit")} ${i}">`).join("")}</div>
-          <span class="hint">${T("Também pode abrir o link do e-mail neste aparelho. Confira o spam.", "You can also open the link in the e-mail on this device. Check spam too.")}</span>
-        </fieldset>
+        <label class="field">${T("Código do e-mail", "Code from the e-mail")}
+          <input id="iwSiCode" class="otp-one" inputmode="numeric" autocomplete="one-time-code" spellcheck="false" autocapitalize="off" maxlength="40" aria-describedby="iwSiHint iwSiMsg"></label>
+        <span class="hint" id="iwSiHint">${T("Copie ou digite o código inteiro do e-mail mais recente. Confira o spam.", "Copy or type the whole code from the latest e-mail. Check spam too.")}</span>
         <p class="small" id="iwSiMsg" role="alert">${esc(msg)}</p>
-        <div class="row between small"><button type="button" class="linkbtn" id="iwSiBack">${T("Trocar e-mail", "Change e-mail")}</button></div>
+        <div class="row between small"><button type="button" class="linkbtn" id="iwSiBack">${T("Trocar e-mail", "Change e-mail")}</button><button type="button" class="linkbtn" id="iwSiAgain"></button></div>
       </form></div>
       <div class="sheet-foot"><button type="button" class="btn ghost" id="iwSiBack2">${T("Voltar", "Back")}</button><button type="submit" form="iwSiForm" class="btn primary" id="iwSiIn" disabled>${T("Entrar", "Sign in")}</button></div>`;
     wireClose();
-    const boxes = [...sheet.querySelectorAll(".otp input")];
-    const code = () => boxes.map((b) => b.value).join("");
-    const sync = () => { boxes.forEach((b) => b.classList.toggle("filled", !!b.value)); $("iwSiIn").disabled = code().length !== 6; };
-    boxes.forEach((b, i) => {
-      b.addEventListener("input", () => {
-        const d = b.value.replace(/\D/g, "");
-        if (d.length > 1) { d.slice(0, 6).split("").forEach((c, j) => { if (boxes[j]) boxes[j].value = c; }); boxes[Math.min(5, d.length - 1)].focus(); }
-        else { b.value = d; if (d && boxes[i + 1]) boxes[i + 1].focus(); }
-        sync();
-        if (code().length === 6) $("iwSiForm").requestSubmit();
-      });
-      b.addEventListener("keydown", (e) => { if (e.key === "Backspace" && !b.value && boxes[i - 1]) boxes[i - 1].focus(); });
-    });
+    const box = $("iwSiCode"), go = $("iwSiIn"), say = (t) => { $("iwSiMsg").textContent = t; };
+    const digits = () => box.value.replace(/\D/g, "");
+    const sync = () => {
+      const n = digits().length;
+      go.disabled = n < OTP_MIN || n > OTP_MAX;
+      box.classList.remove("err");
+      if (n > OTP_MAX) say(T(`O código tem no máximo ${OTP_MAX} dígitos. Confira o que foi colado.`, `The code has at most ${OTP_MAX} digits. Check what was pasted.`));
+      else if (/[^\d\s-]/.test(box.value)) say(T("Use só os números do código.", "Use only the code's digits."));
+      else if ($("iwSiMsg").dataset.keep !== "1") say("");
+      $("iwSiMsg").dataset.keep = "";
+    };
+    box.addEventListener("input", sync);
+    // resend, after the provider's minimum wait between e-mails
+    const again = $("iwSiAgain");
+    const tick = () => {
+      if (!sheet.open || !document.contains(again)) return;
+      const left = Math.max(0, RESEND_WAIT - Math.floor((Date.now() - sentAt) / 1000));
+      again.disabled = left > 0;
+      again.textContent = left > 0 ? T(`Mandar outro código em ${left} s`, `Send another code in ${left} s`) : T("Mandar outro código", "Send another code");
+      if (left > 0) setTimeout(tick, 1000);
+    };
+    again.onclick = async () => {
+      again.disabled = true;
+      try { await CLOUD.requestCode(email); sentAt = Date.now(); box.value = ""; sync(); say(T("Mandamos um código novo. Use só o do e-mail mais recente.", "We sent a new code. Use only the one in the latest e-mail.")); }
+      catch (e) { say(e?.status === 429 ? T("Espere um pouco antes de pedir outro código.", "Wait a little before asking for another code.") : T("Não foi possível enviar o e-mail. Confira a internet.", "Couldn't send the e-mail. Check your connection.")); }
+      tick();
+    };
+    tick();
     const back = () => stepEmail();
     $("iwSiBack").onclick = back; $("iwSiBack2").onclick = back;
     $("iwSiForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const b = $("iwSiIn"); b.setAttribute("aria-busy", "true"); b.disabled = true;
-      try { await CLOUD.verify(email, code()); location.reload(); }
-      catch { boxes.forEach((x) => { x.value = ""; x.classList.add("err"); }); boxes[0].focus(); b.removeAttribute("aria-busy"); sync(); $("iwSiMsg").textContent = T("Código errado ou expirado. Tente de novo.", "Wrong or expired code. Try again."); }
+      if (go.disabled) return;
+      go.setAttribute("aria-busy", "true"); go.disabled = true;
+      try { await CLOUD.verify(email, digits()); location.reload(); }
+      catch (err) {
+        go.removeAttribute("aria-busy"); box.classList.add("err"); box.focus(); box.select?.();
+        $("iwSiMsg").dataset.keep = "1"; sync();
+        say(err?.status === 429 ? T("Muitas tentativas. Espere um pouco e tente de novo.", "Too many tries. Wait a little and try again.")
+          : err?.status >= 400 && err?.status < 500 ? T("Esse código não vale: está errado, expirou ou já foi usado (abrir o link do e-mail também usa o código). Peça outro.", "That code doesn't work: it's wrong, expired or already used (opening the e-mail's link uses it too). Ask for another one.")
+          : T("Sem conexão com o servidor. Tente de novo.", "No connection to the server. Try again."));
+      }
     });
-    setTimeout(() => boxes[0].focus(), 30);
+    setTimeout(() => box.focus(), 30);
   }
   function wireClose() { sheet.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", () => sheet.close())); }
   sheet.addEventListener("close", () => { trigger?.focus?.(); trigger = null; });
@@ -932,6 +971,14 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     if (!sheet.open) sheet.showModal();
   };
   $("iwSignIn")?.addEventListener("click", () => window.INKWELL_SIGNIN());
+  // Came back from an e-mail link that no longer works: say why and offer a new code, once.
+  if (window.INKWELL_LINK_FAILED && CLOUD && !CLOUD.status().signedIn) {
+    setTimeout(() => {
+      window.INKWELL_SIGNIN();
+      stepEmail(T("O link do e-mail não vale mais: ele já foi usado ou expirou. Alguns e-mails, como Outlook e Hotmail, abrem os links sozinhos para verificar. Peça um código novo e digite-o aqui.",
+        "The e-mail link no longer works: it was already used or expired. Some mail services, like Outlook and Hotmail, open links by themselves to scan them. Ask for a new code and type it here."));
+    }, 50);
+  }
 
   // ---------- guest draft (Começar meu Inkwell, behind INKWELL_FLAGS.guestProfile) ----------
   if ((window.INKWELL_FLAGS || {}).guestProfile && page !== "start") {
