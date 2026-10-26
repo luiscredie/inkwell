@@ -36,6 +36,44 @@
 .fy-posts { display: grid; gap: var(--sp-2); }
 .fy-post { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: var(--sp-3); padding: var(--sp-3); border-radius: var(--r-lg); background: var(--surface-1); border: 1px solid var(--line); color: inherit; text-decoration: none; }
 .fy-post p { margin: 2px 0 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+/* signed in, three columns (phase 2 of the redesign): me | timeline | friends and communities */
+.page.split.home3 { max-width: 1240px; grid-template-columns: minmax(0, 1fr) 300px; grid-template-rows: auto auto minmax(0, 1fr); grid-template-areas: "head head" "main left" "main side"; }
+.page.split.home3 > .page-head { grid-area: head; } .page.split.home3 > .home-main { grid-area: main; } .page.split.home3 > #left { grid-area: left; } .page.split.home3 > #aside { grid-area: side; }
+.home3 > #aside { display: grid; gap: var(--sp-3); }
+.page.split.home3 > aside { position: static; }
+#aside > .stack:empty { display: none; }
+@media (min-width: 1200px) {
+  .page.split.home3 { grid-template-columns: 250px minmax(0, 1fr) 300px; grid-template-rows: auto minmax(0, 1fr); grid-template-areas: "left head side" "left main side"; }
+  .page.split.home3 > #left { position: sticky; top: calc(var(--bar-h) + var(--sp-4)); align-self: start; }
+}
+@media (max-width: 760px) { .page.split.home3 > #left, .page.split.home3 > #aside { display: none; } .page.split.home3 { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; grid-template-areas: "head" "main"; } }
+body.out .page.split.home3 { display: block; }
+.home-left { display: grid; gap: var(--sp-3); align-content: start; }
+.me-card { padding: var(--sp-4); border-radius: var(--r-lg); background: var(--surface-1); border: 1px solid var(--line); box-shadow: var(--e1); display: grid; gap: var(--sp-3); }
+.me-top { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: var(--sp-3); align-items: center; color: inherit; text-decoration: none; }
+.me-av { width: 52px; height: 52px; border-radius: 50%; background: var(--surface-3) 50% 20% / 210% auto no-repeat; box-shadow: 0 0 0 2px var(--accent); display: grid; place-items: center; font-weight: 800; font-size: 1.2rem; color: var(--text-2); }
+.me-top b { display: block; font-family: var(--display); font-size: 1.05rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.me-top .small { color: var(--text-2); }
+.me-inks { display: flex; gap: 6px; flex-wrap: wrap; }
+.me-ink { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 4px; border-radius: var(--r-pill); background: var(--surface-2); font-size: var(--fs-micro); font-weight: 700; }
+.me-ink img { width: 18px; height: 18px; }
+.me-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--line); padding-top: var(--sp-3); }
+.me-stats a { display: grid; justify-items: center; gap: 2px; color: inherit; text-decoration: none; border-radius: var(--r-sm); padding: 4px 0; }
+.me-stats a:hover { background: var(--hover-tint); }
+.me-stats b { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.me-stats span { font-size: var(--fs-micro); color: var(--text-2); }
+.home-tools { padding: var(--sp-2); border-radius: var(--r-lg); background: var(--surface-1); border: 1px solid var(--line); display: grid; }
+.home-tools h2 { font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: .06em; color: var(--text-2); margin: var(--sp-2) var(--sp-2) var(--sp-1); }
+.home-tools a { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: var(--sp-2); align-items: center; padding: 8px var(--sp-2); border-radius: var(--r-md); color: var(--text); text-decoration: none; font-weight: 600; font-size: var(--fs-small); min-height: 40px; }
+.home-tools a:hover { background: var(--hover-tint); }
+.home-tools .ic { width: 20px; height: 20px; color: var(--accent-ink); }
+.home-pact { padding: var(--sp-3) var(--sp-4); border-radius: var(--r-lg); background: var(--accent-soft); font-size: var(--fs-small); color: var(--text-2); }
+.home-pact b { display: flex; gap: 6px; align-items: center; color: var(--text); margin-bottom: 4px; }
+.home-pact .ic { width: 18px; height: 18px; color: var(--accent-ink); }
+.comm-list { display: grid; gap: 2px; }
+.comm-list a { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: var(--sp-2); align-items: center; padding: 6px; border-radius: var(--r-md); color: inherit; text-decoration: none; font-weight: 600; font-size: var(--fs-small); }
+.comm-list a:hover { background: var(--hover-tint); }
+.comm-list a span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* public home (signed out) */
 body.out .page-head, body.out #aside { display: none; }
 body.out .page.split { display: block; }
@@ -68,14 +106,15 @@ body.out .page.split { display: block; }
 .land-steps li::before { counter-increment: st; content: counter(st); display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: var(--on-accent); font-weight: 800; font-size: var(--fs-micro); margin-bottom: var(--sp-2); }
 </style>
 
-<main class="page split" id="page">
+<main class="page split home3" id="page">
+  <aside id="left" class="home-left" aria-label="Meu Inkwell" hidden></aside>
   <div class="page-head"><div><h1 id="title">Início</h1><p class="sub" id="sub"></p></div></div>
-  <div>
+  <div class="home-main">
     <div id="forYou" data-testid="for-you"></div>
     <button type="button" class="list-row" id="openFriends" hidden></button>
     <div class="stack" id="feed" style="margin-top:var(--sp-4)"></div>
   </div>
-  <aside id="aside"><div class="stack" id="side"></div></aside>
+  <aside id="aside"><div class="stack" id="comms" data-testid="home-comms"></div><div class="stack" id="side"></div></aside>
 </main>
 <dialog class="sheet" id="friendsSheet" aria-labelledby="fpT">
   <div class="grab"></div>
@@ -150,6 +189,12 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "Add friends": "Adicionar amigos", "Sign in to see your friends' games": "Entre para ver os jogos dos amigos", "Use your e-mail. We e-mail you a code, no password.": "Use seu e-mail. Mandamos um código por e-mail, sem senha.",
     "Couldn't load the timeline.": "Não foi possível carregar a linha do tempo.", "Check your connection and try again.": "Confira a internet e tente de novo.", "Try again": "Tentar de novo",
     "Won": "Venceu", "Lost": "Perdeu", "against": "contra", "went first": "começou jogando", "went second": "começou comprando", "Confirm removal": "Confirmar remoção", "Confirm delete": "Confirmar exclusão",
+    "My Inkwell": "Meu Inkwell", "Private profile": "Perfil privado", "Cards": "Cartas", "Decks": "Decks", "Friends  ": "Amigos",
+    "See my profile": "Ver meu perfil", "Shortcuts": "Atalhos", "Deck builder": "Construtor de decks", "Scan cards": "Escanear cartas", "Lore counter": "Contador de lore",
+    "Trades and loans ": "Trocas e empréstimos", "Prices and wishlist": "Preços e lista de desejos", "Games and stats": "Jogos e estatísticas",
+    "A kind, safe space": "Espaço gentil e seguro", "Communities and recados are for members 18+. Be kind at the table and online; report what isn't.": "Comunidades e recados são para membros 18+. Gentileza na mesa e aqui; denuncie o que não for.",
+    "Amber": "Âmbar", "Amethyst": "Ametista", "Emerald": "Esmeralda", "Ruby": "Rubi", "Sapphire": "Safira", "Steel": "Aço",
+    "No communities yet.": "Nenhuma comunidade ainda.", "Find a community": "Encontrar comunidade",
     "Invite": "Convidar", "people": "pessoas", "Opponents' names are never shown to others. Coaches see the games shared with them. You can change it game by game in the review.": "O nome dos adversários nunca aparece para os outros. Coaches veem os jogos compartilhados com eles. Dá para mudar jogo a jogo na revisão.",
   };
   const fill = (s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)) : s);
@@ -488,10 +533,55 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   if (!me) { publicHome(); return; }
   if (location.hash === "#amigos") setTimeout(() => { if (phone()) $("openFriends").click(); else $("findPeople")?.focus(); }, 0);
   $("feed").innerHTML = `<span class="skel" style="height:150px;border-radius:var(--r-lg)"></span><span class="skel" style="height:150px;border-radius:var(--r-lg)"></span><p class="sr-only">${Tx("Loading…")}</p>`;
+
+  // ---------- left column: me at a glance (real data only) and shortcuts ----------
+  let homeData = null;
+  async function renderLeft() {
+    const el = $("left"); if (!el || !me) return;
+    const [p, cols] = await Promise.all([
+      CLOUD.api("rpc/my_profile", { method: "POST", body: {} }).catch(() => null),
+      CLOUD.collections("profile,collection:data->collection,decks:data->decks").catch(() => []),
+    ]);
+    const col = (cols || []).find((c) => c.profile === "principal") || (cols || [])[0] || {};
+    let cards = 0; for (const v of Object.values(col.collection || {})) cards += (+v?.n || 0) + (+v?.f || 0);
+    const decks = Array.isArray(col.decks) ? col.decks.length : 0;
+    const name = p?.display_name || myProfile?.display_name || "";
+    const IDX = new Map(((typeof CARD_INDEX !== "undefined" && CARD_INDEX?.cards) || []).map((c) => [c[0], c]));
+    const c = p?.avatar_card && IDX.get(p.avatar_card);
+    const art = c && c[8] ? `background-image:url('../lorcana-card-images/${encodeURI(c[8]).replace(/'/g, "%27")}')` : "";
+    const inks = (p?.inks || []).filter((i) => INK[i]).slice(0, 2);
+    const nFr = friendIds().length;
+    el.innerHTML = `<section class="me-card" data-testid="me-card">
+        <a class="me-top" href="../perfil/"><span class="me-av" style="${art}">${art ? "" : esc(name[0]?.toUpperCase() || "?")}</span><span><b>${esc(name || Tx("My Inkwell"))}</b><span class="small">${p?.handle && p?.is_public ? "@" + esc(p.handle) : Tx("Private profile")}</span></span></a>
+        ${inks.length ? `<div class="me-inks">${inks.map((i) => `<span class="me-ink"><img src="../ink/${i.toLowerCase()}.svg" alt="">${Tx(i)}</span>`).join("")}</div>` : ""}
+        <div class="me-stats"><a href="../colecao/"><b data-testid="me-cards">${cards.toLocaleString(LOC)}</b><span>${Tx("Cards")}</span></a><a href="../decks/"><b data-testid="me-decks">${decks}</b><span>${Tx("Decks")}</span></a><a href="#amigos" id="meFriends"><b>${nFr}</b><span>${Tx("Friends  ")}</span></a></div>
+        <a class="btn small" href="../perfil/${p?.handle ? "" : "?editar=1"}">${Tx(p?.handle ? "See my profile" : "Set up My Inkwell")}</a>
+      </section>
+      <nav class="home-tools" aria-labelledby="hTools"><h2 id="hTools">${Tx("Shortcuts")}</h2>
+        <a href="../decks/"><i class="ic i-decks"></i>${Tx("Deck builder")}</a>
+        <a href="../colecao/"><i class="ic i-camera"></i>${Tx("Scan cards")}</a>
+        <a href="../counter/"><i class="ic i-counter"></i>${Tx("Lore counter")}</a>
+        <a href="../coach/"><i class="ic i-games"></i>${Tx("Games and stats")}</a>
+        <a href="../trades/"><i class="ic i-trades"></i>${Tx("Trades and loans ")}</a>
+        <a href="../precos/"><i class="ic i-coins"></i>${Tx("Prices and wishlist")}</a></nav>
+      <section class="home-pact"><b><i class="ic i-shield"></i>${Tx("A kind, safe space")}</b>${Tx("Communities and recados are for members 18+. Be kind at the table and online; report what isn't.")} <a href="../privacidade/">${Tx("Terms and privacy")}</a></section>`;
+    el.hidden = false;
+    $("meFriends").onclick = (e) => { e.preventDefault(); $("findPeople")?.scrollIntoView({ block: "center" }); $("findPeople")?.focus(); };
+  }
+  function renderComms(h) {
+    const el = $("comms"); if (!el) return;
+    const comms = (h?.communities || []).filter(Boolean);
+    const IDX = new Map(((typeof CARD_INDEX !== "undefined" && CARD_INDEX?.cards) || []).map((c) => [c[0], c]));
+    const art = (id) => { const c = IDX.get(id); return c && c[8] ? `background-image:url('../lorcana-card-images/${encodeURI(c[8]).replace(/'/g, "%27")}')` : ""; };
+    el.innerHTML = `<section class="panel stack" aria-labelledby="hComms"><div class="row between"><h2 id="hComms" style="margin:0">${Tx("My communities")}</h2><a class="small" href="../comunidades/">${Tx("See all")}</a></div>
+      ${comms.length ? `<div class="comm-list">${comms.slice(0, 6).map((c) => `<a href="../comunidades/?c=${enc(c.slug)}"><span class="fy-av" style="${art(c.avatar)}"></span><span>${esc(c.name)}${c.mock ? ` <span class="faint small">· ${Tx("Example · fictional community")}</span>` : ""}</span></a>`).join("")}</div>`
+        : `<p class="small muted" style="margin:0">${Tx("No communities yet.")}</p><a class="btn small" href="../comunidades/">${Tx("Find a community")}</a>`}</section>`;
+  }
   // ---------- "Para você": what is waiting, and what your communities are saying (supabase/my_account.sql my_home) ----------
   async function renderForYou() {
     let h = null; try { h = await CLOUD.api("rpc/my_home", { method: "POST", body: {} }); } catch { h = null; }
     const box = $("forYou"); if (!box) return;
+    homeData = h; renderComms(h);
     if (!h) { box.innerHTML = ""; return; }
     const IDX = new Map(((typeof CARD_INDEX !== "undefined" && CARD_INDEX?.cards) || []).map((c) => [c[0], c]));
     const art = (id) => { const c = IDX.get(id); return c && c[8] ? `background-image:url('../lorcana-card-images/${encodeURI(c[8]).replace(/'/g, "%27")}')` : ""; };
@@ -513,7 +603,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
 
   const go = async () => {
     renderForYou();
-    try { await loadPeople(); await loadPosts(); renderSide(); renderFeed(); if (location.hash === "#amigos") { if (phone()) $("openFriends").click(); else $("findPeople")?.focus(); } }
+    try { await loadPeople(); renderLeft(); await loadPosts(); renderSide(); renderFeed(); if (location.hash === "#amigos") { if (phone()) $("openFriends").click(); else $("findPeople")?.focus(); } }
     catch { $("feed").innerHTML = `<div class="empty"><img src="../ui/assets/empty/error.svg" alt=""><b>${Tx("Couldn't load the timeline.")}</b><p>${Tx("Check your connection and try again.")}</p><button type="button" class="btn" id="retry"><i class="ic i-refresh"></i>${Tx("Try again")}</button></div>`; $("retry").onclick = go; }
   };
   go();

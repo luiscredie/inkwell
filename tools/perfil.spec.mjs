@@ -254,6 +254,33 @@ test('signed-in home: "Para você" shows what is waiting and the communities', a
   await expect(fy.locator('[data-testid="fy-posts"] a').first()).toHaveAttribute('href', '../comunidades/?c=liga-campinas');
 });
 
+test('signed-in home on a computer: me, shortcuts, communities in three columns', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await setup(page, { mine: { display_name: 'Luís', handle: 'luis', is_public: true, inks: ['Amber', 'Steel'] } });
+  await page.goto(url('feed/'));
+  const me = page.locator('[data-testid="me-card"]');
+  await expect(me).toContainText('Luís');
+  await expect(me).toContainText('@luis');
+  await expect(me).toContainText('Âmbar');
+  await expect(me.locator('img[src="../ink/steel.svg"]')).toHaveCount(1);
+  await expect(page.locator('[data-testid="me-cards"]')).toHaveText('1');
+  await expect(page.locator('[data-testid="me-decks"]')).toHaveText('1');
+  await expect(page.locator('.home-tools a[href="../counter/"]')).toContainText('Contador de lore');
+  await expect(page.locator('[data-testid="home-comms"] a[href="../comunidades/?c=liga-campinas"]')).toContainText('Liga Campinas');
+  const [l, m, r] = await Promise.all(['#left', '.home-main', '#aside'].map((s) => page.locator(s).boundingBox()));
+  expect(l.x + l.width).toBeLessThanOrEqual(m.x);
+  expect(m.x + m.width).toBeLessThanOrEqual(r.x);
+});
+
+test('signed-in home on a phone: one column, no side columns', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setup(page, { mine: { display_name: 'Luís' } });
+  await page.goto(url('feed/'));
+  await expect(page.locator('[data-testid="for-you"]')).toBeVisible();
+  await expect(page.locator('#left')).toBeHidden();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+});
+
 test('terms and privacy page, linked from the sign-in sheet', async ({ page }) => {
   await setup(page, { signedIn: false });
   await page.goto(url('feed/'));
