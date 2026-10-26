@@ -142,6 +142,13 @@ window.INKWELL_NO_STORE_MSG = "Your games appear here after you sign in.";
     "duels.ink games sync every 30 minutes. Last check {when}, {n} new.": "Os jogos do duels.ink sincronizam a cada 30 minutos. Última verificação {when}, {n} novos.",
     "duels.ink games sync every 30 minutes. Last check {when}, nothing new.": "Os jogos do duels.ink sincronizam a cada 30 minutos. Última verificação {when}, nada novo.",
     " {n} more on the next runs.": " Mais {n} nas próximas verificações.",
+    "Connect my duels.ink": "Conectar meu duels.ink", "duels.ink": "duels.ink",
+    "On duels.ink, create an API token in your account settings (it only reads your games) and paste it here. Your games arrive here as private games, every 30 minutes.": "No duels.ink, crie um token de API nas configurações da sua conta (ele só lê seus jogos) e cole aqui. Seus jogos chegam aqui como privados, a cada 30 minutos.",
+    "duels.ink token": "Token do duels.ink", "Connect": "Conectar", "Sync now": "Sincronizar agora", "Change token": "Trocar token", "Disconnect": "Desconectar", "Confirm disconnect": "Confirmar",
+    "That token doesn't look right: it has 96 letters and numbers.": "Esse token não parece certo: ele tem 96 letras e números.",
+    "Connected. The first games arrive in about a minute.": "Conectado. Os primeiros jogos chegam em cerca de um minuto.",
+    "Checking duels.ink…": "Verificando o duels.ink…", "Couldn't connect now. Try again later.": "Não foi possível conectar agora. Tente mais tarde.",
+    "Disconnected. Your imported games stay here.": "Desconectado. Os jogos já importados continuam aqui.",
     "Opponent": "Oponente", "Language": "Idioma", "Home": "Início", "Only me": "Só eu", "My coaches": "Meus coaches", "Everyone": "Todos", "Group: {name}": "Grupo: {name}", "A friend group": "Um grupo de amigos", "All my coaches": "Todos os meus coaches", "Coach: {name}": "Coach: {name}", "Coach group: {name}": "Grupo de coaches: {name}", "A coach group": "Um grupo de coaches", "By deck": "Por deck", "Deck not recorded": "Deck não registrado", "{w}–{l} · {p}%": "{w}–{l} · {p}%",
   };
   // English wording for the few keys that carry a hint to tell them apart.
@@ -428,6 +435,44 @@ window.INKWELL_NO_STORE_MSG = "Your games appear here after you sign in.";
       + (r.waiting ? Tx(" {n} more on the next runs.", { n: r.waiting }) : ""));
   }
 
+  // My own duels.ink: connect with a token (supabase/duels_tokens.sql), sync now, change the token, disconnect.
+  let duelsEditing = false, duelsMsg = "";
+  function duelsBox() {
+    const on = !!duelsSync?.enabled;
+    const form = `<span class="small muted">${Tx("On duels.ink, create an API token in your account settings (it only reads your games) and paste it here. Your games arrive here as private games, every 30 minutes.")}</span>
+        <div class="row2"><input id="duelsTok" type="password" autocomplete="off" spellcheck="false" maxlength="200" placeholder="${Tx("duels.ink token")}" aria-label="${Tx("duels.ink token")}"><button type="button" class="btn small" id="duelsSave">${Tx("Connect")}</button></div>`;
+    return `<details class="coaches" id="duelsBox" ${!on || duelsEditing || duelsMsg ? "open" : ""}><summary>${on ? Tx("duels.ink") : Tx("Connect my duels.ink")}</summary>
+        ${on ? `<span class="small" id="duelsSync">${syncLine(duelsSync)}</span>
+        <span class="small"><button type="button" class="linkbtn" id="duelsNow">${Tx("Sync now")}</button> · <button type="button" class="linkbtn" id="duelsEdit">${Tx("Change token")}</button> · <button type="button" class="linkbtn" id="duelsOff">${Tx("Disconnect")}</button></span>` : ""}
+        ${!on || duelsEditing ? form : ""}
+        <span class="small" id="duelsMsg" aria-live="polite">${esc(duelsMsg)}</span></details>`;
+  }
+  function duelsWire() {
+    const say = (t) => { duelsMsg = t; const m = document.getElementById("duelsMsg"); if (m) m.textContent = t; };
+    const later = () => { for (const ms of [20000, 60000, 120000]) setTimeout(() => reload().catch(() => {}), ms); };
+    document.getElementById("duelsEdit")?.addEventListener("click", () => { duelsEditing = true; panels(); document.getElementById("duelsTok")?.focus(); });
+    document.getElementById("duelsSave")?.addEventListener("click", async (e) => {
+      const t = document.getElementById("duelsTok").value.trim();
+      if (!/^[0-9a-f]{96}$/i.test(t)) { say(Tx("That token doesn't look right: it has 96 letters and numbers.")); return; }
+      e.target.disabled = true;
+      try {
+        await CLOUD.api("rpc/set_my_duels_token", { method: "POST", prefer: "return=minimal", body: { p_token: t } });
+        duelsEditing = false; duelsMsg = Tx("Connected. The first games arrive in about a minute."); await reload(); later();
+      } catch (err) { e.target.disabled = false; say(Tx(err?.status === 400 ? "That token doesn't look right: it has 96 letters and numbers." : "Couldn't connect now. Try again later.")); }
+    });
+    document.getElementById("duelsNow")?.addEventListener("click", async (e) => {
+      e.target.disabled = true; say(Tx("Checking duels.ink…"));
+      try { await CLOUD.api("rpc/sync_my_duels_now", { method: "POST", prefer: "return=minimal", body: {} }); later(); }
+      catch { e.target.disabled = false; say(Tx("Couldn't connect now. Try again later.")); }
+    });
+    document.getElementById("duelsOff")?.addEventListener("click", async (e) => {
+      const b = e.target;
+      if (b.dataset.c !== "1") { b.dataset.c = "1"; b.textContent = Tx("Confirm disconnect"); return; }
+      try { await CLOUD.api("rpc/stop_my_duels_sync", { method: "POST", prefer: "return=minimal", body: {} }); duelsMsg = Tx("Disconnected. Your imported games stay here."); await reload(); }
+      catch { say(Tx("Couldn't connect now. Try again later.")); }
+    });
+  }
+
   // ---------- panels: sign-in, whose games, my coaches ----------
   let coachesOpen = null;   // remembers the coaches box open or closed across re-renders
   function panels() {
@@ -443,7 +488,7 @@ window.INKWELL_NO_STORE_MSG = "Your games appear here after you sign in.";
     const viewing = player === me.id ? null : students.find((l) => l.owner_id === player);
     host.innerHTML = `<div class="acct">
       <div class="viewrow"><label class="small muted" for="whose">${Tx("View")}</label><select id="whose" class="inline"><option value="${esc(me.id)}">${Tx("My games")}</option><option value="${COMMUNITY}" ${player === COMMUNITY ? "selected" : ""}>${Tx("Community: public games")}</option>${students.map((l) => `<option value="${esc(l.owner_id)}" ${l.owner_id === player ? "selected" : ""}>${esc(Tx("Games of {name}", { name: names.get(l.owner_id) || l.owner_email || Tx("A player") }))}</option>`).join("")}</select></div>
-      ${duelsSync && player === me.id ? `<span class="small" id="duelsSync">${syncLine(duelsSync)}</span>` : ""}
+      ${player === me.id ? duelsBox() : ""}
       ${player === COMMUNITY ? `<span class="small muted">${Tx("Public games from every player. Anyone signed in can read them and comment.")}</span>`
         : viewing ? `<span class="small muted">${esc(Tx("You're coaching {name}: you can read their games and comment.", { name: names.get(viewing.owner_id) || viewing.owner_email }))}</span>` : ""}
       <details class="coaches" ${coachesOpen ?? !names.has(me.id) ? "open" : ""}><summary>${Tx("Coaches and your name")} · ${mine.length}</summary>
@@ -455,7 +500,8 @@ window.INKWELL_NO_STORE_MSG = "Your games appear here after you sign in.";
         <div class="row2"><input id="coachEmail" type="email" placeholder="${Tx("Coach's email")}" aria-label="${Tx("Coach's email")}"><button type="button" class="btn small" id="coachAdd">${Tx("Add")}</button></div>
         <span class="small" id="coachMsg" aria-live="polite"></span>`}</details>
     </div>`;
-    host.querySelector("details.coaches")?.addEventListener("toggle", (e) => { coachesOpen = e.target.open; });
+    host.querySelector("details.coaches:not(#duelsBox)")?.addEventListener("toggle", (e) => { coachesOpen = e.target.open; });
+    duelsWire();
     const saveName = async (v) => {
       v = String(v || "").trim();
       if (v.length < 2) { document.getElementById("dispMsg").textContent = Tx("Use at least 2 characters."); return; }
