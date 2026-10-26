@@ -140,3 +140,45 @@ test('stats: record, match win rate, streak, MMR, charts, matrix, deck versions'
   await expect(page.locator('[data-testid="record"]')).toContainText(`${rows.filter((r) => r.summary.list_key === 'v1aaaaaaaa').length} jogos`);
 });
 
+
+test('my own Lore Counter game can be deleted with two taps; duels.ink games cannot', async ({ page }) => {
+  const counterLog = { ...game('c1', '2026-10-21T20:00:00Z', 1, 'Mesa', true, 0), source: 'lore_counter', event: { kind: 'paper' }, source_ref: {}, lore_track: [{ t: 0, p1: 0, p2: 0 }, { t: 600, p1: 20, p2: 12 }] };
+  let rows = [...ROWS, { user_id: ME, game_id: 'c1', source: 'lore_counter', played_at: counterLog.played_at, visibility: 'private', created_at: counterLog.played_at, summary: { result: 'win', my_deck: 'Amber/Steel', opp_deck: 'Ruby', my_lore: 20, opp_lore: 12 } }];
+  const deletes = [];
+  await page.addInitScript((me) => {
+    localStorage.setItem('inkwell-lang', 'pt');
+    const exp = Math.floor(Date.now() / 1000) + 3600;
+    localStorage.setItem('inkwell-counter-auth', JSON.stringify({ access_token: 'x.' + btoa(JSON.stringify({ sub: me, exp })) + '.y', refresh_token: 'r', expires_at: exp, user: { id: me, email: 'luis@example.com' } }));
+  }, ME);
+  await page.route('**/rest/v1/**', (route) => {
+    const u = new URL(route.request().url()), path = u.pathname.replace(/.*\/rest\/v1\//, '');
+    const json = (v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+    if (route.request().method() === 'DELETE') {
+      deletes.push(`${path}?${u.searchParams.toString()}`);
+      if (path === 'game_logs') rows = rows.filter((r) => `eq.${r.game_id}` !== u.searchParams.get('game_id'));
+      return route.fulfill({ status: 204, body: '' });
+    }
+    if (path === 'game_logs') {
+      const id = (u.searchParams.get('game_id') || '').replace(/^eq\./, '');
+      return json(id ? [{ log: id === 'c1' ? counterLog : LOGS[id] }] : rows);
+    }
+    if (path === 'rpc/my_profile') return json({ display_name: 'Luís', adult: true });
+    return json(path.startsWith('rpc/') ? null : []);
+  });
+  await page.goto(url('coach/?game=a2'));
+  await expect(page.locator('[data-testid="match-charts"]')).toBeVisible();
+  await expect(page.locator('[data-testid="game-delete"]')).toHaveCount(0);   // duels.ink: no delete
+  await page.goto(url('coach/?game=c1'));
+  const del = page.locator('[data-testid="game-delete"]');
+  await expect(del).toHaveText('Apagar jogo');
+  await del.click();
+  await expect(del).toContainText('Apagar este jogo e os comentários?');
+  expect(deletes).toEqual([]);
+  await del.click();
+  await expect.poll(() => deletes.length).toBe(2);
+  expect(deletes[0]).toContain('game_notes?owner_id=eq.' + ME);
+  expect(deletes[1]).toContain('game_logs?user_id=eq.' + ME);
+  expect(deletes[1]).toContain('game_id=eq.c1');
+  await expect(page.locator('.game[data-k="c1"]')).toHaveCount(0);
+  await expect(page.locator('.game[data-k="a2"]')).toHaveCount(1);
+});

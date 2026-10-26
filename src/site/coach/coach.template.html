@@ -80,7 +80,7 @@ window.INKWELL_NO_STORE_MSG = "Your games appear here after you sign in.";
     "One card per line, e.g.\n4 Elsa - Spirit of Winter\n4 Tipo - Growing Son": "Uma carta por linha, por exemplo\n4 Elsa - Spirit of Winter\n4 Tipo - Growing Son",
     "All {n} games of this match": "Todos os {n} jogos desta partida", "Save deck list": "Salvar lista",
     "Turn {n}: {name}": "Turno {n}: {name}", "lore {s}": "lore {s}",
-    "Your comment": "Seu comentário", "Cancel": "Cancelar", "Comment": "Comentar", "Delete": "Apagar", "Confirm delete": "Confirmar",
+    "Your comment": "Seu comentário", "Cancel": "Cancelar", "Comment": "Comentar", "Delete": "Apagar", "Delete game": "Apagar jogo", "Delete this game and its comments?": "Apagar este jogo e os comentários?", "Couldn't delete the game. Try again.": "Não foi possível apagar o jogo. Tente de novo.", "Confirm delete": "Confirmar",
     "Someone": "Alguém", "You": "Você", "A player": "Um jogador",
     "The comment store is full. Delete old comments to add new ones.": "O espaço de comentários está cheio. Apague comentários antigos.",
     "Couldn't save the comment. Try again.": "Não foi possível salvar o comentário. Tente de novo.",
@@ -403,6 +403,14 @@ window.INKWELL_NO_STORE_MSG = "Your games appear here after you sign in.";
         : { visibility: vis, group_id: null };
       if (!vis.includes(":") && SEL !== SEL_OLD) Object.assign(body, { coach_email: null, coach_group_id: null });
       await CLOUD.api(`game_logs?user_id=eq.${enc(me.id)}&game_id=eq.${enc(gameId)}`, { method: "PATCH", prefer: "return=minimal", body });
+      await reload();
+    },
+    // delete one of my games and its comments; duels.ink games stay (duels.ink is their record, and the sync would bring them back)
+    canDelete: (gameId) => { const r = rows.find((x) => x.game_id === gameId && x.user_id === me.id); return player === me.id && !!r && !/^duels[._]ink$/.test(r.source || ""); },
+    async deleteGame(gameId) {
+      if (player !== me.id) throw Object.assign(new Error("not yours"), { code: "permission" });
+      await CLOUD.api(`game_notes?owner_id=eq.${enc(me.id)}&game_id=eq.${enc(gameId)}`, { method: "DELETE" });
+      await CLOUD.api(`game_logs?user_id=eq.${enc(me.id)}&game_id=eq.${enc(gameId)}`, { method: "DELETE" });
       await reload();
     },
   };
@@ -1104,6 +1112,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
         ].filter(Boolean).map((x) => x.replace(/^./, (c) => c.toUpperCase())).join(". "))}.</span>
       </div>
       <div class="rtools">
+        ${isOwner && db?.deleteGame && db.canDelete(g.key) && !/^duels[._]ink$/.test(g.doc.source || log.source || "") ? `<button type="button" class="btn ghost small danger-text" id="gameDel" data-testid="game-delete"><i class="ic i-trash"></i>${Tx("Delete game")}</button>` : ""}
         ${isOwner && db?.audiences ? `<label class="small vissel">${Tx("Who can see this game")} <select id="visSel">${db.audiences().map((o) => `<option value="${esc(o.value)}" ${o.value === (g.doc.audience || "private") ? "selected" : ""}>${esc(o.label)}</option>`).join("")}</select></label>` : isOwner ? `<span class="vis" role="group" aria-label="${Tx("Who can see this game")}"><button type="button" data-vis="private" aria-pressed="${g.coll === "games"}">${Tx("Private")}</button><button type="button" data-vis="public" aria-pressed="${g.coll === "public_games"}">${Tx("Public (one game)")}</button></span>` : `<span class="muted small">${esc(g.doc.audience_label || Tx(g.coll === "public_games" ? "Public game" : "Private game"))}</span>`}
       </div>
       ${!db ? `<div class="notice">Comments need the shared store, which isn't available in this view. You can still read the game.</div>` : !me?.id ? `<div class="notice">${Tx("Sign in to comment.")}</div>` : canWrite === false ? `<div class="notice">You can read this game. Ask the owner to make you a Contributor to comment.</div>` : ""}
@@ -1174,6 +1183,16 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     }));
     $("review").querySelectorAll("[data-vis]").forEach((b) => b.addEventListener("click", () => setVisibility(g, b.dataset.vis)));
     $("visSel")?.addEventListener("change", (e) => setVisibility(g, e.target.value));
+    $("gameDel")?.addEventListener("click", async (e) => {   // only my own games, never duels.ink ones (they come back from duels.ink and are its record)
+      const b = e.currentTarget;
+      if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.innerHTML = `<i class="ic i-trash"></i>${Tx("Delete this game and its comments?")}`; setTimeout(() => { if (b.isConnected && b.dataset.confirm === "1") { b.dataset.confirm = ""; b.innerHTML = `<i class="ic i-trash"></i>${Tx("Delete game")}`; } }, 5000); return; }
+      b.disabled = true;
+      try {
+        await db.deleteGame(g.key);
+        games.delete(g.key); current = null; $("wrap").classList.remove("reading");
+        renderList(); renderReview();
+      } catch { b.disabled = false; alertInline(Tx("Couldn't delete the game. Try again.")); }
+    });
     $("deckEdit")?.addEventListener("click", () => { $("deckBox").hidden = !$("deckBox").hidden; if (!$("deckBox").hidden) $("deckText").focus(); });
     $("deckSave")?.addEventListener("click", () => saveDeck(g));
   }
