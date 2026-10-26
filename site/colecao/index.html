@@ -21,16 +21,20 @@
  * The counter keeps every match locally until send() resolves true.
  * Only the public URL and publishable key are here; row-level security limits each user to their own rows.
  */
-// Feature flags (off by default). ?preview=visitante turns the new guest experience on for this tab only
-// (sessionStorage); ?preview=off turns it off again. Rollback = leave guestProfile false: nothing else changes.
+// Feature flags. The guest experience (Começar meu Inkwell, new Início) is on for everyone since 26/10/2026.
+// ?preview=off shows the previous experience in this tab (sessionStorage); ?preview=visitante turns it back on.
+// Rollback: set GUEST_DEFAULT to false (nothing in the database changes).
 window.INKWELL_FLAGS = (() => {
-  const f = { guestProfile: false };
+  const GUEST_DEFAULT = true;
+  const f = { guestProfile: GUEST_DEFAULT };
   try {
     const q = new URLSearchParams(location.search).get("preview");
     if (q === "visitante") sessionStorage.setItem("inkwell-preview", "visitante");
-    if (q === "off") sessionStorage.removeItem("inkwell-preview");
-    if (sessionStorage.getItem("inkwell-preview") === "visitante") f.guestProfile = true;
-  } catch { /* storage off: flags stay as set above */ }
+    if (q === "off") sessionStorage.setItem("inkwell-preview", "off");
+    const v = sessionStorage.getItem("inkwell-preview");
+    if (v === "visitante") f.guestProfile = true;
+    if (v === "off") f.guestProfile = false;
+  } catch { /* storage off: the default stays */ }
   return f;
 })();
 window.INKWELL_CLOUD = (() => {
