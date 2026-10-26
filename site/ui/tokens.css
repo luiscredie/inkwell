@@ -827,3 +827,11 @@ html[data-theme="dia"] .tabbar { background: rgba(255,255,255,.97); border-top: 
 html[data-theme="dia"] body { background-attachment: scroll; }
 html[data-theme="dia"] input[type=date]::-webkit-calendar-picker-indicator { filter: none; }
 html[data-theme="dia"] .empty img { opacity: .45; }
+
+/* card zoom (shell.js): the whole card, never cropped */
+dialog.iw-zoom-card { padding: 0; border: 0; background: transparent; max-width: min(92vw, 520px); max-height: 92dvh; overflow: visible; }
+dialog.iw-zoom-card::backdrop { background: rgba(8,6,20,.82); }
+dialog.iw-zoom-card figure { margin: 0; display: grid; gap: var(--sp-2); justify-items: center; }
+dialog.iw-zoom-card img { display: block; max-width: min(92vw, 520px); max-height: 84dvh; width: auto; height: auto; object-fit: contain; border-radius: 4.5% / 3.2%; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+dialog.iw-zoom-card figcaption { color: #fff; font-weight: 600; text-align: center; font-size: var(--fs-small); }
+dialog.iw-zoom-card [data-zclose] { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 12px); right: 12px; color: #fff; background: rgba(0,0,0,.4); }

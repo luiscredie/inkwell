@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#0b192c">
 <link rel="icon" href="../ink/icon-192.png">
 <link rel="apple-touch-icon" href="../ink/icon-192.png">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="../ui/tokens.css"><script>try{document.documentElement.dataset.theme=localStorage.getItem("inkwell-theme")==="noite"?"noite":"dia"}catch(e){document.documentElement.dataset.theme="dia"}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="../ui/tokens.css"><link rel="stylesheet" href="../ui/iw-public.css"><script>try{document.documentElement.dataset.theme=localStorage.getItem("inkwell-theme")==="noite"?"noite":"dia"}catch(e){document.documentElement.dataset.theme="dia"}</script>
 </head>
 <body>
 <script>window.INKWELL_CLOUD_CONFIG = {"url": "https://sorefaetiaebmjploanp.supabase.co", "key": "sb_publishable_RkAWW-ENz70CXA6_QV7aHw_MpfD7Gn2", "redirect": "https://luiscredie.github.io/inkwell/perfil/"};
@@ -93,6 +93,17 @@
 .invite-box input { flex: 1; min-width: 0; font-size: var(--fs-small); }
 .pc-prev { width: 100%; max-width: 320px; border-radius: 14px; box-shadow: var(--e2); display: block; }
 @media (max-width: 560px) { .mi-cover { height: 104px; } .mi-body { padding: 0 var(--sp-4) var(--sp-4); } .mi-av { width: 88px; height: 88px; } .mi-id { margin-top: -48px; padding: 0 var(--sp-4) var(--sp-4); gap: var(--sp-3); } .mi-acts { padding: 0 var(--sp-4) var(--sp-4); } }
+/* editor: the showcase as three real cards, like Começar meu Inkwell */
+.ed-slots.iw-public { background: none; }
+.ed-slots .iw-slots { max-width: 560px; }
+.ed-slots .iw-slot > * { min-width: 0; }
+.ed-slots .seg { display: flex; width: 100%; min-width: 0; } .ed-slots .seg button { flex: 1 1 0; min-width: 0; padding-inline: 2px; font-size: var(--fs-micro); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ed-slots .iw-slot .iw-actions [data-spick] { grid-column: 1 / -1; }
+.ed-slots .iw-actions .iw-button { min-height: 40px; }
+@media (max-width: 560px) { .ed-slots .seg { flex-direction: column; } .ed-slots .iw-card-label { font-size: var(--fs-micro); } .ed-slots .iw-slots { gap: 6px; } }
+.ed-slots .iw-zbtn { display: block; width: 100%; padding: 0; border: 0; background: none; color: inherit; cursor: zoom-in; border-radius: 10px; }
+.iw-dialog .iw-zbtn { display: block; width: 100%; padding: 0; border: 0; background: none; color: inherit; cursor: zoom-in; border-radius: 10px; }
+.mi-show .tag.foil { margin-top: 2px; }
 @media (prefers-reduced-motion: no-preference) { .mi-show .thumb { transition: transform var(--t-med) var(--ease); } .mi-show figure:hover .thumb { transform: translateY(-4px) rotate(-.6deg); } }
 </style>
 
@@ -101,6 +112,8 @@
   <div id="app"></div>
 </main>
 <dialog class="sheet" id="sheet" aria-labelledby="shT"></dialog>
+<dialog class="iw-dialog iw-public" id="cardPicker" aria-labelledby="pkT"></dialog>
+<script>/*@PICKER_JS@*/</script>
 <div class="toast-host"><div class="toast" id="toast" role="status" hidden></div></div>
 
 <script>
@@ -120,7 +133,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "Report sent. Thank you.": "Denúncia enviada. Obrigado.", "Couldn't send. Try again.": "Não foi possível enviar. Tente de novo.", "Close": "Fechar",
     "Profile not found": "Perfil não encontrado", "It doesn't exist, or its owner keeps it private.": "Ele não existe ou o dono deixou privado.",
     "Your corner of the Lorcana community": "Seu canto na comunidade de Lorcana", "Show your favourite cards, your deck and your games. Invite your friends.": "Mostre suas cartas favoritas, seu deck e seus jogos. Convide seus amigos.",
-    "Sign in": "Entrar", "Use your e-mail. We e-mail you a code, no password.": "Use seu e-mail. Mandamos um código por e-mail, sem senha.", "See an example": "Ver um exemplo",
+    "Sign in": "Entrar", "Use your e-mail. We e-mail you a code, no password.": "Use seu e-mail. Mandamos um código por e-mail, sem senha.", "Start my Inkwell": "Começar meu Inkwell", "See an example": "Ver um exemplo",
     "{name} invited you to Inkwell": "{name} convidou você para o Inkwell", "Sign in and you become friends.": "Entre e aceite o pedido de amizade.", "Someone": "Alguém",
     "You and {name} are now friends.": "Agora você e {name} são amigos.", "This invite link is no longer valid.": "Este convite não vale mais.",
     "Public": "Público", "Private": "Privado", "Only you see this profile.": "Só você vê este perfil.", "Anyone with the link sees this profile.": "Qualquer pessoa com o link vê este perfil.",
@@ -129,6 +142,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "About you": "Sobre você", "One or two lines: how you play, what you collect.": "Uma ou duas linhas: como você joga, o que coleciona.", "City": "Cidade", "Only shown for adults. Leave empty to hide.": "Só aparece para maiores de idade. Deixe vazio para esconder.",
     "Favourite inks": "Tintas favoritas", "Pick up to 2.": "Escolha até 2.",
     "Avatar": "Avatar", "Pick a card: its art becomes your picture.": "Escolha uma carta: a arte dela vira sua foto.", "Search a card": "Buscar carta", "Type at least 2 letters.": "Digite pelo menos 2 letras.", "No card found.": "Nenhuma carta encontrada.",
+    "Up to 3 cards, in the exact printing and finish. \"I own it\" only for cards in your collection.": "Até 3 cartas, na edição e no acabamento exatos. \"Tenho\" só para cartas da sua coleção.",
+    "Choose card": "Escolher carta", "Replace card": "Trocar carta", "Move left": "Mover para a esquerda", "Move right": "Mover para a direita", "Remove from showcase": "Remover da vitrine",
+    "Slot {n}": "Posição {n}", "foil": "foil", "This card is no longer in the catalogue. Choose another.": "Esta carta não está mais no catálogo. Escolha outra.",
     "Up to 3 cards. Mark \"I own it\" only for cards in your collection.": "Até 3 cartas. Marque \"Tenho\" só nas que estão na sua coleção.", "I own it": "Tenho", "Favourite": "Favorita", "Remove": "Tirar", "Add a card": "Pôr carta",
     "No deck": "Nenhum deck", "Which of your decks people see.": "Qual dos seus decks as pessoas veem.",
     "Privacy": "Privacidade", "I am 18 or older": "Tenho 18 anos ou mais", "Required for a public profile.": "Necessário para o perfil público.",
@@ -177,6 +193,8 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const setName = (code) => { const s = SETS.find((x) => x.code === code); return s ? (lang === "pt" && s.name_pt) || s.name_en || code : code; };
   const CARDS = (CARD_INDEX?.cards || []).map(([id, name, cost, type, ink, rarity, set, num, img]) => ({ id, name: name || id, cost, type, ink, rarity, set, num, img, k: norm(`${name} ${set} ${num}`) }));
   const BY = new Map(CARDS.map((c) => [c.id, c]));
+  const picker = window.INKWELL_CARD_PICKER({ dialog: $("cardPicker"), cards: CARDS, sets: CARD_INDEX?.sets || [], lang,
+    signedIn: () => !!CLOUD?.user()?.id, loadCollection: async () => (editing ? pickProfile(editing).collection : null) });
   const imgUrl = (c) => (c?.img ? `../lorcana-card-images/${encodeURI(c.img).replace(/'/g, "%27")}` : "");
   const thumb = (c, cls = "") => `<span class="thumb ${cls}" data-ink="${(inksOf(c || {})[0] || "steel").toLowerCase()}">${c?.img ? `<img src="${imgUrl(c)}" alt="${esc(c.name)}" loading="lazy" decoding="async" onerror="this.remove()">` : ""}</span>`;
   const artStyle = (id) => { const c = BY.get(id); return c?.img ? `background-image:url('${imgUrl(c)}')` : ""; };
@@ -274,7 +292,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       <div class="mi-cols">
         <div class="mi-col">
           <section class="mi-sec mi-showsec"><div class="group-head"><h3>${Tx("Showcase")}</h3></div>
-            ${show.length ? `<div class="mi-show" data-testid="showcase">${show.map((s) => { const c = BY.get(s.id); return `<figure>${thumb(c)}<figcaption>${esc(split(c.name)[0])}</figcaption><span class="tag ${s.own ? "match" : "accent"}">${Tx(s.own ? "owns it" : "favourite")}</span></figure>`; }).join("")}</div>` : `<p class="mi-empty">${Tx("Nothing here yet.")}</p>`}</section>
+            ${show.length ? `<div class="mi-show" data-testid="showcase">${show.map((s) => { const c = BY.get(s.id); return `<figure>${thumb(c)}<figcaption>${esc(split(c.name)[0])}</figcaption><span class="tag ${s.own ? "match" : "accent"}">${Tx(s.own ? "owns it" : "favourite")}</span>${s.foil ? `<span class="tag foil">${Tx("foil")}</span>` : ""}</figure>`; }).join("")}</div>` : `<p class="mi-empty">${Tx("Nothing here yet.")}</p>`}</section>
           ${recBox}
           ${deck ? deckView(p, deck) : ""}
         </div>
@@ -359,7 +377,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   function welcome() {
     $("app").innerHTML = `<section class="mi-hero" style="padding:var(--sp-8) var(--sp-5)"><h2 class="mi-name">${Tx("Your corner of the Lorcana community")}</h2>
       <p class="muted" style="max-width:52ch">${Tx("Show your favourite cards, your deck and your games. Invite your friends.")}</p>
-      <div class="row" style="gap:var(--sp-2);flex-wrap:wrap"><button type="button" class="btn primary" data-signin>${Tx("Sign in")}</button><a class="btn" href="?u=rafa_exemplo">${Tx("See an example")}</a></div>
+      <div class="row" style="gap:var(--sp-2);flex-wrap:wrap"><button type="button" class="btn primary" data-signin>${Tx("Sign in")}</button><a class="btn" href="../comecar/">${Tx("Start my Inkwell")}</a></div>
       <p class="small faint" style="margin-top:var(--sp-3)">${Tx("Use your e-mail. We e-mail you a code, no password.")}</p></section>`;
     wireInvite();
   }
@@ -371,11 +389,11 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     decksBy = (ip || []).map((x) => ({ profile: x.profile, decks: Array.isArray(x.decks) ? x.decks : [], collection: x.collection && typeof x.collection === "object" ? x.collection : {} }));
   }
   const pickProfile = (e) => decksBy.find((x) => x.profile === e.inkwell_profile) || decksBy.slice().sort((a, b) => b.decks.length - a.decks.length)[0] || { decks: [], collection: {} };
-  const ownsCard = (e, id) => { const c = pickProfile(e).collection[id] || {}; return (+c.n || 0) + (+c.f || 0) > 0; };
+  const ownsCard = (e, id, foil) => { const c = pickProfile(e).collection[id] || {}; return foil === undefined ? (+c.n || 0) + (+c.f || 0) > 0 : (+c[foil ? "f" : "n"] || 0) > 0; };
   function asPublic(e) {   // what others would see, built locally
     const deck = pickProfile(e).decks.find((d) => d.id === e.featured_deck);
     return { name: e.display_name, handle: e.handle, bio: e.bio, motto: e.motto, avatar: e.avatar_card, inks: e.inks, city: e.adult ? e.city : "",
-      showcase: (e.showcase || []).map((s) => ({ id: s.id, own: s.k === "own" && ownsCard(e, s.id) })),
+      showcase: (e.showcase || []).map((s) => ({ id: s.id, foil: !!s.foil, own: s.k === "own" && ownsCard(e, s.id, !!s.foil) })),
       deck: deck ? { name: deck.name, format: deck.format, colors: deck.colors, cards: deck.cards } : null, record: null, trade: null, mock: false };
   }
   function cardSearch(id, q, onPick, disabled = () => false) {
@@ -383,7 +401,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     const found = q.trim().length >= 2 ? CARDS.filter((c) => c.img && words.every((w) => c.k.includes(w))).slice(0, 12) : [];
     return `<div class="sugg static" id="${id}" role="listbox">${q.trim().length < 2 ? `<div class="none">${Tx("Type at least 2 letters.")}</div>` : found.length ? found.map((c) => `<button type="button" role="option" data-pick="${esc(c.id)}" ${disabled(c.id) ? "disabled" : ""}>${thumb(c)}<span>${esc(split(c.name).join(" · ").replace(/ · $/, ""))}<small>${esc(setName(c.set))} · nº ${esc(c.num)}</small></span></button>`).join("") : `<div class="none">${Tx("No card found.")}</div>`}</div>`;
   }
-  let qAv = "", qShow = "";
+  let qAv = "";
   async function editor() {
     if (!mine) { try { await loadMine(); } catch { $("app").innerHTML = emptyBox("error", Tx("The profile is not available yet."), Tx("Check your connection and try again."), `<button type="button" class="btn" id="retry"><i class="ic i-refresh"></i>${Tx("Try again")}</button>`); $("retry").onclick = () => editor(); return; } }
     editing = editing || JSON.parse(JSON.stringify({ display_name: mine.display_name || "", handle: mine.handle || "", bio: mine.bio || "", motto: mine.motto || "", avatar_card: mine.avatar_card || null, inks: mine.inks || [], city: mine.city || "",
@@ -410,12 +428,20 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
         <div class="form-block"><h3>${Tx("Avatar")}</h3><p class="small muted" style="margin:0">${Tx("Pick a card: its art becomes your picture.")}</p>
           <div class="row" style="gap:var(--sp-3)">${e.avatar_card ? `<span class="mi-av sm" style="${artStyle(e.avatar_card)}"></span><span class="small">${esc(BY.get(e.avatar_card)?.name || "")}</span>` : ""}</div>
           <div class="picker"><input id="qAv" type="search" value="${esc(qAv)}" placeholder="${Tx("Search a card")}" aria-label="${Tx("Search a card")}" autocomplete="off"></div>${qAv ? cardSearch("avRes", qAv) : ""}</div>
-        <div class="form-block"><h3>${Tx("Showcase")}</h3><p class="small muted" style="margin:0">${Tx("Up to 3 cards. Mark \"I own it\" only for cards in your collection.")}</p>
-          <div class="ed-show">${e.showcase.map((s, i) => { const c = BY.get(s.id); if (!c) return ""; const owns = ownsCard(e, s.id);
-            return `<div class="list-row on-field">${thumb(c, "sm")}<span class="t"><span>${esc(split(c.name).join(" · ").replace(/ · $/, ""))}</span><span class="meta">${esc(setName(c.set))} · nº ${esc(c.num)}</span></span>
-              <span class="trail" style="gap:var(--sp-2)"><span class="seg" role="group"><button type="button" data-sk="${i}:own" aria-pressed="${s.k === "own"}" ${owns ? "" : "disabled"}>${Tx("I own it")}</button><button type="button" data-sk="${i}:fav" aria-pressed="${s.k !== "own"}">${Tx("Favourite")}</button></span>
-              <button type="button" class="btn ghost icon small" data-sdel="${i}" aria-label="${Tx("Remove")}"><i class="ic i-close"></i></button></span></div>`; }).join("")}</div>
-          ${e.showcase.length < 3 ? `<div class="picker"><input id="qShow" type="search" value="${esc(qShow)}" placeholder="${Tx("Add a card")}" aria-label="${Tx("Add a card")}" autocomplete="off"></div>${qShow ? cardSearch("showRes", qShow, (id) => e.showcase.some((s) => s.id === id)) : ""}` : ""}</div>
+        <div class="form-block" data-testid="ed-showcase"><h3>${Tx("Showcase")}</h3><p class="small muted" style="margin:0">${Tx("Up to 3 cards, in the exact printing and finish. \"I own it\" only for cards in your collection.")}</p>
+          <div class="ed-slots iw-public"><div class="iw-slots">${[0, 1, 2].map((i) => {
+            const s = e.showcase[i], c = s && BY.get(s.id), n = i + 1;
+            if (!s) return `<div class="iw-slot" data-slot="${i}"><button type="button" class="iw-card empty" data-spick="${i}" aria-label="${esc(Tx("Choose card") + " · " + Tx("Slot {n}", { n }))}" ${i > e.showcase.length ? "disabled" : ""}>${Tx("Choose card")}</button></div>`;
+            const owns = c && ownsCard(e, s.id, !!s.foil);
+            return `<div class="iw-slot" data-slot="${i}">${c ? `<button type="button" class="iw-zbtn" data-spick="${i}" aria-label="${esc(Tx("Replace card") + " · " + Tx("Slot {n}", { n }))}">${picker.cardFace(c, !!s.foil)}</button>` : `<span class="iw-card empty" role="img" aria-label="${esc(s.id)}"></span><span class="warn">${Tx("This card is no longer in the catalogue. Choose another.")}</span>`}
+              <div class="iw-card-label">${c ? `${esc(split(c.name)[0])}<small>${esc(setName(c.set))} · nº ${esc(c.num)}${s.foil ? " · " + Tx("foil") : ""}</small>` : esc(s.id)}</div>
+              ${c ? `<div class="seg" role="group" aria-label="${esc(Tx("Slot {n}", { n }))}"><button type="button" data-sk="${i}:own" aria-pressed="${s.k === "own" && owns}" ${owns ? "" : "disabled"}>${Tx("I own it")}</button><button type="button" data-sk="${i}:fav" aria-pressed="${!(s.k === "own" && owns)}">${Tx("Favourite")}</button></div>` : ""}
+              <div class="iw-actions">
+                <button type="button" class="iw-button small" data-spick="${i}">${Tx("Replace card")}</button>
+                <button type="button" class="iw-button small" data-smove="${i}:-1" aria-label="${esc(Tx("Move left") + " · " + Tx("Slot {n}", { n }))}" ${i === 0 ? "disabled" : ""}>◀</button>
+                <button type="button" class="iw-button small" data-smove="${i}:1" aria-label="${esc(Tx("Move right") + " · " + Tx("Slot {n}", { n }))}" ${i >= e.showcase.length - 1 ? "disabled" : ""}>▶</button>
+                <button type="button" class="iw-button small" data-sdel="${i}" aria-label="${esc(Tx("Remove from showcase") + " · " + Tx("Slot {n}", { n }))}">✕</button></div></div>`;
+          }).join("")}</div></div></div>
         <div class="form-block"><h3>${Tx("Featured deck")}</h3>
           ${decksBy.length > 1 ? `<label class="field">${Tx("Which Inkwell collection")}<select id="fProf">${decksBy.map((x) => `<option value="${esc(x.profile)}" ${x.profile === prof.profile ? "selected" : ""}>${esc(x.profile)}</option>`).join("")}</select><span class="hint">${Tx("Used for \"I own it\" and the featured deck.")}</span></label>` : ""}
           <label class="field">${Tx("Which of your decks people see.")}<select id="fDeck"><option value="">${Tx("No deck")}</option>${prof.decks.map((d) => `<option value="${esc(d.id)}" ${d.id === e.featured_deck ? "selected" : ""}>${esc(d.name || d.id)}</option>`).join("")}</select></label></div>
@@ -492,11 +518,18 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     document.querySelectorAll("[data-ink]").forEach((b) => b.onclick = () => { if (!b.closest(".ed-inks")) return; const i = b.dataset.ink; set("inks", e.inks.includes(i) ? e.inks.filter((x) => x !== i) : [...e.inks, i].slice(-2)); });
     $("qAv").oninput = (ev) => { qAv = ev.target.value; drawEditor(); };
     document.querySelectorAll("#avRes [data-pick]").forEach((b) => b.onclick = () => { qAv = ""; set("avatar_card", b.dataset.pick); });
-    if ($("qShow")) $("qShow").oninput = (ev) => { qShow = ev.target.value; drawEditor(); };
-    document.querySelectorAll("#showRes [data-pick]").forEach((b) => b.onclick = () => { qShow = ""; const id = b.dataset.pick; set("showcase", [...e.showcase, { id, k: ownsCard(e, id) ? "own" : "fav" }].slice(0, 3)); });
+    document.querySelectorAll("[data-spick]").forEach((b) => b.onclick = () => {
+      const i = Math.min(+b.dataset.spick, e.showcase.length), cur = e.showcase[i] || null;
+      picker.open({ current: cur, taken: e.showcase.filter((_, j) => j !== i), from: b, onUse: ({ id, foil }) => {
+        const sc = e.showcase.slice(); sc[i] = { id, k: ownsCard(e, id, foil) ? "own" : "fav", ...(foil ? { foil: true } : {}) };
+        set("showcase", sc.slice(0, 3));
+        setTimeout(() => document.querySelector(`[data-slot="${i}"] [data-spick]`)?.focus(), 0);
+      } });
+    });
+    document.querySelectorAll("[data-smove]").forEach((b) => b.onclick = () => { const [i, dx] = b.dataset.smove.split(":").map(Number), j = i + dx, sc = e.showcase.slice(); if (!sc[j]) return; [sc[i], sc[j]] = [sc[j], sc[i]]; set("showcase", sc); });
     document.querySelectorAll("[data-sk]").forEach((b) => b.onclick = () => { const [i, k] = b.dataset.sk.split(":"); const s = e.showcase.slice(); s[+i] = { ...s[+i], k }; set("showcase", s); });
     document.querySelectorAll("[data-sdel]").forEach((b) => b.onclick = () => set("showcase", e.showcase.filter((_, i) => i !== +b.dataset.sdel)));
-    if ($("fProf")) $("fProf").onchange = (ev) => { e.inkwell_profile = ev.target.value; e.featured_deck = ""; dirty = true; drawEditor(); };
+    if ($("fProf")) $("fProf").onchange = (ev) => { e.inkwell_profile = ev.target.value; e.featured_deck = ""; dirty = true; picker.resetCollection(); drawEditor(); };
     $("fDeck").onchange = (ev) => set("featured_deck", ev.target.value);
     $("fAdult").onchange = (ev) => { e.adult = ev.target.checked; if (!e.adult) { e.is_public = false; } dirty = true; drawEditor(); };
     $("fPublic").onchange = (ev) => set("is_public", ev.target.checked);
