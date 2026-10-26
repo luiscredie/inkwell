@@ -204,7 +204,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     if (!me) return signInBox();
     if (!HISTORY) { loadHistory(); return `<div class="skel" style="height:180px"></div><p class="sr-only">${Tx("Loading…")}</p>`; }
     const col = coll();
-    const valueAt = (pm) => { let s = 0; for (const id in col) { const p = pm[id]; if (!p) continue; const n = p.nl ?? p.n ?? null, f = p.fl ?? p.f ?? n; s += (n || 0) * (+col[id].n || 0) + (f || 0) * (+col[id].f || 0); } return Math.round(s * 100) / 100; };
+    // cards without a price on that date (no TCGplayer history: promos priced from Liga Lorcana) count at today's
+    // price, so the last point matches "Value now" and the line moves only with the cards that do have history
+    const valueAt = (pm) => { let s = 0; for (const id in col) { const p = pm[id]; const n = p ? p.nl ?? p.n ?? null : priceN(id), f = p ? p.fl ?? p.f ?? n : priceF(id); s += (n || 0) * (+col[id].n || 0) + (f || 0) * (+col[id].f || 0); } return Math.round(s * 100) / 100; };
     const maxCov = Math.max(1, ...HISTORY.map((s) => Object.keys(s.prices || {}).length));
     const pts = HISTORY.filter((s) => Object.keys(s.prices || {}).length >= maxCov * 0.5).map((s) => ({ d: s.date, v: valueAt(s.prices || {}) }));
     let now = 0, cards = 0; const top = [];
@@ -214,7 +216,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     const first = pts[0]?.v, last = pts[pts.length - 1]?.v, ch = first ? ((last - first) / first) * 100 : null;
     let chart = "";
     if (pts.length >= 2) {
-      const W = 600, H = 180, P = 24, lo = Math.min(...pts.map((p) => p.v)), hi = Math.max(...pts.map((p) => p.v)), span = hi - lo || 1;
+      const W = 600, H = 180, P = 24, lo = 0, hi = Math.max(...pts.map((p) => p.v)) || 1, span = hi - lo;   // from zero: a 1% move looks like 1%
       const x = (i) => P + (i * (W - 2 * P)) / (pts.length - 1), y = (val) => H - P - ((val - lo) / span) * (H - 2 * P);
       const d = pts.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join(" ");
       chart = `<svg class="vchart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${esc(Tx("Collection value"))}"><path class="area" d="${d} L${x(pts.length - 1)},${H - P} L${x(0)},${H - P} Z"></path><path class="line" d="${d}"></path>

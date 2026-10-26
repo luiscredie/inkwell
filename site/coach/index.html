@@ -80,7 +80,7 @@ window.INKWELL_NO_STORE_MSG = "Your games appear here after you sign in.";
     "One card per line, e.g.\n4 Elsa - Spirit of Winter\n4 Tipo - Growing Son": "Uma carta por linha, por exemplo\n4 Elsa - Spirit of Winter\n4 Tipo - Growing Son",
     "All {n} games of this match": "Todos os {n} jogos desta partida", "Save deck list": "Salvar lista",
     "Turn {n}: {name}": "Turno {n}: {name}", "lore {s}": "lore {s}",
-    "Your comment": "Seu comentário", "Cancel": "Cancelar", "Comment": "Comentar", "Delete": "Apagar", "Delete game": "Apagar jogo", "Delete this game and its comments?": "Apagar este jogo e os comentários?", "Couldn't delete the game. Try again.": "Não foi possível apagar o jogo. Tente de novo.", "Confirm delete": "Confirmar",
+    "Your comment": "Seu comentário", "Cancel": "Cancelar", "Comment": "Comentar", "Delete": "Apagar", "Delete game": "Apagar jogo", "Not found in the catalogue: {list}": "Não encontradas no catálogo: {list}", "Delete this game and its comments?": "Apagar este jogo e os comentários?", "Couldn't delete the game. Try again.": "Não foi possível apagar o jogo. Tente de novo.", "Confirm delete": "Confirmar",
     "Someone": "Alguém", "You": "Você", "A player": "Um jogador",
     "The comment store is full. Delete old comments to add new ones.": "O espaço de comentários está cheio. Apague comentários antigos.",
     "Couldn't save the comment. Try again.": "Não foi possível salvar o comentário. Tente de novo.",
@@ -1264,6 +1264,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
           ${siblings(g.key).length > 1 ? `<label class="small"><input type="checkbox" id="deckAll" checked> ${Tx("All {n} games of this match", { n: siblings(g.key).length })}</label>` : ""}
           <div class="row"><button type="button" class="btn primary small" id="deckSave">${Tx("Save deck list")}</button></div></div><span class="small" id="deckMsg" aria-live="polite">${deckNotice?.key === g.key ? esc(deckNotice.text) : ""}</span></div>` : ""}
         ${deck.length ? `<div class="decklist">${deck.map((e) => `<div><span class="q">${e.qty}</span><span>${esc(cardName(e.card_id))}</span></div>`).join("")}</div>` : ""}
+        ${(log.players.find((p) => p.is_me)?.deck?.unresolved || []).length ? `<p class="small muted" data-testid="deck-unresolved">${esc(Tx("Not found in the catalogue: {list}", { list: log.players.find((p) => p.is_me).deck.unresolved.map((u) => `${u.qty} ${u.name || u.duels_id}`).join(", ") }))}</p>` : ""}
         <div style="margin-top:8px">${add("deck", Tx("Comment on the deck list"))}${notesHtml("deck", profilesMap)}</div>
       </details>` : ""}`;
     for (const t of log.turns) {
@@ -1893,17 +1894,18 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
   window.INKWELL_MARK_SEEN = () => { try { localStorage.setItem(SEEN_KEY, new Date().toISOString()); } catch { /* */ } if (news) { news.posts = 0; showNews(); } };
   function showNews() {
     const b = $("iwBadge"); if (!b || !news) return;
-    const n = news.requests + news.recados + news.posts;
+    const n = news.requests + news.recados + news.posts + (news.wants || 0);
     b.hidden = !n; b.textContent = n > 9 ? "9+" : String(n);
     $("iwAcct")?.setAttribute("aria-label", n ? T(`Sua conta · ${n} novidades`, `Your account · ${n} new`) : T("Sua conta", "Your account"));
   }
   const newsMenu = () => {
-    if (!news || !(news.requests + news.recados + news.posts)) return "";
+    if (!news || !(news.requests + news.recados + news.posts + (news.wants || 0))) return "";
     const item = (href, ic, text, n) => (n ? `<a class="menu-item" role="menuitem" href="${href}"><i class="ic i-${ic}"></i>${text}<span class="trail"><span class="count">${n}</span></span></a>` : "");
     return `<div class="menu-sep"></div><div class="menu-label">${T("Novidades", "New for you")}</div>
       ${item("../feed/#amigos", "user-plus", news.requests === 1 ? T("Pedido de amizade", "Friend request") : T("Pedidos de amizade", "Friend requests"), news.requests)}
       ${item("../perfil/?editar=1#recados", "comment", news.recados === 1 ? T("Recado para aprovar", "Recado to approve") : T("Recados para aprovar", "Recados to approve"), news.recados)}
-      ${item("../feed/", "board", T("Mensagens nas comunidades", "Community messages"), news.posts)}`;
+      ${item("../feed/", "board", T("Mensagens nas comunidades", "Community messages"), news.posts)}
+      ${item("../trades/?tab=board", "trades", news.wants === 1 ? T("Carta que você quer no mural", "A card you want on the board") : T("Cartas que você quer no mural", "Cards you want on the board"), news.wants || 0)}`;
   };
   $("iwAcct")?.addEventListener("click", (e) => openMenu(e.currentTarget, `
     <div class="menu-head"><span class="av lg">${esc((profileName || me.email || "?")[0].toUpperCase())}</span><div class="t"><b>${esc(profileName || T("Sua conta", "Your account"))}</b><div class="small">${esc(me.email || "")}</div></div></div>
@@ -1911,7 +1913,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     <div class="menu-sep"></div>
     <a class="menu-item" role="menuitem" href="../perfil/?editar=1"><i class="ic i-users"></i>${T("Meu Inkwell", "My Inkwell")}</a>
     <a class="menu-item" role="menuitem" href="../comunidades/"><i class="ic i-board"></i>${T("Comunidades", "Communities")}</a>
-    <a class="menu-item" role="menuitem" href="../feed/#amigos"><i class="ic i-shield"></i>${T("Privacidade e amigos", "Privacy and friends")}</a>
+    <a class="menu-item" role="menuitem" href="../feed/#amigos"><i class="ic i-user-plus"></i>${T("Amigos e privacidade", "Friends and privacy")}</a>
     <a class="menu-item" role="menuitem" href="../coach/"><i class="ic i-refresh"></i>${T("Jogos do duels.ink", "duels.ink games")}${syncAgo ? `<span class="trail">${esc(syncAgo)}</span>` : ""}</a>
     ${isAdmin ? `<a class="menu-item" role="menuitem" href="../admin/"><i class="ic i-shield"></i>Admin</a>` : ""}
     <a class="menu-item" role="menuitem" href="../privacidade/"><i class="ic i-info"></i>${T("Termos e privacidade", "Terms and privacy")}</a>
@@ -1941,6 +1943,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       <button type="button" class="btn ghost icon" data-close aria-label="${T("Fechar", "Close")}"><i class="ic i-close"></i></button></div>
     <div class="sheet-body"><nav class="more-list" aria-label="${T("Mais seções", "More sections")}">
       ${MORE.map(([k, href, label, ic]) => `<a class="menu-item" href="${href}"${cur(k)} data-iw="${k}"><i class="ic i-${ic}"></i>${label}${k === "trades" ? '<span class="trail"><span class="count" data-trades-count hidden></span></span>' : ""}</a>`).join("")}
+      <a class="menu-item" href="../feed/#amigos"><i class="ic i-user-plus"></i>${T("Amigos", "Friends")}</a>
       <a class="menu-item" href="../counter/"><i class="ic i-counter"></i>${T("Contador de lore", "Lore counter")}</a>
     </nav></div>`;
   document.body.append(more);
@@ -2100,11 +2103,31 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       if (!h) return;
       let since = seenAt();
       if (!since) { window.INKWELL_MARK_SEEN(); since = Date.now(); }   // first visit: only what comes after counts
-      news = { requests: (h.friend_requests || []).length, recados: +h.recados_waiting || 0,
+      news = { wants: news?.wants || 0, requests: (h.friend_requests || []).length, recados: +h.recados_waiting || 0,
         posts: (h.community_posts || []).filter((p) => !p.mine && Date.parse(p.at) > since).length };
       if (page === "feed") news.posts = 0;   // Início shows them in "Para você"
       showNews();
     }).catch(() => {});
+    // Someone put a card I want (my wishlist or my "I want" posts) on the trade board: count the new ones.
+    const WANT_KEY = `inkwell-wantseen-${me.id}`;
+    window.INKWELL_WANTS_SEEN = () => { try { localStorage.setItem(WANT_KEY, new Date().toISOString()); } catch { /* */ } if (news) { news.wants = 0; showNews(); } };
+    (async () => {
+      if (page === "trades") return;
+      const [cols, mine] = await Promise.all([
+        CLOUD.api("inkwell_profiles?select=wishlist:data->wishlist").catch(() => []),
+        CLOUD.api(`listings?user_id=eq.${me.id}&kind=in.(buy,borrow)&select=card_id`).catch(() => []),
+      ]);
+      const ids = [...new Set([...(cols || []).flatMap((c) => (c.wishlist && typeof c.wishlist === "object" ? Object.keys(c.wishlist) : [])), ...(mine || []).map((l) => l.card_id)])]
+        .filter((id) => /^[A-Za-z0-9-]+$/.test(id));
+      if (!ids.length) return;
+      let since = ""; try { since = localStorage.getItem(WANT_KEY) || ""; } catch { /* */ }
+      let n = 0;
+      for (let i = 0; i < ids.length && i < 600; i += 60) {
+        const q = `listings?kind=in.(lend,sell)&user_id=neq.${me.id}&card_id=in.(${ids.slice(i, i + 60).map((x) => `"${x}"`).join(",")})${since ? `&created_at=gt.${encodeURIComponent(since)}` : ""}&select=id&limit=100`;
+        n += ((await CLOUD.api(q).catch(() => [])) || []).length;
+      }
+      news = news || { requests: 0, recados: 0, posts: 0 }; news.wants = n; showNews();
+    })();
     // an invite link opened before signing in (perfil/?convite=…): accept it on whichever page the sign-in lands
     let inv = null; try { inv = localStorage.getItem("inkwell-invite"); } catch { /* */ }
     if (inv && page !== "profile") {
@@ -2121,6 +2144,25 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       syncAgo = m < 1 ? T("agora", "now") : m < 60 ? T(`há ${m} min`, `${m} min ago`) : T(`há ${Math.round(m / 60)} h`, `${Math.round(m / 60)} h ago`);
     }).catch(() => {});
   }
+
+  // ---------- tap a card thumbnail to see it large (any page; not where the thumbnail is already a button or link) ----------
+  const zoom = document.createElement("dialog");
+  zoom.className = "iw-zoom-card"; zoom.id = "iwZoom"; zoom.setAttribute("aria-label", T("Carta ampliada", "Card, larger"));
+  zoom.innerHTML = `<button type="button" class="btn ghost icon" data-zclose aria-label="${T("Fechar", "Close")}"><i class="ic i-close"></i></button><figure><img alt=""><figcaption></figcaption></figure>`;
+  document.body.append(zoom);
+  zoom.addEventListener("click", () => zoom.close());
+  const zoomable = (el) => { const t = el.closest?.(".thumb, .iw-card"); if (!t || !t.querySelector("img") || t.closest("a, button, label, summary, dialog.iw-dialog, #iwZoom, [role=button], [data-nozoom]")) return null; return t; };
+  document.addEventListener("click", (e) => {
+    const t = zoomable(e.target); if (!t) return;
+    const img = t.querySelector("img");
+    e.preventDefault(); e.stopPropagation();
+    zoom.querySelector("img").src = img.currentSrc || img.src;
+    zoom.querySelector("img").alt = img.alt || "";
+    zoom.querySelector("figcaption").textContent = img.alt || "";
+    zoom.querySelector("figcaption").hidden = !img.alt;
+    zoom.showModal();
+  }, true);
+  document.addEventListener("mouseover", (e) => { const t = zoomable(e.target); if (t) t.style.cursor = "zoom-in"; });
 })();
 </script>
 </body>

@@ -154,10 +154,13 @@ test('my profile: private by default; public needs an address and 18+; card and 
   await page.locator('.ed-inks [data-ink="Ruby"]').click();   // a third ink replaces the oldest
   await page.locator('#qAv').fill('abuelita');
   await page.locator('#avRes [data-pick]').first().click();
-  await page.locator('#qShow').fill('rapunzel tower');
-  await page.locator('#showRes [data-pick="LOR13-80"]').click();
-  await page.locator('#qShow').fill('fru fru');
-  await page.locator('#showRes [data-pick="LOR14-1"]').click();
+  await page.locator('[data-spick="0"]').click();
+  await page.locator('#pkQ').fill('rapunzel tower');
+  await page.locator('#cardPicker [data-card="LOR13-80"] [data-use]').click();
+  await expect(page.locator('#cardPicker')).not.toBeVisible();
+  await page.locator('[data-spick="1"]').first().click();
+  await page.locator('#pkQ').fill('fru fru');
+  await page.locator('#cardPicker [data-card="LOR14-1"] [data-use]').click();
   await expect(page.locator('[data-sk="0:own"]')).toHaveAttribute('aria-pressed', 'true');   // owned: Rapunzel
   await expect(page.locator('[data-sk="1:own"]')).toBeDisabled();                             // not owned: Fru Fru
   await page.locator('#fDeck').selectOption('d1');
@@ -176,6 +179,32 @@ test('my profile: private by default; public needs an address and 18+; card and 
   await expect(page.locator('[data-testid="player-card"]')).toBeVisible();
   const size = await page.locator('[data-testid="player-card"]').evaluate((img) => [img.naturalWidth, img.naturalHeight]);
   expect(size).toEqual([1080, 1350]);
+});
+
+test('showcase editor: real cards, only-mine filter, foil kept, replace, move and remove', async ({ page }) => {
+  const calls = await setup(page, { mine: { display_name: 'Luís', handle: 'luis', adult: true, is_public: false, invite_code: 'abc123def0',
+    showcase: [{ id: 'LOR10-10', k: 'fav', foil: true }, { id: 'LOR14-1', k: 'fav' }] } });
+  await page.goto(url('perfil/?editar=1'));
+  const slots = page.locator('[data-testid="ed-showcase"] .iw-slot');
+  await expect(slots).toHaveCount(3);
+  await expect(slots.nth(0).locator('img')).toHaveCount(1);
+  await expect(slots.nth(0)).toContainText('foil');
+  await expect(slots.nth(2).locator('button.iw-card.empty')).toBeEnabled();
+  // pick from my collection only
+  await slots.nth(2).locator('[data-spick]').click();
+  await page.locator('#cardPicker [data-scope="owned"]').click();
+  await expect(page.locator('#cardPicker [data-card]')).toHaveCount(1);
+  await expect(page.locator('#cardPicker [data-card="LOR13-80"]')).toContainText('Você tem esta versão');
+  await page.locator('#cardPicker [data-card="LOR13-80"] [data-use]').click();
+  await expect(page.locator('[data-sk="2:own"]')).toHaveAttribute('aria-pressed', 'true');
+  // move the new card to the front, remove the second, replace keeps the slot
+  await page.locator('[data-smove="2:-1"]').click();
+  await page.locator('[data-smove="1:-1"]').click();
+  await page.locator('[data-sdel="2"]').click();
+  await page.locator('#edSave').click();
+  await expect(page.locator('#toast')).toContainText('Salvo');
+  const saved = rpcCalls(calls, 'save_my_profile').at(-1).p;
+  expect(saved.showcase).toEqual([{ id: 'LOR13-80', k: 'own' }, { id: 'LOR10-10', k: 'fav', foil: true }]);
 });
 
 test('an invite link: shown signed out; after signing in the person decides', async ({ page }) => {
@@ -279,6 +308,33 @@ test('signed-in home on a phone: one column, no side columns', async ({ page }) 
   await expect(page.locator('[data-testid="for-you"]')).toBeVisible();
   await expect(page.locator('#left')).toBeHidden();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+});
+
+test('Início: a friend with a public profile opens it; a private one shows as private', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await setup(page, { mine: { display_name: 'Luís' } });
+  const R = '22222222-2222-4222-8222-222222222222', P = '33333333-3333-4333-8333-333333333333';
+  const json = (route, v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+  await page.route('**/rest/v1/friendships**', (route) => json(route, [{ requester: ME, addressee: R, status: 'accepted' }, { requester: P, addressee: ME, status: 'accepted' }]));
+  await page.route('**/rest/v1/profiles?**', (route) => json(route, route.request().url().includes(ME) && !route.request().url().includes('in.') ? [{ user_id: ME, display_name: 'Luís', default_visibility: 'friends' }]
+    : [{ user_id: R, display_name: 'Rodrigo' }, { user_id: P, display_name: 'Paula' }]));
+  await page.route('**/rest/v1/rpc/my_friends', (route) => json(route, [{ id: R, name: 'Rodrigo', handle: 'rodrigo', avatar: null }, { id: P, name: 'Paula', handle: null, avatar: null }]));
+  await page.goto(url('feed/'));
+  const list = page.locator('[data-testid="friend-list"]');
+  await expect(list.locator('a.friend-link')).toHaveCount(1);
+  await expect(list.locator('a.friend-link')).toHaveAttribute('href', '../perfil/?u=rodrigo');
+  await expect(list).toContainText('Paula');
+  await expect(list).toContainText('Perfil privado');
+});
+
+test('tapping a card thumbnail shows the card large', async ({ page }) => {
+  await setup(page, { signedIn: false });
+  await page.goto(url('perfil/?u=rafa_exemplo'));
+  await page.locator('[data-testid="showcase"] .thumb').first().click();
+  await expect(page.locator('#iwZoom')).toBeVisible();
+  await expect(page.locator('#iwZoom img')).toHaveAttribute('src', /lorcana-card-images/);
+  await page.locator('#iwZoom').click();
+  await expect(page.locator('#iwZoom')).toBeHidden();
 });
 
 test('terms and privacy page, linked from the sign-in sheet', async ({ page }) => {

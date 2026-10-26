@@ -70,6 +70,7 @@ body.out .page.split.home3 { display: block; }
 .home-pact { padding: var(--sp-3) var(--sp-4); border-radius: var(--r-lg); background: var(--accent-soft); font-size: var(--fs-small); color: var(--text-2); }
 .home-pact b { display: flex; gap: 6px; align-items: center; color: var(--text); margin-bottom: 4px; }
 .home-pact .ic { width: 18px; height: 18px; color: var(--accent-ink); }
+.friend-link { color: var(--text); font-weight: 600; text-decoration: none; } .friend-link:hover { text-decoration: underline; }
 .comm-list { display: grid; gap: 2px; }
 .comm-list a { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: var(--sp-2); align-items: center; padding: 6px; border-radius: var(--r-md); color: inherit; text-decoration: none; font-weight: 600; font-size: var(--fs-small); }
 .comm-list a:hover { background: var(--hover-tint); }
@@ -213,7 +214,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const CLOUD = window.INKWELL_CLOUD;
   const me = CLOUD?.user();
   const enc = encodeURIComponent;
-  let groups = [], coachGroups = [], myCoaches = [], coachCols = true, otherGroups = new Map(), myProfile = null, names = new Map(), friendships = [], posts = [], notes = new Map(), olderThan = null, moreAvailable = false, searchRes = null, myGameCount = 0;
+  let faces = new Map(), groups = [], coachGroups = [], myCoaches = [], coachCols = true, otherGroups = new Map(), myProfile = null, names = new Map(), friendships = [], posts = [], notes = new Map(), olderThan = null, moreAvailable = false, searchRes = null, myGameCount = 0;
   const PAGE = 25;
   const friendIds = () => friendships.filter((f) => f.status === "accepted").map((f) => (f.requester === me.id ? f.addressee : f.requester));
   const nameOf = (id) => (id === me.id ? Tx("You") : names.get(id) || Tx("A player"));
@@ -251,6 +252,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     if (myProfile) names.set(me.id, myProfile.display_name);
     friendships = fr || [];
     myGameCount = (cnt || []).length;
+    try { for (const f of (await CLOUD.api("rpc/my_friends", { method: "POST", body: {} })) || []) if (f?.id) faces.set(f.id, f); } catch { /* supabase/my_friends.sql not run yet: names without links */ }
     await loadNames(friendships.flatMap((f) => [f.requester, f.addressee]));
   }
   async function loadPosts(more = false) {
@@ -323,7 +325,8 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
         ${incoming.length ? `<h3>${Tx("Requests")} <span class="count">${incoming.length}</span></h3>${incoming.map((f) => `<div class="list-row on-field">${av(f.requester)}<span class="t"><span>${esc(nameOf(f.requester))}</span><span class="meta">${Tx("Wants to be your friend")}</span></span>
           <span class="row"><button type="button" class="btn ghost small" data-decline="${f.requester}|${f.addressee}">${Tx("Decline")}</button><button type="button" class="btn small" data-accept="${f.requester}">${Tx("Accept")}</button></span></div>`).join("")}` : ""}
         ${outgoing.map((f) => `<div class="list-row flat">${av(f.addressee)}<span class="t"><span>${esc(nameOf(f.addressee))}</span><span class="meta">${esc(Tx("Waiting for {name}", { name: nameOf(f.addressee) }))}</span></span><button type="button" class="btn ghost small" data-decline="${f.requester}|${f.addressee}">${Tx("Cancel")}</button></div>`).join("")}
-        ${friends.length ? `<div class="list tight divided">${friends.map((id) => `<div class="list-row flat">${av(id)}<span class="t"><span>${esc(nameOf(id))}</span></span><button type="button" class="btn ghost small" data-unfriend="${id}">${Tx("Remove")}</button></div>`).join("")}</div>`
+        ${friends.length ? `<div class="list tight divided" data-testid="friend-list">${friends.map((id) => { const h = faces.get(id)?.handle;
+            return `<div class="list-row flat">${av(id)}<span class="t">${h ? `<a class="friend-link" href="../perfil/?u=${enc(h)}">${esc(nameOf(id))}</a>` : `<span>${esc(nameOf(id))}</span>`}${h ? `<span class="meta">@${esc(h)}</span>` : `<span class="meta">${Tx("Private profile")}</span>`}</span><button type="button" class="btn ghost small" data-unfriend="${id}">${Tx("Remove")}</button></div>`; }).join("")}</div>`
           : !incoming.length && !outgoing.length ? `<p class="small muted" style="margin:0">${Tx("No friends yet. Search for people above.")}</p>` : ""}
       </section>
       <section class="panel stack" aria-labelledby="hPriv"><h2 id="hPriv" style="margin:0">${Tx("Privacy")}</h2>
@@ -477,16 +480,14 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
         <div class="iw-grid3" style="margin-top:var(--sp-4)">${[["Your name", "How you want to appear. Your real name and e-mail never show."], ["Up to two inks", "The colours you play, from the six real inks."], ["Three favourite cards", "Any card from the whole catalogue, in the exact printing and finish."]]
           .map(([t, d], i) => `<div class="iw-tile"><span class="iw-eyebrow">${i + 1}</span><h3 class="iw-h3">${Tx(t)}</h3><p class="iw-muted" style="margin:0">${Tx(d)}</p></div>`).join("")}</div>
         <p style="margin:var(--sp-4) 0 0" class="iw-muted">${Tx("Try it without an account. Create one only when you want to keep it.")} <a class="iw-link" href="../comecar/">${Tx("Start my Inkwell")}</a></p></section>
-      <section class="iw-section" aria-labelledby="dkT" style="padding-top:0"><div class="iw-tile" style="display:grid;gap:var(--sp-2)"><span class="iw-sample-label" style="justify-self:start">${Tx("Demo with fictional data")}</span>
-        <h2 class="iw-h2" id="dkT">${Tx("An example deck")}</h2><p class="iw-muted" style="margin:0">${Tx("Illustrative deck from a fictional profile: the full list is on the profile page. Not a tournament list.")}</p>
-        <a class="iw-button" style="justify-self:start" href="../perfil/?u=rafa_exemplo">${Tx("See the deck")}</a></div></section></div>`;
+    </div>`;
     $("feed").style.marginTop = "0";
     $("feed").innerHTML = `<div class="land" data-testid="public-home">
       ${new URLSearchParams(location.search).get("conta") === "excluida" ? `<div class="notice ok" data-testid="deleted"><i class="ic i-check"></i><div class="t">${Tx("Your account and its data were deleted.")}</div></div>` : ""}
       ${GUEST ? newHero() : ""}
       <section class="land-hero" id="landHero" ${GUEST ? "hidden" : ""}><h1>${Tx("Your corner of the Lorcana community")}</h1>
         <p>${Tx("Show your favourite cards and your deck, invite your friends, and keep your collection, games and trades in one place. Free, made by a fan.")}</p>
-        <div class="land-cta"><button type="button" class="btn primary large" id="signIn">${Tx("Create my Inkwell")}</button><a class="btn large" href="../perfil/?u=rafa_exemplo">${Tx("See an example profile")}</a></div>
+        <div class="land-cta"><button type="button" class="btn primary large" id="signIn">${Tx("Create my Inkwell")}</button><a class="btn large" href="../comunidades/">${Tx("Explore the community")}</a></div>
         <p class="small faint" style="margin:var(--sp-3) 0 0">${Tx("Use your e-mail. We e-mail you a code, no password.")}</p></section>
       <section id="landEx" hidden><div class="group-head"><h2>${Tx("Meet the people")}</h2><span class="tag accent">${Tx("Examples · fictional profiles")}</span></div><div class="land-ex" id="exList"></div></section>
       <section id="landComm" hidden><div class="group-head"><h2>${Tx("Communities")}</h2><a class="small" href="../comunidades/">${Tx("See all")}</a></div><div class="land-ex" id="commList"></div></section>
@@ -532,6 +533,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   // ---------- boot ----------
   if (!me) { publicHome(); return; }
   if (location.hash === "#amigos") setTimeout(() => { if (phone()) $("openFriends").click(); else $("findPeople")?.focus(); }, 0);
+  addEventListener("hashchange", () => { if (location.hash !== "#amigos") return; document.querySelectorAll("dialog[open]").forEach((d) => d.close()); if (phone()) $("openFriends").click(); else { $("findPeople")?.scrollIntoView({ block: "center" }); $("findPeople")?.focus(); } });
   $("feed").innerHTML = `<span class="skel" style="height:150px;border-radius:var(--r-lg)"></span><span class="skel" style="height:150px;border-radius:var(--r-lg)"></span><p class="sr-only">${Tx("Loading…")}</p>`;
 
   // ---------- left column: me at a glance (real data only) and shortcuts ----------

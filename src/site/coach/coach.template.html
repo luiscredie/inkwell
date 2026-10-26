@@ -80,7 +80,7 @@ window.INKWELL_NO_STORE_MSG = "Your games appear here after you sign in.";
     "One card per line, e.g.\n4 Elsa - Spirit of Winter\n4 Tipo - Growing Son": "Uma carta por linha, por exemplo\n4 Elsa - Spirit of Winter\n4 Tipo - Growing Son",
     "All {n} games of this match": "Todos os {n} jogos desta partida", "Save deck list": "Salvar lista",
     "Turn {n}: {name}": "Turno {n}: {name}", "lore {s}": "lore {s}",
-    "Your comment": "Seu comentário", "Cancel": "Cancelar", "Comment": "Comentar", "Delete": "Apagar", "Delete game": "Apagar jogo", "Delete this game and its comments?": "Apagar este jogo e os comentários?", "Couldn't delete the game. Try again.": "Não foi possível apagar o jogo. Tente de novo.", "Confirm delete": "Confirmar",
+    "Your comment": "Seu comentário", "Cancel": "Cancelar", "Comment": "Comentar", "Delete": "Apagar", "Delete game": "Apagar jogo", "Not found in the catalogue: {list}": "Não encontradas no catálogo: {list}", "Delete this game and its comments?": "Apagar este jogo e os comentários?", "Couldn't delete the game. Try again.": "Não foi possível apagar o jogo. Tente de novo.", "Confirm delete": "Confirmar",
     "Someone": "Alguém", "You": "Você", "A player": "Um jogador",
     "The comment store is full. Delete old comments to add new ones.": "O espaço de comentários está cheio. Apague comentários antigos.",
     "Couldn't save the comment. Try again.": "Não foi possível salvar o comentário. Tente de novo.",
@@ -1125,6 +1125,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
           ${siblings(g.key).length > 1 ? `<label class="small"><input type="checkbox" id="deckAll" checked> ${Tx("All {n} games of this match", { n: siblings(g.key).length })}</label>` : ""}
           <div class="row"><button type="button" class="btn primary small" id="deckSave">${Tx("Save deck list")}</button></div></div><span class="small" id="deckMsg" aria-live="polite">${deckNotice?.key === g.key ? esc(deckNotice.text) : ""}</span></div>` : ""}
         ${deck.length ? `<div class="decklist">${deck.map((e) => `<div><span class="q">${e.qty}</span><span>${esc(cardName(e.card_id))}</span></div>`).join("")}</div>` : ""}
+        ${(log.players.find((p) => p.is_me)?.deck?.unresolved || []).length ? `<p class="small muted" data-testid="deck-unresolved">${esc(Tx("Not found in the catalogue: {list}", { list: log.players.find((p) => p.is_me).deck.unresolved.map((u) => `${u.qty} ${u.name || u.duels_id}`).join(", ") }))}</p>` : ""}
         <div style="margin-top:8px">${add("deck", Tx("Comment on the deck list"))}${notesHtml("deck", profilesMap)}</div>
       </details>` : ""}`;
     for (const t of log.turns) {

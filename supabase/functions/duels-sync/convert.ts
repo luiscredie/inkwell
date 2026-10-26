@@ -21,6 +21,51 @@ export class Catalog {
     if (m && this.ids.has(`LOR${m[1]}-${m[2]}`)) return `LOR${m[1]}-${m[2]}`;
     return name ? this.byName.get(norm(name)) ?? null : null;
   }
+  // Deck lists: also variant printings (an alternate art is LOR4-224-E here, 4-224 on duels.ink),
+  // other set codes (Q1-244) and, last, the card's name.
+  resolveDeck(duelsId?: string | null, name?: string | null): string | null {
+    const id = String(duelsId || "");
+    const hit = this.resolve(id, name);
+    if (hit) return hit;
+    const m = /^([A-Za-z]*)(\d+)-(\d+)/.exec(id);
+    if (m) {
+      const bases = m[1] ? [`${m[1].toUpperCase()}${m[2]}-${m[3]}`] : [`LOR${m[2]}-${m[3]}`];
+      for (const b of bases) {
+        if (this.ids.has(b)) return b;
+        for (const x of this.ids) if (x.startsWith(b + "-")) return x;
+      }
+    }
+    return null;
+  }
+}
+
+// duels.ink card id -> card name, from a game's events (cardId/cardName, targetCardId/targetCardName, ...)
+export function namesFromEvents(events: Json[]): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const e of events || []) {
+    for (const d of [e, e?.data].filter((x) => x && typeof x === "object")) {
+      for (const k of Object.keys(d)) {
+        if (!/cardid$/i.test(k) || typeof d[k] !== "string") continue;
+        const nm = d[k.replace(/Id$/, "Name").replace(/id$/, "name")];
+        if (typeof nm === "string" && nm && !out.has(d[k])) out.set(d[k], nm);
+      }
+    }
+  }
+  return out;
+}
+
+// my deck list from a match-history row; names: duels.ink id -> name, for printings this catalog lacks
+export function decklistOf(row: Json, cat: Catalog, names: Map<string, string> = new Map()): { list: Json[]; unresolved: Json[] } {
+  const list: Json[] = [], unresolved: Json[] = [];
+  for (const e of row.your_decklist || []) {
+    const id = e.cardId ?? e.card_id ?? e.id ?? null, nm = e.cardName ?? e.name ?? names.get(id) ?? null;
+    const card_id = cat.resolveDeck(id, nm);
+    const qty = Number(e.count ?? e.qty ?? 0) || 0;
+    if (!qty) continue;
+    const have = card_id && list.find((x) => x.card_id === card_id);
+    if (have) have.qty += qty; else if (card_id) list.push({ card_id, qty }); else unresolved.push({ duels_id: id, ...(nm ? { name: nm } : {}), qty });
+  }
+  return { list, unresolved };
 }
 
 // ---------------------------------------------------------------- conversion (same rules as duels_import.convert)
@@ -134,7 +179,7 @@ export function convert(row: Json, events: Json[], cat: Catalog, meName: string)
   winner ??= ({ win: "p1", loss: "p2", draw: "draw" } as Json)[row.result] ?? null;
   if (reason === undefined || reason === null) reason = ({ concede: "concede", lore: "lore" } as Json)[row.end_reason || ""] ?? "other";
 
-  const decklist = (row.your_decklist || []).map((e: Json) => ({ card_id: cat.resolve(e.cardId, null), qty: e.count })).filter((e: Json) => e.card_id);
+  const deck = decklistOf(row, cat, namesFromEvents(events));
   const colors = (s?: string) => [...new Set(String(s || "").split("/").map((c) => c.trim()).filter(Boolean).map((c) => c[0].toUpperCase() + c.slice(1).toLowerCase()))].sort();
   const ev: Json = { name: row.queue_name || row.mode, kind: "online", game_in_match: row.match_game_number };
   for (const k of Object.keys(ev)) if (ev[k] === null || ev[k] === undefined) delete ev[k];
@@ -146,7 +191,7 @@ export function convert(row: Json, events: Json[], cat: Catalog, meName: string)
     event: ev,
     players: [
       { seat: "p1", name: meName, is_me: true, went_first: first === "p1", mulligan_count: mull.p1,
-        deck: { inks: colors(row.your_deck_colors), list: decklist, list_source: "duels_ink" } },
+        deck: { inks: colors(row.your_deck_colors), list: deck.list, list_source: "duels_ink", ...(deck.unresolved.length ? { unresolved: deck.unresolved } : {}) } },
       { seat: "p2", name: row.opp_display_name || "Opponent", is_me: false, went_first: first === "p2", mulligan_count: mull.p2,
         deck: { archetype: row.opp_deck_colors || "Unknown", inks: colors(row.opp_deck_colors), list_source: "observed" } },
     ],

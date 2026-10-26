@@ -188,6 +188,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const myView = (t) => (t.proposer === me.id ? { gave: t.gave, got: t.got, cash: +t.cash_brl } : { gave: t.got, got: t.gave, cash: -(+t.cash_brl) });
   const mySide = (t) => (t.proposer === me.id ? "proposer_collection" : "partner_collection");
   const ACTIVE = new Set(["requested", "accepted", "delivered"]);
+  let wishIds = new Set();   // my wishlist (Preços), so the board marks what I want
   let tab = "loans", showReturned = false, form = null;   // form: {kind, ...draft}
   let boardKind = "all", boardQ = "";
   try { tab = sessionStorage.getItem("inkwell-trades-tab") || "loans"; } catch { /* */ }
@@ -202,9 +203,10 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     const [l, t, p, pr] = await Promise.all([
       CLOUD.api("loans?select=*&order=lent_on.desc,created_at.desc&limit=2000"),
       CLOUD.api("trades?select=*&order=traded_on.desc,created_at.desc&limit=2000"),
-      CLOUD.collections("profile,updated_at,collection:data->collection").catch(() => []),
+      CLOUD.collections("profile,updated_at,collection:data->collection,wishlist:data->wishlist").catch(() => []),
       fetch(window.INKWELL_PRICES_URL || "../data/prices.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
     ]);
+    wishIds = new Set((p || []).flatMap((x) => (x.wishlist && typeof x.wishlist === "object" ? Object.keys(x.wishlist) : [])));
     loans = l || []; trades = t || []; profiles = (p || []).filter((x) => x.collection && typeof x.collection === "object");
     const [ul, fr, ut, ls, mp] = await Promise.all([
       CLOUD.api("user_loans?select=*&order=created_at.desc&limit=1000").catch(() => []),
@@ -438,7 +440,8 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   function boardHtml() {
     const st = stock();
     const mine = listings.filter((l) => l.user_id === me.id);
-    const myWants = new Set(mine.filter((l) => l.kind === "borrow" || l.kind === "buy").map((l) => l.card_id));
+    const myWants = new Set([...wishIds, ...mine.filter((l) => l.kind === "borrow" || l.kind === "buy").map((l) => l.card_id)]);
+    window.INKWELL_WANTS_SEEN?.();   // the board is on screen: "cards you want on the board" starts counting again from now
     const words = norm(boardQ).split(" ").filter(Boolean);
     const matchOf = (l) => {
       if (l.kind === "borrow" || l.kind === "buy") { const n = freeOf(st, l.card_id, false) + freeOf(st, l.card_id, true); return n > 0 ? Tx("You have {n} free", { n }) : ""; }
