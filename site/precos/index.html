@@ -562,6 +562,16 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const sheet = document.createElement("dialog");
   sheet.className = "sheet"; sheet.id = "iwSignSheet"; sheet.setAttribute("aria-labelledby", "iwSiT");
   document.body.append(sheet);
+
+  // ---------- rights note, on every page (Inkwell stays free; the rights belong to Disney and Ravensburger) ----------
+  {
+    const legal = document.createElement("footer");
+    legal.className = "iw-legal"; legal.setAttribute("data-testid", "rights");
+    legal.innerHTML = T(
+      `Disney Lorcana, as imagens das cartas, os símbolos das tintas e as marcas relacionadas pertencem à Disney e à Ravensburger. O Inkwell é um projeto de fã, gratuito e sem vínculo com elas. <a href="../privacidade/">Termos e privacidade</a>`,
+      `Disney Lorcana, the card images, the ink symbols and related marks belong to Disney and Ravensburger. Inkwell is a free fan project, not affiliated with them. <a href="../privacidade/">Terms and privacy</a>`);
+    (document.querySelector("main") || document.body).after(legal);
+  }
   let email = "", trigger = null;
   function stepEmail(msg = "") {
     sheet.innerHTML = `<div class="grab"></div>

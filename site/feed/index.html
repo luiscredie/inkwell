@@ -590,7 +590,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         <ol class="land-steps" style="padding:0;margin:0" data-testid="how-it-works">${GUEST
           ? `<li><b>${Tx("Make it yours, no account")}</b>${Tx("Your name, two inks and three favourite cards.")}</li><li><b>${Tx("Create your account to save")}</b>${Tx("A code by e-mail, no password. What you did stays.")}</li><li><b>${Tx("Your profile, saved")}</b>${Tx("Private until you decide to make it public.")}</li>`
           : `<li><b>${Tx("Sign in with your e-mail")}</b>${Tx("A code by e-mail, no password.")}</li><li><b>${Tx("Make your profile")}</b>${Tx("Private until you decide to make it public.")}</li><li><b>${Tx("Invite your friends")}</b>${Tx("Whoever signs in through your link gets your friend request.")}</li>`}</ol></section>
-      <p class="small faint">${Tx("Fan project, free, not affiliated with Disney or Ravensburger.")} · <a href="../privacidade/">${Tx("Terms and privacy")}</a></p></div>`;
+</div>`;
     $("signIn").onclick = () => window.INKWELL_SIGNIN?.();
     $("signIn2")?.addEventListener("click", () => window.INKWELL_SIGNIN?.());
     const heroArt = img("LOR14-2"); if (heroArt) $("landHero").style.setProperty("--hero-art", `url('${heroArt}')`);
@@ -778,6 +778,16 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const sheet = document.createElement("dialog");
   sheet.className = "sheet"; sheet.id = "iwSignSheet"; sheet.setAttribute("aria-labelledby", "iwSiT");
   document.body.append(sheet);
+
+  // ---------- rights note, on every page (Inkwell stays free; the rights belong to Disney and Ravensburger) ----------
+  {
+    const legal = document.createElement("footer");
+    legal.className = "iw-legal"; legal.setAttribute("data-testid", "rights");
+    legal.innerHTML = T(
+      `Disney Lorcana, as imagens das cartas, os símbolos das tintas e as marcas relacionadas pertencem à Disney e à Ravensburger. O Inkwell é um projeto de fã, gratuito e sem vínculo com elas. <a href="../privacidade/">Termos e privacidade</a>`,
+      `Disney Lorcana, the card images, the ink symbols and related marks belong to Disney and Ravensburger. Inkwell is a free fan project, not affiliated with them. <a href="../privacidade/">Terms and privacy</a>`);
+    (document.querySelector("main") || document.body).after(legal);
+  }
   let email = "", trigger = null;
   function stepEmail(msg = "") {
     sheet.innerHTML = `<div class="grab"></div>

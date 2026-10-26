@@ -219,6 +219,9 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 .half .inkmarks { position: absolute; z-index: 1; top: 20px; right: 22px; display: flex; gap: 6px; pointer-events: none; }
 .half .inkmarks b { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; color: #14121f; box-shadow: 0 0 0 2px rgba(246,240,225,.35), 0 0 14px rgba(0,0,0,.35); }
 .half .inkmarks svg { width: 19px; height: 19px; }
+.half .inkmarks b.official { background: none; box-shadow: none; width: 40px; height: 40px; }
+.table.n3 .half .inkmarks b.official, .table.n4 .half .inkmarks b.official { width: 30px; height: 30px; }
+.half .inkmarks b.official img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,.45)); }
 .table.n3 .half .inkmarks b, .table.n4 .half .inkmarks b { width: 24px; height: 24px; } .table.n3 .half .inkmarks svg, .table.n4 .half .inkmarks svg { width: 15px; height: 15px; }
 
 .hub { position: absolute; left: 50%; top: 50%; width: 0; height: 0; z-index: 3; pointer-events: none; }
@@ -318,7 +321,8 @@ table.stats td.n { text-align: right; }
   const CLOUD = window.INKWELL_CLOUD || null;   // offline app: sends finished matches to the Inkwell database when online   // set when the counter runs inside Coach Review
   const JUDGE_LOCAL = `<h2>Inkwell Lore Counter</h2>
     <p><b>PT.</b> Este app conta apenas o total de lore e o placar da partida. Não registra cartas, inkwell, mão nem anotações, funciona sem internet e não envia nada. Fica à vista dos jogadores. No modo torneio, o deck do oponente só pode ser anotado depois do fim da partida (Regras de Torneio §3.11, §5.2, §5.3).</p>
-    <p><b>EN.</b> This app counts lore totals and the match score only. It records no cards, inkwell, hand or notes, works offline and sends nothing. It stays in plain view of the players. In tournament mode the opponent's deck can only be entered after the match ends (Tournament Rules §3.11, §5.2, §5.3).</p>`;
+    <p><b>EN.</b> This app counts lore totals and the match score only. It records no cards, inkwell, hand or notes, works offline and sends nothing. It stays in plain view of the players. In tournament mode the opponent's deck can only be entered after the match ends (Tournament Rules §3.11, §5.2, §5.3).</p>
+    <p class="legal">Disney Lorcana, os símbolos das tintas e as marcas relacionadas pertencem à Disney e à Ravensburger. Inkwell é um projeto de fã, gratuito e sem vínculo com elas. · Disney Lorcana, the ink symbols and related marks belong to Disney and Ravensburger. Inkwell is a free fan project, not affiliated with them.</p>`;
   const JUDGE = SYNC ? JUDGE_LOCAL.replace("funciona sem internet e não envia nada.", "Só depois do fim da partida, o placar e o lore final de cada jogo vão para o histórico privado do próprio jogador.").replace("works offline and sends nothing.", "Only after the match ends are each game's score and final lore saved to the player's own private history.") : CLOUD ? JUDGE_LOCAL.replace("funciona sem internet e não envia nada.", "Funciona sem internet. Só depois do fim da partida, o placar e o lore final de cada jogo vão para a conta Inkwell do próprio jogador.").replace("works offline and sends nothing.", "It works offline. Only after the match ends are each game's score and final lore sent to the player's own Inkwell account.") : JUDGE_LOCAL;
 
   const zero = () => ({ p1: 0, p2: 0, p3: 0, p4: 0 });
@@ -332,7 +336,13 @@ table.stats td.n { text-align: right; }
     Sapphire: '<path d="M12 2.8c3 4.4 6 7.9 6 11.4a6 6 0 0 1-12 0c0-3.5 3-7 6-11.4z"/>',
     Steel: '<circle cx="12" cy="12" r="6.3" fill="none" stroke="currentColor" stroke-width="3.4" stroke-dasharray="2.45 2.5"/><circle cx="12" cy="12" r="4.6" fill="none" stroke="currentColor" stroke-width="1.8"/>',
   };
-  const inkMark = (ink) => `<b style="background:${HEX[ink] || HEX.Ruby}" title="${ink}"><svg viewBox="0 0 24 24" fill="currentColor">${INK_GLYPH[ink] || ""}</svg></b>`;
+  // The official ink symbols (Ravensburger brand assets, in ../ink/<ink>.svg; free fan use as agreed with Ravensburger);
+  // the drawings above stay only as a fallback if those files ever fail to load.
+  let OFFICIAL_INKS = false;
+  fetch("../ink/amber.svg").then((r) => { if (r.ok && /svg|image/.test(r.headers.get("content-type") || "")) { OFFICIAL_INKS = true; render(); } }).catch(() => {});
+  const inkMark = (ink) => OFFICIAL_INKS
+    ? `<b class="official" title="${ink}"><img src="../ink/${ink.toLowerCase()}.svg" alt=""></b>`
+    : `<b style="background:${HEX[ink] || HEX.Ruby}" title="${ink}"><svg viewBox="0 0 24 24" fill="currentColor">${INK_GLYPH[ink] || ""}</svg></b>`;
   const blank = () => ({ lang: (navigator.language || "pt").startsWith("pt") ? "pt" : "en", players: 2, bestOf: 3, magic: true, decks: false, tour: true, flip: true,
     color: { p1: ["Ruby"], p2: ["Sapphire"], p3: ["Emerald"], p4: ["Amber"] }, lore: zero(), wins: zero(), log: [], won: null, matchDone: false,
     match: null, history: [], recent: [] });
