@@ -8,7 +8,7 @@
 const VERSION = "6c53e25015";
 const APP = `lorecounter-${VERSION}`;
 const FONTS = "lorecounter-fonts";
-const FILES = ["./", "./index.html", "./manifest.webmanifest", "../ink/icon-192.png", "../ink/icon-512.png",
+const FILES = ["./", "./index.html", "./manifest.webmanifest", "../ink/icon-192.png", "../ink/icon-512.png", "../data/meta-archetypes.json",
   ...["amber", "amethyst", "emerald", "ruby", "sapphire", "steel"].map((i) => `../ink/${i}.svg`)];   // official ink symbols, for offline use
 
 self.addEventListener("install", (e) => {
