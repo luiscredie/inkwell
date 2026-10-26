@@ -61,9 +61,9 @@ async function setup(page, { signedIn = true, mine = null, admin = false, relati
 }
 const rpcCalls = (calls, name) => calls.filter((c) => c.path === `rpc/${name}`).map((c) => c.body);
 
-test('public home explains Inkwell and shows example profiles marked as fictional', async ({ page }) => {
+test('previous public home (?preview=off) explains Inkwell and shows example profiles marked as fictional', async ({ page }) => {
   await setup(page, { signedIn: false });
-  await page.goto(url('feed/'));
+  await page.goto(url('feed/?preview=off'));
   const home = page.locator('[data-testid="public-home"]');
   await expect(home.locator('h1')).toHaveText('Seu canto na comunidade de Lorcana');
   await expect(page.locator('[data-testid="example-profile"]')).toHaveCount(2);

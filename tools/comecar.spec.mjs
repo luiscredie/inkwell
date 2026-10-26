@@ -69,9 +69,9 @@ async function pickCard(page, slot, query, { set, id, finish } = {}) {
   await expect(d).toBeHidden();
 }
 
-test('flag off: /comecar/ goes back to the feed; ?preview=visitante opens the editor without a login wall (A01)', async ({ page }) => {
+test('?preview=off: /comecar/ goes back to the feed; without it the editor opens with no login wall (A01)', async ({ page }) => {
   await setup(page);
-  await page.goto(new URL('comecar/', ROOT).href);
+  await page.goto(new URL('comecar/?preview=off', ROOT).href);
   await expect(page).toHaveURL(/\/feed\//);
   await page.goto(PAGE);
   await expect(page.getByRole('heading', { name: 'Seu Inkwell começa aqui' })).toBeVisible();
@@ -416,4 +416,12 @@ test('English: the page and the picker have no Portuguese left over (A21)', asyn
   await page.locator('[data-slot="0"] [data-pick]').click();
   const text = await page.locator('main, #picker').allInnerTexts();
   expect(text.join(' ')).not.toMatch(/Escolha|Buscar|Todos|Modo visitante|cartas favoritas/);
+});
+
+test('on by default: a new visitor gets the new Início and the editor with no parameter', async ({ page }) => {
+  await setup(page);
+  await page.goto(new URL('feed/', ROOT).href);
+  await expect(page.getByRole('link', { name: 'Começar meu Inkwell' }).first()).toBeVisible();
+  await page.goto(new URL('comecar/', ROOT).href);
+  await expect(page.getByRole('heading', { name: 'Seu Inkwell começa aqui' })).toBeVisible();
 });
