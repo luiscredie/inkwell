@@ -393,6 +393,7 @@ test('feed with the flag: example profile is labelled and never enters the draft
   await setup(page);
   await page.goto(new URL('feed/?preview=visitante', ROOT).href);
   await expect(page.getByText('Demonstração com dados fictícios').first()).toBeVisible();
+  await expect(page.getByTestId('how-it-works').locator('li').first()).toContainText('Personalize, sem conta');
   await page.getByRole('link', { name: 'Começar meu Inkwell' }).first().click();
   await expect(page).toHaveURL(/\/comecar\//);
   await expect(page.getByLabel('Nome de exibição')).toHaveValue('');
@@ -403,6 +404,7 @@ test('the feed without the flag stays as it is today (rollback)', async ({ page 
   await setup(page);
   await page.goto(new URL('feed/?preview=off', ROOT).href);
   await expect(page.getByText('Demonstração com dados fictícios')).toHaveCount(0);
+  await expect(page.getByTestId('how-it-works').locator('li').first()).toContainText('Entre com seu e-mail');
   await expect(page.locator('a[href="../comecar/"]')).toHaveCount(0);
 });
 
