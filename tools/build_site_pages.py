@@ -57,6 +57,7 @@ PAGES = {   # site dir -> card index it embeds
     "admin": None,
     "comunidades": site_index,
     "comecar": site_index,       # Começar meu Inkwell: guest profile editor (behind INKWELL_FLAGS.guestProfile)   # communities: stores, cities, interests
+    "entrar": None,              # the sign-in e-mail link lands here and waits for a click (mail scanners)
     "privacidade": None,         # terms and privacy          # members, reports, example accounts (admins only)
     "counter": None,   # the Lore Counter (offline app); its sw.js and manifest are plain files next to it
 }

@@ -137,3 +137,20 @@ Run `supabase/user_trades_listings.sql` (already applied).
   bumps the profile revision so Inkwell pulls the change on its next sync.
 - Public board (`listings`): what each player wants to borrow / buy and what they
   lend / sell; every signed-in player sees it.
+
+## Sign-in e-mails (code + safe link)
+
+The site's sign-in field takes the whole code (6 to 10 digits, whatever "Email OTP Length" says) and never cuts it.
+Outlook/Hotmail open e-mail links by themselves to scan them, which uses up Supabase's own link (`{{ .ConfirmationURL }}`)
+and, with it, the code from the same e-mail. To fix that, in **Authentication → Emails**, give both **Magic Link** and
+**Confirm signup** this body (from a computer; the dashboard editor may not take a paste on a phone):
+
+```html
+<h2>Entrar no Inkwell</h2>
+<p>Seu código: <b>{{ .Token }}</b></p>
+<p><a href="https://luiscredie.github.io/inkwell/entrar/?h={{ .TokenHash }}">Ou toque aqui para entrar</a></p>
+```
+
+`/entrar/` signs in only when the person presses its button, so a scanner that opens the link uses nothing.
+Until the templates change, the site still works with the code; a link already used by a scanner brings the person
+back with an explanation and the sign-in sheet open.

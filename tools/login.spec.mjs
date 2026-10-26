@@ -95,3 +95,43 @@ test('resend refused by the rate limit says to wait', async ({ page }) => {
   await sheet.locator('#iwSiAgain').click();
   await expect(sheet.locator('#iwSiMsg')).toContainText('Espere um pouco');
 });
+
+test('an e-mail link that was already used: the sign-in sheet explains and asks for a new code', async ({ page }) => {
+  await setup(page);
+  await page.goto(`${FEED}#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid`);
+  const sheet = page.locator('#iwSignSheet');
+  await expect(sheet).toBeVisible();
+  await expect(sheet.locator('#iwSiMsg')).toContainText('O link do e-mail não vale mais');
+  expect(page.url()).not.toContain('error');
+});
+
+test('/entrar/: nothing is used until the button; then signs in and goes back where the code was asked', async ({ page }) => {
+  const used = [];
+  await page.addInitScript(() => {
+    localStorage.setItem('inkwell-lang', 'pt');
+    if (!sessionStorage.getItem('t')) { sessionStorage.setItem('t', '1'); localStorage.setItem('inkwell-return', JSON.stringify({ path: '/colecao/', at: Date.now() })); }
+  });
+  await page.route('**/auth/v1/verify', async (route) => {
+    used.push(JSON.parse(route.request().postData()));
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ access_token: jwt(ME), refresh_token: 'r', expires_in: 3600, user: { id: ME } }) });
+  });
+  await page.route('**/rest/v1/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+  await page.goto(new URL('entrar/?h=abc123', ROOT).href);
+  await expect(page.getByRole('button', { name: 'Entrar no Inkwell' })).toBeVisible();
+  expect(page.url()).not.toContain('abc123');   // the hash leaves the address bar
+  await page.waitForTimeout(500);
+  expect(used).toHaveLength(0);                 // a scanner that only opens the page uses nothing
+  await page.getByRole('button', { name: 'Entrar no Inkwell' }).click();
+  await expect(page).toHaveURL(/\/colecao\//);
+  expect(used).toEqual([{ type: 'email', token_hash: 'abc123' }]);
+});
+
+test('/entrar/ with a used link: says so and offers a new code', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('inkwell-lang', 'pt'));
+  await page.route('**/auth/v1/verify', (r) => r.fulfill({ status: 403, contentType: 'application/json', body: '{}' }));
+  await page.goto(new URL('entrar/?h=abc123', ROOT).href);
+  await page.getByRole('button', { name: 'Entrar no Inkwell' }).click();
+  await expect(page.getByRole('heading', { name: 'Este link não vale mais' })).toBeVisible();
+  await page.getByRole('button', { name: 'Pedir código novo' }).click();
+  await expect(page.locator('#iwSignSheet')).toBeVisible();
+});

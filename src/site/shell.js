@@ -210,6 +210,14 @@
     if (!sheet.open) sheet.showModal();
   };
   $("iwSignIn")?.addEventListener("click", () => window.INKWELL_SIGNIN());
+  // Came back from an e-mail link that no longer works: say why and offer a new code, once.
+  if (window.INKWELL_LINK_FAILED && CLOUD && !CLOUD.status().signedIn) {
+    setTimeout(() => {
+      window.INKWELL_SIGNIN();
+      stepEmail(T("O link do e-mail não vale mais: ele já foi usado ou expirou. Alguns e-mails, como Outlook e Hotmail, abrem os links sozinhos para verificar. Peça um código novo e digite-o aqui.",
+        "The e-mail link no longer works: it was already used or expired. Some mail services, like Outlook and Hotmail, open links by themselves to scan them. Ask for a new code and type it here."));
+    }, 50);
+  }
 
   // ---------- guest draft (Começar meu Inkwell, behind INKWELL_FLAGS.guestProfile) ----------
   if ((window.INKWELL_FLAGS || {}).guestProfile && page !== "start") {
