@@ -149,7 +149,7 @@ table.stats td.n { text-align: right; }
       flip: "Virar os painéis do outro lado", history: "Partidas registradas", none: "Nenhuma partida registrada ainda.",
       wonGame: "Venceu o jogo", tapNext: "Toque para o próximo jogo", iConceded: "Eu concedi", oppConceded: "Oponente concedeu", conceded: "concedeu", winnerIs: "Vencedor do jogo",
       byLore: "20 de lore", byConcede: "concessão", won: "venceu", wentFirst: "Quem começou este jogo?", me1: "Eu comecei", opp1: "Oponente começou", skip: "Pular",
-      yourDeck: "Seu deck", oppDeck: "Deck do oponente", pick2: "Toque em até 2 tintas", name: "Nome do deck (opcional)", recent: "Recentes", save: "Salvar", noDeck: "Sem deck",
+      yourDeck: "Seu deck", oppDeck: "Deck do oponente", pick2: "Toque em até 2 tintas", name: "Nome do deck (opcional)", recent: "Recentes", myDecks: "Meus decks no Inkwell", friendDeck: "Deck de um amigo do Inkwell", back: "Voltar", save: "Salvar", noDeck: "Sem deck",
       matchOver: "Fim da partida", copy: "Copiar histórico", copied: "Copiado.", copyFail: "Selecione e copie o texto abaixo.", winRate: "Vitórias por deck do oponente", games: "Jogos", matches: "Partidas", winPct: "% vitórias",
       toCoach: "Copiar para o Coach Review", toCoachSub: "jogos novos", sentHow: "Copiado. Abra o Inkwell Coach Review, toque em Adicionar jogos e cole.", allSent: "Todos os jogos já foram copiados.", toCoachSync: "Enviar ao Coach Review", synced: "Salvo no Coach Review", syncWait: "Ainda não salvo no Coach Review; tentaremos de novo.", backCoach: "Coach Review", account: "Conta Inkwell", noAccount: "Sem conta: os jogos ficam só neste aparelho", toSend: "a enviar", upToDate: "tudo enviado", accountSub: "Entre com o e-mail da sua conta Inkwell. Os jogos são enviados quando houver internet; sem internet, ficam guardados aqui.", emailPh: "seu e-mail", sendCode: "Enviar código", codeSent: "Enviamos um código para", codePh: "código do e-mail", signIn: "Entrar", signOut: "Sair desta conta", sendNow: "Enviar agora", sentCloud: "Enviado ao Inkwell", offlineWait: "Sem internet: será enviado quando você conectar.", failCloud: "Não foi possível enviar agora; tentaremos de novo.", badCode: "Código inválido ou expirado.", badEmail: "Não foi possível enviar o código. Confira o e-mail e a internet.", signedAs: "Conectado como", savedHere: "Guardado neste aparelho; será enviado ao Inkwell.", toCloud: "Enviar ao Inkwell",
       confirmNew: "Começar nova partida? O placar volta a zero.", yes: "Sim", cancel: "Cancelar", colors: "Cores", clear: "Apagar histórico", cleared: "Histórico apagado.", game: "Jogo", vs: "vs" },
@@ -159,7 +159,7 @@ table.stats td.n { text-align: right; }
       flip: "Turn the panes on the far side", history: "Recorded matches", none: "No matches recorded yet.",
       wonGame: "Won the game", tapNext: "Tap for the next game", iConceded: "I conceded", oppConceded: "Opponent conceded", conceded: "conceded", winnerIs: "Game winner",
       byLore: "20 lore", byConcede: "concession", won: "won", wentFirst: "Who went first this game?", me1: "I went first", opp1: "Opponent went first", skip: "Skip",
-      yourDeck: "Your deck", oppDeck: "Opponent's deck", pick2: "Tap up to 2 inks", name: "Deck name (optional)", recent: "Recent", save: "Save", noDeck: "No deck",
+      yourDeck: "Your deck", oppDeck: "Opponent's deck", pick2: "Tap up to 2 inks", name: "Deck name (optional)", recent: "Recent", myDecks: "My Inkwell decks", friendDeck: "An Inkwell friend's deck", back: "Back", save: "Save", noDeck: "No deck",
       matchOver: "Match over", copy: "Copy history", copied: "Copied.", copyFail: "Select and copy the text below.", winRate: "Wins by opponent deck", games: "Games", matches: "Matches", winPct: "Win %",
       toCoach: "Copy for Coach Review", toCoachSub: "new games", sentHow: "Copied. Open Inkwell Coach Review, tap Add games and paste.", allSent: "All games were already copied.", toCoachSync: "Send to Coach Review", synced: "Saved to Coach Review", syncWait: "Not saved to Coach Review yet; it will retry.", backCoach: "Coach Review", account: "Inkwell account", noAccount: "No account: games stay on this device only", toSend: "to send", upToDate: "all sent", accountSub: "Sign in with your Inkwell account email. Games are sent when there is internet; offline they are kept here.", emailPh: "your email", sendCode: "Send code", codeSent: "We sent a code to", codePh: "code from the email", signIn: "Sign in", signOut: "Sign out", sendNow: "Send now", sentCloud: "Sent to Inkwell", offlineWait: "Offline: it will be sent when you connect.", failCloud: "Couldn't send now; it will retry.", badCode: "Wrong or expired code.", badEmail: "Couldn't send the code. Check the email and the connection.", signedAs: "Signed in as", savedHere: "Saved on this device; it will be sent to Inkwell.", toCloud: "Send to Inkwell",
       confirmNew: "Start a new match? The score goes back to zero.", yes: "Yes", cancel: "Cancel", colors: "Colors", clear: "Clear history", cleared: "History cleared.", game: "Game", vs: "vs" },
@@ -357,16 +357,54 @@ table.stats td.n { text-align: right; }
       onChange?.(sel);
     });
   }
-  function pickDeck(title, initial, cb) {
+  // Decks from Inkwell, for the deck pickers: mine (my collections' decks, with the list) and my friends'
+  // (name and inks only, supabase/friend_decks.sql). A copy stays here so the pickers work offline.
+  async function loadInkDecks() {
+    if (!CLOUD || !CLOUD.status().signedIn || navigator.onLine === false) return;
+    const ink = (c) => (Array.isArray(c) ? c : []).filter((x) => HEX[x]).slice(0, 2);
+    try {
+      const [p, f] = await Promise.all([
+        CLOUD.api("inkwell_profiles?select=profile,updated_at,decks:data->decks&order=updated_at.desc"),
+        CLOUD.api("rpc/friend_decks", { method: "POST", body: {} }).catch(() => null)]);
+      const mine = [];
+      for (const x of p || []) for (const d of Array.isArray(x.decks) ? x.decks : []) {
+        if (!d?.name) continue;
+        const list = Object.entries(d.cards && typeof d.cards === "object" ? d.cards : {}).map(([card_id, q]) => ({ card_id, qty: +q || 0 })).filter((e) => e.qty > 0);
+        mine.push({ id: String(d.id || ""), name: String(d.name).slice(0, 40), inks: ink(d.colors), list });
+      }
+      const friends = f ? f.map((r) => ({ who: r.friend, whoName: String(r.friend_name || "").slice(0, 40), id: String(r.deck_id || ""), name: String(r.name || "").slice(0, 40), inks: ink(r.colors) })) : s.ink?.friends || [];
+      s.ink = { mine, friends }; save();
+    } catch { /* keep the last copy */ }
+  }
+  function pickDeck(title, initial, cb, side = "me") {
     const sel = [...(initial?.inks || [])];
     const recent = s.recent.slice(0, 8);
+    const mine = side === "me" ? s.ink?.mine || [] : [];
+    const fr = side === "opp" ? s.ink?.friends || [] : [];
+    const people = [...new Map(fr.map((d) => [d.who, d.whoName || "?"])).entries()];
+    const chip = (attr, i, d, label) => `<button type="button" class="chip" ${attr}="${i}">${swatch(d.inks)}${esc(label ?? deckText(d))}</button>`;
     open(`<h2>${esc(title)}</h2>
+      ${mine.length ? `<div class="grp"><span class="cap">${t().myDecks}</span><div class="chips">${mine.map((d, i) => chip("data-mine", i, d)).join("")}</div></div>` : ""}
+      ${people.length ? `<div class="grp" id="frGrp"><span class="cap">${t().friendDeck}</span><div class="chips">${people.map(([, nm], i) => `<button type="button" class="chip" data-who="${i}">${esc(nm)}</button>`).join("")}</div></div>` : ""}
       <div class="grp"><span class="cap">${t().pick2}</span>${inkPicker("dk", sel)}</div>
       <input class="txt" id="dn" maxlength="40" placeholder="${t().name}" value="${esc(initial?.name || "")}">
       ${recent.length ? `<div class="grp"><span class="cap">${t().recent}</span><div class="chips">${recent.map((d, i) => `<button type="button" class="chip" data-r="${i}">${swatch(d.inks)}${esc(deckText(d))}</button>`).join("")}</div></div>` : ""}
       <div class="row"><button type="button" class="btn quiet" id="dSkip">${t().skip}</button><button type="button" class="btn primary" id="dOk">${t().save}</button></div>`, () => {
       wireInks("dk", sel);
       document.querySelectorAll("[data-r]").forEach((b) => b.onclick = () => { const d = recent[+b.dataset.r]; close(); cb({ inks: [...d.inks], name: d.name || "" }); });
+      document.querySelectorAll("[data-mine]").forEach((b) => b.onclick = () => { const d = mine[+b.dataset.mine]; close(); cb({ inks: [...d.inks], name: d.name, deck_id: d.id, list: d.list }); });
+      const showPeople = () => {
+        const g = $("frGrp"); if (!g) return;
+        g.innerHTML = `<span class="cap">${t().friendDeck}</span><div class="chips">${people.map(([, nm], i) => `<button type="button" class="chip" data-who="${i}">${esc(nm)}</button>`).join("")}</div>`;
+        g.querySelectorAll("[data-who]").forEach((b) => b.onclick = () => showDecks(+b.dataset.who));
+      };
+      const showDecks = (i) => {
+        const [who, whoName] = people[i], ds = fr.filter((d) => d.who === who), g = $("frGrp");
+        g.innerHTML = `<span class="cap">${esc(whoName)}</span><div class="chips">${ds.map((d, j) => chip("data-fd", j, d)).join("")}<button type="button" class="chip" id="frBack">${t().back}</button></div>`;
+        g.querySelectorAll("[data-fd]").forEach((b) => b.onclick = () => { const d = ds[+b.dataset.fd]; close(); cb({ inks: [...d.inks], name: d.name, friend: { id: who, name: whoName } }); });
+        $("frBack").onclick = showPeople;
+      };
+      showPeople();
       $("dSkip").onclick = () => { close(); cb(null); };
       $("dOk").onclick = () => {
         const d = { inks: [...sel], name: $("dn").value.trim() };
@@ -400,7 +438,7 @@ table.stats td.n { text-align: right; }
     render();
     if (s.decks && !s.tour && s.players === 2) {
       open(`<h2>${t().wentFirst}</h2><div class="row"><button type="button" class="btn" id="f1">${t().me1}</button><button type="button" class="btn" id="f2">${t().opp1}</button></div><button type="button" class="btn quiet" id="fs">${t().skip}</button>`, () => {
-        const go = (f) => { g.first = f; pickDeck(t().oppDeck, s.match.opp, (d) => { if (d) { s.match.opp = d; if (d.inks.length) { s.color.p2 = d.inks; magic.reset(); } } render(); }); };
+        const go = (f) => { g.first = f; pickDeck(t().oppDeck, s.match.opp, (d) => { if (d) { s.match.opp = d; if (d.inks.length) { s.color.p2 = d.inks; magic.reset(); } } render(); }, "opp"); };
         $("f1").onclick = () => go("p1"); $("f2").onclick = () => go("p2"); $("fs").onclick = () => go(null);
       });
     }
@@ -418,7 +456,7 @@ table.stats td.n { text-align: right; }
         sync();   // after the card exists, so it can show the result
       });
     };
-    if (s.decks && s.tour && s.players === 2) pickDeck(t().oppDeck, s.match.opp, (d) => { s.match.opp = d; if (d?.inks?.length) { s.color.p2 = d.inks; magic.reset(); } done(); });
+    if (s.decks && s.tour && s.players === 2) pickDeck(t().oppDeck, s.match.opp, (d) => { s.match.opp = d; if (d?.inks?.length) { s.color.p2 = d.inks; magic.reset(); } done(); }, "opp");
     else done();
   }
 
@@ -509,8 +547,9 @@ table.stats td.n { text-align: right; }
       event: { kind: m.tour === false ? "casual" : "other", game_in_match: i + 1 },
       players: [
         { seat: "p1", name: t().you, is_me: true, ...(g.first ? { went_first: g.first === "p1" } : {}),
-          deck: { ...(m.me?.name ? { name: m.me.name } : {}), inks: m.me?.inks || [], list_source: "unknown" } },
-        { seat: "p2", name: t().opp, is_me: false, ...(g.first ? { went_first: g.first === "p2" } : {}),
+          deck: { ...(m.me?.name ? { name: m.me.name } : {}), ...(m.me?.deck_id ? { inkwell_deck: m.me.deck_id } : {}), inks: m.me?.inks || [],
+            ...(m.me?.list?.length ? { list: m.me.list, list_source: "inkwell" } : { list_source: "unknown" }) } },
+        { seat: "p2", name: m.opp?.friend?.name || t().opp, is_me: false, ...(g.first ? { went_first: g.first === "p2" } : {}),
           deck: { archetype: m.opp?.name || m.opp?.inks?.length ? deckText(m.opp) : "Unknown", inks: m.opp?.inks || [], list_source: "unknown" } },
       ],
       turns: [],
@@ -644,7 +683,8 @@ table.stats td.n { text-align: right; }
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") wake(); });
   wake();
   build();
-  setTimeout(sync, 1500);   // retry anything a previous session couldn't save
+  setTimeout(sync, 1500);
+  loadInkDecks();   // retry anything a previous session couldn't save
 })();
 </script>
 
