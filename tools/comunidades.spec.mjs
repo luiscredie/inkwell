@@ -143,3 +143,28 @@ test('store: contact for everyone; owner edits it, makes an admin and hands over
   await bia.locator('[data-own]').click();
   await expect.poll(() => rpcCalls(calls, 'transfer_community')).toEqual([{ p_slug: 'loja-do-ze', p_user: '44444444-4444-4444-8444-444444444444' }]);
 });
+
+test('Mesas & Ligas: the owner sets up a table, members say Vou', async ({ page }) => {
+  const calls = await setup(page);
+  let evs = [];
+  const json = (route, v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+  await page.route('**/rest/v1/rpc/community_events', (r) => json(r, evs));
+  await page.route('**/rest/v1/rpc/save_event', (r) => { const b = JSON.parse(r.request().postData()); calls.push({ path: 'rpc/save_event', body: b });
+    evs = [{ id: 'e1', title: b.p.title, starts_at: b.p.starts_at, place: b.p.place, details: b.p.details, capacity: +b.p.capacity || null, going: 0, maybe: 0, me: null, cancelled: false, people: [] }]; return json(r, evs[0]); });
+  await page.route('**/rest/v1/rpc/rsvp_event', (r) => { const b = JSON.parse(r.request().postData()); calls.push({ path: 'rpc/rsvp_event', body: b }); evs = [{ ...evs[0], me: b.p_status, going: 1 }]; return json(r, evs[0]); });
+  await page.goto(url('comunidades/?c=liga-campinas'));
+  await expect(page.locator('[data-testid="events"]')).toContainText('Nenhuma mesa marcada ainda.');
+  await page.locator('#evNew').click();
+  await page.locator('#evT').fill('Liga de quinta');
+  await page.locator('#evW').fill('2030-01-03T19:00');
+  await page.locator('#evP').fill('Loja do Zé');
+  await page.locator('#evC').fill('16');
+  await page.locator('#evSave').click();
+  await expect(page.locator('[data-ev="e1"]')).toContainText('Liga de quinta');
+  const saved = rpcCalls(calls, 'save_event')[0];
+  expect(saved).toMatchObject({ p_slug: 'liga-campinas', p_id: null, p: { title: 'Liga de quinta', place: 'Loja do Zé', capacity: '16' } });
+  expect(Date.parse(saved.p.starts_at)).toBe(new Date('2030-01-03T19:00').getTime());
+  await page.locator('[data-rsvp="e1:going"]').click();
+  await expect(page.locator('[data-rsvp="e1:going"]')).toHaveAttribute('aria-pressed', 'true');
+  expect(rpcCalls(calls, 'rsvp_event')).toEqual([{ p_event: 'e1', p_status: 'going' }]);
+});

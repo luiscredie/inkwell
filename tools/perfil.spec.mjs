@@ -362,6 +362,66 @@ test('public profile shows its background card', async ({ page }) => {
   await expect(page.locator('[data-testid="cover"]')).toHaveAttribute('data-card', 'LOR12-195');
 });
 
+test('Início: write a post with a card, like and comment; tables & leagues with Vou', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await setup(page, { mine: { display_name: 'Luís', adult: true } });
+  const sent = [];
+  let posts = [{ id: 'p1', author: 'u2', name: 'Rodrigo', handle: 'rodrigo', avatar: null, body: 'Olha meu deck <b>novo</b>', card: null, deck: { name: 'Steelsong', colors: ['Amber', 'Steel'], cards: { 'LOR14-1': 4, 'LOR10-10': 2 } },
+    visibility: 'friends', at: new Date().toISOString(), mine: false, likes: 1, liked: false, comments_n: 0, comments: [] }];
+  const json = (route, v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+  await page.route('**/rest/v1/profiles?**', (r) => json(r, [{ user_id: ME, display_name: 'Luís', default_visibility: 'friends' }]));
+  await page.route('**/rest/v1/rpc/feed_posts', (r) => json(r, posts));
+  await page.route('**/rest/v1/rpc/create_post', (r) => { const b = JSON.parse(r.request().postData()); sent.push(['create', b]); return json(r, { id: 'p2', author: 'me', name: 'Luís', body: b.p_body, card: b.p_card, foil: b.p_foil, deck: b.p_deck, visibility: b.p_visibility, at: new Date().toISOString(), mine: true, likes: 0, liked: false, comments_n: 0, comments: [] }); });
+  await page.route('**/rest/v1/rpc/like_post', (r) => { sent.push(['like', JSON.parse(r.request().postData())]); return r.fulfill({ status: 204, body: '' }); });
+  await page.route('**/rest/v1/rpc/comment_post', (r) => { const b = JSON.parse(r.request().postData()); sent.push(['comment', b]); return json(r, { ...posts[0], comments_n: 1, comments: [{ id: 'c1', name: 'Luís', body: b.p_body, at: new Date().toISOString(), mine: true }] }); });
+  let ev = { id: 'e1', title: 'Liga de quinta', starts_at: '2030-01-03T22:00:00Z', place: 'Loja do Zé', community: 'Liga Campinas', slug: 'liga-campinas', going: 3, maybe: 0, me: null, capacity: 16 };
+  await page.route('**/rest/v1/rpc/my_events', (r) => json(r, [ev]));
+  await page.route('**/rest/v1/rpc/rsvp_event', (r) => { const b = JSON.parse(r.request().postData()); sent.push(['rsvp', b]); ev = { ...ev, me: b.p_status, going: 4 }; return json(r, ev); });
+  await page.goto(url('feed/'));
+  const post = page.locator('[data-spost="p1"]');
+  await expect(post).toContainText('Olha meu deck <b>novo</b>');   // text, never HTML
+  await expect(post.locator('[data-testid="post-deck"]')).toContainText('Steelsong');
+  await post.locator('[data-like]').click();
+  await expect(post.locator('[data-like]')).toHaveAttribute('aria-pressed', 'true');
+  await post.locator('[data-pcmt]').click();
+  await post.locator('[data-pform] input').fill('Boa!');
+  await post.locator('[data-psend]').click();
+  await expect(page.locator('[data-spost="p1"] .cmt')).toContainText('Boa!');
+  await page.locator('#cmpText').fill('Puxei hoje!');
+  await page.locator('#cmpCard').click();
+  await page.locator('#pkQ').fill('rapunzel tower');
+  await page.locator('#cardPicker [data-card="LOR13-80"] [data-use]').click();
+  await expect(page.locator('[data-testid="att-card"]')).toBeVisible();
+  await page.locator('#cmpGo').click();
+  await expect(page.locator('[data-spost="p2"]')).toContainText('Puxei hoje!');
+  expect(sent.find((x) => x[0] === 'create')[1]).toMatchObject({ p_body: 'Puxei hoje!', p_card: 'LOR13-80', p_visibility: 'friends' });
+  expect(sent.find((x) => x[0] === 'like')[1]).toEqual({ p_post: 'p1', p_on: true });
+  const evs = page.locator('[data-testid="home-events"]');
+  await expect(evs).toContainText('Liga de quinta');
+  await evs.locator('[data-rsvp="e1:going"]').click();
+  await expect(evs.locator('[data-rsvp="e1:going"]')).toHaveAttribute('aria-pressed', 'true');
+  expect(sent.find((x) => x[0] === 'rsvp')[1]).toEqual({ p_event: 'e1', p_status: 'going' });
+  if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT, fullPage: true });
+});
+
+test('notifications: a bell with the unread count; opening marks them read', async ({ page }) => {
+  await setup(page, { mine: { display_name: 'Luís' } });
+  let read = 0;
+  const json = (route, v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+  await page.route('**/rest/v1/rpc/my_notifications', (r) => json(r, [
+    { id: 'n1', kind: 'comment', name: 'Rodrigo', handle: 'rodrigo', ref: { post: 'p1', text: 'Olha meu deck' }, at: new Date().toISOString(), unread: true },
+    { id: 'n2', kind: 'event', name: 'Bia', ref: { event: 'e1', slug: 'liga-campinas', text: 'Liga de quinta' }, at: new Date().toISOString(), unread: false }]));
+  await page.route('**/rest/v1/rpc/read_notifications', (r) => { read++; return r.fulfill({ status: 204, body: '' }); });
+  await page.goto(url('colecao/'));
+  await expect(page.locator('#iwBellN')).toHaveText('1');
+  await page.locator('#iwBell').click();
+  const m = page.locator('.menu.notif');
+  await expect(m.locator('a[href="../feed/#post-p1"]')).toContainText('Rodrigo comentou no seu post');
+  await expect(m.locator('a[href="../comunidades/?c=liga-campinas#mesas"]')).toContainText('Liga de quinta');
+  await expect.poll(() => read).toBe(1);
+  await expect(page.locator('#iwBellN')).toBeHidden();
+});
+
 test('terms and privacy page, linked from the sign-in sheet', async ({ page }) => {
   await setup(page, { signedIn: false });
   await page.goto(url('feed/'));

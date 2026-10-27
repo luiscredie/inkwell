@@ -75,6 +75,34 @@ body.out .page.split.home3 { display: block; }
 .comm-list a { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: var(--sp-2); align-items: center; padding: 6px; border-radius: var(--r-md); color: inherit; text-decoration: none; font-weight: 600; font-size: var(--fs-small); }
 .comm-list a:hover { background: var(--hover-tint); }
 .comm-list a span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* posts (supabase/social.sql) */
+.compose { display: grid; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-radius: var(--r-lg); background: var(--surface-1); border: 1px solid var(--line); box-shadow: var(--e1); margin-bottom: var(--sp-4); }
+.compose textarea { min-height: 64px; resize: vertical; }
+.compose .bar { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; }
+.compose .bar .grow { flex: 1; }
+.compose .att { display: flex; gap: var(--sp-2); align-items: center; padding: 6px 8px; border-radius: var(--r-md); background: var(--surface-2); font-size: var(--fs-small); }
+.compose .att .thumb { width: 36px; }
+.spost { display: grid; gap: var(--sp-3); }
+.spost .who { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: var(--sp-3); align-items: center; }
+.spost .who b a { color: inherit; text-decoration: none; } .spost .who b a:hover { text-decoration: underline; }
+.spost .pav { width: 40px; height: 40px; border-radius: 50%; background: var(--surface-3) 50% 20% / 210% auto no-repeat; box-shadow: 0 0 0 2px var(--accent); display: grid; place-items: center; font-weight: 800; color: var(--text-2); }
+.spost .body { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.spost .pcard { max-width: 260px; }
+.spost .pcard .thumb { display: block; width: 100%; border-radius: 4.5% / 3.2%; }
+.spost .pcard .thumb img { object-fit: contain; }
+.pdeck { display: grid; gap: var(--sp-2); padding: var(--sp-3); border-radius: var(--r-md); background: var(--surface-2); }
+.pdeck .curve { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; align-items: end; height: 72px; }
+.pdeck .curve i { display: block; background: var(--accent); border-radius: 4px 4px 0 0; min-height: 2px; }
+.pdeck .curve-x { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; font-size: var(--fs-micro); color: var(--text-2); text-align: center; }
+.spost .acts { display: flex; flex-wrap: wrap; gap: 4px; border-top: 1px solid var(--line); padding-top: var(--sp-2); }
+.spost .acts [aria-pressed="true"] { color: var(--accent-ink); font-weight: 800; }
+.spost .cmts { display: grid; gap: var(--sp-2); }
+.spost .cmt { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: var(--sp-2); font-size: var(--fs-small); }
+.spost .cmt .pav { width: 28px; height: 28px; box-shadow: none; font-size: .8rem; }
+.spost .cmt p { margin: 0; padding: 6px 10px; border-radius: 12px; background: var(--surface-2); overflow-wrap: anywhere; white-space: pre-wrap; }
+.ev { display: grid; gap: 4px; padding: var(--sp-2) 0; border-top: 1px solid var(--line); } .ev:first-of-type { border-top: 0; }
+.ev .when { font-size: var(--fs-micro); font-weight: 800; color: var(--accent-ink); text-transform: uppercase; letter-spacing: .04em; }
+.ev .row { gap: 6px; }
 /* public home (signed out) */
 body.out .page-head, body.out #aside { display: none; }
 body.out .page.split { display: block; }
@@ -112,11 +140,14 @@ body.out .page.split { display: block; }
   <div class="page-head"><div><h1 id="title">Início</h1><p class="sub" id="sub"></p></div></div>
   <div class="home-main">
     <div id="forYou" data-testid="for-you"></div>
+    <div id="composer" data-testid="composer"></div>
     <button type="button" class="list-row" id="openFriends" hidden></button>
     <div class="stack" id="feed" style="margin-top:var(--sp-4)"></div>
   </div>
-  <aside id="aside"><div class="stack" id="comms" data-testid="home-comms"></div><div class="stack" id="side"></div></aside>
+  <aside id="aside"><div class="stack" id="events" data-testid="home-events"></div><div class="stack" id="comms" data-testid="home-comms"></div><div class="stack" id="side"></div></aside>
 </main>
+<dialog class="iw-dialog iw-public" id="cardPicker" aria-labelledby="pkT"></dialog>
+<script>/*@PICKER_JS@*/</script>
 <dialog class="sheet" id="friendsSheet" aria-labelledby="fpT">
   <div class="grab"></div>
   <div class="sheet-head"><h2 id="fpT"></h2><button type="button" class="btn ghost icon" id="fpClose"><i class="ic i-close"></i></button></div>
@@ -152,7 +183,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "{n} turns": "{n} turnos", "Open game": "Abrir jogo", "Comment": "Comentar", "{n} comments": "{n} comentários", "1 comment": "1 comentário",
     "Write a comment": "Escreva um comentário", "Send": "Enviar", "Couldn't send. Try again.": "Não foi possível enviar. Tente de novo.",
     "Your timeline is empty. Add friends, and choose who sees your games.": "Sua linha do tempo está vazia. Adicione amigos e escolha quem vê seus jogos.",
-    "Show older games": "Ver jogos anteriores", "You": "Você", "A player": "Um jogador", "Someone": "Alguém",
+    "Show older games": "Ver anteriores", "You": "Você", "A player": "Um jogador", "Someone": "Alguém",
     "just now": "agora", "{n} min ago": "há {n} min", "{n} h ago": "há {n} h", "yesterday": "ontem",
     "friends": "amigos", "public": "público", "Unknown": "Desconhecido", "Physical game": "Jogo físico",
     "Your friends' games, newest first.": "Os jogos dos seus amigos, do mais recente ao mais antigo.", "What your friends and communities are up to.": "O que seus amigos e suas comunidades andam fazendo.", "Friends and privacy": "Amigos e privacidade", "Privacy": "Privacidade",
@@ -196,6 +227,13 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "A kind, safe space": "Espaço gentil e seguro", "Communities and recados are for members 18+. Be kind at the table and online; report what isn't.": "Comunidades e recados são para membros 18+. Gentileza na mesa e aqui; denuncie o que não for.",
     "Amber": "Âmbar", "Amethyst": "Ametista", "Emerald": "Esmeralda", "Ruby": "Rubi", "Sapphire": "Safira", "Steel": "Aço",
     "No communities yet.": "Nenhuma comunidade ainda.", "Find a community": "Encontrar comunidade",
+    "Share with your friends": "Compartilhe com seus amigos", "Write something, show a card or a deck": "Escreva algo, mostre uma carta ou um deck", "Card": "Carta", "Deck": "Deck", "Post": "Publicar",
+    "Friends only": "Só amigos", "All members": "Todos os membros", "Remove": "Remover", "Like": "Curtir", "Comment ": "Comentar", "Report": "Denunciar", "Delete": "Apagar",
+    "See all {n} comments": "Ver os {n} comentários", "Write a comment ": "Escreva um comentário", "Report this post?": "Denunciar este post?", "Why?": "Por quê?", "Send report": "Enviar denúncia",
+    "Report sent. Thank you.": "Denúncia enviada. Obrigado.", "Tap again to delete": "Toque de novo para apagar", "{n} cards · average cost {c}": "{n} cartas · custo médio {c}",
+    "Your profile needs the 18+ confirmation to post.": "Para publicar, confirme que tem 18+ no Meu Inkwell.", "Couldn't post. Try again.": "Não foi possível publicar. Tente de novo.",
+    "Choose one of your decks": "Escolha um dos seus decks", "Tables & Leagues": "Mesas & Ligas", "No tables coming up in your communities.": "Nenhuma mesa marcada nas suas comunidades.",
+    "Going": "Vou", "Maybe": "Talvez", "{n} going": "{n} vão", "1 going": "1 vai", "Full": "Lotado", "See community": "Ver comunidade", "foil": "foil",
     "Invite": "Convidar", "people": "pessoas", "Opponents' names are never shown to others. Coaches see the games shared with them. You can change it game by game in the review.": "O nome dos adversários nunca aparece para os outros. Coaches veem os jogos compartilhados com eles. Dá para mudar jogo a jogo na revisão.",
   };
   const fill = (s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)) : s);
@@ -391,6 +429,133 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     });
   }
 
+  // ---------- posts: write, like, comment (supabase/social.sql) ----------
+  let sposts = [], sOlder = null, sMore = false, socialOn = true, attach = { card: null, foil: false, deck: null }, vis = "friends", myDecks = null, adultMe = null;
+  const IDXC = new Map(((typeof CARD_INDEX !== "undefined" && CARD_INDEX?.cards) || []).map((c) => [c[0], c]));
+  const cimg = (id) => { const c = IDXC.get(id); return c && c[8] ? `../lorcana-card-images/${encodeURI(c[8]).replace(/'/g, "%27")}` : ""; };
+  const cname = (id) => IDXC.get(id)?.[1] || id;
+  const norm2 = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  let picker = null;
+  const getPicker = () => picker || (picker = window.INKWELL_CARD_PICKER({ dialog: $("cardPicker"), lang, sets: CARD_INDEX?.sets || [], signedIn: () => !!me,
+    cards: [...IDXC.values()].map(([id, name, cost, type, ink, rarity, set, num, img]) => ({ id, name: name || id, cost, type, ink, rarity, set, num, img, k: norm2(`${name} ${set} ${num}`) })),
+    loadCollection: async () => { const r = await CLOUD.collections("profile,collection:data->collection"); return (r || []).find((x) => x.profile === "principal")?.collection || r?.[0]?.collection || {}; } }));
+  const rpcS = (name, body = {}) => CLOUD.api(`rpc/${name}`, { method: "POST", body });
+  async function loadSocial(more = false) {
+    if (!socialOn) return;
+    try {
+      const rows = (await rpcS("feed_posts", { p_before: more ? sOlder : null, p_limit: 20 })) || [];
+      sposts = more ? sposts.concat(rows) : rows; sMore = rows.length === 20; sOlder = sposts.at(-1)?.at || null;
+    } catch { socialOn = false; sposts = []; }   // social.sql not run yet: the page works without posts
+  }
+  const pav = (p) => { const src = p.avatar ? cimg(p.avatar) : ""; return `<span class="pav" style="${src ? `background-image:url('${src}')` : ""}">${src ? "" : esc((p.name || "?")[0].toUpperCase())}</span>`; };
+  const who = (p) => (p.handle ? `<a href="../perfil/?u=${enc(p.handle)}">${esc(p.name || Tx("Someone"))}</a>` : esc(p.name || Tx("Someone")));
+  function deckHtml(d) {
+    if (!d || typeof d !== "object") return "";
+    const cards = d.cards && typeof d.cards === "object" ? d.cards : {}, bins = [0, 0, 0, 0, 0, 0, 0];
+    let n = 0, cost = 0, nc = 0;
+    for (const [id, q] of Object.entries(cards)) { const c = IDXC.get(id), k = +q || 0; n += k; if (c && c[2] != null) { bins[Math.min(7, Math.max(1, +c[2])) - 1] += k; cost += +c[2] * k; nc += k; } }
+    const hi = Math.max(1, ...bins);
+    return `<div class="pdeck" data-testid="post-deck"><div class="row" style="gap:var(--sp-2)">${inkDots((d.colors || []).join("/"))}<b>${esc(d.name || Tx("Deck"))}</b></div>
+      <div class="curve" aria-hidden="true">${bins.map((b) => `<i style="height:${Math.round((b / hi) * 100)}%"></i>`).join("")}</div><div class="curve-x">${["1", "2", "3", "4", "5", "6", "7+"].map((x) => `<span>${x}</span>`).join("")}</div>
+      <span class="small muted">${esc(Tx("{n} cards · average cost {c}", { n, c: nc ? (cost / nc).toLocaleString(LOC, { maximumFractionDigits: 1 }) : "—" }))}</span></div>`;
+  }
+  const cmtHtml = (c) => `<div class="cmt" data-cmt-id="${esc(c.id)}">${pav(c)}<div><div class="small"><b>${who(c)}</b> <span class="faint">· ${esc(ago(c.at))}</span>${c.mine ? ` · <button type="button" class="linkbtn small" data-cdel="${esc(c.id)}">${Tx("Delete")}</button>` : ""}</div><p data-ctext="${esc(c.id)}"></p></div></div>`;
+  function spostHtml(p) {
+    return `<article class="card spost" id="post-${esc(p.id)}" data-spost="${esc(p.id)}" data-testid="spost">
+      <div class="who">${pav(p)}<div style="min-width:0"><b>${who(p)}</b><div class="small muted">${esc(ago(p.at))} · ${Tx(p.visibility === "public" ? "All members" : "Friends only")}</div></div>
+        ${p.mine ? `<button type="button" class="btn ghost small" data-pdel="${esc(p.id)}">${Tx("Delete")}</button>` : ""}</div>
+      ${p.body ? `<p class="body" data-ptext="${esc(p.id)}"></p>` : ""}
+      ${p.card && IDXC.has(p.card) ? `<div class="pcard"><span class="thumb${p.foil ? " foil" : ""}">${cimg(p.card) ? `<img src="${cimg(p.card)}" alt="${esc(cname(p.card))}" loading="lazy">` : ""}</span><div class="small muted" style="margin-top:4px">${esc(cname(p.card))}${p.foil ? ` · ${Tx("foil")}` : ""}</div></div>` : ""}
+      ${deckHtml(p.deck)}
+      <div class="acts"><button type="button" class="btn ghost small" data-like="${esc(p.id)}" aria-pressed="${!!p.liked}">◆ ${Tx("Like")}${p.likes ? ` · ${p.likes}` : ""}</button>
+        <button type="button" class="btn ghost small" data-pcmt="${esc(p.id)}"><i class="ic i-comment"></i>${Tx("Comment ")}${p.comments_n ? ` · ${p.comments_n}` : ""}</button>
+        ${p.mine ? "" : `<button type="button" class="btn ghost small" data-prep="${esc(p.id)}">${Tx("Report")}</button>`}</div>
+      <div class="cmts">${(p.comments || []).map(cmtHtml).join("")}
+        ${p.comments_n > (p.comments || []).length ? `<button type="button" class="linkbtn small" data-pall="${esc(p.id)}" style="justify-self:start">${esc(Tx("See all {n} comments", { n: p.comments_n }))}</button>` : ""}
+        <div class="cmtform" data-pform="${esc(p.id)}" hidden><input maxlength="500" placeholder="${Tx("Write a comment ")}" aria-label="${Tx("Write a comment ")}"><button type="button" class="btn" data-psend="${esc(p.id)}"><i class="ic i-send"></i>${Tx("Send")}</button></div></div>
+    </article>`;
+  }
+  function wireSocial(el) {
+    const byId = new Map(sposts.map((p) => [p.id, p]));
+    el.querySelectorAll("[data-ptext]").forEach((x) => { x.textContent = byId.get(x.dataset.ptext)?.body || ""; });   // people's text: set as text
+    el.querySelectorAll("[data-ctext]").forEach((x) => { for (const p of sposts) { const c = (p.comments || []).find((y) => y.id === x.dataset.ctext); if (c) { x.textContent = c.body; break; } } });
+    const refresh = (np) => { const i = sposts.findIndex((p) => p.id === np.id); if (i >= 0) sposts[i] = np; renderFeed(); };
+    el.querySelectorAll("[data-like]").forEach((b) => b.onclick = async () => {
+      const p = byId.get(b.dataset.like), on = !p.liked; p.liked = on; p.likes = (p.likes || 0) + (on ? 1 : -1); renderFeed();
+      try { await rpcS("like_post", { p_post: p.id, p_on: on }); } catch { p.liked = !on; p.likes += on ? -1 : 1; renderFeed(); }
+    });
+    el.querySelectorAll("[data-pcmt]").forEach((b) => b.onclick = () => { const f = el.querySelector(`[data-pform="${CSS.escape(b.dataset.pcmt)}"]`); f.hidden = !f.hidden; if (!f.hidden) f.querySelector("input").focus(); });
+    el.querySelectorAll("[data-psend]").forEach((b) => {
+      const input = b.parentElement.querySelector("input");
+      const send = async () => { const t = input.value.trim(); if (!t) return; b.disabled = true;
+        try { refresh(await rpcS("comment_post", { p_post: b.dataset.psend, p_body: t })); }
+        catch (e) { b.disabled = false; input.placeholder = /adults_only/.test(String(e?.message || e)) ? Tx("Your profile needs the 18+ confirmation to post.") : Tx("Couldn't send. Try again."); } };
+      b.onclick = send; input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); send(); } });
+    });
+    el.querySelectorAll("[data-pall]").forEach((b) => b.onclick = async () => { const p = byId.get(b.dataset.pall); try { p.comments = (await rpcS("post_comments_all", { p_post: p.id })) || p.comments; p.comments_n = p.comments.length; renderFeed(); } catch { /* keep */ } });
+    el.querySelectorAll("[data-pdel]").forEach((b) => b.onclick = async () => {
+      if (b.dataset.c !== "1") { b.dataset.c = "1"; b.textContent = Tx("Tap again to delete"); return; }
+      try { await rpcS("moderate_post", { p_action: "delete", p_post: b.dataset.pdel }); sposts = sposts.filter((p) => p.id !== b.dataset.pdel); renderFeed(); } catch { b.dataset.c = ""; }
+    });
+    el.querySelectorAll("[data-cdel]").forEach((b) => b.onclick = async () => {
+      try { await rpcS("moderate_post", { p_action: "delete", p_comment: b.dataset.cdel }); for (const p of sposts) { const n = (p.comments || []).length; p.comments = (p.comments || []).filter((c) => c.id !== b.dataset.cdel); if (p.comments.length < n) p.comments_n--; } renderFeed(); } catch { /* keep */ }
+    });
+    el.querySelectorAll("[data-prep]").forEach((b) => b.onclick = () => {
+      const why = prompt(Tx("Report this post?") + " " + Tx("Why?")); if (!why || why.trim().length < 3) return;
+      rpcS("report_post", { p_post: b.dataset.prep, p_reason: why.trim() }).then(() => { b.textContent = Tx("Report sent. Thank you."); b.disabled = true; }).catch(() => {});
+    });
+  }
+  function renderComposer() {
+    const el = $("composer"); if (!el) return;
+    if (!socialOn || !me || !myProfile) { el.innerHTML = ""; return; }
+    const first = (myProfile.display_name || "").split(" ")[0];
+    el.innerHTML = `<form class="compose" id="cmpForm"><label class="sr-only" for="cmpText">${Tx("Share with your friends")}</label>
+      <textarea id="cmpText" maxlength="1000" placeholder="${esc(Tx("Write something, show a card or a deck"))}${first ? ", " + esc(first) : ""}"></textarea>
+      ${attach.card ? `<div class="att" data-testid="att-card"><span class="thumb"><img src="${cimg(attach.card)}" alt=""></span><span class="grow">${esc(cname(attach.card))}${attach.foil ? ` · ${Tx("foil")}` : ""}</span><button type="button" class="btn ghost small" id="cmpNoCard">${Tx("Remove")}</button></div>` : ""}
+      ${attach.deck ? `<div class="att" data-testid="att-deck">${inkDots((attach.deck.colors || []).join("/"))}<span class="grow">${esc(attach.deck.name || Tx("Deck"))}</span><button type="button" class="btn ghost small" id="cmpNoDeck">${Tx("Remove")}</button></div>` : ""}
+      <div class="bar"><button type="button" class="btn ghost small" id="cmpCard"><i class="ic i-cards"></i>${Tx("Card")}</button>
+        ${myDecks?.length ? `<select id="cmpDeck" class="inline" aria-label="${Tx("Choose one of your decks")}"><option value="">${Tx("Deck")}…</option>${myDecks.map((d, i) => `<option value="${i}">${esc(d.name || Tx("Deck"))}</option>`).join("")}</select>` : ""}
+        <span class="grow"></span>
+        <select id="cmpVis" class="inline" aria-label="${Tx("Who sees my new games")}"><option value="friends" ${vis === "friends" ? "selected" : ""}>${Tx("Friends only")}</option><option value="public" ${vis === "public" ? "selected" : ""}>${Tx("All members")}</option></select>
+        <button type="submit" class="btn primary small" id="cmpGo">${Tx("Post")}</button></div>
+      <p class="small" id="cmpMsg" role="alert" style="margin:0"></p></form>`;
+    const keep = () => sessionStorage.setItem("inkwell-compose", $("cmpText").value);
+    try { $("cmpText").value = sessionStorage.getItem("inkwell-compose") || ""; } catch { /* */ }
+    $("cmpText").addEventListener("input", () => { try { keep(); } catch { /* */ } });
+    $("cmpCard").onclick = (e) => getPicker().open({ current: null, taken: [], from: e.currentTarget, onUse: ({ id, foil }) => { attach.card = id; attach.foil = foil; renderComposer(); } });
+    $("cmpNoCard")?.addEventListener("click", () => { attach.card = null; renderComposer(); });
+    $("cmpNoDeck")?.addEventListener("click", () => { attach.deck = null; renderComposer(); });
+    $("cmpDeck")?.addEventListener("change", (e) => { const d = myDecks[+e.target.value]; if (d) { attach.deck = { name: d.name || "", colors: d.colors || [], cards: d.cards || {} }; renderComposer(); } });
+    $("cmpVis").onchange = (e) => { vis = e.target.value; };
+    $("cmpForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const body = $("cmpText").value.trim();
+      if (!body && !attach.card && !attach.deck) { $("cmpText").focus(); return; }
+      $("cmpGo").disabled = true;
+      try {
+        const p = await rpcS("create_post", { p_body: body, p_card: attach.card, p_foil: !!attach.foil, p_deck: attach.deck, p_visibility: vis });
+        sposts.unshift(p); attach = { card: null, foil: false, deck: null }; try { sessionStorage.removeItem("inkwell-compose"); } catch { /* */ }
+        renderComposer(); renderFeed();
+      } catch (err) { $("cmpGo").disabled = false; $("cmpMsg").textContent = /adults_only/.test(String(err?.message || err)) ? Tx("Your profile needs the 18+ confirmation to post.") : Tx("Couldn't post. Try again."); }
+    };
+  }
+  // ---------- Mesas & Ligas: next tables in my communities ----------
+  const evWhen = (iso) => new Date(iso).toLocaleString(LOC, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  async function renderEvents() {
+    const el = $("events"); if (!el || !me) return;
+    let list = null; try { list = await rpcS("my_events"); } catch { el.innerHTML = ""; return; }
+    el.innerHTML = `<section class="panel stack" aria-labelledby="hEv"><h2 id="hEv" style="margin:0">${Tx("Tables & Leagues")}</h2>
+      ${(list || []).length ? list.map((e) => `<div class="ev" data-ev="${esc(e.id)}"><span class="when">${esc(evWhen(e.starts_at))}</span><b>${esc(e.title)}</b>
+        <span class="small muted">${esc([e.community, e.place].filter(Boolean).join(" · "))} · ${esc(e.going === 1 ? Tx("1 going") : Tx("{n} going", { n: e.going }))}${e.capacity ? `/${e.capacity}` : ""}</span>
+        <div class="row"><button type="button" class="btn small ${e.me === "going" ? "primary" : ""}" data-rsvp="${esc(e.id)}:going" aria-pressed="${e.me === "going"}">${Tx("Going")}</button><button type="button" class="btn small ghost" data-rsvp="${esc(e.id)}:maybe" aria-pressed="${e.me === "maybe"}">${Tx("Maybe")}</button><a class="small" href="../comunidades/?c=${enc(e.slug)}#mesas">${Tx("See community")}</a></div></div>`).join("")
+        : `<p class="small muted" style="margin:0">${Tx("No tables coming up in your communities.")}</p>`}</section>`;
+    el.querySelectorAll("[data-rsvp]").forEach((b) => b.onclick = async () => {
+      const [id, st] = b.dataset.rsvp.split(":"), cur = (list || []).find((x) => x.id === id);
+      try { await rpcS("rsvp_event", { p_event: id, p_status: cur?.me === st ? null : st }); } catch { /* full or not allowed */ }
+      renderEvents();
+    });
+  }
+
   // ---------- feed ----------
   function audienceTag(r) {
     if (r.visibility === "group") { const own = groups.find((g) => g.id === r.group_id); return own ? Tx("Group: {name}", { name: own.name }) : otherGroups.has(r.group_id) ? Tx("Group: {name}", { name: otherGroups.get(r.group_id) }) : Tx("group"); }
@@ -414,7 +579,8 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   function renderFeed() {
     const el = $("feed");
     if (!me || !myProfile) { if (me) el.innerHTML = ""; return; }
-    el.innerHTML = posts.length ? posts.map(postHtml).join("") + (moreAvailable ? `<div class="older"><button type="button" class="btn" id="older">${Tx("Show older games")}</button></div>` : "")
+    const items = [...posts.map((g) => ({ at: g.played_at || "", html: postHtml(g) })), ...sposts.map((p) => ({ at: p.at || "", html: spostHtml(p) }))].sort((a, b) => String(b.at).localeCompare(String(a.at)));
+    el.innerHTML = items.length ? items.map((x) => x.html).join("") + (moreAvailable || sMore ? `<div class="older"><button type="button" class="btn" id="older">${Tx("Show older games")}</button></div>` : "")
       : `<div class="empty"><img src="../ui/assets/empty/feed.svg" alt=""><b>${Tx("Your timeline is empty")}</b><p>${Tx("Add friends to see their games here. Your games also show up for whoever you choose.")}</p>
           <button type="button" class="btn primary" id="addFriends"><i class="ic i-user-plus"></i>${Tx("Add friends")}</button></div>`;
     $("addFriends")?.addEventListener("click", () => { if (phone()) $("openFriends").click(); else $("findPeople")?.focus(); });
@@ -435,7 +601,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       b.onclick = send;
       input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); send(); } });
     });
-    $("older")?.addEventListener("click", async () => { await loadPosts(true); renderFeed(); });
+    $("older")?.addEventListener("click", async () => { await Promise.all([moreAvailable ? loadPosts(true) : null, sMore ? loadSocial(true) : null]); renderFeed(); });
+    wireSocial(el);
+    if (location.hash.startsWith("#post-") && !renderFeed.jumped) { const t = document.getElementById(location.hash.slice(1)); if (t) { renderFeed.jumped = true; t.scrollIntoView({ block: "center" }); } }
   }
 
   // ---------- public home (signed out): what Inkwell is, with example profiles marked as such ----------
@@ -605,7 +773,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
 
   const go = async () => {
     renderForYou();
-    try { await loadPeople(); renderLeft(); await loadPosts(); renderSide(); renderFeed(); if (location.hash === "#amigos") { if (phone()) $("openFriends").click(); else $("findPeople")?.focus(); } }
+    renderEvents();
+    try { await loadPeople(); renderLeft(); await Promise.all([loadPosts(), loadSocial()]); renderSide(); renderComposer(); renderFeed();
+      if (!myDecks) CLOUD.collections("profile,decks:data->decks").then((r) => { myDecks = (r || []).flatMap((x) => (Array.isArray(x.decks) ? x.decks : [])).filter((d) => d?.cards && Object.keys(d.cards).length); renderComposer(); }).catch(() => {}); if (location.hash === "#amigos") { if (phone()) $("openFriends").click(); else $("findPeople")?.focus(); } }
     catch { $("feed").innerHTML = `<div class="empty"><img src="../ui/assets/empty/error.svg" alt=""><b>${Tx("Couldn't load the timeline.")}</b><p>${Tx("Check your connection and try again.")}</p><button type="button" class="btn" id="retry"><i class="ic i-refresh"></i>${Tx("Try again")}</button></div>`; $("retry").onclick = go; }
   };
   go();

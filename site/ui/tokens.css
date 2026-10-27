@@ -790,6 +790,7 @@ table .cardcell small { display: block; color: var(--text-2); }
 .i-globe{-webkit-mask-image:url(assets/icons/globe.svg);mask-image:url(assets/icons/globe.svg)}
 .i-sun{-webkit-mask-image:url(assets/icons/sun.svg);mask-image:url(assets/icons/sun.svg)}
 .i-moon{-webkit-mask-image:url(assets/icons/moon.svg);mask-image:url(assets/icons/moon.svg)}
+.i-bell{-webkit-mask-image:url(assets/icons/bell.svg);mask-image:url(assets/icons/bell.svg)}
 .i-coins{-webkit-mask-image:url(assets/icons/coins.svg);mask-image:url(assets/icons/coins.svg)}
 .i-logout{-webkit-mask-image:url(assets/icons/logout.svg);mask-image:url(assets/icons/logout.svg)}
 .i-check{-webkit-mask-image:url(assets/icons/check.svg);mask-image:url(assets/icons/check.svg)}
@@ -835,3 +836,10 @@ dialog.iw-zoom-card figure { margin: 0; display: grid; gap: var(--sp-2); justify
 dialog.iw-zoom-card img { display: block; max-width: min(92vw, 520px); max-height: 84dvh; width: auto; height: auto; object-fit: contain; border-radius: 4.5% / 3.2%; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
 dialog.iw-zoom-card figcaption { color: #fff; font-weight: 600; text-align: center; font-size: var(--fs-small); }
 dialog.iw-zoom-card [data-zclose] { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 12px); right: 12px; color: #fff; background: rgba(0,0,0,.4); }
+/* notifications (shell.js) */
+.bell-btn { position: relative; }
+.bell-btn .count { position: absolute; top: 2px; right: 0; min-width: 18px; height: 18px; padding: 0 5px; font-size: 11px; }
+.menu.notif { width: min(360px, calc(100vw - 24px)); max-height: min(70vh, 520px); overflow: auto; }
+.menu.notif .menu-item { align-items: flex-start; white-space: normal; line-height: 1.35; }
+.menu.notif .menu-item.unread { background: var(--accent-soft); }
+.menu.notif .menu-item small { display: block; color: var(--text-2); }

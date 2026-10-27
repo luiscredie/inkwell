@@ -42,7 +42,7 @@
     "{n} games": "{n} jogos", "{n} open reports": "{n} denúncias abertas", "joined {d}": "entrou em {d}", "last sign-in {d}": "último acesso {d}", "never signed in": "nunca entrou",
     "Hide profile": "Ocultar perfil", "Show profile": "Mostrar perfil", "Sign out everywhere": "Desconectar de tudo", "Delete account": "Excluir conta",
     "Tap again to confirm": "Toque de novo para confirmar", "Done": "Feito", "Couldn't do it: {e}": "Não foi possível: {e}",
-    "No reports.": "Nenhuma denúncia.", "Mark as handled": "Marcar como resolvida", "open": "aberta", "handled": "resolvida", "by {n}": "por {n}", "about {n}": "sobre {n}", "See profile": "Ver perfil",
+    "No reports.": "Nenhuma denúncia.", "Mark as handled": "Marcar como resolvida", "Hide the post": "Esconder o post", "open": "aberta", "handled": "resolvida", "by {n}": "por {n}", "about {n}": "sobre {n}", "See profile": "Ver perfil",
     "Delete all example accounts": "Excluir todas as contas de exemplo", "Example accounts": "Contas de exemplo",
     "There is no password to reset: members sign in with a code sent to their e-mail. \"Sign out everywhere\" ends every session; they sign in again with a new code.": "Não há senha para redefinir: os membros entram com um código enviado por e-mail. \"Desconectar de tudo\" encerra todas as sessões; a pessoa entra de novo com um código novo.",
     "Deleting removes the account and all its data (collection, decks, games, posts). It cannot be undone.": "Excluir apaga a conta e todos os dados dela (coleção, decks, jogos, anúncios). Não dá para desfazer.",
@@ -81,7 +81,7 @@
             <button type="button" class="btn small danger" data-cact="delete" data-c="${esc(c.id)}">${armed === `cdel:${c.id}` ? Tx("Tap again to confirm") : Tx("Delete")}</button></div></div>`).join("") : `<p class="muted">${Tx("No communities.")}</p>`}</div>`
       : `<div data-testid="reports">${reports.length ? reports.map((r) => `<div class="adm-row"><div class="t"><b>${esc(Tx("about {n}", { n: r.target_name || r.target_handle || "?" }))}</b><span class="small muted">${esc([Tx("by {n}", { n: r.reporter_name || "?" }), dt(r.created_at)].join(" · "))}</span>
             <p class="adm-reason">${esc(r.reason)}</p><div class="tags"><span class="tag ${r.status === "open" ? "late" : "match"}">${Tx(r.status === "open" ? "open" : "handled")}</span></div></div>
-          <div class="adm-acts">${r.target_handle ? `<a class="btn small ghost" href="../perfil/?u=${esc(r.target_handle)}">${Tx("See profile")}</a>` : ""}${r.status === "open" ? `<button type="button" class="btn small" data-resolve="${esc(r.id)}">${Tx("Mark as handled")}</button>` : ""}
+          <div class="adm-acts">${/^\[post:([0-9a-f-]{36})\]/.test(r.reason || "") ? `<button type="button" class="btn small ghost" data-hidepost="${esc(/^\[post:([0-9a-f-]{36})\]/.exec(r.reason)[1])}">${Tx("Hide the post")}</button>` : ""}${r.target_handle ? `<a class="btn small ghost" href="../perfil/?u=${esc(r.target_handle)}">${Tx("See profile")}</a>` : ""}${r.status === "open" ? `<button type="button" class="btn small" data-resolve="${esc(r.id)}">${Tx("Mark as handled")}</button>` : ""}
             ${users.find((u) => u.id === r.target) && !users.find((u) => u.id === r.target).hidden ? btn(users.find((u) => u.id === r.target), "hide", "Hide profile") : ""}</div></div>`).join("") : `<p class="muted">${Tx("No reports.")}</p>`}</div>`}`;
     document.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => { tab = b.dataset.tab; armed = null; render(); });
     $("q")?.addEventListener("input", (e) => { q = e.target.value; render(); $("q").focus(); $("q").setSelectionRange(q.length, q.length); });
@@ -92,6 +92,7 @@
       run(() => rpc("admin_community", { p_id: id, p_action: a }));
     });
     document.querySelectorAll("[data-resolve]").forEach((b) => b.onclick = () => run(() => rpc("admin_resolve_report", { p_id: b.dataset.resolve })));
+    document.querySelectorAll("[data-hidepost]").forEach((b) => b.onclick = () => run(() => rpc("moderate_post", { p_action: "hide", p_post: b.dataset.hidepost })));   // supabase/social.sql
   }
   async function run(fn) {
     try { await fn(); await load(); armed = null; render(); toast(Tx("Done")); }
