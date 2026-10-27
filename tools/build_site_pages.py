@@ -11,6 +11,7 @@ Three markers are filled in at build time, so shared code lives in one place:
   /*@CLOUD_JS@*/    src/site/cloud.js   sign-in and REST calls (one session for the whole site)
   /*@SHELL_JS@*/    src/site/shell.js   top bar, tab bar, account menu, sign-in sheet
   /*@PICKER_JS@*/   src/site/cardpicker.js   showcase card picker (search, filters, finish, zoom)
+  /*@AIPROMPT_JS@*/ src/site/aiprompt.js     Jogos: a game as a prompt for the player's own AI
   /*@CARD_INDEX@*/  compact card index from site/data/cards.json (re-run after a catalog update)
   /*@APP_STATIC:name@*/  a pure static method copied verbatim from the Inkwell app (site/index.html), so both give the same answer
 The Decks page has its own builder (tools/build_site_decks.py), which this script also runs.
@@ -90,9 +91,10 @@ def render(name: str, catalog: dict) -> str:
     html = html.replace("/*@CLOUD_JS@*/", (SRC / "cloud.js").read_text(encoding="utf-8"))
     html = html.replace("/*@SHELL_JS@*/", (SRC / "shell.js").read_text(encoding="utf-8"))
     html = html.replace("/*@PICKER_JS@*/", (SRC / "cardpicker.js").read_text(encoding="utf-8"))
+    html = html.replace("/*@AIPROMPT_JS@*/", (SRC / "aiprompt.js").read_text(encoding="utf-8"))
     if PAGES[name]:
         html = html.replace("/*@CARD_INDEX@*/", json.dumps(PAGES[name](catalog), ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/"))
-    for marker in ("/*@CLOUD_JS@*/", "/*@SHELL_JS@*/", "/*@PICKER_JS@*/", "/*@CARD_INDEX@*/"):
+    for marker in ("/*@CLOUD_JS@*/", "/*@SHELL_JS@*/", "/*@PICKER_JS@*/", "/*@AIPROMPT_JS@*/", "/*@CARD_INDEX@*/"):
         if marker in html:
             raise SystemExit(f"{name}: marker {marker} left unfilled")
     return html

@@ -229,3 +229,40 @@ test('filter: online (duels.ink) or at the table (Lore Counter)', async ({ page 
   await page.locator('[data-place="online"]').click();
   await expect(page.locator('.game[data-k]')).toHaveCount(4);
 });
+
+test('Analisar com IA: the game as a prompt for my own AI; the answer can be kept as a comment', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.addInitScript((me) => {
+    localStorage.setItem('inkwell-lang', 'pt');
+    const exp = Math.floor(Date.now() / 1000) + 3600;
+    localStorage.setItem('inkwell-counter-auth', JSON.stringify({ access_token: 'x.' + btoa(JSON.stringify({ sub: me, exp })) + '.y', refresh_token: 'r', expires_at: exp, user: { id: me, email: 'luis@example.com' } }));
+  }, ME);
+  const log = { ...LOGS.a1, turns: [
+    { number: 1, player: 'p1', actions: [{ by: 'p1', seq: 1, type: 'ink', card_id: 'LOR11-174' }, { by: 'p1', seq: 2, type: 'play', card_id: 'LOR11-89' }], lore_end: { p1: 0, p2: 0 } },
+    { number: 2, player: 'p2', actions: [{ by: 'p2', seq: 3, type: 'quest', value: 2, card_id: 'LOR11-86', lore_after: { p1: 0, p2: 2 } }], lore_end: { p1: 0, p2: 2 } }] };
+  const notes = [];
+  await page.route('**/rest/v1/**', (route) => {
+    const req = route.request(), u = new URL(req.url()), path = u.pathname.replace(/.*\/rest\/v1\//, '');
+    const json = (v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+    if (path === 'game_logs') { const id = (u.searchParams.get('game_id') || '').replace(/^eq\./, ''); return json(id ? [{ log }] : [ROWS[0]]); }
+    if (path === 'game_notes' && req.method() === 'POST') { const b = JSON.parse(req.postData()); const row = (Array.isArray(b) ? b[0] : b); notes.push(row); return json([{ id: 'n1', owner_id: ME, created_at: new Date().toISOString(), ...row }]); }
+    if (path === 'rpc/my_profile') return json({ display_name: 'Luís', adult: true });
+    return json(path.startsWith('rpc/') ? null : []);
+  });
+  await page.goto(url('coach/?game=a1'));
+  await page.locator('[data-testid="ai-analyse"]').click();
+  const box = page.locator('#aiPrompt');
+  await expect(box).toHaveValue(/Por que perdi/);
+  await expect(box).toHaveValue(/T1 Eu \(inkwell 1\): tinta: Darkwing Duck - Crime Fighter; joga White Rabbit - Late Again/);
+  await expect(box).toHaveValue(/- Vixey - Forest Friend \(3⬡/);
+  await page.locator('#aiCopy').click();
+  await expect(page.locator('#aiMsg')).toContainText('Copiado');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(/^Você é um coach experiente de Disney Lorcana/);
+  await expect(page.locator('[data-ai="ChatGPT"]')).toHaveAttribute('href', 'https://chatgpt.com/');
+  await page.locator('#aiAnswer').fill('Você perdeu porque não desafiou a Vixey.');
+  if (process.env.SHOT) { await page.screenshot({ path: process.env.SHOT + '-d.png' }); await page.setViewportSize({ width: 390, height: 844 }); await page.screenshot({ path: process.env.SHOT + '-m.png' }); }
+  await page.locator('#aiSave').click();
+  await expect(page.locator('#aiMsg')).toContainText('Salvo');
+  await expect.poll(() => notes.length).toBe(1);
+  expect(JSON.stringify(notes[0])).toContain('Análise da IA:\\nVocê perdeu porque não desafiou a Vixey.');
+});

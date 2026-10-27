@@ -80,7 +80,11 @@ window.INKWELL_NO_STORE_MSG = "Your games appear here after you sign in.";
     "One card per line, e.g.\n4 Elsa - Spirit of Winter\n4 Tipo - Growing Son": "Uma carta por linha, por exemplo\n4 Elsa - Spirit of Winter\n4 Tipo - Growing Son",
     "All {n} games of this match": "Todos os {n} jogos desta partida", "Save deck list": "Salvar lista",
     "Turn {n}: {name}": "Turno {n}: {name}", "lore {s}": "lore {s}",
-    "Your comment": "Seu comentário", "Cancel": "Cancelar", "Comment": "Comentar", "Delete": "Apagar", "Delete game": "Apagar jogo", "or use one of my decks": "ou use um dos meus decks", "Choose a deck…": "Escolha um deck…", "Untitled deck": "Deck sem nome", "Check the list and save.": "Confira a lista e salve.", "Not found in the catalogue: {list}": "Não encontradas no catálogo: {list}", "Delete this game and its comments?": "Apagar este jogo e os comentários?", "Couldn't delete the game. Try again.": "Não foi possível apagar o jogo. Tente de novo.", "Confirm delete": "Confirmar",
+    "Your comment": "Seu comentário", "Cancel": "Cancelar", "Comment": "Comentar", "Delete": "Apagar", "Delete game": "Apagar jogo", "Analyse with AI": "Analisar com IA", "Analyse this game with your AI": "Analisar esta partida com a sua IA",
+    "Inkwell writes up the game (decks, turn by turn, the real card texts). Copy it, paste it into the AI you use — your own account, free — and bring the answer back if you want to keep it.": "O Inkwell monta o resumo da partida (decks, turno a turno, o texto real das cartas). Copie, cole na IA que você usa — na sua conta, sem custo — e, se quiser guardar, traga a resposta de volta.",
+    "Copy": "Copiar", "Copied. Paste it in the AI chat.": "Copiado. Cole no chat da IA.", "Copy and open {ai}": "Copiar e abrir {ai}", "Preparing the game…": "Montando o resumo…", "Couldn't load the card texts. Try again.": "Não foi possível carregar o texto das cartas. Tente de novo.",
+    "The AI's answer (optional)": "Resposta da IA (opcional)", "Paste the answer here to keep it as a comment on this game.": "Cole a resposta aqui para guardá-la como comentário deste jogo.", "Save as comment": "Salvar como comentário", "Close": "Fechar",
+    "AI analysis": "Análise da IA", "Saved in the game's comments.": "Salvo nos comentários do jogo.", "or use one of my decks": "ou use um dos meus decks", "Choose a deck…": "Escolha um deck…", "Untitled deck": "Deck sem nome", "Check the list and save.": "Confira a lista e salve.", "Not found in the catalogue: {list}": "Não encontradas no catálogo: {list}", "Delete this game and its comments?": "Apagar este jogo e os comentários?", "Couldn't delete the game. Try again.": "Não foi possível apagar o jogo. Tente de novo.", "Confirm delete": "Confirmar",
     "Someone": "Alguém", "You": "Você", "A player": "Um jogador",
     "The comment store is full. Delete old comments to add new ones.": "O espaço de comentários está cheio. Apague comentários antigos.",
     "Couldn't save the comment. Try again.": "Não foi possível salvar o comentário. Tente de novo.",
@@ -608,6 +612,13 @@ textarea { width: 100%; min-height: 72px; resize: vertical; }
 .head .result.win .w, .head .result .w.win { color: var(--win); } .head .result .w.loss { color: var(--loss); }
 .head h2 { font-size: var(--fs-body); font-weight: 600; color: var(--text); }
 .head .muted.small { color: var(--text-2); }
+.ai-dlg { width: min(720px, calc(100vw - 24px)); max-height: calc(100vh - 32px); border: 0; border-radius: var(--r-lg); padding: 0; background: var(--surface-1); color: var(--text); box-shadow: var(--e3, 0 20px 50px rgba(0,0,0,.35)); }
+.ai-dlg::backdrop { background: rgba(5, 10, 20, .55); }
+.ai-dlg .in { display: grid; gap: var(--sp-3); padding: var(--sp-4) var(--sp-5); }
+.ai-dlg h2 { margin: 0; font-size: var(--fs-h3); }
+.ai-dlg textarea { width: 100%; font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; min-height: 180px; }
+.ai-dlg #aiAnswer { font: inherit; min-height: 110px; }
+.ai-dlg .row { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; }
 .rtools { display: flex; gap: var(--sp-2); align-items: center; justify-content: space-between; flex-wrap: wrap; }
 .vissel { display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); font-size: var(--fs-small); }
 .vissel select { width: auto; min-height: 36px; }
@@ -1094,6 +1105,41 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     const s = $("rpSlot"); if (s) s.replaceWith(replayBox(s.dataset.src));
   }
 
+  // ---------- "Analisar com IA": the game as a prompt for the player's own AI (src/site/aiprompt.js) ----------
+  // Inkwell sends nothing to any AI: it writes the text, the player copies it into ChatGPT/Claude/Gemini
+  // with their own account, and may paste the answer back as a comment on the game.
+  let aiCards = null;
+  const AIS = [["ChatGPT", "https://chatgpt.com/"], ["Claude", "https://claude.ai/new"], ["Gemini", "https://gemini.google.com/app"]];
+  async function openAi(g) {
+    let dlg = $("aiDlg");
+    if (!dlg) { dlg = document.createElement("dialog"); dlg.id = "aiDlg"; dlg.className = "ai-dlg"; dlg.setAttribute("aria-labelledby", "aiTitle"); document.body.append(dlg); }
+    dlg.innerHTML = `<div class="in"><h2 id="aiTitle">${Tx("Analyse this game with your AI")}</h2>
+      <p class="small muted" style="margin:0">${Tx("Inkwell writes up the game (decks, turn by turn, the real card texts). Copy it, paste it into the AI you use — your own account, free — and bring the answer back if you want to keep it.")}</p>
+      <textarea id="aiPrompt" readonly aria-label="${Tx("Analyse with AI")}">${esc(Tx("Preparing the game…"))}</textarea>
+      <div class="row"><button type="button" class="btn primary small" id="aiCopy" disabled>${Tx("Copy")}</button>${AIS.map(([n, u]) => `<a class="btn small" href="${u}" target="_blank" rel="noopener" data-ai="${n}">${esc(Tx("Copy and open {ai}", { ai: n }))}</a>`).join("")}<span class="small" id="aiMsg" aria-live="polite"></span></div>
+      ${db && me?.id && canWrite !== false ? `<label class="small" for="aiAnswer"><b>${Tx("The AI's answer (optional)")}</b><br>${Tx("Paste the answer here to keep it as a comment on this game.")}</label>
+      <textarea id="aiAnswer" maxlength="3900"></textarea>` : ""}
+      <div class="row" style="justify-content:flex-end">${db && me?.id && canWrite !== false ? `<button type="button" class="btn small" id="aiSave">${Tx("Save as comment")}</button>` : ""}<button type="button" class="btn ghost small" id="aiClose">${Tx("Close")}</button></div></div>`;
+    dlg.showModal();
+    $("aiClose").onclick = () => dlg.close();
+    const msg = (t) => { $("aiMsg").textContent = t; };
+    try {
+      if (!aiCards) { const r = await fetch("../data/cards.json"); if (!r.ok) throw new Error(r.status); aiCards = new Map(((await r.json()).cards || []).map((c) => [c.card_id, c])); }
+    } catch { $("aiPrompt").value = Tx("Couldn't load the card texts. Try again."); return; }
+    const text = window.INKWELL_AI_PROMPT(g.doc.log, aiCards, { lang: window.INKWELL_I18N?.lang === "en" ? "en" : "pt" });
+    $("aiPrompt").value = text; $("aiCopy").disabled = false;
+    const copy = async () => { try { await navigator.clipboard.writeText(text); } catch { $("aiPrompt").select(); document.execCommand?.("copy"); } msg(Tx("Copied. Paste it in the AI chat.")); };
+    $("aiCopy").onclick = copy;
+    dlg.querySelectorAll("[data-ai]").forEach((a) => a.addEventListener("click", () => { copy(); }));   // the link still opens the AI in a new tab
+    $("aiSave")?.addEventListener("click", async () => {
+      const t = $("aiAnswer").value.trim(); if (!t) { $("aiAnswer").focus(); return; }
+      const b = $("aiSave"); b.disabled = true;
+      try {
+        await db.collection(notesColl(g)).add({ game: g.key, anchor: anchorFromKey("game"), text: `${Tx("AI analysis")}:\n${t}`.slice(0, 4000), author: me.id, at: new Date().toISOString() });
+        msg(Tx("Saved in the game's comments.")); $("aiAnswer").value = ""; setTimeout(() => dlg.close(), 900);
+      } catch { b.disabled = false; msg(Tx("Couldn't save the comment. Try again.")); }
+    });
+  }
   async function renderReview() {
     if (showingStats && !current) { renderStatsView(); return; }
     const g = games.get(current);
@@ -1124,6 +1170,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
         ].filter(Boolean).map((x) => x.replace(/^./, (c) => c.toUpperCase())).join(". "))}.</span>
       </div>
       <div class="rtools">
+        ${isOwner && log.turns.length ? `<button type="button" class="btn small" id="aiBtn" data-testid="ai-analyse"><i class="ic i-sparkle"></i>${Tx("Analyse with AI")}</button>` : ""}
         ${isOwner && db?.deleteGame && db.canDelete(g.key) && !/^duels[._]ink$/.test(g.doc.source || log.source || "") ? `<button type="button" class="btn ghost small danger-text" id="gameDel" data-testid="game-delete"><i class="ic i-trash"></i>${Tx("Delete game")}</button>` : ""}
         ${isOwner && db?.audiences ? `<label class="small vissel">${Tx("Who can see this game")} <select id="visSel">${db.audiences().map((o) => `<option value="${esc(o.value)}" ${o.value === (g.doc.audience || "private") ? "selected" : ""}>${esc(o.label)}</option>`).join("")}</select></label>` : isOwner ? `<span class="vis" role="group" aria-label="${Tx("Who can see this game")}"><button type="button" data-vis="private" aria-pressed="${g.coll === "games"}">${Tx("Private")}</button><button type="button" data-vis="public" aria-pressed="${g.coll === "public_games"}">${Tx("Public (one game)")}</button></span>` : `<span class="muted small">${esc(g.doc.audience_label || Tx(g.coll === "public_games" ? "Public game" : "Private game"))}</span>`}
       </div>
@@ -1197,6 +1244,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     }));
     $("review").querySelectorAll("[data-vis]").forEach((b) => b.addEventListener("click", () => setVisibility(g, b.dataset.vis)));
     $("visSel")?.addEventListener("change", (e) => setVisibility(g, e.target.value));
+    $("aiBtn")?.addEventListener("click", () => openAi(g));
     $("gameDel")?.addEventListener("click", async (e) => {   // only my own games, never duels.ink ones (they come back from duels.ink and are its record)
       const b = e.currentTarget;
       if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.innerHTML = `<i class="ic i-trash"></i>${Tx("Delete this game and its comments?")}`; setTimeout(() => { if (b.isConnected && b.dataset.confirm === "1") { b.dataset.confirm = ""; b.innerHTML = `<i class="ic i-trash"></i>${Tx("Delete game")}`; } }, 5000); return; }
@@ -1681,6 +1729,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
 })();
 </script>
 
+<script>/*@AIPROMPT_JS@*/</script>
 <script>window.INKWELL_SHELL = {"page": "coach"};
 /*@SHELL_JS@*/</script>
 </body>
