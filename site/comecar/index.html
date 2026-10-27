@@ -224,7 +224,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "The account has changed. Review your changes before applying them to the new profile.": "A conta mudou. Revise suas alterações antes de aplicar ao novo perfil.",
     "Your Inkwell starts here": "Seu Inkwell começa aqui", "Choose the cards that represent you. Create an account when you want to keep your profile.": "Escolha as cartas que representam você. Crie uma conta quando quiser guardar seu perfil.",
     "Display name": "Nome de exibição", "How do you want to appear?": "Como você quer aparecer?", "2 to 40 characters.": "De 2 a 40 caracteres.", "Use at least 2 characters.": "Use pelo menos 2 caracteres.",
-    "Your three favourite cards": "Suas três cartas favoritas", "Any card from the catalogue, even without a copy in a collection.": "Qualquer carta do catálogo, mesmo sem ter uma cópia.",
+    "Your three favourite cards": "Suas três cartas favoritas", "choose them right here": "escolha aqui mesmo", "Your three favourite cards are chosen in the profile preview — any card from the catalogue, even without a copy in a collection.": "As três cartas favoritas você escolhe na prévia do perfil — qualquer carta do catálogo, mesmo sem ter uma cópia.", "Any card from the catalogue, even without a copy in a collection.": "Qualquer carta do catálogo, mesmo sem ter uma cópia.",
     "Choose card": "Escolher carta", "Move left": "Mover para a esquerda", "Move right": "Mover para a direita", "Slot {n}": "Posição {n}",
     "Profile preview": "Prévia do seu perfil", "Your name here": "Seu nome aqui", "No inks yet": "Nenhuma tinta ainda", "Discard the draft": "Descartar rascunho",
     "Close": "Fechar", "Set": "Set", "Ink": "Tinta", "Rarity": "Raridade", "Finish": "Acabamento", "All": "Todos", "Normal": "Normal", "Foil": "Foil", "foil": "foil",
@@ -351,9 +351,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       <div class="iw-profile-head"><span class="iw-avatar" aria-hidden="true">${(() => { const c = BY.get(draft.favorites[0]?.id); return c?.img ? `<img src="${imgUrl(c)}" alt="" onerror="this.remove()">` : esc((name || "?")[0].toUpperCase()); })()}</span>
         <div style="min-width:0"><p class="iw-name ${name ? "" : "placeholder"}" data-testid="pv-name">${esc(name || Tx("Your name here"))}</p>
         <div class="iw-muted small" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap" data-testid="pv-inks">${draft.preferredInks.length ? inkDots(draft.preferredInks) + esc(draft.preferredInks.map(inkName).join(" · ")) : Tx("No inks yet")}</div></div></div>
-      <div class="iw-showcase" data-testid="pv-showcase">${[0, 1, 2].map((i) => { const f = draft.favorites[i], c = f && BY.get(f.id);
-        return c ? `<figure style="margin:0">${cardFace(c, f.foil)}<figcaption class="iw-card-label">${esc(split(c.name)[0])}<small>${esc(split(c.name)[1])}</small></figcaption></figure>`
-          : `<button type="button" class="iw-card empty" data-pick="${i}" ${locked() ? "disabled" : ""}>${Tx("Choose card")}</button>`; }).join("")}</div>
+      <div data-testid="pv-showcase"><p class="iw-muted small" style="margin:0 0 var(--sp-2)"><b>${Tx("Your three favourite cards")}</b> · ${Tx("choose them right here")}</p>${slots()}</div>
       <p class="iw-muted small" style="margin:var(--sp-3) 0 0">${Tx("Your profile starts private. You decide when to publish it.")}</p></section>`;
   }
   function slots() {
@@ -427,7 +425,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
           <fieldset><legend>${Tx("Choose up to two inks")}</legend><div class="iw-ink-options" data-testid="inks">${INKS.map((i) => { const on = draft.preferredInks.includes(i);
             return `<button type="button" class="iw-button iw-ink-option" data-ink="${i}" aria-pressed="${on}">${on ? '<span class="ck" aria-hidden="true">✓</span>' : ""}<i style="background:${INK_HEX[i]}" aria-hidden="true"></i>${esc(inkName(i))}</button>`; }).join("")}</div>
             ${inkMsg ? `<p class="err" role="alert" data-testid="ink-max">${esc(inkMsg)}</p>` : ""}</fieldset>
-          <fieldset><legend>${Tx("Your three favourite cards")}</legend><span class="hint" style="margin:0 0 var(--sp-3)">${Tx("Any card from the catalogue, even without a copy in a collection.")}</span>${slots()}</fieldset>
+          <p class="iw-muted small cm-cards-hint" style="margin:0">${Tx("Your three favourite cards are chosen in the profile preview — any card from the catalogue, even without a copy in a collection.")}</p>
           <p class="iw-muted small" style="margin:0">${Tx("Without an account, your changes stay in this session and may be lost when you close the tab.")}</p>
           ${isDirty() && !locked() ? `<div class="cm-discard"><button type="button" class="iw-link" id="discard">${Tx("Discard the draft")}</button></div>` : ""}
         </form>
