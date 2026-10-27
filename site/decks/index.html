@@ -113,8 +113,16 @@ window.INKWELL_CLOUD = (() => {
     return api(q);
   }
 
+  // an Edge Function by GET (signed in or not: the publishable key is enough for public ones)
+  async function fn(name, params = {}) {
+    const tok = sess ? await token().catch(() => null) : null;
+    const r = await fetch(`${cfg.url}/functions/v1/${name}?${new URLSearchParams(params)}`, { headers: headers(tok) });
+    if (!r.ok) throw Object.assign(new Error(`${name} ${r.status}`), { status: r.status });
+    return r.json();
+  }
+
   return {
-    api, collections,
+    api, collections, fn,
     user: () => { sess = load(); return sess ? { id: sess.user?.id, email: sess.user?.email } : null; },
     status: () => { sess = load(); return sess ? { signedIn: true, email: sess.user?.email || "" } : { signedIn: false }; },
     async requestCode(email) {
@@ -1136,6 +1144,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     ["decks", "../decks/", "Decks", "decks"],
     ["communities", "../comunidades/", T("Comunidades", "Communities"), "users"],
     ["coach", "../coach/", T("Jogos", "Games"), "games"],
+    ["events", "../eventos/", T("Eventos", "Events"), "calendar"],
     ["trades", "../trades/", T("Trocas", "Trades"), "trades"],
     ["prices", "../precos/", T("Preços", "Prices"), "coins"],
   ];
@@ -1442,14 +1451,15 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     // Notifications (supabase/social.sql): likes, comments, "Vou" on my tables, new tables in my communities.
     let notes = null;
     const NK = { like: ["curtiu seu post", "liked your post"], comment: ["comentou no seu post", "commented on your post"], rsvp: ["vai na sua mesa", "is going to your table"], event: ["marcou uma mesa", "set up a table"],
-      community_invite: ["convidou você para uma comunidade", "invited you to a community"], join_request: ["pediu para entrar", "asked to join"], join_accepted: ["aceitou seu pedido", "accepted your request"] };
-    const noteHref = (n) => n.ref?.post ? `../feed/#post-${encodeURIComponent(n.ref.post)}` : n.ref?.slug ? `../comunidades/?c=${encodeURIComponent(n.ref.slug)}${n.kind === "event" || n.kind === "rsvp" ? "#mesas" : ""}` : "../feed/";
+      community_invite: ["convidou você para uma comunidade", "invited you to a community"], join_request: ["pediu para entrar", "asked to join"], join_accepted: ["aceitou seu pedido", "accepted your request"],
+      event_soon: ["é amanhã ou hoje", "is coming up"] };
+    const noteHref = (n) => n.kind === "event_soon" && n.ref?.rph ? "../eventos/" : n.ref?.post ? `../feed/#post-${encodeURIComponent(n.ref.post)}` : n.ref?.slug ? `../comunidades/?c=${encodeURIComponent(n.ref.slug)}${["event", "rsvp", "event_soon"].includes(n.kind) ? "#mesas" : ""}` : "../feed/";
     const showBell = () => { const b = $("iwBell"), c = $("iwBellN"); if (!b || !notes) return; b.hidden = false; const n = notes.filter((x) => x.unread).length; c.hidden = !n; c.textContent = n > 9 ? "9+" : String(n);
       b.setAttribute("aria-label", n ? T(`Notificações · ${n} novas`, `Notifications · ${n} new`) : T("Notificações", "Notifications")); };
     CLOUD.api("rpc/my_notifications", { method: "POST", body: {} }).then((r) => { notes = r || []; showBell(); }).catch(() => {});   // not there yet: no bell
     $("iwBell")?.addEventListener("click", (e) => {
       const list = notes || [];
-      openMenu(e.currentTarget, `<div class="menu-label">${T("Notificações", "Notifications")}</div>${list.length ? list.map((n) => `<a class="menu-item${n.unread ? " unread" : ""}" role="menuitem" href="${noteHref(n)}"><span><b>${esc(n.name || T("Alguém", "Someone"))}</b> ${esc(T(...(NK[n.kind] || ["", ""])))}${n.ref?.text || n.ref?.name ? `<small>${esc(n.ref.text || n.ref.name)}</small>` : ""}<small>${esc(new Date(n.at).toLocaleString(lang === "en" ? "en" : "pt-BR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}</small></span></a>`).join("") : `<div class="menu-item" style="pointer-events:none"><span class="small">${T("Nada por aqui ainda.", "Nothing here yet.")}</span></div>`}`, "notif");
+      openMenu(e.currentTarget, `<div class="menu-label">${T("Notificações", "Notifications")}</div>${list.length ? list.map((n) => `<a class="menu-item${n.unread ? " unread" : ""}" role="menuitem" href="${noteHref(n)}"><span>${n.kind === "event_soon" ? `<b>${T("Lembrete", "Reminder")}:</b> ${esc(n.ref?.text || T("seu evento", "your event"))} ${esc(T(...NK.event_soon))}` : `<b>${esc(n.name || T("Alguém", "Someone"))}</b> ${esc(T(...(NK[n.kind] || ["", ""])))}`}${n.kind !== "event_soon" && (n.ref?.text || n.ref?.name) ? `<small>${esc(n.ref.text || n.ref.name)}</small>` : ""}<small>${esc(new Date(n.at).toLocaleString(lang === "en" ? "en" : "pt-BR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}</small></span></a>`).join("") : `<div class="menu-item" style="pointer-events:none"><span class="small">${T("Nada por aqui ainda.", "Nothing here yet.")}</span></div>`}`, "notif");
       if (list.some((n) => n.unread)) CLOUD.api("rpc/read_notifications", { method: "POST", body: {} }).then(() => { list.forEach((n) => { n.unread = false; }); showBell(); }).catch(() => {});
     });
     // an invite link opened before signing in (perfil/?convite=…): accept it on whichever page the sign-in lands

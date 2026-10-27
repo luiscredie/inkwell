@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Eventos · Inkwell</title>
+<meta name="description" content="Eventos de Disney Lorcana perto de você, do Play Hub, e as mesas das suas comunidades, num calendário.">
+<meta name="theme-color" content="#0b192c">
+<link rel="icon" href="../ink/icon-192.png">
+<link rel="apple-touch-icon" href="../ink/icon-192.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="../ui/tokens.css"><script>try{document.documentElement.dataset.theme=localStorage.getItem("inkwell-theme")==="noite"?"noite":"dia"}catch(e){document.documentElement.dataset.theme="dia"}</script>
+</head>
+<body>
+<script>window.INKWELL_CLOUD_CONFIG = {"url": "https://sorefaetiaebmjploanp.supabase.co", "key": "sb_publishable_RkAWW-ENz70CXA6_QV7aHw_MpfD7Gn2", "redirect": "https://luiscredie.github.io/inkwell/eventos/"};
+/*@CLOUD_JS@*/</script>
+<style>
+/* layout only — components come from ../ui/tokens.css */
+.ev-loc { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; padding: var(--sp-3) var(--sp-4); border-radius: var(--r-lg); background: var(--surface-1); border: 1px solid var(--line); margin-bottom: var(--sp-3); }
+.ev-loc .where { flex: 1 1 220px; min-width: 0; font-weight: 700; }
+.ev-loc .where small { display: block; font-weight: 400; color: var(--text-2); }
+.ev-loc form { display: flex; gap: var(--sp-2); flex: 1 1 260px; }
+.ev-loc form input { flex: 1; min-width: 0; }
+.ev-bar { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; justify-content: space-between; margin-bottom: var(--sp-3); }
+.ev-bar .grow { flex: 1; }
+.ev-warn { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-3) var(--sp-4); border-radius: var(--r-md); background: var(--loss-soft, rgba(220,38,38,.1)); margin-bottom: var(--sp-3); }
+.ev-day { margin: var(--sp-5) 0 var(--sp-2); font-family: var(--display); font-size: var(--fs-h3); }
+.ev-list { display: grid; gap: var(--sp-2); }
+.ev { display: grid; gap: 6px; padding: var(--sp-3) var(--sp-4); border-radius: var(--r-lg); background: var(--surface-1); border: 1px solid var(--line); }
+.ev.mine { box-shadow: inset 3px 0 0 var(--accent); }
+.ev.conflict { box-shadow: inset 3px 0 0 var(--loss); }
+.ev .top { display: flex; gap: var(--sp-3); align-items: baseline; flex-wrap: wrap; }
+.ev .time { font-weight: 800; color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+.ev .name { font-weight: 700; font-size: 1.02rem; min-width: 0; overflow-wrap: anywhere; }
+.ev .meta { color: var(--text-2); font-size: var(--fs-small); display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.ev .acts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 4px; }
+.ev .friends { font-size: var(--fs-small); color: var(--text-2); }
+.ev .friends b { color: var(--text); }
+.cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.cal .dow { font-size: var(--fs-micro); color: var(--text-2); text-align: center; text-transform: uppercase; font-weight: 700; padding: 4px 0; }
+.cal button { min-height: 64px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--surface-1); color: var(--text); padding: 6px; display: grid; align-content: start; justify-items: start; gap: 4px; font: inherit; cursor: pointer; text-align: left; }
+.cal button.out { opacity: .4; }
+.cal button.today { border-color: var(--accent); }
+.cal button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.cal .n { font-weight: 700; font-size: var(--fs-small); }
+.cal .dots { display: flex; flex-wrap: wrap; gap: 3px; }
+.cal .dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line-strong); }
+.cal .dots i.go { background: var(--accent); } .cal .dots i.tb { background: var(--sapphire, #0284c7); } .cal .dots i.x { background: var(--loss); }
+.cal-head { display: flex; align-items: center; gap: var(--sp-2); margin: var(--sp-2) 0; }
+.cal-head h2 { margin: 0; flex: 1; }
+@media (max-width: 560px) { .cal button { min-height: 48px; padding: 4px; } .cal .n { font-size: var(--fs-micro); } }
+</style>
+
+<main class="page" id="page">
+  <div class="page-head"><div><h1 id="title">Eventos</h1><p class="sub" id="sub"></p></div></div>
+  <div id="app"></div>
+</main>
+<div class="toast-host"><div class="toast" id="toast" role="status" hidden></div></div>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  let lang = "pt"; try { lang = localStorage.getItem("inkwell-lang") || ((navigator.language || "pt").toLowerCase().startsWith("en") ? "en" : "pt"); } catch { /* */ }
+  const T = (pt, en) => (lang === "en" ? en : pt);
+  const LOC = lang === "en" ? "en" : "pt-BR";
+  const CLOUD = window.INKWELL_CLOUD, me = CLOUD?.user();
+  const rpc = (name, body = {}) => CLOUD.api(`rpc/${name}`, { method: "POST", body });
+  const toast = (t, bad) => { const el = $("toast"); el.textContent = t; el.classList.toggle("bad", !!bad); el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => { el.hidden = true; }, 3500); };
+  $("sub").textContent = T("Eventos oficiais do Play Hub perto de você e as mesas das suas comunidades.", "Official Play Hub events near you and your communities' tables.");
+  document.title = T("Eventos · Inkwell", "Events · Inkwell");
+
+  // ---------- state ----------
+  const LOC_KEY = "inkwell-events-where";
+  let where = null; try { where = JSON.parse(localStorage.getItem(LOC_KEY) || "null"); } catch { where = null; }
+  let km = where?.km || 100, view = "list", day = null, month = null, onlyMine = false, onlyFree = false, fmt = "";
+  let events = [], marks = new Map(), friends = {}, tables = [], loading = false, failed = false;
+  const save = () => { try { localStorage.setItem(LOC_KEY, JSON.stringify({ ...where, km })); } catch { /* */ } };
+  const dkey = (iso) => { const d = new Date(iso); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+  const hhmm = (iso) => new Date(iso).toLocaleTimeString(LOC, { hour: "2-digit", minute: "2-digit" });
+  const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+  const dayTitle = (k) => cap(new Date(k + "T12:00:00").toLocaleDateString(LOC, { weekday: "long", day: "numeric", month: "long" }));
+  const money = (cents, cur) => (cents ? (cents / 100).toLocaleString(LOC, { style: "currency", currency: cur || "BRL" }) : T("Grátis", "Free"));
+
+  async function load() {
+    if (!where) return;
+    loading = true; failed = false; draw();
+    try {
+      const d = await CLOUD.fn("rph-events", { lat: where.lat.toFixed(4), lng: where.lng.toFixed(4), km });
+      events = (d.events || []).map((e) => ({ ...e, kind: "rph", key: "rph:" + e.id }));
+    } catch { failed = true; events = []; }
+    if (me) {
+      try { marks = new Map(((await rpc("my_event_marks")) || []).map((m) => [String(m.rph_id), m])); } catch { marks = new Map(); }
+      try { tables = ((await rpc("my_events")) || []).map((t) => ({ kind: "table", key: "tb:" + t.id, id: t.id, name: t.title, start: t.starts_at, address: t.place, store: { name: t.community }, slug: t.slug, me: t.me, going: t.going, capacity: t.capacity })); } catch { tables = []; }
+      const ids = events.map((e) => e.id).concat([...marks.keys()].map(Number)).slice(0, 300);
+      try { friends = ids.length ? (await rpc("friends_on_events", { p_ids: ids })) || {} : {}; } catch { friends = {}; }
+    }
+    loading = false; draw();
+  }
+  // marked events that are no longer in the search (farther, or a filter) still show in "Meus"
+  const markedOnly = () => [...marks.values()].filter((m) => !events.some((e) => String(e.id) === String(m.rph_id)) && m.snap?.start).map((m) => ({ ...m.snap, id: +m.rph_id, kind: "rph", key: "rph:" + m.rph_id, gone: true }));
+  const statusOf = (e) => (e.kind === "table" ? e.me : marks.get(String(e.id))?.status) || null;
+  function all() {
+    let list = [...events, ...markedOnly(), ...tables];
+    if (onlyMine) list = list.filter((e) => statusOf(e));
+    if (onlyFree) list = list.filter((e) => e.kind === "table" || !e.cost_cents);
+    if (fmt) list = list.filter((e) => e.format === fmt);
+    return list.sort((a, b) => String(a.start).localeCompare(String(b.start)));
+  }
+  // two or more "going" on the same day
+  function conflicts() {
+    const byDay = new Map();
+    for (const e of [...events, ...markedOnly(), ...tables]) if (statusOf(e) === "going") { const k = dkey(e.start); byDay.set(k, (byDay.get(k) || []).concat(e)); }
+    return [...byDay.entries()].filter(([, l]) => l.length > 1);
+  }
+
+  // ---------- actions ----------
+  async function mark(e, patch) {
+    if (!me) { window.INKWELL_SIGNIN?.(); return; }
+    if (e.kind === "table") {
+      try {
+        await rpc("rsvp_event", { p_event: e.id, p_status: patch.status });
+        const t = tables.find((x) => x.id === e.id);
+        if (t) { t.going = (t.going || 0) + (patch.status === "going") - (t.me === "going"); t.me = patch.status; }
+        draw();
+      } catch (err) { toast(/event_full/.test(String(err?.message || err)) ? T("Esta mesa está lotada.", "This table is full.") : T("Não foi possível salvar.", "Couldn't save."), true); }
+      return;
+    }
+    const cur = marks.get(String(e.id)) || { status: null, registered: false, paid: false };
+    const next = { ...cur, ...patch };
+    const snap = e.gone ? {} : { name: e.name, start: e.start, end: e.end, store: e.store?.name || null, address: e.address, url: e.url, format: e.format, cost_cents: e.cost_cents, currency: e.currency };
+    try {
+      await rpc("mark_event", { p_rph_id: e.id, p_status: next.status, p_registered: !!next.registered, p_paid: !!next.paid, p_snap: snap });
+      if (next.status) marks.set(String(e.id), { ...next, rph_id: e.id, snap: e.gone ? cur.snap : snap }); else marks.delete(String(e.id));
+      draw();
+      const c = conflicts().find(([k]) => k === dkey(e.start));
+      if (next.status === "going" && c) toast(T(`Atenção: você marcou ${c[1].length} eventos no mesmo dia.`, `Heads up: ${c[1].length} events on the same day.`), true);
+    } catch { toast(T("Não foi possível salvar. Rode o SQL de eventos?", "Couldn't save."), true); }
+  }
+  function ics(e) {
+    const z = (d) => new Date(d).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+    const end = e.end || new Date(new Date(e.start).getTime() + 4 * 3600e3).toISOString();
+    const t = (s) => String(s || "").replace(/[\\,;]/g, (m) => "\\" + m).replace(/\n/g, "\\n");
+    const body = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Inkwell//Eventos//PT", "BEGIN:VEVENT", `UID:${e.key}@inkwell`, `DTSTAMP:${z(Date.now())}`, `DTSTART:${z(e.start)}`, `DTEND:${z(end)}`,
+      `SUMMARY:${t(e.name)}`, `LOCATION:${t([e.store?.name, e.address].filter(Boolean).join(" · "))}`, `DESCRIPTION:${t([e.format, e.url].filter(Boolean).join("\n"))}`, e.url ? `URL:${e.url}` : "",
+      "BEGIN:VALARM", "TRIGGER:-PT3H", "ACTION:DISPLAY", `DESCRIPTION:${t(e.name)}`, "END:VALARM", "END:VEVENT", "END:VCALENDAR"].filter(Boolean).join("\r\n");
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([body], { type: "text/calendar" })); a.download = `${String(e.name).replace(/[^\w\- ]+/g, "").slice(0, 40) || "evento"}.ics`;
+    document.body.append(a); a.click(); a.remove();
+  }
+  async function share(e) {
+    const link = e.kind === "table" ? new URL(`../comunidades/?c=${encodeURIComponent(e.slug)}#mesas`, location.href).href : e.url;
+    const text = `${e.name} · ${new Date(e.start).toLocaleString(LOC, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}${e.store?.name ? " · " + e.store.name : ""}`;
+    try { if (navigator.share) { await navigator.share({ title: e.name, text, url: link }); return; } } catch { return; }
+    try { await navigator.clipboard.writeText(`${text}\n${link}`); toast(T("Link copiado.", "Link copied.")); } catch { prompt("", link); }
+  }
+
+  // ---------- drawing ----------
+  function evHtml(e, clash) {
+    const st = statusOf(e), m = marks.get(String(e.id)), fr = e.kind === "rph" ? friends[e.id] || [] : [];
+    const going = fr.filter((f) => f.status === "going"), maybe = fr.filter((f) => f.status === "maybe");
+    const spots = e.capacity ? `${e.registered ?? e.going ?? 0}/${e.capacity} ${T("inscritos", "registered")}` : "";
+    return `<article class="ev${st ? " mine" : ""}${clash ? " conflict" : ""}" data-ev="${esc(e.key)}">
+      <div class="top"><span class="time">${esc(hhmm(e.start))}</span><span class="name">${esc(e.name)}</span>${e.kind === "table" ? `<span class="tag info">${T("Mesa da comunidade", "Community table")}</span>` : ""}${clash ? `<span class="tag late">${T("Mesmo dia", "Same day")}</span>` : ""}</div>
+      <div class="meta">${e.store?.name ? `<span>${esc(e.store.name)}</span>` : ""}${e.address ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.address)}" target="_blank" rel="noopener">${esc(e.address)}</a>` : ""}
+        ${e.format ? `<span>${esc(e.format)}</span>` : ""}${e.kind === "rph" && !e.gone ? `<span>${esc(money(e.cost_cents, e.currency))}</span>` : ""}${spots ? `<span>${esc(spots)}</span>` : ""}${e.km != null ? `<span>${e.km} km</span>` : ""}</div>
+      ${going.length || maybe.length ? `<div class="friends">${going.length ? `<b>${going.map((f) => esc(f.name)).join(", ")}</b> ${T(going.length === 1 ? "vai" : "vão", "going")}` : ""}${going.length && maybe.length ? " · " : ""}${maybe.length ? `${maybe.map((f) => esc(f.name)).join(", ")} ${T("talvez", "maybe")}` : ""}</div>` : ""}
+      <div class="acts">
+        <button type="button" class="btn small ${st === "going" ? "primary" : ""}" data-act="going" aria-pressed="${st === "going"}">${T("Vou", "Going")}</button>
+        <button type="button" class="btn small ghost" data-act="maybe" aria-pressed="${st === "maybe"}">${T("Talvez", "Maybe")}</button>
+        ${e.kind === "rph" && st ? `<button type="button" class="chipbtn" data-act="registered" aria-pressed="${!!m?.registered}">${T("Inscrito", "Registered")}</button><button type="button" class="chipbtn" data-act="paid" aria-pressed="${!!m?.paid}">${T("Pago", "Paid")}</button>` : ""}
+        <span class="grow" style="flex:1"></span>
+        ${e.kind === "rph" && e.url ? `<a class="btn small ghost" href="${esc(e.url)}" target="_blank" rel="noopener">${T("Play Hub", "Play Hub")} <i class="ic i-external"></i></a>` : e.kind === "table" ? `<a class="btn small ghost" href="../comunidades/?c=${encodeURIComponent(e.slug)}#mesas">${T("Comunidade", "Community")}</a>` : ""}
+        <button type="button" class="btn small ghost" data-act="ics" title="${T("Adicionar ao calendário", "Add to calendar")}"><i class="ic i-calendar"></i>${T("Calendário", "Calendar")}</button>
+        <button type="button" class="btn small ghost" data-act="share"><i class="ic i-send"></i>${T("Compartilhar", "Share")}</button></div></article>`;
+  }
+  function calHtml(list) {
+    const now = new Date(), base = month || new Date(now.getFullYear(), now.getMonth(), 1);
+    const first = new Date(base.getFullYear(), base.getMonth(), 1), start = new Date(first); start.setDate(1 - ((first.getDay() + 6) % 7));
+    const byDay = new Map(); for (const e of list) { const k = dkey(e.start); byDay.set(k, (byDay.get(k) || []).concat(e)); }
+    const clash = new Set(conflicts().map(([k]) => k)), todayK = dkey(now);
+    const cells = Array.from({ length: 42 }, (_, i) => { const d = new Date(start); d.setDate(start.getDate() + i); return d; });
+    const dows = Array.from({ length: 7 }, (_, i) => new Date(2024, 0, 1 + i).toLocaleDateString(LOC, { weekday: "short" }).replace(".", ""));
+    return `<div class="cal-head"><button type="button" class="btn ghost icon" id="mPrev" aria-label="${T("Mês anterior", "Previous month")}"><i class="ic i-chevron-left"></i></button><h2>${esc(cap(first.toLocaleDateString(LOC, { month: "long", year: "numeric" })))}</h2><button type="button" class="btn ghost icon" id="mNext" aria-label="${T("Próximo mês", "Next month")}"><i class="ic i-chevron-right"></i></button></div>
+      <div class="cal" data-testid="calendar">${dows.map((d) => `<span class="dow">${esc(d)}</span>`).join("")}${cells.map((d) => { const k = dkey(d), l = byDay.get(k) || [];
+        return `<button type="button" data-day="${k}" class="${d.getMonth() !== first.getMonth() ? "out" : ""} ${k === todayK ? "today" : ""}" aria-pressed="${day === k}" aria-label="${esc(dayTitle(k))}: ${l.length}"><span class="n">${d.getDate()}</span><span class="dots">${l.slice(0, 8).map((e) => `<i class="${clash.has(k) && statusOf(e) === "going" ? "x" : statusOf(e) ? "go" : e.kind === "table" ? "tb" : ""}"></i>`).join("")}</span></button>`; }).join("")}</div>`;
+  }
+  function draw() {
+    const app = $("app");
+    const locBox = `<section class="ev-loc" data-testid="where"><div class="where">${where ? `${esc(where.label || T("Minha localização", "My location"))}<small>${T(`Até ${km} km`, `Within ${km} km`)}</small>` : T("Onde você joga?", "Where do you play?")}</div>
+      <button type="button" class="btn small" id="geo"><i class="ic i-globe"></i>${T("Usar minha localização", "Use my location")}</button>
+      <form id="cityF"><input id="city" type="search" placeholder="${T("ou digite a cidade", "or type a city")}" aria-label="${T("Cidade", "City")}" autocomplete="address-level2"><button type="submit" class="btn small">${T("Buscar", "Search")}</button></form>
+      <label class="small">${T("Raio", "Radius")} <select id="km" class="inline">${[25, 50, 100, 200, 300].map((k) => `<option value="${k}" ${k === km ? "selected" : ""}>${k} km</option>`).join("")}</select></label></section>`;
+    if (!where) { app.innerHTML = locBox + `<div class="empty"><img src="../ui/assets/empty/search.svg" alt=""><b>${T("Escolha onde procurar", "Choose where to look")}</b><p>${T("Use sua localização ou digite sua cidade. Ela fica só neste aparelho.", "Use your location or type your city. It stays on this device.")}</p></div>`; wire(); return; }
+    const list = all(), clash = conflicts(), clashDays = new Set(clash.map(([k]) => k));
+    const formats = [...new Set(events.map((e) => e.format).filter(Boolean))].sort();
+    const shown = view === "cal" && day ? list.filter((e) => dkey(e.start) === day) : list;
+    const groups = new Map(); for (const e of shown) { const k = dkey(e.start); groups.set(k, (groups.get(k) || []).concat(e)); }
+    app.innerHTML = locBox
+      + (clash.length ? `<div class="ev-warn" role="alert" data-testid="clash"><i class="ic i-alert"></i><div>${clash.map(([k, l]) => `<div><b>${esc(dayTitle(k))}:</b> ${T("você marcou \"Vou\" em", "you said Going to")} ${l.length} ${T("eventos", "events")} (${l.map((e) => esc(e.name)).join(" · ")})</div>`).join("")}</div></div>` : "")
+      + `<div class="ev-bar"><div class="seg" role="group" aria-label="${T("Ver", "View")}"><button type="button" data-view="list" aria-pressed="${view === "list"}">${T("Lista", "List")}</button><button type="button" data-view="cal" aria-pressed="${view === "cal"}">${T("Calendário", "Calendar")}</button></div>
+        <button type="button" class="chipbtn" id="mine" aria-pressed="${onlyMine}">${T("Meus eventos", "My events")}</button><button type="button" class="chipbtn" id="free" aria-pressed="${onlyFree}">${T("Grátis", "Free")}</button>
+        ${formats.length > 1 ? `<select id="fmt" class="inline" aria-label="${T("Formato", "Format")}"><option value="">${T("Todos os formatos", "All formats")}</option>${formats.map((f) => `<option ${f === fmt ? "selected" : ""}>${esc(f)}</option>`).join("")}</select>` : ""}
+        <span class="grow"></span><span class="small muted">${loading ? T("Carregando…", "Loading…") : esc(T(`${list.length} eventos`, `${list.length} events`))}</span></div>`
+      + (view === "cal" ? calHtml(list) + (day ? `<div class="row between" style="margin-top:var(--sp-3)"><h2 style="margin:0">${esc(dayTitle(day))}</h2><button type="button" class="btn small ghost" id="allDays">${T("Ver todos os dias", "All days")}</button></div>` : "") : "")
+      + (failed ? `<div class="empty"><img src="../ui/assets/empty/error.svg" alt=""><b>${T("Não conseguimos falar com o Play Hub agora.", "Couldn't reach the Play Hub now.")}</b><button type="button" class="btn" id="retry">${T("Tentar de novo", "Try again")}</button></div>`
+        : shown.length ? [...groups.entries()].map(([k, l]) => `${view === "cal" && day ? "" : `<h2 class="ev-day">${esc(dayTitle(k))}</h2>`}<div class="ev-list">${l.map((e) => evHtml(e, clashDays.has(k) && statusOf(e) === "going")).join("")}</div>`).join("")
+        : loading ? `<span class="skel" style="height:120px;border-radius:var(--r-lg)"></span>` : `<div class="empty plain"><b>${T("Nenhum evento encontrado.", "No events found.")}</b><p>${T("Aumente o raio ou tire os filtros.", "Widen the radius or clear the filters.")}</p></div>`)
+      + `<p class="small faint" style="margin-top:var(--sp-6)">${T("Eventos do Disney Lorcana Play Network (Ravensburger). A inscrição e o pagamento são feitos no Play Hub; aqui você só marca para se organizar.", "Events from the Disney Lorcana Play Network (Ravensburger). Registration and payment happen on the Play Hub; here you only mark them to plan.")}</p>`;
+    wire();
+  }
+  function wire() {
+    $("geo").onclick = () => {
+      if (!navigator.geolocation) { toast(T("Seu navegador não informa a localização.", "Location isn't available."), true); return; }
+      navigator.geolocation.getCurrentPosition((p) => { where = { lat: p.coords.latitude, lng: p.coords.longitude, label: T("Perto de mim", "Near me") }; save(); load(); }, () => toast(T("Não foi possível pegar sua localização. Digite a cidade.", "Couldn't get your location. Type your city."), true), { maximumAge: 6e5, timeout: 1e4 });
+    };
+    $("cityF").onsubmit = async (e) => { e.preventDefault(); const q = $("city").value.trim(); if (q.length < 2) return;
+      try { const g = await CLOUD.fn("rph-events", { geocode: q }); if (!g) { toast(T("Cidade não encontrada.", "City not found."), true); return; } where = g; save(); load(); } catch { toast(T("Não foi possível buscar a cidade.", "Couldn't look up the city."), true); } };
+    $("km").onchange = (e) => { km = +e.target.value; save(); load(); };
+    document.querySelectorAll("[data-view]").forEach((b) => b.onclick = () => { view = b.dataset.view; day = null; draw(); });
+    $("mine")?.addEventListener("click", () => { onlyMine = !onlyMine; draw(); });
+    $("free")?.addEventListener("click", () => { onlyFree = !onlyFree; draw(); });
+    $("fmt")?.addEventListener("change", (e) => { fmt = e.target.value; draw(); });
+    $("retry")?.addEventListener("click", load);
+    $("allDays")?.addEventListener("click", () => { day = null; draw(); });
+    $("mPrev")?.addEventListener("click", () => { const b = month || new Date(new Date().getFullYear(), new Date().getMonth(), 1); month = new Date(b.getFullYear(), b.getMonth() - 1, 1); draw(); });
+    $("mNext")?.addEventListener("click", () => { const b = month || new Date(new Date().getFullYear(), new Date().getMonth(), 1); month = new Date(b.getFullYear(), b.getMonth() + 1, 1); draw(); });
+    document.querySelectorAll("[data-day]").forEach((b) => b.onclick = () => { day = day === b.dataset.day ? null : b.dataset.day; draw(); });
+    const byKey = new Map(all().map((e) => [e.key, e]));
+    document.querySelectorAll("[data-ev] [data-act]").forEach((b) => b.onclick = () => {
+      const e = byKey.get(b.closest("[data-ev]").dataset.ev); if (!e) return;
+      const a = b.dataset.act, st = statusOf(e), m = marks.get(String(e.id)) || {};
+      if (a === "going" || a === "maybe") mark(e, { status: st === a ? null : a });
+      else if (a === "registered") mark(e, { status: st, registered: !m.registered });
+      else if (a === "paid") mark(e, { status: st, paid: !m.paid });
+      else if (a === "ics") ics(e);
+      else if (a === "share") share(e);
+    });
+  }
+  draw(); load();
+})();
+</script>
+
+<script>window.INKWELL_SHELL = {"page": "events"};
+/*@SHELL_JS@*/</script>
+</body>
+</html>

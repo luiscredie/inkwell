@@ -99,8 +99,16 @@ window.INKWELL_CLOUD = (() => {
     return api(q);
   }
 
+  // an Edge Function by GET (signed in or not: the publishable key is enough for public ones)
+  async function fn(name, params = {}) {
+    const tok = sess ? await token().catch(() => null) : null;
+    const r = await fetch(`${cfg.url}/functions/v1/${name}?${new URLSearchParams(params)}`, { headers: headers(tok) });
+    if (!r.ok) throw Object.assign(new Error(`${name} ${r.status}`), { status: r.status });
+    return r.json();
+  }
+
   return {
-    api, collections,
+    api, collections, fn,
     user: () => { sess = load(); return sess ? { id: sess.user?.id, email: sess.user?.email } : null; },
     status: () => { sess = load(); return sess ? { signedIn: true, email: sess.user?.email || "" } : { signedIn: false }; },
     async requestCode(email) {
