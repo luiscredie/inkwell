@@ -462,6 +462,34 @@ test('global search: people and communities from the top bar, also with "/"', as
   await expect(page.locator('#iwFindQ')).toBeFocused();
 });
 
+test('push: turn notices on and off for this device', async ({ page }) => {
+  await setup(page, { mine: { display_name: 'Luís' } });
+  await page.addInitScript(() => {
+    let sub = null;
+    Object.defineProperty(Notification, 'permission', { get: () => 'default', configurable: true });
+    Notification.requestPermission = async () => 'granted';
+    PushManager.prototype.getSubscription = async function () { return sub; };
+    PushManager.prototype.subscribe = async function (o) {
+      window.__vapidLen = o.applicationServerKey.length;
+      sub = { endpoint: 'https://fcm.googleapis.com/fcm/send/abc', toJSON() { return { endpoint: this.endpoint, keys: { p256dh: 'P', auth: 'A' } }; }, async unsubscribe() { sub = null; return true; } };
+      return sub;
+    };
+  });
+  const calls = [];
+  const json = (route, v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+  await page.route('**/rest/v1/rpc/my_notifications', (r) => json(r, []));
+  await page.route('**/rest/v1/rpc/*_push_sub', (r) => { calls.push([new URL(r.request().url()).pathname.split('/').pop(), JSON.parse(r.request().postData())]); return r.fulfill({ status: 204, body: '' }); });
+  await page.goto(url('colecao/'));
+  await page.locator('#iwBell').click();
+  await page.locator('[data-push="on"]').click();
+  await expect(page.locator('#iwPush')).toContainText('Avisos ligados neste aparelho');
+  expect(calls[0]).toEqual(['save_push_sub', expect.objectContaining({ p_endpoint: 'https://fcm.googleapis.com/fcm/send/abc', p_p256dh: 'P', p_auth: 'A' })]);
+  expect(await page.evaluate(() => window.__vapidLen)).toBe(65);
+  await page.locator('[data-push="off"]').click();
+  await expect(page.locator('[data-push="on"]')).toBeVisible();
+  expect(calls[1]).toEqual(['delete_push_sub', { p_endpoint: 'https://fcm.googleapis.com/fcm/send/abc' }]);
+});
+
 test('notifications: a bell with the unread count; opening marks them read', async ({ page }) => {
   await setup(page, { mine: { display_name: 'Luís' } });
   let read = 0;
@@ -476,6 +504,7 @@ test('notifications: a bell with the unread count; opening marks them read', asy
   const m = page.locator('.menu.notif');
   await expect(m.locator('a[href="../feed/#post-p1"]')).toContainText('Rodrigo comentou no seu post');
   await expect(m.locator('a[href="../comunidades/?c=liga-campinas#mesas"]')).toContainText('Liga de quinta');
+  expect(await page.locator('link[rel="manifest"]').getAttribute('href')).toBe('../inkwell.webmanifest');
   await expect.poll(() => read).toBe(1);
   await expect(page.locator('#iwBellN')).toBeHidden();
 });
