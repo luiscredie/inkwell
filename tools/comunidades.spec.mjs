@@ -175,3 +175,35 @@ test('Mesas & Ligas: the owner sets up a table, members say Vou', async ({ page 
   await expect(page.locator('[data-rsvp="e1:going"]')).toHaveAttribute('aria-pressed', 'true');
   expect(rpcCalls(calls, 'rsvp_event')).toEqual([{ p_event: 'e1', p_status: 'going' }]);
 });
+
+test('with approval: a visitor asks to join; the owner accepts and invites a friend', async ({ page }) => {
+  const calls = await setup(page);
+  const json = (route, v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+  let access = { join_mode: 'approval', requested: false, invited: false, requests: null, invites: null };
+  await page.route('**/rest/v1/rpc/community_access', (r) => { const b = JSON.parse(r.request().postData());
+    return json(r, b.p_slug === 'loja-aberta' ? access : { join_mode: 'open', requested: false, invited: false, requests: [{ uid: '55555555-5555-4555-8555-555555555555', name: 'Caio', handle: 'caio' }], invites: [] }); });
+  await page.route('**/rest/v1/rpc/join_community', (r) => { calls.push({ path: 'rpc/join_community', body: JSON.parse(r.request().postData()) }); access = { ...access, requested: true }; return json(r, 'requested'); });
+  await page.route('**/rest/v1/rpc/answer_community_request', (r) => { calls.push({ path: 'rpc/answer_community_request', body: JSON.parse(r.request().postData()) }); return r.fulfill({ status: 204, body: '' }); });
+  await page.route('**/rest/v1/rpc/set_community_join_mode', (r) => { calls.push({ path: 'rpc/set_community_join_mode', body: JSON.parse(r.request().postData()) }); return r.fulfill({ status: 204, body: '' }); });
+  await page.route('**/rest/v1/rpc/my_friends', (r) => json(r, [{ id: '66666666-6666-4666-8666-666666666666', name: 'Rodrigo', handle: 'rodrigo' }]));
+  await page.route('**/rest/v1/rpc/invite_to_community', (r) => { calls.push({ path: 'rpc/invite_to_community', body: JSON.parse(r.request().postData()) }); return r.fulfill({ status: 204, body: '' }); });
+  // a visitor, community with approval
+  await page.goto(url('comunidades/?c=loja-aberta'));
+  await expect(page.locator('#join')).toHaveText(/Pedir para entrar/);
+  await page.locator('#join').click();
+  await expect(page.locator('[data-testid="requested"]')).toHaveText('Pedido enviado');
+  expect(rpcCalls(calls, 'join_community')).toEqual([{ p_slug: 'loja-aberta', p_join: true }]);
+  // the owner: a request waiting, accept; switch to approval; invite a friend
+  await page.goto(url('comunidades/?c=liga-campinas'));
+  await expect(page.locator('#manage .count')).toHaveText('1');
+  await page.locator('#manage').click();
+  await page.locator('[data-ans="55555555-5555-4555-8555-555555555555:1"]').click();
+  await expect.poll(() => rpcCalls(calls, 'answer_community_request')).toEqual([{ p_slug: 'liga-campinas', p_user: '55555555-5555-4555-8555-555555555555', p_accept: true }]);
+  await page.locator('[data-mode="approval"]').click();
+  await expect.poll(() => rpcCalls(calls, 'set_community_join_mode')).toEqual([{ p_slug: 'liga-campinas', p_mode: 'approval' }]);
+  await page.locator('#sheet [data-close]').first().click();
+  await page.locator('#invite').click();
+  await page.locator('[data-inv="66666666-6666-4666-8666-666666666666"]').click();
+  await expect(page.locator('[data-testid="invite-list"]')).toContainText('Convidado');
+  expect(rpcCalls(calls, 'invite_to_community')).toEqual([{ p_slug: 'liga-campinas', p_user: '66666666-6666-4666-8666-666666666666' }]);
+});
