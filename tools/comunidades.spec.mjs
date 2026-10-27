@@ -159,8 +159,15 @@ test('Mesas & Ligas: the owner sets up a table, members say Vou', async ({ page 
   await page.locator('#evW').fill('2030-01-03T19:00');
   await page.locator('#evP').fill('Loja do Zé');
   await page.locator('#evC').fill('16');
+  await page.locator('#evD').fill('Inscrição: https://exemplo.com/liga?x=1&y=2. Regras em www.lorcana.com <script>');
   await page.locator('#evSave').click();
   await expect(page.locator('[data-ev="e1"]')).toContainText('Liga de quinta');
+  const links = page.locator('[data-ev="e1"] p a');
+  await expect(links).toHaveCount(2);
+  await expect(links.first()).toHaveAttribute('href', 'https://exemplo.com/liga?x=1&y=2');
+  await expect(links.first()).toHaveAttribute('target', '_blank');
+  await expect(links.nth(1)).toHaveAttribute('href', 'https://www.lorcana.com');
+  await expect(page.locator('[data-ev="e1"] p')).toContainText('<script>');
   const saved = rpcCalls(calls, 'save_event')[0];
   expect(saved).toMatchObject({ p_slug: 'liga-campinas', p_id: null, p: { title: 'Liga de quinta', place: 'Loja do Zé', capacity: '16' } });
   expect(Date.parse(saved.p.starts_at)).toBe(new Date('2030-01-03T19:00').getTime());
