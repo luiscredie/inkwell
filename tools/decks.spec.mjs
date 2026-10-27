@@ -211,6 +211,8 @@ test('meta: automatic from the newest set, chosen on the deck page, filter on th
   await page.goto(BASE);
   await expect(page.locator('[data-deck="deck-a"]')).toContainText('Set 10');
   await expect(page.locator('[data-deck="deck-a"] [data-testid="meta-tag"]')).toHaveText('(Set 10)');
+  await expect(page.locator('[data-deck="deck-a"] [data-testid="meta-tag"]')).toHaveCSS('background-color', 'rgb(40, 84, 106)');   // #28546A
+  await expect(page.locator('[data-deck="deck-13"] [data-testid="meta-tag"]')).toHaveCSS('color', 'rgb(28, 20, 4)');   // light green: dark text
   await expect(page.locator('[data-deck="deck-13"]')).toContainText('Set 13');
   await page.locator('#metaF').selectOption('LOR13');
   await expect(page.locator('[data-deck]')).toHaveCount(1);

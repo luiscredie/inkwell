@@ -129,7 +129,8 @@ set search_path = '' as $$
     from public.event_marks m
    where m.status = 'going'
      and m.starts_at
-       between now() and now() + interval '1 day'
+       between now()
+         and now() + interval '1 day'
      and not exists (
        select 1 from public.notifications n
         where n.user_id = m.user_id
@@ -148,7 +149,8 @@ set search_path = '' as $$
    where r.status = 'going'
      and not e.cancelled
      and e.starts_at
-       between now() and now() + interval '1 day'
+       between now()
+         and now() + interval '1 day'
      and not exists (
        select 1 from public.notifications n
         where n.user_id = r.user_id
