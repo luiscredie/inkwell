@@ -77,6 +77,10 @@
 #scan .review .item .t { flex: 1; min-width: 0; } #scan .review .item .t b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #scan .review .item .t .small { display: block; }
 #scan .review footer { display: grid; gap: 8px; padding: 12px 12px calc(env(safe-area-inset-bottom, 0px) + 12px); border-top: 1px solid var(--line); }
+.imp-list { display: grid; gap: 2px; max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: var(--r-md); padding: 6px 10px; }
+.imp-list > div { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: baseline; padding: 3px 0; border-bottom: 1px solid var(--line); }
+.imp-list > div:last-child { border-bottom: 0; }
+.imp-list span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
 
 <main class="page" id="page">
@@ -86,6 +90,7 @@
 <dialog class="sheet" id="filterSheet" aria-labelledby="fT"></dialog>
 <dialog class="sheet" id="cardSheet" aria-labelledby="cT"></dialog>
 <dialog id="scan" aria-labelledby="scanT"></dialog>
+<dialog class="sheet wide" id="impSheet" aria-labelledby="impT"></dialog>
 <div class="toast-host"><div class="toast" id="toast" role="status" hidden></div></div>
 
 <script>
@@ -117,6 +122,14 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "Not sure which printing this is. Which one?": "Não deu para ter certeza da versão. Qual é?", "None of these": "Nenhuma destas",
     "Centre the card in the frame, with good light.": "Centralize a carta na moldura, com boa luz.", "Starting the camera…": "Abrindo a câmera…",
     "The camera didn't open. Allow camera access for this site and try again.": "A câmera não abriu. Permita o acesso à câmera para este site e tente de novo.",
+    "Import": "Importar", "Import collection": "Importar coleção", "A file exported from Dreamborn, TCGplayer, a spreadsheet or another app — Inkwell works out the columns. Or paste a list, one card per line.": "Um arquivo exportado do Dreamborn, TCGplayer, de uma planilha ou de outro app — o Inkwell descobre as colunas. Ou cole uma lista, uma carta por linha.",
+    "Choose file": "Escolher arquivo", "Or paste here": "Ou cole aqui", "4 Elsa - Snow Queen\n2 Vixey - Forest Friend (foil)": "4 Elsa - Snow Queen\n2 Vixey - Forest Friend (foil)", "Read the list": "Ler a lista",
+    "This file is too big (5 MB at most).": "Este arquivo é grande demais (até 5 MB).", "No line matched a card. Check that the file has the card name, or set and number.": "Nenhuma linha bateu com uma carta. Confira se o arquivo tem o nome da carta, ou o set e o número.",
+    "The file is empty.": "O arquivo está vazio.", "Check before importing": "Confira antes de importar", "Recognised: {f}": "Reconhecido: {f}", "{c} different cards · {n} normal · {f} foil": "{c} cartas diferentes · {n} normais · {f} foil",
+    "{n} lines were not recognised": "{n} linhas não foram reconhecidas", "1 line was not recognised": "1 linha não foi reconhecida", "line {n}": "linha {n}", "How to add": "Como adicionar", "Keep the larger number": "Ficar com a maior quantidade",
+    "Safe to import the same file again: nothing is counted twice.": "Pode importar o mesmo arquivo de novo: nada é contado duas vezes.", "Add to what I have": "Somar às que já tenho", "For new cards you just got.": "Para cartas novas que você acabou de pegar.",
+    "and {n} more": "e mais {n}", "Back": "Voltar", "You already have all of them": "Você já tem todas", "Saving… {n}": "Salvando… {n}", "Collection updated: {n} cards added": "Coleção atualizada: {n} cartas adicionadas",
+    "Stopped after {n} cards. Import again with “Keep the larger number” to finish without counting twice.": "Parou depois de {n} cartas. Importe de novo com “Ficar com a maior quantidade” para terminar sem contar duas vezes.",
     "Couldn't load the card scanner.": "Não foi possível carregar o leitor de cartas.", "{n} added": "{n} adicionadas", "{n} added_1": "1 adicionada", "{n} in the list": "{n} na lista", "In Brazil from {p}": "No Brasil a partir de {p}", "Lowest listing on MYP Cards, {d}": "Menor anúncio na MYP Cards, {d}", "{n} in the list_1": "1 na lista", "In the list: {c}": "Na lista: {c}", "Review": "Revisar", "Check before adding": "Confira antes de adicionar", "Add {n} cards to the collection": "Adicionar {n} cartas à coleção", "Add {n} cards to the collection_1": "Adicionar 1 carta à coleção", "Keep scanning": "Continuar escaneando", "Discard the list": "Descartar a lista", "Tap again to discard": "Toque de novo para descartar", "Nothing will be saved until you confirm.": "Nada é salvo antes de você confirmar.", "Remove one": "Tirar uma", "Add one": "Mais uma", "The list is empty.": "A lista está vazia.", "Recently added": "Mais recentes", "added {d}": "adicionada em {d}",
     "+1 of this": "+1 desta", "Done scanning": "Concluir", "Card": "Carta", "Removed: {c}": "Removida: {c}",
     "Show more": "Mostrar mais", "Where": "Onde", "Everything": "Tudo", "Binder": "Fichário", "Home": "Casa", "{n} at home": "{n} em casa", "→ Home": "→ Casa", "→ Binder": "→ Fichário", "Move one {k} to Home": "Mover uma {k} para Casa", "Move one {k} to the Binder": "Mover uma {k} para o Fichário", "Moved": "Movida", "Check stock": "Conferir estoque", "Set": "Set", "All sets": "Todos os sets", "Lend": "Emprestar", "Sell": "Vender", "Combo sale": "Venda combo", "New loan": "Novo empréstimo", "Date": "Data", "Buyer (optional)": "Comprador (opcional)", "Who is borrowing": "Para quem", "Return by (optional)": "Devolver até (opcional)", "Note (optional)": "Observação (opcional)", "Each": "Cada", "Price of {c}": "Preço de {c}", "Finish": "Acabamento", "Remove {c}": "Tirar {c}", "Add a card to the combo": "Adicionar carta ao combo", "Search your cards": "Buscar nas suas cartas", "None of your cards match.": "Nenhuma carta sua com esse nome.", "Sum of the cards": "Soma das cartas", "Total of the sale": "Total da venda", "Discount": "Desconto", "Extra": "Acréscimo", "Write who is borrowing.": "Escreva para quem é o empréstimo.", "Loan saved": "Empréstimo registrado", "Add at least one card.": "Adicione pelo menos uma carta.", "Write the total of the sale.": "Escreva o total da venda.", "You don't have that many to sell.": "Você não tem tantas para vender.", "Sale": "Venda", "discount {v}": "desconto {v}", "extra {v}": "acréscimo {v}", "Sale saved: {v}": "Venda registrada: {v}", "The cards left the collection, but the sale wasn't recorded. Add it in Trocas.": "As cartas saíram da coleção, mas a venda não foi registrada. Registre em Trocas.", "Check binder and home": "Conferir fichário e casa", "Binder checked": "Fichário conferido", "Home checked": "Casa conferida", "Binder: mark checked": "Fichário: marcar conferido", "Home: mark checked": "Casa: marcar conferida", "Checked: binder {a}, home {h} of {b} pages": "Conferidas: fichário {a}, casa {h} de {b} páginas", "Cancel": "Cancelar", "Move normal cards to Home": "Mover cartas normais para Casa", "Move foil cards to Home": "Mover cartas foil para Casa", "Move normal cards to the Binder": "Mover cartas normais para o Fichário", "Move foil cards to the Binder": "Mover cartas foil para o Fichário", "{n} in the binder": "{n} no fichário", "One less": "Uma a menos", "One more": "Uma a mais", "All ({n})": "Todas ({n})", "Move {n} to Home": "Mover {n} para Casa", "Move {n} to the Binder": "Mover {n} para o Fichário", "Add to": "Adicionar em", "{n} cards": "{n} cartas", "Prices: {s}, {d}": "Preços: {s}, {d}",
@@ -698,9 +711,75 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     if (me && binderOn()) return renderBinder();
     $("title").textContent = Tx("Collection");
     $("sub").textContent = pricesDate ? Tx("Prices: {s}, {d}", { s: priceSrc, d: new Date(pricesDate).toLocaleDateString(LOC, { day: "numeric", month: "short" }) }) : "";
-    if (me) { $("headActions").innerHTML = `<button type="button" class="btn" id="openBinder"><i class="ic i-cards"></i>${Tx(homeReady ? "Check stock" : "Check my binder")}</button><button type="button" class="btn primary" id="openScan"><i class="ic i-camera"></i>${Tx("Scan")}</button>`;
-      $("openBinder").onclick = () => setBinder(true); $("openScan").onclick = () => openScanner($("openScan")); }
+    if (me) { $("headActions").innerHTML = `<button type="button" class="btn" id="openBinder"><i class="ic i-cards"></i>${Tx(homeReady ? "Check stock" : "Check my binder")}</button><button type="button" class="btn" id="openImport" data-testid="import"><i class="ic i-import"></i>${Tx("Import")}</button><button type="button" class="btn primary" id="openScan"><i class="ic i-camera"></i>${Tx("Scan")}</button>`;
+      $("openBinder").onclick = () => setBinder(true); $("openScan").onclick = () => openScanner($("openScan")); $("openImport").onclick = () => openImport($("openImport")); }
     render();
+  }
+
+  // ---------- importar: a file or a pasted list from another app (src/site/collimport.js works out which) ----------
+  const FORMAT_NAME = { dreamborn: "Dreamborn", tcgplayer: "TCGplayer", "inkwell-csv": "Inkwell", "inkwell-json": "Inkwell", json: "JSON", table: "Planilha", list: "Lista" };
+  function openImport(from) {
+    const sh = $("impSheet"); let res = null, mode = "max", fileName = "";
+    const close = () => sh.close();
+    function step1(msg) {
+      sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="impT">${Tx("Import collection")}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
+        <div class="sheet-body stack" style="gap:var(--sp-3)">
+          <p class="small muted" style="margin:0">${Tx("A file exported from Dreamborn, TCGplayer, a spreadsheet or another app — Inkwell works out the columns. Or paste a list, one card per line.")}</p>
+          <label class="btn" style="justify-self:start"><i class="ic i-import"></i>${Tx("Choose file")}<input type="file" id="impFile" accept=".csv,.tsv,.txt,.json,text/csv,text/plain,application/json" hidden></label>
+          <label class="field">${Tx("Or paste here")}<textarea id="impText" rows="6" placeholder="${esc(Tx("4 Elsa - Snow Queen\n2 Vixey - Forest Friend (foil)"))}"></textarea></label>
+          <p class="small" id="impMsg" role="alert" style="margin:0">${esc(msg || "")}</p></div>
+        <div class="sheet-foot"><button type="button" class="btn ghost" data-close>${Tx("Cancel")}</button><button type="button" class="btn primary" id="impRead">${Tx("Read the list")}</button></div>`;
+      sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = close);
+      $("impFile").onchange = async (e) => { const f = e.target.files?.[0]; if (!f) return; if (f.size > 5e6) { step1(Tx("This file is too big (5 MB at most).")); return; } fileName = f.name; read(await f.text(), f.name); };
+      $("impRead").onclick = () => { const t = $("impText").value; if (!t.trim()) { $("impText").focus(); return; } fileName = ""; read(t, "colado.txt"); };
+    }
+    function read(text, name) {
+      res = window.INKWELL_COLL_IMPORT.parse(text, name, CARDS, SETS);
+      if (!res.rows.length) { step1(res.rejects.length ? Tx("No line matched a card. Check that the file has the card name, or set and number.") : Tx("The file is empty.")); return; }
+      step2();
+    }
+    function step2() {
+      const tot = window.INKWELL_COLL_IMPORT.total(res.rows), n = tot.reduce((a, x) => a + x.n, 0), f = tot.reduce((a, x) => a + x.f, 0);
+      const coll = prof()?.collection || {};
+      const delta = (x, k) => mode === "sum" ? x[k] : Math.max(0, x[k] - (+coll[x.id]?.[k] || 0));
+      const adds = tot.reduce((a, x) => a + delta(x, "n") + delta(x, "f"), 0);
+      const by = new Map(CARDS.map((c) => [c.id, c]));
+      sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="impT">${Tx("Check before importing")}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
+        <div class="sheet-body stack" style="gap:var(--sp-3)">
+          <p style="margin:0" data-testid="imp-summary"><span class="tag info">${esc(Tx("Recognised: {f}", { f: FORMAT_NAME[res.format] || res.format }))}</span> ${esc(Tx("{c} different cards · {n} normal · {f} foil", { c: tot.length, n, f }))}${fileName ? ` <span class="small muted">· ${esc(fileName)}</span>` : ""}</p>
+          ${res.rejects.length ? `<details class="small" data-testid="imp-rejects"><summary>${esc(res.rejects.length === 1 ? Tx("1 line was not recognised") : Tx("{n} lines were not recognised", { n: res.rejects.length }))}</summary><ul style="margin:6px 0 0;padding-left:18px">${res.rejects.slice(0, 50).map((r) => `<li>${r.line ? esc(Tx("line {n}", { n: r.line })) + ": " : ""}${esc(r.raw)}</li>`).join("")}${res.rejects.length > 50 ? `<li>…</li>` : ""}</ul></details>` : ""}
+          <fieldset class="stack" style="gap:6px;border:0;padding:0;margin:0"><legend class="small" style="font-weight:700;margin-bottom:4px">${Tx("How to add")}</legend>
+            <label class="check"><input type="radio" name="impMode" value="max" ${mode === "max" ? "checked" : ""}> <span>${Tx("Keep the larger number")}<small class="muted" style="display:block">${Tx("Safe to import the same file again: nothing is counted twice.")}</small></span></label>
+            <label class="check"><input type="radio" name="impMode" value="sum" ${mode === "sum" ? "checked" : ""}> <span>${Tx("Add to what I have")}<small class="muted" style="display:block">${Tx("For new cards you just got.")}</small></span></label></fieldset>
+          <div class="imp-list small" data-testid="imp-list">${tot.slice(0, 200).map((x) => { const c = by.get(x.id); return `<div><span>${esc(c?.name || x.id)}</span><span class="muted">${esc(c ? setName(c.set) : "")}</span><b>${x.n ? `${x.n}` : ""}${x.n && x.f ? " + " : ""}${x.f ? `${x.f} foil` : ""}</b></div>`; }).join("")}${tot.length > 200 ? `<div class="muted">… ${esc(Tx("and {n} more", { n: tot.length - 200 }))}</div>` : ""}</div>
+          <p class="small" id="impMsg" role="alert" style="margin:0"></p></div>
+        <div class="sheet-foot"><button type="button" class="btn ghost" id="impBack">${Tx("Back")}</button><button type="button" class="btn primary" id="impGo" ${adds ? "" : "disabled"}>${esc(adds ? Tx("Add {n} cards to the collection", { n: adds }) : Tx("You already have all of them"))}</button></div>`;
+      sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = close);
+      sh.querySelectorAll("[name=impMode]").forEach((r) => r.onchange = () => { mode = r.value; step2(); });
+      $("impBack").onclick = () => step1();
+      $("impGo").onclick = () => apply(tot, delta);
+    }
+    async function apply(tot, delta) {
+      const p = prof(); if (!p) { $("impMsg").textContent = Tx("Couldn't save. Try again."); return; }
+      const items = [];
+      for (const x of tot) for (const k of ["n", "f"]) { const q = delta(x, k); if (q > 0) items.push({ card_id: x.id, qty: q, foil: k === "f" }); }
+      const b = $("impGo"); b.disabled = true;
+      let done = 0;
+      try {
+        for (let i = 0; i < items.length; i += 400) {   // the server takes 400 changes per call
+          const part = items.slice(i, i + 400);
+          await CLOUD.api("rpc/apply_collection_delta", { method: "POST", prefer: "return=minimal", body: { p_profile: p.profile, p_delta: part } });
+          for (const d of part) { const e = p.collection[d.card_id] = { n: 0, f: 0, ...(p.collection[d.card_id] || {}) }; const k = d.foil ? "f" : "n"; e[k] = (+e[k] || 0) + d.qty; ADDED.set(`${p.profile}|${d.card_id}`, Date.now()); done += d.qty; }
+          b.textContent = Tx("Saving… {n}", { n: done });
+        }
+        close(); renderAll(); toast(Tx("Collection updated: {n} cards added", { n: done }));
+      } catch {
+        renderAll();
+        $("impMsg").textContent = done ? Tx("Stopped after {n} cards. Import again with “Keep the larger number” to finish without counting twice.", { n: done }) : Tx("Couldn't save. Try again.");
+        b.disabled = false;
+      }
+    }
+    step1(); openSheet(sh, from);
   }
 
   // ---------- escanear: recognise a card by its art (tools/build_scan_index.py builds the same fingerprint for every card image) ----------
@@ -987,6 +1066,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
 })();
 </script>
 
+<script>/*@COLLIMPORT_JS@*/</script>
 <script>window.INKWELL_SHELL = {"page": "cards"};
 /*@SHELL_JS@*/</script>
 </body>
