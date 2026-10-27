@@ -182,7 +182,7 @@ window.INKWELL_CLOUD = (() => {
   try { lang = localStorage.getItem("inkwell-lang") || "pt"; } catch { /* */ }
   // Contact for privacy requests and removals. Empty: the page points to the report button.
   const CONTACT = "inkwell.lorcana@gmail.com";
-  const VERSION = { pt: "Versão 1 · em vigor desde 21 de outubro de 2026", en: "Version 1 · in effect since 21 October 2026" };
+  const VERSION = { pt: "Versão 2 · em vigor desde 27 de outubro de 2026 (inclui eventos, localização e avisos)", en: "Version 2 · in effect since 27 October 2026 (adds events, location and notices)" };
   const contact = (pt) => CONTACT ? (pt ? `pelo e-mail <a href="mailto:${CONTACT}">${CONTACT}</a>` : `by e-mail at <a href="mailto:${CONTACT}">${CONTACT}</a>`)
     : (pt ? "pelo botão <b>Denunciar</b> em qualquer perfil ou comunidade" : "with the <b>Report</b> button on any profile or community");
   const PT = `
@@ -203,7 +203,10 @@ window.INKWELL_CLOUD = (() => {
       <li><b>Conta:</b> seu e-mail (para mandar o código de entrada) e datas de criação e último acesso.</li>
       <li><b>O que você cadastra:</b> nome, coleção, decks, lista de desejos, empréstimos e trocas, jogos (do contador ou do duels.ink, se você conectar), comentários e anotações.</li>
       <li><b>Perfil Meu Inkwell:</b> endereço (@), lema, bio, carta do avatar, tintas, cidade, vitrine e deck em destaque.</li>
-      <li><b>Mensagens:</b> recados e publicações em comunidades.</li>
+      <li><b>Mensagens:</b> recados, publicações em comunidades e no Início, comentários e curtidas.</li>
+      <li><b>Eventos:</b> os eventos do Play Hub que você marca (Vou/Talvez, inscrito, pago) e suas respostas às mesas das comunidades.</li>
+      <li id="localizacao"><b>Localização, só se você pedir:</b> na página Eventos, o lugar que você usa para buscar (cidade, bairro, endereço ou CEP) fica <b>só no seu aparelho</b>. Se você marcar <i>“Salvar este lugar na minha conta”</i>, guardamos na conta um <b>ponto aproximado</b> (arredondado em cerca de 1 km), o nome do bairro ou cidade e o raio — <b>nunca a rua nem o número</b>. Serve para avisar você de eventos novos perto e para usar o mesmo lugar em outros aparelhos. Só você vê. Desmarcar apaga na hora, e ele também é apagado com a conta.</li>
+      <li><b>Avisos:</b> as notificações do sino e, se você ligar os avisos no aparelho, o endereço técnico que o navegador cria para receber notificações. Desligar no sino apaga esse registro.</li>
       <li><b>Segurança:</b> denúncias enviadas e recebidas, e quando cada carta entrou na sua coleção.</li>
     </ul>
     <p>Não usamos cookies de rastreamento nem ferramentas de publicidade. O site guarda no seu navegador apenas preferências (idioma, filtros) e a sessão de entrada.</p>
@@ -215,7 +218,7 @@ window.INKWELL_CLOUD = (() => {
       <li>Nas listas de amigos e de membros, só aparece pelo nome quem tem perfil público.</li>
     </ul>
     <h2 id="uso">5. Para que usamos e com quem compartilhamos</h2>
-    <p>Usamos seus dados só para fazer o Inkwell funcionar. Não há venda nem compartilhamento para marketing. Os dados ficam nos serviços que hospedam o site: <b>Supabase</b> (banco de dados e entrada por e-mail) e <b>GitHub Pages</b> (as páginas). Preços vêm de fontes públicas (TCGplayer via Lorcast, lojas brasileiras) e jogos podem vir do duels.ink, se você conectar sua conta.</p>
+    <p>Usamos seus dados só para fazer o Inkwell funcionar. Não há venda nem compartilhamento para marketing. Os dados ficam nos serviços que hospedam o site: <b>Supabase</b> (banco de dados e entrada por e-mail) e <b>GitHub Pages</b> (as páginas). Preços vêm de fontes públicas (TCGplayer via Lorcast, lojas brasileiras) e jogos podem vir do duels.ink, se você conectar sua conta. Os eventos vêm do Play Hub da Ravensburger (consultamos pela posição aproximada, sem dados seus). Quando você digita um endereço ou CEP em Eventos, a busca vai do seu navegador direto ao <b>OpenStreetMap</b> e, para CEP, ao <b>ViaCEP</b>. Os avisos no celular passam pelo serviço de notificações do seu aparelho (Apple, Google ou Mozilla). A <b>análise com IA</b> dos jogos só monta um texto: é você quem cola na IA que escolher, na sua conta.</p>
     <h2 id="direitos">6. Seus direitos</h2>
     <p>Pela Lei Geral de Proteção de Dados (LGPD), você pode, entre outros:</p>
     <ul>
@@ -256,7 +259,10 @@ window.INKWELL_CLOUD = (() => {
       <li><b>Account:</b> your e-mail (to send the sign-in code), and when it was created and last used.</li>
       <li><b>What you enter:</b> name, collection, decks, wishlist, loans and trades, games (from the counter or duels.ink, if you connect it), comments and notes.</li>
       <li><b>My Inkwell profile:</b> address (@), motto, bio, avatar card, inks, city, showcase and featured deck.</li>
-      <li><b>Messages:</b> recados and community posts.</li>
+      <li><b>Messages:</b> recados, posts in communities and on Home, comments and likes.</li>
+      <li><b>Events:</b> the Play Hub events you mark (Going/Maybe, registered, paid) and your answers to community tables.</li>
+      <li><b>Location, only if you ask:</b> on Events, the place you search from (city, district, address or postcode) stays <b>on your device</b>. If you tick <i>“Keep this place in my account”</i>, we keep an <b>approximate point</b> (rounded to about 1 km), the district or city name and the radius — <b>never the street or number</b>. It is used to tell you about new events nearby and to use the same place on other devices. Only you see it. Unticking deletes it at once, and it goes with the account.</li>
+      <li><b>Notices:</b> the bell notifications and, if you turn notices on for a device, the technical address the browser creates to receive them. Turning them off in the bell deletes it.</li>
       <li><b>Safety:</b> reports sent and received, and when each card entered your collection.</li>
     </ul>
     <p>We use no tracking cookies or advertising tools. The site only keeps preferences (language, filters) and your sign-in session in your browser.</p>
@@ -268,7 +274,7 @@ window.INKWELL_CLOUD = (() => {
       <li>In friend and member lists, only people with a public profile are named.</li>
     </ul>
     <h2>5. What we use it for, and who we share it with</h2>
-    <p>We use your data only to run Inkwell. No selling, no sharing for marketing. Data lives with the services that host the site: <b>Supabase</b> (database and e-mail sign-in) and <b>GitHub Pages</b> (the pages). Prices come from public sources (TCGplayer via Lorcast, Brazilian shops), and games may come from duels.ink if you connect your account.</p>
+    <p>We use your data only to run Inkwell. No selling, no sharing for marketing. Data lives with the services that host the site: <b>Supabase</b> (database and e-mail sign-in) and <b>GitHub Pages</b> (the pages). Prices come from public sources (TCGplayer via Lorcast, Brazilian shops), and games may come from duels.ink if you connect your account. Events come from the Ravensburger Play Hub (we ask by approximate position, with none of your data). When you type an address or postcode on Events, the lookup goes from your browser straight to <b>OpenStreetMap</b> and, for Brazilian CEPs, <b>ViaCEP</b>. Phone notices go through your device's notification service (Apple, Google or Mozilla). The <b>AI analysis</b> of games only writes a text: you paste it into the AI you choose, in your own account.</p>
     <h2>6. Your rights</h2>
     <p>Under Brazil's data protection law (LGPD) you can, among others:</p>
     <ul>
@@ -635,7 +641,7 @@ window.INKWELL_CLOUD = (() => {
     const NK = { like: ["curtiu seu post", "liked your post"], comment: ["comentou no seu post", "commented on your post"], rsvp: ["vai na sua mesa", "is going to your table"], event: ["marcou uma mesa", "set up a table"],
       community_invite: ["convidou você para uma comunidade", "invited you to a community"], join_request: ["pediu para entrar", "asked to join"], join_accepted: ["aceitou seu pedido", "accepted your request"],
       event_soon: ["é amanhã ou hoje", "is coming up"] };
-    const noteHref = (n) => n.kind === "event_soon" && n.ref?.rph ? "../eventos/" : n.ref?.post ? `../feed/#post-${encodeURIComponent(n.ref.post)}` : n.ref?.slug ? `../comunidades/?c=${encodeURIComponent(n.ref.slug)}${["event", "rsvp", "event_soon"].includes(n.kind) ? "#mesas" : ""}` : "../feed/";
+    const noteHref = (n) => (n.kind === "event_soon" && n.ref?.rph) || /^event_near/.test(n.kind) ? "../eventos/" : n.ref?.post ? `../feed/#post-${encodeURIComponent(n.ref.post)}` : n.ref?.slug ? `../comunidades/?c=${encodeURIComponent(n.ref.slug)}${["event", "rsvp", "event_soon"].includes(n.kind) ? "#mesas" : ""}` : "../feed/";
     const showBell = () => { const b = $("iwBell"), c = $("iwBellN"); if (!b || !notes) return; b.hidden = false; const n = notes.filter((x) => x.unread).length; c.hidden = !n; c.textContent = n > 9 ? "9+" : String(n);
       b.setAttribute("aria-label", n ? T(`Notificações · ${n} novas`, `Notifications · ${n} new`) : T("Notificações", "Notifications")); };
     CLOUD.api("rpc/my_notifications", { method: "POST", body: {} }).then((r) => { notes = r || []; showBell(); }).catch(() => {});   // not there yet: no bell
@@ -674,7 +680,9 @@ window.INKWELL_CLOUD = (() => {
     }
     $("iwBell")?.addEventListener("click", (e) => {
       const list = notes || [];
-      openMenu(e.currentTarget, `<div class="menu-label">${T("Notificações", "Notifications")}</div>${list.length ? list.map((n) => `<a class="menu-item${n.unread ? " unread" : ""}" role="menuitem" href="${noteHref(n)}"><span>${n.kind === "event_soon" ? `<b>${T("Lembrete", "Reminder")}:</b> ${esc(n.ref?.text || T("seu evento", "your event"))} ${esc(T(...NK.event_soon))}` : `<b>${esc(n.name || T("Alguém", "Someone"))}</b> ${esc(T(...(NK[n.kind] || ["", ""])))}`}${n.kind !== "event_soon" && (n.ref?.text || n.ref?.name) ? `<small>${esc(n.ref.text || n.ref.name)}</small>` : ""}<small>${esc(new Date(n.at).toLocaleString(lang === "en" ? "en" : "pt-BR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}</small></span></a>`).join("") : `<div class="menu-item" style="pointer-events:none"><span class="small">${T("Nada por aqui ainda.", "Nothing here yet.")}</span></div>`}<div class="push-row" id="iwPush"></div>`, "notif");
+      openMenu(e.currentTarget, `<div class="menu-label">${T("Notificações", "Notifications")}</div>${list.length ? list.map((n) => `<a class="menu-item${n.unread ? " unread" : ""}" role="menuitem" href="${noteHref(n)}"><span>${n.kind === "event_near" ? `<b>${T("Evento novo perto de você", "New event near you")}:</b> ${esc(n.ref?.text || "")}${n.ref?.store || n.ref?.at ? `<small>${esc([n.ref.store, n.ref.at ? new Date(n.ref.at).toLocaleString(lang === "en" ? "en" : "pt-BR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : ""].filter(Boolean).join(" · "))}</small>` : ""}`
+        : n.kind === "event_near_many" ? `<b>${esc(T(`${n.ref?.n || "Vários"} eventos novos perto de você`, `${n.ref?.n || "Several"} new events near you`))}</b>${n.ref?.text ? ` ${esc(T("em", "in"))} ${esc(n.ref.text)}` : ""}`
+        : n.kind === "event_soon" ? `<b>${T("Lembrete", "Reminder")}:</b> ${esc(n.ref?.text || T("seu evento", "your event"))} ${esc(T(...NK.event_soon))}` : `<b>${esc(n.name || T("Alguém", "Someone"))}</b> ${esc(T(...(NK[n.kind] || ["", ""])))}`}${!/^event_(soon|near)/.test(n.kind) && (n.ref?.text || n.ref?.name) ? `<small>${esc(n.ref.text || n.ref.name)}</small>` : ""}<small>${esc(new Date(n.at).toLocaleString(lang === "en" ? "en" : "pt-BR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}</small></span></a>`).join("") : `<div class="menu-item" style="pointer-events:none"><span class="small">${T("Nada por aqui ainda.", "Nothing here yet.")}</span></div>`}<div class="push-row" id="iwPush"></div>`, "notif");
       drawPush();
       if (list.some((n) => n.unread)) CLOUD.api("rpc/read_notifications", { method: "POST", body: {} }).then(() => { list.forEach((n) => { n.unread = false; }); showBell(); }).catch(() => {});
     });

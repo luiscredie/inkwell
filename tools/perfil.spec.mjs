@@ -496,7 +496,9 @@ test('notifications: a bell with the unread count; opening marks them read', asy
   const json = (route, v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
   await page.route('**/rest/v1/rpc/my_notifications', (r) => json(r, [
     { id: 'n1', kind: 'comment', name: 'Rodrigo', handle: 'rodrigo', ref: { post: 'p1', text: 'Olha meu deck' }, at: new Date().toISOString(), unread: true },
-    { id: 'n2', kind: 'event', name: 'Bia', ref: { event: 'e1', slug: 'liga-campinas', text: 'Liga de quinta' }, at: new Date().toISOString(), unread: false }]));
+    { id: 'n2', kind: 'event', name: 'Bia', ref: { event: 'e1', slug: 'liga-campinas', text: 'Liga de quinta' }, at: new Date().toISOString(), unread: false },
+    { id: 'n3', kind: 'event_near', ref: { rph: 9, text: 'Set Championship', store: 'Loja B', at: '2030-01-05T17:00:00Z' }, at: new Date().toISOString(), unread: false },
+    { id: 'n4', kind: 'event_near_many', ref: { n: 5, text: 'Bela Vista, São Paulo' }, at: new Date().toISOString(), unread: false }]));
   await page.route('**/rest/v1/rpc/read_notifications', (r) => { read++; return r.fulfill({ status: 204, body: '' }); });
   await page.goto(url('colecao/'));
   await expect(page.locator('#iwBellN')).toHaveText('1');
@@ -504,6 +506,9 @@ test('notifications: a bell with the unread count; opening marks them read', asy
   const m = page.locator('.menu.notif');
   await expect(m.locator('a[href="../feed/#post-p1"]')).toContainText('Rodrigo comentou no seu post');
   await expect(m.locator('a[href="../comunidades/?c=liga-campinas#mesas"]')).toContainText('Liga de quinta');
+  await expect(m.locator('a[href="../eventos/"]').first()).toContainText('Evento novo perto de você: Set Championship');
+  await expect(m.locator('a[href="../eventos/"]').first()).toContainText('Loja B');
+  await expect(m.locator('a[href="../eventos/"]').nth(1)).toContainText('5 eventos novos perto de você em Bela Vista, São Paulo');
   expect(await page.locator('link[rel="manifest"]').getAttribute('href')).toBe('../inkwell.webmanifest');
   await expect.poll(() => read).toBe(1);
   await expect(page.locator('#iwBellN')).toBeHidden();
