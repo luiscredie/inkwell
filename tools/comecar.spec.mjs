@@ -155,7 +155,27 @@ test('replace, move and remove with the keyboard keep the order (A05); dialog fo
   await expect(page.locator('#picker')).toBeHidden();
   await expect(trig).toBeFocused();
   await page.locator('[data-remove="0"]').click();
-  expect((await draftOf(page)).favorites.map((f) => f.id)).toEqual(['LOR1-41']);
+  expect((await draftOf(page)).favorites.map((f) => f?.id ?? null)).toEqual([null, 'LOR1-41']);   // the other card stays in its place
+});
+
+test('any of the three places can be chosen first; the card stays there; progress shows how many', async ({ page }) => {
+  await setup(page);
+  await page.goto(PAGE);
+  await expect(page.getByTestId('fav-progress')).toHaveText('0 de 3 escolhidas');
+  await expect(page.locator('[data-slot="2"] [data-pick]')).toBeEnabled();
+  await expect(page.locator('[data-slot="2"] [data-pick]')).toHaveText('Escolher favorita');
+  await pickCard(page, 2, 'rapunzel tower');
+  await expect(page.locator('[data-slot="2"] .iw-card-label')).toContainText('Rapunzel');
+  await expect(page.locator('[data-slot="0"] [data-pick]')).toHaveText('Escolher favorita');
+  await expect(page.getByTestId('fav-progress')).toHaveText('1 de 3 escolhidas');
+  await expect(page.locator('[data-slot="2"] [data-pick]')).toHaveText('Trocar carta');
+  const d = await draftOf(page);
+  expect(d.favorites.length).toBe(3);
+  expect(d.favorites[0]).toBeNull();
+  expect(d.favorites[2].id).toBeTruthy();
+  // survives a reload in the same place
+  await page.reload();
+  await expect(page.locator('[data-slot="2"] .iw-card-label')).toContainText('Rapunzel');
 });
 
 test('reload and navigating in the same tab keep the draft without asking (A09)', async ({ page }) => {
@@ -392,9 +412,10 @@ for (const w of [320, 390, 768, 1440]) {
 test('feed with the flag: example profile is labelled and never enters the draft (A34, A28)', async ({ page }) => {
   await setup(page);
   await page.goto(new URL('feed/?preview=visitante', ROOT).href);
-  await expect(page.getByText('Demonstração com dados fictícios').first()).toBeVisible();
+  await expect(page.getByText('Perfil de exemplo · dados fictícios').first()).toBeVisible();
+  await expect(page.getByText('Taverna da Tinta (exemplo)')).toBeVisible();   // the example's community and friends say they are examples
   await expect(page.getByTestId('how-it-works').locator('li').first()).toContainText('Personalize, sem conta');
-  await page.getByRole('link', { name: 'Começar meu Inkwell' }).first().click();
+  await page.getByRole('link', { name: 'Criar um perfil com a minha cara' }).click();
   await expect(page).toHaveURL(/\/comecar\//);
   await expect(page.getByLabel('Nome de exibição')).toHaveValue('');
   expect(await draftOf(page)).toBeNull();
@@ -403,7 +424,7 @@ test('feed with the flag: example profile is labelled and never enters the draft
 test('the feed without the flag stays as it is today (rollback)', async ({ page }) => {
   await setup(page);
   await page.goto(new URL('feed/?preview=off', ROOT).href);
-  await expect(page.getByText('Demonstração com dados fictícios')).toHaveCount(0);
+  await expect(page.getByText('Perfil de exemplo · dados fictícios')).toHaveCount(0);
   await expect(page.getByTestId('how-it-works').locator('li').first()).toContainText('Entre com seu e-mail');
   await expect(page.locator('a[href="../comecar/"]')).toHaveCount(0);
 });
@@ -421,7 +442,7 @@ test('English: the page and the picker have no Portuguese left over (A21)', asyn
 test('on by default: a new visitor gets the new Início and the editor with no parameter', async ({ page }) => {
   await setup(page);
   await page.goto(new URL('feed/', ROOT).href);
-  await expect(page.getByRole('link', { name: 'Começar meu Inkwell' }).first()).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Criar um perfil com a minha cara' })).toBeVisible();
   await page.goto(new URL('comecar/', ROOT).href);
   await expect(page.getByRole('heading', { name: 'Seu Inkwell começa aqui' })).toBeVisible();
 });

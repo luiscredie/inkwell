@@ -130,6 +130,7 @@ test('store: contact for everyone; owner edits it, makes an admin and hands over
   await expect(ct.locator('a[href="https://instagram.com/lojadoze"]')).toContainText('@lojadoze');
   await expect(ct.locator('a[href="https://lojadoze.com.br"]')).toHaveCount(1);
   await page.locator('#edit').click();
+  await expect(page.locator('#fN')).toBeFocused();   // the sheet puts the cursor in the name first
   await page.locator('[data-ct="instagram"]').fill('@lojadoze2');
   await page.locator('#cfSave').click();
   await expect.poll(() => rpcCalls(calls, 'update_community').length).toBe(1);

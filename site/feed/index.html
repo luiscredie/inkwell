@@ -226,6 +226,23 @@ body.out .page.split.home3 { display: block; }
 .comm-list a:hover { background: var(--hover-tint); }
 .comm-list a span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* posts (supabase/social.sql) */
+.iw-public .demo-cover { height: 84px; margin: calc(-1 * var(--sp-5)) calc(-1 * var(--sp-5)) 0; border-radius: var(--iw-radius) var(--iw-radius) 0 0; background: var(--surface-3) 50% 24% / 135% auto no-repeat; position: relative; display: flex; align-items: flex-start; justify-content: flex-end; padding: 10px; }
+.iw-public .demo-cover::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(180deg, rgba(10,18,32,.05), rgba(10,18,32,.35)); }
+.iw-public .demo-cover .iw-sample-label { position: relative; z-index: 1; background: var(--iw-surface); }
+.iw-public .demo-head { margin-top: -28px; position: relative; }
+.iw-public .demo-head .iw-avatar { box-shadow: 0 0 0 4px var(--iw-surface); }
+.iw-public .demo-head .iw-name { margin-top: 30px; }
+@media (max-width: 767px) { .iw-public .demo-cover { margin: calc(-1 * var(--sp-4)) calc(-1 * var(--sp-4)) 0; } }
+.iw-public .demo-social { display: flex; flex-wrap: wrap; gap: var(--sp-3) var(--sp-5); margin-top: var(--sp-4); font-size: var(--fs-small); }
+.iw-public .demo-social > div { display: flex; align-items: center; gap: 8px; }
+.iw-public .demo-k { color: var(--text-2); font-weight: 600; }
+.iw-public .demo-faces { display: inline-flex; }
+.iw-public .demo-faces i, .iw-public .demo-who i { width: 26px; height: 26px; border-radius: 50%; display: inline-grid; place-items: center; font: 700 .72rem/1 var(--sans, inherit); font-style: normal; color: #fff; background: hsl(var(--h) 45% 42%); box-shadow: 0 0 0 2px var(--iw-surface); }
+.iw-public .demo-faces i + i { margin-left: -7px; }
+.iw-public .demo-chip { padding: 3px 10px; border-radius: 999px; background: var(--hover-tint); font-weight: 600; }
+.iw-public .demo-recado { display: grid; gap: 4px; }
+.iw-public .demo-who { display: flex; align-items: center; gap: 6px; font-style: normal; font-size: var(--fs-micro); color: var(--text-2); }
+.iw-public .demo-who b { color: var(--text); }
 .ev-find { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
 .ev-find input { flex: 1 1 220px; min-width: 0; }
 .ev-nexts { display: grid; gap: var(--sp-2); }
@@ -557,7 +574,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Is it a combo?": "É um combo?", "Yes, a combo": "Sim, é combo", "No, just cards": "Não, só cartas", "Combo": "Combo", "Up to 5 cards per post.": "Até 5 cartas por post.",
     "Tell us if these cards are a combo.": "Diga se essas cartas são um combo.", "Add a card": "Mais uma carta",
     "Find your next table": "Encontre sua próxima mesa", "See all events": "Ver todos os eventos", "Official Lorcana leagues and tournaments near you, from the Play Hub. No account needed.": "Ligas e torneios oficiais de Lorcana perto de você, do Play Hub. Sem precisar de conta.",
-    "Your city, district or CEP": "Sua cidade, bairro ou CEP", "See events": "Ver eventos", "Next near {place}": "Próximos perto de {place}", "you": "você", "Free": "Grátis",
+    "Your city, district or CEP": "Sua cidade, bairro ou CEP", "Make a profile that feels like me": "Criar um perfil com a minha cara", "Example profile · fictional data": "Perfil de exemplo · dados fictícios",
+    "Friends": "Amigos", "Example friends": "Amigos de exemplo", "Community": "Comunidade", "Taverna da Tinta (example)": "Taverna da Tinta (exemplo)", "Bia (example)": "Bia (exemplo)", "left a recado": "deixou um recado", "Find where to play Lorcana near you. No account needed.": "Descubra onde jogar Lorcana perto de você. Sem precisar de conta.", "Find events": "Encontrar eventos", "See events": "Ver eventos", "Next near {place}": "Próximos perto de {place}", "you": "você", "Free": "Grátis",
     "Official events near you": "Eventos oficiais perto de você", "Play Hub near {place}": "Play Hub perto de {place}",
     "Going": "Vou", "Maybe": "Talvez", "{n} going": "{n} vão", "1 going": "1 vai", "Full": "Lotado", "See community": "Ver comunidade", "foil": "foil",
     "Invite": "Convidar", "people": "pessoas", "Opponents' names are never shown to others. Coaches see the games shared with them. You can change it game by game in the review.": "O nome dos adversários nunca aparece para os outros. Coaches veem os jogos compartilhados com eles. Dá para mudar jogo a jogo na revisão.",
@@ -893,8 +911,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   }
   function findEventsHtml() {
     return `<section id="landEvents" data-testid="home-find-events"><div class="group-head"><h2>${Tx("Find your next table")}</h2><a class="small" href="../eventos/">${Tx("See all events")}</a></div>
-      <p class="muted" style="margin:0 0 var(--sp-3)">${Tx("Official Lorcana leagues and tournaments near you, from the Play Hub. No account needed.")}</p>
-      <form id="evFind" class="ev-find"><input id="evFindQ" type="search" placeholder="${esc(Tx("Your city, district or CEP"))}" aria-label="${esc(Tx("Your city, district or CEP"))}" value="${esc(savedWhere()?.label || "")}"><button type="submit" class="btn primary">${Tx("See events")}</button></form>
+      <p class="muted" style="margin:0 0 var(--sp-3)">${Tx("Find where to play Lorcana near you. No account needed.")}</p>
+      <form id="evFind" class="ev-find"><input id="evFindQ" type="search" placeholder="${esc(Tx("Your city, district or CEP"))}" aria-label="${esc(Tx("Your city, district or CEP"))}" value="${esc(savedWhere()?.label || "")}"><button type="submit" class="btn primary">${Tx("Find events")}</button></form>
       <div id="evNext" class="ev-nexts"></div></section>`;
   }
   function wireFindEvents() {
@@ -998,15 +1016,18 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const newHero = () => `<div class="iw-public" data-testid="new-hero"><section class="iw-hero" aria-labelledby="nhT">
         <div><h1 class="iw-h1" id="nhT">${Tx("Your place in the Lorcana community.")}</h1>
           <p class="iw-lead">${Tx("Your favourite cards and your people, in a profile that feels like you.")}</p>
-          <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:var(--sp-5)"><a class="iw-button iw-button-primary" href="../comecar/" data-testid="start">${Tx("Start my Inkwell")}</a>
+          <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:var(--sp-5)"><a class="iw-button iw-button-primary" href="../comecar/" data-testid="start">${Tx("Make a profile that feels like me")}</a>
             <a class="iw-button" href="../comunidades/">${Tx("Explore the community")}</a></div>
           <p style="margin:var(--sp-4) 0 0"><button type="button" class="iw-link" id="signIn2">${Tx("Already have an account? Sign in")}</button></p></div>
         <div class="iw-profile" aria-label="${esc(Tx("Demo with fictional data"))}">
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:var(--sp-3)"><span class="iw-sample-label">${Tx("Demo with fictional data")}</span></div>
-          <div class="iw-profile-head"><span class="iw-avatar" aria-hidden="true">${img("LOR14-2") ? `<img src="${img("LOR14-2")}" alt="">` : "R"}</span>
+          <div class="demo-cover" aria-hidden="true" style="${img("LOR10-178") ? `background-image:url('${img("LOR10-178")}')` : ""}"><span class="iw-sample-label">${Tx("Example profile · fictional data")}</span></div>
+          <div class="iw-profile-head demo-head"><span class="iw-avatar" aria-hidden="true">${img("LOR14-2") ? `<img src="${img("LOR14-2")}" alt="">` : "R"}</span>
             <div><p class="iw-name">${Tx("Rafa (example)")}</p><span class="iw-inkdots" aria-label="${esc(lang === "pt" ? "Âmbar · Ametista" : "Amber · Amethyst")}"><i style="background:${INK_HEX.Amber}"></i><i style="background:${INK_HEX.Amethyst}"></i></span></div></div>
           <div class="iw-showcase">${["LOR13-27", "LOR12-195", "LOR10-17"].map(demoCard).join("")}</div>
-          <blockquote class="iw-quote"><span class="iw-sample-label" style="font-style:normal;margin-bottom:6px">${Tx("Example recado")}</span><br>“${Tx("Thursday is league night. Who's in?")}”</blockquote></div></section>
+          <div class="demo-social">
+            <div><span class="demo-k">${Tx("Friends")}</span><span class="demo-faces" aria-label="${esc(Tx("Example friends"))}">${["B", "D", "M", "T"].map((x, i) => `<i style="--h:${[200, 30, 140, 280][i]}">${x}</i>`).join("")}</span></div>
+            <div><span class="demo-k">${Tx("Community")}</span><span class="demo-chip">${Tx("Taverna da Tinta (example)")}</span></div></div>
+          <blockquote class="iw-quote demo-recado"><span class="demo-who"><i style="--h:200">B</i><b>${Tx("Bia (example)")}</b> · ${Tx("left a recado")}</span>“${Tx("Thursday is league night. Who's in?")}”</blockquote></div></section>
     </div>`;
     $("feed").style.marginTop = "0";
     $("feed").innerHTML = `<div class="land" data-testid="public-home">
@@ -1016,9 +1037,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         <p>${Tx("Show your favourite cards and your deck, invite your friends, and keep your collection, games and trades in one place. Free, made by a fan.")}</p>
         <div class="land-cta"><button type="button" class="btn primary large" id="signIn">${Tx("Create my Inkwell")}</button><a class="btn large" href="../comunidades/">${Tx("Explore the community")}</a></div>
         <p class="small faint" style="margin:var(--sp-3) 0 0">${Tx("Use your e-mail. We e-mail you a code, no password.")}</p></section>
+      ${findEventsHtml()}
       <section id="landEx" hidden><div class="group-head"><h2>${Tx("Meet the people")}</h2><span class="tag accent">${Tx("Examples · fictional profiles")}</span></div><div class="land-ex" id="exList"></div></section>
       <section id="landComm" hidden><div class="group-head"><h2>${Tx("Communities")}</h2><a class="small" href="../comunidades/">${Tx("See all")}</a></div><div class="land-ex" id="commList"></div></section>
-      ${findEventsHtml()}
       <section><div class="group-head"><h2>${Tx("What you can do")}</h2></div>
         <div class="land-feats">${feats.map(([ic, href, t, d]) => `<a class="land-feat" href="${href}"><i class="ic i-${ic}"></i><b>${Tx(t)}</b><span>${Tx(d)}</span></a>`).join("")}</div></section>
       <section><div class="group-head"><h2>${Tx("How it works")}</h2></div>
@@ -1485,7 +1506,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       community_invite: ["convidou você para uma comunidade", "invited you to a community"], join_request: ["pediu para entrar", "asked to join"], join_accepted: ["aceitou seu pedido", "accepted your request"],
       event_soon: ["é amanhã ou hoje", "is coming up"] };
     const noteHref = (n) => (n.kind === "event_soon" && n.ref?.rph) || /^event_near/.test(n.kind) ? "../eventos/" : n.ref?.post ? `../feed/#post-${encodeURIComponent(n.ref.post)}` : n.ref?.slug ? `../comunidades/?c=${encodeURIComponent(n.ref.slug)}${["event", "rsvp", "event_soon"].includes(n.kind) ? "#mesas" : ""}` : "../feed/";
-    const showBell = () => { const b = $("iwBell"), c = $("iwBellN"); if (!b || !notes) return; b.hidden = false; const n = notes.filter((x) => x.unread).length; c.hidden = !n; c.textContent = n > 9 ? "9+" : String(n);
+    // the number on the app icon (installed app): the unread count, cleared when read
+    const appBadge = (n) => { try { if (n && navigator.setAppBadge) navigator.setAppBadge(n).catch(() => {}); else if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {}); } catch { /* */ } };
+    const showBell = () => { const b = $("iwBell"), c = $("iwBellN"); if (!b || !notes) return; b.hidden = false; const n = notes.filter((x) => x.unread).length; c.hidden = !n; c.textContent = n > 9 ? "9+" : String(n); appBadge(n);
       b.setAttribute("aria-label", n ? T(`Notificações · ${n} novas`, `Notifications · ${n} new`) : T("Notificações", "Notifications")); };
     CLOUD.api("rpc/my_notifications", { method: "POST", body: {} }).then((r) => { notes = r || []; showBell(); }).catch(() => {});   // not there yet: no bell
     // Push on this device (supabase/push.sql + functions/push-send; the worker is site/push/sw.js)
@@ -1494,30 +1517,45 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const iosBrowser = /iP(hone|ad|od)/.test(navigator.userAgent) && !(navigator.standalone || matchMedia("(display-mode: standalone)").matches);
     const b64 = (s) => { const p = "=".repeat((4 - (s.length % 4)) % 4), raw = atob((s + p).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from(raw, (c) => c.charCodeAt(0)); };
     const pushReg = () => navigator.serviceWorker.register("../push/sw.js", { scope: "../push/" });
+    // state(): "on" | "off" | "denied" | "ios" (needs the Home Screen app) | "unsupported"; on()/off() throw on failure
+    async function pushSub() { try { return await (await navigator.serviceWorker.getRegistration("../push/"))?.pushManager.getSubscription() || null; } catch { return null; } }
+    async function pushState() {
+      if (iosBrowser) return "ios";
+      if (!pushOk) return "unsupported";
+      if (Notification.permission === "denied") return "denied";
+      return (await pushSub()) ? "on" : "off";
+    }
+    async function pushOn() {
+      if ((await Notification.requestPermission()) !== "granted") return false;
+      const reg = await pushReg();   // not .ready: this page isn't in the worker's scope, so .ready never settles
+      const w = reg.installing || reg.waiting;
+      if (w && !reg.active) await new Promise((ok) => { w.addEventListener("statechange", () => { if (w.state === "activated") ok(); }); setTimeout(ok, 8000); });
+      const s2 = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(VAPID) });
+      const j = s2.toJSON();
+      await CLOUD.api("rpc/save_push_sub", { method: "POST", body: { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_ua: navigator.userAgent.slice(0, 200) } });
+      return true;
+    }
+    async function pushOff() {
+      const sub = await pushSub(); if (!sub) return;
+      await CLOUD.api("rpc/delete_push_sub", { method: "POST", body: { p_endpoint: sub.endpoint } }).catch(() => {});
+      await sub.unsubscribe();
+    }
+    window.INKWELL_PUSH = { state: pushState, on: pushOn, off: pushOff };   // Meu Inkwell › Avisos uses the same switch
+    const PUSH_TEXT = {
+      ios: () => T("Para receber avisos no iPhone: toque em Compartilhar → Adicionar à Tela de Início, abra o Inkwell por lá e ative aqui.", "To get notices on iPhone: Share → Add to Home Screen, open Inkwell from there and turn them on here."),
+      unsupported: () => T("Este navegador não recebe avisos.", "This browser can't receive notices."),
+      denied: () => T("Os avisos estão bloqueados nas configurações do navegador para este site.", "Notices are blocked for this site in the browser settings."),
+    };
     async function drawPush() {
       const el = $("iwPush"); if (!el) return;
-      if (iosBrowser) { el.innerHTML = `<p class="small muted">${T("Para receber avisos no iPhone: toque em Compartilhar → Adicionar à Tela de Início, abra o Inkwell por lá e ative aqui.", "To get notices on iPhone: Share → Add to Home Screen, open Inkwell from there and turn them on here.")}</p>`; return; }
-      if (!pushOk) { el.innerHTML = `<p class="small muted">${T("Este navegador não recebe avisos.", "This browser can't receive notices.")}</p>`; return; }
-      if (Notification.permission === "denied") { el.innerHTML = `<p class="small muted">${T("Os avisos estão bloqueados nas configurações do navegador para este site.", "Notices are blocked for this site in the browser settings.")}</p>`; return; }
-      let sub = null; try { sub = await (await navigator.serviceWorker.getRegistration("../push/"))?.pushManager.getSubscription(); } catch { sub = null; }
-      el.innerHTML = sub ? `<span class="small"><i class="ic i-bell"></i> ${T("Avisos ligados neste aparelho", "Notices on for this device")}</span><button type="button" class="btn ghost small" data-push="off">${T("Desligar", "Turn off")}</button>`
-        : `<button type="button" class="btn small primary" data-push="on"><i class="ic i-bell"></i>${T("Avisar neste aparelho", "Notify me on this device")}</button>`;
+      const st = await pushState(), cfg = `<a class="small" href="../perfil/#avisos" data-testid="notif-settings">${T("Configurar avisos", "Notice settings")}</a>`;
+      if (PUSH_TEXT[st]) { el.innerHTML = `<p class="small muted">${PUSH_TEXT[st]()}</p>${cfg}`; return; }
+      el.innerHTML = st === "on" ? `<span class="small"><i class="ic i-bell"></i> ${T("Avisos ligados neste aparelho", "Notices on for this device")}</span><button type="button" class="btn ghost small" data-push="off">${T("Desligar", "Turn off")}</button>${cfg}`
+        : `<button type="button" class="btn small primary" data-push="on"><i class="ic i-bell"></i>${T("Avisar neste aparelho", "Notify me on this device")}</button>${cfg}`;
       el.querySelector("[data-push]").onclick = async (ev) => {
         ev.stopPropagation(); const b = ev.currentTarget; b.disabled = true;
-        try {
-          if (b.dataset.push === "on") {
-            if ((await Notification.requestPermission()) !== "granted") { drawPush(); return; }
-            const reg = await pushReg();   // not .ready: this page isn't in the worker's scope, so .ready never settles
-            const w = reg.installing || reg.waiting;
-            if (w && !reg.active) await new Promise((ok) => { w.addEventListener("statechange", () => { if (w.state === "activated") ok(); }); setTimeout(ok, 8000); });
-            const s2 = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(VAPID) });
-            const j = s2.toJSON();
-            await CLOUD.api("rpc/save_push_sub", { method: "POST", body: { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_ua: navigator.userAgent.slice(0, 200) } });
-          } else if (sub) {
-            await CLOUD.api("rpc/delete_push_sub", { method: "POST", body: { p_endpoint: sub.endpoint } }).catch(() => {});
-            await sub.unsubscribe();
-          }
-        } catch { el.insertAdjacentHTML("beforeend", `<p class="small" style="color:var(--loss)">${T("Não deu certo. Tente de novo.", "That didn't work. Try again.")}</p>`); b.disabled = false; return; }
+        try { if (b.dataset.push === "on") await pushOn(); else await pushOff(); }
+        catch { el.insertAdjacentHTML("beforeend", `<p class="small" style="color:var(--loss)">${T("Não deu certo. Tente de novo.", "That didn't work. Try again.")}</p>`); b.disabled = false; return; }
         drawPush();
       };
     }

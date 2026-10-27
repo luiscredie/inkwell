@@ -225,7 +225,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Your Inkwell starts here": "Seu Inkwell começa aqui", "Choose the cards that represent you. Create an account when you want to keep your profile.": "Escolha as cartas que representam você. Crie uma conta quando quiser guardar seu perfil.",
     "Display name": "Nome de exibição", "How do you want to appear?": "Como você quer aparecer?", "2 to 40 characters.": "De 2 a 40 caracteres.", "Use at least 2 characters.": "Use pelo menos 2 caracteres.",
     "Your three favourite cards": "Suas três cartas favoritas", "choose them right here": "escolha aqui mesmo", "Your three favourite cards are chosen in the profile preview — any card from the catalogue, even without a copy in a collection.": "As três cartas favoritas você escolhe na prévia do perfil — qualquer carta do catálogo, mesmo sem ter uma cópia.", "Any card from the catalogue, even without a copy in a collection.": "Qualquer carta do catálogo, mesmo sem ter uma cópia.",
-    "Choose card": "Escolher carta", "Move left": "Mover para a esquerda", "Move right": "Mover para a direita", "Slot {n}": "Posição {n}",
+    "Choose card": "Escolher carta", "Choose favourite": "Escolher favorita", "{n} of 3 chosen": "{n} de 3 escolhidas", "Move left": "Mover para a esquerda", "Move right": "Mover para a direita", "Slot {n}": "Posição {n}",
     "Profile preview": "Prévia do seu perfil", "Your name here": "Seu nome aqui", "No inks yet": "Nenhuma tinta ainda", "Discard the draft": "Descartar rascunho",
     "Close": "Fechar", "Set": "Set", "Ink": "Tinta", "Rarity": "Raridade", "Finish": "Acabamento", "All": "Todos", "Normal": "Normal", "Foil": "Foil", "foil": "foil",
     "Show more": "Mostrar mais", "{n} cards": "{n} cartas", "1 card": "1 carta", "Cards from the newest set, to start with. Search for any other.": "Cartas do set mais recente, para começar. Busque qualquer outra.",
@@ -300,17 +300,22 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     if (Array.isArray(x.favorites)) {
       const seen = new Set();
       for (const f of x.favorites.slice(0, 3)) {
-        if (!f || typeof f.id !== "string" || f.id.length > 40) { draftProblem = "invalid"; continue; }
-        const key = `${f.id}|${!!f.foil}`; if (seen.has(key)) continue; seen.add(key);
+        if (f === null) { d.favorites.push(null); continue; }   // an empty place between cards
+        if (typeof f?.id !== "string" || f.id.length > 40) { draftProblem = "invalid"; continue; }
+        const key = `${f.id}|${!!f.foil}`; if (seen.has(key)) { d.favorites.push(null); continue; } seen.add(key);
         d.favorites.push({ id: f.id, foil: !!f.foil });   // an id no longer in the catalogue stays, marked, so it can be replaced
       }
+      trimFavs(d);
     }
     return d;
   }
+  // favorites: up to 3 places, any of them can be empty (null) — a card stays where it was put
+  function trimFavs(d) { while (d.favorites.length && !d.favorites.at(-1)) d.favorites.pop(); }
+  const favs = () => draft.favorites.filter(Boolean);
   let draft = readDraft();
   const hadDraft = !!draft;
   if (!draft) draft = blank();
-  const fields = (d) => JSON.stringify({ n: d.displayName.trim(), i: [...d.preferredInks].sort(), f: d.favorites.map((f) => `${f.id}|${f.foil}`) });
+  const fields = (d) => JSON.stringify({ n: d.displayName.trim(), i: [...d.preferredInks].sort(), f: d.favorites.filter(Boolean).map((f) => `${f.id}|${f.foil}`) });
   const BASE = fields(blank());   // a guest starts from nothing; "dirty" = different from that
   const isDirty = () => fields(draft) !== BASE;
   function persist() {
@@ -348,22 +353,22 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const name = draft.displayName.trim();
     return `<section class="iw-profile" aria-labelledby="pvT" data-testid="preview">
       <div class="row between" style="margin-bottom:var(--sp-3)"><h2 class="iw-h3" id="pvT" style="margin:0">${Tx("Profile preview")}</h2>${signedIn() ? "" : `<span class="iw-sample-label">${Tx("Guest mode")}</span>`}</div>
-      <div class="iw-profile-head"><span class="iw-avatar" aria-hidden="true">${(() => { const c = BY.get(draft.favorites[0]?.id); return c?.img ? `<img src="${imgUrl(c)}" alt="" onerror="this.remove()">` : esc((name || "?")[0].toUpperCase()); })()}</span>
+      <div class="iw-profile-head"><span class="iw-avatar" aria-hidden="true">${(() => { const c = BY.get(favs()[0]?.id); return c?.img ? `<img src="${imgUrl(c)}" alt="" onerror="this.remove()">` : esc((name || "?")[0].toUpperCase()); })()}</span>
         <div style="min-width:0"><p class="iw-name ${name ? "" : "placeholder"}" data-testid="pv-name">${esc(name || Tx("Your name here"))}</p>
         <div class="iw-muted small" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap" data-testid="pv-inks">${draft.preferredInks.length ? inkDots(draft.preferredInks) + esc(draft.preferredInks.map(inkName).join(" · ")) : Tx("No inks yet")}</div></div></div>
-      <div data-testid="pv-showcase"><p class="iw-muted small" style="margin:0 0 var(--sp-2)"><b>${Tx("Your three favourite cards")}</b> · ${Tx("choose them right here")}</p>${slots()}</div>
+      <div data-testid="pv-showcase"><p class="iw-muted small" style="margin:0 0 var(--sp-2)"><b>${Tx("Your three favourite cards")}</b> · <span data-testid="fav-progress">${esc(Tx("{n} of 3 chosen", { n: favs().length }))}</span></p>${slots()}</div>
       <p class="iw-muted small" style="margin:var(--sp-3) 0 0">${Tx("Your profile starts private. You decide when to publish it.")}</p></section>`;
   }
   function slots() {
     return `<div class="iw-slots" data-testid="slots">${[0, 1, 2].map((i) => {
       const f = draft.favorites[i], c = f && BY.get(f.id), n = i + 1;
-      if (!f) return `<div class="iw-slot" data-slot="${i}"><button type="button" class="iw-card empty" data-pick="${i}" aria-label="${esc(Tx("Choose card for slot {n}", { n }))}" ${locked() || i > draft.favorites.length ? "disabled" : ""}>${Tx("Choose card")}</button></div>`;
+      if (!f) return `<div class="iw-slot" data-slot="${i}"><button type="button" class="iw-card empty" data-pick="${i}" aria-label="${esc(Tx("Choose card for slot {n}", { n }))}" ${locked() ? "disabled" : ""}>${Tx("Choose favourite")}</button></div>`;
       return `<div class="iw-slot" data-slot="${i}">${c ? cardFace(c, f.foil) : `<span class="iw-card empty" role="img" aria-label="${esc(f.id)}"></span><span class="warn" data-testid="gone">${Tx("This card is no longer in the catalogue. Choose another.")}</span>`}
         <div class="iw-card-label">${c ? `${esc(split(c.name)[0])}<small>${esc(setName(c.set))} · nº ${esc(c.num)}${f.foil ? " · " + Tx("foil") : ""}</small>` : esc(f.id)}</div>
         <div class="iw-actions">
           <button type="button" class="iw-button small" data-pick="${i}" aria-label="${esc(Tx("Replace card in slot {n}", { n }))}" ${locked() ? "disabled" : ""}>${Tx("Replace card")}</button>
           <button type="button" class="iw-button small" data-move="${i}:-1" aria-label="${esc(Tx("Move left") + " · " + Tx("Slot {n}", { n }))}" ${locked() || i === 0 ? "disabled" : ""}>◀</button>
-          <button type="button" class="iw-button small" data-move="${i}:1" aria-label="${esc(Tx("Move right") + " · " + Tx("Slot {n}", { n }))}" ${locked() || i >= draft.favorites.length - 1 ? "disabled" : ""}>▶</button>
+          <button type="button" class="iw-button small" data-move="${i}:1" aria-label="${esc(Tx("Move right") + " · " + Tx("Slot {n}", { n }))}" ${locked() || i >= 2 ? "disabled" : ""}>▶</button>
           <button type="button" class="iw-button small" data-remove="${i}" aria-label="${esc(Tx("Remove card from slot {n}", { n }))}" ${locked() ? "disabled" : ""}>✕</button>
         </div></div>`;
     }).join("")}</div>`;
@@ -397,7 +402,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       return `<div class="cm-notice" role="region" aria-labelledby="rvT" data-testid="review"><strong id="rvT">${Tx("Your profile already has content. Review before applying.")}</strong>
         <div class="cm-review"><dl><dt>${Tx("Now")}</dt><dd></dd><dt>${Tx("Name")}</dt><dd>${esc(cur.display_name || "—")}</dd><dt>${Tx("Inks")}</dt><dd>${esc((cur.inks || []).map(inkName).join(" · ") || Tx("none"))}</dd><dt>${Tx("Favourite cards")}</dt><dd>${esc(favNames(cur.showcase || []))}</dd></dl>
           <dl><dt>${Tx("After applying")}</dt><dd></dd><dt>${Tx("Name")}</dt><dd>${esc(nm || Tx("(unchanged)"))}</dd><dt>${Tx("Inks")}</dt><dd>${esc(draft.preferredInks.length ? draft.preferredInks.map(inkName).join(" · ") : Tx("(unchanged)"))}</dd>
-          <dt>${Tx("Favourite cards")}</dt><dd>${esc(draft.favorites.length ? favNames(draft.favorites) : Tx("(unchanged)"))}</dd></dl></div>
+          <dt>${Tx("Favourite cards")}</dt><dd>${esc(favs().length ? favNames(favs()) : Tx("(unchanged)"))}</dd></dl></div>
         <div class="row"><button type="button" class="iw-button iw-button-primary small" id="apply">${Tx("Apply to my profile")}</button><button type="button" class="iw-button small" id="backEdit">${Tx("Keep editing")}</button></div></div>`;
     }
     return "";
@@ -458,12 +463,12 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     app.querySelectorAll("[data-pick]").forEach((b) => b.addEventListener("click", () => openPicker(+b.dataset.pick, b)));
     app.querySelectorAll("[data-move]").forEach((b) => b.addEventListener("click", () => {
       const [i, d] = b.dataset.move.split(":").map(Number), j = i + d;
-      change(() => { const f = draft.favorites; [f[i], f[j]] = [f[j], f[i]]; });
+      change(() => { const f = draft.favorites; while (f.length <= j) f.push(null); [f[i], f[j]] = [f[j] || null, f[i] || null]; trimFavs(draft); });
       (app.querySelector(`[data-move="${j}:${d}"]:not([disabled])`) || app.querySelector(`[data-slot="${j}"] [data-pick]`))?.focus();
     }));
     app.querySelectorAll("[data-remove]").forEach((b) => b.addEventListener("click", () => {
-      const i = +b.dataset.remove; change(() => draft.favorites.splice(i, 1));
-      app.querySelector(`[data-slot="${Math.min(i, draft.favorites.length)}"] [data-pick]`)?.focus();
+      const i = +b.dataset.remove; change(() => { draft.favorites[i] = null; trimFavs(draft); });   // the others stay where they are
+      app.querySelector(`[data-slot="${i}"] [data-pick]`)?.focus();
     }));
     $("discard")?.addEventListener("click", () => openLeave($("discard")));
     $("restart")?.addEventListener("click", () => { draftProblem = null; ss.del(DRAFT_KEY); draft = blank(); render(); });
@@ -528,7 +533,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     loadCollection();
   }
   const finOf = (c) => pk.fin_of[c.id] || (pk.fin && finishes(c).includes(pk.fin) ? pk.fin : finishes(c)[0]);
-  const dupe = (c, fin) => draft.favorites.some((f, i) => i !== pk.slot && f.id === c.id && f.foil === (fin === "f"));
+  const dupe = (c, fin) => draft.favorites.some((f, i) => f && i !== pk.slot && f.id === c.id && f.foil === (fin === "f"));
   function finishSeg(c, where) {
     const fs = finishes(c); if (fs.length < 2) return `<span class="meta">${Tx("Foil")}</span>`;
     return `<div class="seg" role="group" aria-label="${Tx("Finish")}">${fs.map((f) => `<button type="button" data-fin="${esc(c.id)}:${f}:${where}" aria-pressed="${finOf(c) === f}">${Tx(f === "f" ? "Foil" : "Normal")}</button>`).join("")}</div>`;
@@ -597,8 +602,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     d.querySelectorAll("[data-use]").forEach((b) => b.addEventListener("click", () => {
       const c = BY.get(b.dataset.use), f = finOf(c);
       if (dupe(c, f)) return;
-      const slot = Math.min(pk.slot, draft.favorites.length), from = pk.from;
-      change(() => { draft.favorites[slot] = { id: c.id, foil: f === "f" }; });
+      const slot = Math.min(2, Math.max(0, pk.slot)), from = pk.from;
+      change(() => { while (draft.favorites.length < slot) draft.favorites.push(null); draft.favorites[slot] = { id: c.id, foil: f === "f" }; });
       d.close();
       (app.querySelector(`[data-slot="${slot}"] [data-pick]`) || from)?.focus();
     }));
@@ -612,7 +617,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const nm = draft.displayName.trim(), p = {};
     if (nm) p.display_name = nm;
     if (!applyOnly || draft.preferredInks.length) p.inks = draft.preferredInks;
-    const fav = draft.favorites.filter((f) => BY.has(f.id)).map((f) => ({ id: f.id, k: "fav", ...(f.foil ? { foil: true } : {}) }));
+    const fav = draft.favorites.filter((f) => f && BY.has(f.id)).map((f) => ({ id: f.id, k: "fav", ...(f.foil ? { foil: true } : {}) }));
     if (!applyOnly || fav.length) p.showcase = fav;
     return p;
   }
@@ -1011,7 +1016,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       community_invite: ["convidou você para uma comunidade", "invited you to a community"], join_request: ["pediu para entrar", "asked to join"], join_accepted: ["aceitou seu pedido", "accepted your request"],
       event_soon: ["é amanhã ou hoje", "is coming up"] };
     const noteHref = (n) => (n.kind === "event_soon" && n.ref?.rph) || /^event_near/.test(n.kind) ? "../eventos/" : n.ref?.post ? `../feed/#post-${encodeURIComponent(n.ref.post)}` : n.ref?.slug ? `../comunidades/?c=${encodeURIComponent(n.ref.slug)}${["event", "rsvp", "event_soon"].includes(n.kind) ? "#mesas" : ""}` : "../feed/";
-    const showBell = () => { const b = $("iwBell"), c = $("iwBellN"); if (!b || !notes) return; b.hidden = false; const n = notes.filter((x) => x.unread).length; c.hidden = !n; c.textContent = n > 9 ? "9+" : String(n);
+    // the number on the app icon (installed app): the unread count, cleared when read
+    const appBadge = (n) => { try { if (n && navigator.setAppBadge) navigator.setAppBadge(n).catch(() => {}); else if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {}); } catch { /* */ } };
+    const showBell = () => { const b = $("iwBell"), c = $("iwBellN"); if (!b || !notes) return; b.hidden = false; const n = notes.filter((x) => x.unread).length; c.hidden = !n; c.textContent = n > 9 ? "9+" : String(n); appBadge(n);
       b.setAttribute("aria-label", n ? T(`Notificações · ${n} novas`, `Notifications · ${n} new`) : T("Notificações", "Notifications")); };
     CLOUD.api("rpc/my_notifications", { method: "POST", body: {} }).then((r) => { notes = r || []; showBell(); }).catch(() => {});   // not there yet: no bell
     // Push on this device (supabase/push.sql + functions/push-send; the worker is site/push/sw.js)
@@ -1020,30 +1027,45 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const iosBrowser = /iP(hone|ad|od)/.test(navigator.userAgent) && !(navigator.standalone || matchMedia("(display-mode: standalone)").matches);
     const b64 = (s) => { const p = "=".repeat((4 - (s.length % 4)) % 4), raw = atob((s + p).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from(raw, (c) => c.charCodeAt(0)); };
     const pushReg = () => navigator.serviceWorker.register("../push/sw.js", { scope: "../push/" });
+    // state(): "on" | "off" | "denied" | "ios" (needs the Home Screen app) | "unsupported"; on()/off() throw on failure
+    async function pushSub() { try { return await (await navigator.serviceWorker.getRegistration("../push/"))?.pushManager.getSubscription() || null; } catch { return null; } }
+    async function pushState() {
+      if (iosBrowser) return "ios";
+      if (!pushOk) return "unsupported";
+      if (Notification.permission === "denied") return "denied";
+      return (await pushSub()) ? "on" : "off";
+    }
+    async function pushOn() {
+      if ((await Notification.requestPermission()) !== "granted") return false;
+      const reg = await pushReg();   // not .ready: this page isn't in the worker's scope, so .ready never settles
+      const w = reg.installing || reg.waiting;
+      if (w && !reg.active) await new Promise((ok) => { w.addEventListener("statechange", () => { if (w.state === "activated") ok(); }); setTimeout(ok, 8000); });
+      const s2 = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(VAPID) });
+      const j = s2.toJSON();
+      await CLOUD.api("rpc/save_push_sub", { method: "POST", body: { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_ua: navigator.userAgent.slice(0, 200) } });
+      return true;
+    }
+    async function pushOff() {
+      const sub = await pushSub(); if (!sub) return;
+      await CLOUD.api("rpc/delete_push_sub", { method: "POST", body: { p_endpoint: sub.endpoint } }).catch(() => {});
+      await sub.unsubscribe();
+    }
+    window.INKWELL_PUSH = { state: pushState, on: pushOn, off: pushOff };   // Meu Inkwell › Avisos uses the same switch
+    const PUSH_TEXT = {
+      ios: () => T("Para receber avisos no iPhone: toque em Compartilhar → Adicionar à Tela de Início, abra o Inkwell por lá e ative aqui.", "To get notices on iPhone: Share → Add to Home Screen, open Inkwell from there and turn them on here."),
+      unsupported: () => T("Este navegador não recebe avisos.", "This browser can't receive notices."),
+      denied: () => T("Os avisos estão bloqueados nas configurações do navegador para este site.", "Notices are blocked for this site in the browser settings."),
+    };
     async function drawPush() {
       const el = $("iwPush"); if (!el) return;
-      if (iosBrowser) { el.innerHTML = `<p class="small muted">${T("Para receber avisos no iPhone: toque em Compartilhar → Adicionar à Tela de Início, abra o Inkwell por lá e ative aqui.", "To get notices on iPhone: Share → Add to Home Screen, open Inkwell from there and turn them on here.")}</p>`; return; }
-      if (!pushOk) { el.innerHTML = `<p class="small muted">${T("Este navegador não recebe avisos.", "This browser can't receive notices.")}</p>`; return; }
-      if (Notification.permission === "denied") { el.innerHTML = `<p class="small muted">${T("Os avisos estão bloqueados nas configurações do navegador para este site.", "Notices are blocked for this site in the browser settings.")}</p>`; return; }
-      let sub = null; try { sub = await (await navigator.serviceWorker.getRegistration("../push/"))?.pushManager.getSubscription(); } catch { sub = null; }
-      el.innerHTML = sub ? `<span class="small"><i class="ic i-bell"></i> ${T("Avisos ligados neste aparelho", "Notices on for this device")}</span><button type="button" class="btn ghost small" data-push="off">${T("Desligar", "Turn off")}</button>`
-        : `<button type="button" class="btn small primary" data-push="on"><i class="ic i-bell"></i>${T("Avisar neste aparelho", "Notify me on this device")}</button>`;
+      const st = await pushState(), cfg = `<a class="small" href="../perfil/#avisos" data-testid="notif-settings">${T("Configurar avisos", "Notice settings")}</a>`;
+      if (PUSH_TEXT[st]) { el.innerHTML = `<p class="small muted">${PUSH_TEXT[st]()}</p>${cfg}`; return; }
+      el.innerHTML = st === "on" ? `<span class="small"><i class="ic i-bell"></i> ${T("Avisos ligados neste aparelho", "Notices on for this device")}</span><button type="button" class="btn ghost small" data-push="off">${T("Desligar", "Turn off")}</button>${cfg}`
+        : `<button type="button" class="btn small primary" data-push="on"><i class="ic i-bell"></i>${T("Avisar neste aparelho", "Notify me on this device")}</button>${cfg}`;
       el.querySelector("[data-push]").onclick = async (ev) => {
         ev.stopPropagation(); const b = ev.currentTarget; b.disabled = true;
-        try {
-          if (b.dataset.push === "on") {
-            if ((await Notification.requestPermission()) !== "granted") { drawPush(); return; }
-            const reg = await pushReg();   // not .ready: this page isn't in the worker's scope, so .ready never settles
-            const w = reg.installing || reg.waiting;
-            if (w && !reg.active) await new Promise((ok) => { w.addEventListener("statechange", () => { if (w.state === "activated") ok(); }); setTimeout(ok, 8000); });
-            const s2 = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(VAPID) });
-            const j = s2.toJSON();
-            await CLOUD.api("rpc/save_push_sub", { method: "POST", body: { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_ua: navigator.userAgent.slice(0, 200) } });
-          } else if (sub) {
-            await CLOUD.api("rpc/delete_push_sub", { method: "POST", body: { p_endpoint: sub.endpoint } }).catch(() => {});
-            await sub.unsubscribe();
-          }
-        } catch { el.insertAdjacentHTML("beforeend", `<p class="small" style="color:var(--loss)">${T("Não deu certo. Tente de novo.", "That didn't work. Try again.")}</p>`); b.disabled = false; return; }
+        try { if (b.dataset.push === "on") await pushOn(); else await pushOff(); }
+        catch { el.insertAdjacentHTML("beforeend", `<p class="small" style="color:var(--loss)">${T("Não deu certo. Tente de novo.", "That didn't work. Try again.")}</p>`); b.disabled = false; return; }
         drawPush();
       };
     }

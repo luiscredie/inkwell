@@ -477,6 +477,15 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "No recados yet. Be the first.": "Nenhum recado ainda. Seja o primeiro.", "No recados yet. Friends can leave one.": "Nenhum recado ainda. Amigos podem deixar um.",
     "{n} min ago": "há {n} min", "{n} h ago": "há {n} h", "yesterday": "ontem", "{n} days ago": "há {n} dias",
     "Request sent": "Pedido enviado", "Answer the friend request": "Responder pedido de amizade", "Add friend": "Adicionar amigo", "Friend request sent.": "Pedido de amizade enviado.",
+    "Notices": "Avisos", "On this device": "Neste aparelho", "Turn off": "Desligar", "Turn on": "Ligar", "New events near you": "Eventos novos perto de você",
+    "On: likes, comments, invites, tables and event notices arrive on this device.": "Ligados: curtidas, comentários, convites, mesas e avisos de eventos chegam neste aparelho.",
+    "Off: notices only show in the bell.": "Desligados: os avisos aparecem só no sino.", "On iPhone: Share → Add to Home Screen, open Inkwell from there and turn them on here.": "No iPhone: Compartilhar → Adicionar à Tela de Início, abra o Inkwell por lá e ligue aqui.",
+    "Blocked in this browser's settings for this site.": "Bloqueados nas configurações do navegador para este site.", "This browser can't receive notices.": "Este navegador não recebe avisos.",
+    "Around {place}. Checked every morning on the Play Hub.": "Perto de {place}. Conferido toda manhã no Play Hub.", "your place": "seu lugar",
+    "Off. On Eventos, choose your place and tick “Keep this place in my account”.": "Desligado. Em Eventos, escolha seu lugar e marque “Salvar este lugar na minha conta”.",
+    "Up to": "Até", "Remove place": "Remover", "Notify": "Avisar", "Change place": "Trocar lugar", "Open Eventos": "Abrir Eventos", "Tap again to remove": "Toque de novo para remover", "Removed from your account.": "Removido da sua conta.",
+    "Reminders the day before events and tables you marked “Going”, and likes, comments, invites and new tables in your communities always arrive in the bell.": "Lembretes na véspera dos eventos e mesas em que você marcou “Vou”, e curtidas, comentários, convites e mesas novas nas suas comunidades chegam sempre no sino.",
+    "That didn't work. Try again.": "Não deu certo. Tente de novo.", "Saved.": "Salvo.", "Couldn't save. Try again.": "Não foi possível salvar. Tente de novo.", "Loading…": "Carregando…",
     "Ink curve": "Curva de tinta", "Your data": "Seus dados", "Download everything linked to your account, or delete the account and all of it.": "Baixe tudo o que está ligado à sua conta, ou exclua a conta e tudo isso junto.",
     "Terms and privacy": "Termos e privacidade", "Download my data": "Baixar meus dados", "Delete my account": "Excluir minha conta", "Couldn't load. Try again.": "Não foi possível carregar. Tente de novo.",
     "This deletes your account and everything linked to it: collection, decks, games, profile, friends, recados, posts and trades. It cannot be undone.": "Isto exclui sua conta e tudo ligado a ela: coleção, decks, jogos, perfil, amigos, recados, publicações e trocas. Não dá para desfazer.",
@@ -522,6 +531,42 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   let mine = null, decksBy = [], editing = null, dirty = false;
 
   async function rpc(name, body = {}) { return CLOUD.api(`rpc/${name}`, { method: "POST", body }); }
+  // ---------- Avisos: this device (push, from shell.js) and new events near my saved place (event_places.sql) ----------
+  async function drawNotices(tries = 0) {
+    const box = $("ntBox"); if (!box) return;
+    if (!window.INKWELL_PUSH && tries < 25) { setTimeout(() => drawNotices(tries + 1), 120); return; }   // the shell loads after this page's script
+    const P = window.INKWELL_PUSH;
+    const [st, place] = await Promise.all([P ? P.state().catch(() => "unsupported") : "unsupported", rpc("my_place").catch(() => undefined)]);
+    const pl = place && place.lat != null ? place : null;
+    const devText = { on: Tx("On: likes, comments, invites, tables and event notices arrive on this device."), off: Tx("Off: notices only show in the bell."),
+      ios: Tx("On iPhone: Share → Add to Home Screen, open Inkwell from there and turn them on here."), denied: Tx("Blocked in this browser's settings for this site."), unsupported: Tx("This browser can't receive notices.") }[st];
+    box.innerHTML = `<div class="nt-row" data-testid="nt-device"><div><b>${Tx("On this device")}</b><small>${esc(devText)}</small></div>
+        ${st === "on" ? `<button type="button" class="btn small" id="ntPush" data-on="0">${Tx("Turn off")}</button>` : st === "off" ? `<button type="button" class="btn small primary" id="ntPush" data-on="1"><i class="ic i-bell"></i>${Tx("Turn on")}</button>` : ""}</div>
+      <div class="nt-row" data-testid="nt-near"><div><b>${Tx("New events near you")}</b>
+        <small>${pl ? esc(Tx("Around {place}. Checked every morning on the Play Hub.", { place: pl.label || Tx("your place") })) : Tx("Off. On Eventos, choose your place and tick “Keep this place in my account”.")}</small></div>
+        ${pl ? `<div class="row" style="gap:6px;flex-wrap:wrap;align-items:center"><label class="small">${Tx("Up to")} <select id="ntKm" class="inline">${[5, 10, 25, 50, 100, 200, 300].map((k) => `<option value="${k}" ${k === +pl.km ? "selected" : ""}>${k} km</option>`).join("")}</select></label>
+          <label class="switch small" style="margin:0"><span>${Tx("Notify")}</span><input type="checkbox" role="switch" id="ntOn" ${pl.notify ? "checked" : ""}></label>
+          <a class="btn small ghost" href="../eventos/">${Tx("Change place")}</a><button type="button" class="btn small ghost danger-text" id="ntDel">${Tx("Remove place")}</button></div>`
+        : `<a class="btn small" href="../eventos/">${Tx("Open Eventos")}</a>`}</div>
+      <p class="small muted" style="margin:var(--sp-3) 0 0">${Tx("Reminders the day before events and tables you marked “Going”, and likes, comments, invites and new tables in your communities always arrive in the bell.")}</p>
+      <p class="small" id="ntMsg" role="status" style="margin:0"></p>`;
+    const msg = (t) => { $("ntMsg").textContent = t; };
+    $("ntPush")?.addEventListener("click", async (ev) => {
+      const b = ev.currentTarget; b.disabled = true;
+      try { if (b.dataset.on === "1") await P.on(); else await P.off(); drawNotices(); } catch { b.disabled = false; msg(Tx("That didn't work. Try again.")); }
+    });
+    const savePl = async (patch) => {
+      try { await rpc("set_my_place", { p_lat: +pl.lat, p_lng: +pl.lng, p_label: pl.label || null, p_km: +pl.km, p_notify: !!pl.notify, ...patch }); msg(Tx("Saved.")); drawNotices(); }
+      catch { msg(Tx("Couldn't save. Try again.")); }
+    };
+    $("ntKm")?.addEventListener("change", (ev) => savePl({ p_km: +ev.target.value }));
+    $("ntOn")?.addEventListener("change", (ev) => savePl({ p_notify: ev.target.checked }));
+    $("ntDel")?.addEventListener("click", async (ev) => {
+      const b = ev.currentTarget;
+      if (b.dataset.armed !== "1") { b.dataset.armed = "1"; b.textContent = Tx("Tap again to remove"); return; }
+      try { await rpc("delete_my_place"); msg(Tx("Removed from your account.")); drawNotices(); } catch { msg(Tx("Couldn't save. Try again.")); }
+    });
+  }
   async function anonRpc(name, body) {   // public reads work signed out too
     if (me) return rpc(name, body);
     const cfg = window.INKWELL_CLOUD_CONFIG;
@@ -777,6 +822,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         <p class="small" id="edMsg" role="alert" style="margin:0"></p>
         <div class="ed-foot">${mine.handle && mine.is_public ? `<a class="btn ghost" href="?u=${esc(mine.handle)}">${Tx("See as others see it")}</a>` : ""}<button type="submit" class="btn primary" id="edSave">${Tx("Save")}</button></div>
       </form>
+      <section class="card" style="margin-top:var(--sp-6)" data-testid="my-notices" id="avisos"><h3 style="margin-top:0">${Tx("Notices")}</h3><div id="ntBox"><p class="small muted">${Tx("Loading…")}</p></div></section>
       <section class="card" style="margin-top:var(--sp-6)" data-testid="my-data" id="seus-dados"><h3 style="margin-top:0">${Tx("Your data")}</h3>
         <p class="small muted">${Tx("Download everything linked to your account, or delete the account and all of it.")} <a href="../privacidade/">${Tx("Terms and privacy")}</a></p>
         <div class="row" style="gap:var(--sp-2);flex-wrap:wrap"><button type="button" class="btn" id="dataDl"><i class="ic i-import"></i>${Tx("Download my data")}</button><button type="button" class="btn danger" id="dataDel"><i class="ic i-trash"></i>${Tx("Delete my account")}</button></div></section>
@@ -827,6 +873,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     $("fCity").oninput = (ev) => { set("city", ev.target.value.slice(0, 40), false); live(); };
     $("fMotto").oninput = (ev) => { set("motto", ev.target.value.slice(0, 60), false); live(); };
     wireRecados();
+    drawNotices();
     $("dataDl").onclick = async (ev) => {
       const b = ev.currentTarget; b.setAttribute("aria-busy", "true"); b.disabled = true;
       try {
@@ -1325,7 +1372,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       community_invite: ["convidou você para uma comunidade", "invited you to a community"], join_request: ["pediu para entrar", "asked to join"], join_accepted: ["aceitou seu pedido", "accepted your request"],
       event_soon: ["é amanhã ou hoje", "is coming up"] };
     const noteHref = (n) => (n.kind === "event_soon" && n.ref?.rph) || /^event_near/.test(n.kind) ? "../eventos/" : n.ref?.post ? `../feed/#post-${encodeURIComponent(n.ref.post)}` : n.ref?.slug ? `../comunidades/?c=${encodeURIComponent(n.ref.slug)}${["event", "rsvp", "event_soon"].includes(n.kind) ? "#mesas" : ""}` : "../feed/";
-    const showBell = () => { const b = $("iwBell"), c = $("iwBellN"); if (!b || !notes) return; b.hidden = false; const n = notes.filter((x) => x.unread).length; c.hidden = !n; c.textContent = n > 9 ? "9+" : String(n);
+    // the number on the app icon (installed app): the unread count, cleared when read
+    const appBadge = (n) => { try { if (n && navigator.setAppBadge) navigator.setAppBadge(n).catch(() => {}); else if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {}); } catch { /* */ } };
+    const showBell = () => { const b = $("iwBell"), c = $("iwBellN"); if (!b || !notes) return; b.hidden = false; const n = notes.filter((x) => x.unread).length; c.hidden = !n; c.textContent = n > 9 ? "9+" : String(n); appBadge(n);
       b.setAttribute("aria-label", n ? T(`Notificações · ${n} novas`, `Notifications · ${n} new`) : T("Notificações", "Notifications")); };
     CLOUD.api("rpc/my_notifications", { method: "POST", body: {} }).then((r) => { notes = r || []; showBell(); }).catch(() => {});   // not there yet: no bell
     // Push on this device (supabase/push.sql + functions/push-send; the worker is site/push/sw.js)
@@ -1334,30 +1383,45 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const iosBrowser = /iP(hone|ad|od)/.test(navigator.userAgent) && !(navigator.standalone || matchMedia("(display-mode: standalone)").matches);
     const b64 = (s) => { const p = "=".repeat((4 - (s.length % 4)) % 4), raw = atob((s + p).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from(raw, (c) => c.charCodeAt(0)); };
     const pushReg = () => navigator.serviceWorker.register("../push/sw.js", { scope: "../push/" });
+    // state(): "on" | "off" | "denied" | "ios" (needs the Home Screen app) | "unsupported"; on()/off() throw on failure
+    async function pushSub() { try { return await (await navigator.serviceWorker.getRegistration("../push/"))?.pushManager.getSubscription() || null; } catch { return null; } }
+    async function pushState() {
+      if (iosBrowser) return "ios";
+      if (!pushOk) return "unsupported";
+      if (Notification.permission === "denied") return "denied";
+      return (await pushSub()) ? "on" : "off";
+    }
+    async function pushOn() {
+      if ((await Notification.requestPermission()) !== "granted") return false;
+      const reg = await pushReg();   // not .ready: this page isn't in the worker's scope, so .ready never settles
+      const w = reg.installing || reg.waiting;
+      if (w && !reg.active) await new Promise((ok) => { w.addEventListener("statechange", () => { if (w.state === "activated") ok(); }); setTimeout(ok, 8000); });
+      const s2 = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(VAPID) });
+      const j = s2.toJSON();
+      await CLOUD.api("rpc/save_push_sub", { method: "POST", body: { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_ua: navigator.userAgent.slice(0, 200) } });
+      return true;
+    }
+    async function pushOff() {
+      const sub = await pushSub(); if (!sub) return;
+      await CLOUD.api("rpc/delete_push_sub", { method: "POST", body: { p_endpoint: sub.endpoint } }).catch(() => {});
+      await sub.unsubscribe();
+    }
+    window.INKWELL_PUSH = { state: pushState, on: pushOn, off: pushOff };   // Meu Inkwell › Avisos uses the same switch
+    const PUSH_TEXT = {
+      ios: () => T("Para receber avisos no iPhone: toque em Compartilhar → Adicionar à Tela de Início, abra o Inkwell por lá e ative aqui.", "To get notices on iPhone: Share → Add to Home Screen, open Inkwell from there and turn them on here."),
+      unsupported: () => T("Este navegador não recebe avisos.", "This browser can't receive notices."),
+      denied: () => T("Os avisos estão bloqueados nas configurações do navegador para este site.", "Notices are blocked for this site in the browser settings."),
+    };
     async function drawPush() {
       const el = $("iwPush"); if (!el) return;
-      if (iosBrowser) { el.innerHTML = `<p class="small muted">${T("Para receber avisos no iPhone: toque em Compartilhar → Adicionar à Tela de Início, abra o Inkwell por lá e ative aqui.", "To get notices on iPhone: Share → Add to Home Screen, open Inkwell from there and turn them on here.")}</p>`; return; }
-      if (!pushOk) { el.innerHTML = `<p class="small muted">${T("Este navegador não recebe avisos.", "This browser can't receive notices.")}</p>`; return; }
-      if (Notification.permission === "denied") { el.innerHTML = `<p class="small muted">${T("Os avisos estão bloqueados nas configurações do navegador para este site.", "Notices are blocked for this site in the browser settings.")}</p>`; return; }
-      let sub = null; try { sub = await (await navigator.serviceWorker.getRegistration("../push/"))?.pushManager.getSubscription(); } catch { sub = null; }
-      el.innerHTML = sub ? `<span class="small"><i class="ic i-bell"></i> ${T("Avisos ligados neste aparelho", "Notices on for this device")}</span><button type="button" class="btn ghost small" data-push="off">${T("Desligar", "Turn off")}</button>`
-        : `<button type="button" class="btn small primary" data-push="on"><i class="ic i-bell"></i>${T("Avisar neste aparelho", "Notify me on this device")}</button>`;
+      const st = await pushState(), cfg = `<a class="small" href="../perfil/#avisos" data-testid="notif-settings">${T("Configurar avisos", "Notice settings")}</a>`;
+      if (PUSH_TEXT[st]) { el.innerHTML = `<p class="small muted">${PUSH_TEXT[st]()}</p>${cfg}`; return; }
+      el.innerHTML = st === "on" ? `<span class="small"><i class="ic i-bell"></i> ${T("Avisos ligados neste aparelho", "Notices on for this device")}</span><button type="button" class="btn ghost small" data-push="off">${T("Desligar", "Turn off")}</button>${cfg}`
+        : `<button type="button" class="btn small primary" data-push="on"><i class="ic i-bell"></i>${T("Avisar neste aparelho", "Notify me on this device")}</button>${cfg}`;
       el.querySelector("[data-push]").onclick = async (ev) => {
         ev.stopPropagation(); const b = ev.currentTarget; b.disabled = true;
-        try {
-          if (b.dataset.push === "on") {
-            if ((await Notification.requestPermission()) !== "granted") { drawPush(); return; }
-            const reg = await pushReg();   // not .ready: this page isn't in the worker's scope, so .ready never settles
-            const w = reg.installing || reg.waiting;
-            if (w && !reg.active) await new Promise((ok) => { w.addEventListener("statechange", () => { if (w.state === "activated") ok(); }); setTimeout(ok, 8000); });
-            const s2 = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(VAPID) });
-            const j = s2.toJSON();
-            await CLOUD.api("rpc/save_push_sub", { method: "POST", body: { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_ua: navigator.userAgent.slice(0, 200) } });
-          } else if (sub) {
-            await CLOUD.api("rpc/delete_push_sub", { method: "POST", body: { p_endpoint: sub.endpoint } }).catch(() => {});
-            await sub.unsubscribe();
-          }
-        } catch { el.insertAdjacentHTML("beforeend", `<p class="small" style="color:var(--loss)">${T("Não deu certo. Tente de novo.", "That didn't work. Try again.")}</p>`); b.disabled = false; return; }
+        try { if (b.dataset.push === "on") await pushOn(); else await pushOff(); }
+        catch { el.insertAdjacentHTML("beforeend", `<p class="small" style="color:var(--loss)">${T("Não deu certo. Tente de novo.", "That didn't work. Try again.")}</p>`); b.disabled = false; return; }
         drawPush();
       };
     }
