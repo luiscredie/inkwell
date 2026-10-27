@@ -359,7 +359,7 @@ table.stats td.n { text-align: right; }
   const inkMark = (ink) => OFFICIAL_INKS
     ? `<b class="official" title="${ink}"><img src="../ink/${ink.toLowerCase()}.svg" alt=""></b>`
     : `<b style="background:${HEX[ink] || HEX.Ruby}" title="${ink}"><svg viewBox="0 0 24 24" fill="currentColor">${INK_GLYPH[ink] || ""}</svg></b>`;
-  const blank = () => ({ lang: (navigator.language || "pt").startsWith("pt") ? "pt" : "en", players: 2, bestOf: 3, magic: true, decks: false, tour: true, flip: true,
+  const blank = () => ({ lang: "pt", players: 2, bestOf: 3, magic: true, decks: false, tour: true, flip: true,
     color: { p1: ["Ruby"], p2: ["Sapphire"], p3: ["Emerald"], p4: ["Amber"] }, lore: zero(), wins: zero(), log: [], won: null, matchDone: false,
     match: null, history: [], recent: [] });
   let s;

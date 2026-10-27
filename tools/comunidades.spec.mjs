@@ -159,11 +159,13 @@ test('Mesas & Ligas: the owner sets up a table, members say Vou', async ({ page 
   await page.locator('#evW').fill('2030-01-03T19:00');
   await page.locator('#evP').fill('Loja do Zé');
   await page.locator('#evC').fill('16');
-  await page.locator('#evD').fill('Inscrição: https://exemplo.com/liga?x=1&y=2. Regras em www.lorcana.com <script>');
+  await page.locator('#evD').fill('Inscrição: https://exemplo.com/liga?x=1&y=2. Regras em www.lorcana.com <script> Play Hub: https://tcg.ravensburgerplay.com/events/123');
   await page.locator('#evSave').click();
   await expect(page.locator('[data-ev="e1"]')).toContainText('Liga de quinta');
   const links = page.locator('[data-ev="e1"] p a');
-  await expect(links).toHaveCount(2);
+  await expect(links).toHaveCount(3);
+  await expect(links.first()).toHaveText('Abrir link (exemplo.com)');   // a short name, not the whole address
+  await expect(links.nth(2)).toHaveText('Ver no Play Hub');
   await expect(links.first()).toHaveAttribute('href', 'https://exemplo.com/liga?x=1&y=2');
   await expect(links.first()).toHaveAttribute('target', '_blank');
   await expect(links.nth(1)).toHaveAttribute('href', 'https://www.lorcana.com');

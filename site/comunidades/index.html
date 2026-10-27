@@ -180,7 +180,7 @@ window.INKWELL_CLOUD = (() => {
     -webkit-mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent); mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent); }
 }
 .cm-bar { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-4); } .cm-bar .search { flex: 1 1 240px; }
-.cm-cover.loc { height: clamp(170px, 30vw, 300px); background-image: none !important; container-type: size; overflow: hidden; }
+.cm-cover.loc { height: clamp(150px, 22vw, 220px); background-image: none !important; container-type: size; overflow: hidden; }
 .cm-cover.loc .cm-loc { position: absolute; left: 50%; top: calc(50% + 13cqw); height: 100cqw; width: auto; max-width: none; aspect-ratio: 5 / 7; object-fit: cover; transform: translate(-50%, -50%) rotate(90deg) scale(1.1); }
 .cm-cover.loc::before { display: none; }
 .cm-cover.loc::after { background: linear-gradient(180deg, transparent 0%, transparent 60%, var(--surface-2) 100%); }
@@ -389,7 +389,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   let lang = "pt";
-  try { lang = localStorage.getItem("inkwell-lang") || ((navigator.language || "pt").toLowerCase().startsWith("en") ? "en" : "pt"); } catch { /* */ }
+  try { lang = localStorage.getItem("inkwell-lang") || "pt"; } catch { /* */ }
   const PT = {
     "Communities": "Comunidades", "Stores, cities and groups that play Lorcana.": "Lojas, cidades e grupos que jogam Lorcana.", "Search by name or city": "Buscar por nome ou cidade",
     "All": "Todas", "Mine": "Minhas", "Create a community": "Criar comunidade", "Store": "Loja", "City": "Cidade", "Interest": "Interesse", "{n} members": "{n} membros", "1 member": "1 membro",
@@ -399,6 +399,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Requests": "Pedidos", "Accept": "Aceitar", "Decline": "Recusar", "Invite": "Convidar", "Invite friends": "Convidar amigos", "Invited": "Convidado",
     "They get a notice and join without waiting for approval. Someone who isn't on Inkwell yet: send the community link.": "A pessoa recebe um aviso e entra sem precisar de aprovação. Quem ainda não está no Inkwell: mande o link da comunidade.",
     "All your friends are already here, or you have no friends on Inkwell yet.": "Todos os seus amigos já estão aqui, ou você ainda não tem amigos no Inkwell.", "Share the community link": "Compartilhar o link da comunidade", "Tables & Leagues": "Mesas & Ligas", "New table": "Nova mesa", "Edit table": "Editar mesa", "No tables set up yet.": "Nenhuma mesa marcada ainda.",
+    "See on the Play Hub": "Ver no Play Hub", "Open link ({site})": "Abrir link ({site})",
     "Going": "Vou", "Maybe": "Talvez", "{n} going": "{n} vão", "1 going": "1 vai", "{n} maybe": "{n} talvez", "cancelled": "cancelada", "Cancelled": "Cancelada", "Title": "Título", "When": "Quando", "Where": "Onde",
     "Places (optional)": "Vagas (opcional)", "Details": "Detalhes", "Format, entry, prizes, what to bring.": "Formato, inscrição, prêmios, o que levar.", "League night, casual table, tournament…": "Liga, mesa casual, torneio…",
     "This table is full.": "Esta mesa está lotada.", "admin": "admin", "you": "você",
@@ -524,7 +525,13 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const evWhen = (iso) => new Date(iso).toLocaleString(lang === "pt" ? "pt-BR" : "en", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
   // text with its web addresses as links that open in a new tab (escaped first; only http/https and www.)
   const linkify = (t) => esc(t).replace(/\b((?:https?:\/\/|www\.)[^\s<]+?)([.,;:!?)\]]*)(?=\s|$)/gi, (m, url, tail) =>
-    `<a href="${/^www\./i.test(url) ? "https://" + url : url}" target="_blank" rel="noopener nofollow ugc">${url}</a>${tail}`);
+    `<a href="${/^www\./i.test(url) ? "https://" + url : url}" target="_blank" rel="noopener nofollow ugc" title="${url}">${linkLabel(url)}</a>${tail}`);
+  // a short name instead of the whole address: "Ver no Play Hub", else "Abrir link (site.com)"
+  function linkLabel(url) {
+    const host = (url.replace(/^https?:\/\//i, "").split(/[/?#]/)[0] || "").replace(/^www\./i, "").toLowerCase();
+    if (/(^|\.)ravensburgerplay\.com$/.test(host)) return Tx("See on the Play Hub");
+    return esc(Tx("Open link ({site})", { site: host || "link" }));
+  }
   function eventsHtml(c, isMember, canManage) {
     if (!Array.isArray(c.events) || c.mock) return "";
     const ev = (e) => `<article class="cm-ev${e.cancelled ? " off" : ""}" data-ev="${esc(e.id)}"><div class="when">${esc(evWhen(e.starts_at))}${e.cancelled ? ` · ${Tx("cancelled")}` : ""}</div>
@@ -776,7 +783,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
 (() => {
   "use strict";
   let lang = "pt";
-  try { lang = localStorage.getItem("inkwell-lang") || ((navigator.language || "pt").toLowerCase().startsWith("en") ? "en" : "pt"); } catch { /* */ }
+  try { lang = localStorage.getItem("inkwell-lang") || "pt"; } catch { /* */ }
   const pt = lang === "pt";
   const T = (p, e) => (pt ? p : e);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));

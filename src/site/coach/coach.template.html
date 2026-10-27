@@ -20,13 +20,13 @@ window.INKWELL_NO_STORE_MSG = "Your games appear here after you sign in.";
 <script>
 /* Coach Review: Portuguese / English.
  * Texts are written in English in the code and looked up here; {name} marks a value filled in at run time.
- * Language: the viewer's choice (saved on this device), else the browser's language, Portuguese first.
+ * Language: the viewer's choice (saved on this device), else Portuguese — the browser's language is not used (27/10/2026).
  */
 (() => {
   "use strict";
   const KEY = "inkwell-lang";
   let lang = "pt";
-  try { lang = localStorage.getItem(KEY) || ((navigator.language || "pt").toLowerCase().startsWith("en") ? "en" : "pt"); } catch { /* storage off */ }
+  try { lang = localStorage.getItem(KEY) || "pt"; } catch { /* storage off */ }
   const PT = {
     // page
     "Coach review": "Coach Review",
