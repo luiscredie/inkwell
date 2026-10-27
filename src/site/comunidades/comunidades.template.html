@@ -42,6 +42,10 @@
 .cm-acts { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
 .cm-cols { display: grid; gap: var(--sp-5); grid-template-columns: minmax(0, 1fr); margin-top: var(--sp-5); }
 @media (min-width: 900px) { .cm-cols { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); align-items: start; } }
+.cm-evs { display: grid; gap: var(--sp-2); }
+.cm-ev { padding: var(--sp-3) var(--sp-4); border-radius: var(--r-lg); background: var(--surface-1); border: 1px solid var(--line); }
+.cm-ev.off { opacity: .6; }
+.cm-ev .when { font-size: var(--fs-micro); font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--accent-ink); }
 .cm-contact { list-style: none; margin: 0 0 var(--sp-3); padding: 0; display: grid; gap: 6px; font-size: var(--fs-small); }
 .cm-contact li { display: flex; gap: 8px; align-items: center; min-width: 0; } .cm-contact li span { min-width: 0; overflow-wrap: anywhere; }
 .cm-contact .ic { width: 16px; height: 16px; color: var(--text-2); flex: none; }
@@ -77,7 +81,10 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const PT = {
     "Communities": "Comunidades", "Stores, cities and groups that play Lorcana.": "Lojas, cidades e grupos que jogam Lorcana.", "Search by name or city": "Buscar por nome ou cidade",
     "All": "Todas", "Mine": "Minhas", "Create a community": "Criar comunidade", "Store": "Loja", "City": "Cidade", "Interest": "Interesse", "{n} members": "{n} membros", "1 member": "1 membro",
-    "example": "exemplo", "member": "membro", "owner": "dono", "admin": "admin", "you": "você",
+    "example": "exemplo", "member": "membro", "owner": "dono", "Tables & Leagues": "Mesas & Ligas", "New table": "Nova mesa", "Edit table": "Editar mesa", "No tables set up yet.": "Nenhuma mesa marcada ainda.",
+    "Going": "Vou", "Maybe": "Talvez", "{n} going": "{n} vão", "1 going": "1 vai", "{n} maybe": "{n} talvez", "cancelled": "cancelada", "Cancelled": "Cancelada", "Title": "Título", "When": "Quando", "Where": "Onde",
+    "Places (optional)": "Vagas (opcional)", "Details": "Detalhes", "Format, entry, prizes, what to bring.": "Formato, inscrição, prêmios, o que levar.", "League night, casual table, tournament…": "Liga, mesa casual, torneio…",
+    "This table is full.": "Esta mesa está lotada.", "admin": "admin", "you": "você",
     "Store details": "Dados da loja", "Shown to everyone on the community page. Use the store's details, not personal ones.": "Aparecem para todos na página da comunidade. Use os dados da loja, não os pessoais.",
     "Address": "Endereço", "Phone / WhatsApp": "Telefone / WhatsApp", "E-mail": "E-mail", "Website": "Site", "Instagram": "Instagram", "Map": "Mapa", "Check the e-mail.": "Confira o e-mail.",
     "Make admin": "Tornar admin", "Remove admin": "Tirar admin", "Make owner": "Tornar dono", "Tap again: they become the owner": "Toque de novo: vira o dono",
@@ -168,6 +175,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   // ---------- one community ----------
   async function showOne(slug) {
     view = await rpc("community_view", { p_slug: slug });
+    if (view) { try { view.events = await rpc("community_events", { p_slug: slug }); } catch { view.events = null; } }   // supabase/social.sql
     $("head").hidden = true;
     if (!view) { $("app").innerHTML = emptyBox("search", Tx("Community not found"), Tx("It doesn't exist, or it was hidden."), `<a class="btn" href="./">${Tx("Back")}</a>`); return; }
     document.title = `${L(view.mock, view.name)} · Inkwell`;
@@ -185,6 +193,43 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       ${k.email ? row("mail", `<a href="mailto:${esc(k.email)}">${esc(k.email)}</a>`) : ""}
       ${/^https?:\/\//i.test(k.site || "") ? row("globe", `<a href="${esc(k.site)}" target="_blank" rel="noopener nofollow">${esc(String(k.site).replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, ""))}</a>`) : ""}
       ${k.instagram ? row("external", `<a href="https://instagram.com/${encodeURIComponent(k.instagram)}" target="_blank" rel="noopener nofollow">@${esc(k.instagram)}</a>`) : ""}</ul>`;
+  }
+  // ---------- Mesas & Ligas: this community's tables (supabase/social.sql) ----------
+  const evWhen = (iso) => new Date(iso).toLocaleString(lang === "pt" ? "pt-BR" : "en", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+  function eventsHtml(c, isMember, canManage) {
+    if (!Array.isArray(c.events) || c.mock) return "";
+    const ev = (e) => `<article class="cm-ev${e.cancelled ? " off" : ""}" data-ev="${esc(e.id)}"><div class="when">${esc(evWhen(e.starts_at))}${e.cancelled ? ` · ${Tx("cancelled")}` : ""}</div>
+        <b>${esc(e.title)}</b>${e.place ? `<div class="small muted">${esc(e.place)}</div>` : ""}${e.details ? `<p class="small" style="margin:4px 0 0;white-space:pre-wrap">${esc(e.details)}</p>` : ""}
+        <div class="small muted" style="margin-top:4px">${esc(e.going === 1 ? Tx("1 going") : Tx("{n} going", { n: e.going }))}${e.capacity ? ` / ${e.capacity}` : ""}${e.maybe ? ` · ${esc(Tx("{n} maybe", { n: e.maybe }))}` : ""}${(e.people || []).length ? ` · ${(e.people || []).filter((p) => p.status === "going").slice(0, 6).map((p) => esc(p.name)).join(", ")}` : ""}</div>
+        <div class="row" style="gap:6px;margin-top:var(--sp-2);flex-wrap:wrap">${isMember && !e.cancelled ? `<button type="button" class="btn small ${e.me === "going" ? "primary" : ""}" data-rsvp="${esc(e.id)}:going" aria-pressed="${e.me === "going"}">${Tx("Going")}</button><button type="button" class="btn small ghost" data-rsvp="${esc(e.id)}:maybe" aria-pressed="${e.me === "maybe"}">${Tx("Maybe")}</button>` : ""}
+          ${canManage ? `<button type="button" class="btn small ghost" data-evedit="${esc(e.id)}">${Tx("Edit")}</button>` : ""}</div></article>`;
+    return `<section id="mesas" data-testid="events"><div class="group-head"><h2>${Tx("Tables & Leagues")}</h2>${canManage ? `<button type="button" class="btn small" id="evNew"><i class="ic i-plus"></i>${Tx("New table")}</button>` : ""}</div>
+      ${c.events.length ? `<div class="cm-evs">${c.events.map(ev).join("")}</div>` : `<p class="muted" style="margin:0">${Tx("No tables set up yet.")}</p>`}</section>`;
+  }
+  function openEvent(e) {
+    const sh = $("sheet"), local = (iso) => { const d = iso ? new Date(iso) : new Date(Date.now() + 864e5); d.setSeconds(0, 0); return new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16); };
+    sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="shT">${Tx(e ? "Edit table" : "New table")}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
+      <div class="sheet-body"><form class="form" id="evf" novalidate>
+        <label class="field">${Tx("Title")}<input id="evT" maxlength="80" required value="${esc(e?.title || "")}" placeholder="${esc(Tx("League night, casual table, tournament…"))}"></label>
+        <label class="field">${Tx("When")}<input id="evW" type="datetime-local" required value="${local(e?.starts_at)}"></label>
+        <label class="field">${Tx("Where")}<input id="evP" maxlength="160" value="${esc(e?.place || "")}"></label>
+        <label class="field">${Tx("Places (optional)")}<input id="evC" type="number" min="2" max="999" inputmode="numeric" value="${esc(e?.capacity || "")}"></label>
+        <label class="field">${Tx("Details")}<textarea id="evD" maxlength="600" rows="3">${esc(e?.details || "")}</textarea><span class="hint">${Tx("Format, entry, prizes, what to bring.")}</span></label>
+        ${e ? `<label class="check"><input type="checkbox" id="evX" ${e.cancelled ? "checked" : ""}> ${Tx("Cancelled")}</label>` : ""}
+        <p class="small" id="evMsg" role="alert"></p></form></div>
+      <div class="sheet-foot"><button type="button" class="btn ghost" data-close>${Tx("Cancel")}</button><button type="submit" form="evf" class="btn primary" id="evSave">${Tx("Save")}</button></div>`;
+    sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = () => sh.close());
+    $("evf").onsubmit = async (ev) => {
+      ev.preventDefault();
+      const t = $("evT").value.trim(), w = $("evW").value;
+      if (t.length < 3) { $("evT").focus(); return; } if (!w) { $("evW").focus(); return; }
+      $("evSave").disabled = true;
+      try {
+        await rpc("save_event", { p_slug: view.slug, p_id: e?.id || null, p: { title: t, starts_at: new Date(w).toISOString(), place: $("evP").value.trim(), details: $("evD").value.trim(), capacity: $("evC").value, ...(e ? { cancelled: $("evX").checked } : {}) } });
+        sh.close(); view.events = await rpc("community_events", { p_slug: view.slug }); drawOne(); toast(Tx("Done"));
+      } catch { $("evSave").disabled = false; $("evMsg").textContent = Tx("Couldn't save. Try again."); }
+    };
+    sh.showModal(); setTimeout(() => $("evT")?.focus(), 30);
   }
   function drawOne() {
     const c = view, m = c.mock, isMember = !!c.role, isOwner = c.role === "owner", canManage = isOwner || c.role === "admin";
@@ -206,11 +251,12 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
           <div class="cm-acts">${join}${canManage ? `<button type="button" class="btn" id="edit"><i class="ic i-edit"></i>${Tx("Edit")}</button><button type="button" class="btn ghost" id="manage">${Tx("Manage members")}</button>` : ""}
             <button type="button" class="btn ghost" id="share"><i class="ic i-send"></i>${Tx("Share")}</button></div></div></section>
       <div class="cm-cols">
+        <div style="display:grid;gap:var(--sp-5);align-content:start">${eventsHtml(c, isMember, canManage)}
         <section data-testid="conversation"><div class="group-head"><h2>${Tx("Conversation")}</h2></div>
           ${c.posts ? `${isMember && !m ? `<form class="cm-compose" id="compose"><label class="sr-only" for="body">${Tx("Write to the community")}</label><textarea id="body" maxlength="1000" rows="3" placeholder="${Tx("Write to the community")}"></textarea><div class="row" style="justify-content:flex-end"><button type="submit" class="btn primary small">${Tx("Post")}</button></div></form>` : ""}
             ${c.posts.length ? `<div class="cm-posts">${c.posts.map(post).join("")}</div>` : `<p class="muted">${Tx("No messages yet. Say hi!")}</p>`}`
           : `<div class="cm-locked" data-testid="locked"><b>${Tx("The conversation is for members only.")}</b><div class="small" style="margin-top:4px">${c.week_posts === 1 ? Tx("1 message this week") : Tx("{n} messages this week", { n: c.week_posts || 0 })}</div></div>`}
-        </section>
+        </section></div>
         <section class="card" data-testid="people"><div class="row between"><div class="mi-label small faint" style="font-weight:700;text-transform:uppercase;letter-spacing:.06em">${Tx("People")}</div><span class="small muted">${esc(members(c.member_n || 0))}</span></div>
           <div class="cm-people">${named.map((p) => `<a href="../perfil/?u=${encodeURIComponent(p.handle)}"><span class="pav" style="${art(p.avatar)}"></span><span>${esc(L(m, p.name))}${p.role === "owner" || p.role === "admin" ? `<br><span class="faint small">${Tx(p.role)}</span>` : ""}</span></a>`).join("")}</div>
           ${hiddenN ? `<p class="small faint" style="margin:var(--sp-2) 0 0">${Tx("+{n} with a private profile", { n: hiddenN })}</p>` : ""}</section>
@@ -223,6 +269,14 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     $("join")?.addEventListener("click", () => act(() => rpc("join_community", { p_slug: c.slug, p_join: true }), Tx("You joined {name}.", { name: c.name })));
     $("leave")?.addEventListener("click", () => { if (armed !== "leave") { armed = "leave"; drawOne(); return; } act(() => rpc("join_community", { p_slug: c.slug, p_join: false }), Tx("You left {name}.", { name: c.name })); });
     $("edit")?.addEventListener("click", () => openForm(c));
+    $("evNew")?.addEventListener("click", () => openEvent(null));
+    document.querySelectorAll("[data-evedit]").forEach((b) => b.onclick = () => openEvent((c.events || []).find((x) => x.id === b.dataset.evedit)));
+    document.querySelectorAll("[data-rsvp]").forEach((b) => b.onclick = async () => {
+      const [id, st] = b.dataset.rsvp.split(":"), cur = (c.events || []).find((x) => x.id === id);
+      try { await rpc("rsvp_event", { p_event: id, p_status: cur?.me === st ? null : st }); view.events = await rpc("community_events", { p_slug: c.slug }); drawOne(); }
+      catch (err) { toast(/event_full/.test(String(err?.message || err)) ? Tx("This table is full.") : Tx("Couldn't send. Try again."), true); }
+    });
+    if (location.hash === "#mesas" && !wireOne.jumped) { wireOne.jumped = true; $("mesas")?.scrollIntoView({ block: "start" }); }
     $("manage")?.addEventListener("click", openManage);
     $("share")?.addEventListener("click", async () => { const u = location.href.replace(/#.*$/, ""); try { if (navigator.share) { await navigator.share({ title: c.name, url: u }); return; } } catch { return; } try { await navigator.clipboard.writeText(u); toast(Tx("Link copied")); } catch { /* */ } });
     $("compose")?.addEventListener("submit", (e) => { e.preventDefault(); const t = $("body"), body = t.value.trim(); if (!body) { t.focus(); return; } act(() => rpc("post_in_community", { p_slug: c.slug, p_body: body })); });
