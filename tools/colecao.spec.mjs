@@ -449,3 +449,45 @@ test('a new account gets an empty collection, so its first card saves', async ({
   const made = calls.find((c) => c.path === 'inkwell_profiles' && c.body).body;
   expect(made).toMatchObject({ user_id: ME, profile: 'principal', data: { collection: {} } });
 });
+
+test('import: a Dreamborn file is recognised on its own; review, then "keep the larger number" adds only what is missing', async ({ page }) => {
+  const calls = await setup(page, { collection: { 'LOR10-10': { n: 2, f: 0 }, 'LOR1-41': { n: 3, f: 0 } } });
+  await page.goto(BASE);
+  await page.locator('[data-testid="import"]').click();
+  const csv = 'Set Number,Card Number,Variant,Count,Name\n1,41,Normal,3,Elsa - Snow Queen\n1,41,Foil,1,Elsa - Snow Queen\n10,10,Normal,4,Gurgi - Apple Lover\n99,1,Normal,1,Nobody\n';
+  await page.locator('#impFile').setInputFiles({ name: 'dreamborn.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
+  const sum = page.locator('[data-testid="imp-summary"]');
+  await expect(sum).toContainText('Reconhecido: Dreamborn');
+  await expect(sum).toContainText('2 cartas diferentes · 7 normais · 1 foil');
+  await expect(page.locator('[data-testid="imp-rejects"]')).toContainText('1 linha não foi reconhecida');
+  await page.locator('[data-testid="imp-rejects"] summary').click();
+  await expect(page.locator('[data-testid="imp-rejects"]')).toContainText('linha 5: 99 · 1 · Nobody');
+  // max: Elsa 3 already (0 more) + 1 foil; Gurgi 2 -> 4 (2 more) = 3
+  await expect(page.locator('#impGo')).toHaveText('Adicionar 3 cartas à coleção');
+  if (process.env.SHOT) { await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(600); await page.screenshot({ path: process.env.SHOT }); await page.setViewportSize({ width: 1280, height: 720 }); }
+  await page.locator('[name=impMode][value=sum]').check();
+  await expect(page.locator('#impGo')).toHaveText('Adicionar 8 cartas à coleção');
+  await page.locator('[name=impMode][value=max]').check();
+  await page.locator('#impGo').click();
+  await expect.poll(() => calls.filter((c) => c.path === 'rpc/apply_collection_delta').length).toBe(1);
+  const d = calls.find((c) => c.path === 'rpc/apply_collection_delta').body;
+  expect(d.p_profile).toBe('luiscredie');
+  expect(d.p_delta).toEqual(expect.arrayContaining([{ card_id: 'LOR1-41', qty: 1, foil: true }, { card_id: 'LOR10-10', qty: 2, foil: false }]));
+  expect(d.p_delta).toHaveLength(2);
+  await expect(page.locator('#toast')).toContainText('3 cartas adicionadas');
+});
+
+test('import: a pasted list; nothing matched says so', async ({ page }) => {
+  const calls = await setup(page, { collection: {} });
+  await page.goto(BASE);
+  await page.locator('[data-testid="import"]').click();
+  await page.locator('#impText').fill('carta que não existe\noutra');
+  await page.locator('#impRead').click();
+  await expect(page.locator('#impMsg')).toContainText('Nenhuma linha bateu');
+  await page.locator('#impText').fill('4 Gurgi - Apple Lover\n1 Elsa - Snow Queen (foil)');
+  await page.locator('#impRead').click();
+  await expect(page.locator('[data-testid="imp-summary"]')).toContainText('Reconhecido: Lista');
+  await page.locator('#impGo').click();
+  await expect.poll(() => calls.filter((c) => c.path === 'rpc/apply_collection_delta').length).toBe(1);
+  expect(calls.find((c) => c.path === 'rpc/apply_collection_delta').body.p_delta).toHaveLength(2);
+});

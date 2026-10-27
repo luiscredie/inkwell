@@ -232,8 +232,8 @@ img, svg { display: block; max-width: 100%; }
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--sp-3) var(--sp-4); flex-wrap: wrap; margin: var(--sp-4) 0 var(--sp-5); }
 .page-head > div:first-child { min-width: 0; }
 .page-head .sub { color: var(--text-2); font-size: var(--fs-small); margin-top: 4px; }
-.page-head .actions { display: flex; gap: var(--sp-2); }
-@media (max-width: 760px) { .page-head { margin-top: var(--sp-2); } .page-head .actions { width: 100%; } .page-head .actions .btn { flex: 1; } .page-head .actions .btn.icon { flex: none; } }
+.page-head .actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+@media (max-width: 760px) { .page-head { margin-top: var(--sp-2); } .page-head .actions { width: 100%; } .page-head .actions .btn { flex: 1 1 auto; } .page-head .actions .btn.icon { flex: none; } }
 .back { display: inline-flex; align-items: center; gap: 2px; min-height: 32px; margin-bottom: 2px; color: var(--text-2); text-decoration: none; font-size: var(--fs-small); font-weight: 600; }
 .back::before { content: ""; width: 18px; height: 18px; background: currentColor; -webkit-mask: url(assets/icons/chevron-left.svg) center/contain no-repeat; mask: url(assets/icons/chevron-left.svg) center/contain no-repeat; }
 .back:hover { color: var(--text); }

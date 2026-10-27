@@ -224,6 +224,10 @@ window.INKWELL_CLOUD = (() => {
 #scan .review .item .t { flex: 1; min-width: 0; } #scan .review .item .t b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #scan .review .item .t .small { display: block; }
 #scan .review footer { display: grid; gap: 8px; padding: 12px 12px calc(env(safe-area-inset-bottom, 0px) + 12px); border-top: 1px solid var(--line); }
+.imp-list { display: grid; gap: 2px; max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: var(--r-md); padding: 6px 10px; }
+.imp-list > div { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: baseline; padding: 3px 0; border-bottom: 1px solid var(--line); }
+.imp-list > div:last-child { border-bottom: 0; }
+.imp-list span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
 
 <main class="page" id="page">
@@ -233,6 +237,7 @@ window.INKWELL_CLOUD = (() => {
 <dialog class="sheet" id="filterSheet" aria-labelledby="fT"></dialog>
 <dialog class="sheet" id="cardSheet" aria-labelledby="cT"></dialog>
 <dialog id="scan" aria-labelledby="scanT"></dialog>
+<dialog class="sheet wide" id="impSheet" aria-labelledby="impT"></dialog>
 <div class="toast-host"><div class="toast" id="toast" role="status" hidden></div></div>
 
 <script>
@@ -264,6 +269,14 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Not sure which printing this is. Which one?": "Não deu para ter certeza da versão. Qual é?", "None of these": "Nenhuma destas",
     "Centre the card in the frame, with good light.": "Centralize a carta na moldura, com boa luz.", "Starting the camera…": "Abrindo a câmera…",
     "The camera didn't open. Allow camera access for this site and try again.": "A câmera não abriu. Permita o acesso à câmera para este site e tente de novo.",
+    "Import": "Importar", "Import collection": "Importar coleção", "A file exported from Dreamborn, TCGplayer, a spreadsheet or another app — Inkwell works out the columns. Or paste a list, one card per line.": "Um arquivo exportado do Dreamborn, TCGplayer, de uma planilha ou de outro app — o Inkwell descobre as colunas. Ou cole uma lista, uma carta por linha.",
+    "Choose file": "Escolher arquivo", "Or paste here": "Ou cole aqui", "4 Elsa - Snow Queen\n2 Vixey - Forest Friend (foil)": "4 Elsa - Snow Queen\n2 Vixey - Forest Friend (foil)", "Read the list": "Ler a lista",
+    "This file is too big (5 MB at most).": "Este arquivo é grande demais (até 5 MB).", "No line matched a card. Check that the file has the card name, or set and number.": "Nenhuma linha bateu com uma carta. Confira se o arquivo tem o nome da carta, ou o set e o número.",
+    "The file is empty.": "O arquivo está vazio.", "Check before importing": "Confira antes de importar", "Recognised: {f}": "Reconhecido: {f}", "{c} different cards · {n} normal · {f} foil": "{c} cartas diferentes · {n} normais · {f} foil",
+    "{n} lines were not recognised": "{n} linhas não foram reconhecidas", "1 line was not recognised": "1 linha não foi reconhecida", "line {n}": "linha {n}", "How to add": "Como adicionar", "Keep the larger number": "Ficar com a maior quantidade",
+    "Safe to import the same file again: nothing is counted twice.": "Pode importar o mesmo arquivo de novo: nada é contado duas vezes.", "Add to what I have": "Somar às que já tenho", "For new cards you just got.": "Para cartas novas que você acabou de pegar.",
+    "and {n} more": "e mais {n}", "Back": "Voltar", "You already have all of them": "Você já tem todas", "Saving… {n}": "Salvando… {n}", "Collection updated: {n} cards added": "Coleção atualizada: {n} cartas adicionadas",
+    "Stopped after {n} cards. Import again with “Keep the larger number” to finish without counting twice.": "Parou depois de {n} cartas. Importe de novo com “Ficar com a maior quantidade” para terminar sem contar duas vezes.",
     "Couldn't load the card scanner.": "Não foi possível carregar o leitor de cartas.", "{n} added": "{n} adicionadas", "{n} added_1": "1 adicionada", "{n} in the list": "{n} na lista", "In Brazil from {p}": "No Brasil a partir de {p}", "Lowest listing on MYP Cards, {d}": "Menor anúncio na MYP Cards, {d}", "{n} in the list_1": "1 na lista", "In the list: {c}": "Na lista: {c}", "Review": "Revisar", "Check before adding": "Confira antes de adicionar", "Add {n} cards to the collection": "Adicionar {n} cartas à coleção", "Add {n} cards to the collection_1": "Adicionar 1 carta à coleção", "Keep scanning": "Continuar escaneando", "Discard the list": "Descartar a lista", "Tap again to discard": "Toque de novo para descartar", "Nothing will be saved until you confirm.": "Nada é salvo antes de você confirmar.", "Remove one": "Tirar uma", "Add one": "Mais uma", "The list is empty.": "A lista está vazia.", "Recently added": "Mais recentes", "added {d}": "adicionada em {d}",
     "+1 of this": "+1 desta", "Done scanning": "Concluir", "Card": "Carta", "Removed: {c}": "Removida: {c}",
     "Show more": "Mostrar mais", "Where": "Onde", "Everything": "Tudo", "Binder": "Fichário", "Home": "Casa", "{n} at home": "{n} em casa", "→ Home": "→ Casa", "→ Binder": "→ Fichário", "Move one {k} to Home": "Mover uma {k} para Casa", "Move one {k} to the Binder": "Mover uma {k} para o Fichário", "Moved": "Movida", "Check stock": "Conferir estoque", "Set": "Set", "All sets": "Todos os sets", "Lend": "Emprestar", "Sell": "Vender", "Combo sale": "Venda combo", "New loan": "Novo empréstimo", "Date": "Data", "Buyer (optional)": "Comprador (opcional)", "Who is borrowing": "Para quem", "Return by (optional)": "Devolver até (opcional)", "Note (optional)": "Observação (opcional)", "Each": "Cada", "Price of {c}": "Preço de {c}", "Finish": "Acabamento", "Remove {c}": "Tirar {c}", "Add a card to the combo": "Adicionar carta ao combo", "Search your cards": "Buscar nas suas cartas", "None of your cards match.": "Nenhuma carta sua com esse nome.", "Sum of the cards": "Soma das cartas", "Total of the sale": "Total da venda", "Discount": "Desconto", "Extra": "Acréscimo", "Write who is borrowing.": "Escreva para quem é o empréstimo.", "Loan saved": "Empréstimo registrado", "Add at least one card.": "Adicione pelo menos uma carta.", "Write the total of the sale.": "Escreva o total da venda.", "You don't have that many to sell.": "Você não tem tantas para vender.", "Sale": "Venda", "discount {v}": "desconto {v}", "extra {v}": "acréscimo {v}", "Sale saved: {v}": "Venda registrada: {v}", "The cards left the collection, but the sale wasn't recorded. Add it in Trocas.": "As cartas saíram da coleção, mas a venda não foi registrada. Registre em Trocas.", "Check binder and home": "Conferir fichário e casa", "Binder checked": "Fichário conferido", "Home checked": "Casa conferida", "Binder: mark checked": "Fichário: marcar conferido", "Home: mark checked": "Casa: marcar conferida", "Checked: binder {a}, home {h} of {b} pages": "Conferidas: fichário {a}, casa {h} de {b} páginas", "Cancel": "Cancelar", "Move normal cards to Home": "Mover cartas normais para Casa", "Move foil cards to Home": "Mover cartas foil para Casa", "Move normal cards to the Binder": "Mover cartas normais para o Fichário", "Move foil cards to the Binder": "Mover cartas foil para o Fichário", "{n} in the binder": "{n} no fichário", "One less": "Uma a menos", "One more": "Uma a mais", "All ({n})": "Todas ({n})", "Move {n} to Home": "Mover {n} para Casa", "Move {n} to the Binder": "Mover {n} para o Fichário", "Add to": "Adicionar em", "{n} cards": "{n} cartas", "Prices: {s}, {d}": "Preços: {s}, {d}",
@@ -845,9 +858,75 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     if (me && binderOn()) return renderBinder();
     $("title").textContent = Tx("Collection");
     $("sub").textContent = pricesDate ? Tx("Prices: {s}, {d}", { s: priceSrc, d: new Date(pricesDate).toLocaleDateString(LOC, { day: "numeric", month: "short" }) }) : "";
-    if (me) { $("headActions").innerHTML = `<button type="button" class="btn" id="openBinder"><i class="ic i-cards"></i>${Tx(homeReady ? "Check stock" : "Check my binder")}</button><button type="button" class="btn primary" id="openScan"><i class="ic i-camera"></i>${Tx("Scan")}</button>`;
-      $("openBinder").onclick = () => setBinder(true); $("openScan").onclick = () => openScanner($("openScan")); }
+    if (me) { $("headActions").innerHTML = `<button type="button" class="btn" id="openBinder"><i class="ic i-cards"></i>${Tx(homeReady ? "Check stock" : "Check my binder")}</button><button type="button" class="btn" id="openImport" data-testid="import"><i class="ic i-import"></i>${Tx("Import")}</button><button type="button" class="btn primary" id="openScan"><i class="ic i-camera"></i>${Tx("Scan")}</button>`;
+      $("openBinder").onclick = () => setBinder(true); $("openScan").onclick = () => openScanner($("openScan")); $("openImport").onclick = () => openImport($("openImport")); }
     render();
+  }
+
+  // ---------- importar: a file or a pasted list from another app (src/site/collimport.js works out which) ----------
+  const FORMAT_NAME = { dreamborn: "Dreamborn", tcgplayer: "TCGplayer", "inkwell-csv": "Inkwell", "inkwell-json": "Inkwell", json: "JSON", table: "Planilha", list: "Lista" };
+  function openImport(from) {
+    const sh = $("impSheet"); let res = null, mode = "max", fileName = "";
+    const close = () => sh.close();
+    function step1(msg) {
+      sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="impT">${Tx("Import collection")}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
+        <div class="sheet-body stack" style="gap:var(--sp-3)">
+          <p class="small muted" style="margin:0">${Tx("A file exported from Dreamborn, TCGplayer, a spreadsheet or another app — Inkwell works out the columns. Or paste a list, one card per line.")}</p>
+          <label class="btn" style="justify-self:start"><i class="ic i-import"></i>${Tx("Choose file")}<input type="file" id="impFile" accept=".csv,.tsv,.txt,.json,text/csv,text/plain,application/json" hidden></label>
+          <label class="field">${Tx("Or paste here")}<textarea id="impText" rows="6" placeholder="${esc(Tx("4 Elsa - Snow Queen\n2 Vixey - Forest Friend (foil)"))}"></textarea></label>
+          <p class="small" id="impMsg" role="alert" style="margin:0">${esc(msg || "")}</p></div>
+        <div class="sheet-foot"><button type="button" class="btn ghost" data-close>${Tx("Cancel")}</button><button type="button" class="btn primary" id="impRead">${Tx("Read the list")}</button></div>`;
+      sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = close);
+      $("impFile").onchange = async (e) => { const f = e.target.files?.[0]; if (!f) return; if (f.size > 5e6) { step1(Tx("This file is too big (5 MB at most).")); return; } fileName = f.name; read(await f.text(), f.name); };
+      $("impRead").onclick = () => { const t = $("impText").value; if (!t.trim()) { $("impText").focus(); return; } fileName = ""; read(t, "colado.txt"); };
+    }
+    function read(text, name) {
+      res = window.INKWELL_COLL_IMPORT.parse(text, name, CARDS, SETS);
+      if (!res.rows.length) { step1(res.rejects.length ? Tx("No line matched a card. Check that the file has the card name, or set and number.") : Tx("The file is empty.")); return; }
+      step2();
+    }
+    function step2() {
+      const tot = window.INKWELL_COLL_IMPORT.total(res.rows), n = tot.reduce((a, x) => a + x.n, 0), f = tot.reduce((a, x) => a + x.f, 0);
+      const coll = prof()?.collection || {};
+      const delta = (x, k) => mode === "sum" ? x[k] : Math.max(0, x[k] - (+coll[x.id]?.[k] || 0));
+      const adds = tot.reduce((a, x) => a + delta(x, "n") + delta(x, "f"), 0);
+      const by = new Map(CARDS.map((c) => [c.id, c]));
+      sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="impT">${Tx("Check before importing")}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
+        <div class="sheet-body stack" style="gap:var(--sp-3)">
+          <p style="margin:0" data-testid="imp-summary"><span class="tag info">${esc(Tx("Recognised: {f}", { f: FORMAT_NAME[res.format] || res.format }))}</span> ${esc(Tx("{c} different cards · {n} normal · {f} foil", { c: tot.length, n, f }))}${fileName ? ` <span class="small muted">· ${esc(fileName)}</span>` : ""}</p>
+          ${res.rejects.length ? `<details class="small" data-testid="imp-rejects"><summary>${esc(res.rejects.length === 1 ? Tx("1 line was not recognised") : Tx("{n} lines were not recognised", { n: res.rejects.length }))}</summary><ul style="margin:6px 0 0;padding-left:18px">${res.rejects.slice(0, 50).map((r) => `<li>${r.line ? esc(Tx("line {n}", { n: r.line })) + ": " : ""}${esc(r.raw)}</li>`).join("")}${res.rejects.length > 50 ? `<li>…</li>` : ""}</ul></details>` : ""}
+          <fieldset class="stack" style="gap:6px;border:0;padding:0;margin:0"><legend class="small" style="font-weight:700;margin-bottom:4px">${Tx("How to add")}</legend>
+            <label class="check"><input type="radio" name="impMode" value="max" ${mode === "max" ? "checked" : ""}> <span>${Tx("Keep the larger number")}<small class="muted" style="display:block">${Tx("Safe to import the same file again: nothing is counted twice.")}</small></span></label>
+            <label class="check"><input type="radio" name="impMode" value="sum" ${mode === "sum" ? "checked" : ""}> <span>${Tx("Add to what I have")}<small class="muted" style="display:block">${Tx("For new cards you just got.")}</small></span></label></fieldset>
+          <div class="imp-list small" data-testid="imp-list">${tot.slice(0, 200).map((x) => { const c = by.get(x.id); return `<div><span>${esc(c?.name || x.id)}</span><span class="muted">${esc(c ? setName(c.set) : "")}</span><b>${x.n ? `${x.n}` : ""}${x.n && x.f ? " + " : ""}${x.f ? `${x.f} foil` : ""}</b></div>`; }).join("")}${tot.length > 200 ? `<div class="muted">… ${esc(Tx("and {n} more", { n: tot.length - 200 }))}</div>` : ""}</div>
+          <p class="small" id="impMsg" role="alert" style="margin:0"></p></div>
+        <div class="sheet-foot"><button type="button" class="btn ghost" id="impBack">${Tx("Back")}</button><button type="button" class="btn primary" id="impGo" ${adds ? "" : "disabled"}>${esc(adds ? Tx("Add {n} cards to the collection", { n: adds }) : Tx("You already have all of them"))}</button></div>`;
+      sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = close);
+      sh.querySelectorAll("[name=impMode]").forEach((r) => r.onchange = () => { mode = r.value; step2(); });
+      $("impBack").onclick = () => step1();
+      $("impGo").onclick = () => apply(tot, delta);
+    }
+    async function apply(tot, delta) {
+      const p = prof(); if (!p) { $("impMsg").textContent = Tx("Couldn't save. Try again."); return; }
+      const items = [];
+      for (const x of tot) for (const k of ["n", "f"]) { const q = delta(x, k); if (q > 0) items.push({ card_id: x.id, qty: q, foil: k === "f" }); }
+      const b = $("impGo"); b.disabled = true;
+      let done = 0;
+      try {
+        for (let i = 0; i < items.length; i += 400) {   // the server takes 400 changes per call
+          const part = items.slice(i, i + 400);
+          await CLOUD.api("rpc/apply_collection_delta", { method: "POST", prefer: "return=minimal", body: { p_profile: p.profile, p_delta: part } });
+          for (const d of part) { const e = p.collection[d.card_id] = { n: 0, f: 0, ...(p.collection[d.card_id] || {}) }; const k = d.foil ? "f" : "n"; e[k] = (+e[k] || 0) + d.qty; ADDED.set(`${p.profile}|${d.card_id}`, Date.now()); done += d.qty; }
+          b.textContent = Tx("Saving… {n}", { n: done });
+        }
+        close(); renderAll(); toast(Tx("Collection updated: {n} cards added", { n: done }));
+      } catch {
+        renderAll();
+        $("impMsg").textContent = done ? Tx("Stopped after {n} cards. Import again with “Keep the larger number” to finish without counting twice.", { n: done }) : Tx("Couldn't save. Try again.");
+        b.disabled = false;
+      }
+    }
+    step1(); openSheet(sh, from);
   }
 
   // ---------- escanear: recognise a card by its art (tools/build_scan_index.py builds the same fingerprint for every card image) ----------
@@ -1134,6 +1213,156 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
 })();
 </script>
 
+<script>/* Inkwell — "Importar coleção": reads a collection exported by another app without asking which one.
+ *
+ *   INKWELL_COLL_IMPORT.parse(text, fileName, cards, sets) -> { format, rows: [{ id, n, f, line }], rejects: [{ line, raw, reason }] }
+ *     cards  [{ id, name, set, num }]    (the page's card index)
+ *     sets   [{ code, name_en, name_pt }]
+ *
+ * What it understands:
+ *   - Inkwell's own export (CSV card_id,name,set,normal,foil, or JSON { collection: { id: { n, f } } })
+ *   - Dreamborn CSV (Set Number, Card Number, Variant, Count, Name…)
+ *   - any spreadsheet whose header names the columns, in English or Portuguese: quantity (count, qty, quantidade…),
+ *     set (number, code or name), card number, name, finish (foil, variant, printing, acabamento, extras…).
+ *     TCGplayer's export fits this. Comma, semicolon (Excel in Portuguese) or tab.
+ *   - a plain list, one card per line: "4 Elsa - Spirit of Winter", "4x Elsa…", "Elsa… x4", optionally "(foil)".
+ * Each line is matched by id, then set + number, then name (set kept if given). Lines it can't place come back
+ * in rejects with the reason, so the page can show them. Nothing here touches the network. */
+(function (root) {
+  "use strict";
+  const norm = (s) => String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[’']/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+  const COLS = {
+    id: ["card_id", "card id", "id", "inkwell id"],
+    qty: ["count", "qty", "quantity", "quantidade", "qtd", "qtde", "quant", "copies", "copias", "amount", "total quantity", "owned", "have", "tenho"],
+    normal: ["normal", "n", "regular", "nonfoil", "non foil", "non-foil"],
+    foilQty: ["foil", "f", "foils", "foil qty", "foil count", "foil quantity"],
+    set: ["set number", "set", "set code", "set name", "edition", "expansion", "edicao", "colecao", "expansao", "set no", "set #"],
+    num: ["card number", "number", "collector number", "card no", "no", "#", "numero", "num", "n do card", "nr"],
+    name: ["name", "card name", "card", "nome", "carta", "simple name", "product name", "product"],
+    finish: ["variant", "finish", "printing", "foil type", "acabamento", "extras", "extra", "tipo", "versao", "condition foil"],
+  };
+  const isFoil = (v) => /foil|brilh|holo|^(yes|sim|true|1|x)$/i.test(String(v ?? "").trim()) && !/non.?foil|^normal$/i.test(String(v ?? "").trim());
+
+  function splitLine(line, sep) {
+    const out = []; let cur = "", q = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (q) { if (ch === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += ch; }
+      else if (ch === '"') q = true;
+      else if (ch === sep) { out.push(cur); cur = ""; }
+      else cur += ch;
+    }
+    out.push(cur);
+    return out.map((x) => x.trim());
+  }
+  const sepOf = (head) => { const c = { ",": 0, ";": 0, "\t": 0 }; for (const ch of head) if (ch in c) c[ch]++; return Object.entries(c).sort((a, b) => b[1] - a[1])[0][1] ? Object.entries(c).sort((a, b) => b[1] - a[1])[0][0] : null; };
+
+  function index(cards, sets) {
+    const byId = new Map(), bySetNum = new Map(), byName = new Map(), setOf = new Map();
+    for (const c of cards) {
+      byId.set(c.id.toLowerCase(), c);
+      bySetNum.set(`${c.set}|${String(c.num).toLowerCase()}`, c);
+      const k = norm(c.name); (byName.get(k) || byName.set(k, []).get(k)).push(c);
+      const base = norm(String(c.name).replace(/\s*\([^)]*\)\s*$/, ""));   // "Elsa - Spirit of Winter (Enchanted)" also answers to the plain name
+      if (base !== k) (byName.get(base) || byName.set(base, []).get(base)).push(c);
+    }
+    for (const s of sets || []) { setOf.set(norm(s.code), s.code); if (s.name_en) setOf.set(norm(s.name_en), s.code); if (s.name_pt) setOf.set(norm(s.name_pt), s.code); }
+    return { byId, bySetNum, byName, setOf };
+  }
+  // "1", "01", "TFC"? no; "LOR1", "The First Chapter", "P1", "C1"… -> a set code of the catalogue (or null)
+  function setCode(v, ix) {
+    const s = String(v ?? "").trim(); if (!s) return null;
+    if (/^\d{1,2}$/.test(s)) return `LOR${+s}`;
+    const k = norm(s);
+    if (ix.setOf.has(k)) return ix.setOf.get(k);
+    const m = s.match(/^lor\s*(\d{1,2})$/i); if (m) return `LOR${+m[1]}`;
+    return s.toUpperCase();   // promo tags (P1, C1, CC1, D23…) are tried as they are
+  }
+  function find(ix, { id, set, num, name }) {
+    if (id) { const c = ix.byId.get(String(id).trim().toLowerCase()); if (c) return c; }
+    const n = String(num ?? "").trim().replace(/\s*\/\s*\d+\s*$/, "").replace(/^#/, "").replace(/^0+(?=\d)/, "").toLowerCase();
+    const code = setCode(set, ix);
+    if (code && n) {
+      const c = ix.bySetNum.get(`${code}|${n}`); if (c) return c;
+      if (/^(P|C|CC|DIS)\d*$/i.test(code)) { const p = ix.bySetNum.get(`DLPC1|${n}-${code.toLowerCase()}`); if (p) return p; }   // Dreamborn promos: set "P2", number "1" -> DLPC1 "1-P2"
+    }
+    if (name) {
+      const list = ix.byName.get(norm(name)) || ix.byName.get(norm(String(name).replace(/\s*\([^)]*\)\s*$/, "")));
+      if (list?.length) return (code && list.find((c) => c.set === code)) || list.find((c) => /^LOR\d+$/.test(c.set) && !/\(/.test(c.name)) || list[0];
+    }
+    return null;
+  }
+  const int = (v) => { const n = parseInt(String(v ?? "").replace(/[^\d-]/g, ""), 10); return Number.isFinite(n) && n > 0 ? Math.min(n, 999) : 0; };
+
+  function parse(text, fileName, cards, sets) {
+    const ix = index(cards || [], sets);
+    const rows = [], rejects = [];
+    const add = (c, n, f, line) => { if (n || f) rows.push({ id: c.id, n, f, line }); };
+    const src = String(text ?? "").replace(/^﻿/, "");
+    // JSON: Inkwell's export ({collection:{id:{n,f}}}, or the data export's inkwell[].data.collection)
+    if (/\.json$/i.test(fileName || "") || /^\s*[{[]/.test(src)) {
+      let j; try { j = JSON.parse(src); } catch { return { format: "json", rows, rejects: [{ line: 0, raw: fileName || "", reason: "bad_json" }] }; }
+      const coll = j?.collection || j?.inkwell?.[0]?.data?.collection || (Array.isArray(j) ? null : j);
+      if (Array.isArray(j)) {   // [{card_id|id|name, qty|count, foil}]
+        j.forEach((x, i) => { const c = find(ix, { id: x.card_id || x.id, set: x.set || x.set_code, num: x.number || x.card_number, name: x.name });
+          if (!c) { rejects.push({ line: i + 1, raw: String(x.name || x.card_id || x.id || "").slice(0, 60), reason: "no_match" }); return; }
+          const q = int(x.qty ?? x.count ?? x.quantity ?? 1); add(c, isFoil(x.foil ?? x.finish ?? x.variant) ? 0 : q, isFoil(x.foil ?? x.finish ?? x.variant) ? q : 0, i + 1); });
+        return { format: "json", rows, rejects };
+      }
+      for (const [id, e] of Object.entries(coll || {})) {
+        const c = ix.byId.get(id.toLowerCase());
+        if (!c) { rejects.push({ line: 0, raw: id.slice(0, 60), reason: "unknown_id" }); continue; }
+        add(c, int(e?.n), int(e?.f), 0);
+      }
+      return { format: "inkwell-json", rows, rejects };
+    }
+    const lines = src.split(/\r?\n/).map((l) => l.replace(/\s+$/, "")).filter((l) => l.trim());
+    if (!lines.length) return { format: "empty", rows, rejects };
+    const sep = sepOf(lines[0]);
+    const head = sep ? splitLine(lines[0], sep).map((h) => norm(h)) : [];
+    const col = (names) => { for (const nm of names) { const i = head.indexOf(norm(nm)); if (i >= 0) return i; } return -1; };
+    const iId = col(COLS.id), iQty = col(COLS.qty), iN = col(COLS.normal), iF = col(COLS.foilQty), iSet = col(COLS.set), iNum = col(COLS.num), iName = col(COLS.name), iFin = col(COLS.finish);
+    const tabular = sep && (iId >= 0 || iName >= 0 || (iSet >= 0 && iNum >= 0));
+    if (tabular) {
+      const format = iId >= 0 && iN >= 0 ? "inkwell-csv" : head.includes("set number") && head.includes("card number") ? "dreamborn" : head.includes("simple name") || head.includes("product id") ? "tcgplayer" : "table";
+      for (let i = 1; i < lines.length; i++) {
+        const p = splitLine(lines[i], sep); if (p.every((x) => !x)) continue;
+        const c = find(ix, { id: iId >= 0 ? p[iId] : null, set: iSet >= 0 ? p[iSet] : null, num: iNum >= 0 ? p[iNum] : null, name: iName >= 0 ? p[iName] : null });
+        if (!c) { rejects.push({ line: i + 1, raw: [iSet >= 0 ? p[iSet] : "", iNum >= 0 ? p[iNum] : "", iName >= 0 ? p[iName] : (iId >= 0 ? p[iId] : "")].filter(Boolean).join(" · ").slice(0, 80) || lines[i].slice(0, 80), reason: "no_match" }); continue; }
+        if (iN >= 0 || (iF >= 0 && iQty < 0 && !isFoil(p[iF]))) { add(c, int(iN >= 0 ? p[iN] : 0), int(iF >= 0 ? p[iF] : 0), i + 1); continue; }   // separate normal/foil counts
+        const q = iQty >= 0 ? int(p[iQty]) : 1;
+        if (!q) { rejects.push({ line: i + 1, raw: lines[i].slice(0, 80), reason: "no_qty" }); continue; }
+        const foil = (iFin >= 0 && isFoil(p[iFin])) || (iF >= 0 && isFoil(p[iF]));
+        add(c, foil ? 0 : q, foil ? q : 0, i + 1);
+      }
+      return { format, rows, rejects };
+    }
+    // a plain list: "4 Name", "4x Name", "Name x4", "Name" (1)
+    lines.forEach((l, i) => {
+      if (/^\s*(\/\/|#)/.test(l) || /^\s*(deck|sideboard|main|total)\b/i.test(l)) return;   // comments and section titles
+      let s = l.trim(), q = 1, foil = /\((?:cold )?foil\)|\bfoil\b|\*f\*/i.test(s);
+      s = s.replace(/\((?:cold )?foil\)|\*f\*/ig, "").replace(/\bfoil\b/ig, "").trim();
+      let m = s.match(/^(\d{1,3})\s*x?\s+(.+)$/i); if (m) { q = +m[1]; s = m[2]; } else if ((m = s.match(/^(.+?)\s+x\s*(\d{1,3})$/i))) { q = +m[2]; s = m[1]; }
+      let set = null, num = null;
+      const sn = s.match(/\s*[([]?\s*(?:set\s*)?([a-z]{0,3}\d{1,2})\s*[-#/ ]\s*#?(\d{1,3}[a-z]?)\s*[)\]]?\s*$/i);   // "… (1-123)", "… [LOR1 #123]"
+      if (sn) { set = sn[1]; num = sn[2]; s = s.slice(0, sn.index).trim(); }
+      const c = find(ix, { name: s, set, num });
+      if (!c) { rejects.push({ line: i + 1, raw: l.slice(0, 80), reason: "no_match" }); return; }
+      add(c, foil ? 0 : q, foil ? q : 0, i + 1);
+    });
+    return { format: "list", rows, rejects };
+  }
+  // several lines for the same card -> one total per card
+  function total(rows) {
+    const m = new Map();
+    for (const r of rows) { const e = m.get(r.id) || { id: r.id, n: 0, f: 0 }; e.n += r.n; e.f += r.f; m.set(r.id, e); }
+    return [...m.values()];
+  }
+  const api = { parse, total, norm };
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+  else root.INKWELL_COLL_IMPORT = api;
+})(typeof window !== "undefined" ? window : globalThis);
+</script>
 <script>window.INKWELL_SHELL = {"page": "cards"};
 /* Inkwell site shell (design v2, Noite): app bar, phone tab bar, account menu and the one sign-in sheet.
    Markup and classes follow packages/ui/tokens.css (§4 Shell, §11 Sheet); see DESIGN-CHANGES.md.
