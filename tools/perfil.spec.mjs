@@ -348,7 +348,7 @@ test('profile background: pick a Location, it shows turned sideways; saved apart
   await expect(page.locator('[data-testid="ed-cover"]')).toContainText('Local');
   const cover = page.locator('#prev [data-testid="cover"]');
   await expect(cover).toHaveClass(/loc/);
-  expect(await cover.locator('img.mi-loc').evaluate((i) => getComputedStyle(i).transform)).toMatch(/matrix\(0, 1, -1, 0|matrix\([-0-9.e]+, 1, -1/);
+  expect(await cover.locator('img.mi-loc').evaluate((i) => getComputedStyle(i).transform)).toMatch(/^matrix\([-0-9.e]+, 1(\.\d+)?, -1(\.\d+)?, /);
   await page.locator('#edSave').click();
   await expect(page.locator('#toast')).toContainText('Salvo');
   expect(rpcCalls(calls, 'save_my_profile').at(-1).p).not.toHaveProperty('cover_card');
