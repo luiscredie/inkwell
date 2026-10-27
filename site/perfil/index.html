@@ -160,13 +160,10 @@ window.INKWELL_CLOUD = (() => {
 .mi-hero { position: relative; border-radius: 20px; overflow: hidden; background: var(--surface-2); box-shadow: var(--e2); }
 .mi-cover { height: 132px; background-color: var(--surface-3); background-size: 100% auto; background-position: 50% 14%; background-repeat: no-repeat; position: relative; overflow: hidden; }
 .mi-art { display: none; }
-/* a Location as cover: the whole card turned sideways, over a soft blur of itself */
-.mi-cover.loc { height: 200px; background-image: none !important; isolation: isolate; }
-.mi-cover.loc::before { content: ""; position: absolute; inset: -24px; background: var(--art) 50% 50% / cover no-repeat; filter: blur(22px) saturate(1.1); opacity: .55; z-index: -1; }
-.mi-cover.loc .mi-loc { position: absolute; left: 50%; top: 50%; height: auto; width: 176px; aspect-ratio: 5 / 7; object-fit: contain; transform: translate(-50%, -50%) rotate(90deg); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
-.mi-cover.loc::after { display: none; }
-@media (min-width: 640px) { .mi-cover.loc { height: 240px; } .mi-cover.loc .mi-loc { width: 216px; } }
-@media (max-width: 560px) { .mi-cover.loc { height: 180px; } .mi-cover.loc .mi-loc { width: 160px; } }
+.mi-cover.loc { height: clamp(170px, 30vw, 320px); background-image: none !important; container-type: size; }
+/* the Location turned sideways and stretched to the cover's full width; top and bottom are cropped */
+.mi-cover.loc .mi-loc { position: absolute; left: 50%; top: calc(50% + 13cqw); height: 100cqw; width: auto; max-width: none; aspect-ratio: 5 / 7; object-fit: cover; transform: translate(-50%, -50%) rotate(90deg) scale(1.1); }   /* lowered so the art (top of the turned card) fills the cover; scaled past the black frame */
+.mi-cover.loc::after { background: linear-gradient(180deg, transparent 0%, transparent 60%, var(--surface-2) 100%); }
 @media (min-width: 640px) {   /* wide screens: the art at its own scale in the middle, fading into a soft blur of it */
   .mi-cover { height: 160px; background-image: none !important; isolation: isolate; }
   .mi-cover::before { content: ""; position: absolute; inset: -24px; background: var(--art) 50% 20% / cover no-repeat; filter: blur(24px) saturate(1.1); opacity: .5; z-index: -1; }
