@@ -409,8 +409,10 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const autoMeta = (d) => { let n = 0; for (const id of Object.keys(d.cards || {})) n = Math.max(n, setNo(BY.get(id)?.set)); return n ? `LOR${n}` : ""; };
   const metaOf = (d) => d.meta || localMeta[d.id] || autoMeta(d);
   // the deck's meta (set) as a coloured tag before its name: each set its own colour (12 orange, 13 green, 14 yellow…)
-  const SET_COLOR = { 1: "#2f6db5", 2: "#7b3fb0", 3: "#0f8a8a", 4: "#c2185b", 5: "#3949ab", 6: "#00796b", 7: "#6d4c41", 8: "#5e35b1", 9: "#c62828", 10: "#6a1b9a", 11: "#0277bd", 12: "#ef6c00", 13: "#2e7d32", 14: "#f9a825" };
-  const metaTag = (code) => { const n = setNo(code); if (!n) return ""; const bg = SET_COLOR[n] || "#546e7a", light = n === 14;
+  // set colours chosen by Luis (27/10/2026)
+  const SET_COLOR = { 1: "#D4A72C", 2: "#2563A6", 3: "#4F7D5A", 4: "#713B83", 5: "#D96C91", 6: "#168C9C", 7: "#B8663B", 8: "#A8323E", 9: "#C6A15B", 10: "#28546A", 11: "#79AFC2", 12: "#52734D", 13: "#78A83B", 14: "#B84296" };
+  const lightBg = (hex) => { const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)); return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.196; };   // whichever text colour has more contrast
+  const metaTag = (code) => { const n = setNo(code); if (!n) return ""; const bg = SET_COLOR[n] || "#546e7a", light = lightBg(bg);
     return `<span class="tag settag" data-testid="meta-tag" style="background:${bg};color:${light ? "#1c1404" : "#fff"};border-color:${bg}">(${esc(Tx("Set {n}", { n }))})</span> `; };
   const metaLabel = (code) => (code ? Tx("Set {n}", { n: setNo(code) }) : Tx("No meta"));
   const coll = () => prof()?.collection || {};
