@@ -71,7 +71,7 @@ test('previous public home (?preview=off) explains Inkwell and shows example pro
   await expect(page.locator('[data-testid="example-profile"]').first()).toContainText('“Quinta é dia de liga.”');
   await expect(page.locator('[data-testid="example-profile"]').first()).toContainText('3 amigos');
   const order = await home.locator(':scope > section').evaluateAll((els) => els.map((e) => e.id || e.className));
-  expect(order.slice(0, 2)).toEqual(['landHero', 'landEx']);   // examples right below the hero
+  expect(order.slice(0, 2)).toEqual(['landHero', 'landEvents']);   // where to play right below the hero, then the examples
   await expect(home.locator('.land-feat')).toHaveCount(6);
   await page.locator('[data-testid="example-profile"]').first().click();
   await expect(page).toHaveURL(/perfil\/\?u=rafa_exemplo/);
@@ -539,4 +539,31 @@ test('notices: a count on the avatar and the list in the menu; Início marks mes
   await expect(page.locator('[data-testid="fy-posts"]')).toBeVisible();
   await page.goto(url('perfil/?u=rafa_exemplo'));
   await expect(page.locator('#iwBadge')).toHaveText('3');   // the message was seen on Início
+});
+
+test('Meu Inkwell › Avisos: this device, and new events near my saved place (radius, on/off, remove)', async ({ page }) => {
+  await setup(page, { mine: { display_name: 'Luís', adult: true } });
+  const sent = []; let place = { lat: -23.61, lng: -46.7, label: 'Cidade Jardim, São Paulo', km: 25, notify: true };
+  const json = (route, v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+  await page.route('**/rest/v1/rpc/my_place', (r) => json(r, place));
+  await page.route('**/rest/v1/rpc/set_my_place', (r) => { const b = JSON.parse(r.request().postData()); sent.push(['set', b]); place = { lat: b.p_lat, lng: b.p_lng, label: b.p_label, km: b.p_km, notify: b.p_notify }; return json(r, place); });
+  await page.route('**/rest/v1/rpc/delete_my_place', (r) => { sent.push(['delete']); place = null; return r.fulfill({ status: 204, body: '' }); });
+  await page.route('**/rest/v1/rpc/my_notifications', (r) => json(r, []));
+  await page.goto(url('perfil/#avisos'));
+  const box = page.locator('[data-testid="my-notices"]');
+  await expect(box.locator('[data-testid="nt-near"]')).toContainText('Perto de Cidade Jardim, São Paulo');
+  await expect(box.locator('[data-testid="nt-device"]')).toBeVisible();
+  await box.locator('#ntKm').selectOption('10');
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]).toEqual(['set', { p_lat: -23.61, p_lng: -46.7, p_label: 'Cidade Jardim, São Paulo', p_km: 10, p_notify: true }]);
+  await box.locator('#ntOn').uncheck();
+  await expect.poll(() => sent.length).toBe(2);
+  expect(sent[1][1]).toMatchObject({ p_km: 10, p_notify: false });
+  await box.locator('#ntDel').click();
+  await box.locator('#ntDel').click();
+  await expect.poll(() => sent.at(-1)).toEqual(['delete']);
+  await expect(box.locator('[data-testid="nt-near"]')).toContainText('Desligado');
+  // the bell links here
+  await page.locator('#iwBell').click();
+  await expect(page.locator('[data-testid="notif-settings"]')).toHaveAttribute('href', '../perfil/#avisos');
 });

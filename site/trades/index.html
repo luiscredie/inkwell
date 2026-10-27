@@ -1202,7 +1202,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       community_invite: ["convidou você para uma comunidade", "invited you to a community"], join_request: ["pediu para entrar", "asked to join"], join_accepted: ["aceitou seu pedido", "accepted your request"],
       event_soon: ["é amanhã ou hoje", "is coming up"] };
     const noteHref = (n) => (n.kind === "event_soon" && n.ref?.rph) || /^event_near/.test(n.kind) ? "../eventos/" : n.ref?.post ? `../feed/#post-${encodeURIComponent(n.ref.post)}` : n.ref?.slug ? `../comunidades/?c=${encodeURIComponent(n.ref.slug)}${["event", "rsvp", "event_soon"].includes(n.kind) ? "#mesas" : ""}` : "../feed/";
-    const showBell = () => { const b = $("iwBell"), c = $("iwBellN"); if (!b || !notes) return; b.hidden = false; const n = notes.filter((x) => x.unread).length; c.hidden = !n; c.textContent = n > 9 ? "9+" : String(n);
+    // the number on the app icon (installed app): the unread count, cleared when read
+    const appBadge = (n) => { try { if (n && navigator.setAppBadge) navigator.setAppBadge(n).catch(() => {}); else if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {}); } catch { /* */ } };
+    const showBell = () => { const b = $("iwBell"), c = $("iwBellN"); if (!b || !notes) return; b.hidden = false; const n = notes.filter((x) => x.unread).length; c.hidden = !n; c.textContent = n > 9 ? "9+" : String(n); appBadge(n);
       b.setAttribute("aria-label", n ? T(`Notificações · ${n} novas`, `Notifications · ${n} new`) : T("Notificações", "Notifications")); };
     CLOUD.api("rpc/my_notifications", { method: "POST", body: {} }).then((r) => { notes = r || []; showBell(); }).catch(() => {});   // not there yet: no bell
     // Push on this device (supabase/push.sql + functions/push-send; the worker is site/push/sw.js)
@@ -1211,30 +1213,45 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const iosBrowser = /iP(hone|ad|od)/.test(navigator.userAgent) && !(navigator.standalone || matchMedia("(display-mode: standalone)").matches);
     const b64 = (s) => { const p = "=".repeat((4 - (s.length % 4)) % 4), raw = atob((s + p).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from(raw, (c) => c.charCodeAt(0)); };
     const pushReg = () => navigator.serviceWorker.register("../push/sw.js", { scope: "../push/" });
+    // state(): "on" | "off" | "denied" | "ios" (needs the Home Screen app) | "unsupported"; on()/off() throw on failure
+    async function pushSub() { try { return await (await navigator.serviceWorker.getRegistration("../push/"))?.pushManager.getSubscription() || null; } catch { return null; } }
+    async function pushState() {
+      if (iosBrowser) return "ios";
+      if (!pushOk) return "unsupported";
+      if (Notification.permission === "denied") return "denied";
+      return (await pushSub()) ? "on" : "off";
+    }
+    async function pushOn() {
+      if ((await Notification.requestPermission()) !== "granted") return false;
+      const reg = await pushReg();   // not .ready: this page isn't in the worker's scope, so .ready never settles
+      const w = reg.installing || reg.waiting;
+      if (w && !reg.active) await new Promise((ok) => { w.addEventListener("statechange", () => { if (w.state === "activated") ok(); }); setTimeout(ok, 8000); });
+      const s2 = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(VAPID) });
+      const j = s2.toJSON();
+      await CLOUD.api("rpc/save_push_sub", { method: "POST", body: { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_ua: navigator.userAgent.slice(0, 200) } });
+      return true;
+    }
+    async function pushOff() {
+      const sub = await pushSub(); if (!sub) return;
+      await CLOUD.api("rpc/delete_push_sub", { method: "POST", body: { p_endpoint: sub.endpoint } }).catch(() => {});
+      await sub.unsubscribe();
+    }
+    window.INKWELL_PUSH = { state: pushState, on: pushOn, off: pushOff };   // Meu Inkwell › Avisos uses the same switch
+    const PUSH_TEXT = {
+      ios: () => T("Para receber avisos no iPhone: toque em Compartilhar → Adicionar à Tela de Início, abra o Inkwell por lá e ative aqui.", "To get notices on iPhone: Share → Add to Home Screen, open Inkwell from there and turn them on here."),
+      unsupported: () => T("Este navegador não recebe avisos.", "This browser can't receive notices."),
+      denied: () => T("Os avisos estão bloqueados nas configurações do navegador para este site.", "Notices are blocked for this site in the browser settings."),
+    };
     async function drawPush() {
       const el = $("iwPush"); if (!el) return;
-      if (iosBrowser) { el.innerHTML = `<p class="small muted">${T("Para receber avisos no iPhone: toque em Compartilhar → Adicionar à Tela de Início, abra o Inkwell por lá e ative aqui.", "To get notices on iPhone: Share → Add to Home Screen, open Inkwell from there and turn them on here.")}</p>`; return; }
-      if (!pushOk) { el.innerHTML = `<p class="small muted">${T("Este navegador não recebe avisos.", "This browser can't receive notices.")}</p>`; return; }
-      if (Notification.permission === "denied") { el.innerHTML = `<p class="small muted">${T("Os avisos estão bloqueados nas configurações do navegador para este site.", "Notices are blocked for this site in the browser settings.")}</p>`; return; }
-      let sub = null; try { sub = await (await navigator.serviceWorker.getRegistration("../push/"))?.pushManager.getSubscription(); } catch { sub = null; }
-      el.innerHTML = sub ? `<span class="small"><i class="ic i-bell"></i> ${T("Avisos ligados neste aparelho", "Notices on for this device")}</span><button type="button" class="btn ghost small" data-push="off">${T("Desligar", "Turn off")}</button>`
-        : `<button type="button" class="btn small primary" data-push="on"><i class="ic i-bell"></i>${T("Avisar neste aparelho", "Notify me on this device")}</button>`;
+      const st = await pushState(), cfg = `<a class="small" href="../perfil/#avisos" data-testid="notif-settings">${T("Configurar avisos", "Notice settings")}</a>`;
+      if (PUSH_TEXT[st]) { el.innerHTML = `<p class="small muted">${PUSH_TEXT[st]()}</p>${cfg}`; return; }
+      el.innerHTML = st === "on" ? `<span class="small"><i class="ic i-bell"></i> ${T("Avisos ligados neste aparelho", "Notices on for this device")}</span><button type="button" class="btn ghost small" data-push="off">${T("Desligar", "Turn off")}</button>${cfg}`
+        : `<button type="button" class="btn small primary" data-push="on"><i class="ic i-bell"></i>${T("Avisar neste aparelho", "Notify me on this device")}</button>${cfg}`;
       el.querySelector("[data-push]").onclick = async (ev) => {
         ev.stopPropagation(); const b = ev.currentTarget; b.disabled = true;
-        try {
-          if (b.dataset.push === "on") {
-            if ((await Notification.requestPermission()) !== "granted") { drawPush(); return; }
-            const reg = await pushReg();   // not .ready: this page isn't in the worker's scope, so .ready never settles
-            const w = reg.installing || reg.waiting;
-            if (w && !reg.active) await new Promise((ok) => { w.addEventListener("statechange", () => { if (w.state === "activated") ok(); }); setTimeout(ok, 8000); });
-            const s2 = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(VAPID) });
-            const j = s2.toJSON();
-            await CLOUD.api("rpc/save_push_sub", { method: "POST", body: { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_ua: navigator.userAgent.slice(0, 200) } });
-          } else if (sub) {
-            await CLOUD.api("rpc/delete_push_sub", { method: "POST", body: { p_endpoint: sub.endpoint } }).catch(() => {});
-            await sub.unsubscribe();
-          }
-        } catch { el.insertAdjacentHTML("beforeend", `<p class="small" style="color:var(--loss)">${T("Não deu certo. Tente de novo.", "That didn't work. Try again.")}</p>`); b.disabled = false; return; }
+        try { if (b.dataset.push === "on") await pushOn(); else await pushOff(); }
+        catch { el.insertAdjacentHTML("beforeend", `<p class="small" style="color:var(--loss)">${T("Não deu certo. Tente de novo.", "That didn't work. Try again.")}</p>`); b.disabled = false; return; }
         drawPush();
       };
     }

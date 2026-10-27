@@ -251,7 +251,7 @@
     const locBox = `<section class="ev-loc" data-testid="where"><div class="where">${where ? `${esc(where.label || T("Minha localização", "My location"))}<small>${T(`Até ${km} km`, `Within ${km} km`)}</small>` : T("Onde você joga?", "Where do you play?")}</div>
       <button type="button" class="btn small" id="geo"><i class="ic i-globe"></i>${T("Usar minha localização", "Use my location")}</button>
       <form id="cityF"><input id="city" type="search" placeholder="${T("ou digite cidade, bairro, endereço ou CEP", "or type a city, district, address or postcode")}" aria-label="${T("Cidade, bairro, endereço ou CEP", "City, district, address or postcode")}"><button type="submit" class="btn small">${T("Buscar", "Search")}</button></form>
-      <label class="small">${T("Raio", "Radius")} <select id="km" class="inline">${[25, 50, 100, 200, 300].map((k) => `<option value="${k}" ${k === km ? "selected" : ""}>${k} km</option>`).join("")}</select></label></section>`;
+      <label class="small">${T("Raio", "Radius")} <select id="km" class="inline">${[5, 10, 25, 50, 100, 200, 300].map((k) => `<option value="${k}" ${k === km ? "selected" : ""}>${k} km</option>`).join("")}</select></label></section>`;
     const consent = me && acct !== undefined && where ? `<label class="ev-consent" data-testid="keep-place"><input type="checkbox" id="keepPlace" ${acct ? "checked" : ""}>
       <span><b>${T(`Salvar este lugar na minha conta e me avisar de eventos novos até ${km} km`, `Keep this place in my account and tell me about new events within ${km} km`)}</b>
       <small>${T("Guardamos só um ponto aproximado (cerca de 1 km) e o nome do bairro ou cidade — nunca a rua. Só você vê. Desmarque quando quiser e ele é apagado. Para receber no celular, ligue os avisos no sino.", "We keep only an approximate point (about 1 km) and the district or city name — never the street. Only you see it. Untick any time and it is deleted. To get it on your phone, turn on notices in the bell.")} <a href="../privacidade/#localizacao">${T("Privacidade", "Privacy")}</a></small></span></label>` : "";
@@ -325,6 +325,7 @@
   // the place kept in the account: shows the box, and fills in the place on a new device
   if (me) rpc("my_place").then((r) => {
     acct = r && r.lat != null ? r : null;
+    if (acct && where && !onde && +acct.km && +acct.km !== km) { km = +acct.km; try { localStorage.setItem(LOC_KEY, JSON.stringify({ ...where, km })); } catch { /* */ } load(); }   // the radius kept in the account wins
     if (acct && !where && !onde) { where = { lat: +acct.lat, lng: +acct.lng, label: acct.label || T("Minha localização", "My location") }; km = +acct.km || km; try { localStorage.setItem(LOC_KEY, JSON.stringify({ ...where, km })); } catch { /* */ } load(); }
     draw();
   }).catch(() => { acct = undefined; });
