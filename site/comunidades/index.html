@@ -220,7 +220,11 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const PT = {
     "Communities": "Comunidades", "Stores, cities and groups that play Lorcana.": "Lojas, cidades e grupos que jogam Lorcana.", "Search by name or city": "Buscar por nome ou cidade",
     "All": "Todas", "Mine": "Minhas", "Create a community": "Criar comunidade", "Store": "Loja", "City": "Cidade", "Interest": "Interesse", "{n} members": "{n} membros", "1 member": "1 membro",
-    "example": "exemplo", "member": "membro", "owner": "dono", "Tables & Leagues": "Mesas & Ligas", "New table": "Nova mesa", "Edit table": "Editar mesa", "No tables set up yet.": "Nenhuma mesa marcada ainda.",
+    "example": "exemplo", "member": "membro", "owner": "dono", "Ask to join": "Pedir para entrar", "Request sent": "Pedido enviado", "Cancel request": "Cancelar pedido", "You were invited": "Você foi convidado",
+    "Request sent. You'll get a notice when it's accepted.": "Pedido enviado. Você recebe um aviso quando for aceito.", "Who can join": "Quem pode entrar", "Anyone 18+": "Qualquer pessoa 18+", "With approval": "Com aprovação",
+    "Requests": "Pedidos", "Accept": "Aceitar", "Decline": "Recusar", "Invite": "Convidar", "Invite friends": "Convidar amigos", "Invited": "Convidado",
+    "They get a notice and join without waiting for approval. Someone who isn't on Inkwell yet: send the community link.": "A pessoa recebe um aviso e entra sem precisar de aprovação. Quem ainda não está no Inkwell: mande o link da comunidade.",
+    "All your friends are already here, or you have no friends on Inkwell yet.": "Todos os seus amigos já estão aqui, ou você ainda não tem amigos no Inkwell.", "Share the community link": "Compartilhar o link da comunidade", "Tables & Leagues": "Mesas & Ligas", "New table": "Nova mesa", "Edit table": "Editar mesa", "No tables set up yet.": "Nenhuma mesa marcada ainda.",
     "Going": "Vou", "Maybe": "Talvez", "{n} going": "{n} vão", "1 going": "1 vai", "{n} maybe": "{n} talvez", "cancelled": "cancelada", "Cancelled": "Cancelada", "Title": "Título", "When": "Quando", "Where": "Onde",
     "Places (optional)": "Vagas (opcional)", "Details": "Detalhes", "Format, entry, prizes, what to bring.": "Formato, inscrição, prêmios, o que levar.", "League night, casual table, tournament…": "Liga, mesa casual, torneio…",
     "This table is full.": "Esta mesa está lotada.", "admin": "admin", "you": "você",
@@ -312,9 +316,18 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   }
 
   // ---------- one community ----------
+  // the page, its tables (social.sql) and who may join how (community_invites.sql); the last two are optional
+  async function loadView(slug) {
+    const v = await rpc("community_view", { p_slug: slug });
+    if (v) {
+      const [ev, ac] = await Promise.all([rpc("community_events", { p_slug: slug }).catch(() => null), rpc("community_access", { p_slug: slug }).catch(() => null)]);
+      v.events = ev; v.access = ac;
+    }
+    return v;
+  }
+  const reloadView = async () => { view = await loadView(view.slug); };
   async function showOne(slug) {
-    view = await rpc("community_view", { p_slug: slug });
-    if (view) { try { view.events = await rpc("community_events", { p_slug: slug }); } catch { view.events = null; } }   // supabase/social.sql
+    view = await loadView(slug);
     $("head").hidden = true;
     if (!view) { $("app").innerHTML = emptyBox("search", Tx("Community not found"), Tx("It doesn't exist, or it was hidden."), `<a class="btn" href="./">${Tx("Back")}</a>`); return; }
     document.title = `${L(view.mock, view.name)} · Inkwell`;
@@ -378,7 +391,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const named = c.members || [], hiddenN = Math.max(0, (c.member_n || 0) - named.length);
     let join = "";
     if (!me) join = `<button type="button" class="btn primary" id="signIn">${Tx("Sign in to take part")}</button>`;
-    else if (c.can_join) join = `<button type="button" class="btn primary" id="join"><i class="ic i-user-plus"></i>${Tx("Join")}</button>`;
+    else if (c.can_join && c.access?.requested) join = `<span class="tag info" data-testid="requested">${Tx("Request sent")}</span><button type="button" class="btn ghost small" id="unask">${Tx("Cancel request")}</button>`;
+    else if (c.can_join) join = `${c.access?.invited ? `<span class="tag match">${Tx("You were invited")}</span>` : ""}<button type="button" class="btn primary" id="join"><i class="ic i-user-plus"></i>${Tx(c.access?.join_mode === "approval" && !c.access?.invited ? "Ask to join" : "Join")}</button>`;
     else if (isMember && !isOwner && !m) join = `<button type="button" class="btn ghost" id="leave">${armed === "leave" ? Tx("Tap again to confirm") : Tx("Leave")}</button>`;
     else if (!isMember && !m && !adult()) join = `<a class="btn" href="../perfil/?editar=1">${Tx("Open My Inkwell")}</a><span class="small muted">${Tx("To take part, confirm you are 18+ in My Inkwell.")}</span>`;
     const post = (p) => `<article class="cm-post" data-post="${esc(p.id)}">${p.handle ? `<a href="../perfil/?u=${encodeURIComponent(p.handle)}"><span class="pav sm" style="${art(p.avatar)}"></span></a>` : `<span class="pav sm"></span>`}
@@ -390,7 +404,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         <div class="cm-id"><span class="cm-av" style="${art(c.avatar)}"></span><div style="min-width:0"><h1>${esc(L(m, c.name))}</h1><div class="small muted">${esc([Tx(KIND[c.kind] || "Store"), c.city, members(c.member_n || 0)].filter(Boolean).join(" · "))}</div></div></div>
         <div class="cm-body">${c.description ? `<p>${esc(L(m, c.description))}</p>` : ""}
           ${contactHtml(c)}
-          <div class="cm-acts">${join}${canManage ? `<button type="button" class="btn" id="edit"><i class="ic i-edit"></i>${Tx("Edit")}</button><button type="button" class="btn ghost" id="manage">${Tx("Manage members")}</button>` : ""}
+          <div class="cm-acts">${join}${canManage ? `<button type="button" class="btn" id="edit"><i class="ic i-edit"></i>${Tx("Edit")}</button><button type="button" class="btn ghost" id="manage">${Tx("Manage members")}${c.access?.requests?.length ? ` <span class="count">${c.access.requests.length}</span>` : ""}</button>${c.access ? `<button type="button" class="btn ghost" id="invite"><i class="ic i-user-plus"></i>${Tx("Invite")}</button>` : ""}` : ""}
             <button type="button" class="btn ghost" id="share"><i class="ic i-send"></i>${Tx("Share")}</button></div></div></section>
       <div class="cm-cols">
         <div style="display:grid;gap:var(--sp-5);align-content:start">${eventsHtml(c, isMember, canManage)}
@@ -408,7 +422,14 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   function wireOne() {
     const c = view;
     $("signIn")?.addEventListener("click", () => window.INKWELL_SIGNIN?.());
-    $("join")?.addEventListener("click", () => act(() => rpc("join_community", { p_slug: c.slug, p_join: true }), Tx("You joined {name}.", { name: c.name })));
+    $("join")?.addEventListener("click", async () => {
+      let r = null;
+      try { r = await rpc("join_community", { p_slug: c.slug, p_join: true }); } catch { toast(Tx("Couldn't send. Try again."), true); return; }
+      await reloadView(); drawOne();
+      toast(r === "requested" ? Tx("Request sent. You'll get a notice when it's accepted.") : Tx("You joined {name}.", { name: c.name }));
+    });
+    $("unask")?.addEventListener("click", () => act(() => rpc("join_community", { p_slug: c.slug, p_join: false })));
+    $("invite")?.addEventListener("click", openInvite);
     $("leave")?.addEventListener("click", () => { if (armed !== "leave") { armed = "leave"; drawOne(); return; } act(() => rpc("join_community", { p_slug: c.slug, p_join: false }), Tx("You left {name}.", { name: c.name })); });
     $("edit")?.addEventListener("click", () => openForm(c));
     $("evNew")?.addEventListener("click", () => openEvent(null));
@@ -430,7 +451,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     });
   }
   async function act(fn, msg) {
-    try { await fn(); armed = null; view = await rpc("community_view", { p_slug: view.slug }); drawOne(); toast(msg || Tx("Done")); }
+    try { await fn(); armed = null; await reloadView(); drawOne(); toast(msg || Tx("Done")); }
     catch (e) { armed = null; drawOne(); toast(Tx("Couldn't send. Try again."), true); }
   }
 
@@ -467,7 +488,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         if (f.name.trim().length < 3) { $("fN").setAttribute("aria-invalid", "true"); $("fN").focus(); return; }
         $("cfSave").disabled = true;
         try {
-          if (c) { await rpc("update_community", { p_slug: c.slug, p: { ...f, contact: f.kind === "store" ? f.contact : {} } }); sh.close(); view = await rpc("community_view", { p_slug: c.slug }); drawOne(); toast(Tx("Done")); }
+          if (c) { await rpc("update_community", { p_slug: c.slug, p: { ...f, contact: f.kind === "store" ? f.contact : {} } }); sh.close(); await reloadView(); drawOne(); toast(Tx("Done")); }
           else { const { contact, ...base } = f; const r = await rpc("create_community", { p: base }); if (f.kind === "store" && Object.values(contact).some((v) => String(v || "").trim())) await rpc("update_community", { p_slug: r.slug, p: { contact } }).catch(() => {}); location.href = `?c=${encodeURIComponent(r.slug)}`; }
         } catch (err) { $("cfSave").disabled = false; const t = String(err?.message || err); $("cfMsg").textContent = /too_many/.test(t) ? Tx("You already created 3 communities.") : /bad email/.test(t) ? Tx("Check the e-mail.") : Tx("Couldn't save. Try again."); }
       };
@@ -480,6 +501,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const draw = () => {
       sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="shT">${Tx("Members")}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
         <div class="sheet-body"><p class="small muted" style="margin:0 0 var(--sp-3)">${Tx(owner ? "Admins edit the details and moderate, like you. Only the owner picks admins and can hand the community to someone else." : "Admins edit the details and moderate. The owner picks the admins.")}</p>
+        ${view.access ? `<div class="field" style="margin-bottom:var(--sp-3)">${Tx("Who can join")}<div class="seg block" role="group" data-testid="join-mode">${[["open", "Anyone 18+"], ["approval", "With approval"]].map(([k, l]) => `<button type="button" data-mode="${k}" aria-pressed="${view.access.join_mode === k}">${Tx(l)}</button>`).join("")}</div></div>` : ""}
+        ${view.access?.requests?.length ? `<h3 style="margin:0 0 var(--sp-2)">${Tx("Requests")} <span class="count">${view.access.requests.length}</span></h3><div class="list" data-testid="requests" style="margin-bottom:var(--sp-4)">${view.access.requests.map((r) => `<div class="list-row flat" data-req="${esc(r.uid)}"><span class="t"><span>${r.handle ? `<a href="../perfil/?u=${encodeURIComponent(r.handle)}">${esc(r.name || "?")}</a>` : esc(r.name || "?")}</span></span><span class="row" style="gap:6px"><button type="button" class="btn small ghost" data-ans="${esc(r.uid)}:0">${Tx("Decline")}</button><button type="button" class="btn small primary" data-ans="${esc(r.uid)}:1">${Tx("Accept")}</button></span></div>`).join("")}</div>` : ""}
         <div class="list" data-testid="manage">${(view.manage || []).map((x) => { const self = x.uid === me?.id, u = esc(x.uid);
           const btns = x.role === "owner" || self ? "" : [
             owner ? `<button type="button" class="btn small" data-role="${u}:${x.role === "admin" ? "member" : "admin"}">${Tx(x.role === "admin" ? "Remove admin" : "Make admin")}</button>` : "",
@@ -488,18 +511,43 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
           return `<div class="list-row flat" data-member="${u}"><span class="t"><span>${esc(x.name || "?")}${self ? ` · ${Tx("you")}` : ""}</span><span class="meta">${roleName(x.role)}</span></span><span class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">${btns}</span></div>`; }).join("")}</div></div>`;
       sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = () => sh.close());
       const run = async (fn, msg) => {
-        try { await fn(); armed = null; view = await rpc("community_view", { p_slug: view.slug }); if (view.role !== "owner" && view.role !== "admin") sh.close(); else draw(); drawOne(); toast(msg || Tx("Done")); }
+        try { await fn(); armed = null; await reloadView(); if (view.role !== "owner" && view.role !== "admin") sh.close(); else draw(); drawOne(); toast(msg || Tx("Done")); }
         catch { armed = null; draw(); toast(Tx("Couldn't send. Try again."), true); }
       };
       sh.querySelectorAll("[data-rm]").forEach((b) => b.onclick = () => {
         const uid = b.dataset.rm; if (armed !== "rm:" + uid) { armed = "rm:" + uid; draw(); return; }
         run(() => rpc("moderate_community", { p_action: "remove_member", p_slug: view.slug, p_user: uid }));
       });
+      sh.querySelectorAll("[data-mode]").forEach((b) => b.onclick = () => run(() => rpc("set_community_join_mode", { p_slug: view.slug, p_mode: b.dataset.mode })));
+      sh.querySelectorAll("[data-ans]").forEach((b) => b.onclick = () => { const [uid, a] = b.dataset.ans.split(":"); run(() => rpc("answer_community_request", { p_slug: view.slug, p_user: uid, p_accept: a === "1" })); });
       sh.querySelectorAll("[data-role]").forEach((b) => b.onclick = () => { const [uid, r] = b.dataset.role.split(":"); run(() => rpc("set_community_role", { p_slug: view.slug, p_user: uid, p_role: r })); });
       sh.querySelectorAll("[data-own]").forEach((b) => b.onclick = () => {
         const uid = b.dataset.own; if (armed !== "own:" + uid) { armed = "own:" + uid; draw(); return; }
         run(() => rpc("transfer_community", { p_slug: view.slug, p_user: uid }), Tx("Ownership handed over. You stay as admin."));
       });
+    };
+    draw(); sh.showModal();
+  }
+  // invite my Inkwell friends who aren't members yet; they get a notice (supabase/community_invites.sql)
+  async function openInvite() {
+    const sh = $("sheet");
+    let friends = [];
+    try { friends = (await rpc("my_friends")) || []; } catch { friends = []; }
+    const members = new Set((view.manage || []).map((m) => m.uid)), invited = new Set(view.access?.invites || []);
+    const draw = () => {
+      const list = friends.filter((f) => !members.has(f.id));
+      sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="shT">${Tx("Invite friends")}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
+        <div class="sheet-body"><p class="small muted" style="margin:0 0 var(--sp-3)">${Tx("They get a notice and join without waiting for approval. Someone who isn't on Inkwell yet: send the community link.")}</p>
+        ${list.length ? `<div class="list" data-testid="invite-list">${list.map((f) => `<div class="list-row flat"><span class="t"><span>${esc(f.name || "?")}</span>${f.handle ? `<span class="meta">@${esc(f.handle)}</span>` : ""}</span>${invited.has(f.id) ? `<span class="small muted">${Tx("Invited")}</span>` : `<button type="button" class="btn small" data-inv="${esc(f.id)}"><i class="ic i-user-plus"></i>${Tx("Invite")}</button>`}</div>`).join("")}</div>`
+          : `<p class="muted">${Tx("All your friends are already here, or you have no friends on Inkwell yet.")}</p>`}
+        <div class="row" style="margin-top:var(--sp-4)"><button type="button" class="btn ghost" id="invShare"><i class="ic i-send"></i>${Tx("Share the community link")}</button></div></div>`;
+      sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = () => sh.close());
+      sh.querySelectorAll("[data-inv]").forEach((b) => b.onclick = async () => {
+        b.disabled = true;
+        try { await rpc("invite_to_community", { p_slug: view.slug, p_user: b.dataset.inv }); invited.add(b.dataset.inv); (view.access.invites ||= []).push(b.dataset.inv); draw(); }
+        catch { b.disabled = false; toast(Tx("Couldn't send. Try again."), true); }
+      });
+      $("invShare").onclick = () => $("share")?.click();
     };
     draw(); sh.showModal();
   }
@@ -859,14 +907,15 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     })();
     // Notifications (supabase/social.sql): likes, comments, "Vou" on my tables, new tables in my communities.
     let notes = null;
-    const NK = { like: ["curtiu seu post", "liked your post"], comment: ["comentou no seu post", "commented on your post"], rsvp: ["vai na sua mesa", "is going to your table"], event: ["marcou uma mesa", "set up a table"] };
-    const noteHref = (n) => n.ref?.post ? `../feed/#post-${encodeURIComponent(n.ref.post)}` : n.ref?.slug ? `../comunidades/?c=${encodeURIComponent(n.ref.slug)}#mesas` : "../feed/";
+    const NK = { like: ["curtiu seu post", "liked your post"], comment: ["comentou no seu post", "commented on your post"], rsvp: ["vai na sua mesa", "is going to your table"], event: ["marcou uma mesa", "set up a table"],
+      community_invite: ["convidou você para uma comunidade", "invited you to a community"], join_request: ["pediu para entrar", "asked to join"], join_accepted: ["aceitou seu pedido", "accepted your request"] };
+    const noteHref = (n) => n.ref?.post ? `../feed/#post-${encodeURIComponent(n.ref.post)}` : n.ref?.slug ? `../comunidades/?c=${encodeURIComponent(n.ref.slug)}${n.kind === "event" || n.kind === "rsvp" ? "#mesas" : ""}` : "../feed/";
     const showBell = () => { const b = $("iwBell"), c = $("iwBellN"); if (!b || !notes) return; b.hidden = false; const n = notes.filter((x) => x.unread).length; c.hidden = !n; c.textContent = n > 9 ? "9+" : String(n);
       b.setAttribute("aria-label", n ? T(`Notificações · ${n} novas`, `Notifications · ${n} new`) : T("Notificações", "Notifications")); };
     CLOUD.api("rpc/my_notifications", { method: "POST", body: {} }).then((r) => { notes = r || []; showBell(); }).catch(() => {});   // not there yet: no bell
     $("iwBell")?.addEventListener("click", (e) => {
       const list = notes || [];
-      openMenu(e.currentTarget, `<div class="menu-label">${T("Notificações", "Notifications")}</div>${list.length ? list.map((n) => `<a class="menu-item${n.unread ? " unread" : ""}" role="menuitem" href="${noteHref(n)}"><span><b>${esc(n.name || T("Alguém", "Someone"))}</b> ${esc(T(...(NK[n.kind] || ["", ""])))}${n.ref?.text ? `<small>${esc(n.ref.text)}</small>` : ""}<small>${esc(new Date(n.at).toLocaleString(lang === "en" ? "en" : "pt-BR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}</small></span></a>`).join("") : `<div class="menu-item" style="pointer-events:none"><span class="small">${T("Nada por aqui ainda.", "Nothing here yet.")}</span></div>`}`, "notif");
+      openMenu(e.currentTarget, `<div class="menu-label">${T("Notificações", "Notifications")}</div>${list.length ? list.map((n) => `<a class="menu-item${n.unread ? " unread" : ""}" role="menuitem" href="${noteHref(n)}"><span><b>${esc(n.name || T("Alguém", "Someone"))}</b> ${esc(T(...(NK[n.kind] || ["", ""])))}${n.ref?.text || n.ref?.name ? `<small>${esc(n.ref.text || n.ref.name)}</small>` : ""}<small>${esc(new Date(n.at).toLocaleString(lang === "en" ? "en" : "pt-BR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}</small></span></a>`).join("") : `<div class="menu-item" style="pointer-events:none"><span class="small">${T("Nada por aqui ainda.", "Nothing here yet.")}</span></div>`}`, "notif");
       if (list.some((n) => n.unread)) CLOUD.api("rpc/read_notifications", { method: "POST", body: {} }).then(() => { list.forEach((n) => { n.unread = false; }); showBell(); }).catch(() => {});
     });
     // an invite link opened before signing in (perfil/?convite=…): accept it on whichever page the sign-in lands
