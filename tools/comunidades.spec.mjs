@@ -229,3 +229,42 @@ test('community background: a Location fills the top; owners change it in Editar
   await page.locator('#cfSave').click();
   await expect.poll(() => covers).toEqual([{ p_slug: 'liga-campinas', p_card: 'LOR13-80' }]);
 });
+
+test('Mesas & Ligas: fill in from a Play Hub link, linked table points to the Play Hub; delete with two taps', async ({ page }) => {
+  const calls = await setup(page);
+  let evs = [];
+  const json = (route, v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+  await page.route('**/functions/v1/rph-events**', (r) => json(r, { id: 904881, name: 'Terça de Lorcana - October 27, 2026', start: '2030-01-08T22:30:00+00:00', format: 'Core Constructed', cost_cents: 2500, currency: 'BRL', capacity: 32,
+    address: 'Av. Dr. Cândido Motta Filho, 575', store: { name: 'Pimp My Deck' }, url: 'https://tcg.ravensburgerplay.com/events/904881' }));
+  await page.route('**/rest/v1/rpc/community_events', (r) => json(r, evs));
+  await page.route('**/rest/v1/rpc/save_event', (r) => { const b = JSON.parse(r.request().postData()); calls.push({ path: 'rpc/save_event', body: b });
+    evs = [{ id: 'e7', title: b.p.title, starts_at: b.p.starts_at, place: b.p.place, details: b.p.details, capacity: +b.p.capacity || null, going: 0, maybe: 0, me: null, cancelled: false, people: [], can_edit: true }]; return json(r, evs[0]); });
+  await page.route('**/rest/v1/rpc/link_event_rph', (r) => { const b = JSON.parse(r.request().postData()); calls.push({ path: 'rpc/link_event_rph', body: b }); evs = [{ ...evs[0], rph_id: b.p_rph_id }]; return json(r, evs[0]); });
+  await page.route('**/rest/v1/rpc/delete_event', (r) => { calls.push({ path: 'rpc/delete_event', body: JSON.parse(r.request().postData()) }); evs = []; return r.fulfill({ status: 204, body: '' }); });
+  await page.goto(url('comunidades/?c=liga-campinas'));
+  await page.locator('#evNew').click();
+  await expect(page.locator('#evT')).toBeFocused();   // the sheet puts the cursor in the title first
+  await page.locator('#evR').fill('https://tcg.ravensburgerplay.com/events/904881');
+  await page.locator('#evImp').click();
+  await expect(page.locator('#evT')).toHaveValue('Terça de Lorcana');
+  await expect(page.locator('#evP')).toHaveValue('Pimp My Deck · Av. Dr. Cândido Motta Filho, 575');
+  await expect(page.locator('#evC')).toHaveValue('32');
+  await expect(page.locator('#evD')).toHaveValue(/^Core Constructed · R\$\s25,00$/);
+  await page.locator('#evSave').click();
+  await expect.poll(() => rpcCalls(calls, 'link_event_rph')[0]).toEqual({ p_event: 'e7', p_rph_id: 904881 });
+  await expect(page.locator('[data-ev="e7"] [data-testid="ev-playhub"]')).toHaveAttribute('href', 'https://tcg.ravensburgerplay.com/events/904881');
+  // delete
+  await page.locator('[data-evedit="e7"]').click();
+  await expect(page.locator('#evR')).toHaveValue('https://tcg.ravensburgerplay.com/events/904881');
+  await page.locator('#evDel').click();
+  expect(rpcCalls(calls, 'delete_event')).toHaveLength(0);   // first tap only arms it
+  await page.locator('#evDel').click();
+  await expect.poll(() => rpcCalls(calls, 'delete_event')[0]).toEqual({ p_event: 'e7' });
+  await expect(page.locator('[data-ev="e7"]')).toHaveCount(0);
+  // a link that isn't a Play Hub event
+  await page.locator('#evNew').click();
+  await expect(page.locator('#evT')).toBeFocused();
+  await page.locator('#evR').fill('https://exemplo.com/x');
+  await page.locator('#evImp').click();
+  await expect(page.locator('#evRh')).toContainText('não parece');
+});

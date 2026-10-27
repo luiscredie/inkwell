@@ -2,6 +2,7 @@
 // for the Eventos page. Public data, no key (the same API the Play Hub site uses); cached here for 15 minutes.
 //   GET ?lat=-23.55&lng=-46.63&km=100&from=2026-10-27&to=2027-01-31   -> { events: [...], total }
 //   GET ?geocode=Campinas                                               -> { lat, lng, label } (Open-Meteo geocoder)
+//   GET ?id=904881                                                      -> one event (to link a community table)
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 const API = "https://api.cloudflare.ravensburgerplay.com/hydraproxy/api/v2";
@@ -64,6 +65,20 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
   const u = new URL(req.url);
   try {
+    const id = u.searchParams.get("id");
+    if (id) {
+      if (!/^\d{1,12}$/.test(id)) return json({ error: "bad id" }, 400);
+      const hit = cache.get("id|" + id);
+      if (hit && Date.now() - hit.at < TTL) return json(hit.data);
+      const r = await fetch(`${API}/events/${id}/`, { headers: HEADERS });
+      if (r.status === 404) return json(null, 404);
+      if (!r.ok) throw new Error(`play hub ${r.status}`);
+      const e = await r.json();
+      if (e?.game?.slug && e.game.slug !== "disney-lorcana") return json(null, 404);
+      const data = slim(e);
+      cache.set("id|" + id, { at: Date.now(), data });
+      return json(data);
+    }
     const g = u.searchParams.get("geocode");
     if (g) return json(g.trim().length >= 2 ? await geocode(g.trim().slice(0, 100)) : null);
     const lat = num(u.searchParams.get("lat"), -90, 90), lng = num(u.searchParams.get("lng"), -180, 180);

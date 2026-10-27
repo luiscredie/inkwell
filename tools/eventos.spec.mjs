@@ -226,3 +226,20 @@ test('keep the place in my account only when I tick the box; a new device picks 
   await page.locator('[data-testid="keep-place"] input').uncheck();
   await expect.poll(() => sent.at(-1)).toEqual(['delete']);
 });
+
+test('a community table linked to a Play Hub event shows as one; Vou answers both', async ({ page }) => {
+  const calls = await setup(page);
+  const json = (route, v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+  const tb = { id: 'e9', title: 'Terça na Pimp', starts_at: EVENTS[0].start, place: 'Pimp My Deck', capacity: 16, community: 'Liga SP', slug: 'liga-sp', going: 3, me: null, rph_id: 101 };
+  await page.route('**/rest/v1/rpc/my_events', (r) => json(r, [tb]));
+  await page.route('**/rest/v1/rpc/rph_tables', (r) => { calls.push({ path: 'rpc/rph_tables', body: JSON.parse(r.request().postData()) }); return json(r, { 101: [tb] }); });
+  await page.goto(url('eventos/'));
+  await expect(page.locator('.ev')).toHaveCount(3);   // 3 Play Hub events; the linked table isn't listed apart
+  await expect(page.locator('[data-ev="tb:e9"]')).toHaveCount(0);
+  const ev = page.locator('[data-ev="rph:101"]');
+  await expect(ev.locator('[data-testid="linked"]')).toContainText('Liga SP · 3 vão');
+  await expect(ev.locator('[data-testid="linked"] a')).toHaveAttribute('href', '../comunidades/?c=liga-sp#mesas');
+  await ev.locator('[data-act="going"]').click();
+  await expect.poll(() => calls.filter((c) => c.path === 'rpc/rsvp_event').map((c) => c.body)[0]).toEqual({ p_event: 'e9', p_status: 'going' });
+  await expect(ev.locator('[data-testid="linked"]')).toContainText('4 vão');
+});

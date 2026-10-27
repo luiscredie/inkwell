@@ -192,6 +192,7 @@ window.INKWELL_CLOUD = (() => {
 .ev-consent small { display: block; color: var(--text-2); margin-top: 2px; }
 .ev-more { display: flex; justify-content: center; margin-top: var(--sp-4); }
 .ev .acts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 4px; }
+.ev .linked { font-size: var(--fs-small); color: var(--text-2); }
 .ev .friends { font-size: var(--fs-small); color: var(--text-2); }
 .ev .friends b { color: var(--text); }
 .cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
@@ -234,7 +235,7 @@ window.INKWELL_CLOUD = (() => {
   let where = null; try { where = JSON.parse(localStorage.getItem(LOC_KEY) || "null"); } catch { where = null; }
   let km = where?.km || 100, view = "list", day = null, month = null, onlyMine = false, onlyFree = false, fmt = "", order = "date", horizon = 14;
   try { order = localStorage.getItem("inkwell-events-order") === "km" ? "km" : "date"; } catch { /* */ }
-  let events = [], marks = new Map(), friends = {}, tables = [], loading = false, failed = false;
+  let linked = {}, events = [], marks = new Map(), friends = {}, tables = [], loading = false, failed = false;
   // acct: the place kept in the account (event_places.sql), only after the person ticks the box.
   // undefined = not available (signed out, or the SQL isn't there); null = not saved; object = saved.
   let acct;
@@ -289,9 +290,11 @@ window.INKWELL_CLOUD = (() => {
       const d = await CLOUD.fn("rph-events", { lat: where.lat.toFixed(4), lng: where.lng.toFixed(4), km });
       events = (d.events || []).map((e) => ({ ...e, kind: "rph", key: "rph:" + e.id }));
     } catch { failed = true; events = []; }
+    // community tables linked to these Play Hub events (community_tables.sql): shown on the event, not twice
+    try { const r = events.length ? await rpc("rph_tables", { p_ids: events.map((e) => e.id).slice(0, 400) }) : {}; linked = r && !Array.isArray(r) ? r : {}; } catch { linked = {}; }
     if (me) {
       try { marks = new Map(((await rpc("my_event_marks")) || []).map((m) => [String(m.rph_id), m])); } catch { marks = new Map(); }
-      try { tables = ((await rpc("my_events")) || []).map((t) => ({ kind: "table", key: "tb:" + t.id, id: t.id, name: t.title, start: t.starts_at, address: t.place, store: { name: t.community }, slug: t.slug, me: t.me, going: t.going, capacity: t.capacity })); } catch { tables = []; }
+      try { tables = ((await rpc("my_events")) || []).map((t) => ({ kind: "table", key: "tb:" + t.id, id: t.id, name: t.title, start: t.starts_at, address: t.place, store: { name: t.community }, slug: t.slug, me: t.me, going: t.going, capacity: t.capacity, rph_id: t.rph_id ? +t.rph_id : null })); } catch { tables = []; }
       const ids = events.map((e) => e.id).concat([...marks.keys()].map(Number)).slice(0, 300);
       try { friends = ids.length ? (await rpc("friends_on_events", { p_ids: ids })) || {} : {}; } catch { friends = {}; }
     }
@@ -300,8 +303,9 @@ window.INKWELL_CLOUD = (() => {
   // marked events that are no longer in the search (farther, or a filter) still show in "Meus"
   const markedOnly = () => [...marks.values()].filter((m) => !events.some((e) => String(e.id) === String(m.rph_id)) && m.snap?.start).map((m) => ({ ...m.snap, id: +m.rph_id, kind: "rph", key: "rph:" + m.rph_id, gone: true }));
   const statusOf = (e) => (e.kind === "table" ? e.me : marks.get(String(e.id))?.status) || null;
+  const ownTables = () => tables.filter((t) => !(t.rph_id && (linked[t.rph_id] || events.some((e) => e.id === t.rph_id))));   // merged into the Play Hub event
   function all() {
-    let list = [...events, ...markedOnly(), ...tables];
+    let list = [...events, ...markedOnly(), ...ownTables()];
     if (onlyMine) list = list.filter((e) => statusOf(e));
     if (onlyFree) list = list.filter((e) => e.kind === "table" || !e.cost_cents);
     if (fmt) list = list.filter((e) => e.format === fmt);
@@ -310,7 +314,7 @@ window.INKWELL_CLOUD = (() => {
   // two or more "going" on the same day
   function conflicts() {
     const byDay = new Map();
-    for (const e of [...events, ...markedOnly(), ...tables]) if (statusOf(e) === "going") { const k = dkey(e.start); byDay.set(k, (byDay.get(k) || []).concat(e)); }
+    for (const e of [...events, ...markedOnly(), ...ownTables()]) if (statusOf(e) === "going") { const k = dkey(e.start); byDay.set(k, (byDay.get(k) || []).concat(e)); }
     return [...byDay.entries()].filter(([, l]) => l.length > 1);
   }
 
@@ -332,6 +336,9 @@ window.INKWELL_CLOUD = (() => {
     try {
       await rpc("mark_event", { p_rph_id: e.id, p_status: next.status, p_registered: !!next.registered, p_paid: !!next.paid, p_snap: snap });
       if (next.status) marks.set(String(e.id), { ...next, rph_id: e.id, snap: e.gone ? cur.snap : snap }); else marks.delete(String(e.id));
+      if ("status" in patch) for (const t of tables.filter((x) => x.rph_id === e.id && x.me !== next.status)) {   // the same answer on its community table
+        try { await rpc("rsvp_event", { p_event: t.id, p_status: next.status }); t.me = next.status; const l = (linked[e.id] || []).find((x) => x.id === t.id); if (l) { l.me = next.status; l.going = (l.going || 0) + (next.status === "going" ? 1 : 0) - (cur.status === "going" ? 1 : 0); } } catch { /* full or not a member */ }
+      }
       draw();
       const c = conflicts().find(([k]) => k === dkey(e.start));
       if (next.status === "going" && c) toast(T(`Atenção: você marcou ${c[1].length} eventos no mesmo dia.`, `Heads up: ${c[1].length} events on the same day.`), true);
@@ -364,6 +371,7 @@ window.INKWELL_CLOUD = (() => {
       ${order === "km" && view === "list" ? `<div class="when">${esc(dayShort(e.start))}</div>` : ""}
       <div class="where1">${e.store?.name ? `<span class="store">${esc(e.store.name)}</span>` : ""}${e.format ? `<span class="muted">${esc(e.format)}</span>` : ""}</div>
       ${e.address || spots || e.km != null ? `<div class="meta sub">${e.km != null ? `<span>${e.km} km</span>` : ""}${e.address ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.address)}" target="_blank" rel="noopener">${esc(e.address)}</a>` : ""}${spots ? `<span>${esc(spots)}</span>` : ""}</div>` : ""}
+      ${(e.kind === "rph" ? linked[e.id] || [] : []).map((t) => `<div class="linked" data-testid="linked"><span class="tag info">${T("Mesa da comunidade", "Community table")}</span> <a href="../comunidades/?c=${encodeURIComponent(t.slug)}#mesas">${esc(t.community)}</a> · ${esc(T(t.going === 1 ? "1 vai" : `${t.going || 0} vão`, `${t.going || 0} going`))}</div>`).join("")}
       ${going.length || maybe.length ? `<div class="friends">${going.length ? `<b>${going.map((f) => esc(f.name)).join(", ")}</b> ${T(going.length === 1 ? "vai" : "vão", "going")}` : ""}${going.length && maybe.length ? " · " : ""}${maybe.length ? `${maybe.map((f) => esc(f.name)).join(", ")} ${T("talvez", "maybe")}` : ""}</div>` : ""}
       <div class="acts">
         <button type="button" class="btn small ${st === "going" ? "primary" : ""}" data-act="going" aria-pressed="${st === "going"}">${T("Vou", "Going")}</button>
