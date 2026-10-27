@@ -335,10 +335,13 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   }
   // ---------- Mesas & Ligas: this community's tables (supabase/social.sql) ----------
   const evWhen = (iso) => new Date(iso).toLocaleString(lang === "pt" ? "pt-BR" : "en", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+  // text with its web addresses as links that open in a new tab (escaped first; only http/https and www.)
+  const linkify = (t) => esc(t).replace(/\b((?:https?:\/\/|www\.)[^\s<]+?)([.,;:!?)\]]*)(?=\s|$)/gi, (m, url, tail) =>
+    `<a href="${/^www\./i.test(url) ? "https://" + url : url}" target="_blank" rel="noopener nofollow ugc">${url}</a>${tail}`);
   function eventsHtml(c, isMember, canManage) {
     if (!Array.isArray(c.events) || c.mock) return "";
     const ev = (e) => `<article class="cm-ev${e.cancelled ? " off" : ""}" data-ev="${esc(e.id)}"><div class="when">${esc(evWhen(e.starts_at))}${e.cancelled ? ` · ${Tx("cancelled")}` : ""}</div>
-        <b>${esc(e.title)}</b>${e.place ? `<div class="small muted">${esc(e.place)}</div>` : ""}${e.details ? `<p class="small" style="margin:4px 0 0;white-space:pre-wrap">${esc(e.details)}</p>` : ""}
+        <b>${esc(e.title)}</b>${e.place ? `<div class="small muted">${esc(e.place)}</div>` : ""}${e.details ? `<p class="small" style="margin:4px 0 0;white-space:pre-wrap;overflow-wrap:anywhere">${linkify(e.details)}</p>` : ""}
         <div class="small muted" style="margin-top:4px">${esc(e.going === 1 ? Tx("1 going") : Tx("{n} going", { n: e.going }))}${e.capacity ? ` / ${e.capacity}` : ""}${e.maybe ? ` · ${esc(Tx("{n} maybe", { n: e.maybe }))}` : ""}${(e.people || []).length ? ` · ${(e.people || []).filter((p) => p.status === "going").slice(0, 6).map((p) => esc(p.name)).join(", ")}` : ""}</div>
         <div class="row" style="gap:6px;margin-top:var(--sp-2);flex-wrap:wrap">${isMember && !e.cancelled ? `<button type="button" class="btn small ${e.me === "going" ? "primary" : ""}" data-rsvp="${esc(e.id)}:going" aria-pressed="${e.me === "going"}">${Tx("Going")}</button><button type="button" class="btn small ghost" data-rsvp="${esc(e.id)}:maybe" aria-pressed="${e.me === "maybe"}">${Tx("Maybe")}</button>` : ""}
           ${canManage ? `<button type="button" class="btn small ghost" data-evedit="${esc(e.id)}">${Tx("Edit")}</button>` : ""}</div></article>`;
