@@ -231,7 +231,8 @@ select cron.schedule('inkwell-events-near',
     body := '{}'::jsonb,
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'x-push-key', private.push_key()));
+      'x-push-key', private.push_key()),
+    timeout_milliseconds := 60000);
   select private.trim_event_seen();$c$);
 
 revoke all on function
