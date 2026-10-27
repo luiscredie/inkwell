@@ -213,7 +213,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       CLOUD.api("friendships?select=requester,addressee,status").catch(() => []),
       CLOUD.api("user_trades?select=*&order=created_at.desc&limit=1000").catch(() => []),
       CLOUD.api("listings?select=*&order=created_at.desc&limit=3000").catch(() => []),
-      CLOUD.api(`profiles?user_id=eq.${me.id}&select=auto_collection`).catch(() => []),
+      CLOUD.api("rpc/my_settings", { method: "POST", body: {} }).then((r) => (r?.user_id ? [r] : Promise.reject(r))).catch(() => CLOUD.api(`profiles?user_id=eq.${me.id}&select=auto_collection`)).catch(() => []),
     ]);
     const otherF = (f) => (f.requester === me.id ? f.addressee : f.requester);
     uloans = ul || []; utrades = ut || []; listings = ls || [];

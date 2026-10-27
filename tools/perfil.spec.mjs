@@ -404,6 +404,64 @@ test('Início: write a post with a card, like and comment; tables & leagues with
   if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT, fullPage: true });
 });
 
+test('Início: a post with several cards asks if it is a combo (up to 5)', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await setup(page, { mine: { display_name: 'Luís', adult: true } });
+  const sent = [];
+  const json = (route, v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+  await page.route('**/rest/v1/profiles?**', (r) => json(r, [{ user_id: ME, display_name: 'Luís', default_visibility: 'friends' }]));
+  await page.route('**/rest/v1/rpc/feed_posts', (r) => json(r, [{ id: 'old', author: 'u2', name: 'Rodrigo', body: 'velho', card: 'LOR14-1', foil: false, visibility: 'friends', at: '2026-10-01T10:00:00Z', mine: false, likes: 0, comments_n: 0, comments: [] }]));
+  await page.route('**/rest/v1/rpc/create_post', (r) => { const b = JSON.parse(r.request().postData()); sent.push(b); return json(r, { id: 'p3', author: 'me', name: 'Luís', body: b.p_body, card: b.p_card, foil: b.p_foil, cards: b.p_cards, combo: b.p_combo, visibility: b.p_visibility, at: new Date().toISOString(), mine: true, likes: 0, comments_n: 0, comments: [] }); });
+  await page.goto(url('feed/'));
+  await expect(page.locator('[data-spost="old"] .pcard')).toHaveCount(1);   // older posts: one card, no combo
+  const add = async (q, id) => { await page.locator('#cmpCard').click(); await page.locator('#pkQ').fill(q); await page.locator(`#cardPicker [data-card="${id}"] [data-use]`).click(); };
+  await page.locator('#cmpText').fill('Combo do dia');
+  await add('rapunzel tower', 'LOR13-80');
+  await expect(page.locator('[data-testid="combo-ask"]')).toHaveCount(0);
+  await add('fru fru vip', 'LOR14-1');
+  await expect(page.locator('[data-testid="att-card"]')).toHaveCount(2);
+  await expect(page.locator('#cmpCard')).toContainText('2/5');
+  await page.locator('#cmpGo').click();   // must answer first
+  await expect(page.locator('#cmpMsg')).toContainText('combo');
+  expect(sent).toHaveLength(0);
+  await page.locator('[data-combo="1"]').click();
+  await page.locator('#cmpGo').click();
+  await expect(page.locator('[data-spost="p3"] [data-testid="combo-tag"]')).toBeVisible();
+  await expect(page.locator('[data-spost="p3"] .pcard')).toHaveCount(2);
+  if (process.env.SHOT2) await page.locator('[data-spost="p3"]').screenshot({ path: process.env.SHOT2 });
+  expect(sent[0]).toMatchObject({ p_body: 'Combo do dia', p_card: 'LOR13-80', p_combo: true, p_cards: [{ id: 'LOR13-80', foil: false }, { id: 'LOR14-1', foil: false }] });
+  // the 6th card can't be added
+  for (const q of ['rapunzel tower', 'fru fru vip', 'gurgi apple', 'stitch', 'mickey']) { await page.locator('#cmpCard').click(); await page.locator('#pkQ').fill(q); await page.locator('#cardPicker [data-use]:not([disabled])').first().click(); }
+  await expect(page.locator('[data-testid="att-card"]')).toHaveCount(5);
+  await expect(page.locator('#cmpCard')).toBeDisabled();
+  await page.locator('[data-testid="att-card"] [data-nocard]').first().click();
+  await expect(page.locator('#cmpCard')).toBeEnabled();
+});
+
+test('global search: people and communities from the top bar, also with "/"', async ({ page }) => {
+  await setup(page, { mine: { display_name: 'Luís' } });
+  const qs = [];
+  await page.route('**/rest/v1/rpc/search_all', (r) => { const b = JSON.parse(r.request().postData()); qs.push(b.p_q); return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+    people: [{ uid: 'u2', name: 'Rodrigo', handle: 'rodrigo', friend: true }, { uid: 'u3', name: 'Rodolfo <b>', handle: null, friend: false }],
+    communities: [{ slug: 'loja-do-ze', name: 'Loja do Zé', city: 'São Paulo', mine: true }] }) }); });
+  await page.goto(url('colecao/'));
+  await page.locator('#iwFind').click();
+  await page.locator('#iwFindQ').fill('r');
+  await expect(page.locator('#iwFindR')).toContainText('pelo menos 2');
+  await page.locator('#iwFindQ').fill('rod');
+  const res = page.locator('#iwFindR');
+  await expect(res.locator('a[href="../perfil/?u=rodrigo"]')).toContainText('Amigo');
+  await expect(res.locator('a[href="../feed/#amigos"]')).toContainText('Rodolfo <b>');   // text, never HTML
+  await expect(res.locator('a[href="../comunidades/?c=loja-do-ze"]')).toContainText('Você participa');
+  expect(qs).toEqual(['rod']);
+  if (process.env.SHOT3) { await page.screenshot({ path: process.env.SHOT3 + '-d.png' }); await page.setViewportSize({ width: 360, height: 760 }); await page.screenshot({ path: process.env.SHOT3 + '-m.png' }); }
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#iwFindQ')).toHaveCount(0);
+  await page.locator('body').click();
+  await page.keyboard.press('/');
+  await expect(page.locator('#iwFindQ')).toBeFocused();
+});
+
 test('notifications: a bell with the unread count; opening marks them read', async ({ page }) => {
   await setup(page, { mine: { display_name: 'Luís' } });
   let read = 0;
