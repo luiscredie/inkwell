@@ -180,6 +180,14 @@ window.INKWELL_CLOUD = (() => {
 .ev .time { font-weight: 800; color: var(--accent-ink); font-variant-numeric: tabular-nums; }
 .ev .name { font-weight: 700; font-size: 1.02rem; min-width: 0; overflow-wrap: anywhere; }
 .ev .meta { color: var(--text-2); font-size: var(--fs-small); display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.ev .where1 { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; font-size: var(--fs-small); }
+.ev .where1 .store { font-weight: 700; color: var(--text); }
+.ev .meta.sub { font-size: var(--fs-micro); }
+.ev .meta.sub a { color: inherit; }
+.ev .price { margin-left: auto; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ev .price.free { color: var(--win, #15803d); }
+.ev .when { font-size: var(--fs-micro); color: var(--text-2); text-transform: capitalize; }
+.ev-more { display: flex; justify-content: center; margin-top: var(--sp-4); }
 .ev .acts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 4px; }
 .ev .friends { font-size: var(--fs-small); color: var(--text-2); }
 .ev .friends b { color: var(--text); }
@@ -209,7 +217,7 @@ window.INKWELL_CLOUD = (() => {
   "use strict";
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  let lang = "pt"; try { lang = localStorage.getItem("inkwell-lang") || ((navigator.language || "pt").toLowerCase().startsWith("en") ? "en" : "pt"); } catch { /* */ }
+  let lang = "pt"; try { lang = localStorage.getItem("inkwell-lang") || "pt"; } catch { /* */ }
   const T = (pt, en) => (lang === "en" ? en : pt);
   const LOC = lang === "en" ? "en" : "pt-BR";
   const CLOUD = window.INKWELL_CLOUD, me = CLOUD?.user();
@@ -221,15 +229,43 @@ window.INKWELL_CLOUD = (() => {
   // ---------- state ----------
   const LOC_KEY = "inkwell-events-where";
   let where = null; try { where = JSON.parse(localStorage.getItem(LOC_KEY) || "null"); } catch { where = null; }
-  let km = where?.km || 100, view = "list", day = null, month = null, onlyMine = false, onlyFree = false, fmt = "";
+  let km = where?.km || 100, view = "list", day = null, month = null, onlyMine = false, onlyFree = false, fmt = "", order = "date", horizon = 14;
+  try { order = localStorage.getItem("inkwell-events-order") === "km" ? "km" : "date"; } catch { /* */ }
   let events = [], marks = new Map(), friends = {}, tables = [], loading = false, failed = false;
   const save = () => { try { localStorage.setItem(LOC_KEY, JSON.stringify({ ...where, km })); } catch { /* */ } };
   const dkey = (iso) => { const d = new Date(iso); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+  const dayShort = (iso) => new Date(iso).toLocaleDateString(LOC, { weekday: "short", day: "numeric", month: "short" });
   const hhmm = (iso) => new Date(iso).toLocaleTimeString(LOC, { hour: "2-digit", minute: "2-digit" });
   const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
   const dayTitle = (k) => cap(new Date(k + "T12:00:00").toLocaleDateString(LOC, { weekday: "long", day: "numeric", month: "long" }));
   const money = (cents, cur) => (cents ? (cents / 100).toLocaleString(LOC, { style: "currency", currency: cur || "BRL" }) : T("Grátis", "Free"));
 
+  // A typed place -> a point. Addresses, CEPs and districts: OpenStreetMap (Nominatim), called from this browser,
+  // light use only. Plain city names also work through our own function (Open-Meteo). The point is rounded to
+  // ~1 km and stays on this device. undefined = couldn't search; null = not found.
+  async function findPlace(q) {
+    const cep = q.replace(/\D/g, "").length === 8 && /^\s*\d{5}-?\d{3}\s*$/.test(q) ? q.replace(/\D/g, "").replace(/^(\d{5})(\d{3})$/, "$1-$2") : null;
+    const nominatim = async (params) => {
+      const u = new URL("https://nominatim.openstreetmap.org/search");
+      u.search = new URLSearchParams({ format: "jsonv2", limit: "1", addressdetails: "1", countrycodes: "br", "accept-language": "pt-BR", ...params });
+      const r = await fetch(u); if (!r.ok) throw new Error(r.status);
+      return (await r.json())?.[0] || null;
+    };
+    let osm = null, failed = 0;
+    try {
+      osm = await nominatim(cep ? { postalcode: cep } : { q });
+      if (!osm && cep) {   // many CEPs aren't in OpenStreetMap: ViaCEP names the district, then look that up
+        const v = await (await fetch(`https://viacep.com.br/ws/${cep.replace("-", "")}/json/`)).json().catch(() => null);
+        if (v && !v.erro) { q = [v.bairro, v.localidade, v.uf].filter(Boolean).join(", "); osm = await nominatim({ q }); }
+      }
+    } catch { failed++; }
+    if (osm) {
+      const a = osm.address || {}, area = a.suburb || a.neighbourhood || a.city_district || a.quarter || "", city = a.city || a.town || a.village || a.municipality || "";
+      return { lat: +(+osm.lat).toFixed(2), lng: +(+osm.lon).toFixed(2), label: [area, city].filter(Boolean).join(", ") || osm.name || q };
+    }
+    try { const g = await CLOUD.fn("rph-events", { geocode: q }); return g ? { ...g, lat: +(+g.lat).toFixed(2), lng: +(+g.lng).toFixed(2) } : null; } catch { failed++; }
+    return failed === 2 ? undefined : null;
+  }
   async function load() {
     if (!where) return;
     loading = true; failed = false; draw();
@@ -308,9 +344,10 @@ window.INKWELL_CLOUD = (() => {
     const going = fr.filter((f) => f.status === "going"), maybe = fr.filter((f) => f.status === "maybe");
     const spots = e.capacity ? `${e.registered ?? e.going ?? 0}/${e.capacity} ${T("inscritos", "registered")}` : "";
     return `<article class="ev${st ? " mine" : ""}${clash ? " conflict" : ""}" data-ev="${esc(e.key)}">
-      <div class="top"><span class="time">${esc(hhmm(e.start))}</span><span class="name">${esc(e.name)}</span>${e.kind === "table" ? `<span class="tag info">${T("Mesa da comunidade", "Community table")}</span>` : ""}${clash ? `<span class="tag late">${T("Mesmo dia", "Same day")}</span>` : ""}</div>
-      <div class="meta">${e.store?.name ? `<span>${esc(e.store.name)}</span>` : ""}${e.address ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.address)}" target="_blank" rel="noopener">${esc(e.address)}</a>` : ""}
-        ${e.format ? `<span>${esc(e.format)}</span>` : ""}${e.kind === "rph" && !e.gone ? `<span>${esc(money(e.cost_cents, e.currency))}</span>` : ""}${spots ? `<span>${esc(spots)}</span>` : ""}${e.km != null ? `<span>${e.km} km</span>` : ""}</div>
+      <div class="top"><span class="time">${esc(hhmm(e.start))}</span><span class="name">${esc(e.name)}</span>${e.kind === "table" ? `<span class="tag info">${T("Mesa da comunidade", "Community table")}</span>` : ""}${clash ? `<span class="tag late">${T("Mesmo dia", "Same day")}</span>` : ""}${e.kind === "rph" && !e.gone ? `<span class="price${e.cost_cents ? "" : " free"}" data-testid="price">${esc(money(e.cost_cents, e.currency))}</span>` : ""}</div>
+      ${order === "km" && view === "list" ? `<div class="when">${esc(dayShort(e.start))}</div>` : ""}
+      <div class="where1">${e.store?.name ? `<span class="store">${esc(e.store.name)}</span>` : ""}${e.format ? `<span class="muted">${esc(e.format)}</span>` : ""}</div>
+      ${e.address || spots || e.km != null ? `<div class="meta sub">${e.km != null ? `<span>${e.km} km</span>` : ""}${e.address ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.address)}" target="_blank" rel="noopener">${esc(e.address)}</a>` : ""}${spots ? `<span>${esc(spots)}</span>` : ""}</div>` : ""}
       ${going.length || maybe.length ? `<div class="friends">${going.length ? `<b>${going.map((f) => esc(f.name)).join(", ")}</b> ${T(going.length === 1 ? "vai" : "vão", "going")}` : ""}${going.length && maybe.length ? " · " : ""}${maybe.length ? `${maybe.map((f) => esc(f.name)).join(", ")} ${T("talvez", "maybe")}` : ""}</div>` : ""}
       <div class="acts">
         <button type="button" class="btn small ${st === "going" ? "primary" : ""}" data-act="going" aria-pressed="${st === "going"}">${T("Vou", "Going")}</button>
@@ -336,22 +373,30 @@ window.INKWELL_CLOUD = (() => {
     const app = $("app");
     const locBox = `<section class="ev-loc" data-testid="where"><div class="where">${where ? `${esc(where.label || T("Minha localização", "My location"))}<small>${T(`Até ${km} km`, `Within ${km} km`)}</small>` : T("Onde você joga?", "Where do you play?")}</div>
       <button type="button" class="btn small" id="geo"><i class="ic i-globe"></i>${T("Usar minha localização", "Use my location")}</button>
-      <form id="cityF"><input id="city" type="search" placeholder="${T("ou digite a cidade", "or type a city")}" aria-label="${T("Cidade", "City")}" autocomplete="address-level2"><button type="submit" class="btn small">${T("Buscar", "Search")}</button></form>
+      <form id="cityF"><input id="city" type="search" placeholder="${T("ou digite cidade, bairro, endereço ou CEP", "or type a city, district, address or postcode")}" aria-label="${T("Cidade, bairro, endereço ou CEP", "City, district, address or postcode")}"><button type="submit" class="btn small">${T("Buscar", "Search")}</button></form>
       <label class="small">${T("Raio", "Radius")} <select id="km" class="inline">${[25, 50, 100, 200, 300].map((k) => `<option value="${k}" ${k === km ? "selected" : ""}>${k} km</option>`).join("")}</select></label></section>`;
     if (!where) { app.innerHTML = locBox + `<div class="empty"><img src="../ui/assets/empty/search.svg" alt=""><b>${T("Escolha onde procurar", "Choose where to look")}</b><p>${T("Use sua localização ou digite sua cidade. Ela fica só neste aparelho.", "Use your location or type your city. It stays on this device.")}</p></div>`; wire(); return; }
     const list = all(), clash = conflicts(), clashDays = new Set(clash.map(([k]) => k));
     const formats = [...new Set(events.map((e) => e.format).filter(Boolean))].sort();
-    const shown = view === "cal" && day ? list.filter((e) => dkey(e.start) === day) : list;
-    const groups = new Map(); for (const e of shown) { const k = dkey(e.start); groups.set(k, (groups.get(k) || []).concat(e)); }
+    // the list shows the next two weeks first (São Paulo alone has 200+ events in four months); "Meus" shows all
+    const until = Date.now() + horizon * 864e5, cut = view === "list" && !onlyMine ? list.filter((e) => new Date(e.start).getTime() <= until) : list;
+    const hidden = list.length - cut.length;
+    let shown = view === "cal" && day ? list.filter((e) => dkey(e.start) === day) : cut;
+    if (view === "list" && order === "km") shown = shown.slice().sort((a, b) => (a.km ?? 1e9) - (b.km ?? 1e9) || String(a.start).localeCompare(String(b.start)));
+    const groups = new Map();
+    if (view === "list" && order === "km") groups.set("", shown);
+    else for (const e of shown) { const k = dkey(e.start); groups.set(k, (groups.get(k) || []).concat(e)); }
     app.innerHTML = locBox
       + (clash.length ? `<div class="ev-warn" role="alert" data-testid="clash"><i class="ic i-alert"></i><div>${clash.map(([k, l]) => `<div><b>${esc(dayTitle(k))}:</b> ${T("você marcou \"Vou\" em", "you said Going to")} ${l.length} ${T("eventos", "events")} (${l.map((e) => esc(e.name)).join(" · ")})</div>`).join("")}</div></div>` : "")
       + `<div class="ev-bar"><div class="seg" role="group" aria-label="${T("Ver", "View")}"><button type="button" data-view="list" aria-pressed="${view === "list"}">${T("Lista", "List")}</button><button type="button" data-view="cal" aria-pressed="${view === "cal"}">${T("Calendário", "Calendar")}</button></div>
         <button type="button" class="chipbtn" id="mine" aria-pressed="${onlyMine}">${T("Meus eventos", "My events")}</button><button type="button" class="chipbtn" id="free" aria-pressed="${onlyFree}">${T("Grátis", "Free")}</button>
         ${formats.length > 1 ? `<select id="fmt" class="inline" aria-label="${T("Formato", "Format")}"><option value="">${T("Todos os formatos", "All formats")}</option>${formats.map((f) => `<option ${f === fmt ? "selected" : ""}>${esc(f)}</option>`).join("")}</select>` : ""}
+        ${view === "list" ? `<label class="small">${T("Ordenar", "Sort")} <select id="order" class="inline" data-testid="order"><option value="date" ${order === "date" ? "selected" : ""}>${T("por data", "by date")}</option><option value="km" ${order === "km" ? "selected" : ""}>${T("por distância", "by distance")}</option></select></label>` : ""}
         <span class="grow"></span><span class="small muted">${loading ? T("Carregando…", "Loading…") : esc(T(`${list.length} eventos`, `${list.length} events`))}</span></div>`
       + (view === "cal" ? calHtml(list) + (day ? `<div class="row between" style="margin-top:var(--sp-3)"><h2 style="margin:0">${esc(dayTitle(day))}</h2><button type="button" class="btn small ghost" id="allDays">${T("Ver todos os dias", "All days")}</button></div>` : "") : "")
       + (failed ? `<div class="empty"><img src="../ui/assets/empty/error.svg" alt=""><b>${T("Não conseguimos falar com o Play Hub agora.", "Couldn't reach the Play Hub now.")}</b><button type="button" class="btn" id="retry">${T("Tentar de novo", "Try again")}</button></div>`
-        : shown.length ? [...groups.entries()].map(([k, l]) => `${view === "cal" && day ? "" : `<h2 class="ev-day">${esc(dayTitle(k))}</h2>`}<div class="ev-list">${l.map((e) => evHtml(e, clashDays.has(k) && statusOf(e) === "going")).join("")}</div>`).join("")
+        : shown.length ? [...groups.entries()].map(([k, l]) => `${(view === "cal" && day) || !k ? "" : `<h2 class="ev-day">${esc(dayTitle(k))}</h2>`}<div class="ev-list">${l.map((e) => evHtml(e, clashDays.has(dkey(e.start)) && statusOf(e) === "going")).join("")}</div>`).join("")
+          + (view === "list" && hidden > 0 ? `<div class="ev-more"><button type="button" class="btn" id="more" data-testid="more">${esc(T(`Ver mais ${hidden} eventos (próximas semanas)`, `See ${hidden} more events (later weeks)`))}</button></div>` : "")
         : loading ? `<span class="skel" style="height:120px;border-radius:var(--r-lg)"></span>` : `<div class="empty plain"><b>${T("Nenhum evento encontrado.", "No events found.")}</b><p>${T("Aumente o raio ou tire os filtros.", "Widen the radius or clear the filters.")}</p></div>`)
       + `<p class="small faint" style="margin-top:var(--sp-6)">${T("Eventos do Disney Lorcana Play Network (Ravensburger). A inscrição e o pagamento são feitos no Play Hub; aqui você só marca para se organizar.", "Events from the Disney Lorcana Play Network (Ravensburger). Registration and payment happen on the Play Hub; here you only mark them to plan.")}</p>`;
     wire();
@@ -359,16 +404,21 @@ window.INKWELL_CLOUD = (() => {
   function wire() {
     $("geo").onclick = () => {
       if (!navigator.geolocation) { toast(T("Seu navegador não informa a localização.", "Location isn't available."), true); return; }
-      navigator.geolocation.getCurrentPosition((p) => { where = { lat: p.coords.latitude, lng: p.coords.longitude, label: T("Perto de mim", "Near me") }; save(); load(); }, () => toast(T("Não foi possível pegar sua localização. Digite a cidade.", "Couldn't get your location. Type your city."), true), { maximumAge: 6e5, timeout: 1e4 });
+      navigator.geolocation.getCurrentPosition((p) => { where = { lat: +p.coords.latitude.toFixed(2), lng: +p.coords.longitude.toFixed(2), label: T("Perto de mim", "Near me") }; save(); load(); }, () => toast(T("Não foi possível pegar sua localização. Digite a cidade.", "Couldn't get your location. Type your city."), true), { maximumAge: 6e5, timeout: 1e4 });
     };
     $("cityF").onsubmit = async (e) => { e.preventDefault(); const q = $("city").value.trim(); if (q.length < 2) return;
-      try { const g = await CLOUD.fn("rph-events", { geocode: q }); if (!g) { toast(T("Cidade não encontrada.", "City not found."), true); return; } where = g; save(); load(); } catch { toast(T("Não foi possível buscar a cidade.", "Couldn't look up the city."), true); } };
+      const g = await findPlace(q);
+      if (g === undefined) { toast(T("Não foi possível buscar agora. Tente de novo.", "Couldn't search now. Try again."), true); return; }
+      if (!g) { toast(T("Não achei esse lugar. Tente o bairro ou a cidade.", "Couldn't find that place. Try the district or city."), true); return; }
+      where = g; save(); load(); };
     $("km").onchange = (e) => { km = +e.target.value; save(); load(); };
     document.querySelectorAll("[data-view]").forEach((b) => b.onclick = () => { view = b.dataset.view; day = null; draw(); });
     $("mine")?.addEventListener("click", () => { onlyMine = !onlyMine; draw(); });
     $("free")?.addEventListener("click", () => { onlyFree = !onlyFree; draw(); });
     $("fmt")?.addEventListener("change", (e) => { fmt = e.target.value; draw(); });
     $("retry")?.addEventListener("click", load);
+    $("more")?.addEventListener("click", () => { horizon += 30; draw(); });
+    $("order")?.addEventListener("change", (e) => { order = e.target.value; try { localStorage.setItem("inkwell-events-order", order); } catch { /* */ } draw(); });
     $("allDays")?.addEventListener("click", () => { day = null; draw(); });
     $("mPrev")?.addEventListener("click", () => { const b = month || new Date(new Date().getFullYear(), new Date().getMonth(), 1); month = new Date(b.getFullYear(), b.getMonth() - 1, 1); draw(); });
     $("mNext")?.addEventListener("click", () => { const b = month || new Date(new Date().getFullYear(), new Date().getMonth(), 1); month = new Date(b.getFullYear(), b.getMonth() + 1, 1); draw(); });
@@ -384,7 +434,13 @@ window.INKWELL_CLOUD = (() => {
       else if (a === "share") share(e);
     });
   }
-  draw(); load();
+  // ?onde=Campinas (from the Início box): look the place up, then forget the parameter
+  const onde = new URLSearchParams(location.search).get("onde");
+  if (onde) {
+    history.replaceState(null, "", location.pathname + location.hash);
+    draw();
+    findPlace(onde.slice(0, 120)).then((g) => { if (g) { where = g; save(); } else toast(T("Não achei esse lugar. Tente o bairro ou a cidade.", "Couldn't find that place. Try the district or city."), true); load(); draw(); });
+  } else { draw(); load(); }
 })();
 </script>
 
@@ -398,7 +454,7 @@ window.INKWELL_CLOUD = (() => {
 (() => {
   "use strict";
   let lang = "pt";
-  try { lang = localStorage.getItem("inkwell-lang") || ((navigator.language || "pt").toLowerCase().startsWith("en") ? "en" : "pt"); } catch { /* */ }
+  try { lang = localStorage.getItem("inkwell-lang") || "pt"; } catch { /* */ }
   const pt = lang === "pt";
   const T = (p, e) => (pt ? p : e);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));

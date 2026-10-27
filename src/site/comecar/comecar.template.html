@@ -54,7 +54,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   if (!FLAGS.guestProfile) { location.replace("../feed/"); return; }
 
   let lang = "pt";
-  try { lang = localStorage.getItem("inkwell-lang") || ((navigator.language || "pt").toLowerCase().startsWith("en") ? "en" : "pt"); } catch { /* */ }
+  try { lang = localStorage.getItem("inkwell-lang") || "pt"; } catch { /* */ }
   // Texts: handoff spec/03-textos.md (English keys, Portuguese in PT)
   const PT = {
     "Guest mode": "Modo visitante", "Unsaved changes": "Alterações ainda não salvas", "Create an account to save your profile and continue later.": "Crie sua conta para salvar seu perfil e continuar depois.",

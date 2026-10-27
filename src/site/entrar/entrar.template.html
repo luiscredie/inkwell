@@ -28,7 +28,7 @@
 // Used once the Supabase e-mail templates point here (SUPABASE_SETUP.md); until then, nothing links to this page.
 (() => {
   const CLOUD = window.INKWELL_CLOUD, $ = (id) => document.getElementById(id), app = $("app");
-  let lang = "pt"; try { lang = localStorage.getItem("inkwell-lang") || ((navigator.language || "pt").toLowerCase().startsWith("en") ? "en" : "pt"); } catch { /* */ }
+  let lang = "pt"; try { lang = localStorage.getItem("inkwell-lang") || "pt"; } catch { /* */ }
   const T = (pt, en) => (lang === "pt" ? pt : en);
   const q = new URLSearchParams(location.search);
   const hash = (q.get("h") || q.get("token_hash") || "").trim();

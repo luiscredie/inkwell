@@ -201,7 +201,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   if (!FLAGS.guestProfile) { location.replace("../feed/"); return; }
 
   let lang = "pt";
-  try { lang = localStorage.getItem("inkwell-lang") || ((navigator.language || "pt").toLowerCase().startsWith("en") ? "en" : "pt"); } catch { /* */ }
+  try { lang = localStorage.getItem("inkwell-lang") || "pt"; } catch { /* */ }
   // Texts: handoff spec/03-textos.md (English keys, Portuguese in PT)
   const PT = {
     "Guest mode": "Modo visitante", "Unsaved changes": "Alterações ainda não salvas", "Create an account to save your profile and continue later.": "Crie sua conta para salvar seu perfil e continuar depois.",
@@ -683,7 +683,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
 (() => {
   "use strict";
   let lang = "pt";
-  try { lang = localStorage.getItem("inkwell-lang") || ((navigator.language || "pt").toLowerCase().startsWith("en") ? "en" : "pt"); } catch { /* */ }
+  try { lang = localStorage.getItem("inkwell-lang") || "pt"; } catch { /* */ }
   const pt = lang === "pt";
   const T = (p, e) => (pt ? p : e);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));

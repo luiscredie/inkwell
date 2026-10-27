@@ -190,7 +190,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   let lang = "pt";
-  try { lang = localStorage.getItem("inkwell-lang") || ((navigator.language || "pt").toLowerCase().startsWith("en") ? "en" : "pt"); } catch { /* */ }
+  try { lang = localStorage.getItem("inkwell-lang") || "pt"; } catch { /* */ }
   const PT = {
     "Prices": "Preços", "Collection": "Coleção", "Loading…": "Carregando…", "Liga Lorcana prices, {d}": "Preços da Liga Lorcana de {d}",
     "These prices are from {d}, {n} days ago. They are refreshed by the price agent on Luis's computer.": "Estes preços são de {d}, há {n} dias. Eles são atualizados pelo agente de preços que roda no computador do Luis.",
@@ -464,7 +464,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
 (() => {
   "use strict";
   let lang = "pt";
-  try { lang = localStorage.getItem("inkwell-lang") || ((navigator.language || "pt").toLowerCase().startsWith("en") ? "en" : "pt"); } catch { /* */ }
+  try { lang = localStorage.getItem("inkwell-lang") || "pt"; } catch { /* */ }
   const pt = lang === "pt";
   const T = (p, e) => (pt ? p : e);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));

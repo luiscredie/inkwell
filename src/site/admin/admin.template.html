@@ -34,7 +34,7 @@
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   let lang = "pt";
-  try { lang = localStorage.getItem("inkwell-lang") || ((navigator.language || "pt").toLowerCase().startsWith("en") ? "en" : "pt"); } catch { /* */ }
+  try { lang = localStorage.getItem("inkwell-lang") || "pt"; } catch { /* */ }
   const PT = {
     "Members, reports and example accounts.": "Membros, denúncias e contas de exemplo.", "Members": "Membros", "Reports": "Denúncias", "Loading…": "Carregando…",
     "Sign in": "Entrar", "Sign in with an admin account.": "Entre com uma conta de administrador.", "Not allowed": "Sem permissão", "This page is only for administrators.": "Esta página é só para administradores.",

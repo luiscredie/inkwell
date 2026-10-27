@@ -79,6 +79,12 @@ body.out .page.split.home3 { display: block; }
 .comm-list a:hover { background: var(--hover-tint); }
 .comm-list a span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* posts (supabase/social.sql) */
+.ev-find { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+.ev-find input { flex: 1 1 220px; min-width: 0; }
+.ev-nexts { display: grid; gap: var(--sp-2); }
+.ev-next { display: grid; gap: 2px; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); background: var(--surface-1); border: 1px solid var(--line); color: inherit; text-decoration: none; }
+.ev-next:hover { border-color: var(--line-strong); }
+.ev-next .when { font-size: var(--fs-micro); font-weight: 700; color: var(--accent-ink); text-transform: capitalize; }
 .compose { display: grid; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-radius: var(--r-lg); background: var(--surface-1); border: 1px solid var(--line); box-shadow: var(--e1); margin-bottom: var(--sp-4); }
 .compose textarea { min-height: 64px; resize: vertical; }
 .compose .bar { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; }
@@ -170,7 +176,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   let lang = "pt";
-  try { lang = localStorage.getItem("inkwell-lang") || ((navigator.language || "pt").toLowerCase().startsWith("en") ? "en" : "pt"); } catch { /* */ }
+  try { lang = localStorage.getItem("inkwell-lang") || "pt"; } catch { /* */ }
   const PT = {
     "Home": "Início", "Coach Review": "Coach Review", "Loans and trades": "Empréstimos e trocas", "Lore Counter": "Contador", "Inkwell": "Inkwell",
     "Sign in": "Entrar", "Use your Inkwell account email.": "Use o e-mail da sua conta Inkwell.", "Email": "E-mail", "Send code": "Enviar código",
@@ -244,6 +250,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "Choose one of your decks": "Escolha um dos seus decks", "Tables & Leagues": "Mesas & Ligas", "No tables coming up in your communities.": "Nenhuma mesa marcada nas suas comunidades.",
     "Is it a combo?": "É um combo?", "Yes, a combo": "Sim, é combo", "No, just cards": "Não, só cartas", "Combo": "Combo", "Up to 5 cards per post.": "Até 5 cartas por post.",
     "Tell us if these cards are a combo.": "Diga se essas cartas são um combo.", "Add a card": "Mais uma carta",
+    "Find your next table": "Encontre sua próxima mesa", "See all events": "Ver todos os eventos", "Official Lorcana leagues and tournaments near you, from the Play Hub. No account needed.": "Ligas e torneios oficiais de Lorcana perto de você, do Play Hub. Sem precisar de conta.",
+    "Your city, district or CEP": "Sua cidade, bairro ou CEP", "See events": "Ver eventos", "Next near {place}": "Próximos perto de {place}", "you": "você", "Free": "Grátis",
+    "Official events near you": "Eventos oficiais perto de você", "Play Hub near {place}": "Play Hub perto de {place}",
     "Going": "Vou", "Maybe": "Talvez", "{n} going": "{n} vão", "1 going": "1 vai", "Full": "Lotado", "See community": "Ver comunidade", "foil": "foil",
     "Invite": "Convidar", "people": "pessoas", "Opponents' names are never shown to others. Coaches see the games shared with them. You can change it game by game in the review.": "O nome dos adversários nunca aparece para os outros. Coaches veem os jogos compartilhados com eles. Dá para mudar jogo a jogo na revisão.",
   };
@@ -567,6 +576,26 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   }
   // ---------- Mesas & Ligas: next tables in my communities ----------
   const evWhen = (iso) => new Date(iso).toLocaleString(LOC, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  // ---------- Eventos (Play Hub) on Início: a place to type where you play, and the next events if we know it ----------
+  const savedWhere = () => { try { const w = JSON.parse(localStorage.getItem("inkwell-events-where") || "null"); return w && Number.isFinite(+w.lat) ? w : null; } catch { return null; } };
+  const evDay = (iso) => new Date(iso).toLocaleString(LOC, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  const evPrice = (e) => (e.cost_cents ? (e.cost_cents / 100).toLocaleString(LOC, { style: "currency", currency: e.currency || "BRL" }) : Tx("Free"));
+  const nextEventsHtml = (list) => list.map((e) => `<a class="ev-next" href="${esc(e.url)}" target="_blank" rel="noopener"><span class="when">${esc(evDay(e.start))}</span><b>${esc(e.name)}</b><span class="small muted">${esc([e.store?.name, e.km != null ? `${e.km} km` : "", evPrice(e)].filter(Boolean).join(" · "))}</span></a>`).join("");
+  async function nextEvents(n) {
+    const w = savedWhere(); if (!w || !window.INKWELL_CLOUD?.fn) return null;
+    try { const d = await window.INKWELL_CLOUD.fn("rph-events", { lat: (+w.lat).toFixed(4), lng: (+w.lng).toFixed(4), km: w.km || 100 }); return { where: w, list: (d.events || []).slice(0, n) }; } catch { return null; }
+  }
+  function findEventsHtml() {
+    return `<section id="landEvents" data-testid="home-find-events"><div class="group-head"><h2>${Tx("Find your next table")}</h2><a class="small" href="../eventos/">${Tx("See all events")}</a></div>
+      <p class="muted" style="margin:0 0 var(--sp-3)">${Tx("Official Lorcana leagues and tournaments near you, from the Play Hub. No account needed.")}</p>
+      <form id="evFind" class="ev-find"><input id="evFindQ" type="search" placeholder="${esc(Tx("Your city, district or CEP"))}" aria-label="${esc(Tx("Your city, district or CEP"))}" value="${esc(savedWhere()?.label || "")}"><button type="submit" class="btn primary">${Tx("See events")}</button></form>
+      <div id="evNext" class="ev-nexts"></div></section>`;
+  }
+  function wireFindEvents() {
+    $("evFind")?.addEventListener("submit", (e) => { e.preventDefault(); const q = $("evFindQ").value.trim();
+      location.href = q && q !== savedWhere()?.label ? `../eventos/?onde=${encodeURIComponent(q)}` : "../eventos/"; });
+    nextEvents(3).then((r) => { if (r?.list.length && $("evNext")) $("evNext").innerHTML = `<p class="small muted" style="margin:var(--sp-3) 0 var(--sp-2)">${esc(Tx("Next near {place}", { place: r.where.label || Tx("you") }))}</p>${nextEventsHtml(r.list)}`; });
+  }
   async function renderEvents() {
     const el = $("events"); if (!el || !me) return;
     let list = null; try { list = await rpcS("my_events"); } catch { el.innerHTML = ""; return; }
@@ -574,7 +603,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       ${(list || []).length ? list.map((e) => `<div class="ev" data-ev="${esc(e.id)}"><span class="when">${esc(evWhen(e.starts_at))}</span><b>${esc(e.title)}</b>
         <span class="small muted">${esc([e.community, e.place].filter(Boolean).join(" · "))} · ${esc(e.going === 1 ? Tx("1 going") : Tx("{n} going", { n: e.going }))}${e.capacity ? `/${e.capacity}` : ""}</span>
         <div class="row"><button type="button" class="btn small ${e.me === "going" ? "primary" : ""}" data-rsvp="${esc(e.id)}:going" aria-pressed="${e.me === "going"}">${Tx("Going")}</button><button type="button" class="btn small ghost" data-rsvp="${esc(e.id)}:maybe" aria-pressed="${e.me === "maybe"}">${Tx("Maybe")}</button><a class="small" href="../comunidades/?c=${enc(e.slug)}#mesas">${Tx("See community")}</a></div></div>`).join("")
-        : `<p class="small muted" style="margin:0">${Tx("No tables coming up in your communities.")}</p>`}</section>`;
+        : `<p class="small muted" style="margin:0">${Tx("No tables coming up in your communities.")}</p>`}
+      <div id="evNearMe" data-testid="home-near-events"><a class="small" href="../eventos/">${Tx("Official events near you")} →</a></div></section>`;
+    nextEvents(3).then((r) => { const box = $("evNearMe"); if (box && r?.list.length) box.innerHTML = `<h3 class="small" style="margin:var(--sp-2) 0 0">${esc(Tx("Play Hub near {place}", { place: r.where.label || Tx("you") }))}</h3><div class="ev-nexts">${nextEventsHtml(r.list)}</div><a class="small" href="../eventos/">${Tx("See all events")} →</a>`; });
     el.querySelectorAll("[data-rsvp]").forEach((b) => b.onclick = async () => {
       const [id, st] = b.dataset.rsvp.split(":"), cur = (list || []).find((x) => x.id === id);
       try { await rpcS("rsvp_event", { p_event: id, p_status: cur?.me === st ? null : st }); } catch { /* full or not allowed */ }
@@ -670,10 +701,6 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
             <div><p class="iw-name">${Tx("Rafa (example)")}</p><span class="iw-inkdots" aria-label="${esc(lang === "pt" ? "Âmbar · Ametista" : "Amber · Amethyst")}"><i style="background:${INK_HEX.Amber}"></i><i style="background:${INK_HEX.Amethyst}"></i></span></div></div>
           <div class="iw-showcase">${["LOR13-27", "LOR12-195", "LOR10-17"].map(demoCard).join("")}</div>
           <blockquote class="iw-quote"><span class="iw-sample-label" style="font-style:normal;margin-bottom:6px">${Tx("Example recado")}</span><br>“${Tx("Thursday is league night. Who's in?")}”</blockquote></div></section>
-      <section class="iw-section" aria-labelledby="bpT"><h2 class="iw-h2" id="bpT">${Tx("Build your profile")}</h2>
-        <div class="iw-grid3" style="margin-top:var(--sp-4)">${[["Your name", "How you want to appear. Your real name and e-mail never show."], ["Up to two inks", "The colours you play, from the six real inks."], ["Three favourite cards", "Any card from the whole catalogue, in the exact printing and finish."]]
-          .map(([t, d], i) => `<div class="iw-tile"><span class="iw-eyebrow">${i + 1}</span><h3 class="iw-h3">${Tx(t)}</h3><p class="iw-muted" style="margin:0">${Tx(d)}</p></div>`).join("")}</div>
-        <p style="margin:var(--sp-4) 0 0" class="iw-muted">${Tx("Try it without an account. Create one only when you want to keep it.")} <a class="iw-link" href="../comecar/">${Tx("Start my Inkwell")}</a></p></section>
     </div>`;
     $("feed").style.marginTop = "0";
     $("feed").innerHTML = `<div class="land" data-testid="public-home">
@@ -685,15 +712,18 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
         <p class="small faint" style="margin:var(--sp-3) 0 0">${Tx("Use your e-mail. We e-mail you a code, no password.")}</p></section>
       <section id="landEx" hidden><div class="group-head"><h2>${Tx("Meet the people")}</h2><span class="tag accent">${Tx("Examples · fictional profiles")}</span></div><div class="land-ex" id="exList"></div></section>
       <section id="landComm" hidden><div class="group-head"><h2>${Tx("Communities")}</h2><a class="small" href="../comunidades/">${Tx("See all")}</a></div><div class="land-ex" id="commList"></div></section>
+      ${findEventsHtml()}
       <section><div class="group-head"><h2>${Tx("What you can do")}</h2></div>
         <div class="land-feats">${feats.map(([ic, href, t, d]) => `<a class="land-feat" href="${href}"><i class="ic i-${ic}"></i><b>${Tx(t)}</b><span>${Tx(d)}</span></a>`).join("")}</div></section>
       <section><div class="group-head"><h2>${Tx("How it works")}</h2></div>
         <ol class="land-steps" style="padding:0;margin:0" data-testid="how-it-works">${GUEST
           ? `<li><b>${Tx("Make it yours, no account")}</b>${Tx("Your name, two inks and three favourite cards.")}</li><li><b>${Tx("Create your account to save")}</b>${Tx("A code by e-mail, no password. What you did stays.")}</li><li><b>${Tx("Your profile, saved")}</b>${Tx("Private until you decide to make it public.")}</li>`
-          : `<li><b>${Tx("Sign in with your e-mail")}</b>${Tx("A code by e-mail, no password.")}</li><li><b>${Tx("Make your profile")}</b>${Tx("Private until you decide to make it public.")}</li><li><b>${Tx("Invite your friends")}</b>${Tx("Whoever signs in through your link gets your friend request.")}</li>`}</ol></section>
+          : `<li><b>${Tx("Sign in with your e-mail")}</b>${Tx("A code by e-mail, no password.")}</li><li><b>${Tx("Make your profile")}</b>${Tx("Private until you decide to make it public.")}</li><li><b>${Tx("Invite your friends")}</b>${Tx("Whoever signs in through your link gets your friend request.")}</li>`}</ol>
+        ${GUEST ? `<p style="margin:var(--sp-4) 0 0" class="iw-muted">${Tx("Try it without an account. Create one only when you want to keep it.")} <a class="iw-link" href="../comecar/">${Tx("Start my Inkwell")}</a></p>` : ""}</section>
 </div>`;
     $("signIn").onclick = () => window.INKWELL_SIGNIN?.();
     $("signIn2")?.addEventListener("click", () => window.INKWELL_SIGNIN?.());
+    wireFindEvents();
     const heroArt = img("LOR14-2"); if (heroArt) $("landHero").style.setProperty("--hero-art", `url('${heroArt}')`);
     const cfg = window.INKWELL_CLOUD_CONFIG;
     fetch(`${cfg.url}/rest/v1/rpc/example_profiles`, { method: "POST", headers: { apikey: cfg.key, "Content-Type": "application/json" }, body: "{}" })
