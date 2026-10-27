@@ -423,6 +423,9 @@ window.INKWELL_CLOUD = (() => {
   let theme = "dia"; try { theme = localStorage.getItem("inkwell-theme") === "noite" ? "noite" : "dia"; } catch { /* */ }
   const cur = (k) => (k === page ? ' aria-current="page"' : "");
 
+  if (!document.querySelector('link[rel="manifest"]')) {
+    document.head.insertAdjacentHTML("beforeend", `<link rel="manifest" href="../inkwell.webmanifest"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Inkwell">`);
+  }
   const bar = document.createElement("header");
   bar.className = "appbar";
   bar.innerHTML = `<div class="appbar-in"><a class="brand" href="../feed/"><img src="../ink/logo-coin.png" alt="" width="32" height="32">Inkwell</a>
@@ -728,9 +731,43 @@ window.INKWELL_CLOUD = (() => {
     const showBell = () => { const b = $("iwBell"), c = $("iwBellN"); if (!b || !notes) return; b.hidden = false; const n = notes.filter((x) => x.unread).length; c.hidden = !n; c.textContent = n > 9 ? "9+" : String(n);
       b.setAttribute("aria-label", n ? T(`Notificações · ${n} novas`, `Notifications · ${n} new`) : T("Notificações", "Notifications")); };
     CLOUD.api("rpc/my_notifications", { method: "POST", body: {} }).then((r) => { notes = r || []; showBell(); }).catch(() => {});   // not there yet: no bell
+    // Push on this device (supabase/push.sql + functions/push-send; the worker is site/push/sw.js)
+    const VAPID = "BLvoLCTQgS3n-1MGGoQXBZ3OO50n_-mWuhLqRbWFVK38DvLNVEK3IOO_CCSMxDkq2AoRCiInC9R4mrEM23pWQdk";
+    const pushOk = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window && (location.protocol === "https:" || location.hostname === "localhost");
+    const iosBrowser = /iP(hone|ad|od)/.test(navigator.userAgent) && !(navigator.standalone || matchMedia("(display-mode: standalone)").matches);
+    const b64 = (s) => { const p = "=".repeat((4 - (s.length % 4)) % 4), raw = atob((s + p).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from(raw, (c) => c.charCodeAt(0)); };
+    const pushReg = () => navigator.serviceWorker.register("../push/sw.js", { scope: "../push/" });
+    async function drawPush() {
+      const el = $("iwPush"); if (!el) return;
+      if (iosBrowser) { el.innerHTML = `<p class="small muted">${T("Para receber avisos no iPhone: toque em Compartilhar → Adicionar à Tela de Início, abra o Inkwell por lá e ative aqui.", "To get notices on iPhone: Share → Add to Home Screen, open Inkwell from there and turn them on here.")}</p>`; return; }
+      if (!pushOk) { el.innerHTML = `<p class="small muted">${T("Este navegador não recebe avisos.", "This browser can't receive notices.")}</p>`; return; }
+      if (Notification.permission === "denied") { el.innerHTML = `<p class="small muted">${T("Os avisos estão bloqueados nas configurações do navegador para este site.", "Notices are blocked for this site in the browser settings.")}</p>`; return; }
+      let sub = null; try { sub = await (await navigator.serviceWorker.getRegistration("../push/"))?.pushManager.getSubscription(); } catch { sub = null; }
+      el.innerHTML = sub ? `<span class="small"><i class="ic i-bell"></i> ${T("Avisos ligados neste aparelho", "Notices on for this device")}</span><button type="button" class="btn ghost small" data-push="off">${T("Desligar", "Turn off")}</button>`
+        : `<button type="button" class="btn small primary" data-push="on"><i class="ic i-bell"></i>${T("Avisar neste aparelho", "Notify me on this device")}</button>`;
+      el.querySelector("[data-push]").onclick = async (ev) => {
+        ev.stopPropagation(); const b = ev.currentTarget; b.disabled = true;
+        try {
+          if (b.dataset.push === "on") {
+            if ((await Notification.requestPermission()) !== "granted") { drawPush(); return; }
+            const reg = await pushReg();   // not .ready: this page isn't in the worker's scope, so .ready never settles
+            const w = reg.installing || reg.waiting;
+            if (w && !reg.active) await new Promise((ok) => { w.addEventListener("statechange", () => { if (w.state === "activated") ok(); }); setTimeout(ok, 8000); });
+            const s2 = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(VAPID) });
+            const j = s2.toJSON();
+            await CLOUD.api("rpc/save_push_sub", { method: "POST", body: { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_ua: navigator.userAgent.slice(0, 200) } });
+          } else if (sub) {
+            await CLOUD.api("rpc/delete_push_sub", { method: "POST", body: { p_endpoint: sub.endpoint } }).catch(() => {});
+            await sub.unsubscribe();
+          }
+        } catch { el.insertAdjacentHTML("beforeend", `<p class="small" style="color:var(--loss)">${T("Não deu certo. Tente de novo.", "That didn't work. Try again.")}</p>`); b.disabled = false; return; }
+        drawPush();
+      };
+    }
     $("iwBell")?.addEventListener("click", (e) => {
       const list = notes || [];
-      openMenu(e.currentTarget, `<div class="menu-label">${T("Notificações", "Notifications")}</div>${list.length ? list.map((n) => `<a class="menu-item${n.unread ? " unread" : ""}" role="menuitem" href="${noteHref(n)}"><span>${n.kind === "event_soon" ? `<b>${T("Lembrete", "Reminder")}:</b> ${esc(n.ref?.text || T("seu evento", "your event"))} ${esc(T(...NK.event_soon))}` : `<b>${esc(n.name || T("Alguém", "Someone"))}</b> ${esc(T(...(NK[n.kind] || ["", ""])))}`}${n.kind !== "event_soon" && (n.ref?.text || n.ref?.name) ? `<small>${esc(n.ref.text || n.ref.name)}</small>` : ""}<small>${esc(new Date(n.at).toLocaleString(lang === "en" ? "en" : "pt-BR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}</small></span></a>`).join("") : `<div class="menu-item" style="pointer-events:none"><span class="small">${T("Nada por aqui ainda.", "Nothing here yet.")}</span></div>`}`, "notif");
+      openMenu(e.currentTarget, `<div class="menu-label">${T("Notificações", "Notifications")}</div>${list.length ? list.map((n) => `<a class="menu-item${n.unread ? " unread" : ""}" role="menuitem" href="${noteHref(n)}"><span>${n.kind === "event_soon" ? `<b>${T("Lembrete", "Reminder")}:</b> ${esc(n.ref?.text || T("seu evento", "your event"))} ${esc(T(...NK.event_soon))}` : `<b>${esc(n.name || T("Alguém", "Someone"))}</b> ${esc(T(...(NK[n.kind] || ["", ""])))}`}${n.kind !== "event_soon" && (n.ref?.text || n.ref?.name) ? `<small>${esc(n.ref.text || n.ref.name)}</small>` : ""}<small>${esc(new Date(n.at).toLocaleString(lang === "en" ? "en" : "pt-BR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}</small></span></a>`).join("") : `<div class="menu-item" style="pointer-events:none"><span class="small">${T("Nada por aqui ainda.", "Nothing here yet.")}</span></div>`}<div class="push-row" id="iwPush"></div>`, "notif");
+      drawPush();
       if (list.some((n) => n.unread)) CLOUD.api("rpc/read_notifications", { method: "POST", body: {} }).then(() => { list.forEach((n) => { n.unread = false; }); showBell(); }).catch(() => {});
     });
     // Global search (supabase/search_privacy.sql): people with a public profile or my friends, and communities

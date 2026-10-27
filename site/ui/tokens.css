@@ -843,6 +843,9 @@ dialog.iw-zoom-card [data-zclose] { position: fixed; top: calc(env(safe-area-ins
 .menu.notif { width: min(360px, calc(100vw - 24px)); max-height: min(70vh, 520px); overflow: auto; }
 .menu.notif .menu-item { align-items: flex-start; white-space: normal; line-height: 1.35; }
 .menu.notif .menu-item.unread { background: var(--accent-soft); }
+.menu.notif .push-row { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; justify-content: space-between; border-top: 1px solid var(--line); margin-top: var(--sp-2); padding: var(--sp-3) var(--sp-2) var(--sp-1); }
+.menu.notif .push-row:empty { display: none; }
+.menu.notif .push-row p { margin: 0; }
 .menu.notif .menu-item small { display: block; color: var(--text-2); }
 .menu.find-menu { width: min(380px, calc(100vw - 24px)); max-height: min(75vh, 560px); overflow: auto; }
 .menu.find-menu .find { display: grid; gap: var(--sp-2); }
