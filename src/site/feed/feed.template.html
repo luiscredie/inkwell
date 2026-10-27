@@ -91,6 +91,12 @@ body.out .page.split.home3 { display: block; }
 .spost .pav { width: 40px; height: 40px; border-radius: 50%; background: var(--surface-3) 50% 20% / 210% auto no-repeat; box-shadow: 0 0 0 2px var(--accent); display: grid; place-items: center; font-weight: 800; color: var(--text-2); }
 .spost .body { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .spost .pcard { max-width: 260px; }
+.spost .pcards { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; }
+.spost .pcards .pcard { flex: 0 1 calc((100% - 4 * var(--sp-2)) / 5); min-width: 72px; max-width: 160px; }
+.spost .pcards.n2 .pcard, .spost .pcards.n3 .pcard { flex-basis: calc((100% - 2 * var(--sp-2)) / 3); max-width: 200px; }
+.spost .pcards.combo .plus { font-weight: 800; color: var(--accent-ink); font-size: 1.2rem; }
+.spost .combo-tag { justify-self: start; }
+.compose .ask { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; font-size: var(--fs-small); font-weight: 600; }
 .spost .pcard .thumb { display: block; width: 100%; border-radius: 4.5% / 3.2%; }
 .spost .pcard .thumb img { object-fit: contain; }
 .pdeck { display: grid; gap: var(--sp-2); padding: var(--sp-3); border-radius: var(--r-md); background: var(--surface-2); }
@@ -236,6 +242,8 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "Report sent. Thank you.": "Denúncia enviada. Obrigado.", "Tap again to delete": "Toque de novo para apagar", "{n} cards · average cost {c}": "{n} cartas · custo médio {c}",
     "Your profile needs the 18+ confirmation to post.": "Para publicar, confirme que tem 18+ no Meu Inkwell.", "Couldn't post. Try again.": "Não foi possível publicar. Tente de novo.",
     "Choose one of your decks": "Escolha um dos seus decks", "Tables & Leagues": "Mesas & Ligas", "No tables coming up in your communities.": "Nenhuma mesa marcada nas suas comunidades.",
+    "Is it a combo?": "É um combo?", "Yes, a combo": "Sim, é combo", "No, just cards": "Não, só cartas", "Combo": "Combo", "Up to 5 cards per post.": "Até 5 cartas por post.",
+    "Tell us if these cards are a combo.": "Diga se essas cartas são um combo.", "Add a card": "Mais uma carta",
     "Going": "Vou", "Maybe": "Talvez", "{n} going": "{n} vão", "1 going": "1 vai", "Full": "Lotado", "See community": "Ver comunidade", "foil": "foil",
     "Invite": "Convidar", "people": "pessoas", "Opponents' names are never shown to others. Coaches see the games shared with them. You can change it game by game in the review.": "O nome dos adversários nunca aparece para os outros. Coaches veem os jogos compartilhados com eles. Dá para mudar jogo a jogo na revisão.",
   };
@@ -276,7 +284,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   async function loadPeople() {
     const profSel = "user_id,display_name,default_visibility,default_group_id";
     const [prof, fr, cnt, grp, cl, cg] = await Promise.all([
-      CLOUD.api(`profiles?user_id=eq.${me.id}&select=${profSel},default_coach_email,default_coach_group_id`)
+      // my defaults come from my_settings() (search_privacy.sql); older databases: read the row directly
+      CLOUD.api("rpc/my_settings", { method: "POST", body: {} }).then((r) => (r?.user_id ? [r] : Promise.reject(r)))
+        .catch(() => CLOUD.api(`profiles?user_id=eq.${me.id}&select=${profSel},default_coach_email,default_coach_group_id`))
         .catch(() => { coachCols = false; return CLOUD.api(`profiles?user_id=eq.${me.id}&select=${profSel}`); }),   // database without the coach columns yet
       CLOUD.api("friendships?select=*&order=created_at.desc"),
       CLOUD.api(`game_logs?user_id=eq.${me.id}&visibility=eq.private&select=game_id&limit=5000`),
@@ -433,7 +443,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   }
 
   // ---------- posts: write, like, comment (supabase/social.sql) ----------
-  let sposts = [], sOlder = null, sMore = false, socialOn = true, attach = { card: null, foil: false, deck: null }, vis = "friends", myDecks = null, adultMe = null;
+  let sposts = [], sOlder = null, sMore = false, socialOn = true, attach = { cards: [], combo: null, deck: null }, vis = "friends", myDecks = null, adultMe = null;
   const IDXC = new Map(((typeof CARD_INDEX !== "undefined" && CARD_INDEX?.cards) || []).map((c) => [c[0], c]));
   const cimg = (id) => { const c = IDXC.get(id); return c && c[8] ? `../lorcana-card-images/${encodeURI(c[8]).replace(/'/g, "%27")}` : ""; };
   const cname = (id) => IDXC.get(id)?.[1] || id;
@@ -463,12 +473,20 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       <span class="small muted">${esc(Tx("{n} cards · average cost {c}", { n, c: nc ? (cost / nc).toLocaleString(LOC, { maximumFractionDigits: 1 }) : "—" }))}</span></div>`;
   }
   const cmtHtml = (c) => `<div class="cmt" data-cmt-id="${esc(c.id)}">${pav(c)}<div><div class="small"><b>${who(c)}</b> <span class="faint">· ${esc(ago(c.at))}</span>${c.mine ? ` · <button type="button" class="linkbtn small" data-cdel="${esc(c.id)}">${Tx("Delete")}</button>` : ""}</div><p data-ctext="${esc(c.id)}"></p></div></div>`;
+  function pcardsHtml(p) {
+    const list = (Array.isArray(p.cards) && p.cards.length ? p.cards : p.card ? [{ id: p.card, foil: p.foil }] : []).filter((c) => c && IDXC.has(c.id)).slice(0, 5);
+    if (!list.length) return "";
+    const one = (c) => `<div class="pcard"><span class="thumb${c.foil ? " foil" : ""}">${cimg(c.id) ? `<img src="${cimg(c.id)}" alt="${esc(cname(c.id))}" loading="lazy">` : ""}</span><div class="small muted" style="margin-top:4px">${esc(cname(c.id))}${c.foil ? ` · ${Tx("foil")}` : ""}</div></div>`;
+    if (list.length === 1) return one(list[0]);
+    const combo = !!p.combo;
+    return `${combo ? `<span class="tag info combo-tag" data-testid="combo-tag">${Tx("Combo")}</span>` : ""}<div class="pcards n${list.length}${combo ? " combo" : ""}" data-testid="post-cards">${list.map(one).join(combo ? `<span class="plus" aria-hidden="true">+</span>` : "")}</div>`;
+  }
   function spostHtml(p) {
     return `<article class="card spost" id="post-${esc(p.id)}" data-spost="${esc(p.id)}" data-testid="spost">
       <div class="who">${pav(p)}<div style="min-width:0"><b>${who(p)}</b><div class="small muted">${esc(ago(p.at))} · ${Tx(p.visibility === "public" ? "All members" : "Friends only")}</div></div>
         ${p.mine ? `<button type="button" class="btn ghost small" data-pdel="${esc(p.id)}">${Tx("Delete")}</button>` : ""}</div>
       ${p.body ? `<p class="body" data-ptext="${esc(p.id)}"></p>` : ""}
-      ${p.card && IDXC.has(p.card) ? `<div class="pcard"><span class="thumb${p.foil ? " foil" : ""}">${cimg(p.card) ? `<img src="${cimg(p.card)}" alt="${esc(cname(p.card))}" loading="lazy">` : ""}</span><div class="small muted" style="margin-top:4px">${esc(cname(p.card))}${p.foil ? ` · ${Tx("foil")}` : ""}</div></div>` : ""}
+      ${pcardsHtml(p)}
       ${deckHtml(p.deck)}
       <div class="acts"><button type="button" class="btn ghost small" data-like="${esc(p.id)}" aria-pressed="${!!p.liked}">◆ ${Tx("Like")}${p.likes ? ` · ${p.likes}` : ""}</button>
         <button type="button" class="btn ghost small" data-pcmt="${esc(p.id)}"><i class="ic i-comment"></i>${Tx("Comment ")}${p.comments_n ? ` · ${p.comments_n}` : ""}</button>
@@ -514,9 +532,10 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     const first = (myProfile.display_name || "").split(" ")[0];
     el.innerHTML = `<form class="compose" id="cmpForm"><label class="sr-only" for="cmpText">${Tx("Share with your friends")}</label>
       <textarea id="cmpText" maxlength="1000" placeholder="${esc(Tx("Write something, show a card or a deck"))}${first ? ", " + esc(first) : ""}"></textarea>
-      ${attach.card ? `<div class="att" data-testid="att-card"><span class="thumb"><img src="${cimg(attach.card)}" alt=""></span><span class="grow">${esc(cname(attach.card))}${attach.foil ? ` · ${Tx("foil")}` : ""}</span><button type="button" class="btn ghost small" id="cmpNoCard">${Tx("Remove")}</button></div>` : ""}
+      ${attach.cards.map((c, i) => `<div class="att" data-testid="att-card"><span class="thumb"><img src="${cimg(c.id)}" alt=""></span><span class="grow">${esc(cname(c.id))}${c.foil ? ` · ${Tx("foil")}` : ""}</span><button type="button" class="btn ghost small" data-nocard="${i}">${Tx("Remove")}</button></div>`).join("")}
+      ${attach.cards.length > 1 ? `<div class="ask" data-testid="combo-ask"><span>${Tx("Is it a combo?")}</span><button type="button" class="chipbtn" data-combo="1" aria-pressed="${attach.combo === true}">${Tx("Yes, a combo")}</button><button type="button" class="chipbtn" data-combo="0" aria-pressed="${attach.combo === false}">${Tx("No, just cards")}</button></div>` : ""}
       ${attach.deck ? `<div class="att" data-testid="att-deck">${inkDots((attach.deck.colors || []).join("/"))}<span class="grow">${esc(attach.deck.name || Tx("Deck"))}</span><button type="button" class="btn ghost small" id="cmpNoDeck">${Tx("Remove")}</button></div>` : ""}
-      <div class="bar"><button type="button" class="btn ghost small" id="cmpCard"><i class="ic i-cards"></i>${Tx("Card")}</button>
+      <div class="bar"><button type="button" class="btn ghost small" id="cmpCard" ${attach.cards.length >= 5 ? `disabled title="${Tx("Up to 5 cards per post.")}"` : ""}><i class="ic i-cards"></i>${Tx(attach.cards.length ? "Add a card" : "Card")}${attach.cards.length ? ` · ${attach.cards.length}/5` : ""}</button>
         ${myDecks?.length ? `<select id="cmpDeck" class="inline" aria-label="${Tx("Choose one of your decks")}"><option value="">${Tx("Deck")}…</option>${myDecks.map((d, i) => `<option value="${i}">${esc(d.name || Tx("Deck"))}</option>`).join("")}</select>` : ""}
         <span class="grow"></span>
         <select id="cmpVis" class="inline" aria-label="${Tx("Who sees my new games")}"><option value="friends" ${vis === "friends" ? "selected" : ""}>${Tx("Friends only")}</option><option value="public" ${vis === "public" ? "selected" : ""}>${Tx("All members")}</option></select>
@@ -525,19 +544,23 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     const keep = () => sessionStorage.setItem("inkwell-compose", $("cmpText").value);
     try { $("cmpText").value = sessionStorage.getItem("inkwell-compose") || ""; } catch { /* */ }
     $("cmpText").addEventListener("input", () => { try { keep(); } catch { /* */ } });
-    $("cmpCard").onclick = (e) => getPicker().open({ current: null, taken: [], from: e.currentTarget, onUse: ({ id, foil }) => { attach.card = id; attach.foil = foil; renderComposer(); } });
-    $("cmpNoCard")?.addEventListener("click", () => { attach.card = null; renderComposer(); });
+    $("cmpCard").onclick = (e) => { if (attach.cards.length >= 5) return; getPicker().open({ current: null, taken: attach.cards.map((c) => c.id), from: e.currentTarget, onUse: ({ id, foil }) => { if (attach.cards.length < 5 && !attach.cards.some((c) => c.id === id)) attach.cards.push({ id, foil: !!foil }); renderComposer(); } }); };
+    el.querySelectorAll("[data-nocard]").forEach((b) => b.onclick = () => { attach.cards.splice(+b.dataset.nocard, 1); if (attach.cards.length < 2) attach.combo = null; renderComposer(); });
+    el.querySelectorAll("[data-combo]").forEach((b) => b.onclick = () => { attach.combo = b.dataset.combo === "1"; renderComposer(); });
     $("cmpNoDeck")?.addEventListener("click", () => { attach.deck = null; renderComposer(); });
     $("cmpDeck")?.addEventListener("change", (e) => { const d = myDecks[+e.target.value]; if (d) { attach.deck = { name: d.name || "", colors: d.colors || [], cards: d.cards || {} }; renderComposer(); } });
     $("cmpVis").onchange = (e) => { vis = e.target.value; };
     $("cmpForm").onsubmit = async (e) => {
       e.preventDefault();
       const body = $("cmpText").value.trim();
-      if (!body && !attach.card && !attach.deck) { $("cmpText").focus(); return; }
+      if (!body && !attach.cards.length && !attach.deck) { $("cmpText").focus(); return; }
+      if (attach.cards.length > 1 && attach.combo == null) { $("cmpMsg").textContent = Tx("Tell us if these cards are a combo."); el.querySelector("[data-combo]")?.focus(); return; }
       $("cmpGo").disabled = true;
       try {
-        const p = await rpcS("create_post", { p_body: body, p_card: attach.card, p_foil: !!attach.foil, p_deck: attach.deck, p_visibility: vis });
-        sposts.unshift(p); attach = { card: null, foil: false, deck: null }; try { sessionStorage.removeItem("inkwell-compose"); } catch { /* */ }
+        const first = attach.cards[0] || null;
+        const p = await rpcS("create_post", { p_body: body, p_card: first?.id || null, p_foil: !!first?.foil, p_deck: attach.deck, p_visibility: vis,
+          ...(attach.cards.length > 1 ? { p_cards: attach.cards, p_combo: !!attach.combo } : {}) });
+        sposts.unshift(p); attach = { cards: [], combo: null, deck: null }; try { sessionStorage.removeItem("inkwell-compose"); } catch { /* */ }
         renderComposer(); renderFeed();
       } catch (err) { $("cmpGo").disabled = false; $("cmpMsg").textContent = /adults_only/.test(String(err?.message || err)) ? Tx("Your profile needs the 18+ confirmation to post.") : Tx("Couldn't post. Try again."); }
     };

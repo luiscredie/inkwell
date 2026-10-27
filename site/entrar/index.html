@@ -258,6 +258,7 @@ window.INKWELL_CLOUD = (() => {
     <div class="end">
       <button type="button" class="btn ghost icon" id="iwTheme" aria-pressed="${theme === "noite"}" aria-label="${theme === "noite" ? T("Usar o tema claro", "Use the light theme") : T("Usar o tema escuro", "Use the dark theme")}"><i class="ic ${theme === "noite" ? "i-sun" : "i-moon"}"></i></button>
       <a class="btn ghost counter-btn" href="../counter/" aria-label="${T("Abrir o Contador", "Open the Counter")}"><i class="ic i-counter"></i><span>${T("Contador", "Counter")}</span></a>
+      ${me ? `<button type="button" class="btn ghost icon" id="iwFind" aria-label="${T("Buscar pessoas e comunidades", "Search people and communities")}" aria-haspopup="dialog" aria-expanded="false" title="${T("Buscar", "Search")} ( / )"><i class="ic i-search"></i></button>` : ""}
       ${me ? `<button type="button" class="btn ghost icon bell-btn" id="iwBell" aria-label="${T("Notificações", "Notifications")}" aria-haspopup="menu" aria-expanded="false" hidden><i class="ic i-bell"></i><span class="count" id="iwBellN" hidden></span></button>` : ""}
       ${me ? `<button type="button" class="av-btn" id="iwAcct" aria-label="${T("Sua conta", "Your account")}" aria-haspopup="menu" aria-expanded="false"><span class="av" id="iwAv">${esc((me.email || "?")[0].toUpperCase())}</span><span class="count iw-badge" id="iwBadge" hidden></span></button>`
         : `<button type="button" class="btn ghost icon" id="iwLangBtn" aria-label="${T("Aparência e idioma", "Appearance and language")}" aria-haspopup="menu" aria-expanded="false"><i class="ic i-globe"></i></button>
@@ -560,6 +561,28 @@ window.INKWELL_CLOUD = (() => {
       openMenu(e.currentTarget, `<div class="menu-label">${T("Notificações", "Notifications")}</div>${list.length ? list.map((n) => `<a class="menu-item${n.unread ? " unread" : ""}" role="menuitem" href="${noteHref(n)}"><span>${n.kind === "event_soon" ? `<b>${T("Lembrete", "Reminder")}:</b> ${esc(n.ref?.text || T("seu evento", "your event"))} ${esc(T(...NK.event_soon))}` : `<b>${esc(n.name || T("Alguém", "Someone"))}</b> ${esc(T(...(NK[n.kind] || ["", ""])))}`}${n.kind !== "event_soon" && (n.ref?.text || n.ref?.name) ? `<small>${esc(n.ref.text || n.ref.name)}</small>` : ""}<small>${esc(new Date(n.at).toLocaleString(lang === "en" ? "en" : "pt-BR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}</small></span></a>`).join("") : `<div class="menu-item" style="pointer-events:none"><span class="small">${T("Nada por aqui ainda.", "Nothing here yet.")}</span></div>`}`, "notif");
       if (list.some((n) => n.unread)) CLOUD.api("rpc/read_notifications", { method: "POST", body: {} }).then(() => { list.forEach((n) => { n.unread = false; }); showBell(); }).catch(() => {});
     });
+    // Global search (supabase/search_privacy.sql): people with a public profile or my friends, and communities
+    const findBtn = $("iwFind");
+    const openFind = () => {
+      if (!findBtn) return;
+      openMenu(findBtn, `<div class="find" data-testid="find"><input type="search" id="iwFindQ" placeholder="${T("Buscar pessoas e comunidades", "Search people and communities")}" aria-label="${T("Buscar pessoas e comunidades", "Search people and communities")}" autocomplete="off" maxlength="60"><div id="iwFindR" aria-live="polite"><p class="small muted">${T("Digite pelo menos 2 letras.", "Type at least 2 letters.")}</p></div></div>`, "find-menu");
+      const q = $("iwFindQ"), out = $("iwFindR"); let t = 0, seq = 0; q.focus();
+      const ini = (n) => esc(String(n || "?").trim().charAt(0).toUpperCase() || "?");
+      const sec = (title, rows) => rows.length ? `<div class="menu-label">${title}</div>${rows.join("")}` : "";
+      q.addEventListener("input", () => { clearTimeout(t); t = setTimeout(async () => {
+        const v = q.value.trim(), my = ++seq;
+        if (v.length < 2) { out.innerHTML = `<p class="small muted">${T("Digite pelo menos 2 letras.", "Type at least 2 letters.")}</p>`; return; }
+        out.innerHTML = `<p class="small muted">${T("Buscando…", "Searching…")}</p>`;
+        let r = null; try { r = await CLOUD.api("rpc/search_all", { method: "POST", body: { p_q: v } }); } catch { r = null; }
+        if (my !== seq) return;
+        if (!r) { out.innerHTML = `<p class="small muted">${T("A busca ainda não está disponível.", "Search isn't available yet.")}</p>`; return; }
+        const people = (r.people || []).map((p) => `<a class="menu-item" role="menuitem" href="${p.handle ? `../perfil/?u=${encodeURIComponent(p.handle)}` : "../feed/#amigos"}"><span class="av sm">${ini(p.name)}</span><span><b>${esc(p.name || "")}</b><small>${esc([p.handle ? "@" + p.handle : "", p.friend ? T("Amigo", "Friend") : "", p.city || ""].filter(Boolean).join(" · "))}</small></span></a>`);
+        const comms = (r.communities || []).map((c) => `<a class="menu-item" role="menuitem" href="../comunidades/?c=${encodeURIComponent(c.slug)}"><span class="av sm"><i class="ic i-users"></i></span><span><b>${esc(c.name)}</b><small>${esc([c.city, c.mine ? T("Você participa", "You're a member") : ""].filter(Boolean).join(" · "))}</small></span></a>`);
+        out.innerHTML = sec(T("Pessoas", "People"), people) + sec(T("Comunidades", "Communities"), comms) || `<p class="small muted">${T("Nada encontrado.", "Nothing found.")}</p>`;
+      }, 250); });
+    };
+    findBtn?.addEventListener("click", openFind);
+    document.addEventListener("keydown", (e) => { if (e.key === "/" && !e.ctrlKey && !e.metaKey && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || "") && !document.activeElement?.isContentEditable && !$("iwFindQ")) { e.preventDefault(); openFind(); } });
     // an invite link opened before signing in (perfil/?convite=…): accept it on whichever page the sign-in lands
     let inv = null; try { inv = localStorage.getItem("inkwell-invite"); } catch { /* */ }
     if (inv && page !== "profile") {
