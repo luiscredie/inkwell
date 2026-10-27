@@ -43,7 +43,7 @@ window.INKWELL_NO_STORE_MSG = "Your games appear here after you sign in.";
     "Import a file": "Importar arquivo",
     "Pick a game to review it turn by turn.": "Escolha um jogo para revisar turno a turno.",
     // list
-    "All": "Todos", "Losses": "Derrotas", "Wins": "Vitórias", "With comments": "Com comentários", "Public games": "Públicos", "Public (one game)": "Público", "Friends (one game)": "Amigos", "Friends game": "Jogo de amigos",
+    "All": "Todos", "Losses": "Derrotas", "Wins": "Vitórias", "With comments": "Com comentários", "Online": "Online", "At the table": "Físico", "Where": "Onde", "Public games": "Públicos", "Public (one game)": "Público", "Friends (one game)": "Amigos", "Friends game": "Jogo de amigos",
     "Showing games against {deck}. Remove filter": "Mostrando jogos contra {deck}. Remover filtro",
     "No games here yet. Games show up when they are imported from duels.ink.": "Nenhum jogo aqui ainda. Os jogos aparecem quando vêm do duels.ink.",
     "No games here yet. Games show up when they are imported from duels.ink or added below from the Table Logger.": "Nenhum jogo aqui ainda. Os jogos aparecem quando vêm do duels.ink ou do Contador de lore.",
@@ -845,6 +845,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const noteCount = (g) => allNotes[notesColl(g)].filter((n) => n.game === g.key).length;
   let composerFor = null;           // anchor key with an open composer
   let filter = "all";
+  let place = "all";                // all | online (duels.ink) | table (Lore Counter, by hand)
+  try { place = localStorage.getItem("inkwell-coach-place") || "all"; } catch { /* storage off */ }
+  const isOnline = (g) => /^duels[._]ink$/.test(g.doc.source || g.doc.log?.source || "");
   let deckNotice = null;
   let showingStats = false, oppFilter = null;
   const GROUP_KEY = "inkwell-coach-group-by-deck";
@@ -867,10 +870,12 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   function renderFilters() {
     const seg = [["all", "All"], ["win", "Wins"], ["loss", "Losses"]].map(([k, l]) => `<button type="button" data-f="${k}" aria-pressed="${filter === k}">${Tx(l)}</button>`).join("");
     const chips = [["noted", "With comments"], ["public", "Public games"]].map(([k, l]) => `<button type="button" class="chipbtn" data-f="${k}" aria-pressed="${filter === k}">${Tx(l)}</button>`).join("");
-    $("filters").innerHTML = `<div class="frow"><div class="seg" role="group" aria-label="${Tx("Result")}">${seg}</div></div>
+    const pl = [["all", "All"], ["online", "Online"], ["table", "At the table"]].map(([k, l]) => `<button type="button" data-place="${k}" aria-pressed="${place === k}">${Tx(l)}</button>`).join("");
+    $("filters").innerHTML = `<div class="frow"><div class="seg" role="group" aria-label="${Tx("Result")}">${seg}</div><div class="seg" role="group" aria-label="${Tx("Where")}" data-testid="place-filter">${pl}</div></div>
       <div class="frow">${chips}${db?.isCommunity ? "" : `<button type="button" class="chipbtn" id="groupChip" aria-pressed="${byDeck}">${Tx("By deck")}</button>`}
       ${oppFilter ? `<button type="button" class="chipbtn x" id="oppChip" aria-pressed="true" aria-label="${esc(Tx("Showing games against {deck}. Remove filter", { deck: oppFilter }))}">vs ${esc(oppFilter)}</button>` : ""}</div>`;
     $("filters").querySelectorAll("[data-f]").forEach((b) => b.onclick = () => { filter = filter === b.dataset.f && b.dataset.f !== "all" ? "all" : b.dataset.f; renderFilters(); renderList(); });
+    $("filters").querySelectorAll("[data-place]").forEach((b) => b.onclick = () => { place = b.dataset.place; try { localStorage.setItem("inkwell-coach-place", place); } catch { /* */ } renderFilters(); renderList(); });
     $("oppChip")?.addEventListener("click", () => { oppFilter = null; renderFilters(); renderList(); });
     $("groupChip")?.addEventListener("click", () => {
       byDeck = !byDeck;
@@ -884,6 +889,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     const shown = all.filter((g) => {
       const s = summaryOf(g);
       if (oppFilter && (s.opp_deck || "Unknown") !== oppFilter) return false;
+      if (place !== "all" && isOnline(g) !== (place === "online")) return false;
       if (filter === "loss" || filter === "win") return s.result === filter;
       if (filter === "noted") return noteCount(g) > 0;
       if (filter === "public") return g.coll === "public_games";

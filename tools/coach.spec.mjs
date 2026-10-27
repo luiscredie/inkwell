@@ -205,3 +205,27 @@ test('a game without a deck list can take one of my Inkwell decks', async ({ pag
   await expect(page.locator('#deckBox')).toBeVisible();
   await expect(page.locator('#deckText')).toHaveValue(/^4 .+\n2 .+$/);
 });
+
+test('filter: online (duels.ink) or at the table (Lore Counter)', async ({ page }) => {
+  const rows = [...ROWS, { user_id: ME, game_id: 'c1', source: 'lore_counter', played_at: '2026-10-21T20:00:00Z', visibility: 'private', created_at: '2026-10-21T20:00:00Z', summary: { result: 'win', my_deck: 'Amber/Steel', opp_deck: 'Ruby', my_lore: 20, opp_lore: 12 } }];
+  await page.addInitScript((me) => {
+    localStorage.setItem('inkwell-lang', 'pt');
+    const exp = Math.floor(Date.now() / 1000) + 3600;
+    localStorage.setItem('inkwell-counter-auth', JSON.stringify({ access_token: 'x.' + btoa(JSON.stringify({ sub: me, exp })) + '.y', refresh_token: 'r', expires_at: exp, user: { id: me, email: 'luis@example.com' } }));
+  }, ME);
+  await page.route('**/rest/v1/**', (route) => {
+    const u = new URL(route.request().url()), path = u.pathname.replace(/.*\/rest\/v1\//, '');
+    const json = (v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+    if (path === 'game_logs') return json(u.searchParams.get('game_id') ? [] : rows);
+    if (path === 'rpc/my_profile') return json({ display_name: 'Luís', adult: true });
+    return json(path.startsWith('rpc/') ? null : []);
+  });
+  await page.goto(url('coach/'));
+  await page.locator('#groupChip').click();   // by date: one row per game
+  await expect(page.locator('.game[data-k]')).toHaveCount(5);
+  await page.locator('[data-place="table"]').click();
+  await expect(page.locator('.game[data-k]')).toHaveCount(1);
+  await expect(page.locator('.game[data-k="c1"]')).toHaveCount(1);
+  await page.locator('[data-place="online"]').click();
+  await expect(page.locator('.game[data-k]')).toHaveCount(4);
+});
