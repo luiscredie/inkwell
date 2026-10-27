@@ -113,12 +113,14 @@ body.out .page.split.home3 { display: block; }
 .spost .who b a { color: inherit; text-decoration: none; } .spost .who b a:hover { text-decoration: underline; }
 .spost .pav { width: 40px; height: 40px; border-radius: 50%; background: var(--surface-3) 50% 20% / 210% auto no-repeat; box-shadow: 0 0 0 2px var(--accent); display: grid; place-items: center; font-weight: 800; color: var(--text-2); }
 .spost .body { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-.spost .pcard { max-width: 260px; }
-.spost .pcards { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; }
+.spost .pcard { max-width: 260px; margin-inline: auto; text-align: center; }   /* one card or several: in the middle of the post */
+.spost .pcards { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; justify-content: center; }
+.spost .pcards .pcard { margin-inline: 0; }
+.spost .combo-tag { justify-self: center; }
 .spost .pcards .pcard { flex: 0 1 calc((100% - 4 * var(--sp-2)) / 5); min-width: 72px; max-width: 160px; }
 .spost .pcards.n2 .pcard, .spost .pcards.n3 .pcard { flex-basis: calc((100% - 2 * var(--sp-2)) / 3); max-width: 200px; }
 .spost .pcards.combo .plus { font-weight: 800; color: var(--accent-ink); font-size: 1.2rem; }
-.spost .combo-tag { justify-self: start; }
+
 .compose .ask { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; font-size: var(--fs-small); font-weight: 600; }
 .spost .pcard .thumb { display: block; width: 100%; border-radius: 4.5% / 3.2%; }
 .spost .pcard .thumb img { object-fit: contain; }
