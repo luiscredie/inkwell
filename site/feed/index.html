@@ -181,6 +181,9 @@ window.INKWELL_CLOUD = (() => {
 .home3 > #aside { display: grid; gap: var(--sp-3); }
 .page.split.home3 > aside { position: static; }
 #aside > .stack:empty { display: none; }
+.page.split.home3 > #aside, #aside .stack, #aside .panel, #aside .field { min-width: 0; }
+#aside .panel select, #aside .panel input, #aside .panel .btn { max-width: 100%; min-width: 0; }
+#aside .panel .btn { white-space: normal; height: auto; min-height: 36px; text-align: center; }
 @media (min-width: 1200px) {
   .page.split.home3 { grid-template-columns: 250px minmax(0, 1fr) 300px; grid-template-rows: auto minmax(0, 1fr); grid-template-areas: "left head side" "left main side"; }
   .page.split.home3 > #left { position: sticky; top: calc(var(--bar-h) + var(--sp-4)); align-self: start; }
