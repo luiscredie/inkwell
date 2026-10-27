@@ -93,7 +93,13 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "Requests": "Pedidos", "Accept": "Aceitar", "Decline": "Recusar", "Invite": "Convidar", "Invite friends": "Convidar amigos", "Invited": "Convidado",
     "They get a notice and join without waiting for approval. Someone who isn't on Inkwell yet: send the community link.": "A pessoa recebe um aviso e entra sem precisar de aprovação. Quem ainda não está no Inkwell: mande o link da comunidade.",
     "All your friends are already here, or you have no friends on Inkwell yet.": "Todos os seus amigos já estão aqui, ou você ainda não tem amigos no Inkwell.", "Share the community link": "Compartilhar o link da comunidade", "Tables & Leagues": "Mesas & Ligas", "New table": "Nova mesa", "Edit table": "Editar mesa", "No tables set up yet.": "Nenhuma mesa marcada ainda.",
-    "See on the Play Hub": "Ver no Play Hub", "Open link ({site})": "Abrir link ({site})",
+    "See on the Play Hub": "Ver no Play Hub", "Register on the Play Hub": "Inscrever-se no Play Hub", "Play Hub event (optional)": "Evento no Play Hub (opcional)",
+    "Paste the event link from the Play Hub": "Cole o link do evento no Play Hub", "Fill in": "Preencher",
+    "Links the table to the official event: Eventos shows them as one, and players register on the Play Hub.": "Liga a mesa ao evento oficial: em Eventos os dois aparecem como um só, e a inscrição é feita no Play Hub.",
+    "That doesn't look like a Play Hub event link.": "Isso não parece um link de evento do Play Hub.", "Filled in from the Play Hub. Check and save.": "Preenchido com os dados do Play Hub. Confira e salve.",
+    "Couldn't find this event on the Play Hub.": "Não achei esse evento no Play Hub.", "Delete table": "Apagar mesa", "Tap again to delete": "Toque de novo para apagar",
+    "Deleting removes it for everyone, with its answers. To keep it visible, mark it cancelled.": "Apagar tira a mesa para todos, com as respostas. Para deixar visível, marque como cancelada.",
+    "Table deleted.": "Mesa apagada.", "Couldn't delete. Try again.": "Não foi possível apagar. Tente de novo.", "Free": "Grátis", "Open link ({site})": "Abrir link ({site})",
     "Going": "Vou", "Maybe": "Talvez", "{n} going": "{n} vão", "1 going": "1 vai", "{n} maybe": "{n} talvez", "cancelled": "cancelada", "Cancelled": "Cancelada", "Title": "Título", "When": "Quando", "Where": "Onde",
     "Places (optional)": "Vagas (opcional)", "Details": "Detalhes", "Format, entry, prizes, what to bring.": "Formato, inscrição, prêmios, o que levar.", "League night, casual table, tournament…": "Liga, mesa casual, torneio…",
     "This table is full.": "Esta mesa está lotada.", "admin": "admin", "you": "você",
@@ -232,6 +238,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
         <b>${esc(e.title)}</b>${e.place ? `<div class="small muted">${esc(e.place)}</div>` : ""}${e.details ? `<p class="small" style="margin:4px 0 0;white-space:pre-wrap;overflow-wrap:anywhere">${linkify(e.details)}</p>` : ""}
         <div class="small muted" style="margin-top:4px">${esc(e.going === 1 ? Tx("1 going") : Tx("{n} going", { n: e.going }))}${e.capacity ? ` / ${e.capacity}` : ""}${e.maybe ? ` · ${esc(Tx("{n} maybe", { n: e.maybe }))}` : ""}${(e.people || []).length ? ` · ${(e.people || []).filter((p) => p.status === "going").slice(0, 6).map((p) => esc(p.name)).join(", ")}` : ""}</div>
         <div class="row" style="gap:6px;margin-top:var(--sp-2);flex-wrap:wrap">${isMember && !e.cancelled ? `<button type="button" class="btn small ${e.me === "going" ? "primary" : ""}" data-rsvp="${esc(e.id)}:going" aria-pressed="${e.me === "going"}">${Tx("Going")}</button><button type="button" class="btn small ghost" data-rsvp="${esc(e.id)}:maybe" aria-pressed="${e.me === "maybe"}">${Tx("Maybe")}</button>` : ""}
+          ${e.rph_id ? `<a class="btn small" href="https://tcg.ravensburgerplay.com/events/${encodeURIComponent(e.rph_id)}" target="_blank" rel="noopener" data-testid="ev-playhub">${Tx("Register on the Play Hub")} <i class="ic i-external"></i></a>` : ""}
           ${canManage ? `<button type="button" class="btn small ghost" data-evedit="${esc(e.id)}">${Tx("Edit")}</button>` : ""}</div></article>`;
     return `<section id="mesas" data-testid="events"><div class="group-head"><h2>${Tx("Tables & Leagues")}</h2>${canManage ? `<button type="button" class="btn small" id="evNew"><i class="ic i-plus"></i>${Tx("New table")}</button>` : ""}</div>
       ${c.events.length ? `<div class="cm-evs">${c.events.map(ev).join("")}</div>` : `<p class="muted" style="margin:0">${Tx("No tables set up yet.")}</p>`}</section>`;
@@ -240,22 +247,52 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     const sh = $("sheet"), local = (iso) => { const d = iso ? new Date(iso) : new Date(Date.now() + 864e5); d.setSeconds(0, 0); return new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16); };
     sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="shT">${Tx(e ? "Edit table" : "New table")}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
       <div class="sheet-body"><form class="form" id="evf" novalidate>
+        <div class="field"><label for="evR">${Tx("Play Hub event (optional)")}</label><div class="row" style="gap:6px;flex-wrap:nowrap"><input id="evR" inputmode="url" style="flex:1;min-width:0" placeholder="${esc(Tx("Paste the event link from the Play Hub"))}" value="${e?.rph_id ? `https://tcg.ravensburgerplay.com/events/${esc(e.rph_id)}` : ""}"><button type="button" class="btn small" id="evImp">${Tx("Fill in")}</button></div>
+          <span class="hint" id="evRh">${Tx("Links the table to the official event: Eventos shows them as one, and players register on the Play Hub.")}</span></div>
         <label class="field">${Tx("Title")}<input id="evT" maxlength="80" required value="${esc(e?.title || "")}" placeholder="${esc(Tx("League night, casual table, tournament…"))}"></label>
         <label class="field">${Tx("When")}<input id="evW" type="datetime-local" required value="${local(e?.starts_at)}"></label>
         <label class="field">${Tx("Where")}<input id="evP" maxlength="160" value="${esc(e?.place || "")}"></label>
         <label class="field">${Tx("Places (optional)")}<input id="evC" type="number" min="2" max="999" inputmode="numeric" value="${esc(e?.capacity || "")}"></label>
         <label class="field">${Tx("Details")}<textarea id="evD" maxlength="600" rows="3">${esc(e?.details || "")}</textarea><span class="hint">${Tx("Format, entry, prizes, what to bring.")}</span></label>
-        ${e ? `<label class="check"><input type="checkbox" id="evX" ${e.cancelled ? "checked" : ""}> ${Tx("Cancelled")}</label>` : ""}
+        ${e ? `<label class="check"><input type="checkbox" id="evX" ${e.cancelled ? "checked" : ""}> ${Tx("Cancelled")}</label>
+          <div><button type="button" class="btn small ghost danger-text" id="evDel" data-testid="ev-delete"><i class="ic i-trash"></i>${Tx("Delete table")}</button><span class="hint">${Tx("Deleting removes it for everyone, with its answers. To keep it visible, mark it cancelled.")}</span></div>` : ""}
         <p class="small" id="evMsg" role="alert"></p></form></div>
       <div class="sheet-foot"><button type="button" class="btn ghost" data-close>${Tx("Cancel")}</button><button type="submit" form="evf" class="btn primary" id="evSave">${Tx("Save")}</button></div>`;
     sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = () => sh.close());
+    const rphOf = (v) => { const m = String(v || "").match(/events\/(\d{1,12})/) || String(v || "").trim().match(/^(\d{1,12})$/); return m ? +m[1] : null; };
+    $("evImp").onclick = async () => {
+      const id = rphOf($("evR").value);
+      if (!id) { $("evRh").textContent = Tx("That doesn't look like a Play Hub event link."); $("evR").focus(); return; }
+      $("evImp").disabled = true;
+      try {
+        const x = await CLOUD.fn("rph-events", { id });
+        if (!x?.id) throw new Error("none");
+        if (!$("evT").value.trim() || !e) $("evT").value = String(x.name || "").replace(/\s+-\s+\w+ \d{1,2}, \d{4}$/, "").slice(0, 80);   // "Terça de Lorcana - October 27, 2026" -> "Terça de Lorcana"
+        if (x.start) $("evW").value = local(x.start);
+        if (!$("evP").value.trim()) $("evP").value = [x.store?.name, x.address].filter(Boolean).join(" · ").slice(0, 160);
+        if (!$("evC").value && x.capacity) $("evC").value = Math.min(999, Math.max(2, x.capacity));
+        if (!$("evD").value.trim()) $("evD").value = [x.format, x.cost_cents != null ? (x.cost_cents ? (x.cost_cents / 100).toLocaleString(LOC, { style: "currency", currency: x.currency || "BRL" }) : Tx("Free")) : ""].filter(Boolean).join(" · ").slice(0, 600);
+        $("evRh").textContent = Tx("Filled in from the Play Hub. Check and save.");
+      } catch { $("evRh").textContent = Tx("Couldn't find this event on the Play Hub."); }
+      $("evImp").disabled = false;
+    };
+    $("evDel")?.addEventListener("click", async () => {
+      const b = $("evDel");
+      if (b.dataset.armed !== "1") { b.dataset.armed = "1"; b.lastChild.textContent = Tx("Tap again to delete"); return; }
+      b.disabled = true;
+      try { await rpc("delete_event", { p_event: e.id }); sh.close(); view.events = await rpc("community_events", { p_slug: view.slug }); drawOne(); toast(Tx("Table deleted.")); }
+      catch { b.disabled = false; $("evMsg").textContent = Tx("Couldn't delete. Try again."); }
+    });
     $("evf").onsubmit = async (ev) => {
       ev.preventDefault();
       const t = $("evT").value.trim(), w = $("evW").value;
       if (t.length < 3) { $("evT").focus(); return; } if (!w) { $("evW").focus(); return; }
       $("evSave").disabled = true;
       try {
-        await rpc("save_event", { p_slug: view.slug, p_id: e?.id || null, p: { title: t, starts_at: new Date(w).toISOString(), place: $("evP").value.trim(), details: $("evD").value.trim(), capacity: $("evC").value, ...(e ? { cancelled: $("evX").checked } : {}) } });
+        const rv = $("evR").value.trim(), rph = rphOf(rv);
+        if (rv && !rph) { $("evRh").textContent = Tx("That doesn't look like a Play Hub event link."); $("evR").focus(); $("evSave").disabled = false; return; }
+        const saved = await rpc("save_event", { p_slug: view.slug, p_id: e?.id || null, p: { title: t, starts_at: new Date(w).toISOString(), place: $("evP").value.trim(), details: $("evD").value.trim(), capacity: $("evC").value, ...(e ? { cancelled: $("evX").checked } : {}) } });
+        if ((rph || null) !== (e?.rph_id ? +e.rph_id : null) && (saved?.id || e?.id)) await rpc("link_event_rph", { p_event: saved?.id || e.id, p_rph_id: rph });
         sh.close(); view.events = await rpc("community_events", { p_slug: view.slug }); drawOne(); toast(Tx("Done"));
       } catch { $("evSave").disabled = false; $("evMsg").textContent = Tx("Couldn't save. Try again."); }
     };
