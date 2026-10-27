@@ -207,3 +207,23 @@ test('with approval: a visitor asks to join; the owner accepts and invites a fri
   await expect(page.locator('[data-testid="invite-list"]')).toContainText('Convidado');
   expect(rpcCalls(calls, 'invite_to_community')).toEqual([{ p_slug: 'liga-campinas', p_user: '66666666-6666-4666-8666-666666666666' }]);
 });
+
+test('community background: a Location fills the top; owners change it in Editar', async ({ page }) => {
+  const calls = await setup(page);
+  const json = (route, v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+  await page.route('**/rest/v1/rpc/community_access', (r) => json(r, { join_mode: 'open', cover: 'LOR10-102', requested: false, invited: false, requests: [], invites: [] }));
+  const covers = [];
+  await page.route('**/rest/v1/rpc/set_community_cover', (r) => { covers.push(JSON.parse(r.request().postData())); return r.fulfill({ status: 204, body: '' }); });
+  await page.goto(url('comunidades/?c=liga-campinas'));
+  const cover = page.locator('[data-testid="cover"]');
+  await expect(cover).toHaveClass(/loc/);
+  await expect(cover.locator('img.cm-loc')).toHaveAttribute('src', /lorcana-card-images/);
+  if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });
+  await page.locator('#edit').click();
+  await page.locator('#fCover').click();
+  await page.locator('#pkQ').fill('rapunzel tower');
+  await page.locator('#cardPicker [data-card="LOR13-80"] [data-use]').click();
+  await expect(page.locator('[data-testid="cover-field"]')).toContainText('Rapunzel');
+  await page.locator('#cfSave').click();
+  await expect.poll(() => covers).toEqual([{ p_slug: 'liga-campinas', p_card: 'LOR13-80' }]);
+});

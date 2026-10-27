@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#0b192c">
 <link rel="icon" href="../ink/icon-192.png">
 <link rel="apple-touch-icon" href="../ink/icon-192.png">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="../ui/tokens.css"><script>try{document.documentElement.dataset.theme=localStorage.getItem("inkwell-theme")==="noite"?"noite":"dia"}catch(e){document.documentElement.dataset.theme="dia"}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="../ui/tokens.css"><link rel="stylesheet" href="../ui/iw-public.css"><script>try{document.documentElement.dataset.theme=localStorage.getItem("inkwell-theme")==="noite"?"noite":"dia"}catch(e){document.documentElement.dataset.theme="dia"}</script>
 </head>
 <body>
 <script>window.INKWELL_CLOUD_CONFIG = {"url": "https://sorefaetiaebmjploanp.supabase.co", "key": "sb_publishable_RkAWW-ENz70CXA6_QV7aHw_MpfD7Gn2", "redirect": "https://luiscredie.github.io/inkwell/comunidades/"};
@@ -33,6 +33,10 @@
     -webkit-mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent); mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent); }
 }
 .cm-bar { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-4); } .cm-bar .search { flex: 1 1 240px; }
+.cm-cover.loc { height: clamp(170px, 30vw, 300px); background-image: none !important; container-type: size; overflow: hidden; }
+.cm-cover.loc .cm-loc { position: absolute; left: 50%; top: calc(50% + 13cqw); height: 100cqw; width: auto; max-width: none; aspect-ratio: 5 / 7; object-fit: cover; transform: translate(-50%, -50%) rotate(90deg) scale(1.1); }
+.cm-cover.loc::before { display: none; }
+.cm-cover.loc::after { background: linear-gradient(180deg, transparent 0%, transparent 60%, var(--surface-2) 100%); }
 .cm-cover::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(19,16,42,.1), var(--surface-2)); }
 .cm-id { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--sp-4); align-items: end; padding: 0 var(--sp-5) var(--sp-3); margin-top: -44px; }
 .cm-id .cm-av { width: 88px; height: 88px; border-radius: 22px; box-shadow: 0 0 0 4px var(--surface-2), 0 0 0 6px var(--gold, #e9b949); }
@@ -68,6 +72,8 @@
   <div id="app"></div>
 </main>
 <dialog class="sheet" id="sheet" aria-labelledby="shT"></dialog>
+<dialog class="iw-dialog iw-public" id="cardPicker" aria-labelledby="pkT"></dialog>
+<script>/*@PICKER_JS@*/</script>
 <div class="toast-host"><div class="toast" id="toast" role="status" hidden></div></div>
 
 <script>
@@ -81,7 +87,8 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const PT = {
     "Communities": "Comunidades", "Stores, cities and groups that play Lorcana.": "Lojas, cidades e grupos que jogam Lorcana.", "Search by name or city": "Buscar por nome ou cidade",
     "All": "Todas", "Mine": "Minhas", "Create a community": "Criar comunidade", "Store": "Loja", "City": "Cidade", "Interest": "Interesse", "{n} members": "{n} membros", "1 member": "1 membro",
-    "example": "exemplo", "member": "membro", "owner": "dono", "Ask to join": "Pedir para entrar", "Request sent": "Pedido enviado", "Cancel request": "Cancelar pedido", "You were invited": "Você foi convidado",
+    "example": "exemplo", "member": "membro", "owner": "dono", "Background": "Fundo", "A second card for the top of the page. A Location card is turned sideways to fill it.": "Uma segunda carta para o topo da página. Uma carta de Local é girada para preencher.",
+    "None: the picture's art is used.": "Nenhuma: usamos a arte da imagem.", "Change card": "Trocar carta", "Choose card": "Escolher carta", "Saved, but not the background. Try again later.": "Salvo, mas o fundo não. Tente de novo mais tarde.", "Ask to join": "Pedir para entrar", "Request sent": "Pedido enviado", "Cancel request": "Cancelar pedido", "You were invited": "Você foi convidado",
     "Request sent. You'll get a notice when it's accepted.": "Pedido enviado. Você recebe um aviso quando for aceito.", "Who can join": "Quem pode entrar", "Anyone 18+": "Qualquer pessoa 18+", "With approval": "Com aprovação",
     "Requests": "Pedidos", "Accept": "Aceitar", "Decline": "Recusar", "Invite": "Convidar", "Invite friends": "Convidar amigos", "Invited": "Convidado",
     "They get a notice and join without waiting for approval. Someone who isn't on Inkwell yet: send the community link.": "A pessoa recebe um aviso e entra sem precisar de aprovação. Quem ainda não está no Inkwell: mande o link da comunidade.",
@@ -133,7 +140,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const KIND = { store: "Store", city: "City", interest: "Interest" };
   const norm = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   const split = (name) => { const i = name.indexOf(" - "); return i > 0 ? [name.slice(0, i), name.slice(i + 3)] : [name, ""]; };
-  const CARDS = (CARD_INDEX?.cards || []).map(([id, name, cost, type, ink, rarity, set, num, img]) => ({ id, name: name || id, set, num, img, k: norm(`${name} ${set} ${num}`) }));
+  const CARDS = (CARD_INDEX?.cards || []).map(([id, name, cost, type, ink, rarity, set, num, img]) => ({ id, name: name || id, cost, type, ink, rarity, set, num, img, k: norm(`${name} ${set} ${num}`) }));
   const BY = new Map(CARDS.map((c) => [c.id, c]));
   const imgUrl = (c) => (c?.img ? `../lorcana-card-images/${encodeURI(c.img).replace(/'/g, "%27")}` : "");
   const art = (id) => { const c = BY.get(id); return c?.img ? `background-image:url('${imgUrl(c)}')` : ""; };
@@ -247,6 +254,14 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     };
     sh.showModal(); setTimeout(() => $("evT")?.focus(), 30);
   }
+  // the top of the page: the background card if chosen (a Location turned sideways, full width), else the picture's art
+  function coverHtml(c) {
+    const cv = c.access?.cover && BY.get(c.access.cover), id = cv ? cv.id : c.avatar, card = BY.get(id), artv = card?.img ? `url('${imgUrl(card)}')` : "none";
+    if (cv && cv.type === "Location") return `<div class="cm-cover loc" data-testid="cover" data-card="${esc(id)}"><img class="cm-loc" src="${imgUrl(cv)}" alt="${esc(cv.name)}" data-nozoom></div>`;
+    return `<div class="cm-cover" ${cv ? `data-testid="cover" data-card="${esc(id)}"` : ""} style="${art(id)};--art:${artv}"><i class="cm-art"></i></div>`;
+  }
+  let picker = null;
+  const getPicker = () => picker || (picker = window.INKWELL_CARD_PICKER({ dialog: $("cardPicker"), cards: CARDS, sets: CARD_INDEX?.sets || [], lang, signedIn: () => !!me, loadCollection: async () => null }));
   function drawOne() {
     const c = view, m = c.mock, isMember = !!c.role, isOwner = c.role === "owner", canManage = isOwner || c.role === "admin";
     const named = c.members || [], hiddenN = Math.max(0, (c.member_n || 0) - named.length);
@@ -261,7 +276,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
         ${!m && isMember ? `<div class="acts">${p.mine || canManage ? `<button type="button" class="btn ghost small" data-pa="delete_post">${armed === "del:" + p.id ? Tx("Tap again to confirm") : Tx("Delete")}</button>` : ""}${canManage && !p.mine ? `<button type="button" class="btn ghost small" data-pa="hide_post">${Tx("Hide")}</button>` : ""}${!p.mine ? `<button type="button" class="btn ghost small" data-pa="report">${Tx("Report")}</button>` : ""}</div>` : ""}</div></article>`;
     $("app").innerHTML = `${m ? `<div class="cm-mock" data-testid="mock-banner"><i class="ic i-info"></i><span>${Tx("Example · fictional community")}. ${Tx("This is a mockup to show what a community looks like. Its people are not real.")}</span></div>` : ""}
       <a class="back" href="./">${Tx("Communities")}</a>
-      <section class="cm-hero" style="margin-top:var(--sp-3)"><div class="cm-cover" style="${art(c.avatar)};--art:${BY.get(c.avatar)?.img ? `url('${imgUrl(BY.get(c.avatar))}')` : "none"}"><i class="cm-art"></i></div>
+      <section class="cm-hero" style="margin-top:var(--sp-3)">${coverHtml(c)}
         <div class="cm-id"><span class="cm-av" style="${art(c.avatar)}"></span><div style="min-width:0"><h1>${esc(L(m, c.name))}</h1><div class="small muted">${esc([Tx(KIND[c.kind] || "Store"), c.city, members(c.member_n || 0)].filter(Boolean).join(" · "))}</div></div></div>
         <div class="cm-body">${c.description ? `<p>${esc(L(m, c.description))}</p>` : ""}
           ${contactHtml(c)}
@@ -319,7 +334,8 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   // ---------- sheets: create/edit, manage members, report ----------
   function openForm(c) {
     const f = { name: c?.name || "", kind: c?.kind || "store", city: c?.city || "", description: c?.description || "", avatar_card: c?.avatar || "", contact: { ...(c?.contact || {}) } };
-    let qa = "";
+    let qa = "", cover = c ? (view?.access?.cover || null) : null;
+    const coverWas = cover;
     const sh = $("sheet");
     const draw = () => {
       const words = norm(qa).split(" ").filter(Boolean), found = qa.trim().length >= 2 ? CARDS.filter((x) => x.img && words.every((w) => x.k.includes(w))).slice(0, 8) : [];
@@ -336,6 +352,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
             ${f.avatar_card ? `<div class="row" style="gap:var(--sp-2)"><span class="cm-av" style="${art(f.avatar_card)};width:40px;height:40px"></span><span class="small">${esc(BY.get(f.avatar_card)?.name || "")}</span></div>` : ""}
             <div class="picker"><input id="fQ" type="search" value="${esc(qa)}" placeholder="${Tx("Search a card")}" aria-label="${Tx("Search a card")}" autocomplete="off"></div>
             ${qa ? `<div class="sugg static">${qa.trim().length < 2 ? `<div class="none">${Tx("Type at least 2 letters.")}</div>` : found.length ? found.map((x) => `<button type="button" data-pick="${esc(x.id)}"><span class="thumb"><img src="${imgUrl(x)}" alt=""></span><span>${esc(split(x.name).join(" · ").replace(/ · $/, ""))}<small>${esc(x.set)} · nº ${esc(x.num)}</small></span></button>`).join("") : `<div class="none">${Tx("No card found.")}</div>`}</div>` : ""}</div>
+          ${c && view?.access ? `<div class="field" data-testid="cover-field">${Tx("Background")}<span class="hint">${Tx("A second card for the top of the page. A Location card is turned sideways to fill it.")}</span>
+            <div class="row" style="gap:var(--sp-2);flex-wrap:wrap">${cover && BY.get(cover) ? `<span class="small"><b>${esc(BY.get(cover).name)}</b></span>` : `<span class="small muted">${Tx("None: the picture's art is used.")}</span>`}
+              <button type="button" class="btn small" id="fCover">${Tx(cover ? "Change card" : "Choose card")}</button>${cover ? `<button type="button" class="btn small ghost" id="fCoverDel">${Tx("Remove")}</button>` : ""}</div></div>` : ""}
           <p class="small" id="cfMsg" role="alert"></p></form></div>
         <div class="sheet-foot"><button type="button" class="btn ghost" data-close>${Tx("Cancel")}</button><button type="submit" form="cf" class="btn primary" id="cfSave">${Tx(c ? "Save" : "Create")}</button></div>`;
       sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = () => sh.close());
@@ -344,12 +363,16 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       sh.querySelectorAll("[data-ct]").forEach((i) => i.oninput = () => { f.contact[i.dataset.ct] = i.value; });
       $("fQ").oninput = (e) => { qa = e.target.value; draw(); $("fQ").focus(); $("fQ").setSelectionRange(qa.length, qa.length); };
       sh.querySelectorAll("[data-pick]").forEach((b) => b.onclick = () => { f.avatar_card = b.dataset.pick; qa = ""; draw(); });
+      $("fCover")?.addEventListener("click", (e) => getPicker().open({ current: null, taken: [], from: e.currentTarget, onUse: ({ id }) => { cover = id; draw(); } }));
+      $("fCoverDel")?.addEventListener("click", () => { cover = null; draw(); });
       $("cf").onsubmit = async (e) => {
         e.preventDefault();
         if (f.name.trim().length < 3) { $("fN").setAttribute("aria-invalid", "true"); $("fN").focus(); return; }
         $("cfSave").disabled = true;
         try {
-          if (c) { await rpc("update_community", { p_slug: c.slug, p: { ...f, contact: f.kind === "store" ? f.contact : {} } }); sh.close(); await reloadView(); drawOne(); toast(Tx("Done")); }
+          if (c) { await rpc("update_community", { p_slug: c.slug, p: { ...f, contact: f.kind === "store" ? f.contact : {} } });
+            if (cover !== coverWas) await rpc("set_community_cover", { p_slug: c.slug, p_card: cover }).catch(() => toast(Tx("Saved, but not the background. Try again later."), true));   // supabase/community_cover.sql
+            sh.close(); await reloadView(); drawOne(); toast(Tx("Done")); }
           else { const { contact, ...base } = f; const r = await rpc("create_community", { p: base }); if (f.kind === "store" && Object.values(contact).some((v) => String(v || "").trim())) await rpc("update_community", { p_slug: r.slug, p: { contact } }).catch(() => {}); location.href = `?c=${encodeURIComponent(r.slug)}`; }
         } catch (err) { $("cfSave").disabled = false; const t = String(err?.message || err); $("cfMsg").textContent = /too_many/.test(t) ? Tx("You already created 3 communities.") : /bad email/.test(t) ? Tx("Check the e-mail.") : Tx("Couldn't save. Try again."); }
       };
