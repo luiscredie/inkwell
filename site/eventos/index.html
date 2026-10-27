@@ -187,6 +187,9 @@ window.INKWELL_CLOUD = (() => {
 .ev .price { margin-left: auto; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .ev .price.free { color: var(--win, #15803d); }
 .ev .when { font-size: var(--fs-micro); color: var(--text-2); text-transform: capitalize; }
+.ev-consent { display: flex; gap: var(--sp-3); align-items: flex-start; padding: var(--sp-3) var(--sp-4); border-radius: var(--r-lg); background: var(--surface-1); border: 1px dashed var(--line-strong); margin: calc(-1 * var(--sp-1)) 0 var(--sp-3); cursor: pointer; }
+.ev-consent input { margin-top: 3px; width: 18px; height: 18px; flex: none; }
+.ev-consent small { display: block; color: var(--text-2); margin-top: 2px; }
 .ev-more { display: flex; justify-content: center; margin-top: var(--sp-4); }
 .ev .acts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 4px; }
 .ev .friends { font-size: var(--fs-small); color: var(--text-2); }
@@ -232,7 +235,20 @@ window.INKWELL_CLOUD = (() => {
   let km = where?.km || 100, view = "list", day = null, month = null, onlyMine = false, onlyFree = false, fmt = "", order = "date", horizon = 14;
   try { order = localStorage.getItem("inkwell-events-order") === "km" ? "km" : "date"; } catch { /* */ }
   let events = [], marks = new Map(), friends = {}, tables = [], loading = false, failed = false;
-  const save = () => { try { localStorage.setItem(LOC_KEY, JSON.stringify({ ...where, km })); } catch { /* */ } };
+  // acct: the place kept in the account (event_places.sql), only after the person ticks the box.
+  // undefined = not available (signed out, or the SQL isn't there); null = not saved; object = saved.
+  let acct;
+  const save = () => {
+    try { localStorage.setItem(LOC_KEY, JSON.stringify({ ...where, km })); } catch { /* */ }
+    if (acct && where) rpc("set_my_place", { p_lat: where.lat, p_lng: where.lng, p_label: where.label || null, p_km: km, p_notify: true }).then((r) => { acct = r; }).catch(() => {});
+  };
+  async function keepPlace(on) {
+    try {
+      if (on) { acct = await rpc("set_my_place", { p_lat: where.lat, p_lng: where.lng, p_label: where.label || null, p_km: km, p_notify: true }); toast(T("Salvo. Avisaremos quando aparecer evento novo perto.", "Saved. We'll tell you about new events nearby.")); }
+      else { await rpc("delete_my_place"); acct = null; toast(T("Removido da sua conta.", "Removed from your account.")); }
+    } catch { toast(T("Não foi possível salvar. Tente de novo.", "Couldn't save. Try again."), true); }
+    draw();
+  }
   const dkey = (iso) => { const d = new Date(iso); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
   const dayShort = (iso) => new Date(iso).toLocaleDateString(LOC, { weekday: "short", day: "numeric", month: "short" });
   const hhmm = (iso) => new Date(iso).toLocaleTimeString(LOC, { hour: "2-digit", minute: "2-digit" });
@@ -375,6 +391,9 @@ window.INKWELL_CLOUD = (() => {
       <button type="button" class="btn small" id="geo"><i class="ic i-globe"></i>${T("Usar minha localização", "Use my location")}</button>
       <form id="cityF"><input id="city" type="search" placeholder="${T("ou digite cidade, bairro, endereço ou CEP", "or type a city, district, address or postcode")}" aria-label="${T("Cidade, bairro, endereço ou CEP", "City, district, address or postcode")}"><button type="submit" class="btn small">${T("Buscar", "Search")}</button></form>
       <label class="small">${T("Raio", "Radius")} <select id="km" class="inline">${[25, 50, 100, 200, 300].map((k) => `<option value="${k}" ${k === km ? "selected" : ""}>${k} km</option>`).join("")}</select></label></section>`;
+    const consent = me && acct !== undefined && where ? `<label class="ev-consent" data-testid="keep-place"><input type="checkbox" id="keepPlace" ${acct ? "checked" : ""}>
+      <span><b>${T(`Salvar este lugar na minha conta e me avisar de eventos novos até ${km} km`, `Keep this place in my account and tell me about new events within ${km} km`)}</b>
+      <small>${T("Guardamos só um ponto aproximado (cerca de 1 km) e o nome do bairro ou cidade — nunca a rua. Só você vê. Desmarque quando quiser e ele é apagado. Para receber no celular, ligue os avisos no sino.", "We keep only an approximate point (about 1 km) and the district or city name — never the street. Only you see it. Untick any time and it is deleted. To get it on your phone, turn on notices in the bell.")} <a href="../privacidade/#localizacao">${T("Privacidade", "Privacy")}</a></small></span></label>` : "";
     if (!where) { app.innerHTML = locBox + `<div class="empty"><img src="../ui/assets/empty/search.svg" alt=""><b>${T("Escolha onde procurar", "Choose where to look")}</b><p>${T("Use sua localização ou digite sua cidade. Ela fica só neste aparelho.", "Use your location or type your city. It stays on this device.")}</p></div>`; wire(); return; }
     const list = all(), clash = conflicts(), clashDays = new Set(clash.map(([k]) => k));
     const formats = [...new Set(events.map((e) => e.format).filter(Boolean))].sort();
@@ -386,7 +405,7 @@ window.INKWELL_CLOUD = (() => {
     const groups = new Map();
     if (view === "list" && order === "km") groups.set("", shown);
     else for (const e of shown) { const k = dkey(e.start); groups.set(k, (groups.get(k) || []).concat(e)); }
-    app.innerHTML = locBox
+    app.innerHTML = locBox + consent
       + (clash.length ? `<div class="ev-warn" role="alert" data-testid="clash"><i class="ic i-alert"></i><div>${clash.map(([k, l]) => `<div><b>${esc(dayTitle(k))}:</b> ${T("você marcou \"Vou\" em", "you said Going to")} ${l.length} ${T("eventos", "events")} (${l.map((e) => esc(e.name)).join(" · ")})</div>`).join("")}</div></div>` : "")
       + `<div class="ev-bar"><div class="seg" role="group" aria-label="${T("Ver", "View")}"><button type="button" data-view="list" aria-pressed="${view === "list"}">${T("Lista", "List")}</button><button type="button" data-view="cal" aria-pressed="${view === "cal"}">${T("Calendário", "Calendar")}</button></div>
         <button type="button" class="chipbtn" id="mine" aria-pressed="${onlyMine}">${T("Meus eventos", "My events")}</button><button type="button" class="chipbtn" id="free" aria-pressed="${onlyFree}">${T("Grátis", "Free")}</button>
@@ -417,6 +436,7 @@ window.INKWELL_CLOUD = (() => {
     $("free")?.addEventListener("click", () => { onlyFree = !onlyFree; draw(); });
     $("fmt")?.addEventListener("change", (e) => { fmt = e.target.value; draw(); });
     $("retry")?.addEventListener("click", load);
+    $("keepPlace")?.addEventListener("change", (e) => keepPlace(e.target.checked));
     $("more")?.addEventListener("click", () => { horizon += 30; draw(); });
     $("order")?.addEventListener("change", (e) => { order = e.target.value; try { localStorage.setItem("inkwell-events-order", order); } catch { /* */ } draw(); });
     $("allDays")?.addEventListener("click", () => { day = null; draw(); });
@@ -441,6 +461,12 @@ window.INKWELL_CLOUD = (() => {
     draw();
     findPlace(onde.slice(0, 120)).then((g) => { if (g) { where = g; save(); } else toast(T("Não achei esse lugar. Tente o bairro ou a cidade.", "Couldn't find that place. Try the district or city."), true); load(); draw(); });
   } else { draw(); load(); }
+  // the place kept in the account: shows the box, and fills in the place on a new device
+  if (me) rpc("my_place").then((r) => {
+    acct = r && r.lat != null ? r : null;
+    if (acct && !where && !onde) { where = { lat: +acct.lat, lng: +acct.lng, label: acct.label || T("Minha localização", "My location") }; km = +acct.km || km; try { localStorage.setItem(LOC_KEY, JSON.stringify({ ...where, km })); } catch { /* */ } load(); }
+    draw();
+  }).catch(() => { acct = undefined; });
 })();
 </script>
 
@@ -783,7 +809,7 @@ window.INKWELL_CLOUD = (() => {
     const NK = { like: ["curtiu seu post", "liked your post"], comment: ["comentou no seu post", "commented on your post"], rsvp: ["vai na sua mesa", "is going to your table"], event: ["marcou uma mesa", "set up a table"],
       community_invite: ["convidou você para uma comunidade", "invited you to a community"], join_request: ["pediu para entrar", "asked to join"], join_accepted: ["aceitou seu pedido", "accepted your request"],
       event_soon: ["é amanhã ou hoje", "is coming up"] };
-    const noteHref = (n) => n.kind === "event_soon" && n.ref?.rph ? "../eventos/" : n.ref?.post ? `../feed/#post-${encodeURIComponent(n.ref.post)}` : n.ref?.slug ? `../comunidades/?c=${encodeURIComponent(n.ref.slug)}${["event", "rsvp", "event_soon"].includes(n.kind) ? "#mesas" : ""}` : "../feed/";
+    const noteHref = (n) => (n.kind === "event_soon" && n.ref?.rph) || /^event_near/.test(n.kind) ? "../eventos/" : n.ref?.post ? `../feed/#post-${encodeURIComponent(n.ref.post)}` : n.ref?.slug ? `../comunidades/?c=${encodeURIComponent(n.ref.slug)}${["event", "rsvp", "event_soon"].includes(n.kind) ? "#mesas" : ""}` : "../feed/";
     const showBell = () => { const b = $("iwBell"), c = $("iwBellN"); if (!b || !notes) return; b.hidden = false; const n = notes.filter((x) => x.unread).length; c.hidden = !n; c.textContent = n > 9 ? "9+" : String(n);
       b.setAttribute("aria-label", n ? T(`Notificações · ${n} novas`, `Notifications · ${n} new`) : T("Notificações", "Notifications")); };
     CLOUD.api("rpc/my_notifications", { method: "POST", body: {} }).then((r) => { notes = r || []; showBell(); }).catch(() => {});   // not there yet: no bell
@@ -822,7 +848,9 @@ window.INKWELL_CLOUD = (() => {
     }
     $("iwBell")?.addEventListener("click", (e) => {
       const list = notes || [];
-      openMenu(e.currentTarget, `<div class="menu-label">${T("Notificações", "Notifications")}</div>${list.length ? list.map((n) => `<a class="menu-item${n.unread ? " unread" : ""}" role="menuitem" href="${noteHref(n)}"><span>${n.kind === "event_soon" ? `<b>${T("Lembrete", "Reminder")}:</b> ${esc(n.ref?.text || T("seu evento", "your event"))} ${esc(T(...NK.event_soon))}` : `<b>${esc(n.name || T("Alguém", "Someone"))}</b> ${esc(T(...(NK[n.kind] || ["", ""])))}`}${n.kind !== "event_soon" && (n.ref?.text || n.ref?.name) ? `<small>${esc(n.ref.text || n.ref.name)}</small>` : ""}<small>${esc(new Date(n.at).toLocaleString(lang === "en" ? "en" : "pt-BR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}</small></span></a>`).join("") : `<div class="menu-item" style="pointer-events:none"><span class="small">${T("Nada por aqui ainda.", "Nothing here yet.")}</span></div>`}<div class="push-row" id="iwPush"></div>`, "notif");
+      openMenu(e.currentTarget, `<div class="menu-label">${T("Notificações", "Notifications")}</div>${list.length ? list.map((n) => `<a class="menu-item${n.unread ? " unread" : ""}" role="menuitem" href="${noteHref(n)}"><span>${n.kind === "event_near" ? `<b>${T("Evento novo perto de você", "New event near you")}:</b> ${esc(n.ref?.text || "")}${n.ref?.store || n.ref?.at ? `<small>${esc([n.ref.store, n.ref.at ? new Date(n.ref.at).toLocaleString(lang === "en" ? "en" : "pt-BR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : ""].filter(Boolean).join(" · "))}</small>` : ""}`
+        : n.kind === "event_near_many" ? `<b>${esc(T(`${n.ref?.n || "Vários"} eventos novos perto de você`, `${n.ref?.n || "Several"} new events near you`))}</b>${n.ref?.text ? ` ${esc(T("em", "in"))} ${esc(n.ref.text)}` : ""}`
+        : n.kind === "event_soon" ? `<b>${T("Lembrete", "Reminder")}:</b> ${esc(n.ref?.text || T("seu evento", "your event"))} ${esc(T(...NK.event_soon))}` : `<b>${esc(n.name || T("Alguém", "Someone"))}</b> ${esc(T(...(NK[n.kind] || ["", ""])))}`}${!/^event_(soon|near)/.test(n.kind) && (n.ref?.text || n.ref?.name) ? `<small>${esc(n.ref.text || n.ref.name)}</small>` : ""}<small>${esc(new Date(n.at).toLocaleString(lang === "en" ? "en" : "pt-BR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}</small></span></a>`).join("") : `<div class="menu-item" style="pointer-events:none"><span class="small">${T("Nada por aqui ainda.", "Nothing here yet.")}</span></div>`}<div class="push-row" id="iwPush"></div>`, "notif");
       drawPush();
       if (list.some((n) => n.unread)) CLOUD.api("rpc/read_notifications", { method: "POST", body: {} }).then(() => { list.forEach((n) => { n.unread = false; }); showBell(); }).catch(() => {});
     });

@@ -195,3 +195,34 @@ test('Início signed in: the Play Hub events near me next to the community table
   await expect(near.locator('.ev-next')).toHaveCount(3);
   await expect(near.locator('.ev-next').first()).toHaveAttribute('href', /tcg\.ravensburgerplay\.com\/events\/\d+/);
 });
+
+test('keep the place in my account only when I tick the box; a new device picks it up', async ({ page }) => {
+  await setup(page, { where: false });
+  const sent = []; let saved = null;
+  await page.route('**/rest/v1/rpc/my_place', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(saved) }));
+  await page.route('**/rest/v1/rpc/set_my_place', (r) => { const b = JSON.parse(r.request().postData()); sent.push(['set', b]); saved = { lat: b.p_lat, lng: b.p_lng, label: b.p_label, km: b.p_km, notify: true }; return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(saved) }); });
+  await page.route('**/rest/v1/rpc/delete_my_place', (r) => { sent.push(['delete']); saved = null; return r.fulfill({ status: 204, body: '' }); });
+  await page.goto(url('eventos/'));
+  await page.locator('#city').fill('Campinas');
+  await page.locator('#cityF button').click();
+  const box = page.locator('[data-testid="keep-place"]');
+  await expect(box).toContainText('nunca a rua');
+  await expect(box.locator('input')).not.toBeChecked();
+  expect(sent).toHaveLength(0);   // nothing goes to the account without the tick
+  await box.locator('input').check();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]).toEqual(['set', { p_lat: -22.9, p_lng: -47.06, p_label: 'Campinas, SP, BR', p_km: 100, p_notify: true }]);
+  await expect(box.locator('input')).toBeChecked();
+  // a radius change updates the saved place
+  await page.locator('#km').selectOption('50');
+  await expect.poll(() => sent.length).toBe(2);
+  expect(sent[1][1]).toMatchObject({ p_km: 50 });
+  // another device: nothing on it, the account has the place
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await expect(page.locator('[data-testid="where"]')).toContainText('Campinas, SP, BR');
+  await expect(page.locator('[data-testid="where"]')).toContainText('50 km');
+  await expect(page.locator('.ev').first()).toBeVisible();
+  await page.locator('[data-testid="keep-place"] input').uncheck();
+  await expect.poll(() => sent.at(-1)).toEqual(['delete']);
+});
