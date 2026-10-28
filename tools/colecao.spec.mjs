@@ -536,3 +536,13 @@ test('trade binder: before supabase/trade_binder.sql runs, nothing about it show
   await expect(page.locator('[data-place="trade"]')).toHaveCount(0);
   await expect(page.locator('[data-testid="trade-fill"]')).toHaveCount(0);
 });
+
+test('trade binder counts by card name: a reprint is the same card', async ({ page }) => {
+  // Elsa - Snow Queen: 3 of LOR1-41 + 2 of the LOR9-53 reprint = 5 → keep 4, 1 goes (from the printing with more copies)
+  const calls = await setup(page, { collection: { 'LOR1-41': { n: 3, f: 0 }, 'LOR9-53': { n: 2, f: 0 } }, trade: [] });
+  await page.goto(BASE);
+  await page.locator('[data-testid="trade-fill"]').click();
+  await expect(page.locator('[data-testid="trade-plan"]')).toContainText('1 cópia de 1 carta vai');
+  await page.locator('[data-testid="trade-go"]').click();
+  await expect.poll(() => rpc(calls, 'collection_move')).toEqual([{ p_owner: null, p_profile: 'luiscredie', p_delta: [], p_home: [], p_trade: [{ card_id: 'LOR1-41', qty: 1, foil: false }] }]);
+});
