@@ -569,3 +569,17 @@ test('Meu Inkwell › Avisos: this device, and new events near my saved place (r
   await page.locator('#iwBell').click();
   await expect(page.locator('[data-testid="notif-settings"]')).toHaveAttribute('href', '../perfil/#avisos');
 });
+
+test('invite friends to Inkwell: from "Para você" and from the account menu, with my invite link', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await setup(page, { mine: { display_name: 'Luís', handle: 'luis', is_public: true, invite_code: 'abc123def0' } });
+  await page.addInitScript(() => { delete Navigator.prototype.share; });
+  await page.goto(url('feed/'));
+  await page.locator('[data-testid="fy-invite"]').click();
+  await expect(page.locator('[data-testid="fy-invite"]')).toContainText('Link copiado');
+  const text = await page.evaluate(() => navigator.clipboard.readText());
+  expect(text).toMatch(/Vem para o Inkwell!.*\/perfil\/\?convite=abc123def0&u=luis$/);
+  await page.locator('#iwAcct').click();
+  await page.locator('.menu [data-invite]').click();
+  await expect(page.locator('.menu [data-invite]')).toContainText('Link copiado');
+});
