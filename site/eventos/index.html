@@ -562,6 +562,7 @@ window.INKWELL_CLOUD = (() => {
     menu.querySelectorAll("[data-lang-pick]").forEach((b) => b.addEventListener("click", () => {
       if (b.dataset.langPick !== lang) { try { localStorage.setItem("inkwell-lang", b.dataset.langPick); } catch { /* */ } location.reload(); }
     }));
+    menu.querySelector("[data-invite]")?.addEventListener("click", (e) => window.INKWELL_INVITE(e.currentTarget));
     menu.querySelector("[data-signout]")?.addEventListener("click", () => {
       try { sessionStorage.removeItem("inkwell-guest-intent-v1"); } catch { /* */ }   // signing out cancels a pending "save after sign-in"; the draft stays
       CLOUD?.signOut(); location.reload();
@@ -578,7 +579,19 @@ window.INKWELL_CLOUD = (() => {
   });
   const langSeg = () => `<div class="menu-label">${T("Idioma", "Language")}</div>
     <div class="seg block" role="group" aria-label="${T("Idioma", "Language")}">${[["pt", "Português"], ["en", "English"]].map(([k, l]) => `<button type="button" data-lang-pick="${k}" aria-pressed="${k === lang}">${l}</button>`).join("")}</div>`;
-  let profileName = "", syncAgo = "", isAdmin = false, news = null;
+  let profileName = "", syncAgo = "", isAdmin = false, news = null, myInvite = null;
+  // ---------- "Convidar para o Inkwell": your invite link (perfil/?convite=…); whoever signs up through it gets your friend request ----------
+  window.INKWELL_INVITE = async (btn) => {
+    if (!me || !CLOUD) { window.INKWELL_SIGNIN?.(); return; }
+    if (!myInvite) { const p = await CLOUD.api("rpc/my_profile", { method: "POST", body: {} }).catch(() => null); if (p?.invite_code) myInvite = { code: p.invite_code, handle: p.handle, pub: !!p.is_public }; }
+    const done = (t) => { if (!btn) return; const old = btn.innerHTML; btn.innerHTML = `<i class="ic i-check"></i>${t}`; setTimeout(() => { btn.innerHTML = old; }, 2500); };
+    if (!myInvite?.code) { done(T("Não deu, tente de novo", "Couldn't, try again")); return; }
+    const url = new URL(`../perfil/?convite=${encodeURIComponent(myInvite.code)}${myInvite.handle && myInvite.pub ? `&u=${encodeURIComponent(myInvite.handle)}` : ""}`, location.href).href;
+    const text = T("Vem para o Inkwell! Coleção, decks, trocas e eventos de Lorcana num lugar só. É grátis. Entrando por este link, a gente já fica amigo:",
+      "Join me on Inkwell! Lorcana collection, decks, trades and events in one place. It's free. Sign up through this link and we're friends right away:");
+    try { if (navigator.share) { await navigator.share({ title: "Inkwell", text, url }); return; } } catch (e) { if (e?.name === "AbortError") return; }
+    try { await navigator.clipboard.writeText(`${text} ${url}`); done(T("Link copiado", "Link copied")); } catch { window.prompt(T("Copie o link do convite:", "Copy the invite link:"), url); }
+  };
   // Notices: friend requests, recados waiting for approval, new posts in your communities (supabase/my_account.sql my_home).
   // "New" posts are the ones after you last opened Início (kept per account in this browser).
   const SEEN_KEY = me ? `inkwell-seen-${me.id}` : "";
@@ -603,6 +616,7 @@ window.INKWELL_CLOUD = (() => {
     <div class="menu-head"><span class="av lg">${esc((profileName || me.email || "?")[0].toUpperCase())}</span><div class="t"><b>${esc(profileName || T("Sua conta", "Your account"))}</b><div class="small">${esc(me.email || "")}</div></div></div>
     ${newsMenu()}
     <div class="menu-sep"></div>
+    <button type="button" class="menu-item" role="menuitem" data-invite><i class="ic i-send"></i>${T("Convidar amigos para o Inkwell", "Invite friends to Inkwell")}</button>
     <a class="menu-item" role="menuitem" href="../perfil/?editar=1"><i class="ic i-users"></i>${T("Meu Inkwell", "My Inkwell")}</a>
     <a class="menu-item" role="menuitem" href="../comunidades/"><i class="ic i-board"></i>${T("Comunidades", "Communities")}</a>
     <a class="menu-item" role="menuitem" href="../feed/#amigos"><i class="ic i-user-plus"></i>${T("Amigos e privacidade", "Friends and privacy")}</a>
@@ -637,8 +651,10 @@ window.INKWELL_CLOUD = (() => {
       ${MORE.map(([k, href, label, ic]) => `<a class="menu-item" href="${href}"${cur(k)} data-iw="${k}"><i class="ic i-${ic}"></i>${label}${k === "trades" ? '<span class="trail"><span class="count" data-trades-count hidden></span></span>' : ""}</a>`).join("")}
       <a class="menu-item" href="../feed/#amigos"><i class="ic i-user-plus"></i>${T("Amigos", "Friends")}</a>
       <a class="menu-item" href="../counter/"><i class="ic i-counter"></i>${T("Contador de lore", "Lore counter")}</a>
+      ${me ? `<button type="button" class="menu-item" data-invite><i class="ic i-send"></i>${T("Convidar amigos para o Inkwell", "Invite friends to Inkwell")}</button>` : ""}
     </nav></div>`;
   document.body.append(more);
+  more.querySelector("[data-invite]")?.addEventListener("click", (e) => window.INKWELL_INVITE(e.currentTarget));
   more.querySelector("[data-close]").addEventListener("click", () => more.close());
   more.addEventListener("click", (e) => { if (e.target === more) more.close(); });
   more.addEventListener("close", () => { $("iwMore")?.setAttribute("aria-expanded", "false"); $("iwMore")?.focus(); });
@@ -787,7 +803,7 @@ window.INKWELL_CLOUD = (() => {
   };
   if (me && CLOUD) {
     CLOUD.api("rpc/my_profile", { method: "POST", body: {} })   // supabase/my_inkwell.sql
-      .then((p) => { profileName = p?.display_name || ""; isAdmin = !!p?.is_admin; return profileName ? null : CLOUD.api(`profiles?user_id=eq.${me.id}&select=display_name`); })
+      .then((p) => { profileName = p?.display_name || ""; isAdmin = !!p?.is_admin; if (p?.invite_code) myInvite = { code: p.invite_code, handle: p.handle, pub: !!p.is_public }; return profileName ? null : CLOUD.api(`profiles?user_id=eq.${me.id}&select=display_name`); })
       .catch(() => CLOUD.api(`profiles?user_id=eq.${me.id}&select=display_name`))
       .then((r) => { if (r) profileName = r?.[0]?.display_name || ""; if (profileName) $("iwAv").textContent = profileName.trim()[0].toUpperCase(); })
       .catch(() => {});

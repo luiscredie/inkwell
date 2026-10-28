@@ -183,6 +183,7 @@ window.INKWELL_CLOUD = (() => {
 .fy-row { display: grid; gap: var(--sp-3); grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 .fy-tile { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--sp-3); align-items: center; padding: var(--sp-3) var(--sp-4); border-radius: var(--r-lg); background: var(--surface-2); color: inherit; text-decoration: none; box-shadow: var(--e1); }
 .fy-tile:hover { box-shadow: var(--e2); }
+button.fy-tile { border: 0; font: inherit; text-align: left; width: 100%; cursor: pointer; }
 .fy-tile.hot { box-shadow: inset 0 0 0 1px var(--accent), var(--e1); }
 .fy-tile .n { font-size: 1.4rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 .fy-tile .ic { width: 22px; height: 22px; color: var(--accent); }
@@ -560,7 +561,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Create your account to save": "Crie a conta para salvar", "A code by e-mail, no password. What you did stays.": "Um código por e-mail, sem senha. O que você fez continua lá.", "Your profile, saved": "Seu perfil, salvo", "Sign in with your e-mail": "Entre com seu e-mail", "A code by e-mail, no password.": "Um código por e-mail, sem senha.",
     "Make your profile": "Monte seu perfil", "Private until you decide to make it public.": "Privado até você decidir deixar público.", "Invite your friends": "Convide seus amigos",
     "Whoever signs in through your link gets your friend request.": "Quem entrar pelo seu link recebe seu pedido de amizade.", "Terms and privacy": "Termos e privacidade", "Fan project, free, not affiliated with Disney or Ravensburger.": "Projeto de fã, gratuito, sem vínculo com a Disney ou a Ravensburger.",
-    "For you": "Para você", "Your account and its data were deleted.": "Sua conta e os dados dela foram excluídos.", "My communities": "Minhas comunidades", "{name} wants to be your friend": "{name} quer ser seu amigo", "{n} friend requests": "{n} pedidos de amizade",
+    "For you": "Para você", "Invite friends to Inkwell": "Convidar amigos para o Inkwell", "Whoever signs up through your link becomes your friend.": "Quem se cadastrar pelo seu link já vira seu amigo.", "Invite friends": "Convidar amigos", "Your account and its data were deleted.": "Sua conta e os dados dela foram excluídos.", "My communities": "Minhas comunidades", "{name} wants to be your friend": "{name} quer ser seu amigo", "{n} friend requests": "{n} pedidos de amizade",
     "Answer in Friends": "Responda em Amigos", "A recado is waiting for you": "Um recado esperando você", "{n} recados are waiting for you": "{n} recados esperando você",
     "Approve it to show on your profile": "Aprove para aparecer no seu perfil", "Set up My Inkwell": "Monte seu Meu Inkwell", "Your cards, your deck, your friends. Private until you say so.": "Suas cartas, seu deck, seus amigos. Privado até você decidir.",
     "Find your people": "Encontre sua turma", "Join your store's or your city's community.": "Entre na comunidade da sua loja ou da sua cidade.", "left you a recado": "deixou um recado",
@@ -1118,6 +1119,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         ${inks.length ? `<div class="me-inks">${inks.map((i) => `<span class="me-ink"><img src="../ink/${i.toLowerCase()}.svg" alt="">${Tx(i)}</span>`).join("")}</div>` : ""}
         <div class="me-stats"><a href="../colecao/"><b data-testid="me-cards">${cards.toLocaleString(LOC)}</b><span>${Tx("Cards")}</span></a><a href="../decks/"><b data-testid="me-decks">${decks}</b><span>${Tx("Decks")}</span></a><a href="#amigos" id="meFriends"><b>${nFr}</b><span>${Tx("Friends  ")}</span></a></div>
         <a class="btn small" href="../perfil/${p?.handle ? "" : "?editar=1"}">${Tx(p?.handle ? "See my profile" : "Set up My Inkwell")}</a>
+        <button type="button" class="btn small primary" id="meInvite" data-testid="me-invite"><i class="ic i-send"></i>${Tx("Invite friends")}</button>
       </section>
       <nav class="home-tools" aria-labelledby="hTools"><h2 id="hTools">${Tx("Shortcuts")}</h2>
         <a href="../decks/"><i class="ic i-decks"></i>${Tx("Deck builder")}</a>
@@ -1128,6 +1130,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         <a href="../precos/"><i class="ic i-coins"></i>${Tx("Prices and wishlist")}</a></nav>
       <section class="home-pact"><b><i class="ic i-shield"></i>${Tx("A kind, safe space")}</b>${Tx("Communities and recados are for members 18+. Be kind at the table and online; report what isn't.")} <a href="../privacidade/">${Tx("Terms and privacy")}</a></section>`;
     el.hidden = false;
+    $("meInvite").onclick = (e) => window.INKWELL_INVITE?.(e.currentTarget);
     $("meFriends").onclick = (e) => { e.preventDefault(); $("findPeople")?.scrollIntoView({ block: "center" }); $("findPeople")?.focus(); };
   }
   function renderComms(h) {
@@ -1153,13 +1156,16 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     if (reqs.length) tiles.push(`<a class="fy-tile hot" href="#amigos" id="fyReqs" data-testid="fy-requests"><i class="ic i-user-plus"></i><span><b>${esc(reqs.length === 1 ? Tx("{name} wants to be your friend", { name: reqs[0].name || Tx("Someone") }) : Tx("{n} friend requests", { n: reqs.length }))}</b><span class="small muted" style="display:block">${Tx("Answer in Friends")}</span></span><span class="n">${reqs.length}</span></a>`);
     if (waiting) tiles.push(`<a class="fy-tile hot" href="../perfil/?editar=1#recados" data-testid="fy-recados"><i class="ic i-comment"></i><span><b>${esc(waiting === 1 ? Tx("A recado is waiting for you") : Tx("{n} recados are waiting for you", { n: waiting }))}</b><span class="small muted" style="display:block">${Tx("Approve it to show on your profile")}</span></span><span class="n">${waiting}</span></a>`);
     if (!h.profile?.handle || !h.profile?.is_public) tiles.push(`<a class="fy-tile" href="../perfil/?editar=1" data-testid="fy-profile"><span class="fy-av" style="${art(h.profile?.avatar)}"></span><span><b>${Tx("Set up My Inkwell")}</b><span class="small muted" style="display:block">${Tx("Your cards, your deck, your friends. Private until you say so.")}</span></span><i class="ic i-chevron-right"></i></a>`);
+    // invite: always there, last (people who sign up through your link get your friend request)
+    const inviteTile = `<button type="button" class="fy-tile" id="fyInvite" data-testid="fy-invite"><i class="ic i-send"></i><span><b>${Tx("Invite friends to Inkwell")}</b><span class="small muted" style="display:block">${Tx("Whoever signs up through your link becomes your friend.")}</span></span><i class="ic i-chevron-right"></i></button>`;
     if (!comms.length) tiles.push(`<a class="fy-tile" href="../comunidades/" data-testid="fy-communities"><i class="ic i-board"></i><span><b>${Tx("Find your people")}</b><span class="small muted" style="display:block">${Tx("Join your store's or your city's community.")}</span></span><i class="ic i-chevron-right"></i></a>`);
     box.innerHTML = `<section class="fy"><div class="group-head" style="margin:0"><h2 style="margin:0">${Tx("For you")}</h2>${comms.length ? `<a class="small" href="../comunidades/">${Tx("My communities")}</a>` : ""}</div>
-      ${tiles.length ? `<div class="fy-row">${tiles.join("")}</div>` : ""}
+      <div class="fy-row">${[...tiles, inviteTile].join("")}</div>
       ${(h.recados_new || []).filter(Boolean).length ? `<div class="fy-posts">${h.recados_new.filter(Boolean).map((r) => `<a class="fy-post" href="../perfil/?editar=1"><span class="fy-av" style="${art(r.avatar)}"></span><span><span class="small"><b>${esc(r.name || Tx("Someone"))}</b> <span class="faint">${Tx("left you a recado")} · ${esc(when(r.at))}</span></span><p>${esc(r.body)}</p></span></a>`).join("")}</div>` : ""}
       ${posts.length ? `<div class="fy-posts" data-testid="fy-posts">${posts.slice(0, 4).map((p) => `<a class="fy-post" href="../comunidades/?c=${encodeURIComponent(p.slug)}"><span class="fy-av" style="${art(p.avatar)}"></span><span><span class="small"><b>${esc(p.name || Tx("Someone"))}</b> <span class="faint">${Tx("in")} ${esc(p.community)} · ${esc(when(p.at))}</span></span><p>${esc(p.body)}</p></span></a>`).join("")}</div>` : ""}
       ${!tiles.length && !posts.length && !(h.recados_new || []).length ? `<p class="small muted" style="margin:0">${Tx("All caught up.")}</p>` : ""}</section>`;
     window.INKWELL_MARK_SEEN?.();   // the community messages are on screen now
+    $("fyInvite")?.addEventListener("click", (e) => window.INKWELL_INVITE?.(e.currentTarget.querySelector("b")));
     $("fyReqs")?.addEventListener("click", (e) => { e.preventDefault(); if (phone()) $("openFriends").click(); else { $("findPeople")?.scrollIntoView({ block: "center" }); $("findPeople")?.focus(); } });
   }
 
@@ -1251,6 +1257,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     menu.querySelectorAll("[data-lang-pick]").forEach((b) => b.addEventListener("click", () => {
       if (b.dataset.langPick !== lang) { try { localStorage.setItem("inkwell-lang", b.dataset.langPick); } catch { /* */ } location.reload(); }
     }));
+    menu.querySelector("[data-invite]")?.addEventListener("click", (e) => window.INKWELL_INVITE(e.currentTarget));
     menu.querySelector("[data-signout]")?.addEventListener("click", () => {
       try { sessionStorage.removeItem("inkwell-guest-intent-v1"); } catch { /* */ }   // signing out cancels a pending "save after sign-in"; the draft stays
       CLOUD?.signOut(); location.reload();
@@ -1267,7 +1274,19 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   });
   const langSeg = () => `<div class="menu-label">${T("Idioma", "Language")}</div>
     <div class="seg block" role="group" aria-label="${T("Idioma", "Language")}">${[["pt", "Português"], ["en", "English"]].map(([k, l]) => `<button type="button" data-lang-pick="${k}" aria-pressed="${k === lang}">${l}</button>`).join("")}</div>`;
-  let profileName = "", syncAgo = "", isAdmin = false, news = null;
+  let profileName = "", syncAgo = "", isAdmin = false, news = null, myInvite = null;
+  // ---------- "Convidar para o Inkwell": your invite link (perfil/?convite=…); whoever signs up through it gets your friend request ----------
+  window.INKWELL_INVITE = async (btn) => {
+    if (!me || !CLOUD) { window.INKWELL_SIGNIN?.(); return; }
+    if (!myInvite) { const p = await CLOUD.api("rpc/my_profile", { method: "POST", body: {} }).catch(() => null); if (p?.invite_code) myInvite = { code: p.invite_code, handle: p.handle, pub: !!p.is_public }; }
+    const done = (t) => { if (!btn) return; const old = btn.innerHTML; btn.innerHTML = `<i class="ic i-check"></i>${t}`; setTimeout(() => { btn.innerHTML = old; }, 2500); };
+    if (!myInvite?.code) { done(T("Não deu, tente de novo", "Couldn't, try again")); return; }
+    const url = new URL(`../perfil/?convite=${encodeURIComponent(myInvite.code)}${myInvite.handle && myInvite.pub ? `&u=${encodeURIComponent(myInvite.handle)}` : ""}`, location.href).href;
+    const text = T("Vem para o Inkwell! Coleção, decks, trocas e eventos de Lorcana num lugar só. É grátis. Entrando por este link, a gente já fica amigo:",
+      "Join me on Inkwell! Lorcana collection, decks, trades and events in one place. It's free. Sign up through this link and we're friends right away:");
+    try { if (navigator.share) { await navigator.share({ title: "Inkwell", text, url }); return; } } catch (e) { if (e?.name === "AbortError") return; }
+    try { await navigator.clipboard.writeText(`${text} ${url}`); done(T("Link copiado", "Link copied")); } catch { window.prompt(T("Copie o link do convite:", "Copy the invite link:"), url); }
+  };
   // Notices: friend requests, recados waiting for approval, new posts in your communities (supabase/my_account.sql my_home).
   // "New" posts are the ones after you last opened Início (kept per account in this browser).
   const SEEN_KEY = me ? `inkwell-seen-${me.id}` : "";
@@ -1292,6 +1311,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     <div class="menu-head"><span class="av lg">${esc((profileName || me.email || "?")[0].toUpperCase())}</span><div class="t"><b>${esc(profileName || T("Sua conta", "Your account"))}</b><div class="small">${esc(me.email || "")}</div></div></div>
     ${newsMenu()}
     <div class="menu-sep"></div>
+    <button type="button" class="menu-item" role="menuitem" data-invite><i class="ic i-send"></i>${T("Convidar amigos para o Inkwell", "Invite friends to Inkwell")}</button>
     <a class="menu-item" role="menuitem" href="../perfil/?editar=1"><i class="ic i-users"></i>${T("Meu Inkwell", "My Inkwell")}</a>
     <a class="menu-item" role="menuitem" href="../comunidades/"><i class="ic i-board"></i>${T("Comunidades", "Communities")}</a>
     <a class="menu-item" role="menuitem" href="../feed/#amigos"><i class="ic i-user-plus"></i>${T("Amigos e privacidade", "Friends and privacy")}</a>
@@ -1326,8 +1346,10 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       ${MORE.map(([k, href, label, ic]) => `<a class="menu-item" href="${href}"${cur(k)} data-iw="${k}"><i class="ic i-${ic}"></i>${label}${k === "trades" ? '<span class="trail"><span class="count" data-trades-count hidden></span></span>' : ""}</a>`).join("")}
       <a class="menu-item" href="../feed/#amigos"><i class="ic i-user-plus"></i>${T("Amigos", "Friends")}</a>
       <a class="menu-item" href="../counter/"><i class="ic i-counter"></i>${T("Contador de lore", "Lore counter")}</a>
+      ${me ? `<button type="button" class="menu-item" data-invite><i class="ic i-send"></i>${T("Convidar amigos para o Inkwell", "Invite friends to Inkwell")}</button>` : ""}
     </nav></div>`;
   document.body.append(more);
+  more.querySelector("[data-invite]")?.addEventListener("click", (e) => window.INKWELL_INVITE(e.currentTarget));
   more.querySelector("[data-close]").addEventListener("click", () => more.close());
   more.addEventListener("click", (e) => { if (e.target === more) more.close(); });
   more.addEventListener("close", () => { $("iwMore")?.setAttribute("aria-expanded", "false"); $("iwMore")?.focus(); });
@@ -1476,7 +1498,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   };
   if (me && CLOUD) {
     CLOUD.api("rpc/my_profile", { method: "POST", body: {} })   // supabase/my_inkwell.sql
-      .then((p) => { profileName = p?.display_name || ""; isAdmin = !!p?.is_admin; return profileName ? null : CLOUD.api(`profiles?user_id=eq.${me.id}&select=display_name`); })
+      .then((p) => { profileName = p?.display_name || ""; isAdmin = !!p?.is_admin; if (p?.invite_code) myInvite = { code: p.invite_code, handle: p.handle, pub: !!p.is_public }; return profileName ? null : CLOUD.api(`profiles?user_id=eq.${me.id}&select=display_name`); })
       .catch(() => CLOUD.api(`profiles?user_id=eq.${me.id}&select=display_name`))
       .then((r) => { if (r) profileName = r?.[0]?.display_name || ""; if (profileName) $("iwAv").textContent = profileName.trim()[0].toUpperCase(); })
       .catch(() => {});
