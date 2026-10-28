@@ -113,3 +113,15 @@ test("a friend's collection that isn't open", async ({ page }) => {
   await page.goto(BASE + '?amigo=ana');
   await expect(page.locator('#app')).toContainText('não está aberta para você');
 });
+
+test('a visitor sees what Coleção does, with a fictional example, and can create theirs or try a deck', async ({ page }) => {
+  await setup(page, { signedIn: false });
+  await page.goto(BASE);
+  const d = page.locator('[data-testid="coll-demo"]');
+  await expect(d).toContainText('dados fictícios');
+  await expect(d.locator('.ccard')).toHaveCount(6);
+  await expect(d).toContainText('Escaneie com a câmera');
+  await expect(d).toContainText('Fichário, Casa e Trocas');
+  await expect(page.locator('[data-testid="create-collection"]')).toHaveText('Criar minha coleção');
+  await expect(d.getByRole('link', { name: 'Testar um deck sem cadastro' })).toHaveAttribute('href', '../decks/');
+});

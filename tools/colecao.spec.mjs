@@ -569,3 +569,17 @@ test('trade binder on the Mural: posts what is in it, updates what changed, remo
   expect(w.find((c) => c.method === 'PATCH')).toMatchObject({ q: '?id=eq.old1', body: { qty: 2, note: 'Troco por set 14' } });
   expect(w.find((c) => c.method === 'POST').body.map((x) => `${x.kind} ${x.card_id} ${x.foil} ${x.qty}`).sort()).toEqual(['trade LOR10-10 true 1', 'trade LOR13-27 false 1']);
 });
+
+test('value: normal copies at the MYP Cards price when listed, foils and the rest at TCGplayer, said under the total', async ({ page }) => {
+  await setup(page, { collection: { 'LOR10-10': { n: 2, f: 1 }, 'LOR13-27': { n: 1, f: 0 } } });
+  await page.route('**/data/prices.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ generated_at: '2026-10-28T00:00:00Z', usd_brl: 5.4, prices: { 'LOR10-10': { n: 1, nl: 1, f: 5, fl: 5 }, 'LOR13-27': { n: 4, nl: 4 } } }) }));
+  await page.route('**/data/prices-br.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ retrieved_at: '2026-10-21T17:00:00Z', product_url: 'https://mypcards.com/lorcana/produto/{path}', cards: { 'LOR10-10': [3, 'x/gurgi'] } }) }));
+  await page.goto(BASE);
+  // 2 × 3 (MYP) + 1 foil × 5 (TCGplayer) + 1 × 4 (TCGplayer) = 15; MYP part 6 of 15 = 40%
+  await expect(page.locator('[data-testid="to-prices"] b')).toHaveText('R$ 15,00');
+  await expect(page.locator('[data-testid="value-src"]')).toHaveText('40% MYP Cards · resto TCGplayer');
+  await expect(page.locator('#sub')).toContainText('MYP Cards');
+  await page.locator('[data-card="LOR10-10"]').click();
+  await expect(page.locator('[data-testid="card-value"]')).toHaveText('R$ 11,00');
+  await expect(page.locator('[data-testid="card-prices"]')).toContainText('Normal R$ 3,00 MYP Cards');
+});

@@ -237,6 +237,16 @@ window.INKWELL_CLOUD = (() => {
 body.coll-ro .qty button, body.coll-ro .mv, body.coll-ro [data-bq], body.coll-notmine .act-btns { display: none !important; }
 #shareSheet .list-row.flat { gap: var(--sp-2); }
 #shareSheet input:not([type]), #shareSheet input[readonly] { min-width: 0; }
+.coll-demo .demo-box { padding: var(--sp-4); }
+.coll-demo .demo-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); pointer-events: none; }
+.coll-demo .demo-grid .ccard { cursor: default; }
+.coll-demo .places { pointer-events: none; }
+.demo-feats { list-style: none; margin: var(--sp-5) 0 0; padding: 0; display: grid; gap: var(--sp-3); grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.demo-feats li { display: grid; grid-template-columns: auto 1fr; gap: var(--sp-3); align-items: start; }
+.demo-feats .ic { width: 22px; height: 22px; color: var(--accent); margin-top: 2px; }
+.demo-feats b { display: block; }
+.demo-feats span { color: var(--text-2); font-size: var(--fs-small); }
+.demo-feats span b { color: var(--text); font-size: var(--fs-body, 1rem); }
 .imp-list span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
 
@@ -323,7 +333,12 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const setOrder = new Map(SETS.map((s, i) => [s.code, i]));
   const numOf = (c) => parseInt(String(c.num).replace(/\D+/g, ""), 10) || 0;
   let PRICES = {}, BR = null, pricesDate = null, priceSrc = "Liga Lorcana";   // "TCGplayer" while prices.json carries converted TCGplayer prices
-  const priceOf = (id, foil) => { const p = PRICES[id]; if (!p) return null; return foil ? (p.fl ?? p.f ?? p.nl ?? p.n ?? null) : (p.nl ?? p.n ?? null); };
+  // Price in Brazil (one rule for every card and every total): a normal copy uses the lowest MYP Cards listing when
+  // there is one, else TCGplayer converted to reais; a foil uses TCGplayer foil (MYP doesn't tell normal and foil apart).
+  const tcgOf = (id, foil) => { const p = PRICES[id]; if (!p) return null; return foil ? (p.fl ?? p.f ?? p.nl ?? p.n ?? null) : (p.nl ?? p.n ?? null); };
+  const mypOf = (id) => BR?.cards?.[id]?.[0] ?? null;
+  const priceOf = (id, foil) => (foil ? tcgOf(id, true) : mypOf(id) ?? tcgOf(id, false));
+  const srcOf = (id, foil) => (!foil && mypOf(id) != null ? "MYP Cards" : priceSrc);
   const imgUrl = (c) => (c.img ? `../lorcana-card-images/${encodeURI(c.img).replace(/'/g, "%27")}` : "");
   const thumb = (c, cls = "", foil = false) => `<span class="thumb ${cls}${foil ? " foil" : ""}" data-ink="${(inksOf(c)[0] || "steel").toLowerCase()}">${c.img ? `<img src="${imgUrl(c)}" alt="" loading="lazy" decoding="async" onerror="this.remove()">` : ""}`;
 
@@ -450,11 +465,12 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
 
   // ---------- rendering ----------
   function stats() {
-    let cards = 0, value = 0;
-    for (const id of Object.keys(coll())) { const { n, f } = inPlace(id); cards += n + f; value += (priceOf(id) || 0) * n + (priceOf(id, true) || 0) * f; }
+    let cards = 0, value = 0, viaMyp = 0;
+    for (const id of Object.keys(coll())) { const { n, f } = inPlace(id); cards += n + f; value += (priceOf(id) || 0) * n + (priceOf(id, true) || 0) * f; if (mypOf(id) != null) viaMyp += (mypOf(id) || 0) * n; }
+    const share = value ? Math.round((viaMyp / value) * 100) : 0;
     const lent = [...lentN.values(), ...lentF.values()].reduce((a, b) => a + b, 0);
     return `<div class="stats-row three" data-testid="coll-stats"><div class="stat"><b>${cards.toLocaleString(LOC)}</b><span>${Tx("Cards")}</span></div>
-      <a class="stat" href="../precos/?tab=value" data-testid="to-prices" style="text-decoration:none;color:inherit"><b class="money">${moneySplit(value)}</b><span>${Tx("Value")} · ${Tx("Prices")} ›</span></a>
+      <a class="stat" href="../precos/?tab=value" data-testid="to-prices" style="text-decoration:none;color:inherit"><b class="money">${moneySplit(value)}</b><span>${esc(P("Valor estimado", "Estimated value"))} · ${Tx("Prices")} ›</span>${value ? `<small class="micro muted" data-testid="value-src" style="display:block">${esc(share >= 100 ? "MYP Cards" : share > 0 ? P(`${share}% MYP Cards · resto TCGplayer`, `${share}% MYP Cards · rest TCGplayer`) : priceSrc)}</small>` : ""}</a>
       <div class="stat"><b>${lent.toLocaleString(LOC)}</b><span>${Tx("Lent out")}</span></div></div>`;
   }
   const qtyText = (o, ln, hm = 0) => [o.n ? Tx("{n} normal", { n: o.n }) : "", o.f ? Tx("{n} foil", { n: o.f }) : "", hm ? Tx("{n} at home", { n: hm }) : "", ln ? Tx("{n} lent", { n: ln }) : ""].filter(Boolean).join(" · ");
@@ -491,7 +507,21 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   function render() {
     const app = $("app");
     if (!me) {
-      app.innerHTML = `<div class="empty"><img src="../ui/assets/empty/signedout.svg" alt=""><b>${Tx("Sign in to see your collection")}</b><p>${Tx("Use your e-mail. We e-mail you a code, no password.")}</p><button type="button" class="btn primary" id="signIn">${Tx("Sign in")}</button></div>`;
+      // a visitor sees what the page does, with a small fictional example (nothing here is anyone's real collection)
+      const demo = [["LOR10-1", 4, 0], ["LOR10-190", 3, 1], ["LOR13-27", 2, 0], ["LOR10-10", 7, 0], ["LOR12-195", 1, 1], ["LOR10-178", 4, 0]];
+      const feats = [["camera", P("Escaneie com a câmera", "Scan with the camera"), P("Aponte para a carta e ela entra na coleção — com conferência antes de salvar.", "Point at the card and it goes in — you check before it saves.")],
+        ["cards", P("Fichário, Casa e Trocas", "Binder, Home and Trades"), P("Saiba onde cada cópia está. Separe as repetidas (acima de 4) para trocar e anuncie no Mural.", "Know where each copy is. Set extras (above 4) aside to trade and post them on the board.")],
+        ["import", P("Importe de onde você já usa", "Import from what you already use"), P("Dreamborn, TCGplayer, planilha ou uma lista colada.", "Dreamborn, TCGplayer, a spreadsheet or a pasted list.")],
+        ["coins", P("Valor em reais", "Value in reais"), P("Estimativa com o menor anúncio na MYP Cards e o TCGplayer convertido.", "An estimate from the lowest MYP Cards listing and TCGplayer converted.")],
+        ["users", P("Uma coleção para dois", "One collection for two"), P("Divida com quem mora com você; empreste e peça emprestado a amigos.", "Share it with someone you live with; lend to and borrow from friends.")]];
+      app.innerHTML = `<section class="coll-demo" data-testid="coll-demo">
+          <p class="lead" style="margin:0 0 var(--sp-4);max-width:60ch">${esc(P("Sua coleção de Lorcana organizada: o que você tem, onde está cada carta e quanto vale.", "Your Lorcana collection, organised: what you have, where each card is and what it's worth."))}</p>
+          <div class="card demo-box"><div class="row between" style="margin-bottom:var(--sp-3)"><b>${esc(P("Exemplo", "Example"))}</b><span class="tag info">${esc(P("dados fictícios", "fictional data"))}</span></div>
+            <div class="seg places" aria-hidden="true">${[[P("Tudo", "All"), 412], [P("Fichário", "Binder"), 290], [P("Casa", "Home"), 98], [P("Trocas", "Trades"), 18], [P("Emprestadas", "Lent"), 6]].map(([l, n], i) => `<button type="button" tabindex="-1" aria-pressed="${i === 0}">${esc(l)} <span class="n">${n}</span></button>`).join("")}</div>
+            <div class="cgrid demo-grid">${demo.map(([id, n, f]) => { const c = BY.get(id); if (!c) return ""; const [a, b] = split(c.name); return `<div class="ccard">${thumb(c, "", f > 0)}<span class="pill">×${n + f}</span>${f ? `<span class="flags"><span class="tag foil">foil</span></span>` : ""}</span><span class="nm">${esc(a)}${b ? `<small>${esc(b)}</small>` : ""}</span></div>`; }).join("")}</div></div>
+          <ul class="demo-feats">${feats.map(([ic, t, d]) => `<li><i class="ic i-${ic}"></i><span><b>${esc(t)}</b>${esc(d)}</span></li>`).join("")}</ul>
+          <div class="row" style="gap:var(--sp-3);margin-top:var(--sp-5)"><button type="button" class="btn primary large" id="signIn" data-testid="create-collection">${esc(P("Criar minha coleção", "Create my collection"))}</button><a class="btn large" href="../decks/">${esc(P("Testar um deck sem cadastro", "Try a deck, no sign-up"))}</a></div>
+          <p class="small faint" style="margin:var(--sp-3) 0 0">${Tx("Use your e-mail. We e-mail you a code, no password.")}</p></section>`;
       $("signIn").onclick = () => window.INKWELL_SIGNIN?.();
       return;
     }
@@ -620,7 +650,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
           <p class="small" style="margin:var(--sp-2) 0 0" data-testid="card-format">${esc(formatLine(c))}</p>
           <div class="row between" style="align-items:flex-end;margin:var(--sp-4) 0">
             <div><div class="small muted">${esc(Tx("Value of your {n}", { n: o.n + o.f }))}</div><div class="hero-num" style="color:var(--money)" data-testid="card-value">${esc(money(value))}</div></div>
-            <div class="small muted" style="text-align:right">${Tx("Normal")} ${pn != null ? esc(money(pn)) : "–"}<br>${Tx("Foil")} ${pf != null ? esc(money(pf)) : "–"}<br><span class="faint">${esc(priceSrc)}</span></div></div>
+            <div class="small muted" style="text-align:right" data-testid="card-prices">${Tx("Normal")} ${pn != null ? esc(money(pn)) : "–"} <span class="faint">${esc(srcOf(id, false))}</span><br>${Tx("Foil")} ${pf != null ? esc(money(pf)) : "–"} <span class="faint">${esc(priceSrc)}</span></div></div>
           ${brLine(id)}
           ${act ? `<div id="actBox" data-testid="act-${act.kind}"></div>` : `${homeReady ? (mv ? moveBox() : stocks) : `<div class="card inset stack" style="gap:0;padding:var(--sp-2) var(--sp-3)">${row("n", Tx("Normal"), o.n, lentN.get(id) || 0)}${row("f", Tx("Foil"), o.f, lentF.get(id) || 0)}</div>`}
           ${avail(id).n + avail(id).f ? `<div class="row act-btns"><button type="button" class="btn" id="aLoan"><i class="ic i-loan"></i>${Tx("Lend")}</button><button type="button" class="btn" id="aSale"><i class="ic i-trades"></i>${Tx("Sell")}</button></div>` : ""}`}
@@ -937,7 +967,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     if (me && binderOn()) return renderBinder();
     const cur = prof();
     $("title").textContent = cur && (cur.shared || cur.friend || profiles.length > 1 || shared.length) ? collName(cur) : Tx("Collection");
-    $("sub").innerHTML = esc(pricesDate ? Tx("Prices: {s}, {d}", { s: priceSrc, d: new Date(pricesDate).toLocaleDateString(LOC, { day: "numeric", month: "short" }) }) : "")
+    const dd = (d) => new Date(d).toLocaleDateString(LOC, { day: "numeric", month: "short" });
+    $("sub").innerHTML = esc(pricesDate ? (BR ? P(`Preços: MYP Cards (${dd(BR.retrieved_at)}) e ${priceSrc} convertido (${dd(pricesDate)})`, `Prices: MYP Cards (${dd(BR.retrieved_at)}) and ${priceSrc} converted (${dd(pricesDate)})`) : Tx("Prices: {s}, {d}", { s: priceSrc, d: dd(pricesDate) })) : "")
       + (cur?.shared ? ` <span class="tag ${cur.canEdit ? "match" : "info"}" data-testid="src-mode">${esc(cur.canEdit ? P("compartilhada · pode alterar", "shared · can change") : P("compartilhada · só ver", "shared · view only"))}</span>` : "")
       + (cur?.friend ? ` <span class="tag info" data-testid="src-mode">${esc(P("só ver", "view only"))}</span>` : "");
     if (me && friendView) {

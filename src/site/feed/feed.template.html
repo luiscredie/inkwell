@@ -224,7 +224,8 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "Your friends' games, newest first.": "Os jogos dos seus amigos, do mais recente ao mais antigo.", "What your friends and communities are up to.": "O que seus amigos e suas comunidades andam fazendo.", "Friends and privacy": "Amigos e privacidade", "Privacy": "Privacidade",
     "{n} friends": "{n} amigos", "1 friend": "1 amigo", "your games: {v}": "seus jogos: {v}", "Close": "Fechar", "Requests": "Pedidos", "Add a friend": "Adicionar amigo",
     "Your timeline is empty": "Sua linha do tempo está vazia", "Add friends to see their games here. Your games also show up for whoever you choose.": "Adicione amigos para ver os jogos deles aqui. Os seus jogos também aparecem para quem você escolher.",
-    "Your place in the Lorcana community.": "Seu lugar no mundo de Lorcana.", "Your favourite cards and your people, in a profile that feels like you.": "Suas cartas favoritas e sua turma, em um perfil com a sua cara.",
+    "Your place in the Lorcana community.": "Seu lugar no mundo de Lorcana.", "Organise your cards, try decks, find events and your Lorcana people — with a profile that feels like you.": "Organize suas cartas, teste decks, ache eventos e encontre sua turma de Lorcana — com um perfil com a sua cara.",
+    "No sign-up to try.": "Sem cadastro para experimentar.", "Create your account only when you want to keep what you did.": "Crie sua conta só quando quiser guardar o que fez.", "Or go straight to:": "Ou vá direto:", "try a deck": "testar um deck", "see the collection": "ver a coleção", "events near you": "eventos perto de você", "Your favourite cards and your people, in a profile that feels like you.": "Suas cartas favoritas e sua turma, em um perfil com a sua cara.",
     "Start my Inkwell": "Começar meu Inkwell", "Explore the community": "Explorar a comunidade", "Demo with fictional data": "Demonstração com dados fictícios",
     "Already have an account? Sign in": "Já tem conta? Entrar", "Example recado": "Recado de exemplo", "Build your profile": "Monte seu perfil",
     "Your name": "Seu nome", "How you want to appear. Your real name and e-mail never show.": "Como você quer aparecer. Seu nome real e seu e-mail nunca aparecem.",
@@ -712,9 +713,11 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
         <figcaption class="iw-card-label">${esc(a)}${b ? `<small>${esc(b)}</small>` : ""}</figcaption></figure>`; };
     const newHero = () => `<div class="iw-public" data-testid="new-hero"><section class="iw-hero" aria-labelledby="nhT">
         <div><h1 class="iw-h1" id="nhT">${Tx("Your place in the Lorcana community.")}</h1>
-          <p class="iw-lead">${Tx("Your favourite cards and your people, in a profile that feels like you.")}</p>
+          <p class="iw-lead" data-testid="lead">${Tx("Organise your cards, try decks, find events and your Lorcana people — with a profile that feels like you.")}</p>
           <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:var(--sp-5)"><a class="iw-button iw-button-primary" href="../comecar/" data-testid="start">${Tx("Make a profile that feels like me")}</a>
             <a class="iw-button" href="../comunidades/">${Tx("Explore the community")}</a></div>
+          <p class="iw-muted" style="margin:var(--sp-3) 0 0" data-testid="no-signup"><b>${Tx("No sign-up to try.")}</b> ${Tx("Create your account only when you want to keep what you did.")}</p>
+          <p class="iw-muted small" style="margin:var(--sp-2) 0 0">${Tx("Or go straight to:")} <a class="iw-link" href="../decks/">${Tx("try a deck")}</a> · <a class="iw-link" href="../colecao/">${Tx("see the collection")}</a> · <a class="iw-link" href="../eventos/">${Tx("events near you")}</a></p>
           <p style="margin:var(--sp-4) 0 0"><button type="button" class="iw-link" id="signIn2">${Tx("Already have an account? Sign in")}</button></p></div>
         <div class="iw-profile" aria-label="${esc(Tx("Demo with fictional data"))}">
           <div class="demo-cover" aria-hidden="true" style="${img("LOR10-178") ? `background-image:url('${img("LOR10-178")}')` : ""}"><span class="iw-sample-label">${Tx("Example profile · fictional data")}</span></div>
