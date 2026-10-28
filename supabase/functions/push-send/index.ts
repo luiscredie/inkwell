@@ -21,12 +21,15 @@ const rpc = async (name: string, body: Json) => {
 const SAYS: Record<string, string> = {
   like: "curtiu seu post", comment: "comentou no seu post", rsvp: "vai na sua mesa", event: "marcou uma mesa",
   community_invite: "convidou você para uma comunidade", join_request: "pediu para entrar na comunidade", join_accepted: "aceitou seu pedido",
+  share_accepted: "aceitou dividir a sua coleção", loan_request: "pediu cartas emprestadas", loan_offer: "quer emprestar cartas para você",
 };
 function message(p: Json) {
   const ref = p.ref || {}, text = p.text ? String(p.text).slice(0, 120) : "";
   let url = SITE + "feed/";
   if (ref.post) url = `${SITE}feed/#post-${encodeURIComponent(ref.post)}`;
   else if (ref.rph || /^event_near/.test(p.kind)) url = `${SITE}eventos/`;
+  else if (/^loan_/.test(p.kind)) url = `${SITE}trades/`;
+  else if (p.kind === "share_accepted") url = `${SITE}colecao/`;
   else if (ref.slug) url = `${SITE}comunidades/?c=${encodeURIComponent(ref.slug)}${["event", "rsvp", "event_soon"].includes(p.kind) ? "#mesas" : ""}`;
   if (p.kind === "event_near") return { title: "Evento novo perto de você", body: [text, ref.store, ref.at ? new Date(ref.at).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : ""].filter(Boolean).join(" · "), url: SITE + "eventos/" };
   if (p.kind === "event_near_many") return { title: "Eventos novos perto de você", body: `${ref.n || "Vários"} eventos novos${text ? ` perto de ${text}` : ""} no Play Hub.`, url: SITE + "eventos/" };
