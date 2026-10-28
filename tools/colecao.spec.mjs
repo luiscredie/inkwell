@@ -583,3 +583,16 @@ test('value: normal copies at the MYP Cards price when listed, foils and the res
   await expect(page.locator('[data-testid="card-value"]')).toHaveText('R$ 11,00');
   await expect(page.locator('[data-testid="card-prices"]')).toContainText('Normal R$ 3,00 MYP Cards');
 });
+
+test('"Mais valiosas": by one copy\'s price (the foil when it is worth more), not by the sum of the copies; that price is shown', async ({ page }) => {
+  await setup(page, { collection: { 'LOR10-10': { n: 8, f: 0 }, 'LOR13-27': { n: 0, f: 1 }, 'LOR10-1': { n: 1, f: 0 } } });
+  await page.route('**/data/prices.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ generated_at: '2026-10-28T00:00:00Z', usd_brl: 5.4,
+    prices: { 'LOR10-10': { n: 2, nl: 2, f: 3, fl: 3 }, 'LOR13-27': { n: 1, nl: 1, f: 9, fl: 9 }, 'LOR10-1': { n: 5, nl: 5 } } }) }));
+  await page.route('**/data/prices-br.json', (r) => r.fulfill({ status: 404, body: '' }));
+  await page.addInitScript(() => localStorage.setItem('inkwell-coll-view-v2', JSON.stringify({ sort: 'value' })));
+  await page.goto(BASE);
+  // Gurgi 8 × R$ 2 = R$ 16 in total, but one copy is R$ 2: last
+  expect(await page.locator('.ccard[data-card]').evaluateAll((els) => els.map((e) => e.dataset.card))).toEqual(['LOR13-27', 'LOR10-1', 'LOR10-10']);
+  await expect(page.locator('[data-card="LOR13-27"] [data-testid="unit-price"]')).toHaveText('R$ 9,00 foil');
+  await expect(page.locator('[data-card="LOR10-10"] [data-testid="unit-price"]')).toHaveText('R$ 2,00');
+});

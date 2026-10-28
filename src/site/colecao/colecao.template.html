@@ -184,6 +184,10 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const tcgOf = (id, foil) => { const p = PRICES[id]; if (!p) return null; return foil ? (p.fl ?? p.f ?? p.nl ?? p.n ?? null) : (p.nl ?? p.n ?? null); };
   const mypOf = (id) => BR?.cards?.[id]?.[0] ?? null;
   const priceOf = (id, foil) => (foil ? tcgOf(id, true) : mypOf(id) ?? tcgOf(id, false));
+  // the price shown on a card and used by "Mais valiosas": one copy, the most valuable one you have (the foil when
+  // you have a foil worth more); for a card you don't have, the normal price
+  const topPrice = (id, q) => { const n = priceOf(id), f = q && q.f > 0 ? priceOf(id, true) : null;
+    return f != null && (n == null || f > n || !q.n) ? { v: f, foil: true } : { v: n, foil: false }; };
   const srcOf = (id, foil) => (!foil && mypOf(id) != null ? "MYP Cards" : priceSrc);
   const imgUrl = (c) => (c.img ? `../lorcana-card-images/${encodeURI(c.img).replace(/'/g, "%27")}` : "");
   const thumb = (c, cls = "", foil = false) => `<span class="thumb ${cls}${foil ? " foil" : ""}" data-ink="${(inksOf(c)[0] || "steel").toLowerCase()}">${c.img ? `<img src="${imgUrl(c)}" alt="" loading="lazy" decoding="async" onerror="this.remove()">` : ""}`;
@@ -300,7 +304,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     const rows = CARDS.filter((x) => (!f.sets.length || f.sets.includes(x.set)) && (!f.inks.length || inksOf(x).some((i) => f.inks.includes(i)))
       && (!f.rar.length || f.rar.includes(x.rarity)) && (!f.cost.length || f.cost.includes(Math.min(8, +x.cost || 0)))
       && (!f.owned || tot(x) > 0) && (!f.foil || inPlace(x.id, f.place).f > 0) && (!f.lent || lentOf(x.id) > 0) && (!words.length || words.every((w) => x.k.includes(w))));
-    const val = (x) => { const q = inPlace(x.id, f.place); return (priceOf(x.id) || 0) * q.n + (priceOf(x.id, true) || 0) * q.f; };
+    const val = (x) => topPrice(x.id, inPlace(x.id, f.place)).v || 0;   // one copy's price, not the sum of the copies
     const bySet = (a, b) => (setOrder.get(a.set) ?? 999) - (setOrder.get(b.set) ?? 999) || numOf(a) - numOf(b) || a.id.localeCompare(b.id);
     const unit = (x) => priceOf(x.id) || 0, pn = prof()?.profile, when = (x) => ADDED.get(`${pn}|${x.id}`) || 0;
     rows.sort(f.sort === "recent" ? (a, b) => when(b) - when(a) || bySet(a, b) : f.sort === "name" ? (a, b) => a.name.localeCompare(b.name) : f.sort === "copies" ? (a, b) => tot(b) - tot(a) || bySet(a, b)
@@ -321,19 +325,19 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   }
   const qtyText = (o, ln, hm = 0) => [o.n ? Tx("{n} normal", { n: o.n }) : "", o.f ? Tx("{n} foil", { n: o.f }) : "", hm ? Tx("{n} at home", { n: hm }) : "", ln ? Tx("{n} lent", { n: ln }) : ""].filter(Boolean).join(" · ");
   function gridCard(c) {
-    const o = inPlace(c.id), t = o.n + o.f, ln = lentOf(c.id), p = priceOf(c.id), [a, b] = split(c.name);
+    const o = inPlace(c.id), t = o.n + o.f, ln = lentOf(c.id), tp = topPrice(c.id, o), p = tp.v, [a, b] = split(c.name);
     return `<button type="button" class="ccard ${t ? "" : "none"}" data-card="${esc(c.id)}">${thumb(c, "", o.f > 0)}
         ${t ? `<span class="pill">×${t}</span>` : ""}<span class="flags">${o.f ? `<span class="tag foil">foil</span>` : ""}${ln ? `<span class="tag info">${esc(Tx("{n} lent", { n: ln }))}</span>` : ""}</span></span>
       <span class="nm">${esc(a)}${b ? `<small>${esc(b)}</small>` : ""}</span>
-      <span class="meta"><span>${v.sort === "recent" && ADDED.get(`${prof()?.profile}|${c.id}`) ? esc(new Date(ADDED.get(`${prof()?.profile}|${c.id}`)).toLocaleDateString(LOC, { day: "numeric", month: "short" })) : esc(lang === "pt" ? "nº " : "#") + esc(c.num)}</span><b>${p != null ? esc(money(p)) : "–"}</b></span></button>`;
+      <span class="meta"><span>${v.sort === "recent" && ADDED.get(`${prof()?.profile}|${c.id}`) ? esc(new Date(ADDED.get(`${prof()?.profile}|${c.id}`)).toLocaleDateString(LOC, { day: "numeric", month: "short" })) : esc(lang === "pt" ? "nº " : "#") + esc(c.num)}</span><b data-testid="unit-price">${p != null ? esc(money(p)) + (tp.foil ? ` <small class="micro">foil</small>` : "") : "–"}</b></span></button>`;
   }
   const addedText = (c) => { if (v.sort !== "recent") return ""; const t = ADDED.get(`${prof()?.profile}|${c.id}`);
     return t ? " · " + esc(Tx("added {d}", { d: new Date(t).toLocaleDateString(LOC, { day: "numeric", month: "short" }) })) : ""; };
   function listRow(c) {
-    const o = owned(c.id), ln = lentOf(c.id), p = priceOf(c.id);
+    const o = owned(c.id), ln = lentOf(c.id), tp = topPrice(c.id, inPlace(c.id)), p = tp.v;
     return `<button type="button" class="list-row" data-card="${esc(c.id)}">${thumb(c, "sm", o.f > 0)}</span>
       <span class="t"><span>${esc(split(c.name).join(" · ").replace(/ · $/, ""))}</span><span class="meta">${esc(setName(c.set))} · nº ${esc(c.num)}${addedText(c)}</span>${o.n + o.f || ln ? `<span class="meta">${esc(qtyText(o, ln, ((h) => h.n + h.f)(homeOf(c.id))))}</span>` : ""}</span>
-      <span class="trail"><span class="money">${p != null ? esc(money(p)) : "–"}</span>${ln ? `<span class="tag info">${Tx("lent")}</span>` : ""}</span></button>`;
+      <span class="trail"><span class="money" data-testid="unit-price">${p != null ? esc(money(p)) + (tp.foil ? ` <small class="micro">foil</small>` : "") : "–"}</span>${ln ? `<span class="tag info">${Tx("lent")}</span>` : ""}</span></button>`;
   }
   function placeSeg() {
     const sum = (p) => Object.keys(coll()).reduce((t, id) => { const q = inPlace(id, p); return t + q.n + q.f; }, 0);
