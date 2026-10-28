@@ -342,7 +342,7 @@
       let since = ""; try { since = localStorage.getItem(WANT_KEY) || ""; } catch { /* */ }
       let n = 0;
       for (let i = 0; i < ids.length && i < 600; i += 60) {
-        const q = `listings?kind=in.(lend,sell)&user_id=neq.${me.id}&card_id=in.(${ids.slice(i, i + 60).map((x) => `"${x}"`).join(",")})${since ? `&created_at=gt.${encodeURIComponent(since)}` : ""}&select=id&limit=100`;
+        const q = `listings?kind=in.(lend,sell,trade)&user_id=neq.${me.id}&card_id=in.(${ids.slice(i, i + 60).map((x) => `"${x}"`).join(",")})${since ? `&created_at=gt.${encodeURIComponent(since)}` : ""}&select=id&limit=100`;
         n += ((await CLOUD.api(q).catch(() => [])) || []).length;
       }
       news = news || { requests: 0, recados: 0, posts: 0 }; news.wants = n; showNews();
