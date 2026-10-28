@@ -177,7 +177,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "Blocked in this browser's settings for this site.": "Bloqueados nas configurações do navegador para este site.", "This browser can't receive notices.": "Este navegador não recebe avisos.",
     "Around {place}. Checked every morning on the Play Hub.": "Perto de {place}. Conferido toda manhã no Play Hub.", "your place": "seu lugar",
     "Off. On Eventos, choose your place and tick “Keep this place in my account”.": "Desligado. Em Eventos, escolha seu lugar e marque “Salvar este lugar na minha conta”.",
-    "Up to": "Até", "Remove place": "Remover", "Notify": "Avisar", "Change place": "Trocar lugar", "Open Eventos": "Abrir Eventos", "Tap again to remove": "Toque de novo para remover", "Removed from your account.": "Removido da sua conta.",
+    "Up to": "Até", "Too many requests today. Try again tomorrow.": "Muitos pedidos hoje. Tente de novo amanhã.", "Remove place": "Remover", "Notify": "Avisar", "Change place": "Trocar lugar", "Open Eventos": "Abrir Eventos", "Tap again to remove": "Toque de novo para remover", "Removed from your account.": "Removido da sua conta.",
     "Reminders the day before events and tables you marked “Going”, and likes, comments, invites and new tables in your communities always arrive in the bell.": "Lembretes na véspera dos eventos e mesas em que você marcou “Vou”, e curtidas, comentários, convites e mesas novas nas suas comunidades chegam sempre no sino.",
     "That didn't work. Try again.": "Não deu certo. Tente de novo.", "Saved.": "Salvo.", "Couldn't save. Try again.": "Não foi possível salvar. Tente de novo.", "Loading…": "Carregando…",
     "Ink curve": "Curva de tinta", "Your data": "Seus dados", "Download everything linked to your account, or delete the account and all of it.": "Baixe tudo o que está ligado à sua conta, ou exclua a conta e tudo isso junto.",
@@ -368,7 +368,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     $("addFriend")?.addEventListener("click", async (ev) => {
       const b = ev.currentTarget; b.disabled = true;
       try { await rpc("request_friend", { p_handle: p.handle }); b.outerHTML = `<span class="tag info" data-testid="relation">${Tx("Request sent")}</span>`; toast(Tx("Friend request sent.")); }
-      catch { b.disabled = false; toast(Tx("Couldn't send. Try again."), true); }
+      catch (err) { b.disabled = false; toast(Tx(/too_many/.test(String(err?.message || err)) ? "Too many requests today. Try again tomorrow." : "Couldn't send. Try again."), true); }
     });
     $("recForm")?.addEventListener("submit", async (ev) => {
       ev.preventDefault(); const t = $("recBody"), body = t.value.trim(); if (!body) { t.focus(); return; }

@@ -15,6 +15,10 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import site_security  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src" / "site"
@@ -72,6 +76,7 @@ def build(out: Path = SITE / "decks" / "index.html") -> Path:
             .replace("/*@CARD_INDEX@*/", f"const CARD_INDEX = {script_json(card_index(catalog))};")
             .replace("/*@PORTFOLIO@*/", plan_fn)
             .replace("/*@SHELL@*/", f"window.INKWELL_SHELL = {json.dumps({'page': 'decks'})};\n{shell}"))
+    html = site_security.add_head(html, "decks")
     for marker in ("/*@CLOUD@*/", "/*@CARD_INDEX@*/", "/*@PORTFOLIO@*/", "/*@SHELL@*/"):
         assert marker not in html, marker
     out.parent.mkdir(parents=True, exist_ok=True)

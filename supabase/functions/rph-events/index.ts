@@ -61,8 +61,22 @@ async function geocode(q: string) {   // city names, via Open-Meteo's free geoco
   return d ? { lat: +d.latitude, lng: +d.longitude, label: [d.name, d.admin1, d.country_code].filter(Boolean).join(", ") } : null;
 }
 
+// best-effort limit per address (each server instance counts on its own): this function is open to visitors,
+// so it must not become a free relay to the Play Hub
+const hits = new Map<string, { n: number; at: number }>();
+const LIMIT = 90, WINDOW = 5 * 60 * 1000;
+function limited(req: Request) {
+  const ip = (req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "?").split(",")[0].trim();
+  const now = Date.now(), h = hits.get(ip);
+  if (!h || now - h.at > WINDOW) { hits.set(ip, { n: 1, at: now }); if (hits.size > 5000) for (const [k, v] of hits) if (now - v.at > WINDOW) hits.delete(k); return false; }
+  h.n++;
+  return h.n > LIMIT;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
+  if (req.method !== "GET") return json({ error: "GET only" }, 405);
+  if (limited(req)) return json({ error: "too many requests, try again in a few minutes" }, 429);
   const u = new URL(req.url);
   try {
     const id = u.searchParams.get("id");

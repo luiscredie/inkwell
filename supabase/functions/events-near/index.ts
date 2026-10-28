@@ -5,7 +5,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 const URL_ = Deno.env.get("SUPABASE_URL")!;
-const KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+const KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;   // these RPCs are granted to service_role only (hardening.sql)
 const API = "https://api.cloudflare.ravensburgerplay.com/hydraproxy/api/v2";
 const HEADERS = { "Content-Type": "application/json", Referer: "https://tcg.ravensburgerplay.com/" };
 type Json = Record<string, any>;

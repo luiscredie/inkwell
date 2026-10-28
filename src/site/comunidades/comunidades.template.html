@@ -93,7 +93,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "Requests": "Pedidos", "Accept": "Aceitar", "Decline": "Recusar", "Invite": "Convidar", "Invite friends": "Convidar amigos", "Invited": "Convidado",
     "They get a notice and join without waiting for approval. Someone who isn't on Inkwell yet: send the community link.": "A pessoa recebe um aviso e entra sem precisar de aprovação. Quem ainda não está no Inkwell: mande o link da comunidade.",
     "All your friends are already here, or you have no friends on Inkwell yet.": "Todos os seus amigos já estão aqui, ou você ainda não tem amigos no Inkwell.", "Share the community link": "Compartilhar o link da comunidade", "Tables & Leagues": "Mesas & Ligas", "New table": "Nova mesa", "Edit table": "Editar mesa", "No tables set up yet.": "Nenhuma mesa marcada ainda.",
-    "See on the Play Hub": "Ver no Play Hub", "Register on the Play Hub": "Inscrever-se no Play Hub", "Play Hub event (optional)": "Evento no Play Hub (opcional)",
+    "See on the Play Hub": "Ver no Play Hub", "Too many requests today. Try again tomorrow.": "Muitos pedidos hoje. Tente de novo amanhã.", "Too many new tables today. Try again tomorrow.": "Muitas mesas novas hoje. Tente de novo amanhã.", "Register on the Play Hub": "Inscrever-se no Play Hub", "Play Hub event (optional)": "Evento no Play Hub (opcional)",
     "Paste the event link from the Play Hub": "Cole o link do evento no Play Hub", "Fill in": "Preencher",
     "Links the table to the official event: Eventos shows them as one, and players register on the Play Hub.": "Liga a mesa ao evento oficial: em Eventos os dois aparecem como um só, e a inscrição é feita no Play Hub.",
     "That doesn't look like a Play Hub event link.": "Isso não parece um link de evento do Play Hub.", "Filled in from the Play Hub. Check and save.": "Preenchido com os dados do Play Hub. Confira e salve.",
@@ -294,7 +294,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
         const saved = await rpc("save_event", { p_slug: view.slug, p_id: e?.id || null, p: { title: t, starts_at: new Date(w).toISOString(), place: $("evP").value.trim(), details: $("evD").value.trim(), capacity: $("evC").value, ...(e ? { cancelled: $("evX").checked } : {}) } });
         if ((rph || null) !== (e?.rph_id ? +e.rph_id : null) && (saved?.id || e?.id)) await rpc("link_event_rph", { p_event: saved?.id || e.id, p_rph_id: rph });
         sh.close(); view.events = await rpc("community_events", { p_slug: view.slug }); drawOne(); toast(Tx("Done"));
-      } catch { $("evSave").disabled = false; $("evMsg").textContent = Tx("Couldn't save. Try again."); }
+      } catch (err) { $("evSave").disabled = false; $("evMsg").textContent = Tx(/too_many/.test(String(err?.message || err)) ? "Too many new tables today. Try again tomorrow." : "Couldn't save. Try again."); }
     };
     sh.showModal(); setTimeout(() => $("evT")?.focus(), 30);
   }
@@ -344,7 +344,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     $("signIn")?.addEventListener("click", () => window.INKWELL_SIGNIN?.());
     $("join")?.addEventListener("click", async () => {
       let r = null;
-      try { r = await rpc("join_community", { p_slug: c.slug, p_join: true }); } catch { toast(Tx("Couldn't send. Try again."), true); return; }
+      try { r = await rpc("join_community", { p_slug: c.slug, p_join: true }); } catch (err) { toast(Tx(/too_many/.test(String(err?.message || err)) ? "Too many requests today. Try again tomorrow." : "Couldn't send. Try again."), true); return; }
       await reloadView(); drawOne();
       toast(r === "requested" ? Tx("Request sent. You'll get a notice when it's accepted.") : Tx("You joined {name}.", { name: c.name }));
     });

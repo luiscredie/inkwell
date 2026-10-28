@@ -80,7 +80,10 @@ window.INKWELL_CLOUD = (() => {
     if (r.status === 401) store({ ...sess, expires_at: 0 });
     if (!r.ok) {
       const code = r.status === 401 || r.status === 403 ? "permission" : r.status === 400 || r.status === 409 || r.status === 413 ? "invalid_argument" : "unavailable";
-      throw Object.assign(new Error(`${method} ${path.split("?")[0]} ${r.status}`), { code, status: r.status });
+      // the database's own reason (e.g. "adults_only", "event_full", "too_many_friend_requests") goes in the message,
+      // so a page can tell the person what happened
+      let why = ""; try { why = String((await r.json())?.message || "").slice(0, 200); } catch { /* no body */ }
+      throw Object.assign(new Error(`${method} ${path.split("?")[0]} ${r.status}${why ? `: ${why}` : ""}`), { code, status: r.status, why });
     }
     const text = await r.text();
     return text ? JSON.parse(text) : null;

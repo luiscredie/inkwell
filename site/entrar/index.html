@@ -2,6 +2,9 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: mediastream:; connect-src 'self' https://sorefaetiaebmjploanp.supabase.co wss://sorefaetiaebmjploanp.supabase.co https://nominatim.openstreetmap.org https://viacep.com.br https://cdn.jsdelivr.net https://tessdata.projectnaptha.com; frame-src 'self' https://duels.ink; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<script>(function(){if(window.top===window.self)return;var s=false;try{s=window.top.location.origin===location.origin}catch(e){}if(!s){document.documentElement.style.display='none';try{window.top.location=location.href}catch(e){}}})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Entrar · Inkwell</title>
 <meta name="description" content="Confirme sua entrada no Inkwell.">
@@ -95,7 +98,10 @@ window.INKWELL_CLOUD = (() => {
     if (r.status === 401) store({ ...sess, expires_at: 0 });
     if (!r.ok) {
       const code = r.status === 401 || r.status === 403 ? "permission" : r.status === 400 || r.status === 409 || r.status === 413 ? "invalid_argument" : "unavailable";
-      throw Object.assign(new Error(`${method} ${path.split("?")[0]} ${r.status}`), { code, status: r.status });
+      // the database's own reason (e.g. "adults_only", "event_full", "too_many_friend_requests") goes in the message,
+      // so a page can tell the person what happened
+      let why = ""; try { why = String((await r.json())?.message || "").slice(0, 200); } catch { /* no body */ }
+      throw Object.assign(new Error(`${method} ${path.split("?")[0]} ${r.status}${why ? `: ${why}` : ""}`), { code, status: r.status, why });
     }
     const text = await r.text();
     return text ? JSON.parse(text) : null;
