@@ -250,7 +250,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Changes go to your Inkwell collection; Inkwell picks them up on its next sync.": "As mudanças vão para sua coleção no Inkwell; o Inkwell as recebe na próxima sincronização.",
     "Public board": "Mural público", "What players want and offer. Everyone signed in sees it.": "O que os jogadores procuram e oferecem. Todos que entram no site veem.",
     "My posts": "Meus anúncios", "New post": "Novo anúncio", "Post": "Publicar", "No posts yet.": "Nenhum anúncio ainda.",
-    "I want to borrow": "Quero pegar emprestado", "I want to buy": "Quero comprar", "I lend": "Eu empresto", "I sell": "Vendo",
+    "I want to borrow": "Quero pegar emprestado", "I want to buy": "Quero comprar", "I lend": "Eu empresto", "I sell": "Vendo", "I trade": "Troco", "has it to trade": "tem para troca", "Propose a trade": "Propor troca",
     "wants to borrow": "quer pegar emprestado", "wants to buy": "quer comprar", "lends": "empresta", "sells": "vende",
     "All": "Todos", "Looking for": "Procurando", "Offering": "Oferecendo", "Price per card (optional)": "Preço por carta (opcional)",
     "You have {n} free": "Você tem {n} livre(s)", "On your list": "Na sua lista", "Add friend": "Adicionar amigo", "Friend request sent": "Pedido de amizade enviado",
@@ -590,7 +590,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   }
 
   // ---------- public board ----------
-  const KIND = { borrow: ["I want to borrow", "wants to borrow"], buy: ["I want to buy", "wants to buy"], lend: ["I lend", "lends"], sell: ["I sell", "sells"] };
+  // trade: "I have it to trade" — what Coleção's trade binder posts (supabase/trade_binder_board.sql)
+  const KIND = { borrow: ["I want to borrow", "wants to borrow"], buy: ["I want to buy", "wants to buy"], lend: ["I lend", "lends"], sell: ["I sell", "sells"], trade: ["I trade", "has it to trade"] };
+  const OFFERS = ["lend", "sell", "trade"];
   function boardHtml() {
     const st = stock();
     const mine = listings.filter((l) => l.user_id === me.id);
@@ -602,12 +604,12 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       return myWants.has(l.card_id) ? Tx("On your list") : "";
     };
     const rows = listings.filter((l) => l.user_id !== me.id && CARDS.has(l.card_id)
-        && (boardKind === "all" || (boardKind === "want" ? l.kind === "borrow" || l.kind === "buy" : l.kind === "lend" || l.kind === "sell"))
+        && (boardKind === "all" || (boardKind === "want" ? l.kind === "borrow" || l.kind === "buy" : OFFERS.includes(l.kind)))
         && (!words.length || words.every((w) => norm(`${cardLabel(l.card_id)} ${l.card_id} ${nameOf(l.user_id)}`).includes(w))))
       .map((l) => ({ l, m: matchOf(l) })).sort((a, b) => (b.m ? 1 : 0) - (a.m ? 1 : 0) || String(b.l.created_at).localeCompare(String(a.l.created_at)));
     const action = (l) => {
       if (friends.includes(l.user_id)) {
-        const [k, label] = { lend: ["ask", "Ask to borrow"], borrow: ["offer", "Offer to lend"], sell: ["buy", "Propose to buy"], buy: ["sell", "Propose to sell"] }[l.kind];
+        const [k, label] = { lend: ["ask", "Ask to borrow"], borrow: ["offer", "Offer to lend"], sell: ["buy", "Propose to buy"], buy: ["sell", "Propose to sell"], trade: ["swap", "Propose a trade"] }[l.kind] || ["ask", "Ask to borrow"];
         return `<button type="button" class="btn small" data-bact="${k}:${l.id}">${Tx(label)}</button>`;
       }
       return pendingWith.has(l.user_id) ? `<span class="small muted">${Tx("Friend request sent")}</span>` : `<button type="button" class="btn small" data-addfriend="${l.user_id}"><i class="ic i-user-plus"></i>${Tx("Add friend")}</button>`;
@@ -658,7 +660,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
           <div id="fBalance">${balanceHtml(f.gave, f.got, cashPaid)}</div>
           <label class="field">${Tx("Note (optional)")}<textarea id="fNote" maxlength="500">${esc(f.note)}</textarea></label></div>${peopleList()}` };
     }
-    const own = f.post === "lend" || f.post === "sell";
+    const own = OFFERS.includes(f.post);
     return { title: Tx("New post"), wide: false, note: "", save: Tx("Post"),
       body: `<div class="form-block"><div class="chips" role="group" aria-label="${Tx("Kind")}">${Object.entries(KIND).map(([k, [l]]) => `<button type="button" class="chipbtn" data-post="${k}" aria-pressed="${f.post === k}">${Tx(l)}</button>`).join("")}</div></div>
         <div class="form-block">${pickerHtml("bd", f.items, Tx("Cards"), own)}
@@ -694,7 +696,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       wirePicker(sh, "li", form.items, changed, form.direction === "lent");
       sh.querySelectorAll("[data-dir]").forEach((b) => b.onclick = () => { keep(); form.direction = b.dataset.dir; renderSheet(); });
     } else if (form.kind === "post") {
-      wirePicker(sh, "bd", form.items, changed, form.post === "lend" || form.post === "sell");
+      wirePicker(sh, "bd", form.items, changed, OFFERS.includes(form.post));
       sh.querySelectorAll("[data-post]").forEach((b) => b.onclick = () => { keep(); form.post = b.dataset.post; renderSheet(); });
     } else {
       wirePicker(sh, "gv", form.gave, changed, true); wirePicker(sh, "gt", form.got, changed);
@@ -795,7 +797,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       if (act === "ask" || act === "offer") { tab = "loans"; form = { ...newLoanForm(), withSite: true, friend: l.user_id, direction: act === "ask" ? "borrowed" : "lent", items: [item] }; }
       else {
         const cash = l.price_brl != null ? String(+l.price_brl * l.qty) : "";
-        tab = "trades"; form = { ...newTradeForm(), withSite: true, friend: l.user_id, ...(act === "buy" ? { got: [item], cashMode: "paid" } : { gave: [item], cashMode: "received" }), cash };
+        tab = "trades"; form = { ...newTradeForm(), withSite: true, friend: l.user_id, ...(act === "swap" ? { got: [item] } : act === "buy" ? { got: [item], cashMode: "paid" } : { gave: [item], cashMode: "received" }), cash: act === "swap" ? "" : cash };
       }
       try { sessionStorage.setItem("inkwell-trades-tab", tab); } catch { /* */ }
       render();
@@ -808,7 +810,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   async function saveForm() {
     keep();
     const msg = $("fMsg"), f = form;
-    const over = overStock(f.kind === "loan" ? (f.direction === "lent" ? f.items : []) : f.kind === "post" ? (f.post === "lend" || f.post === "sell" ? f.items : []) : f.gave);
+    const over = overStock(f.kind === "loan" ? (f.direction === "lent" ? f.items : []) : f.kind === "post" ? (OFFERS.includes(f.post) ? f.items : []) : f.gave);
     if (over) { msg.textContent = Tx("{card}: you only have {n} available.", { card: cardLabel(over.card_id), n: freeOf(stock(), over.card_id, over.foil) }); return; }
     const person = (f.person || "").trim();
     const busy = () => { $("fSave").disabled = true; $("fSave").setAttribute("aria-busy", "true"); };
@@ -1214,7 +1216,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       let since = ""; try { since = localStorage.getItem(WANT_KEY) || ""; } catch { /* */ }
       let n = 0;
       for (let i = 0; i < ids.length && i < 600; i += 60) {
-        const q = `listings?kind=in.(lend,sell)&user_id=neq.${me.id}&card_id=in.(${ids.slice(i, i + 60).map((x) => `"${x}"`).join(",")})${since ? `&created_at=gt.${encodeURIComponent(since)}` : ""}&select=id&limit=100`;
+        const q = `listings?kind=in.(lend,sell,trade)&user_id=neq.${me.id}&card_id=in.(${ids.slice(i, i + 60).map((x) => `"${x}"`).join(",")})${since ? `&created_at=gt.${encodeURIComponent(since)}` : ""}&select=id&limit=100`;
         n += ((await CLOUD.api(q).catch(() => [])) || []).length;
       }
       news = news || { requests: 0, recados: 0, posts: 0 }; news.wants = n; showNews();

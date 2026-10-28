@@ -352,7 +352,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   // Three stocks: Fichário (the binder you carry), Casa (at home), Emprestadas (lent out). The collection is all you own;
   // supabase/collection_home.sql keeps how many are at home; the binder is the rest.
   let HOME = new Map(), homeReady = false;   // "profile|id" -> {n, f}
-  // Pasta de trocas: copies set aside to trade (supabase/trade_binder.sql), kept like Casa
+  // Fichário de trocas: copies set aside to trade (supabase/trade_binder.sql), kept like Casa
   let TRADE = new Map(), tradeReady = false;
   const homeOf = (id) => { const e = HOME.get(`${prof()?.profile}|${id}`) || {}; return { n: +e.n || 0, f: +e.f || 0 }; };
   const tradeOf = (id) => { const e = TRADE.get(`${prof()?.profile}|${id}`) || {}; return { n: +e.n || 0, f: +e.f || 0 }; };
@@ -505,7 +505,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         <div class="seg icons" role="group" aria-label="${Tx("View")}"><button type="button" data-view="grid" aria-pressed="${v.view === "grid"}" aria-label="${Tx("Grid")}"><i class="ic i-grid"></i></button><button type="button" data-view="list" aria-pressed="${v.view === "list"}" aria-label="${Tx("List")}"><i class="ic i-list"></i></button></div>
       </div>
       ${homeReady ? placeSeg() : ""}
-      ${tradeReady && !readOnly() && ["all", "binder", "trade"].includes(v.place) ? `<div class="row trade-fill" style="margin:0 0 var(--sp-3)">${v.place === "trade" ? `<span class="small muted">${esc(P("Cartas separadas para troca.", "Cards set aside to trade."))}</span>` : ""}<button type="button" class="btn small" id="openTradeFill" data-testid="trade-fill"><i class="ic i-trades"></i>${esc(P("Separar repetidas para trocas", "Set extras aside to trade"))}</button></div>` : ""}
+      ${tradeReady && !readOnly() && ["all", "binder", "trade"].includes(v.place) ? `<div class="row trade-fill" style="margin:0 0 var(--sp-3)">${v.place === "trade" ? `<span class="small muted">${esc(P("Cartas separadas para troca.", "Cards set aside to trade."))}</span>` : ""}<button type="button" class="btn small" id="openTradeFill" data-testid="trade-fill"><i class="ic i-trades"></i>${esc(P("Separar repetidas para trocas", "Set extras aside to trade"))}</button>${v.place === "trade" && !prof()?.shared ? `<button type="button" class="btn small primary" id="openTradePost" data-testid="trade-post"><i class="ic i-board"></i>${esc(P("Anunciar no Mural", "Post on the board"))}</button>` : ""}</div>` : ""}
       <div class="row between" style="margin:-4px 0 var(--sp-4)">
         <div class="chips">${chips()}<span class="small muted" id="count">${esc(Tx("{n} cards", { n: rows.length.toLocaleString(LOC) }))}</span></div>
         <select class="inline" id="sort" aria-label="${Tx("Sort")}">${[["value", "Most valuable"], ["recent", "Recently added"], ["name", "Name"], ["set", "Set and number"], ["cost", "Cost"], ["copies", "Copies"]].map(([k, l]) => `<option value="${k}" ${v.sort === k ? "selected" : ""}>${Tx(l)}</option>`).join("")}</select>
@@ -533,6 +533,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     });
     $("more")?.addEventListener("click", () => { shown += 120; render(); });
     $("openTradeFill")?.addEventListener("click", () => openTradeFill($("openTradeFill")));
+    $("openTradePost")?.addEventListener("click", () => openTradePost($("openTradePost")));
     $("clearAll")?.addEventListener("click", () => { v = { ...v, q: "", inks: [], sets: [], rar: [], cost: [], foil: false, lent: false }; again(); });
     $("allCards")?.addEventListener("click", () => { v.owned = false; again(); });
     $("grid")?.addEventListener("click", (e) => { const b = e.target.closest("[data-card]"); if (b) openCard(b.dataset.card, b); });
@@ -597,14 +598,14 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       const stocks = `<div class="card inset stack stocks" style="gap:0;padding:var(--sp-2) var(--sp-3)" data-testid="stocks">
         <div class="stock-h"><i class="ic i-cards"></i>${Tx("Binder")} <span class="muted">${w.binder.n + w.binder.f}</span></div>${stockRows("binder")}
         <div class="stock-h"><i class="ic i-home"></i>${Tx("Home")} <span class="muted">${w.home.n + w.home.f}</span></div>${stockRows("home")}
-        ${tradeReady ? `<div class="stock-h" data-testid="stock-trade"><i class="ic i-trades"></i>${esc(P("Pasta de trocas", "Trade binder"))} <span class="muted">${w.trade.n + w.trade.f}</span></div>${stockRows("trade")}` : ""}
+        ${tradeReady ? `<div class="stock-h" data-testid="stock-trade"><i class="ic i-trades"></i>${esc(P("Fichário de trocas", "Trade binder"))} <span class="muted">${w.trade.n + w.trade.f}</span></div>${stockRows("trade")}` : ""}
         ${w.lent.n + w.lent.f ? `<div class="stock-h"><i class="ic i-loan"></i>${Tx("Lent out")} <span class="muted">${w.lent.n + w.lent.f}</span></div>` : ""}</div>`;
       const moveBox = () => {
         const from = mv.from, max = w[from][mv.k], kl = Tx(mv.k === "f" ? "foil" : "normal");
         const oldWay = from !== "trade" && mv.to !== "trade";
         return `<div class="card inset stack movebox" data-testid="move-confirm" role="group" aria-labelledby="mvT">
-          <b id="mvT">${esc(oldWay ? Tx(`Move ${mv.k === "f" ? "foil" : "normal"} cards to ${mv.to === "home" ? "Home" : "the Binder"}`) : P(`Mover cartas ${mv.k === "f" ? "foil" : "normais"} para ${mv.to === "trade" ? "a pasta de trocas" : "o Fichário"}`, `Move ${mv.k === "f" ? "foil" : "normal"} cards to ${mv.to === "trade" ? "the trade binder" : "the Binder"}`))}</b>
-          <span class="small muted">${esc(from === "trade" ? P(`${max} na pasta de trocas`, `${max} in the trade binder`) : Tx(from === "home" ? "{n} at home" : "{n} in the binder", { n: max }))}</span>
+          <b id="mvT">${esc(oldWay ? Tx(`Move ${mv.k === "f" ? "foil" : "normal"} cards to ${mv.to === "home" ? "Home" : "the Binder"}`) : P(`Mover cartas ${mv.k === "f" ? "foil" : "normais"} para ${mv.to === "trade" ? "o fichário de trocas" : "o Fichário"}`, `Move ${mv.k === "f" ? "foil" : "normal"} cards to ${mv.to === "trade" ? "the trade binder" : "the Binder"}`))}</b>
+          <span class="small muted">${esc(from === "trade" ? P(`${max} no fichário de trocas`, `${max} in the trade binder`) : Tx(from === "home" ? "{n} at home" : "{n} in the binder", { n: max }))}</span>
           <div class="row" style="gap:var(--sp-3);justify-content:center;margin:var(--sp-2) 0">
             <div class="qty lg"><button type="button" data-mq="-1" aria-label="${Tx("One less")}" ${mv.qty <= 1 ? "disabled" : ""}>−</button><output id="mvQ">${mv.qty}</output><button type="button" data-mq="1" aria-label="${Tx("One more")}" ${mv.qty >= max ? "disabled" : ""}>+</button></div>
             <button type="button" class="btn small" data-mq="all" ${mv.qty >= max ? "disabled" : ""}>${esc(Tx("All ({n})", { n: max }))}</button></div>
@@ -952,7 +953,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     render();
   }
 
-  // ---------- pasta de trocas: send every copy above N (default 4, a playset) from the binder to the trade binder ----------
+  // ---------- fichário de trocas: send every copy above N (default 4, a playset) from the binder to the trade binder ----------
   const KEEP_KEY = "inkwell-trade-keep";
   function openTradeFill(from) {
     const sh = $("tradeSheet");
@@ -986,12 +987,12 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       const pl = plan(), copies = pl.reduce((t, x) => t + x.n + x.f, 0), names = new Set(pl.map((x) => x.name)).size;
       sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="tfT">${esc(P("Separar repetidas para trocas", "Set extras aside to trade"))}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
         <div class="sheet-body stack" style="gap:var(--sp-3)">
-          <p class="small muted" style="margin:0">${esc(P("Conta pelo nome da carta, como no deck: reimpressões, normal e foil somam juntas. Fica esse número no fichário (ou em casa); o que passar vai para a pasta de trocas (as Encantadas por último).", "Counted by card name, like in a deck: reprints, normal and foil add up. That many stay in the binder (or at home); the rest goes to the trade binder (Enchanted last)."))}</p>
+          <p class="small muted" style="margin:0">${esc(P("Conta pelo nome da carta, como no deck: reimpressões, normal e foil somam juntas. Fica esse número no fichário (ou em casa); o que passar vai para o fichário de trocas (as Encantadas por último).", "Counted by card name, like in a deck: reprints, normal and foil add up. That many stay in the binder (or at home); the rest goes to the trade binder (Enchanted last)."))}</p>
           <div class="row" style="gap:var(--sp-3);align-items:center;flex-wrap:wrap"><span>${esc(P("Manter", "Keep"))}</span>
             <div class="qty lg"><button type="button" data-k="-1" aria-label="${esc(P("Uma a menos", "One less"))}" ${keep <= 1 ? "disabled" : ""}>−</button><output id="tfKeep" data-testid="trade-keep">${keep}</output><button type="button" data-k="1" aria-label="${esc(P("Uma a mais", "One more"))}" ${keep >= 99 ? "disabled" : ""}>+</button></div>
             <span>${esc(P("de cada carta", "of each card"))}${keep === 4 ? ` <span class="tag info">${esc(P("play set", "playset"))}</span>` : ` <button type="button" class="btn ghost small" id="tf4">${esc(P("Voltar para 4", "Back to 4"))}</button>`}</span></div>
           <label class="switch"><span>${esc(P("Manter as foils no fichário", "Keep foils in the binder"))}<small>${esc(P("Vão primeiro as normais.", "Normal copies go first."))}</small></span><input type="checkbox" role="switch" id="tfFoil" ${foilsStay ? "checked" : ""}></label>
-          <p style="margin:0" data-testid="trade-plan"><b>${esc(copies ? P(`${copies} ${copies === 1 ? "cópia" : "cópias"} de ${names} ${names === 1 ? "carta" : "cartas"} ${copies === 1 ? "vai" : "vão"} para a pasta de trocas.`, `${copies} ${copies === 1 ? "copy" : "copies"} of ${names} ${names === 1 ? "card" : "cards"} go to the trade binder.`) : P("Nada a separar: nenhuma carta passa desse número no fichário.", "Nothing to set aside: no card goes above that number in the binder."))}</b></p>
+          <p style="margin:0" data-testid="trade-plan"><b>${esc(copies ? P(`${copies} ${copies === 1 ? "cópia" : "cópias"} de ${names} ${names === 1 ? "carta" : "cartas"} ${copies === 1 ? "vai" : "vão"} para o fichário de trocas.`, `${copies} ${copies === 1 ? "copy" : "copies"} of ${names} ${names === 1 ? "card" : "cards"} go to the trade binder.`) : P("Nada a separar: nenhuma carta passa desse número no fichário.", "Nothing to set aside: no card goes above that number in the binder."))}</b></p>
           ${pl.length ? `<div class="imp-list small">${pl.slice(0, 200).map((x) => { const c = BY.get(x.id); return `<div><span>${esc(c?.name || x.id)}</span><span class="muted">${esc(c ? setName(c.set) + " · nº " + c.num : "")}</span><b>${x.n ? x.n : ""}${x.n && x.f ? " + " : ""}${x.f ? `${x.f} foil` : ""}</b></div>`; }).join("")}${pl.length > 200 ? `<div class="muted">… ${esc(Tx("and {n} more", { n: pl.length - 200 }))}</div>` : ""}</div>` : ""}
           <p class="small" id="tfMsg" role="alert" style="margin:0">${esc(msg)}</p></div>
         <div class="sheet-foot"><button type="button" class="btn ghost" data-close>${Tx("Cancel")}</button><button type="button" class="btn primary" id="tfGo" data-testid="trade-go" ${copies && !busy ? "" : "disabled"}>${esc(copies ? P(`Mover ${copies} para Trocas`, `Move ${copies} to Trades`) : P("Mover", "Move"))}</button></div>`;
@@ -1016,12 +1017,53 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         await flush(true); await send(p, items); applyLocal(p, items, 1);
         sh.close(); v.place = "trade"; save(); renderAll();
         const n = items.reduce((t, d) => t + d.qty, 0);
-        toast(P(`${n} ${n === 1 ? "cópia foi" : "cópias foram"} para a pasta de trocas`, `${n} ${n === 1 ? "copy" : "copies"} moved to the trade binder`), async () => {
+        toast(P(`${n} ${n === 1 ? "cópia foi" : "cópias foram"} para o fichário de trocas`, `${n} ${n === 1 ? "copy" : "copies"} moved to the trade binder`), async () => {
           try { await send(p, items.map((d) => ({ ...d, qty: -d.qty }))); applyLocal(p, items, -1); renderAll(); } catch { toast(Tx("Couldn't save. Try again."), null, true); }
         });
       } catch { busy = false; draw(Tx("Couldn't save. Try again.")); }
     }
     draw(); openSheet(sh, from);
+  }
+
+  // ---------- the trade binder on the Mural: one "Troco" post per card (normal and foil apart), kept in step ----------
+  async function openTradePost(from) {
+    const sh = $("tradeSheet"), p = prof(); if (!p || p.shared || p.friend) return;
+    const want = [];
+    for (const id of Object.keys(coll())) { const t = where(id).trade; for (const k of ["n", "f"]) if (t[k] > 0 && BY.has(id)) want.push({ card_id: id, foil: k === "f", qty: Math.min(99, t[k]) }); }
+    let mine = null, note = "", msg = "";
+    const draw = () => {
+      const copies = want.reduce((t, x) => t + x.qty, 0), gone = (mine || []).filter((l) => !want.some((w) => w.card_id === l.card_id && w.foil === !!l.foil));
+      sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="tfT">${esc(P("Anunciar no Mural", "Post on the board"))}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
+        <div class="sheet-body stack" style="gap:var(--sp-3)">
+          <p style="margin:0" data-testid="trade-post-plan"><b>${esc(want.length ? P(`${want.length} ${want.length === 1 ? "anúncio" : "anúncios"} “Troco” (${copies} ${copies === 1 ? "cópia" : "cópias"}).`, `${want.length} “I trade” ${want.length === 1 ? "post" : "posts"} (${copies} ${copies === 1 ? "copy" : "copies"}).`) : P("Seu fichário de trocas está vazio.", "Your trade binder is empty."))}</b></p>
+          <p class="small muted" style="margin:0">${esc(P("O Mural passa a mostrar o que está no seu fichário de trocas. Amigos podem propor uma troca direto do anúncio. Se você anunciar de novo depois de mudar o fichário, os anúncios acompanham.", "The board shows what is in your trade binder. Friends can propose a trade right from the post. Post again after changing the binder and the posts follow."))}${gone.length ? " " + esc(P(`${gone.length} ${gone.length === 1 ? "anúncio antigo sai" : "anúncios antigos saem"} (não estão mais no fichário).`, `${gone.length} old ${gone.length === 1 ? "post goes" : "posts go"} (no longer in the binder).`)) : ""}</p>
+          <label class="field">${esc(P("Recado no anúncio (opcional)", "Note on the posts (optional)"))}<input type="text" id="tpNote" maxlength="200" value="${esc(note)}" placeholder="${esc(P("Ex.: troco por cartas do set 14", "E.g. swapping for set 14 cards"))}"></label>
+          <p class="small" id="tpMsg" role="alert" style="margin:0">${esc(msg)}</p></div>
+        <div class="sheet-foot"><button type="button" class="btn ghost" data-close>${Tx("Cancel")}</button><button type="button" class="btn primary" id="tpGo" data-testid="trade-post-go" ${mine !== null && (want.length || gone.length) ? "" : "disabled"}>${esc(P("Anunciar", "Post"))}</button></div>`;
+      sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = () => sh.close());
+      $("tpNote").oninput = (e) => { note = e.target.value; };
+      $("tpGo").onclick = () => go(gone);
+    };
+    async function go(gone) {
+      const b = $("tpGo"); b.disabled = true; b.textContent = P("Anunciando…", "Posting…");
+      try {
+        const n = note.trim().slice(0, 200), old = mine || [];
+        if (gone.length) await CLOUD.api(`listings?id=in.(${gone.map((l) => l.id).join(",")})`, { method: "DELETE", prefer: "return=minimal" });
+        for (const w of want) {
+          const l = old.find((x) => x.card_id === w.card_id && !!x.foil === w.foil);
+          if (l && (l.qty !== w.qty || (n && l.note !== n))) await CLOUD.api(`listings?id=eq.${l.id}`, { method: "PATCH", prefer: "return=minimal", body: { qty: w.qty, ...(n ? { note: n } : {}), updated_at: new Date().toISOString() } });
+        }
+        const add = want.filter((w) => !old.some((x) => x.card_id === w.card_id && !!x.foil === w.foil)).map((w) => ({ user_id: me.id, kind: "trade", card_id: w.card_id, foil: w.foil, qty: w.qty, note: n }));
+        if (add.length) await CLOUD.api("listings", { method: "POST", prefer: "return=minimal", body: add });
+        sh.close(); toast(want.length ? P(`Pronto: ${want.length} ${want.length === 1 ? "carta" : "cartas"} no Mural como “Troco”.`, `Done: ${want.length} ${want.length === 1 ? "card" : "cards"} on the board as “I trade”.`) : P("Anúncios retirados do Mural.", "Posts removed from the board."));
+      } catch (e) {
+        msg = /check|kind/.test(String(e?.why || "")) ? P("O Mural ainda não aceita “Troco”: falta rodar supabase/trade_binder_board.sql.", "The board doesn't take “I trade” yet: supabase/trade_binder_board.sql still needs to run.") : Tx("Couldn't save. Try again.");
+        draw();
+      }
+    }
+    draw(); openSheet(sh, from);
+    mine = await CLOUD.api(`listings?user_id=eq.${me.id}&kind=eq.trade&select=id,card_id,foil,qty,note`).catch(() => []);
+    if (sh.open) draw();
   }
 
   // ---------- compartilhar: your collections, people who share one, friends (see / borrow), shared with you ----------
@@ -2013,7 +2055,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       let since = ""; try { since = localStorage.getItem(WANT_KEY) || ""; } catch { /* */ }
       let n = 0;
       for (let i = 0; i < ids.length && i < 600; i += 60) {
-        const q = `listings?kind=in.(lend,sell)&user_id=neq.${me.id}&card_id=in.(${ids.slice(i, i + 60).map((x) => `"${x}"`).join(",")})${since ? `&created_at=gt.${encodeURIComponent(since)}` : ""}&select=id&limit=100`;
+        const q = `listings?kind=in.(lend,sell,trade)&user_id=neq.${me.id}&card_id=in.(${ids.slice(i, i + 60).map((x) => `"${x}"`).join(",")})${since ? `&created_at=gt.${encodeURIComponent(since)}` : ""}&select=id&limit=100`;
         n += ((await CLOUD.api(q).catch(() => [])) || []).length;
       }
       news = news || { requests: 0, recados: 0, posts: 0 }; news.wants = n; showNews();

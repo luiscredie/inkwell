@@ -546,3 +546,26 @@ test('trade binder counts by card name: a reprint is the same card', async ({ pa
   await page.locator('[data-testid="trade-go"]').click();
   await expect.poll(() => rpc(calls, 'collection_move')).toEqual([{ p_owner: null, p_profile: 'luiscredie', p_delta: [], p_home: [], p_trade: [{ card_id: 'LOR1-41', qty: 1, foil: false }] }]);
 });
+
+test('trade binder on the Mural: posts what is in it, updates what changed, removes what left', async ({ page }) => {
+  const calls = await setup(page, { collection: { 'LOR10-10': { n: 6, f: 1 }, 'LOR13-27': { n: 2, f: 0 } },
+    trade: [{ profile: 'luiscredie', card_id: 'LOR10-10', n: 2, f: 1 }, { profile: 'luiscredie', card_id: 'LOR13-27', n: 1, f: 0 }] });
+  const mine = [{ id: 'old1', card_id: 'LOR10-10', foil: false, qty: 1, note: '' }, { id: 'old2', card_id: 'LOR1-41', foil: false, qty: 1, note: '' }];
+  await page.route('**/rest/v1/listings**', (r) => {
+    const req = r.request(), u = new URL(req.url());
+    calls.push({ path: 'listings', method: req.method(), q: decodeURIComponent(u.search), body: req.postData() ? JSON.parse(req.postData()) : null });
+    return req.method() === 'GET' ? r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mine) }) : r.fulfill({ status: 204, body: '' });
+  });
+  await page.goto(BASE);
+  await page.locator('[data-place="trade"]').click();
+  await page.locator('[data-testid="trade-post"]').click();
+  await expect(page.locator('[data-testid="trade-post-plan"]')).toContainText('3 anúncios “Troco” (4 cópias)');
+  await expect(page.locator('#tradeSheet')).toContainText('1 anúncio antigo sai');
+  await page.locator('#tpNote').fill('Troco por set 14');
+  await page.locator('[data-testid="trade-post-go"]').click();
+  await expect(page.locator('#toast')).toContainText('3 cartas no Mural');
+  const w = calls.filter((c) => c.path === 'listings' && c.method !== 'GET');
+  expect(w.find((c) => c.method === 'DELETE').q).toBe('?id=in.(old2)');
+  expect(w.find((c) => c.method === 'PATCH')).toMatchObject({ q: '?id=eq.old1', body: { qty: 2, note: 'Troco por set 14' } });
+  expect(w.find((c) => c.method === 'POST').body.map((x) => `${x.kind} ${x.card_id} ${x.foil} ${x.qty}`).sort()).toEqual(['trade LOR10-10 true 1', 'trade LOR13-27 false 1']);
+});
