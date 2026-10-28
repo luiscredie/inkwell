@@ -804,27 +804,40 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     const sh = $("tradeSheet");
     let keep = 4, foilsStay = true, busy = false;
     try { keep = Math.max(1, Math.min(99, parseInt(localStorage.getItem(KEEP_KEY) || "4", 10))); if (!Number.isFinite(keep)) keep = 4; foilsStay = localStorage.getItem(KEEP_KEY + "-foil") !== "0"; } catch { /* */ }
-    const plan = () => {   // per card: total copies (normal + foil) minus N minus what is already in trades, taken from the binder
-      const out = [];
-      for (const id of Object.keys(coll())) {
-        const w = where(id), extra = w.all.n + w.all.f - keep - (w.trade.n + w.trade.f);
-        if (extra <= 0) continue;
-        const order = foilsStay ? ["n", "f"] : ["f", "n"]; let left = extra; const mv = { n: 0, f: 0 };
-        for (const k of order) { const q = Math.min(left, w.binder[k]); mv[k] = q; left -= q; }
-        if (mv.n + mv.f) out.push({ id, ...mv });
+    // by card NAME, like the deck rule: reprints and other printings of the same card count together.
+    // A reprint plays as the same card, so which printing goes doesn't matter for decks: the one you have most of in the
+    // binder goes first, Enchanted/Epic/Iconic last, normal before foil.
+    const plan = () => {
+      const out = [], seen = new Set(), col = coll(), special = new Set(["E", "EP", "I"]);
+      for (const id of Object.keys(col)) {
+        const c0 = BY.get(id); if (!c0) continue;
+        const key = nkey(c0.name); if (seen.has(key)) continue; seen.add(key);
+        const ids = (BYNAME.get(key) || [c0]).map((c) => c.id).filter((x) => col[x]);
+        let total = 0, inTrade = 0;
+        for (const x of ids) { const w = where(x); total += w.all.n + w.all.f; inTrade += w.trade.n + w.trade.f; }
+        let left = total - keep - inTrade; if (left <= 0) continue;
+        const rank = (x) => (special.has(BY.get(x)?.rarity) ? 1 : 0);
+        const order = ids.slice().sort((a, b) => rank(a) - rank(b) || (where(b).binder.n + where(b).binder.f) - (where(a).binder.n + where(a).binder.f));
+        const mv = new Map();
+        for (const k of foilsStay ? ["n", "f"] : ["f", "n"]) for (const x of order) {
+          if (left <= 0) break;
+          const q = Math.min(left, where(x).binder[k]); if (!q) continue;
+          const m = mv.get(x) || { id: x, n: 0, f: 0, name: key }; m[k] += q; mv.set(x, m); left -= q;
+        }
+        out.push(...mv.values());
       }
-      return out.sort((a, b) => (b.n + b.f) - (a.n + a.f) || (BY.get(a.id)?.name || "").localeCompare(BY.get(b.id)?.name || ""));
+      return out.sort((a, b) => (BY.get(a.id)?.name || "").localeCompare(BY.get(b.id)?.name || "") || a.id.localeCompare(b.id));
     };
     const draw = (msg = "") => {
-      const pl = plan(), copies = pl.reduce((t, x) => t + x.n + x.f, 0);
+      const pl = plan(), copies = pl.reduce((t, x) => t + x.n + x.f, 0), names = new Set(pl.map((x) => x.name)).size;
       sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="tfT">${esc(P("Separar repetidas para trocas", "Set extras aside to trade"))}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
         <div class="sheet-body stack" style="gap:var(--sp-3)">
-          <p class="small muted" style="margin:0">${esc(P("De cada carta, ficam no fichário (ou em casa) as primeiras cópias; o que passar disso vai para a pasta de trocas. Normal e foil contam juntas.", "Of each card, the first copies stay in the binder (or at home); anything above goes to the trade binder. Normal and foil count together."))}</p>
+          <p class="small muted" style="margin:0">${esc(P("Conta pelo nome da carta, como no deck: reimpressões, normal e foil somam juntas. Fica esse número no fichário (ou em casa); o que passar vai para a pasta de trocas (as Encantadas por último).", "Counted by card name, like in a deck: reprints, normal and foil add up. That many stay in the binder (or at home); the rest goes to the trade binder (Enchanted last)."))}</p>
           <div class="row" style="gap:var(--sp-3);align-items:center;flex-wrap:wrap"><span>${esc(P("Manter", "Keep"))}</span>
             <div class="qty lg"><button type="button" data-k="-1" aria-label="${esc(P("Uma a menos", "One less"))}" ${keep <= 1 ? "disabled" : ""}>−</button><output id="tfKeep" data-testid="trade-keep">${keep}</output><button type="button" data-k="1" aria-label="${esc(P("Uma a mais", "One more"))}" ${keep >= 99 ? "disabled" : ""}>+</button></div>
             <span>${esc(P("de cada carta", "of each card"))}${keep === 4 ? ` <span class="tag info">${esc(P("play set", "playset"))}</span>` : ` <button type="button" class="btn ghost small" id="tf4">${esc(P("Voltar para 4", "Back to 4"))}</button>`}</span></div>
           <label class="switch"><span>${esc(P("Manter as foils no fichário", "Keep foils in the binder"))}<small>${esc(P("Vão primeiro as normais.", "Normal copies go first."))}</small></span><input type="checkbox" role="switch" id="tfFoil" ${foilsStay ? "checked" : ""}></label>
-          <p style="margin:0" data-testid="trade-plan"><b>${esc(copies ? P(`${copies} ${copies === 1 ? "cópia" : "cópias"} de ${pl.length} ${pl.length === 1 ? "carta" : "cartas"} ${copies === 1 ? "vai" : "vão"} para a pasta de trocas.`, `${copies} ${copies === 1 ? "copy" : "copies"} of ${pl.length} ${pl.length === 1 ? "card" : "cards"} go to the trade binder.`) : P("Nada a separar: nenhuma carta passa desse número no fichário.", "Nothing to set aside: no card goes above that number in the binder."))}</b></p>
+          <p style="margin:0" data-testid="trade-plan"><b>${esc(copies ? P(`${copies} ${copies === 1 ? "cópia" : "cópias"} de ${names} ${names === 1 ? "carta" : "cartas"} ${copies === 1 ? "vai" : "vão"} para a pasta de trocas.`, `${copies} ${copies === 1 ? "copy" : "copies"} of ${names} ${names === 1 ? "card" : "cards"} go to the trade binder.`) : P("Nada a separar: nenhuma carta passa desse número no fichário.", "Nothing to set aside: no card goes above that number in the binder."))}</b></p>
           ${pl.length ? `<div class="imp-list small">${pl.slice(0, 200).map((x) => { const c = BY.get(x.id); return `<div><span>${esc(c?.name || x.id)}</span><span class="muted">${esc(c ? setName(c.set) + " · nº " + c.num : "")}</span><b>${x.n ? x.n : ""}${x.n && x.f ? " + " : ""}${x.f ? `${x.f} foil` : ""}</b></div>`; }).join("")}${pl.length > 200 ? `<div class="muted">… ${esc(Tx("and {n} more", { n: pl.length - 200 }))}</div>` : ""}</div>` : ""}
           <p class="small" id="tfMsg" role="alert" style="margin:0">${esc(msg)}</p></div>
         <div class="sheet-foot"><button type="button" class="btn ghost" data-close>${Tx("Cancel")}</button><button type="button" class="btn primary" id="tfGo" data-testid="trade-go" ${copies && !busy ? "" : "disabled"}>${esc(copies ? P(`Mover ${copies} para Trocas`, `Move ${copies} to Trades`) : P("Mover", "Move"))}</button></div>`;
