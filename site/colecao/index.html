@@ -249,6 +249,7 @@ body.coll-ro .qty button, body.coll-ro .mv, body.coll-ro [data-bq], body.coll-no
 <dialog id="scan" aria-labelledby="scanT"></dialog>
 <dialog class="sheet wide" id="impSheet" aria-labelledby="impT"></dialog>
 <dialog class="sheet wide" id="shareSheet" aria-labelledby="shT"></dialog>
+<dialog class="sheet wide" id="tradeSheet" aria-labelledby="tfT"></dialog>
 <div class="toast-host"><div class="toast" id="toast" role="status" hidden></div></div>
 
 <script>
@@ -290,7 +291,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Stopped after {n} cards. Import again with “Keep the larger number” to finish without counting twice.": "Parou depois de {n} cartas. Importe de novo com “Ficar com a maior quantidade” para terminar sem contar duas vezes.",
     "Couldn't load the card scanner.": "Não foi possível carregar o leitor de cartas.", "{n} added": "{n} adicionadas", "{n} added_1": "1 adicionada", "{n} in the list": "{n} na lista", "In Brazil from {p}": "No Brasil a partir de {p}", "Lowest listing on MYP Cards, {d}": "Menor anúncio na MYP Cards, {d}", "{n} in the list_1": "1 na lista", "In the list: {c}": "Na lista: {c}", "Review": "Revisar", "Check before adding": "Confira antes de adicionar", "Add {n} cards to the collection": "Adicionar {n} cartas à coleção", "Add {n} cards to the collection_1": "Adicionar 1 carta à coleção", "Keep scanning": "Continuar escaneando", "Discard the list": "Descartar a lista", "Tap again to discard": "Toque de novo para descartar", "Nothing will be saved until you confirm.": "Nada é salvo antes de você confirmar.", "Remove one": "Tirar uma", "Add one": "Mais uma", "The list is empty.": "A lista está vazia.", "Recently added": "Mais recentes", "added {d}": "adicionada em {d}",
     "+1 of this": "+1 desta", "Done scanning": "Concluir", "Card": "Carta", "Removed: {c}": "Removida: {c}",
-    "Show more": "Mostrar mais", "Where": "Onde", "Everything": "Tudo", "Binder": "Fichário", "Home": "Casa", "{n} at home": "{n} em casa", "→ Home": "→ Casa", "→ Binder": "→ Fichário", "Move one {k} to Home": "Mover uma {k} para Casa", "Move one {k} to the Binder": "Mover uma {k} para o Fichário", "Moved": "Movida", "Check stock": "Conferir estoque", "Set": "Set", "All sets": "Todos os sets", "Lend": "Emprestar", "Sell": "Vender", "Combo sale": "Venda combo", "New loan": "Novo empréstimo", "Date": "Data", "Buyer (optional)": "Comprador (opcional)", "Who is borrowing": "Para quem", "Return by (optional)": "Devolver até (opcional)", "Note (optional)": "Observação (opcional)", "Each": "Cada", "Price of {c}": "Preço de {c}", "Finish": "Acabamento", "Remove {c}": "Tirar {c}", "Add a card to the combo": "Adicionar carta ao combo", "Search your cards": "Buscar nas suas cartas", "None of your cards match.": "Nenhuma carta sua com esse nome.", "Sum of the cards": "Soma das cartas", "Total of the sale": "Total da venda", "Discount": "Desconto", "Extra": "Acréscimo", "Write who is borrowing.": "Escreva para quem é o empréstimo.", "Loan saved": "Empréstimo registrado", "Add at least one card.": "Adicione pelo menos uma carta.", "Write the total of the sale.": "Escreva o total da venda.", "You don't have that many to sell.": "Você não tem tantas para vender.", "Sale": "Venda", "discount {v}": "desconto {v}", "extra {v}": "acréscimo {v}", "Sale saved: {v}": "Venda registrada: {v}", "The cards left the collection, but the sale wasn't recorded. Add it in Trocas.": "As cartas saíram da coleção, mas a venda não foi registrada. Registre em Trocas.", "Check binder and home": "Conferir fichário e casa", "Binder checked": "Fichário conferido", "Home checked": "Casa conferida", "Binder: mark checked": "Fichário: marcar conferido", "Home: mark checked": "Casa: marcar conferida", "Checked: binder {a}, home {h} of {b} pages": "Conferidas: fichário {a}, casa {h} de {b} páginas", "Cancel": "Cancelar", "Move normal cards to Home": "Mover cartas normais para Casa", "Move foil cards to Home": "Mover cartas foil para Casa", "Move normal cards to the Binder": "Mover cartas normais para o Fichário", "Move foil cards to the Binder": "Mover cartas foil para o Fichário", "{n} in the binder": "{n} no fichário", "One less": "Uma a menos", "One more": "Uma a mais", "All ({n})": "Todas ({n})", "Move {n} to Home": "Mover {n} para Casa", "Move {n} to the Binder": "Mover {n} para o Fichário", "Add to": "Adicionar em", "{n} cards": "{n} cartas", "Prices: {s}, {d}": "Preços: {s}, {d}",
+    "Show more": "Mostrar mais", "Trades": "Trocas", "Where": "Onde", "Everything": "Tudo", "Binder": "Fichário", "Home": "Casa", "{n} at home": "{n} em casa", "→ Home": "→ Casa", "→ Binder": "→ Fichário", "Move one {k} to Home": "Mover uma {k} para Casa", "Move one {k} to the Binder": "Mover uma {k} para o Fichário", "Moved": "Movida", "Check stock": "Conferir estoque", "Set": "Set", "All sets": "Todos os sets", "Lend": "Emprestar", "Sell": "Vender", "Combo sale": "Venda combo", "New loan": "Novo empréstimo", "Date": "Data", "Buyer (optional)": "Comprador (opcional)", "Who is borrowing": "Para quem", "Return by (optional)": "Devolver até (opcional)", "Note (optional)": "Observação (opcional)", "Each": "Cada", "Price of {c}": "Preço de {c}", "Finish": "Acabamento", "Remove {c}": "Tirar {c}", "Add a card to the combo": "Adicionar carta ao combo", "Search your cards": "Buscar nas suas cartas", "None of your cards match.": "Nenhuma carta sua com esse nome.", "Sum of the cards": "Soma das cartas", "Total of the sale": "Total da venda", "Discount": "Desconto", "Extra": "Acréscimo", "Write who is borrowing.": "Escreva para quem é o empréstimo.", "Loan saved": "Empréstimo registrado", "Add at least one card.": "Adicione pelo menos uma carta.", "Write the total of the sale.": "Escreva o total da venda.", "You don't have that many to sell.": "Você não tem tantas para vender.", "Sale": "Venda", "discount {v}": "desconto {v}", "extra {v}": "acréscimo {v}", "Sale saved: {v}": "Venda registrada: {v}", "The cards left the collection, but the sale wasn't recorded. Add it in Trocas.": "As cartas saíram da coleção, mas a venda não foi registrada. Registre em Trocas.", "Check binder and home": "Conferir fichário e casa", "Binder checked": "Fichário conferido", "Home checked": "Casa conferida", "Binder: mark checked": "Fichário: marcar conferido", "Home: mark checked": "Casa: marcar conferida", "Checked: binder {a}, home {h} of {b} pages": "Conferidas: fichário {a}, casa {h} de {b} páginas", "Cancel": "Cancelar", "Move normal cards to Home": "Mover cartas normais para Casa", "Move foil cards to Home": "Mover cartas foil para Casa", "Move normal cards to the Binder": "Mover cartas normais para o Fichário", "Move foil cards to the Binder": "Mover cartas foil para o Fichário", "{n} in the binder": "{n} no fichário", "One less": "Uma a menos", "One more": "Uma a mais", "All ({n})": "Todas ({n})", "Move {n} to Home": "Mover {n} para Casa", "Move {n} to the Binder": "Mover {n} para o Fichário", "Add to": "Adicionar em", "{n} cards": "{n} cartas", "Prices: {s}, {d}": "Preços: {s}, {d}",
     "Normal": "Normal", "Foil": "Foil", "{n} free": "{n} livre(s)", "{n} lent": "{n} emprestada(s)", "Value of your {n}": "Valor das suas {n}",
     "Remove one {k}": "Tirar uma {k}", "Add one {k}": "Pôr uma {k}", "normal": "normal", "foil": "foil", "Lent": "Emprestadas",
     "Changes save right away. You can undo from the notice at the bottom.": "As mudanças salvam na hora. Dá para desfazer pelo aviso que aparece embaixo.",
@@ -351,16 +352,19 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   // Three stocks: Fichário (the binder you carry), Casa (at home), Emprestadas (lent out). The collection is all you own;
   // supabase/collection_home.sql keeps how many are at home; the binder is the rest.
   let HOME = new Map(), homeReady = false;   // "profile|id" -> {n, f}
+  // Pasta de trocas: copies set aside to trade (supabase/trade_binder.sql), kept like Casa
+  let TRADE = new Map(), tradeReady = false;
   const homeOf = (id) => { const e = HOME.get(`${prof()?.profile}|${id}`) || {}; return { n: +e.n || 0, f: +e.f || 0 }; };
+  const tradeOf = (id) => { const e = TRADE.get(`${prof()?.profile}|${id}`) || {}; return { n: +e.n || 0, f: +e.f || 0 }; };
   function where(id) {
-    const o = owned(id), h = homeOf(id), ln = { n: lentN.get(id) || 0, f: lentF.get(id) || 0 };
-    return { all: o, home: h, lent: ln, binder: { n: Math.max(0, o.n - h.n - ln.n), f: Math.max(0, o.f - h.f - ln.f) } };
+    const o = owned(id), h = homeOf(id), t = tradeOf(id), ln = { n: lentN.get(id) || 0, f: lentF.get(id) || 0 };
+    return { all: o, home: h, trade: t, lent: ln, binder: { n: Math.max(0, o.n - h.n - t.n - ln.n), f: Math.max(0, o.f - h.f - t.f - ln.f) } };
   }
   const inPlace = (id, place = v.place) => (!place || place === "all" ? owned(id) : where(id)[place]);
 
   async function loadAll() {
     const sharesP = fetchShares();   // in parallel with the rest
-    const [p, pr, l, ul, ad, hm, br] = await Promise.all([
+    const [p, pr, l, ul, ad, hm, br, tr] = await Promise.all([
       CLOUD.collections("profile,updated_at,collection:data->collection"),
       fetch(window.INKWELL_PRICES_URL || "../data/prices.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
       CLOUD.api("loans?select=direction,person,items,due_on,returned_at&returned_at=is.null").catch(() => []),
@@ -368,10 +372,12 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       CLOUD.api("collection_added?select=profile,card_id,added_at").catch(() => []),
       CLOUD.api("collection_home?select=profile,card_id,n,f").catch(() => null),   // null: supabase/collection_home.sql not run yet
       fetch(window.INKWELL_PRICES_BR_URL || "../data/prices-br.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),   // MYP Cards, tools/prices_from_mypcards.py   // when each card last came in (supabase/collection_added.sql)
+      CLOUD.api("collection_trade?select=profile,card_id,n,f").catch(() => null),   // null: supabase/trade_binder.sql not run yet
     ]);
     BR = br?.cards ? br : null;
     homeReady = Array.isArray(hm); HOME = new Map((hm || []).map((r) => [`${r.profile}|${r.card_id}`, { n: +r.n || 0, f: +r.f || 0 }]));
-    if (!homeReady) v.place = "all";
+    tradeReady = homeReady && Array.isArray(tr); TRADE = new Map((tr || []).map((r) => [`${r.profile}|${r.card_id}`, { n: +r.n || 0, f: +r.f || 0 }]));
+    if (!homeReady || (v.place === "trade" && !tradeReady)) v.place = "all";
     ADDED = new Map(); for (const r of ad || []) ADDED.set(`${r.profile}|${r.card_id}`, Date.parse(r.added_at) || 0);
     profiles = (p || []).map((x) => ({ ...x, collection: x.collection && typeof x.collection === "object" ? x.collection : {} }));
     if (pr?.prices) { PRICES = pr.prices; pricesDate = pr.generated_at; priceSrc = pr.usd_brl ? "TCGplayer" : "Liga Lorcana"; }
@@ -400,7 +406,10 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const [sc, ms, pv] = await (pre || fetchShares());
     shared = (Array.isArray(sc) ? sc : []).map((x) => ({ profile: `share:${x.owner}:${x.profile}`, pname: x.profile, owner: x.owner, ownerName: x.owner_name || "", canEdit: !!x.can_edit, shared: true,
       collection: x.collection && typeof x.collection === "object" ? x.collection : {} }));
-    for (const x of Array.isArray(sc) ? sc : []) for (const h of x.home || []) HOME.set(`share:${x.owner}:${x.profile}|${h.card_id}`, { n: +h.n || 0, f: +h.f || 0 });
+    for (const x of Array.isArray(sc) ? sc : []) {
+      for (const h of x.home || []) HOME.set(`share:${x.owner}:${x.profile}|${h.card_id}`, { n: +h.n || 0, f: +h.f || 0 });
+      for (const t of x.trade || []) TRADE.set(`share:${x.owner}:${x.profile}|${t.card_id}`, { n: +t.n || 0, f: +t.f || 0 });
+    }
     shareInfo = ms && typeof ms === "object" ? { given: ms.given || [], received: ms.received || [] } : { given: [], received: [] };
     if (pv) privacy = pv;
     // nothing chosen yet and your own is empty, but someone shares theirs: that one ("one collection for the two of us")
@@ -466,7 +475,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   }
   function placeSeg() {
     const sum = (p) => Object.keys(coll()).reduce((t, id) => { const q = inPlace(id, p); return t + q.n + q.f; }, 0);
-    return `<div class="seg places" role="group" aria-label="${Tx("Where")}" data-testid="places">${[["all", "Everything"], ["binder", "Binder"], ["home", "Home"], ["lent", "Lent out"]]
+    return `<div class="seg places" role="group" aria-label="${Tx("Where")}" data-testid="places">${[["all", "Everything"], ["binder", "Binder"], ["home", "Home"], ...(tradeReady ? [["trade", "Trades"]] : []), ["lent", "Lent out"]]
       .map(([k, l]) => `<button type="button" data-place="${k}" aria-pressed="${v.place === k}">${Tx(l)} <span class="n">${sum(k).toLocaleString(LOC)}</span></button>`).join("")}</div>`;
   }
   function chips() {
@@ -496,6 +505,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         <div class="seg icons" role="group" aria-label="${Tx("View")}"><button type="button" data-view="grid" aria-pressed="${v.view === "grid"}" aria-label="${Tx("Grid")}"><i class="ic i-grid"></i></button><button type="button" data-view="list" aria-pressed="${v.view === "list"}" aria-label="${Tx("List")}"><i class="ic i-list"></i></button></div>
       </div>
       ${homeReady ? placeSeg() : ""}
+      ${tradeReady && !readOnly() && ["all", "binder", "trade"].includes(v.place) ? `<div class="row trade-fill" style="margin:0 0 var(--sp-3)">${v.place === "trade" ? `<span class="small muted">${esc(P("Cartas separadas para troca.", "Cards set aside to trade."))}</span>` : ""}<button type="button" class="btn small" id="openTradeFill" data-testid="trade-fill"><i class="ic i-trades"></i>${esc(P("Separar repetidas para trocas", "Set extras aside to trade"))}</button></div>` : ""}
       <div class="row between" style="margin:-4px 0 var(--sp-4)">
         <div class="chips">${chips()}<span class="small muted" id="count">${esc(Tx("{n} cards", { n: rows.length.toLocaleString(LOC) }))}</span></div>
         <select class="inline" id="sort" aria-label="${Tx("Sort")}">${[["value", "Most valuable"], ["recent", "Recently added"], ["name", "Name"], ["set", "Set and number"], ["cost", "Cost"], ["copies", "Copies"]].map(([k, l]) => `<option value="${k}" ${v.sort === k ? "selected" : ""}>${Tx(l)}</option>`).join("")}</select>
@@ -522,6 +532,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       again();
     });
     $("more")?.addEventListener("click", () => { shown += 120; render(); });
+    $("openTradeFill")?.addEventListener("click", () => openTradeFill($("openTradeFill")));
     $("clearAll")?.addEventListener("click", () => { v = { ...v, q: "", inks: [], sets: [], rar: [], cost: [], foil: false, lent: false }; again(); });
     $("allCards")?.addEventListener("click", () => { v.owned = false; again(); });
     $("grid")?.addEventListener("click", (e) => { const b = e.target.closest("[data-card]"); if (b) openCard(b.dataset.card, b); });
@@ -575,27 +586,30 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       const w = where(id);
       // one stock: Normal and Foil with − / +, and a button that moves one copy to the other stock
       const stockRows = (place) => ["n", "f"].map((k) => {
-        const n = w[place][k], kl = Tx(k === "f" ? "foil" : "normal"), to = place === "home" ? "binder" : "home";
+        const n = w[place][k], kl = Tx(k === "f" ? "foil" : "normal"), tos = place === "binder" ? ["home", ...(tradeReady ? ["trade"] : [])] : ["binder"];
+        const mvBtn = (to) => `<button type="button" class="btn ghost small mv" data-mv="${k}:${to}${place === "trade" ? ":trade" : ""}" ${n <= 0 ? "disabled" : ""} aria-label="${esc(to === "trade" ? P(`Mover uma ${kl} para Trocas`, `Move one ${kl} to Trades`) : Tx(to === "home" ? "Move one {k} to Home" : "Move one {k} to the Binder", { k: kl }))}">${to === "trade" ? esc(P("→ Trocas", "→ Trades")) : to === "home" ? Tx("→ Home") : Tx("→ Binder")}</button>`;
         return `<div class="row between stock-row" style="min-height:56px">
           <div><b>${Tx(k === "f" ? "Foil" : "Normal")}</b>${place === "binder" && w.lent[k] ? `<div class="small muted">${esc(Tx("{n} lent", { n: w.lent[k] }))}</div>` : ""}</div>
           <div class="row" style="gap:6px;flex-wrap:nowrap">
-            <button type="button" class="btn ghost small mv" data-mv="${k}:${to}" ${n <= 0 ? "disabled" : ""} aria-label="${esc(Tx(to === "home" ? "Move one {k} to Home" : "Move one {k} to the Binder", { k: kl }))}">${to === "home" ? Tx("→ Home") : Tx("→ Binder")}</button>
+            ${tos.map(mvBtn).join("")}
             <div class="qty lg"><button type="button" data-d="${k}:-1:${place}" aria-label="${esc(Tx("Remove one {k}", { k: kl }))}" ${n <= 0 ? "disabled" : ""}>−</button><output data-n="${place}-${k}">${n}</output><button type="button" data-d="${k}:1:${place}" aria-label="${esc(Tx("Add one {k}", { k: kl }))}">+</button></div></div></div>`;
       }).join("");
       const stocks = `<div class="card inset stack stocks" style="gap:0;padding:var(--sp-2) var(--sp-3)" data-testid="stocks">
         <div class="stock-h"><i class="ic i-cards"></i>${Tx("Binder")} <span class="muted">${w.binder.n + w.binder.f}</span></div>${stockRows("binder")}
         <div class="stock-h"><i class="ic i-home"></i>${Tx("Home")} <span class="muted">${w.home.n + w.home.f}</span></div>${stockRows("home")}
+        ${tradeReady ? `<div class="stock-h" data-testid="stock-trade"><i class="ic i-trades"></i>${esc(P("Pasta de trocas", "Trade binder"))} <span class="muted">${w.trade.n + w.trade.f}</span></div>${stockRows("trade")}` : ""}
         ${w.lent.n + w.lent.f ? `<div class="stock-h"><i class="ic i-loan"></i>${Tx("Lent out")} <span class="muted">${w.lent.n + w.lent.f}</span></div>` : ""}</div>`;
       const moveBox = () => {
-        const from = mv.to === "home" ? "binder" : "home", max = w[from][mv.k], kl = Tx(mv.k === "f" ? "foil" : "normal");
+        const from = mv.from, max = w[from][mv.k], kl = Tx(mv.k === "f" ? "foil" : "normal");
+        const oldWay = from !== "trade" && mv.to !== "trade";
         return `<div class="card inset stack movebox" data-testid="move-confirm" role="group" aria-labelledby="mvT">
-          <b id="mvT">${esc(Tx(`Move ${mv.k === "f" ? "foil" : "normal"} cards to ${mv.to === "home" ? "Home" : "the Binder"}`))}</b>
-          <span class="small muted">${esc(Tx(from === "home" ? "{n} at home" : "{n} in the binder", { n: max }))}</span>
+          <b id="mvT">${esc(oldWay ? Tx(`Move ${mv.k === "f" ? "foil" : "normal"} cards to ${mv.to === "home" ? "Home" : "the Binder"}`) : P(`Mover cartas ${mv.k === "f" ? "foil" : "normais"} para ${mv.to === "trade" ? "a pasta de trocas" : "o Fichário"}`, `Move ${mv.k === "f" ? "foil" : "normal"} cards to ${mv.to === "trade" ? "the trade binder" : "the Binder"}`))}</b>
+          <span class="small muted">${esc(from === "trade" ? P(`${max} na pasta de trocas`, `${max} in the trade binder`) : Tx(from === "home" ? "{n} at home" : "{n} in the binder", { n: max }))}</span>
           <div class="row" style="gap:var(--sp-3);justify-content:center;margin:var(--sp-2) 0">
             <div class="qty lg"><button type="button" data-mq="-1" aria-label="${Tx("One less")}" ${mv.qty <= 1 ? "disabled" : ""}>−</button><output id="mvQ">${mv.qty}</output><button type="button" data-mq="1" aria-label="${Tx("One more")}" ${mv.qty >= max ? "disabled" : ""}>+</button></div>
             <button type="button" class="btn small" data-mq="all" ${mv.qty >= max ? "disabled" : ""}>${esc(Tx("All ({n})", { n: max }))}</button></div>
           <div class="row" style="gap:var(--sp-2)"><button type="button" class="btn" id="mvCancel" style="flex:1">${Tx("Cancel")}</button>
-            <button type="button" class="btn primary" id="mvOk" style="flex:2">${esc(Tx(mv.to === "home" ? "Move {n} to Home" : "Move {n} to the Binder", { n: mv.qty }))}</button></div></div>`;
+            <button type="button" class="btn primary" id="mvOk" style="flex:2">${esc(mv.to === "trade" ? P(`Mover ${mv.qty} para Trocas`, `Move ${mv.qty} to Trades`) : Tx(mv.to === "home" ? "Move {n} to Home" : "Move {n} to the Binder", { n: mv.qty }))}</button></div></div>`;
       };
       const row = (k, label, n, ln) => `<div class="row between" style="min-height:60px${k === "f" ? ";border-top:1px solid var(--line)" : ""}"><div><b>${label}</b><div class="small muted">${esc([Tx("{n} free", { n: Math.max(0, n - ln) }), ln ? Tx("{n} lent", { n: ln }) : ""].filter(Boolean).join(" · "))}</div></div>
         <div class="qty lg"><button type="button" data-d="${k}:-1" aria-label="${esc(Tx("Remove one {k}", { k: Tx(k === "f" ? "foil" : "normal") }))}" ${n <= 0 ? "disabled" : ""}>−</button><output data-n="${k}">${n}</output><button type="button" data-d="${k}:1" aria-label="${esc(Tx("Add one {k}", { k: Tx(k === "f" ? "foil" : "normal") }))}">+</button></div></div>`;
@@ -614,17 +628,17 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         <div class="sheet-foot"><a class="btn" href="../trades/?tab=board&q=${encodeURIComponent(a)}"><i class="ic i-board"></i>${Tx("Post on the board")}</a></div>`;
       sh.querySelectorAll("[data-close]").forEach((x) => x.onclick = () => sh.close());
       sh.querySelectorAll("[data-d]").forEach((x) => x.onclick = () => { const [k, d, place] = x.dataset.d.split(":"); change(id, k, +d, false, place || "binder"); draw(); sh.querySelector(`[data-d="${x.dataset.d}"]`)?.focus(); });
-      sh.querySelectorAll("[data-mv]").forEach((x) => x.onclick = () => { const [k, to] = x.dataset.mv.split(":"); mv = { k, to, qty: 1 }; draw(); $("mvOk")?.focus(); });
+      sh.querySelectorAll("[data-mv]").forEach((x) => x.onclick = () => { const [k, to, fr] = x.dataset.mv.split(":"); mv = { k, to, from: fr || (to === "binder" ? "home" : "binder"), qty: 1, key: x.dataset.mv }; draw(); $("mvOk")?.focus(); });
       sh.querySelectorAll("[data-mq]").forEach((x) => x.onclick = () => {
-        const max = where(id)[mv.to === "home" ? "binder" : "home"][mv.k];
+        const max = where(id)[mv.from][mv.k];
         mv.qty = x.dataset.mq === "all" ? max : Math.min(max, Math.max(1, mv.qty + +x.dataset.mq)); draw();
         (sh.querySelector(`[data-mq="${x.dataset.mq}"]:not([disabled])`) || $("mvOk"))?.focus();
       });
       $("aLoan")?.addEventListener("click", () => { const k = avail(id).n ? "n" : "f"; act = { kind: "loan", items: [{ id, k, qty: 1 }], person: "", due: "", note: "" }; draw(); });
       $("aSale")?.addEventListener("click", () => { const k = avail(id).n ? "n" : "f"; act = { kind: "sale", combo: false, items: [{ id, k, qty: 1, price: unitPrice(id, k) }], date: today(), buyer: "", total: null, q: "" }; draw(); });
       if (act) actPanel(sh, act, () => { act = null; draw(); });
-      $("mvCancel")?.addEventListener("click", () => { const back = `[data-mv="${mv.k}:${mv.to}"]`; mv = null; draw(); sh.querySelector(back)?.focus(); });
-      $("mvOk")?.addEventListener("click", () => { const { k, to, qty } = mv; mv = null; move(id, k, qty, to); draw(); sh.querySelector(`[data-mv="${k}:${to}"]:not([disabled])`)?.focus(); });
+      $("mvCancel")?.addEventListener("click", () => { const back = `[data-mv="${mv.key}"]`; mv = null; draw(); sh.querySelector(back)?.focus(); });
+      $("mvOk")?.addEventListener("click", () => { const { k, to, from: fr, qty, key } = mv; mv = null; move(id, k, qty, to, false, fr); draw(); sh.querySelector(`[data-mv="${key}"]:not([disabled])`)?.focus(); });
     };
     draw(); redrawSheet = () => { if (sh.open) { mv = null; act = null; draw(); } };
     openSheet(sh, from);
@@ -741,17 +755,18 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   }
   // place: where the copies are added or removed ("binder" or "home"). Lent copies are changed in Trocas.
   function change(id, kind, delta, quiet, place = "binder") {
-    const w = where(id);
-    if (delta < 0 && w[place === "home" ? "home" : "binder"][kind] + delta < 0) return;
-    bump(id, kind, delta, place === "home" ? delta : 0, quiet);
+    const w = where(id), pl = ["home", "trade"].includes(place) ? place : "binder";
+    if (delta < 0 && w[pl][kind] + delta < 0) return;
+    bump(id, kind, delta, pl === "home" ? delta : 0, quiet, pl === "trade" ? delta : 0);
   }
-  // Move copies between the binder and home: what you own stays the same.
-  function move(id, kind, qty, to, quiet) {
-    const w = where(id), from = to === "home" ? "binder" : "home";
-    if (qty <= 0 || w[from][kind] < qty) return;
-    bump(id, kind, 0, to === "home" ? qty : -qty, quiet);
+  // Move copies between the binder, home and the trade binder: what you own stays the same.
+  function move(id, kind, qty, to, quiet, from) {
+    const w = where(id); from = from || (to === "binder" ? "home" : "binder");
+    if (qty <= 0 || from === to || w[from][kind] < qty) return;
+    const d = (pl) => (to === pl ? qty : from === pl ? -qty : 0);
+    bump(id, kind, 0, d("home"), quiet, d("trade"));
   }
-  function bump(id, kind, dTotal, dHome, quiet) {
+  function bump(id, kind, dTotal, dHome, quiet, dTrade = 0) {
     if (readOnly()) { toast(P("Esta coleção é só para ver.", "This collection is view only."), null, true); return; }
     const p = prof(); if (!p) { toast(Tx("Couldn't save. Try again."), null, true); if ($("scan").open) scanSay(Tx("Couldn't save. Try again."), true); return; }
     if (dTotal) {
@@ -763,20 +778,27 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       const hk = `${p.profile}|${id}`, h = HOME.get(hk) || { n: 0, f: 0 };
       h[kind] = Math.max(0, h[kind] + dHome); HOME.set(hk, h);
     }
-    const key = `${id}:${kind}`, cur = pending.get(key) || { t: 0, h: 0 };
-    pending.set(key, { t: cur.t + dTotal, h: cur.h + dHome });
+    if (dTrade) {
+      const tk = `${p.profile}|${id}`, t = TRADE.get(tk) || { n: 0, f: 0 };
+      t[kind] = Math.max(0, t[kind] + dTrade); TRADE.set(tk, t);
+    }
+    const key = `${id}:${kind}`, cur = pending.get(key) || { t: 0, h: 0, x: 0 };
+    pending.set(key, { t: cur.t + dTotal, h: cur.h + dHome, x: cur.x + dTrade });
     clearTimeout(pendingTimer);
     pendingTimer = setTimeout(() => flush(quiet), 600);
   }
   let queue = Promise.resolve(), burst = [];
   function flush(quiet) {
     const p = prof(); if (!p || !pending.size) return Promise.resolve(true);
-    const items = [...pending].filter(([, d]) => d.t || d.h).map(([k, d]) => { const [card_id, kind] = k.split(":"); return { card_id, foil: kind === "f", t: d.t, h: d.h }; });
+    const items = [...pending].filter(([, d]) => d.t || d.h || d.x).map(([k, d]) => { const [card_id, kind] = k.split(":"); return { card_id, foil: kind === "f", t: d.t, h: d.h, x: d.x || 0 }; });
     pending = new Map();
     if (!items.length) return Promise.resolve(true);
     const delta = items.filter((x) => x.t).map((x) => ({ card_id: x.card_id, qty: x.t, foil: x.foil }));
     const home = items.filter((x) => x.h).map((x) => ({ card_id: x.card_id, qty: x.h, foil: x.foil }));
-    const call = () => p.shared
+    const trade = items.filter((x) => x.x).map((x) => ({ card_id: x.card_id, qty: x.x, foil: x.foil }));
+    const call = () => trade.length
+      ? CLOUD.api("rpc/collection_move", { method: "POST", prefer: "return=minimal", body: { p_owner: p.shared ? p.owner : null, p_profile: p.shared ? p.pname : p.profile, p_delta: delta, p_home: home, p_trade: trade } })
+      : p.shared
       ? CLOUD.api("rpc/shared_collection_change", { method: "POST", prefer: "return=minimal", body: { p_owner: p.owner, p_profile: p.pname, p_delta: delta, p_home: home } })
       : home.length
       ? CLOUD.api("rpc/collection_change", { method: "POST", prefer: "return=minimal", body: { p_profile: p.profile, p_delta: delta, p_home: home } })
@@ -786,13 +808,13 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         if (quiet) return;
         burst = ($("toast").hidden ? [] : burst).concat(items);   // "Desfazer" undoes every change since the notice appeared
         const undoAll = burst;
-        toast(Tx(home.length && !delta.length ? "Moved" : "Collection updated"), () => { burst = []; for (const d of undoAll) bump(d.card_id, d.foil ? "f" : "n", -d.t, -d.h, true); clearTimeout(pendingTimer); flush(true); renderAll(); });
+        toast(Tx((home.length || trade.length) && !delta.length ? "Moved" : "Collection updated"), () => { burst = []; for (const d of undoAll) bump(d.card_id, d.foil ? "f" : "n", -d.t, -d.h, true, -(d.x || 0)); clearTimeout(pendingTimer); flush(true); renderAll(); });
       })
       .then(() => true)
       .catch(() => {
         for (const d of items) {
-          const k = d.foil ? "f" : "n", e = p.collection[d.card_id], h = HOME.get(`${p.profile}|${d.card_id}`);
-          if (e) e[k] = Math.max(0, e[k] - d.t); if (h) h[k] = Math.max(0, h[k] - d.h);
+          const k = d.foil ? "f" : "n", e = p.collection[d.card_id], h = HOME.get(`${p.profile}|${d.card_id}`), t = TRADE.get(`${p.profile}|${d.card_id}`);
+          if (e) e[k] = Math.max(0, e[k] - d.t); if (h) h[k] = Math.max(0, h[k] - d.h); if (t) t[k] = Math.max(0, t[k] - d.x);
         }
         toast(Tx("Couldn't save. Try again."), null, true); if ($("scan").open) scanSay(Tx("Couldn't save. Try again."), true); renderAll(); redrawSheet?.();
         return false;
@@ -928,6 +950,65 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       $("openShare").onclick = () => openShare($("openShare"));
       $("openBinder").onclick = () => setBinder(true); $("openScan")?.addEventListener("click", () => openScanner($("openScan"))); $("openImport")?.addEventListener("click", () => openImport($("openImport"))); }
     render();
+  }
+
+  // ---------- pasta de trocas: send every copy above N (default 4, a playset) from the binder to the trade binder ----------
+  const KEEP_KEY = "inkwell-trade-keep";
+  function openTradeFill(from) {
+    const sh = $("tradeSheet");
+    let keep = 4, foilsStay = true, busy = false;
+    try { keep = Math.max(1, Math.min(99, parseInt(localStorage.getItem(KEEP_KEY) || "4", 10))); if (!Number.isFinite(keep)) keep = 4; foilsStay = localStorage.getItem(KEEP_KEY + "-foil") !== "0"; } catch { /* */ }
+    const plan = () => {   // per card: total copies (normal + foil) minus N minus what is already in trades, taken from the binder
+      const out = [];
+      for (const id of Object.keys(coll())) {
+        const w = where(id), extra = w.all.n + w.all.f - keep - (w.trade.n + w.trade.f);
+        if (extra <= 0) continue;
+        const order = foilsStay ? ["n", "f"] : ["f", "n"]; let left = extra; const mv = { n: 0, f: 0 };
+        for (const k of order) { const q = Math.min(left, w.binder[k]); mv[k] = q; left -= q; }
+        if (mv.n + mv.f) out.push({ id, ...mv });
+      }
+      return out.sort((a, b) => (b.n + b.f) - (a.n + a.f) || (BY.get(a.id)?.name || "").localeCompare(BY.get(b.id)?.name || ""));
+    };
+    const draw = (msg = "") => {
+      const pl = plan(), copies = pl.reduce((t, x) => t + x.n + x.f, 0);
+      sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="tfT">${esc(P("Separar repetidas para trocas", "Set extras aside to trade"))}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
+        <div class="sheet-body stack" style="gap:var(--sp-3)">
+          <p class="small muted" style="margin:0">${esc(P("De cada carta, ficam no fichário (ou em casa) as primeiras cópias; o que passar disso vai para a pasta de trocas. Normal e foil contam juntas.", "Of each card, the first copies stay in the binder (or at home); anything above goes to the trade binder. Normal and foil count together."))}</p>
+          <div class="row" style="gap:var(--sp-3);align-items:center;flex-wrap:wrap"><span>${esc(P("Manter", "Keep"))}</span>
+            <div class="qty lg"><button type="button" data-k="-1" aria-label="${esc(P("Uma a menos", "One less"))}" ${keep <= 1 ? "disabled" : ""}>−</button><output id="tfKeep" data-testid="trade-keep">${keep}</output><button type="button" data-k="1" aria-label="${esc(P("Uma a mais", "One more"))}" ${keep >= 99 ? "disabled" : ""}>+</button></div>
+            <span>${esc(P("de cada carta", "of each card"))}${keep === 4 ? ` <span class="tag info">${esc(P("play set", "playset"))}</span>` : ` <button type="button" class="btn ghost small" id="tf4">${esc(P("Voltar para 4", "Back to 4"))}</button>`}</span></div>
+          <label class="switch"><span>${esc(P("Manter as foils no fichário", "Keep foils in the binder"))}<small>${esc(P("Vão primeiro as normais.", "Normal copies go first."))}</small></span><input type="checkbox" role="switch" id="tfFoil" ${foilsStay ? "checked" : ""}></label>
+          <p style="margin:0" data-testid="trade-plan"><b>${esc(copies ? P(`${copies} ${copies === 1 ? "cópia" : "cópias"} de ${pl.length} ${pl.length === 1 ? "carta" : "cartas"} ${copies === 1 ? "vai" : "vão"} para a pasta de trocas.`, `${copies} ${copies === 1 ? "copy" : "copies"} of ${pl.length} ${pl.length === 1 ? "card" : "cards"} go to the trade binder.`) : P("Nada a separar: nenhuma carta passa desse número no fichário.", "Nothing to set aside: no card goes above that number in the binder."))}</b></p>
+          ${pl.length ? `<div class="imp-list small">${pl.slice(0, 200).map((x) => { const c = BY.get(x.id); return `<div><span>${esc(c?.name || x.id)}</span><span class="muted">${esc(c ? setName(c.set) + " · nº " + c.num : "")}</span><b>${x.n ? x.n : ""}${x.n && x.f ? " + " : ""}${x.f ? `${x.f} foil` : ""}</b></div>`; }).join("")}${pl.length > 200 ? `<div class="muted">… ${esc(Tx("and {n} more", { n: pl.length - 200 }))}</div>` : ""}</div>` : ""}
+          <p class="small" id="tfMsg" role="alert" style="margin:0">${esc(msg)}</p></div>
+        <div class="sheet-foot"><button type="button" class="btn ghost" data-close>${Tx("Cancel")}</button><button type="button" class="btn primary" id="tfGo" data-testid="trade-go" ${copies && !busy ? "" : "disabled"}>${esc(copies ? P(`Mover ${copies} para Trocas`, `Move ${copies} to Trades`) : P("Mover", "Move"))}</button></div>`;
+      sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = () => sh.close());
+      const saveKeep = () => { try { localStorage.setItem(KEEP_KEY, String(keep)); localStorage.setItem(KEEP_KEY + "-foil", foilsStay ? "1" : "0"); } catch { /* */ } };
+      sh.querySelectorAll("[data-k]").forEach((b) => b.onclick = () => { keep = Math.max(1, Math.min(99, keep + +b.dataset.k)); saveKeep(); draw(); sh.querySelector(`[data-k="${b.dataset.k}"]:not([disabled])`)?.focus(); });
+      $("tf4")?.addEventListener("click", () => { keep = 4; saveKeep(); draw(); });
+      $("tfFoil").onchange = (e) => { foilsStay = e.target.checked; saveKeep(); draw(); $("tfFoil").focus(); };
+      $("tfGo").onclick = () => go(pl);
+    };
+    const send = async (p, items) => {
+      for (let i = 0; i < items.length; i += 400) {   // the server takes 400 changes per call
+        await CLOUD.api("rpc/collection_move", { method: "POST", prefer: "return=minimal", body: { p_owner: p.shared ? p.owner : null, p_profile: p.shared ? p.pname : p.profile, p_delta: [], p_home: [], p_trade: items.slice(i, i + 400) } });
+      }
+    };
+    const applyLocal = (p, items, sign) => { for (const d of items) { const tk = `${p.profile}|${d.card_id}`, t = TRADE.get(tk) || { n: 0, f: 0 }, k = d.foil ? "f" : "n"; t[k] = Math.max(0, t[k] + sign * d.qty); TRADE.set(tk, t); } };
+    async function go(pl) {
+      const p = prof(); if (!p || busy) return;
+      const items = pl.flatMap((x) => [x.n ? { card_id: x.id, qty: x.n, foil: false } : null, x.f ? { card_id: x.id, qty: x.f, foil: true } : null]).filter(Boolean);
+      busy = true; $("tfGo").disabled = true; $("tfGo").textContent = P("Movendo…", "Moving…");
+      try {
+        await flush(true); await send(p, items); applyLocal(p, items, 1);
+        sh.close(); v.place = "trade"; save(); renderAll();
+        const n = items.reduce((t, d) => t + d.qty, 0);
+        toast(P(`${n} ${n === 1 ? "cópia foi" : "cópias foram"} para a pasta de trocas`, `${n} ${n === 1 ? "copy" : "copies"} moved to the trade binder`), async () => {
+          try { await send(p, items.map((d) => ({ ...d, qty: -d.qty }))); applyLocal(p, items, -1); renderAll(); } catch { toast(Tx("Couldn't save. Try again."), null, true); }
+        });
+      } catch { busy = false; draw(Tx("Couldn't save. Try again.")); }
+    }
+    draw(); openSheet(sh, from);
   }
 
   // ---------- compartilhar: your collections, people who share one, friends (see / borrow), shared with you ----------

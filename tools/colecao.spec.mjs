@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test';
 const BASE = new URL('colecao/', process.env.INKWELL_URL || 'http://localhost:8080/index.html').href;
 const ME = '11111111-1111-4111-8111-111111111111';
 
-async function setup(page, { collection = { 'LOR10-10': { n: 2, f: 0 } }, added = [], home = [], failHome = false, fresh = false } = {}) {
+async function setup(page, { collection = { 'LOR10-10': { n: 2, f: 0 } }, added = [], home = [], trade = [], failHome = false, fresh = false } = {}) {
   let created = false;
   const calls = [];
   await page.addInitScript((me) => {
@@ -24,6 +24,8 @@ async function setup(page, { collection = { 'LOR10-10': { n: 2, f: 0 } }, added 
     if (path === 'collection_home') return home === null ? route.fulfill({ status: 404, contentType: 'application/json', body: '{}' }) : json(home);
     if (path === 'rpc/collection_change') return failHome ? route.fulfill({ status: 400, contentType: 'application/json', body: '{"message":"x"}' }) : route.fulfill({ status: 204, body: '' });
     if (path === 'rpc/apply_collection_delta') return route.fulfill({ status: 204, body: '' });
+    if (path === 'collection_trade') return trade === null ? route.fulfill({ status: 404, contentType: 'application/json', body: '{}' }) : json(trade);
+    if (path === 'rpc/collection_move') return route.fulfill({ status: 204, body: '' });
     if (path === 'rpc/my_duels_sync') return json(null);
     return json([]);
   });
@@ -491,4 +493,46 @@ test('import: a pasted list; nothing matched says so', async ({ page }) => {
   await page.locator('#impGo').click();
   await expect.poll(() => calls.filter((c) => c.path === 'rpc/apply_collection_delta').length).toBe(1);
   expect(calls.find((c) => c.path === 'rpc/apply_collection_delta').body.p_delta).toHaveLength(2);
+});
+
+// ---------- Pasta de trocas (supabase/trade_binder.sql) ----------
+test('trade binder: set aside every copy above 4 (or another number), move one back, add straight to it', async ({ page }) => {
+  const calls = await setup(page, { collection: { 'LOR10-10': { n: 6, f: 1 }, 'LOR13-27': { n: 3, f: 0 }, 'LOR1-41': { n: 5, f: 0 } },
+    home: [{ profile: 'luiscredie', card_id: 'LOR1-41', n: 5, f: 0 }], trade: [] });
+  await page.goto(BASE);
+  const places = page.locator('[data-testid="places"]');
+  await expect(places.locator('[data-place="trade"]')).toContainText('0');
+  await page.locator('[data-testid="trade-fill"]').click();
+  await expect(page.locator('[data-testid="trade-keep"]')).toHaveText('4');
+  // Gurgi: 7 copies, keep 4 → 3 go (normals first, the foil stays); the 5 at home are not touched; 3 copies stay
+  await expect(page.locator('[data-testid="trade-plan"]')).toContainText('3 cópias de 1 carta');
+  await page.locator('#tradeSheet [data-k="-1"]').click();
+  await expect(page.locator('[data-testid="trade-plan"]')).toContainText('4 cópias de 1 carta');
+  await page.locator('#tf4').click();
+  await page.locator('[data-testid="trade-go"]').click();
+  await expect.poll(() => rpc(calls, 'collection_move')).toEqual([{ p_owner: null, p_profile: 'luiscredie', p_delta: [], p_home: [], p_trade: [{ card_id: 'LOR10-10', qty: 3, foil: false }] }]);
+  await expect(places.locator('[data-place="trade"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(places.locator('[data-place="trade"]')).toContainText('3');
+  await expect(page.locator('[data-card="LOR10-10"] .pill')).toHaveText('×3');
+  expect(await page.evaluate(() => localStorage.getItem('inkwell-trade-keep'))).toBe('4');
+  // the card sheet has the trade binder; one goes back to the binder
+  await page.locator('[data-card="LOR10-10"]').click();
+  const st = page.locator('[data-testid="stocks"]');
+  await expect(st.locator('[data-n="trade-n"]')).toHaveText('3');
+  await expect(st.locator('[data-n="binder-n"]')).toHaveText('3');
+  await st.locator('[data-mv="n:binder:trade"]').click();
+  await page.locator('#mvOk').click();
+  await expect(st.locator('[data-n="trade-n"]')).toHaveText('2');
+  await expect.poll(() => rpc(calls, 'collection_move').at(-1)).toEqual({ p_owner: null, p_profile: 'luiscredie', p_delta: [], p_home: [], p_trade: [{ card_id: 'LOR10-10', qty: -1, foil: false }] });
+  // + in the trade binder: owned +1 and trade +1 in one call
+  await st.locator('[data-d="f:1:trade"]').click();
+  await expect.poll(() => rpc(calls, 'collection_move').at(-1)).toEqual({ p_owner: null, p_profile: 'luiscredie', p_delta: [{ card_id: 'LOR10-10', qty: 1, foil: true }], p_home: [], p_trade: [{ card_id: 'LOR10-10', qty: 1, foil: true }] });
+});
+
+test('trade binder: before supabase/trade_binder.sql runs, nothing about it shows', async ({ page }) => {
+  await setup(page, { collection: { 'LOR10-10': { n: 6, f: 0 } }, trade: null });
+  await page.goto(BASE);
+  await expect(page.locator('[data-testid="places"]')).toBeVisible();
+  await expect(page.locator('[data-place="trade"]')).toHaveCount(0);
+  await expect(page.locator('[data-testid="trade-fill"]')).toHaveCount(0);
 });
