@@ -459,7 +459,7 @@ test('global search: people and communities from the top bar, also with "/"', as
   if (process.env.SHOT3) { await page.screenshot({ path: process.env.SHOT3 + '-d.png' }); await page.setViewportSize({ width: 360, height: 760 }); await page.screenshot({ path: process.env.SHOT3 + '-m.png' }); }
   await page.keyboard.press('Escape');
   await expect(page.locator('#iwFindQ')).toHaveCount(0);
-  await page.locator('body').click();
+  await page.locator('h1').first().click();   // somewhere neutral (the middle of the page can be a card or a button)
   await page.keyboard.press('/');
   await expect(page.locator('#iwFindQ')).toBeFocused();
 });

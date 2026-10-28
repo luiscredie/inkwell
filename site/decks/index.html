@@ -260,7 +260,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Only {n} cards cost 1 or 2. Slow opening hands are more likely.": "Só {n} cartas de custo 1 ou 2. Mãos iniciais lentas ficam mais prováveis.",
     "{n} cards cost 1 or 2: enough early plays.": "{n} cartas de custo 1 ou 2: jogadas cedo suficientes.",
     "Only {a} of {b} are inkable. You may run short of ink.": "Só {a} de {b} são inkáveis. Pode faltar tinta.", "{a} of {b} inkable: enough ink.": "{a} de {b} inkáveis: tinta suficiente.",
-    "{n} cards missing": "{n} cartas faltando", "{n} card missing": "1 carta faltando", "{v} at {s}": "{v} no {s}", "{n} can come from friends": "{n} podem vir de amigos", "{n} can come from friends_1": "1 pode vir de amigos",
+    "{n} cards missing": "{n} cartas faltando", "{n} card missing": "1 carta faltando", "{v} at {s}": "{v} no {s}", "Try it with an example deck": "Experimentar com um deck de exemplo", "Example deck": "Deck de exemplo", "Amber/Steel, made to show the tool — not a competitive list. Change it as you like.": "Âmbar/Aço, feito para mostrar a ferramenta — não é lista competitiva. Mude à vontade.", "{v} estimated (MYP Cards, else TCGplayer)": "{v} estimados (MYP Cards; sem anúncio lá, TCGplayer)", "estimate": "estimativa",
+    "Estimate in reais: {s}, updated {d}. A card with no price is left out of the total, never counted as zero.": "Estimativa em reais: {s}, atualizado em {d}. Carta sem preço fica fora do total, nunca conta como zero.",
+    "lowest MYP Cards listing ({d}); without one, {s}": "menor anúncio na MYP Cards ({d}); sem anúncio lá, {s}", "{n} can come from friends": "{n} podem vir de amigos", "{n} can come from friends_1": "1 pode vir de amigos",
     "You have every card for this deck.": "Você tem todas as cartas deste deck.", "Copies lent to friends still count as yours.": "Cópias emprestadas a amigos contam como suas.",
     "{who} lends": "{who} empresta", "{n} free": "{n} livres", "{n} free_1": "1 livre", "Ask to borrow": "Pedir emprestado", "{who} has it": "{who} tem", "Asked": "Pedido enviado", "For the deck {d}": "Para o deck {d}", "Request sent. You'll see the answer in Trades.": "Pedido enviado. A resposta aparece em Trocas.", "Too many requests today. Try tomorrow.": "Muitos pedidos hoje. Tente amanhã.", "{who} sells on the board": "{who} vende no Mural", "{v} each": "{v} cada", "See listing": "Ver anúncio",
     "None of your friends has it": "Ninguém dos seus amigos tem", "Post what's missing on the board": "Anunciar o que falta no Mural", "Looking to buy": "Procuro para comprar", "Looking to borrow": "Procuro emprestado",
@@ -324,8 +326,12 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const kind = (c) => (c.song ? "song" : c.type === "Character" ? "char" : c.type === "Action" ? "action" : "item");
   const typeName = (c) => Tx(c.song ? "Song" : c.type || "");
   let PRICES = {}, pricesDate = null, priceSrc = "Liga Lorcana", PRICE_SOURCE = "";   // "TCGplayer" while prices.json carries converted TCGplayer prices
-  const priceOf = (c) => { const p = PRICES[c.id]; const v = p ? (p.nl ?? p.n ?? null) : null; if (v != null) return v;
-    let best = null; for (const x of printings(c)) { const q = PRICES[x.id]; const y = q ? (q.nl ?? q.n ?? null) : null; if (y != null && (best == null || y < best)) best = y; } return best; };
+  // Price in Brazil, the same rule as Coleção: the lowest MYP Cards listing when there is one, else TCGplayer converted
+  let BR = null;
+  const one = (id) => { const b = BR?.cards?.[id]?.[0]; if (b != null) return b; const q = PRICES[id]; return q ? (q.nl ?? q.n ?? null) : null; };
+  const priceOf = (c) => { const v = one(c.id); if (v != null) return v;
+    let best = null; for (const x of printings(c)) { const y = one(x.id); if (y != null && (best == null || y < best)) best = y; } return best; };
+  const fromMyp = (c) => BR?.cards?.[c.id] != null || (one(c.id) == null && printings(c).some((x) => BR?.cards?.[x.id] != null));
   const imgUrl = (c) => (c.img ? `../lorcana-card-images/${encodeURI(c.img).replace(/'/g, "%27")}` : "");
   const thumb = (c, cls = "") => `<span class="thumb ${cls}" data-ink="${(inksOf(c)[0] || "steel").toLowerCase()}">${c.img ? `<img src="${imgUrl(c)}" alt="" loading="lazy" decoding="async" onerror="this.remove()">` : ""}</span>`;
   // The Inkwell app's optimizer, copied in at build time (tools/build_site_decks.py)
@@ -430,9 +436,10 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   let editing = false;
 
   async function loadAll() {
-    const [p, pr, ls, fr, gl] = await Promise.all([
+    const [p, pr, , ls, fr, gl] = await Promise.all([
       CLOUD.collections("profile,updated_at,decks:data->decks,collection:data->collection"),
       fetch(window.INKWELL_PRICES_URL || "../data/prices.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      fetch(window.INKWELL_PRICES_BR_URL || "../data/prices-br.json").then((r) => (r.ok ? r.json() : null)).then((b) => { if (b?.cards) BR = b; }).catch(() => {}),
       CLOUD.api("listings?select=id,user_id,kind,card_id,qty,foil,price_brl&order=created_at.desc&limit=3000").catch(() => []),
       CLOUD.api("friendships?select=requester,addressee,status&status=eq.accepted").catch(() => []),
       CLOUD.api(`game_logs?select=game_id,played_at,summary,players:log->players&user_id=eq.${me.id}&order=played_at.desc&limit=400`).catch(() => { gamesOk = false; return []; }),
@@ -535,7 +542,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const pubSave = (x) => { try { if (x.text.trim()) localStorage.setItem(PUB_KEY, JSON.stringify({ v: 1, text: x.text, format: x.format, at: Date.now() })); else localStorage.removeItem(PUB_KEY); } catch { /* storage off: the list stays on the page */ } };
   const pubDrop = () => { try { localStorage.removeItem(PUB_KEY); } catch { /* */ } };
   let pub = pubLoad() || { text: "", format: "core" }, pubFix = null;
-  const ownPrice = (c) => { const p = PRICES[c.id]; return p ? (p.nl ?? p.n ?? null) : null; };
+  const ownPrice = (c) => one(c.id);
   const lineQty = (line) => { const m = String(line).trim().match(/^(\d{1,2})\s*x?\s+/i); return m ? +m[1] : 1; };
   const lineName = (line) => String(line).trim().replace(/^(\d{1,2})\s*x?\s+/i, "");
   function rulesText(fmt) {
@@ -544,6 +551,10 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     return Tx("Checked as Core: sets {s}; at least 60 cards, up to 2 inks, up to 4 copies of each card (counting reprints).", { s: sets })
       + (LEGAL?.generated_at ? " " + Tx("Rules as of {d}.", { d: dateFmt(LEGAL.generated_at).replace(/\.$/, "") }) : "");
   }
+  // a ready list to try the page with one tap (Amber/Steel, Core sets) — an example of the tool, not a competitive list
+  const SAMPLE = ["Nick Wilde - Sly Fox Sleuth", "Darkwing Duck - Crime Fighter", "Gurgi - Apple Lover", "Minnie Mouse - Ghost Hunter", "Mowgli - Man Cub",
+    "Putting It All Together", "Bagheera - Cautious Explorer", "Basil - Tenacious Mouse", "Lexington - Small in Stature", "Mrs. Beakley - Former S.H.U.S.H. Agent",
+    "Chief Bogo - Calling the Shots", "Broadway - Sturdy and Strong", "Pluto - Steel Champion", "Baloo - Friend and Guardian", "Li Shang - Valiant Leader"].map((n) => `4 ${n}`).join("\n");
   function renderPublic() {
     const r = parseList(pub.text), d = { id: "public", name: "", format: pub.format, colors: [], cards: r.cards }, m = measure(d);
     const known = m.known.slice().sort((a, b) => a.c.cost - b.c.cost || a.c.name.localeCompare(b.c.name));
@@ -571,6 +582,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         <div class="form">
           <label class="field">${Tx("Paste a list")}<span class="hint">${esc(Tx("One card per line, like \"4 Stitch - Rock Star\". Lists from duels.ink, Dreamborn and Lorcanito work."))}</span>
             <textarea class="paste" id="pText" spellcheck="false" data-testid="public-text">${esc(pub.text)}</textarea></label>
+          ${!pub.text.trim() ? `<button type="button" class="btn" id="pSample" data-testid="public-sample" style="justify-self:start"><i class="ic i-decks"></i>${Tx("Try it with an example deck")}</button>`
+            : pub.text === SAMPLE ? `<p class="small muted" style="margin:0" data-testid="public-sample-note"><span class="tag info">${Tx("Example deck")}</span> ${Tx("Amber/Steel, made to show the tool — not a competitive list. Change it as you like.")}</p>` : ""}
           <div class="field">${Tx("Format")}<div class="seg" role="group" aria-label="${Tx("Format")}">${[["core", "Core"], ["infinity", "Infinity"]].map(([k, l]) => `<button type="button" data-pf="${k}" aria-pressed="${pub.format === k}">${Tx(l)}</button>`).join("")}</div></div>
         </div>
         ${pub.text.trim() ? `
@@ -578,14 +591,14 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
           <div class="stat"><b class="num">${m.total}/${MIN}</b><span>${Tx("cards")}</span></div>
           <div class="stat"><b>${m.inks.length ? dots(m.inks, "lg pair") : "—"}</b><span>${esc(m.inks.map((i) => Tx(i)).join(" · ") || Tx("no inks yet"))}</span></div>
           <div class="stat"><b data-testid="public-legal">${m.total >= MIN && !m.issues.length ? `<span class="tag match">${Tx("legal")}</span>` : `<span class="tag late">${Tx("not legal yet")}</span>`}</b><span>${esc(fmtName(pub.format))}</span></div>
-          <div class="stat"><b class="num" data-testid="public-total">${priced ? esc(money(total)) : "—"}</b><span>${esc(unpriced ? Tx("{a} of {b} cards priced", { a: priced, b: priced + unpriced }) : Tx("all cards priced"))}</span></div>
+          <div class="stat"><b class="num" data-testid="public-total">${priced ? esc(money(total)) : "—"}</b><span>${esc(Tx("estimate") + " · " + (unpriced ? Tx("{a} of {b} cards priced", { a: priced, b: priced + unpriced }) : Tx("all cards priced")))}</span></div>
         </div>
         <p class="small muted" data-testid="public-rules">${esc(rulesText(pub.format))}</p>
         ${issues.length ? `<ul class="pd-issues" data-testid="public-issues">${issues.map((i) => `<li>${esc(i.text)}</li>`).join("")}</ul>` : ""}
         ${badIdx.length ? `<div class="notice warn"><i class="ic i-alert"></i><span class="t"><b>${esc(Tx(badIdx.length === 1 ? "1 line not recognised: pick the right card" : "{n} lines not recognised: pick the right card", { n: badIdx.length }))}</b></span></div>
           <ul class="pd-fixes" data-testid="public-fixes">${badIdx.map((i) => fixBox(lines[i], i)).join("")}</ul>` : ""}
         ${known.length ? `<div class="list" data-testid="public-list">${known.map(row).join("")}</div>` : ""}
-        <p class="small faint" data-testid="public-prices">${esc(pricesDate ? Tx("Prices: {s}, updated {d}. Market price per copy; a card with no price is left out of the total, never counted as zero.", { s: PRICE_SOURCE || priceSrc, d: dateFmt(pricesDate).replace(/\.$/, "") }) : Tx("Prices didn't load. The list and the rules still work."))}${other ? " " + esc(Tx("“Other printing”: this printing has no price, so the cheapest reprint's is used.")) : ""}</p>
+        <p class="small faint" data-testid="public-prices">${esc(pricesDate ? Tx("Estimate in reais: {s}, updated {d}. A card with no price is left out of the total, never counted as zero.", { s: PRICE_SOURCE || priceSrc, d: dateFmt(pricesDate).replace(/\.$/, "") }) : Tx("Prices didn't load. The list and the rules still work."))}${other ? " " + esc(Tx("“Other printing”: this printing has no price, so the cheapest reprint's is used.")) : ""}</p>
         <div class="notice"><i class="ic i-info"></i><span class="t"><b>${Tx("Save it and compare with your collection")}</b><span>${Tx("Create your account with a code by e-mail. This list stays in this browser for a day, so it's here when you come back.")}</span></span>
           <span class="actions"><button type="button" class="btn primary" id="pSave" data-testid="public-save">${Tx("Create account and save")}</button><button type="button" class="btn ghost" id="pClear">${Tx("Clear")}</button></span></div>` : `
         <p class="small muted">${esc(rulesText(pub.format))}</p>`}
@@ -601,6 +614,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     });
     $("signIn").onclick = () => window.INKWELL_SIGNIN?.();
     $("pSave")?.addEventListener("click", () => { pubSave(pub); window.INKWELL_SIGNIN?.(); });
+    $("pSample")?.addEventListener("click", () => { pub = { text: SAMPLE, format: "core" }; pubSave(pub); renderPublic(); $("pText").scrollIntoView({ block: "start" }); });
     $("pClear")?.addEventListener("click", () => { pub = { text: "", format: pub.format }; pubDrop(); renderPublic(); $("pText").focus(); });
   }
 
@@ -808,11 +822,11 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       if (!lend.length && !fl.length) offers.push(`<div class="list-row flat two" style="min-height:52px"><span class="t"><span class="muted" style="font-weight:400">${Tx("None of your friends has it")}</span></span><a class="btn small" href="${esc(ligaUrl(c))}" target="_blank" rel="noopener">Liga Lorcana<i class="ic i-external"></i></a></div>`);
       return `<section class="card miss" data-miss="${esc(c.id)}"><div class="row" style="flex-wrap:nowrap;align-items:flex-start;gap:var(--sp-3)">${thumb(c, "md")}<div class="grow" style="min-width:0">
         <div class="row between" style="flex-wrap:nowrap"><b>${esc(a)}${b ? ` · ${esc(b)}` : ""}</b><span class="tag warn">${esc(Tx("missing {n}", { n }))}</span></div>
-        <div class="small muted" style="margin-top:2px">${esc(priceSrc)} <span class="money">${p != null ? esc(money(p)) : "–"}</span></div>
+        <div class="small muted" style="margin-top:2px">${esc(fromMyp(c) ? "MYP Cards" : priceSrc)} <span class="money">${p != null ? esc(money(p)) : "–"}</span></div>
         <div class="list tight divided" style="margin-top:var(--sp-2)">${offers.join("")}</div></div></div></section>`;
     }).join("");
     const head = [Tx(m.missingN === 1 ? "{n} card missing" : "{n} cards missing", { n: m.missingN })];
-    const sub = [Tx("{v} at {s}", { v: money(m.missingValue), s: priceSrc }), fromFriends ? Tx("{n} can come from friends", { n: fromFriends }) : ""].filter(Boolean).join(" · ");
+    const sub = [BR ? Tx("{v} estimated (MYP Cards, else TCGplayer)", { v: money(m.missingValue) }) : Tx("{v} at {s}", { v: money(m.missingValue), s: priceSrc }), fromFriends ? Tx("{n} can come from friends", { n: fromFriends }) : ""].filter(Boolean).join(" · ");
     return `<div class="notice" data-testid="missing-summary"><i class="ic i-info"></i><span class="t"><b>${esc(head[0])}</b>${esc(sub)}</span></div>
       <div class="row" style="gap:var(--sp-2);margin:var(--sp-3) 0"><span class="small muted">${Tx("Post what's missing on the board")}</span><button type="button" class="btn small" data-post="buy">${Tx("Looking to buy")}</button><button type="button" class="btn small" data-post="borrow">${Tx("Looking to borrow")}</button></div>
       <div class="stack">${cards}</div>`;
@@ -1146,9 +1160,12 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     Promise.all([
       fetch(window.INKWELL_PRICES_URL || "../data/prices.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
       fetch("../data/legality.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
-    ]).then(([pr, l]) => {
+      fetch(window.INKWELL_PRICES_BR_URL || "../data/prices-br.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+    ]).then(([pr, l, br]) => {
+      if (br?.cards) BR = br;
       if (pr?.prices) { PRICES = pr.prices; pricesDate = pr.generated_at; priceSrc = pr.usd_brl ? "TCGplayer" : "Liga Lorcana";
-        PRICE_SOURCE = pr.usd_brl ? Tx("TCGplayer market price converted at R$ {r} per dollar (Liga Lorcana where TCGplayer has none)", { r: String(pr.usd_brl).replace(".", lang === "pt" ? "," : ".") }) : "Liga Lorcana"; }
+        PRICE_SOURCE = pr.usd_brl ? Tx("TCGplayer market price converted at R$ {r} per dollar (Liga Lorcana where TCGplayer has none)", { r: String(pr.usd_brl).replace(".", lang === "pt" ? "," : ".") }) : "Liga Lorcana";
+        if (BR) PRICE_SOURCE = Tx("lowest MYP Cards listing ({d}); without one, {s}", { d: dateFmt(BR.retrieved_at).replace(/\.$/, ""), s: PRICE_SOURCE }); }
       const ls = l?.formats?.core?.legal_sets; if (Array.isArray(ls) && ls.length) { CORE_SETS = ls; LEGAL = l; }
       if (!$("pText") || document.activeElement !== $("pText")) render(); else { const x = $("pText"), pos = x.selectionStart; render(); const y = $("pText"); y.focus(); y.setSelectionRange(pos, pos); }
     });

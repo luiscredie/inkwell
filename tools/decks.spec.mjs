@@ -253,9 +253,10 @@ test('import recognises names with special dashes and apostrophes in the catalog
 
 // ---------- trying a list without an account ----------
 const LIST = '4 Elsa - Snow Queen\n4 Stitch - Rock Star\n2 Elza Snow Quen';
-async function publicSetup(page, prices) {
+async function publicSetup(page, prices, br) {
   const calls = await setup(page, { signedIn: false });
   if (prices) await page.route('**/data/prices.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(prices) }));
+  if (prices || br) await page.route('**/data/prices-br.json', (r) => (br ? r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(br) }) : r.fulfill({ status: 404, body: '' })));
   return calls;
 }
 
@@ -339,4 +340,26 @@ test('a collection shared with me counts, and a friend who lends from their coll
   await page.locator('[data-borrow]').click();
   await expect(page.locator('[data-testid="friend-has"]')).toContainText('Pedido enviado');
   expect(posts[0]).toEqual({ lender: FRIEND, borrower: ME, created_by: ME, items: [{ card_id: 'LOR10-1', qty: 1, foil: false }], note: 'Para o deck Amber Test' });
+});
+
+test('signed out: the total is an estimate in reais — MYP Cards when listed there, TCGplayer otherwise', async ({ page }) => {
+  await publicSetup(page, { generated_at: '2026-10-25T00:00:00Z', currency: 'BRL', usd_brl: 5.4, prices: { 'LOR9-3': { n: 3, nl: 3 }, 'LOR9-53': { n: 10, nl: 10 } } },
+    { retrieved_at: '2026-10-21T17:28:47Z', product_url: 'https://mypcards.com/lorcana/produto/{path}', cards: { 'LOR9-53': [2, 'x/elsa'] } });
+  await page.goto(BASE);
+  await page.getByTestId('public-text').fill('4 Stitch - Rock Star\n4 Elsa - Snow Queen (9-53)');
+  await expect(page.getByTestId('public-total')).toHaveText('R$ 20,00');   // 4 × 3 (TCGplayer) + 4 × 2 (MYP)
+  await expect(page.getByTestId('public-summary')).toContainText('estimativa');
+  await expect(page.getByTestId('public-prices')).toContainText('Estimativa em reais: menor anúncio na MYP Cards');
+});
+
+test('signed out: one tap fills an example deck — 60 cards, legal in Core, marked as an example', async ({ page }) => {
+  await publicSetup(page);
+  await page.goto(BASE);
+  await page.getByTestId('public-sample').click();
+  await expect(page.getByTestId('public-summary')).toContainText('60/60');
+  await expect(page.getByTestId('public-legal')).toContainText('legal');
+  await expect(page.getByTestId('public-legal')).not.toContainText('ainda');
+  await expect(page.getByTestId('public-fixes')).toHaveCount(0);
+  await expect(page.getByTestId('public-sample-note')).toContainText('não é lista competitiva');
+  await expect(page.getByTestId('public-sample')).toHaveCount(0);
 });
