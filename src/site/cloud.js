@@ -72,9 +72,10 @@ window.INKWELL_CLOUD = (() => {
   }
 
   // Authenticated call to the database's REST API (used by Coach Review). Errors carry a short code.
-  async function api(path, { method = "GET", body, prefer } = {}) {
+  // anon: true also works signed out (the publishable key), for the few functions open to visitors
+  async function api(path, { method = "GET", body, prefer, anon = false } = {}) {
     const tok = await token();
-    if (!tok) throw Object.assign(new Error("signed out"), { code: "auth" });
+    if (!tok && !anon) throw Object.assign(new Error("signed out"), { code: "auth" });
     const r = await fetch(`${cfg.url}/rest/v1/${path}`, {
       method, headers: { ...headers(tok), ...(prefer ? { Prefer: prefer } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
     if (r.status === 401) store({ ...sess, expires_at: 0 });

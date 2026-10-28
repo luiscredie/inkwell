@@ -304,7 +304,14 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   }
   function relationBtn(p) {
     if (p.mock || !p.relation || p.relation === "self") return "";
-    if (p.relation === "friend") return `<span class="tag match" data-testid="relation">${Tx("Friends")}</span>`;
+    if (p.relation === "friend") {
+      // their collection, if they opened it to friends (Coleção > Compartilhar; supabase/collection_shares.sql)
+      setTimeout(() => window.INKWELL_CLOUD?.api("rpc/friend_collection", { method: "POST", body: { p_handle: p.handle, p_full: false } }).then((r) => {
+        const el = document.getElementById("friendColl"); if (!el || !r?.view) return;
+        el.outerHTML = `<a class="btn" href="../colecao/?amigo=${encodeURIComponent(p.handle)}" data-testid="friend-collection"><i class="ic i-cards"></i>${lang === "pt" ? "Ver coleção" : "See collection"}</a>`;
+      }).catch(() => {}), 0);
+      return `<span class="tag match" data-testid="relation">${Tx("Friends")}</span><span id="friendColl" hidden></span>`;
+    }
     if (p.relation === "asked") return `<span class="tag info" data-testid="relation">${Tx("Request sent")}</span>`;
     if (p.relation === "asks_you") return `<a class="btn primary" href="../feed/#amigos" data-testid="relation">${Tx("Answer the friend request")}</a>`;
     return `<button type="button" class="btn primary" id="addFriend" data-testid="relation"><i class="ic i-user-plus"></i>${Tx("Add friend")}</button>`;

@@ -90,9 +90,10 @@ window.INKWELL_CLOUD = (() => {
   }
 
   // Authenticated call to the database's REST API (used by Coach Review). Errors carry a short code.
-  async function api(path, { method = "GET", body, prefer } = {}) {
+  // anon: true also works signed out (the publishable key), for the few functions open to visitors
+  async function api(path, { method = "GET", body, prefer, anon = false } = {}) {
     const tok = await token();
-    if (!tok) throw Object.assign(new Error("signed out"), { code: "auth" });
+    if (!tok && !anon) throw Object.assign(new Error("signed out"), { code: "auth" });
     const r = await fetch(`${cfg.url}/rest/v1/${path}`, {
       method, headers: { ...headers(tok), ...(prefer ? { Prefer: prefer } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
     if (r.status === 401) store({ ...sess, expires_at: 0 });
@@ -560,8 +561,9 @@ window.INKWELL_CLOUD = (() => {
     let notes = null;
     const NK = { like: ["curtiu seu post", "liked your post"], comment: ["comentou no seu post", "commented on your post"], rsvp: ["vai na sua mesa", "is going to your table"], event: ["marcou uma mesa", "set up a table"],
       community_invite: ["convidou você para uma comunidade", "invited you to a community"], join_request: ["pediu para entrar", "asked to join"], join_accepted: ["aceitou seu pedido", "accepted your request"],
-      event_soon: ["é amanhã ou hoje", "is coming up"] };
-    const noteHref = (n) => (n.kind === "event_soon" && n.ref?.rph) || /^event_near/.test(n.kind) ? "../eventos/" : n.ref?.post ? `../feed/#post-${encodeURIComponent(n.ref.post)}` : n.ref?.slug ? `../comunidades/?c=${encodeURIComponent(n.ref.slug)}${["event", "rsvp", "event_soon"].includes(n.kind) ? "#mesas" : ""}` : "../feed/";
+      event_soon: ["é amanhã ou hoje", "is coming up"], share_accepted: ["aceitou dividir a sua coleção", "joined your shared collection"],
+      loan_request: ["pediu cartas emprestadas", "asked to borrow cards"], loan_offer: ["quer emprestar cartas para você", "offered to lend you cards"] };
+    const noteHref = (n) => /^loan_/.test(n.kind) ? "../trades/" : n.kind === "share_accepted" ? "../colecao/" : (n.kind === "event_soon" && n.ref?.rph) || /^event_near/.test(n.kind) ? "../eventos/" : n.ref?.post ? `../feed/#post-${encodeURIComponent(n.ref.post)}` : n.ref?.slug ? `../comunidades/?c=${encodeURIComponent(n.ref.slug)}${["event", "rsvp", "event_soon"].includes(n.kind) ? "#mesas" : ""}` : "../feed/";
     // the number on the app icon (installed app): the unread count, cleared when read
     const appBadge = (n) => { try { if (n && navigator.setAppBadge) navigator.setAppBadge(n).catch(() => {}); else if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {}); } catch { /* */ } };
     const showBell = () => { const b = $("iwBell"), c = $("iwBellN"); if (!b || !notes) return; b.hidden = false; const n = notes.filter((x) => x.unread).length; c.hidden = !n; c.textContent = n > 9 ? "9+" : String(n); appBadge(n);

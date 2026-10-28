@@ -89,9 +89,10 @@ window.INKWELL_CLOUD = (() => {
   }
 
   // Authenticated call to the database's REST API (used by Coach Review). Errors carry a short code.
-  async function api(path, { method = "GET", body, prefer } = {}) {
+  // anon: true also works signed out (the publishable key), for the few functions open to visitors
+  async function api(path, { method = "GET", body, prefer, anon = false } = {}) {
     const tok = await token();
-    if (!tok) throw Object.assign(new Error("signed out"), { code: "auth" });
+    if (!tok && !anon) throw Object.assign(new Error("signed out"), { code: "auth" });
     const r = await fetch(`${cfg.url}/rest/v1/${path}`, {
       method, headers: { ...headers(tok), ...(prefer ? { Prefer: prefer } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
     if (r.status === 401) store({ ...sess, expires_at: 0 });
@@ -233,6 +234,9 @@ window.INKWELL_CLOUD = (() => {
 .imp-list { display: grid; gap: 2px; max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: var(--r-md); padding: 6px 10px; }
 .imp-list > div { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: baseline; padding: 3px 0; border-bottom: 1px solid var(--line); }
 .imp-list > div:last-child { border-bottom: 0; }
+body.coll-ro .qty button, body.coll-ro .mv, body.coll-ro [data-bq], body.coll-notmine .act-btns { display: none !important; }
+#shareSheet .list-row.flat { gap: var(--sp-2); }
+#shareSheet input:not([type]), #shareSheet input[readonly] { min-width: 0; }
 .imp-list span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
 
@@ -244,6 +248,7 @@ window.INKWELL_CLOUD = (() => {
 <dialog class="sheet" id="cardSheet" aria-labelledby="cT"></dialog>
 <dialog id="scan" aria-labelledby="scanT"></dialog>
 <dialog class="sheet wide" id="impSheet" aria-labelledby="impT"></dialog>
+<dialog class="sheet wide" id="shareSheet" aria-labelledby="shT"></dialog>
 <div class="toast-host"><div class="toast" id="toast" role="status" hidden></div></div>
 
 <script>
@@ -330,7 +335,16 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   try { v = { ...v, ...JSON.parse(localStorage.getItem(VIEW_KEY) || "{}") }; } catch { /* */ }
   let shown = 120;
   const save = () => { try { localStorage.setItem(VIEW_KEY, JSON.stringify(v)); } catch { /* */ } };
-  const prof = () => profiles.find((p) => p.profile === profileName) || profiles[0] || null;
+  // Collections: your own (one or more), the ones shared with you (couples, families: "share:<owner>:<name>")
+  // and, opened from a friend's profile (?amigo=handle), a friend's, read only. supabase/collection_shares.sql.
+  const P = (pt, en) => (lang === "pt" ? pt : en);
+  const SRC_KEY = "inkwell-coll-source";
+  let shared = [], friendView = null, source = null, privacy = { view: false, lend: false }, shareInfo = { given: [], received: [] }, ownLent = null;
+  try { source = localStorage.getItem(SRC_KEY); } catch { /* */ }
+  const ownBest = () => profiles.find((p) => p.profile === profileName) || profiles[0] || null;
+  const prof = () => friendView || [...profiles, ...shared].find((p) => p.profile === source) || ownBest();
+  const collName = (p) => (!p ? "" : p.friend || p.shared ? P(`Coleção de ${(p.ownerName || "").split(" ")[0] || "amigo"}`, `${(p.ownerName || "").split(" ")[0] || "A friend"}'s collection`) : p.profile === "principal" ? P("Minha coleção", "My collection") : p.profile);
+  const readOnly = () => { const p = prof(); return !!p && (!!p.friend || (!!p.shared && !p.canEdit)); };
   const coll = () => prof()?.collection || {};
   const owned = (id) => { const e = coll()[id] || {}; return { n: +e.n || 0, f: +e.f || 0 }; };
   const lentOf = (id) => (lentN.get(id) || 0) + (lentF.get(id) || 0);
@@ -345,6 +359,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const inPlace = (id, place = v.place) => (!place || place === "all" ? owned(id) : where(id)[place]);
 
   async function loadAll() {
+    const sharesP = fetchShares();   // in parallel with the rest
     const [p, pr, l, ul, ad, hm, br] = await Promise.all([
       CLOUD.collections("profile,updated_at,collection:data->collection"),
       fetch(window.INKWELL_PRICES_URL || "../data/prices.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
@@ -373,6 +388,38 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     for (const x of mineToFriends) add(x.items, names.get(x.borrower) || Tx("a friend"), x.due_on, true);
     try { profileName = localStorage.getItem("inkwell-trades-profile"); } catch { /* */ }
     if (!profiles.some((x) => x.profile === profileName)) profileName = profiles.slice().sort((a, b) => Object.keys(b.collection).length - Object.keys(a.collection).length)[0]?.profile || null;
+    ownLent = { n: lentN, f: lentF, who: lentWho };
+    await loadShares(sharesP);
+  }
+  const fetchShares = () => Promise.all([
+      CLOUD.api("rpc/shared_collections", { method: "POST", body: {} }).catch(() => []),   // [] until collection_shares.sql runs
+      CLOUD.api("rpc/my_collection_shares", { method: "POST", body: {} }).catch(() => null),
+      CLOUD.api("rpc/my_collection_privacy", { method: "POST", body: {} }).catch(() => null),
+    ]);
+  async function loadShares(pre) {
+    const [sc, ms, pv] = await (pre || fetchShares());
+    shared = (Array.isArray(sc) ? sc : []).map((x) => ({ profile: `share:${x.owner}:${x.profile}`, pname: x.profile, owner: x.owner, ownerName: x.owner_name || "", canEdit: !!x.can_edit, shared: true,
+      collection: x.collection && typeof x.collection === "object" ? x.collection : {} }));
+    for (const x of Array.isArray(sc) ? sc : []) for (const h of x.home || []) HOME.set(`share:${x.owner}:${x.profile}|${h.card_id}`, { n: +h.n || 0, f: +h.f || 0 });
+    shareInfo = ms && typeof ms === "object" ? { given: ms.given || [], received: ms.received || [] } : { given: [], received: [] };
+    if (pv) privacy = pv;
+    // nothing chosen yet and your own is empty, but someone shares theirs: that one ("one collection for the two of us")
+    if (!source && shared.length && !Object.keys(ownBest()?.collection || {}).length) source = shared[0].profile;
+    if (source && ![...profiles, ...shared].some((p) => p.profile === source)) source = null;
+    applySource();
+  }
+  // loans are the owner's: a shared or a friend's collection shows none of yours
+  function applySource() {
+    const p = prof();
+    if (!p || (!p.shared && !p.friend)) { if (ownLent) { lentN = ownLent.n; lentF = ownLent.f; lentWho = ownLent.who; } }
+    else { lentN = new Map(); lentF = new Map(); lentWho = new Map(); if (p.friend) for (const [id, q] of Object.entries(p.lent || {})) lentN.set(id, +q || 0); }
+    document.body.classList.toggle("coll-ro", readOnly());
+    document.body.classList.toggle("coll-notmine", !!(p && (p.shared || p.friend)));
+  }
+  function useSource(key) {
+    source = key; try { key ? localStorage.setItem(SRC_KEY, key) : localStorage.removeItem(SRC_KEY); } catch { /* */ }
+    const own = profiles.find((x) => x.profile === key); if (own) profileName = own.profile;
+    applySource(); shown = 120; renderAll();
   }
 
   // ---------- filtering ----------
@@ -705,6 +752,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     bump(id, kind, 0, to === "home" ? qty : -qty, quiet);
   }
   function bump(id, kind, dTotal, dHome, quiet) {
+    if (readOnly()) { toast(P("Esta coleção é só para ver.", "This collection is view only."), null, true); return; }
     const p = prof(); if (!p) { toast(Tx("Couldn't save. Try again."), null, true); if ($("scan").open) scanSay(Tx("Couldn't save. Try again."), true); return; }
     if (dTotal) {
       const e = p.collection[id] = { n: 0, f: 0, ...(p.collection[id] || {}) };
@@ -728,7 +776,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     if (!items.length) return Promise.resolve(true);
     const delta = items.filter((x) => x.t).map((x) => ({ card_id: x.card_id, qty: x.t, foil: x.foil }));
     const home = items.filter((x) => x.h).map((x) => ({ card_id: x.card_id, qty: x.h, foil: x.foil }));
-    const call = () => home.length
+    const call = () => p.shared
+      ? CLOUD.api("rpc/shared_collection_change", { method: "POST", prefer: "return=minimal", body: { p_owner: p.owner, p_profile: p.pname, p_delta: delta, p_home: home } })
+      : home.length
       ? CLOUD.api("rpc/collection_change", { method: "POST", prefer: "return=minimal", body: { p_profile: p.profile, p_delta: delta, p_home: home } })
       : CLOUD.api("rpc/apply_collection_delta", { method: "POST", prefer: "return=minimal", body: { p_profile: p.profile, p_delta: delta } });
     return (queue = queue.then(() => call())
@@ -862,11 +912,155 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   }
   function renderAll() {
     if (me && binderOn()) return renderBinder();
-    $("title").textContent = Tx("Collection");
-    $("sub").textContent = pricesDate ? Tx("Prices: {s}, {d}", { s: priceSrc, d: new Date(pricesDate).toLocaleDateString(LOC, { day: "numeric", month: "short" }) }) : "";
-    if (me) { $("headActions").innerHTML = `<button type="button" class="btn" id="openBinder"><i class="ic i-cards"></i>${Tx(homeReady ? "Check stock" : "Check my binder")}</button><button type="button" class="btn" id="openImport" data-testid="import"><i class="ic i-import"></i>${Tx("Import")}</button><button type="button" class="btn primary" id="openScan"><i class="ic i-camera"></i>${Tx("Scan")}</button>`;
-      $("openBinder").onclick = () => setBinder(true); $("openScan").onclick = () => openScanner($("openScan")); $("openImport").onclick = () => openImport($("openImport")); }
+    const cur = prof();
+    $("title").textContent = cur && (cur.shared || cur.friend || profiles.length > 1 || shared.length) ? collName(cur) : Tx("Collection");
+    $("sub").innerHTML = esc(pricesDate ? Tx("Prices: {s}, {d}", { s: priceSrc, d: new Date(pricesDate).toLocaleDateString(LOC, { day: "numeric", month: "short" }) }) : "")
+      + (cur?.shared ? ` <span class="tag ${cur.canEdit ? "match" : "info"}" data-testid="src-mode">${esc(cur.canEdit ? P("compartilhada · pode alterar", "shared · can change") : P("compartilhada · só ver", "shared · view only"))}</span>` : "")
+      + (cur?.friend ? ` <span class="tag info" data-testid="src-mode">${esc(P("só ver", "view only"))}</span>` : "");
+    if (me && friendView) {
+      $("headActions").innerHTML = `<a class="btn" href="./" data-testid="back-mine"><i class="ic i-chevron-left"></i>${esc(P("Voltar para a minha", "Back to mine"))}</a>`;
+    } else if (me) {
+      const all = [...profiles, ...shared];
+      $("headActions").innerHTML = `${all.length > 1 ? `<select class="inline" id="collSrc" data-testid="coll-source" aria-label="${esc(P("Coleção", "Collection"))}">${all.map((x) => `<option value="${esc(x.profile)}" ${x === cur ? "selected" : ""}>${esc(collName(x))}</option>`).join("")}</select>` : ""}
+        <button type="button" class="btn" id="openShare" data-testid="share"><i class="ic i-users"></i>${esc(P("Compartilhar", "Share"))}</button>
+        <button type="button" class="btn" id="openBinder"><i class="ic i-cards"></i>${Tx(homeReady ? "Check stock" : "Check my binder")}</button>${readOnly() ? "" : `<button type="button" class="btn" id="openImport" data-testid="import"><i class="ic i-import"></i>${Tx("Import")}</button><button type="button" class="btn primary" id="openScan"><i class="ic i-camera"></i>${Tx("Scan")}</button>`}`;
+      $("collSrc")?.addEventListener("change", (e) => useSource(e.target.value));
+      $("openShare").onclick = () => openShare($("openShare"));
+      $("openBinder").onclick = () => setBinder(true); $("openScan")?.addEventListener("click", () => openScanner($("openScan"))); $("openImport")?.addEventListener("click", () => openImport($("openImport"))); }
     render();
+  }
+
+  // ---------- compartilhar: your collections, people who share one, friends (see / borrow), shared with you ----------
+  const firstName = (n) => String(n || "").split(" ")[0] || P("alguém", "someone");
+  const why = (e) => String(e?.why || e?.message || "");
+  function openShare(from) {
+    const sh = $("shareSheet"); let link = null, linkEdit = false, newOpen = false, renaming = null, sure = null, msg = "";
+    const mine = () => (prof()?.shared || prof()?.friend ? ownBest() : prof());
+    const reload = async () => { const p = await CLOUD.collections("profile,updated_at,collection:data->collection").catch(() => null);
+      if (Array.isArray(p)) profiles = p.map((x) => ({ ...x, collection: x.collection && typeof x.collection === "object" ? x.collection : {} }));
+      await loadShares(); renderAll(); };
+    const say = (t) => { msg = t; draw(); };
+    const cardsIn = (p) => Object.values(p.collection || {}).reduce((t, e) => t + (+e.n || 0) + (+e.f || 0), 0);
+    function draw() {
+      const m = mine(), people = shareInfo.given.filter((g) => g.profile === m?.profile);
+      const ownRows = profiles.map((x) => {
+        const on = prof() === x, k = esc(x.profile);
+        if (renaming === x.profile) return `<div class="list-row flat"><input class="grow" id="rnName" maxlength="40" value="${k}" aria-label="${esc(P("Novo nome", "New name"))}"><button type="button" class="btn small primary" id="rnOk">${esc(P("Salvar", "Save"))}</button><button type="button" class="btn small ghost" id="rnNo">${esc(P("Cancelar", "Cancel"))}</button></div>`;
+        return `<div class="list-row flat" data-own="${k}"><span class="t"><span>${esc(collName(x))}${on ? ` <span class="tag match">${esc(P("aberta", "open"))}</span>` : ""}</span><span class="meta">${esc(cardsIn(x) === 1 ? P("1 carta", "1 card") : P(`${cardsIn(x)} cartas`, `${cardsIn(x)} cards`))}${shareInfo.given.some((g) => g.profile === x.profile) ? " · " + esc(P("compartilhada", "shared")) : ""}</span></span>
+          <span class="row" style="gap:4px;flex-wrap:nowrap">${on ? "" : `<button type="button" class="btn small" data-use="${k}">${esc(P("Abrir", "Open"))}</button>`}<button type="button" class="btn small ghost" data-rn="${k}" aria-label="${esc(P(`Renomear ${collName(x)}`, `Rename ${collName(x)}`))}"><i class="ic i-edit"></i></button>${profiles.length > 1 ? `<button type="button" class="btn small ghost${sure === "del:" + x.profile ? " danger" : ""}" data-del="${k}" aria-label="${esc(P(`Apagar ${collName(x)}`, `Delete ${collName(x)}`))}">${sure === "del:" + x.profile ? esc(P("Apagar mesmo?", "Really delete?")) : `<i class="ic i-trash"></i>`}</button>` : ""}</span></div>`;
+      }).join("");
+      sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="shT">${esc(P("Compartilhar coleção", "Share collection"))}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
+        <div class="sheet-body stack" style="gap:var(--sp-5)">
+          <section class="stack" style="gap:var(--sp-2)" data-testid="share-own"><h3 style="margin:0">${esc(P("Minhas coleções", "My collections"))}</h3>
+            <p class="small muted" style="margin:0">${esc(P("Você pode ter mais de uma: por exemplo, uma compartilhada com quem mora com você e outra só sua.", "You can keep more than one: say, one shared with someone you live with and one only yours."))}</p>
+            <div class="list tight divided">${ownRows}</div>
+            ${newOpen ? `<div class="row" style="gap:var(--sp-2);flex-wrap:nowrap"><input class="grow" id="newName" maxlength="40" placeholder="${esc(P("Nome (ex.: Só minha)", "Name (e.g. Only mine)"))}" aria-label="${esc(P("Nome da nova coleção", "New collection name"))}"><button type="button" class="btn primary" id="newOk">${esc(P("Criar", "Create"))}</button></div>`
+              : `<button type="button" class="btn" id="newColl" style="justify-self:start"><i class="ic i-plus"></i>${esc(P("Nova coleção", "New collection"))}</button>`}</section>
+          ${m ? `<section class="stack" style="gap:var(--sp-2)" data-testid="share-people"><h3 style="margin:0">${esc(P(`Dividir «${collName(m)}» com alguém`, `Share “${collName(m)}” with someone`))}</h3>
+            <p class="small muted" style="margin:0">${esc(P("Uma coleção só, para os dois: a pessoa vê tudo e, se você deixar, também altera. Dá para mudar ou tirar o acesso quando quiser.", "One collection for both of you: they see everything and, if you allow, change it too. You can change or remove access any time."))}</p>
+            ${people.length ? `<div class="list tight divided">${people.map((g) => `<div class="stack" style="gap:0" data-member="${esc(g.member)}"><div class="list-row flat"><span class="av sm">${esc(firstName(g.name)[0].toUpperCase())}</span><span class="t"><span>${esc(g.name || P("Sem nome", "No name"))}</span></span>
+              <button type="button" class="btn small ghost${sure === "rm:" + g.member ? " danger" : ""}" data-rm="${esc(g.member)}">${esc(sure === "rm:" + g.member ? P("Remover mesmo?", "Really remove?") : P("Remover", "Remove"))}</button></div>
+              <label class="switch" style="border:0"><span>${esc(P("Pode alterar", "Can change"))}<small>${esc(g.can_edit ? P("Vê e altera.", "Sees and changes.") : P("Só vê.", "Only sees."))}</small></span><input type="checkbox" role="switch" data-edit="${esc(g.member)}" ${g.can_edit ? "checked" : ""}></label></div>`).join("")}</div>` : ""}
+            ${link ? `<div class="card inset stack" style="gap:var(--sp-2)" data-testid="share-link"><span class="small">${esc(linkEdit ? P("Convite para ver e alterar. Vale para 1 pessoa, por 7 dias. Funciona mesmo se ela ainda não tiver conta.", "Invite to see and change. For 1 person, 7 days. Works even without an account yet.") : P("Convite só para ver. Vale para 1 pessoa, por 7 dias. Funciona mesmo se ela ainda não tiver conta.", "View-only invite. For 1 person, 7 days. Works even without an account yet."))}</span>
+                <input readonly value="${esc(link)}" id="linkTxt" aria-label="${esc(P("Link do convite", "Invite link"))}" onclick="this.select()"><div class="row" style="gap:var(--sp-2)"><button type="button" class="btn primary" id="linkSend">${esc(P("Enviar", "Send"))}</button><button type="button" class="btn" id="linkCopy">${esc(P("Copiar", "Copy"))}</button></div></div>`
+              : `<label class="switch"><span>${esc(P("A pessoa pode alterar", "They can change it"))}<small>${esc(P("Desligado: só vê.", "Off: view only."))}</small></span><input type="checkbox" role="switch" id="invEdit" ${linkEdit ? "checked" : ""}></label>
+                <button type="button" class="btn primary" id="mkLink" style="justify-self:start" data-testid="make-invite">${esc(P("Criar link de convite", "Create invite link"))}</button>`}</section>` : ""}
+          <section class="stack" style="gap:0" data-testid="share-friends"><h3 style="margin:0 0 var(--sp-2)">${esc(P("Amigos", "Friends"))}</h3>
+            ${profiles.length > 1 ? `<label class="field small">${esc(P("Coleção que os amigos veem", "Collection friends see"))}<select id="pvProf">${profiles.map((x) => `<option value="${esc(x.profile)}" ${(privacy.profile || m?.profile) === x.profile ? "selected" : ""}>${esc(collName(x))}</option>`).join("")}</select></label>` : ""}
+            <label class="switch"><span>${esc(P("Amigos podem ver minha coleção", "Friends can see my collection"))}<small>${esc(P("Só ver. Aparece um botão “Ver coleção” no seu perfil para quem é seu amigo.", "View only. Friends get a “See collection” button on your profile."))}</small></span><input type="checkbox" role="switch" id="pvView" ${privacy.view ? "checked" : ""}></label>
+            <label class="switch"><span>${esc(P("Aceito pedidos de empréstimo", "I take borrow requests"))}<small>${esc(P("Ao montar um deck, seus amigos veem quais das cartas que faltam você tem livres e podem pedir emprestado. Você aceita ou recusa cada pedido.", "When building a deck, friends see which missing cards you have free and can ask to borrow them. You accept or decline each request."))}</small></span><input type="checkbox" role="switch" id="pvLend" ${privacy.lend ? "checked" : ""}></label></section>
+          ${shared.length ? `<section class="stack" style="gap:var(--sp-2)" data-testid="share-received"><h3 style="margin:0">${esc(P("Compartilhadas comigo", "Shared with me"))}</h3><div class="list tight divided">${shared.map((x) => `<div class="list-row flat"><span class="t"><span>${esc(collName(x))}</span><span class="meta">${esc(x.canEdit ? P("pode alterar", "can change") : P("só ver", "view only"))}</span></span>
+            <span class="row" style="gap:4px;flex-wrap:nowrap">${prof() === x ? `<span class="tag match">${esc(P("aberta", "open"))}</span>` : `<button type="button" class="btn small" data-use="${esc(x.profile)}">${esc(P("Abrir", "Open"))}</button>`}<button type="button" class="btn small ghost${sure === "leave:" + x.profile ? " danger" : ""}" data-leave="${esc(x.profile)}">${esc(sure === "leave:" + x.profile ? P("Sair mesmo?", "Really leave?") : P("Sair", "Leave"))}</button></span></div>`).join("")}</div></section>` : ""}
+          <p class="small" id="shMsg" role="alert" style="margin:0">${esc(msg)}</p></div>`;
+      sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = () => sh.close());
+      sh.querySelectorAll("[data-use]").forEach((b) => b.onclick = () => { useSource(b.dataset.use); draw(); });
+      sh.querySelectorAll("[data-rn]").forEach((b) => b.onclick = () => { renaming = b.dataset.rn; draw(); $("rnName")?.focus(); });
+      $("rnNo")?.addEventListener("click", () => { renaming = null; draw(); });
+      $("rnOk")?.addEventListener("click", async () => {
+        const old = renaming, name = $("rnName").value.trim(); if (!name) return;
+        try { await CLOUD.api("rpc/rename_collection", { method: "POST", body: { p_profile: old, p_name: name } });
+          if (source === old) source = name; if (profileName === old) profileName = name; try { if (localStorage.getItem(SRC_KEY) === old) localStorage.setItem(SRC_KEY, name); } catch { /* */ }
+          renaming = null; msg = ""; await reload(); draw(); }
+        catch (e) { say(/name_taken/.test(why(e)) ? P("Você já tem uma coleção com esse nome.", "You already have a collection with that name.") : Tx("Couldn't save. Try again.")); }
+      });
+      sh.querySelectorAll("[data-del]").forEach((b) => b.onclick = async () => {
+        const k = "del:" + b.dataset.del; if (sure !== k) { sure = k; draw(); return; }
+        sure = null;
+        try { await CLOUD.api("rpc/delete_collection", { method: "POST", body: { p_profile: b.dataset.del } }); if (source === b.dataset.del) useSource(null); await reload(); msg = P("Coleção apagada.", "Collection deleted."); draw(); }
+        catch { say(Tx("Couldn't save. Try again.")); }
+      });
+      $("newColl")?.addEventListener("click", () => { newOpen = true; draw(); $("newName")?.focus(); });
+      $("newOk")?.addEventListener("click", async () => {
+        const name = $("newName").value.trim(); if (!name) { $("newName").focus(); return; }
+        try { await CLOUD.api("rpc/create_collection", { method: "POST", body: { p_name: name } }); newOpen = false; await reload(); useSource(name); msg = P(`Coleção «${name}» criada e aberta.`, `“${name}” created and opened.`); draw(); }
+        catch (e) { const w = why(e); say(/name_taken/.test(w) ? P("Você já tem uma coleção com esse nome.", "You already have a collection with that name.") : /too_many/.test(w) ? P("Limite de 10 coleções.", "10 collections at most.") : Tx("Couldn't save. Try again.")); }
+      });
+      $("invEdit")?.addEventListener("change", (e) => { linkEdit = e.target.checked; });
+      $("mkLink")?.addEventListener("click", async () => {
+        try { const code = await CLOUD.api("rpc/create_share_invite", { method: "POST", body: { p_profile: m.profile, p_can_edit: linkEdit } });
+          link = new URL(`./?compartilhar=${encodeURIComponent(code)}`, location.href).href; msg = ""; draw(); $("linkSend")?.focus(); }
+        catch (e) { say(/too_many/.test(why(e)) ? P("Muitos convites hoje. Tente amanhã.", "Too many invites today. Try tomorrow.") : Tx("Couldn't save. Try again.")); }
+      });
+      $("linkCopy")?.addEventListener("click", async () => { try { await navigator.clipboard.writeText(link); say(P("Link copiado.", "Link copied.")); } catch { $("linkTxt").select(); } });
+      $("linkSend")?.addEventListener("click", async () => { const text = P("Vamos dividir a coleção de Lorcana no Inkwell?", "Shall we share our Lorcana collection on Inkwell?");
+        try { if (navigator.share) { await navigator.share({ title: "Inkwell", text, url: link }); return; } } catch { return; }
+        try { await navigator.clipboard.writeText(link); say(P("Link copiado.", "Link copied.")); } catch { $("linkTxt").select(); } });
+      sh.querySelectorAll("[data-edit]").forEach((x) => x.onchange = async () => {
+        try { await CLOUD.api("rpc/set_collection_share", { method: "POST", body: { p_owner: me.id, p_profile: m.profile, p_member: x.dataset.edit, p_can_edit: x.checked } });
+          const g = shareInfo.given.find((y) => y.member === x.dataset.edit && y.profile === m.profile); if (g) g.can_edit = x.checked; say(x.checked ? P("Agora pode alterar.", "Can change now.") : P("Agora só vê.", "View only now.")); }
+        catch { x.checked = !x.checked; say(Tx("Couldn't save. Try again.")); }
+      });
+      sh.querySelectorAll("[data-rm]").forEach((b) => b.onclick = async () => {
+        const k = "rm:" + b.dataset.rm; if (sure !== k) { sure = k; draw(); return; }
+        sure = null;
+        try { await CLOUD.api("rpc/set_collection_share", { method: "POST", body: { p_owner: me.id, p_profile: m.profile, p_member: b.dataset.rm, p_can_edit: null } });
+          shareInfo.given = shareInfo.given.filter((y) => !(y.member === b.dataset.rm && y.profile === m.profile)); say(P("Acesso removido.", "Access removed.")); }
+        catch { say(Tx("Couldn't save. Try again.")); }
+      });
+      sh.querySelectorAll("[data-leave]").forEach((b) => b.onclick = async () => {
+        const k = "leave:" + b.dataset.leave; if (sure !== k) { sure = k; draw(); return; }
+        sure = null; const x = shared.find((y) => y.profile === b.dataset.leave); if (!x) return;
+        try { await CLOUD.api("rpc/set_collection_share", { method: "POST", body: { p_owner: x.owner, p_profile: x.pname, p_member: me.id, p_can_edit: null } });
+          if (source === x.profile) useSource(null); await reload(); say(P("Você saiu da coleção.", "You left the collection.")); }
+        catch { say(Tx("Couldn't save. Try again.")); }
+      });
+      const savePv = async () => {
+        const pv = { profile: $("pvProf")?.value || privacy.profile || m?.profile, view: $("pvView").checked, lend: $("pvLend").checked };
+        try { await CLOUD.api("rpc/set_collection_privacy", { method: "POST", body: { p_profile: pv.profile, p_view: pv.view, p_lend: pv.lend } }); privacy = pv; say(P("Salvo.", "Saved.")); }
+        catch { say(Tx("Couldn't save. Try again.")); }
+      };
+      ["pvView", "pvLend", "pvProf"].forEach((id) => $(id)?.addEventListener("change", savePv));
+    }
+    draw(); openSheet(sh, from);
+  }
+
+  // ---------- a share invite: ?compartilhar=CODE (kept through signing in) ----------
+  const INV_KEY = "inkwell-share-invite";
+  function inviteCode() {
+    const q = new URLSearchParams(location.search).get("compartilhar");
+    if (q) { try { localStorage.setItem(INV_KEY, q); } catch { /* */ } return q; }
+    try { return localStorage.getItem(INV_KEY); } catch { return null; }
+  }
+  const dropInvite = () => { try { localStorage.removeItem(INV_KEY); } catch { /* */ } if (/[?&]compartilhar=/.test(location.search)) history.replaceState(null, "", location.pathname); };
+  async function offerInvite(code) {
+    const info = await CLOUD.api("rpc/share_invite_info", { method: "POST", body: { p_code: code }, anon: true }).catch(() => null);
+    const sh = $("shareSheet"), who = firstName(info?.name);
+    const body = !info || !info.valid ? P("Este convite já foi usado ou venceu. Peça um novo link.", "This invite was used or has expired. Ask for a new link.")
+      : info.mine ? P("Este é o seu próprio convite. Mande o link para a outra pessoa.", "This is your own invite. Send the link to the other person.")
+      : info.can_edit ? P(`${who} quer dividir a coleção com você: você vê tudo e também pode alterar.`, `${who} wants to share their collection with you: you see everything and can change it too.`)
+      : P(`${who} quer mostrar a coleção para você: você vê tudo (sem alterar).`, `${who} wants to show you their collection: you see everything (no changes).`);
+    const ok = info && info.valid && !info.mine;
+    sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="shT">${esc(P("Coleção compartilhada", "Shared collection"))}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
+      <div class="sheet-body stack" style="gap:var(--sp-3)"><p style="margin:0" data-testid="invite-text">${esc(body)}</p>${ok && !me ? `<p class="small muted" style="margin:0">${esc(P("Entre ou crie sua conta (só o e-mail) para aceitar.", "Sign in or create your account (just e-mail) to accept."))}</p>` : ""}<p class="small" id="invMsg" role="alert" style="margin:0"></p></div>
+      <div class="sheet-foot"><button type="button" class="btn ghost" data-close>${esc(ok ? P("Agora não", "Not now") : Tx("Close"))}</button>${ok ? `<button type="button" class="btn primary" id="invOk" data-testid="accept-invite">${esc(me ? P("Aceitar", "Accept") : Tx("Sign in"))}</button>` : ""}</div>`;
+    sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = () => { dropInvite(); sh.close(); });
+    $("invOk")?.addEventListener("click", async () => {
+      if (!me) { window.INKWELL_SIGNIN?.(); return; }
+      try { const r = await CLOUD.api("rpc/accept_share_invite", { method: "POST", body: { p_code: code } });
+        dropInvite(); sh.close(); await loadShares(); useSource(`share:${r.owner}:${r.profile}`); toast(P(`Pronto: coleção de ${who}.`, `Done: ${who}'s collection.`)); }
+      catch { $("invMsg").textContent = P("Não deu para aceitar. O convite pode ter vencido.", "Couldn't accept. The invite may have expired."); }
+    });
+    openSheet(sh, null);
   }
 
   // ---------- importar: a file or a pasted list from another app (src/site/collimport.js works out which) ----------
@@ -921,7 +1115,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       try {
         for (let i = 0; i < items.length; i += 400) {   // the server takes 400 changes per call
           const part = items.slice(i, i + 400);
-          await CLOUD.api("rpc/apply_collection_delta", { method: "POST", prefer: "return=minimal", body: { p_profile: p.profile, p_delta: part } });
+          await (p.shared ? CLOUD.api("rpc/shared_collection_change", { method: "POST", prefer: "return=minimal", body: { p_owner: p.owner, p_profile: p.pname, p_delta: part, p_home: [] } })
+            : CLOUD.api("rpc/apply_collection_delta", { method: "POST", prefer: "return=minimal", body: { p_profile: p.profile, p_delta: part } }));
           for (const d of part) { const e = p.collection[d.card_id] = { n: 0, f: 0, ...(p.collection[d.card_id] || {}) }; const k = d.foil ? "f" : "n"; e[k] = (+e[k] || 0) + d.qty; ADDED.set(`${p.profile}|${d.card_id}`, Date.now()); done += d.qty; }
           b.textContent = Tx("Saving… {n}", { n: done });
         }
@@ -1209,9 +1404,19 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   document.title = `${Tx("Collection")} · Inkwell`;
   $("title").textContent = Tx("Collection");
   document.documentElement.lang = LOC;
-  if (!me) { render(); return; }
+  const invite = inviteCode();
+  if (!me) { render(); if (invite) offerInvite(invite); return; }
+  const friendHandle = new URLSearchParams(location.search).get("amigo");
   $("app").innerHTML = `<div class="stats-row three"><span class="skel"></span><span class="skel"></span><span class="skel"></span></div><div class="cgrid">${"<span class=\"skel thumb\"></span>".repeat(8)}</div><p class="sr-only">${Tx("Loading…")}</p>`;
-  const go = () => loadAll().then(renderAll).catch(() => {
+  const loadFriend = async () => {
+    const r = await CLOUD.api("rpc/friend_collection", { method: "POST", body: { p_handle: friendHandle, p_full: true } }).catch(() => null);
+    if (!r?.view) { $("title").textContent = Tx("Collection"); $("headActions").innerHTML = "";
+      $("app").innerHTML = `<div class="empty"><img src="../ui/assets/empty/collection.svg" alt=""><b>${esc(P("Esta coleção não está aberta para você.", "This collection isn't open to you."))}</b><p>${esc(P("Só amigos veem, e só quando o dono deixa.", "Only friends see it, and only if the owner allows."))}</p><a class="btn" href="./">${esc(P("Ver a minha coleção", "See my collection"))}</a></div>`; return false; }
+    friendView = { profile: `friend:${friendHandle}`, friend: true, ownerName: r.name || "", collection: r.collection || {}, lent: r.lent || {}, lend: !!r.lend };
+    v.owned = true; return true;
+  };
+  const go = () => (friendHandle ? Promise.all([loadAll(), loadFriend()]).then(([, ok]) => { if (ok) { applySource(); renderAll(); } })
+    : loadAll().then(() => { renderAll(); if (invite) offerInvite(invite); })).catch(() => {
     $("app").innerHTML = `<div class="empty"><img src="../ui/assets/empty/error.svg" alt=""><b>${Tx("Couldn't load your collection.")}</b><p>${Tx("Check your connection and try again.")}</p><button type="button" class="btn" id="retry"><i class="ic i-refresh"></i>${Tx("Try again")}</button></div>`;
     $("retry").onclick = go;
   });
@@ -1707,8 +1912,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     let notes = null;
     const NK = { like: ["curtiu seu post", "liked your post"], comment: ["comentou no seu post", "commented on your post"], rsvp: ["vai na sua mesa", "is going to your table"], event: ["marcou uma mesa", "set up a table"],
       community_invite: ["convidou você para uma comunidade", "invited you to a community"], join_request: ["pediu para entrar", "asked to join"], join_accepted: ["aceitou seu pedido", "accepted your request"],
-      event_soon: ["é amanhã ou hoje", "is coming up"] };
-    const noteHref = (n) => (n.kind === "event_soon" && n.ref?.rph) || /^event_near/.test(n.kind) ? "../eventos/" : n.ref?.post ? `../feed/#post-${encodeURIComponent(n.ref.post)}` : n.ref?.slug ? `../comunidades/?c=${encodeURIComponent(n.ref.slug)}${["event", "rsvp", "event_soon"].includes(n.kind) ? "#mesas" : ""}` : "../feed/";
+      event_soon: ["é amanhã ou hoje", "is coming up"], share_accepted: ["aceitou dividir a sua coleção", "joined your shared collection"],
+      loan_request: ["pediu cartas emprestadas", "asked to borrow cards"], loan_offer: ["quer emprestar cartas para você", "offered to lend you cards"] };
+    const noteHref = (n) => /^loan_/.test(n.kind) ? "../trades/" : n.kind === "share_accepted" ? "../colecao/" : (n.kind === "event_soon" && n.ref?.rph) || /^event_near/.test(n.kind) ? "../eventos/" : n.ref?.post ? `../feed/#post-${encodeURIComponent(n.ref.post)}` : n.ref?.slug ? `../comunidades/?c=${encodeURIComponent(n.ref.slug)}${["event", "rsvp", "event_soon"].includes(n.kind) ? "#mesas" : ""}` : "../feed/";
     // the number on the app icon (installed app): the unread count, cleared when read
     const appBadge = (n) => { try { if (n && navigator.setAppBadge) navigator.setAppBadge(n).catch(() => {}); else if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {}); } catch { /* */ } };
     const showBell = () => { const b = $("iwBell"), c = $("iwBellN"); if (!b || !notes) return; b.hidden = false; const n = notes.filter((x) => x.unread).length; c.hidden = !n; c.textContent = n > 9 ? "9+" : String(n); appBadge(n);

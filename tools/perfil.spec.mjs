@@ -35,6 +35,7 @@ async function setup(page, { signedIn = true, mine = null, admin = false, relati
     if (path === 'rpc/public_profile') return json(body.p_handle === 'rafa_exemplo' ? USER1 : body.p_handle === 'ana' ? ANA(relation) : null);
     if (path === 'rpc/example_profiles') return json([USER1, { ...USER1, handle: 'marina_exemplo', name: 'Marina (exemplo)', motto: 'Uma Encantada de cada vez.', deck: null }]);
     if (path === 'rpc/request_friend' || path === 'rpc/post_recado') return json({ ok: true });
+    if (path === 'rpc/friend_collection') return json({ view: true, lend: false, cards: 12, collection: null, lent: null });
     if (path === 'rpc/my_data_export') return json({ account: { email: 'luis@example.com' }, games: [] });
     if (path === 'rpc/delete_my_account') return route.fulfill({ status: 200, contentType: 'application/json', body: 'null' });
     if (path === 'rpc/my_home') return json({ profile: { handle: null, is_public: false, adult: true }, friend_requests: [{ name: 'Ana', handle: 'ana', avatar: 'LOR14-1' }], recados_waiting: 2,
@@ -123,6 +124,7 @@ test('friends: ask from a profile; a friend can leave a recado that waits for ap
   calls = await setup(page2, { mine: { display_name: 'Luís', handle: 'luis', adult: true, invite_code: 'abc123def0' }, relation: 'friend' });
   await page2.goto(url('perfil/?u=ana'));
   await expect(page2.locator('[data-testid="relation"]')).toHaveText('Amigos');
+  await expect(page2.locator('[data-testid="friend-collection"]')).toHaveAttribute('href', '../colecao/?amigo=ana');   // she opened her collection to friends
   await page2.locator('#recBody').fill('Bora jogar sexta?');
   await page2.locator('#recForm button[type=submit]').click();
   await expect(page2.locator('#toast')).toContainText('Aparece quando Ana aprovar');

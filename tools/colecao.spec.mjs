@@ -435,6 +435,7 @@ test('conferir estoque: pick a set; only its cards and pages; checked marks kept
 test('sets are listed by set number', async ({ page }) => {
   await setup(page);
   await page.goto(BASE + '?conferir=1');
+  await expect(page.locator('#bSet option').nth(3)).toBeAttached();
   const codes = await page.locator('#bSet option').evaluateAll((o) => o.map((x) => x.value).filter((v) => v !== 'all'));
   const main = codes.filter((c) => /^LOR\d+$/.test(c)).map((c) => +c.slice(3));
   expect(main).toEqual([...main].sort((a, b) => a - b));

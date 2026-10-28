@@ -326,3 +326,17 @@ test('a list older than a day is gone', async ({ page }) => {
   await page.goto(BASE);
   await expect(page.getByTestId('public-text')).toHaveValue('');
 });
+
+test('a collection shared with me counts, and a friend who lends from their collection can be asked', async ({ page }) => {
+  await setup(page);
+  const posts = [];
+  await page.route('**/rest/v1/rpc/shared_collections', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ owner: SELLER, owner_name: 'Bruno', profile: 'principal', can_edit: true, collection: { 'LOR10-1': { n: 1, f: 0 } }, home: [] }]) }));
+  await page.route('**/rest/v1/rpc/friends_lending', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ user: FRIEND, name: 'Ana Souza', handle: 'ana', card_id: 'LOR10-1', free: 3 }]) }));
+  await page.route('**/rest/v1/user_loans', (r) => { posts.push(JSON.parse(r.request().postData())); return r.fulfill({ status: 201, body: '' }); });
+  await page.goto(BASE + '?deck=deck-a&tab=missing');
+  await expect(page.locator('[data-testid="missing-summary"]')).toContainText('1 carta faltando');   // 2 mine + 1 shared of 4
+  await expect(page.locator('[data-testid="friend-has"]')).toContainText('Ana Souza tem');
+  await page.locator('[data-borrow]').click();
+  await expect(page.locator('[data-testid="friend-has"]')).toContainText('Pedido enviado');
+  expect(posts[0]).toEqual({ lender: FRIEND, borrower: ME, created_by: ME, items: [{ card_id: 'LOR10-1', qty: 1, foil: false }], note: 'Para o deck Amber Test' });
+});

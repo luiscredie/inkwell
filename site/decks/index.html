@@ -89,9 +89,10 @@ window.INKWELL_CLOUD = (() => {
   }
 
   // Authenticated call to the database's REST API (used by Coach Review). Errors carry a short code.
-  async function api(path, { method = "GET", body, prefer } = {}) {
+  // anon: true also works signed out (the publishable key), for the few functions open to visitors
+  async function api(path, { method = "GET", body, prefer, anon = false } = {}) {
     const tok = await token();
-    if (!tok) throw Object.assign(new Error("signed out"), { code: "auth" });
+    if (!tok && !anon) throw Object.assign(new Error("signed out"), { code: "auth" });
     const r = await fetch(`${cfg.url}/rest/v1/${path}`, {
       method, headers: { ...headers(tok), ...(prefer ? { Prefer: prefer } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
     if (r.status === 401) store({ ...sess, expires_at: 0 });
@@ -261,7 +262,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Only {a} of {b} are inkable. You may run short of ink.": "Só {a} de {b} são inkáveis. Pode faltar tinta.", "{a} of {b} inkable: enough ink.": "{a} de {b} inkáveis: tinta suficiente.",
     "{n} cards missing": "{n} cartas faltando", "{n} card missing": "1 carta faltando", "{v} at {s}": "{v} no {s}", "{n} can come from friends": "{n} podem vir de amigos", "{n} can come from friends_1": "1 pode vir de amigos",
     "You have every card for this deck.": "Você tem todas as cartas deste deck.", "Copies lent to friends still count as yours.": "Cópias emprestadas a amigos contam como suas.",
-    "{who} lends": "{who} empresta", "{n} free": "{n} livres", "{n} free_1": "1 livre", "Ask to borrow": "Pedir emprestado", "{who} sells on the board": "{who} vende no Mural", "{v} each": "{v} cada", "See listing": "Ver anúncio",
+    "{who} lends": "{who} empresta", "{n} free": "{n} livres", "{n} free_1": "1 livre", "Ask to borrow": "Pedir emprestado", "{who} has it": "{who} tem", "Asked": "Pedido enviado", "For the deck {d}": "Para o deck {d}", "Request sent. You'll see the answer in Trades.": "Pedido enviado. A resposta aparece em Trocas.", "Too many requests today. Try tomorrow.": "Muitos pedidos hoje. Tente amanhã.", "{who} sells on the board": "{who} vende no Mural", "{v} each": "{v} cada", "See listing": "Ver anúncio",
     "None of your friends has it": "Ninguém dos seus amigos tem", "Post what's missing on the board": "Anunciar o que falta no Mural", "Looking to buy": "Procuro para comprar", "Looking to borrow": "Procuro emprestado",
     "Posted {n} cards on the board": "{n} cartas anunciadas no Mural", "Already on the board": "Já está no Mural",
     "Last games": "Últimos jogos", "See all in Games": "Ver todos em Jogos", "Going first": "Começando", "Going second": "Comprando",
@@ -421,7 +422,10 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const metaTag = (code) => { const n = setNo(code); if (!n) return ""; const bg = SET_COLOR[n] || "#546e7a", light = lightBg(bg);
     return `<span class="tag settag" data-testid="meta-tag" style="background:${bg};color:${light ? "#1c1404" : "#fff"};border-color:${bg}">(${esc(Tx("Set {n}", { n }))})</span> `; };
   const metaLabel = (code) => (code ? Tx("Set {n}", { n: setNo(code) }) : Tx("No meta"));
-  const coll = () => prof()?.collection || {};
+  // the cards you can build with: all your collections plus the ones shared with you (supabase/collection_shares.sql)
+  let ALL_COLL = null;
+  const coll = () => ALL_COLL || prof()?.collection || {};
+  let sharedColls = [], lendBy = new Map(), lendAsked = new Set();   // friends who lend: card_id -> [{user, name, free}]
   const ownedName = (c) => { let n = 0; const col = coll(); for (const p of printings(c)) { const e = col[p.id]; if (e) n += (+e.n || 0) + (+e.f || 0); } return n; };
   let editing = false;
 
@@ -441,6 +445,11 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const ids = [...new Set(listings.map((l) => l.user_id).filter((u) => u !== me.id))];
     if (ids.length) for (const r of (await CLOUD.api(`profiles?user_id=in.(${ids.slice(0, 150).join(",")})&select=user_id,display_name`).catch(() => [])) || []) names.set(r.user_id, r.display_name);
     games = (gl || []).map(gameOf).filter(Boolean);
+    const sc = await CLOUD.api("rpc/shared_collections", { method: "POST", body: {} }).catch(() => []);
+    sharedColls = Array.isArray(sc) ? sc : [];
+    ALL_COLL = {};
+    for (const src of [...profiles.map((x) => x.collection), ...sharedColls.map((x) => x.collection || {})])
+      for (const [id, e] of Object.entries(src || {})) { const t = ALL_COLL[id] || (ALL_COLL[id] = { n: 0, f: 0 }); t.n += +e?.n || 0; t.f += +e?.f || 0; }
     try { profileName = localStorage.getItem("inkwell-trades-profile"); } catch { /* */ }
     if (!profiles.some((x) => x.profile === profileName)) profileName = profiles.slice().sort((a, b) => b.decks.length - a.decks.length || Object.keys(b.collection).length - Object.keys(a.collection).length)[0]?.profile || null;
   }
@@ -792,7 +801,11 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         ...lend.slice(0, 3).map((l) => `<div class="list-row flat two" style="min-height:52px"><span class="t"><span>${esc(Tx("{who} lends", { who: who(l.user_id) }))}</span><span class="meta">${esc(Tx("{n} free", { n: l.qty }))}</span></span><a class="btn small" href="../trades/?tab=board&q=${q}">${Tx("Ask to borrow")}</a></div>`),
         ...sell.slice(0, 3).map((l) => `<div class="list-row flat two" style="min-height:52px"><span class="t"><span>${esc(Tx("{who} sells on the board", { who: who(l.user_id) }))}</span><span class="meta">${l.price_brl != null ? esc(Tx("{v} each", { v: money(+l.price_brl) })) : ""}</span></span><a class="btn small" href="../trades/?tab=board&q=${q}">${Tx("See listing")}</a></div>`),
       ];
-      if (!lend.length) offers.push(`<div class="list-row flat two" style="min-height:52px"><span class="t"><span class="muted" style="font-weight:400">${Tx("None of your friends has it")}</span></span><a class="btn small" href="${esc(ligaUrl(c))}" target="_blank" rel="noopener">Liga Lorcana<i class="ic i-external"></i></a></div>`);
+      const fl = friendsLend(c);
+      if (fl.length) fromFriends += Math.min(n, fl.reduce((s2, x) => s2 + x.free, 0));
+      offers.unshift(...fl.slice(0, 3).map((x) => { const k = `${x.user}|${x.card_id}`, asked = lendAsked.has(k);
+        return `<div class="list-row flat two" style="min-height:52px" data-testid="friend-has"><span class="t"><span>${esc(Tx("{who} has it", { who: x.name || "—" }))}</span><span class="meta">${esc(Tx("{n} free", { n: x.free }))}</span></span>${asked ? `<a class="btn small ghost" href="../trades/">${Tx("Asked")}</a>` : `<button type="button" class="btn small" data-borrow="${esc(x.user)}" data-bcard="${esc(x.card_id)}" data-bq="${Math.min(n, x.free)}">${Tx("Ask to borrow")}</button>`}</div>`; }));
+      if (!lend.length && !fl.length) offers.push(`<div class="list-row flat two" style="min-height:52px"><span class="t"><span class="muted" style="font-weight:400">${Tx("None of your friends has it")}</span></span><a class="btn small" href="${esc(ligaUrl(c))}" target="_blank" rel="noopener">Liga Lorcana<i class="ic i-external"></i></a></div>`);
       return `<section class="card miss" data-miss="${esc(c.id)}"><div class="row" style="flex-wrap:nowrap;align-items:flex-start;gap:var(--sp-3)">${thumb(c, "md")}<div class="grow" style="min-width:0">
         <div class="row between" style="flex-wrap:nowrap"><b>${esc(a)}${b ? ` · ${esc(b)}` : ""}</b><span class="tag warn">${esc(Tx("missing {n}", { n }))}</span></div>
         <div class="small muted" style="margin-top:2px">${esc(priceSrc)} <span class="money">${p != null ? esc(money(p)) : "–"}</span></div>
@@ -803,6 +816,28 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     return `<div class="notice" data-testid="missing-summary"><i class="ic i-info"></i><span class="t"><b>${esc(head[0])}</b>${esc(sub)}</span></div>
       <div class="row" style="gap:var(--sp-2);margin:var(--sp-3) 0"><span class="small muted">${Tx("Post what's missing on the board")}</span><button type="button" class="btn small" data-post="buy">${Tx("Looking to buy")}</button><button type="button" class="btn small" data-post="borrow">${Tx("Looking to borrow")}</button></div>
       <div class="stack">${cards}</div>`;
+  }
+  function friendsLend(c) {   // per friend, the printing they have most of
+    const best = new Map();
+    for (const p of printings(c)) for (const x of lendBy.get(p.id) || []) { const b = best.get(x.user); if (!b || x.free > b.free) best.set(x.user, x); }
+    return [...best.values()].sort((a, b) => b.free - a.free);
+  }
+  let lendFor = null;
+  async function loadLending(d, m) {
+    const key = d.id + ":" + m.missing.map((x) => x.c.key).join(",");
+    if (lendFor === key) return; lendFor = key;
+    const ids = [...new Set(m.missing.flatMap(({ c }) => printings(c).map((p) => p.id)))].slice(0, 400);
+    if (!ids.length) return;
+    const r = await CLOUD.api("rpc/friends_lending", { method: "POST", body: { p_cards: ids } }).catch(() => []);
+    lendBy = new Map(); for (const x of Array.isArray(r) ? r : []) (lendBy.get(x.card_id) || lendBy.set(x.card_id, []).get(x.card_id)).push({ ...x, free: +x.free || 0 });
+    if (lendBy.size) render();
+  }
+  async function askBorrow(d, b) {
+    const k = `${b.dataset.borrow}|${b.dataset.bcard}`; b.disabled = true;
+    try {
+      await CLOUD.api("user_loans", { method: "POST", prefer: "return=minimal", body: { lender: b.dataset.borrow, borrower: me.id, created_by: me.id, items: [{ card_id: b.dataset.bcard, qty: Math.max(1, +b.dataset.bq || 1), foil: false }], note: Tx("For the deck {d}", { d: d.name }).slice(0, 500) } });
+      lendAsked.add(k); toast(Tx("Request sent. You'll see the answer in Trades.")); render();
+    } catch (e) { b.disabled = false; toast(/too_many/.test(String(e?.why || "")) ? Tx("Too many requests today. Try tomorrow.") : Tx("Couldn't save. Try again."), null, true); }
   }
   async function postMissing(d, kindName) {
     const m = measure(d);
@@ -838,7 +873,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       $("addRes")?.addEventListener("click", (e) => { const b = e.target.closest("[data-add]"); if (b) { setQty(d, b.dataset.add, 1); render(); $("addQ")?.focus(); } });
       $("tabBody").querySelectorAll("[data-q]").forEach((b) => b.onclick = () => { const i = b.dataset.q.lastIndexOf(":"); setQty(d, b.dataset.q.slice(0, i), +b.dataset.q.slice(i + 1)); render(); document.querySelector(`[data-q="${CSS.escape(b.dataset.q)}"]`)?.focus(); });
     }
-    if (tab === "missing") document.querySelectorAll("[data-post]").forEach((b) => b.onclick = () => postMissing(d, b.dataset.post));
+    if (tab === "missing") { document.querySelectorAll("[data-post]").forEach((b) => b.onclick = () => postMissing(d, b.dataset.post));
+      document.querySelectorAll("[data-borrow]").forEach((b) => b.onclick = () => askBorrow(d, b)); loadLending(d, m); }
     if (tab === "plan") wirePlan();
   }
 
@@ -1464,8 +1500,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     let notes = null;
     const NK = { like: ["curtiu seu post", "liked your post"], comment: ["comentou no seu post", "commented on your post"], rsvp: ["vai na sua mesa", "is going to your table"], event: ["marcou uma mesa", "set up a table"],
       community_invite: ["convidou você para uma comunidade", "invited you to a community"], join_request: ["pediu para entrar", "asked to join"], join_accepted: ["aceitou seu pedido", "accepted your request"],
-      event_soon: ["é amanhã ou hoje", "is coming up"] };
-    const noteHref = (n) => (n.kind === "event_soon" && n.ref?.rph) || /^event_near/.test(n.kind) ? "../eventos/" : n.ref?.post ? `../feed/#post-${encodeURIComponent(n.ref.post)}` : n.ref?.slug ? `../comunidades/?c=${encodeURIComponent(n.ref.slug)}${["event", "rsvp", "event_soon"].includes(n.kind) ? "#mesas" : ""}` : "../feed/";
+      event_soon: ["é amanhã ou hoje", "is coming up"], share_accepted: ["aceitou dividir a sua coleção", "joined your shared collection"],
+      loan_request: ["pediu cartas emprestadas", "asked to borrow cards"], loan_offer: ["quer emprestar cartas para você", "offered to lend you cards"] };
+    const noteHref = (n) => /^loan_/.test(n.kind) ? "../trades/" : n.kind === "share_accepted" ? "../colecao/" : (n.kind === "event_soon" && n.ref?.rph) || /^event_near/.test(n.kind) ? "../eventos/" : n.ref?.post ? `../feed/#post-${encodeURIComponent(n.ref.post)}` : n.ref?.slug ? `../comunidades/?c=${encodeURIComponent(n.ref.slug)}${["event", "rsvp", "event_soon"].includes(n.kind) ? "#mesas" : ""}` : "../feed/";
     // the number on the app icon (installed app): the unread count, cleared when read
     const appBadge = (n) => { try { if (n && navigator.setAppBadge) navigator.setAppBadge(n).catch(() => {}); else if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {}); } catch { /* */ } };
     const showBell = () => { const b = $("iwBell"), c = $("iwBellN"); if (!b || !notes) return; b.hidden = false; const n = notes.filter((x) => x.unread).length; c.hidden = !n; c.textContent = n > 9 ? "9+" : String(n); appBadge(n);
