@@ -2,6 +2,9 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: mediastream:; connect-src 'self' https://sorefaetiaebmjploanp.supabase.co wss://sorefaetiaebmjploanp.supabase.co https://nominatim.openstreetmap.org https://viacep.com.br https://cdn.jsdelivr.net https://tessdata.projectnaptha.com; frame-src 'self' https://duels.ink; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<script>(function(){if(window.top===window.self)return;var s=false;try{s=window.top.location.origin===location.origin}catch(e){}if(!s){document.documentElement.style.display='none';try{window.top.location=location.href}catch(e){}}})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Comunidades · Inkwell</title>
 <meta name="description" content="Lojas, cidades e grupos de Lorcana: encontre sua turma.">
@@ -94,7 +97,10 @@ window.INKWELL_CLOUD = (() => {
     if (r.status === 401) store({ ...sess, expires_at: 0 });
     if (!r.ok) {
       const code = r.status === 401 || r.status === 403 ? "permission" : r.status === 400 || r.status === 409 || r.status === 413 ? "invalid_argument" : "unavailable";
-      throw Object.assign(new Error(`${method} ${path.split("?")[0]} ${r.status}`), { code, status: r.status });
+      // the database's own reason (e.g. "adults_only", "event_full", "too_many_friend_requests") goes in the message,
+      // so a page can tell the person what happened
+      let why = ""; try { why = String((await r.json())?.message || "").slice(0, 200); } catch { /* no body */ }
+      throw Object.assign(new Error(`${method} ${path.split("?")[0]} ${r.status}${why ? `: ${why}` : ""}`), { code, status: r.status, why });
     }
     const text = await r.text();
     return text ? JSON.parse(text) : null;
@@ -399,7 +405,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Requests": "Pedidos", "Accept": "Aceitar", "Decline": "Recusar", "Invite": "Convidar", "Invite friends": "Convidar amigos", "Invited": "Convidado",
     "They get a notice and join without waiting for approval. Someone who isn't on Inkwell yet: send the community link.": "A pessoa recebe um aviso e entra sem precisar de aprovação. Quem ainda não está no Inkwell: mande o link da comunidade.",
     "All your friends are already here, or you have no friends on Inkwell yet.": "Todos os seus amigos já estão aqui, ou você ainda não tem amigos no Inkwell.", "Share the community link": "Compartilhar o link da comunidade", "Tables & Leagues": "Mesas & Ligas", "New table": "Nova mesa", "Edit table": "Editar mesa", "No tables set up yet.": "Nenhuma mesa marcada ainda.",
-    "See on the Play Hub": "Ver no Play Hub", "Register on the Play Hub": "Inscrever-se no Play Hub", "Play Hub event (optional)": "Evento no Play Hub (opcional)",
+    "See on the Play Hub": "Ver no Play Hub", "Too many requests today. Try again tomorrow.": "Muitos pedidos hoje. Tente de novo amanhã.", "Too many new tables today. Try again tomorrow.": "Muitas mesas novas hoje. Tente de novo amanhã.", "Register on the Play Hub": "Inscrever-se no Play Hub", "Play Hub event (optional)": "Evento no Play Hub (opcional)",
     "Paste the event link from the Play Hub": "Cole o link do evento no Play Hub", "Fill in": "Preencher",
     "Links the table to the official event: Eventos shows them as one, and players register on the Play Hub.": "Liga a mesa ao evento oficial: em Eventos os dois aparecem como um só, e a inscrição é feita no Play Hub.",
     "That doesn't look like a Play Hub event link.": "Isso não parece um link de evento do Play Hub.", "Filled in from the Play Hub. Check and save.": "Preenchido com os dados do Play Hub. Confira e salve.",
@@ -600,7 +606,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         const saved = await rpc("save_event", { p_slug: view.slug, p_id: e?.id || null, p: { title: t, starts_at: new Date(w).toISOString(), place: $("evP").value.trim(), details: $("evD").value.trim(), capacity: $("evC").value, ...(e ? { cancelled: $("evX").checked } : {}) } });
         if ((rph || null) !== (e?.rph_id ? +e.rph_id : null) && (saved?.id || e?.id)) await rpc("link_event_rph", { p_event: saved?.id || e.id, p_rph_id: rph });
         sh.close(); view.events = await rpc("community_events", { p_slug: view.slug }); drawOne(); toast(Tx("Done"));
-      } catch { $("evSave").disabled = false; $("evMsg").textContent = Tx("Couldn't save. Try again."); }
+      } catch (err) { $("evSave").disabled = false; $("evMsg").textContent = Tx(/too_many/.test(String(err?.message || err)) ? "Too many new tables today. Try again tomorrow." : "Couldn't save. Try again."); }
     };
     sh.showModal(); setTimeout(() => $("evT")?.focus(), 30);
   }
@@ -650,7 +656,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     $("signIn")?.addEventListener("click", () => window.INKWELL_SIGNIN?.());
     $("join")?.addEventListener("click", async () => {
       let r = null;
-      try { r = await rpc("join_community", { p_slug: c.slug, p_join: true }); } catch { toast(Tx("Couldn't send. Try again."), true); return; }
+      try { r = await rpc("join_community", { p_slug: c.slug, p_join: true }); } catch (err) { toast(Tx(/too_many/.test(String(err?.message || err)) ? "Too many requests today. Try again tomorrow." : "Couldn't send. Try again."), true); return; }
       await reloadView(); drawOne();
       toast(r === "requested" ? Tx("Request sent. You'll get a notice when it's accepted.") : Tx("You joined {name}.", { name: c.name }));
     });

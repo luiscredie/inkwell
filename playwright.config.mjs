@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: 'tools',
-  testMatch: /(smoke|decks|colecao|precos|perfil|comunidades|coach|comecar|login|counter|eventos)\.spec\.mjs/,
+  testMatch: /(smoke|decks|colecao|precos|perfil|comunidades|coach|comecar|login|counter|eventos|security)\.spec\.mjs/,
   timeout: 30000,
   use: {
     baseURL: process.env.INKWELL_URL || 'http://localhost:8080/index.html',

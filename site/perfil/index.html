@@ -2,6 +2,9 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: mediastream:; connect-src 'self' https://sorefaetiaebmjploanp.supabase.co wss://sorefaetiaebmjploanp.supabase.co https://nominatim.openstreetmap.org https://viacep.com.br https://cdn.jsdelivr.net https://tessdata.projectnaptha.com; frame-src 'self' https://duels.ink; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<script>(function(){if(window.top===window.self)return;var s=false;try{s=window.top.location.origin===location.origin}catch(e){}if(!s){document.documentElement.style.display='none';try{window.top.location=location.href}catch(e){}}})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Meu Inkwell</title>
 <meta name="description" content="Seu canto na comunidade de Lorcana: suas cartas favoritas, seu deck, seus jogos e seus amigos.">
@@ -96,7 +99,10 @@ window.INKWELL_CLOUD = (() => {
     if (r.status === 401) store({ ...sess, expires_at: 0 });
     if (!r.ok) {
       const code = r.status === 401 || r.status === 403 ? "permission" : r.status === 400 || r.status === 409 || r.status === 413 ? "invalid_argument" : "unavailable";
-      throw Object.assign(new Error(`${method} ${path.split("?")[0]} ${r.status}`), { code, status: r.status });
+      // the database's own reason (e.g. "adults_only", "event_full", "too_many_friend_requests") goes in the message,
+      // so a page can tell the person what happened
+      let why = ""; try { why = String((await r.json())?.message || "").slice(0, 200); } catch { /* no body */ }
+      throw Object.assign(new Error(`${method} ${path.split("?")[0]} ${r.status}${why ? `: ${why}` : ""}`), { code, status: r.status, why });
     }
     const text = await r.text();
     return text ? JSON.parse(text) : null;
@@ -483,7 +489,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Blocked in this browser's settings for this site.": "Bloqueados nas configurações do navegador para este site.", "This browser can't receive notices.": "Este navegador não recebe avisos.",
     "Around {place}. Checked every morning on the Play Hub.": "Perto de {place}. Conferido toda manhã no Play Hub.", "your place": "seu lugar",
     "Off. On Eventos, choose your place and tick “Keep this place in my account”.": "Desligado. Em Eventos, escolha seu lugar e marque “Salvar este lugar na minha conta”.",
-    "Up to": "Até", "Remove place": "Remover", "Notify": "Avisar", "Change place": "Trocar lugar", "Open Eventos": "Abrir Eventos", "Tap again to remove": "Toque de novo para remover", "Removed from your account.": "Removido da sua conta.",
+    "Up to": "Até", "Too many requests today. Try again tomorrow.": "Muitos pedidos hoje. Tente de novo amanhã.", "Remove place": "Remover", "Notify": "Avisar", "Change place": "Trocar lugar", "Open Eventos": "Abrir Eventos", "Tap again to remove": "Toque de novo para remover", "Removed from your account.": "Removido da sua conta.",
     "Reminders the day before events and tables you marked “Going”, and likes, comments, invites and new tables in your communities always arrive in the bell.": "Lembretes na véspera dos eventos e mesas em que você marcou “Vou”, e curtidas, comentários, convites e mesas novas nas suas comunidades chegam sempre no sino.",
     "That didn't work. Try again.": "Não deu certo. Tente de novo.", "Saved.": "Salvo.", "Couldn't save. Try again.": "Não foi possível salvar. Tente de novo.", "Loading…": "Carregando…",
     "Ink curve": "Curva de tinta", "Your data": "Seus dados", "Download everything linked to your account, or delete the account and all of it.": "Baixe tudo o que está ligado à sua conta, ou exclua a conta e tudo isso junto.",
@@ -674,7 +680,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     $("addFriend")?.addEventListener("click", async (ev) => {
       const b = ev.currentTarget; b.disabled = true;
       try { await rpc("request_friend", { p_handle: p.handle }); b.outerHTML = `<span class="tag info" data-testid="relation">${Tx("Request sent")}</span>`; toast(Tx("Friend request sent.")); }
-      catch { b.disabled = false; toast(Tx("Couldn't send. Try again."), true); }
+      catch (err) { b.disabled = false; toast(Tx(/too_many/.test(String(err?.message || err)) ? "Too many requests today. Try again tomorrow." : "Couldn't send. Try again."), true); }
     });
     $("recForm")?.addEventListener("submit", async (ev) => {
       ev.preventDefault(); const t = $("recBody"), body = t.value.trim(); if (!body) { t.focus(); return; }

@@ -32,6 +32,7 @@ SKIP_TYPES = {"Non-Playable Insert", "Quest Component"}
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import build_site_decks  # noqa: E402
+import site_security  # noqa: E402
 
 
 def site_index(catalog: dict) -> dict:
@@ -88,6 +89,7 @@ def app_static(name: str) -> str:
 
 def render(name: str, catalog: dict) -> str:
     html = (SRC / name / f"{name}.template.html").read_text(encoding="utf-8")
+    html = site_security.add_head(html, name)
     html = re.sub(r"/\*@APP_STATIC:(\w+)@\*/", lambda m: app_static(m.group(1)), html)
     html = html.replace("/*@CLOUD_JS@*/", (SRC / "cloud.js").read_text(encoding="utf-8"))
     html = html.replace("/*@SHELL_JS@*/", (SRC / "shell.js").read_text(encoding="utf-8"))
