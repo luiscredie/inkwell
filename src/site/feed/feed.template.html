@@ -614,7 +614,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       <div id="evNext" class="ev-nexts"></div></section>`;
   }
   function wireFindEvents() {
-    $("evFind")?.addEventListener("submit", (e) => { e.preventDefault(); const q = $("evFindQ").value.trim();
+    $("evFind")?.addEventListener("submit", (e) => { e.preventDefault(); window.INKWELL_TRACK?.("events_box"); const q = $("evFindQ").value.trim();
       location.href = q && q !== savedWhere()?.label ? `../eventos/?onde=${encodeURIComponent(q)}` : "../eventos/"; });
     nextEvents(3).then((r) => { if (r?.list.length && $("evNext")) $("evNext").innerHTML = `<p class="small muted" style="margin:var(--sp-3) 0 var(--sp-2)">${esc(Tx("Next near {place}", { place: r.where.label || Tx("you") }))}</p>${nextEventsHtml(r.list)}`; });
   }

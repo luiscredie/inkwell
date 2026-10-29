@@ -114,6 +114,7 @@
   // light use only. Plain city names also work through our own function (Open-Meteo). The point is rounded to
   // ~1 km and stays on this device. undefined = couldn't search; null = not found.
   async function findPlace(q) {
+    window.INKWELL_TRACK?.("events_search");
     const cep = q.replace(/\D/g, "").length === 8 && /^\s*\d{5}-?\d{3}\s*$/.test(q) ? q.replace(/\D/g, "").replace(/^(\d{5})(\d{3})$/, "$1-$2") : null;
     const nominatim = async (params) => {
       const u = new URL("https://nominatim.openstreetmap.org/search");

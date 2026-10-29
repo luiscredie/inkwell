@@ -55,6 +55,7 @@ async function setup(page, { signedIn = true, mine = null, admin = false, relati
     ]) : route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ code: '42501', message: 'not allowed' }) });
     if (path === 'rpc/admin_reports') return admin ? json([{ id: 'r1', reason: 'Spam', status: 'open', created_at: '2026-10-21T00:00:00Z', target: '00000000-0000-4000-a000-000000000001', target_name: 'user1 (exemplo)', target_handle: 'user1', reporter_name: 'Luís' }]) : route.fulfill({ status: 403, body: '{"message":"not allowed"}' });
     if (path === 'rpc/admin_action' || path === 'rpc/admin_resolve_report') return route.fulfill({ status: 204, body: '' });
+    if (path === 'rpc/admin_stats') return admin ? json(STATS(body.p_days)) : route.fulfill({ status: 403, body: '{"message":"not allowed"}' });
     if (path === 'rpc/my_duels_sync') return json(null);
     return json([]);
   });
@@ -232,6 +233,7 @@ test('an invite link: shown signed out; after signing in the person decides', as
 test('admin: members, reports, two taps to delete', async ({ page }) => {
   const calls = await setup(page, { mine: { display_name: 'Luís' }, admin: true });
   await page.goto(url('admin/'));
+  await page.locator('[data-tab="users"]').click();   // the Painel opens first
   const rows = page.locator('[data-testid="users"] .adm-row');
   await expect(rows).toHaveCount(2);
   await expect(rows.nth(1)).toContainText('exemplo');
@@ -246,6 +248,51 @@ test('admin: members, reports, two taps to delete', async ({ page }) => {
   await expect(page.locator('[data-testid="reports"]')).toContainText('Spam');
   await page.locator('[data-resolve="r1"]').click();
   await expect.poll(() => rpcCalls(calls, 'admin_resolve_report')).toEqual([{ p_id: 'r1' }]);
+});
+
+const STATS = (days) => ({ days, totals: { visits_anon: 40, visits_signed: 12, views: 130, bounced: 22, two_plus: 15, tried: 9, opened_signin: 6, got_code: 4, signed_in: 3, avg_views: 2.4,
+  signups: 5, signups_confirmed: 4, profiles_public: 1, profiles_private: 3, members: 31, active_7d: 9 },
+  series: [{ day: '2026-10-28', visits_anon: 10, visits_signed: 4, signups: 1, profiles: 1 }, { day: '2026-10-29', visits_anon: 30, visits_signed: 8, signups: 4, profiles: 3 }],
+  pages: [{ page: 'feed', views_anon: 50, views_signed: 20, landed: 30, left: 18 }, { page: 'decks', views_anon: 20, views_signed: 5, landed: 6, left: 9 }],
+  actions: [{ name: 'deck_sample', anon: 5, signed: 0 }, { name: 'signin_open', anon: 6, signed: 0 }], refs: [{ ref: 'instagram.com', visits: 12 }, { ref: '', visits: 20 }], devices: { mobile: 33, desktop: 7 } });
+
+test('admin Painel: visits, sign-ups, profiles, the way to an account, pages, actions; period', async ({ page }) => {
+  const calls = await setup(page, { mine: { display_name: 'Luís' }, admin: true });
+  await page.goto(url('admin/'));
+  await expect(page.locator('[data-testid="kpi-visits"]')).toContainText('40');
+  await expect(page.locator('[data-testid="kpi-visits"]')).toContainText('55% saíram na primeira página');
+  await expect(page.locator('[data-testid="kpi-signups"]')).toContainText('4 confirmaram o e-mail');
+  await expect(page.locator('[data-testid="kpi-profiles"]')).toContainText('1 públicos · 3 privados');
+  await expect(page.locator('[data-testid="stats-funnel"]')).toContainText('Experimentaram algo');
+  await expect(page.locator('[data-testid="stats-funnel"] .fr').nth(2)).toContainText('23%');
+  await expect(page.locator('[data-testid="stats-pages"]')).toContainText('Início');
+  await expect(page.locator('[data-testid="stats-actions"]')).toContainText('Deck de exemplo');
+  await expect(page.locator('[data-testid="stats-refs"]')).toContainText('Direto ou app');
+  await expect(page.locator('[data-testid="stats-devices"]')).toHaveText('Celular 33 · Computador 7');
+  await page.locator('[data-days="30"]').click();
+  await expect.poll(() => rpcCalls(calls, 'admin_stats').at(-1)).toEqual({ p_days: 30 });
+});
+
+test('a visit is counted: one page view, and an action once; nothing from "do not track"', async ({ page }) => {
+  const calls = await setup(page, { signedIn: false });
+  await page.addInitScript(() => Object.defineProperty(Navigator.prototype, 'webdriver', { get: () => false }));
+  await page.goto(url('decks/'));
+  await expect.poll(() => rpcCalls(calls, 'track').length).toBe(1);
+  const v = rpcCalls(calls, 'track')[0];
+  expect(v).toMatchObject({ p_page: 'decks', p_kind: 'view', p_name: null });
+  expect(v.p_sid).toMatch(/^[a-f0-9]{24}$/);
+  await page.getByTestId('public-sample').click();
+  await page.getByTestId('public-text').fill('4 Stitch - Rock Star');
+  await page.getByTestId('public-text').fill('4 Stitch - Rock Star\n4 Elsa - Snow Queen');
+  await expect.poll(() => rpcCalls(calls, 'track').map((x) => x.p_name)).toEqual([null, 'deck_sample', 'deck_paste']);
+  expect(new Set(rpcCalls(calls, 'track').map((x) => x.p_sid)).size).toBe(1);   // the same visit
+  // a browser with Global Privacy Control sends nothing
+  const page2 = await page.context().newPage();
+  const calls2 = await setup(page2, { signedIn: false });
+  await page2.addInitScript(() => { Object.defineProperty(Navigator.prototype, 'webdriver', { get: () => false }); Object.defineProperty(Navigator.prototype, 'globalPrivacyControl', { get: () => true }); });
+  await page2.goto(url('decks/'));
+  await page2.waitForTimeout(800);
+  expect(rpcCalls(calls2, 'track')).toEqual([]);
 });
 
 test('admin page refuses members who are not admins', async ({ page }) => {

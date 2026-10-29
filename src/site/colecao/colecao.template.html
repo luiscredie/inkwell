@@ -840,6 +840,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   // ---------- fichário de trocas: send every copy above N (default 4, a playset) from the binder to the trade binder ----------
   const KEEP_KEY = "inkwell-trade-keep";
   function openTradeFill(from) {
+    window.INKWELL_TRACK?.("trade_fill");
     const sh = $("tradeSheet");
     let keep = 4, foilsStay = true, busy = false;
     try { keep = Math.max(1, Math.min(99, parseInt(localStorage.getItem(KEEP_KEY) || "4", 10))); if (!Number.isFinite(keep)) keep = 4; foilsStay = localStorage.getItem(KEEP_KEY + "-foil") !== "0"; } catch { /* */ }
@@ -911,6 +912,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
 
   // ---------- the trade binder on the Mural: one "Troco" post per card (normal and foil apart), kept in step ----------
   async function openTradePost(from) {
+    window.INKWELL_TRACK?.("trade_post");
     const sh = $("tradeSheet"), p = prof(); if (!p || p.shared || p.friend) return;
     const want = [];
     for (const id of Object.keys(coll())) { const t = where(id).trade; for (const k of ["n", "f"]) if (t[k] > 0 && BY.has(id)) want.push({ card_id: id, foil: k === "f", qty: Math.min(99, t[k]) }); }
@@ -954,6 +956,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const firstName = (n) => String(n || "").split(" ")[0] || P("alguém", "someone");
   const why = (e) => String(e?.why || e?.message || "");
   function openShare(from) {
+    window.INKWELL_TRACK?.("share_open");
     const sh = $("shareSheet"); let link = null, linkEdit = false, newOpen = false, renaming = null, sure = null, msg = "";
     const mine = () => (prof()?.shared || prof()?.friend ? ownBest() : prof());
     const reload = async () => { const p = await CLOUD.collections("profile,updated_at,collection:data->collection").catch(() => null);
@@ -1086,6 +1089,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   // ---------- importar: a file or a pasted list from another app (src/site/collimport.js works out which) ----------
   const FORMAT_NAME = { dreamborn: "Dreamborn", tcgplayer: "TCGplayer", "inkwell-csv": "Inkwell", "inkwell-json": "Inkwell", json: "JSON", table: "Planilha", list: "Lista" };
   function openImport(from) {
+    window.INKWELL_TRACK?.("import_open");
     const sh = $("impSheet"); let res = null, mode = "max", fileName = "";
     const close = () => sh.close();
     function step1(msg) {
@@ -1402,6 +1406,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     } finally { scan.busy = false; }
   }
   async function openScanner(from) {
+    window.INKWELL_TRACK?.("scan_open");
     const sh = $("scan"); scan.added = []; scan.last = null; scan.wait = false; scan.askOpen = false; scan.seen = null; scan.review = false; scan.saved = 0; scan.prev = null;
     drawScan(); sh.showModal(); scanSay(Tx("Starting the camera…"));
     sh.addEventListener("close", () => { clearInterval(scan.timer); scan.stream?.getTracks().forEach((t) => t.stop()); scan.stream = null; sh.innerHTML = ""; sh.oncancel = null; flush(true); renderAll(); from?.focus?.(); if (scan.saved) toast(Tx("{n} added", { n: scan.saved })); }, { once: true });

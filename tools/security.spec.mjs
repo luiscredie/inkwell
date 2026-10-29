@@ -25,6 +25,7 @@ async function setup(page, signedIn) {
 
 for (const signedIn of [false, true]) {
   test(`every page: the security tags are there and nothing is blocked (${signedIn ? 'signed in' : 'visitor'})`, async ({ page }) => {
+    test.setTimeout(120000);   // 14 pages, each until the network is quiet
     await setup(page, signedIn);
     for (const p of PAGES) {
       await page.goto(url(p));

@@ -57,7 +57,7 @@
     <button type="button" class="btn primary large" id="go">${T("Entrar no Inkwell", "Sign in to Inkwell")}</button><p class="small" id="msg" role="alert"></p>`);
   $("go").onclick = async () => {
     const b = $("go"); b.disabled = true; b.setAttribute("aria-busy", "true");
-    try { await CLOUD.verifyHash(hash, type); location.replace(back()); }
+    try { await CLOUD.verifyHash(hash, type); window.INKWELL_TRACK?.("signin_done"); location.replace(back()); }
     catch (e) {
       b.removeAttribute("aria-busy");
       show(`<h1>${T("Este link não vale mais", "This link no longer works")}</h1><p>${e?.status >= 400 && e?.status < 500
