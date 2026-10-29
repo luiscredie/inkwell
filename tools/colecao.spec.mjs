@@ -577,7 +577,7 @@ test('value: normal copies at the MYP Cards price when listed, foils and the res
   await page.goto(BASE);
   // 2 × 3 (MYP) + 1 foil × 5 (TCGplayer) + 1 × 4 (TCGplayer) = 15; MYP part 6 of 15 = 40%
   await expect(page.locator('[data-testid="to-prices"] b')).toHaveText('R$ 15,00');
-  await expect(page.locator('[data-testid="value-src"]')).toHaveText('40% MYP Cards · resto TCGplayer');
+  await expect(page.locator('[data-testid="value-src"]')).toHaveText('40% MYP · resto TCG');
   await expect(page.locator('#sub')).toContainText('MYP Cards');
   await page.locator('[data-card="LOR10-10"]').click();
   await expect(page.locator('[data-testid="card-value"]')).toHaveText('R$ 11,00');
@@ -612,3 +612,22 @@ test('scanner review on a phone: a long name wraps, and − / count / + stay on 
   await item.locator('[data-rq="1"]').click();
   await expect(item.locator('output')).toHaveText('2');
 });
+
+test('export: a CSV of the collection (Excel-friendly in Portuguese) that Importar reads back', async ({ page }) => {
+  await setup(page, { collection: { 'LOR10-10': { n: 6, f: 1 }, 'LOR13-27': { n: 2, f: 0 } },
+    home: [{ profile: 'luiscredie', card_id: 'LOR13-27', n: 1, f: 0 }], trade: [{ profile: 'luiscredie', card_id: 'LOR10-10', n: 2, f: 0 }] });
+  await page.route('**/data/prices.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ generated_at: '2026-10-28T00:00:00Z', usd_brl: 5.4, prices: { 'LOR10-10': { n: 1.5, nl: 1.5, f: 3, fl: 3 } } }) }));
+  await page.route('**/data/prices-br.json', (r) => r.fulfill({ status: 404, body: '' }));
+  await page.goto(BASE);
+  await page.locator('[data-testid="export"]').click();
+  await expect(page.locator('[data-testid="export-count"]')).toContainText('2 cartas, 9 cópias');
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('[data-testid="export-go"]').click()]);
+  expect(dl.suggestedFilename()).toMatch(/^inkwell-colecao-\d{4}-\d{2}-\d{2}\.csv$/);
+  const text = await (await import('node:fs')).promises.readFile(await dl.path(), 'utf8');
+  expect(text.charCodeAt(0)).toBe(0xfeff);
+  const lines = text.slice(1).trim().split('\r\n');
+  expect(lines[0]).toBe('card_id;name;set;set_name;number;rarity;ink;normal;foil;binder;home;trades;lent;price_normal_brl;price_foil_brl;value_brl;price_source');
+  const gurgi = lines.find((l) => l.startsWith('LOR10-10;')).split(';');
+  expect(gurgi.slice(7, 13)).toEqual(['6', '1', '5', '0', '2', '0']);   // normal, foil, binder, home, trades, lent
+  expect(gurgi.slice(13, 16)).toEqual(['1,50', '3,00', '12,00']);
+});   // reading it back: tools/collimport.test.mjs

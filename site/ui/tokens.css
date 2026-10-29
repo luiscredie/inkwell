@@ -802,6 +802,7 @@ table .cardcell small { display: block; color: var(--text-2); }
 .i-undo{-webkit-mask-image:url(assets/icons/undo.svg);mask-image:url(assets/icons/undo.svg)}
 .i-external{-webkit-mask-image:url(assets/icons/external.svg);mask-image:url(assets/icons/external.svg)}
 .i-import{-webkit-mask-image:url(assets/icons/import.svg);mask-image:url(assets/icons/import.svg)}
+.i-export{-webkit-mask-image:url(assets/icons/export.svg);mask-image:url(assets/icons/export.svg)}
 .i-sparkle{-webkit-mask-image:url(assets/icons/sparkle.svg);mask-image:url(assets/icons/sparkle.svg)}
 .i-clock{-webkit-mask-image:url(assets/icons/clock.svg);mask-image:url(assets/icons/clock.svg)}
 .i-edit{-webkit-mask-image:url(assets/icons/edit.svg);mask-image:url(assets/icons/edit.svg)}

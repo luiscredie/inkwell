@@ -57,3 +57,13 @@ test('a plain list, deck style, with foil and set/number hints; repeated lines a
   assert.deepEqual(ids(r), ['LOR1-41:0/1', 'LOR10-190:4/0', 'LOR11-86:3/0', 'LOR13-80:3/0', 'LOR2-201:1/0']);
   assert.deepEqual(r.rejects.map((x) => x.raw), ['Nada disso']);
 });
+
+test("Coleção's own CSV export reads back (semicolons, BOM, extra columns, decimal commas)", () => {
+  const csv = '\ufeffcard_id;name;set;set_name;number;rarity;ink;normal;foil;binder;home;trades;lent;price_normal_brl;price_foil_brl;value_brl;price_source\r\n'
+    + 'LOR10-10;Gurgi - Apple Lover;LOR10;Whispers in the Well;10;Comum;Amber;6;1;5;0;2;0;1,50;3,00;12,00;TCGplayer\r\n'
+    + 'LOR13-27;"Pocahontas & Meeko - Adventurous Friends";LOR13;X;27;Rara;Amber;2;0;1;1;0;0;;;0,00;TCGplayer\r\n';
+  const r = parse(csv, 'inkwell-colecao-2026-10-29.csv', cards, sets);
+  assert.equal(r.format, 'inkwell-csv');
+  assert.deepEqual(ids(r), ['LOR10-10:6/1', 'LOR13-27:2/0']);
+  assert.equal(r.rejects.length, 0);
+});
