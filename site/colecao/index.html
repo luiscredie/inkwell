@@ -477,7 +477,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const share = value ? Math.round((viaMyp / value) * 100) : 0;
     const lent = [...lentN.values(), ...lentF.values()].reduce((a, b) => a + b, 0);
     return `<div class="stats-row three" data-testid="coll-stats"><div class="stat"><b>${cards.toLocaleString(LOC)}</b><span>${Tx("Cards")}</span></div>
-      <a class="stat" href="../precos/?tab=value" data-testid="to-prices" style="text-decoration:none;color:inherit"><b class="money">${moneySplit(value)}</b><span>${esc(P("Valor estimado", "Estimated value"))} · ${Tx("Prices")} ›</span>${value ? `<small class="micro muted" data-testid="value-src" style="display:block">${esc(share >= 100 ? "MYP Cards" : share > 0 ? P(`${share}% MYP Cards · resto TCGplayer`, `${share}% MYP Cards · rest TCGplayer`) : priceSrc)}</small>` : ""}</a>
+      <a class="stat" href="../precos/?tab=value" data-testid="to-prices" style="text-decoration:none;color:inherit"><b class="money">${moneySplit(value)}</b><span>${esc(P("Valor estimado", "Estimated value"))} ›</span>${value ? `<small class="micro muted" data-testid="value-src" style="display:block" title="${esc(P("Preço no Brasil: menor anúncio na MYP Cards para cópias normais; TCGplayer convertido para foil e cartas sem anúncio lá", "Price in Brazil: lowest MYP Cards listing for normal copies; TCGplayer converted for foils and cards not listed there"))}">${esc(share >= 100 ? "MYP Cards" : share > 0 ? P(`${share}% MYP · resto TCG`, `${share}% MYP · rest TCG`) : priceSrc)}</small>` : ""}</a>
       <div class="stat"><b>${lent.toLocaleString(LOC)}</b><span>${Tx("Lent out")}</span></div></div>`;
   }
   const qtyText = (o, ln, hm = 0) => [o.n ? Tx("{n} normal", { n: o.n }) : "", o.f ? Tx("{n} foil", { n: o.f }) : "", hm ? Tx("{n} at home", { n: hm }) : "", ln ? Tx("{n} lent", { n: ln }) : ""].filter(Boolean).join(" · ");
@@ -984,9 +984,10 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       const all = [...profiles, ...shared];
       $("headActions").innerHTML = `${all.length > 1 ? `<select class="inline" id="collSrc" data-testid="coll-source" aria-label="${esc(P("Coleção", "Collection"))}">${all.map((x) => `<option value="${esc(x.profile)}" ${x === cur ? "selected" : ""}>${esc(collName(x))}</option>`).join("")}</select>` : ""}
         <button type="button" class="btn" id="openShare" data-testid="share"><i class="ic i-users"></i>${esc(P("Compartilhar", "Share"))}</button>
-        <button type="button" class="btn" id="openBinder"><i class="ic i-cards"></i>${Tx(homeReady ? "Check stock" : "Check my binder")}</button>${readOnly() ? "" : `<button type="button" class="btn" id="openImport" data-testid="import"><i class="ic i-import"></i>${Tx("Import")}</button><button type="button" class="btn primary" id="openScan"><i class="ic i-camera"></i>${Tx("Scan")}</button>`}`;
+        <button type="button" class="btn" id="openBinder"><i class="ic i-cards"></i>${Tx(homeReady ? "Check stock" : "Check my binder")}</button><button type="button" class="btn" id="openExport" data-testid="export"><i class="ic i-export"></i>${esc(P("Exportar", "Export"))}</button>${readOnly() ? "" : `<button type="button" class="btn" id="openImport" data-testid="import"><i class="ic i-import"></i>${Tx("Import")}</button><button type="button" class="btn primary" id="openScan"><i class="ic i-camera"></i>${Tx("Scan")}</button>`}`;
       $("collSrc")?.addEventListener("change", (e) => useSource(e.target.value));
       $("openShare").onclick = () => openShare($("openShare"));
+      $("openExport").onclick = () => openExport($("openExport"));
       $("openBinder").onclick = () => setBinder(true); $("openScan")?.addEventListener("click", () => openScanner($("openScan"))); $("openImport")?.addEventListener("click", () => openImport($("openImport"))); }
     render();
   }
@@ -1238,6 +1239,52 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       catch { $("invMsg").textContent = P("Não deu para aceitar. O convite pode ter vencido.", "Couldn't accept. The invite may have expired."); }
     });
     openSheet(sh, null);
+  }
+
+  // ---------- exportar: a CSV file (opens in Excel / Google Sheets; Importar reads it back) ----------
+  // In Portuguese: ";" between columns and "," in prices, like a Brazilian Excel expects; in English "," and ".".
+  function collectionCsv(ids) {
+    const sep = lang === "pt" ? ";" : ",", dec = (v) => (v == null ? "" : (Math.round(v * 100) / 100).toFixed(2).replace(".", lang === "pt" ? "," : "."));
+    const cell = (v) => { const t = String(v ?? ""); return t.includes(sep) || /["\n\r]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+    const head = ["card_id", "name", "set", "set_name", "number", "rarity", "ink", "normal", "foil", "binder", "home", ...(tradeReady ? ["trades"] : []), "lent", "price_normal_brl", "price_foil_brl", "value_brl", "price_source"];
+    const rows = ids.map((id) => {
+      const c = BY.get(id), w = where(id), pn = priceOf(id), pf = priceOf(id, true);
+      return [id, c?.name || "", c?.set || "", c ? setName(c.set) : "", c?.num || "", c ? rarName(c.rarity) : "", c ? inksOf(c).join("/") : "", w.all.n, w.all.f,
+        w.binder.n + w.binder.f, w.home.n + w.home.f, ...(tradeReady ? [w.trade.n + w.trade.f] : []), w.lent.n + w.lent.f,
+        dec(pn), dec(pf), dec((pn || 0) * w.all.n + (pf || 0) * w.all.f), srcOf(id, false)];
+    });
+    return "\ufeff" + [head, ...rows].map((r) => r.map(cell).join(sep)).join("\r\n") + "\r\n";   // BOM: Excel reads the accents right
+  }
+  function openExport(from) {
+    window.INKWELL_TRACK?.("export_csv");
+    const sh = $("tradeSheet"), p = prof(); if (!p) return;
+    const all = Object.keys(coll()).filter((id) => { const o = owned(id); return o.n + o.f > 0; }).sort((a, b) => (setOrder.get(BY.get(a)?.set) ?? 999) - (setOrder.get(BY.get(b)?.set) ?? 999) || numOf(BY.get(a) || {}) - numOf(BY.get(b) || {}) || a.localeCompare(b));
+    const shownIds = filtered().filter((c) => { const q = inPlace(c.id); return q.n + q.f > 0; }).map((c) => c.id);
+    const copies = (ids) => ids.reduce((t, id) => { const o = owned(id); return t + o.n + o.f; }, 0);
+    const narrowed = shownIds.length && shownIds.length !== all.length;
+    let pick = "all";
+    const draw = () => {
+      sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="tfT">${esc(P("Exportar coleção", "Export collection"))}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
+        <div class="sheet-body stack" style="gap:var(--sp-3)">
+          <p class="small muted" style="margin:0">${esc(P("Um arquivo CSV com cada carta: quantas normais e foil, onde estão (fichário, casa, trocas, emprestadas) e o preço. Abre no Excel e no Google Planilhas, e o “Importar” daqui lê de volta.", "A CSV file with each card: how many normal and foil, where they are (binder, home, trades, lent) and the price. Opens in Excel and Google Sheets, and “Import” here reads it back."))}</p>
+          ${narrowed ? `<fieldset class="stack" style="gap:6px;border:0;padding:0;margin:0"><legend class="small" style="font-weight:700;margin-bottom:4px">${esc(P("O que exportar", "What to export"))}</legend>
+            <label class="check"><input type="radio" name="exPick" value="all" ${pick === "all" ? "checked" : ""}> <span>${esc(P(`A coleção inteira (${all.length} cartas, ${copies(all)} cópias)`, `The whole collection (${all.length} cards, ${copies(all)} copies)`))}</span></label>
+            <label class="check"><input type="radio" name="exPick" value="shown" ${pick === "shown" ? "checked" : ""}> <span>${esc(P(`Só o que está na tela agora (${shownIds.length} cartas, com os filtros e o lugar escolhidos)`, `Only what is on screen now (${shownIds.length} cards, with the filters and place chosen)`))}</span></label></fieldset>`
+          : `<p style="margin:0" data-testid="export-count"><b>${esc(P(`${all.length} ${all.length === 1 ? "carta" : "cartas"}, ${copies(all)} ${copies(all) === 1 ? "cópia" : "cópias"}.`, `${all.length} ${all.length === 1 ? "card" : "cards"}, ${copies(all)} ${copies(all) === 1 ? "copy" : "copies"}.`))}</b></p>`}
+          <p class="small" id="exMsg" role="alert" style="margin:0"></p></div>
+        <div class="sheet-foot"><button type="button" class="btn ghost" data-close>${Tx("Cancel")}</button><button type="button" class="btn primary" id="exGo" data-testid="export-go" ${all.length ? "" : "disabled"}><i class="ic i-export"></i>${esc(P("Baixar CSV", "Download CSV"))}</button></div>`;
+      sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = () => sh.close());
+      sh.querySelectorAll("[name=exPick]").forEach((r) => r.onchange = () => { pick = r.value; });
+      $("exGo").onclick = () => {
+        const ids = pick === "shown" ? shownIds : all;
+        const name = `inkwell-${(p.shared || profiles.length > 1 ? collName(p) : P("colecao", "collection")).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}-${new Date().toISOString().slice(0, 10)}.csv`;
+        const url = URL.createObjectURL(new Blob([collectionCsv(ids)], { type: "text/csv;charset=utf-8" }));
+        const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+        sh.close(); toast(P(`Arquivo ${name} baixado.`, `${name} downloaded.`));
+      };
+    };
+    draw(); openSheet(sh, from);
   }
 
   // ---------- importar: a file or a pasted list from another app (src/site/collimport.js works out which) ----------
