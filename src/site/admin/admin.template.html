@@ -19,6 +19,23 @@
 .adm-row .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .adm-acts { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
 @media (max-width: 640px) { .adm-row { grid-template-columns: minmax(0, 1fr); } .adm-acts { justify-content: flex-start; } }
+.st-funnel { display: grid; gap: 6px; }
+.st-funnel .fr { display: grid; grid-template-columns: minmax(0, 11rem) minmax(0, 1fr) 6.5rem; gap: var(--sp-3); align-items: center; }
+.st-funnel .bar { height: 14px; border-radius: 0 4px 4px 0; background: var(--accent); min-width: 2px; }
+.st-funnel .n { text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 640px) { .st-funnel .fr { grid-template-columns: minmax(0, 1fr) 5.5rem; } .st-funnel .track { grid-column: 1 / -1; order: 3; } }
+.st-days { display: flex; align-items: flex-end; gap: 2px; height: 140px; padding: 0 0 4px; border-bottom: 1px solid var(--line); }
+.st-days .d { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; position: relative; }
+.st-days .d i { display: block; background: var(--accent); border-radius: 4px 4px 0 0; min-height: 0; }
+.st-days .d:hover i, .st-days .d:focus i { filter: brightness(1.2); }
+.st-days .d .tip { display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); white-space: nowrap; background: var(--surface-3, var(--surface-2)); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; font-size: var(--fs-micro); z-index: 2; }
+.st-days .d:hover .tip, .st-days .d:focus .tip { display: block; }
+.st-axis { display: flex; justify-content: space-between; color: var(--text-3); font-size: var(--fs-micro); margin-top: 4px; }
+.st-table { width: 100%; border-collapse: collapse; font-size: var(--fs-small); }
+.st-table th, .st-table td { text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.st-table th:first-child, .st-table td:first-child { text-align: left; }
+.st-table th { color: var(--text-2); font-weight: 600; }
+.st-wrap { overflow-x: auto; }
 .adm-reason { white-space: pre-wrap; overflow-wrap: anywhere; margin: 4px 0 0; }
 </style>
 
@@ -36,7 +53,7 @@
   let lang = "pt";
   try { lang = localStorage.getItem("inkwell-lang") || "pt"; } catch { /* */ }
   const PT = {
-    "Members, reports and example accounts.": "Membros, denúncias e contas de exemplo.", "Members": "Membros", "Reports": "Denúncias", "Loading…": "Carregando…",
+    "Members, reports and example accounts.": "Membros, denúncias e contas de exemplo.", "Visits, members, reports and example accounts.": "Visitas, membros, denúncias e contas de exemplo.", "Members": "Membros", "Reports": "Denúncias", "Loading…": "Carregando…",
     "Sign in": "Entrar", "Sign in with an admin account.": "Entre com uma conta de administrador.", "Not allowed": "Sem permissão", "This page is only for administrators.": "Esta página é só para administradores.",
     "Couldn't load.": "Não foi possível carregar.", "Try again": "Tentar de novo", "example": "exemplo", "public": "público", "private": "privado", "hidden": "oculto", "admin": "admin", "18+": "18+",
     "{n} games": "{n} jogos", "{n} open reports": "{n} denúncias abertas", "joined {d}": "entrou em {d}", "last sign-in {d}": "último acesso {d}", "never signed in": "nunca entrou",
@@ -46,7 +63,17 @@
     "Delete all example accounts": "Excluir todas as contas de exemplo", "Example accounts": "Contas de exemplo",
     "There is no password to reset: members sign in with a code sent to their e-mail. \"Sign out everywhere\" ends every session; they sign in again with a new code.": "Não há senha para redefinir: os membros entram com um código enviado por e-mail. \"Desconectar de tudo\" encerra todas as sessões; a pessoa entra de novo com um código novo.",
     "Deleting removes the account and all its data (collection, decks, games, posts). It cannot be undone.": "Excluir apaga a conta e todos os dados dela (coleção, decks, jogos, anúncios). Não dá para desfazer.",
-    "Search by name or e-mail": "Buscar por nome ou e-mail", "Communities": "Comunidades", "{n} members": "{n} membros", "{n} posts": "{n} mensagens",
+    "Search by name or e-mail": "Buscar por nome ou e-mail", "Dashboard": "Painel", "Period": "Período", "{n} days": "{n} dias",
+    "Run supabase/site_stats.sql to start counting.": "Rode o supabase/site_stats.sql para começar a contar.", "Visits without an account": "Visitas sem conta", "{p}% left on the first page": "{p}% saíram na primeira página",
+    "Sign-ups": "Cadastros", "{n} confirmed the e-mail": "{n} confirmaram o e-mail", "New profiles": "Perfis novos", "{a} public · {b} private": "{a} públicos · {b} privados", "Members active in 7 days": "Membros ativos em 7 dias", "{n} members in all": "{n} membros no total",
+    "Visits without an account, per day": "Visitas sem conta, por dia", "{n} visits": "{n} visitas", "{n} sign-ups": "{n} cadastros", "max {n}": "máx. {n}", "See the numbers per day": "Ver os números por dia", "Day": "Dia", "Visits signed in": "Visitas com conta",
+    "From visit to account": "Da visita à conta", "visits that started without an account": "visitas que começaram sem conta", "Arrived without an account": "Chegaram sem conta", "Saw 2 or more pages": "Viram 2 páginas ou mais", "Tried something": "Experimentaram algo",
+    "Opened “Sign in”": "Abriram “Entrar”", "Got the code": "Receberam o código", "Signed in": "Entraram", "On average {n} pages per visit.": "Em média {n} páginas por visita.",
+    "Someone who created the account from the e-mail link on another tab counts in Sign-ups, not here.": "Quem criou a conta pelo link do e-mail em outra aba conta em Cadastros, não aqui.",
+    "Pages": "Páginas", "Page": "Página", "Views without an account": "Vistas sem conta", "Views signed in": "Vistas com conta", "Arrived here": "Chegaram aqui", "Left from here": "Saíram daqui", "Nothing yet.": "Nada ainda.",
+    "“Arrived” and “Left” count visits that started without an account: the first and the last page they saw.": "“Chegaram” e “Saíram” contam as visitas que começaram sem conta: a primeira e a última página vista.",
+    "What people tried": "O que experimentaram", "Action": "Ação", "Without an account": "Sem conta", "With an account": "Com conta", "Where they came from": "De onde vieram", "Site": "Site", "Visits": "Visitas", "Direct or app (WhatsApp, Instagram…)": "Direto ou app (WhatsApp, Instagram…)",
+    "Phone {a} · Computer {b}": "Celular {a} · Computador {b}", "No cookies or IP: a visit is one open browser tab. Admins and “do not track” browsers aren't counted. Kept 90 days.": "Sem cookies nem IP: uma visita é uma aba aberta do navegador. Admins e navegadores com “não rastrear” não contam. Guardado por 90 dias.", "Communities": "Comunidades", "{n} members": "{n} membros", "{n} posts": "{n} mensagens",
     "See": "Ver", "Show": "Mostrar", "Hide": "Ocultar", "Delete": "Excluir", "No communities.": "Nenhuma comunidade.", "{n} members": "{n} membros",
   };
   const fill = (s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)) : s);
@@ -55,7 +82,7 @@
   const dt = (d) => (d ? new Date(d).toLocaleDateString(LOC, { day: "numeric", month: "short", year: "numeric" }) : "");
   const CLOUD = window.INKWELL_CLOUD, me = CLOUD?.user();
   const rpc = (name, body = {}) => CLOUD.api(`rpc/${name}`, { method: "POST", body });
-  let users = [], reports = [], comms = [], tab = "users", q = "", armed = null;
+  let users = [], reports = [], comms = [], tab = "stats", q = "", armed = null, stats = null, statDays = 14, statErr = "";
 
   function emptyBox(img, title, text, extra = "") { return `<div class="empty"><img src="../ui/assets/empty/${img}.svg" alt=""><b>${esc(title)}</b><p>${esc(text)}</p>${extra}</div>`; }
   async function load() { [users, reports, comms] = await Promise.all([rpc("admin_users"), rpc("admin_reports"), rpc("admin_communities").catch(() => [])]); users = users || []; reports = reports || []; comms = comms || []; }
@@ -64,10 +91,10 @@
     const words = q.toLowerCase().split(/\s+/).filter(Boolean);
     const list = users.filter((u) => words.every((w) => `${u.display_name || ""} ${u.email || ""} ${u.handle || ""}`.toLowerCase().includes(w)));
     const btn = (u, act, label, cls = "") => `<button type="button" class="btn small ${cls}" data-act="${act}" data-u="${esc(u.id)}" ${u.is_admin && act === "delete" ? "disabled" : ""}>${armed === `${act}:${u.id}` ? Tx("Tap again to confirm") : Tx(label)}</button>`;
-    $("app").innerHTML = `<div class="tabs" role="tablist"><button type="button" class="tab" role="tab" data-tab="users" aria-selected="${tab === "users"}">${Tx("Members")} <span class="count quiet">${users.length}</span></button>
+    $("app").innerHTML = `<div class="tabs" role="tablist"><button type="button" class="tab" role="tab" data-tab="stats" aria-selected="${tab === "stats"}">${Tx("Dashboard")}</button><button type="button" class="tab" role="tab" data-tab="users" aria-selected="${tab === "users"}">${Tx("Members")} <span class="count quiet">${users.length}</span></button>
         <button type="button" class="tab" role="tab" data-tab="reports" aria-selected="${tab === "reports"}">${Tx("Reports")} ${open ? `<span class="count">${open}</span>` : ""}</button>
         <button type="button" class="tab" role="tab" data-tab="comms" aria-selected="${tab === "comms"}">${Tx("Communities")} <span class="count quiet">${comms.length}</span></button></div>
-      ${tab === "users" ? `
+      ${tab === "stats" ? statsHtml() : tab === "users" ? `
         <p class="small muted">${Tx("There is no password to reset: members sign in with a code sent to their e-mail. \"Sign out everywhere\" ends every session; they sign in again with a new code.")} ${Tx("Deleting removes the account and all its data (collection, decks, games, posts). It cannot be undone.")}</p>
         ${mocks.length ? `<section class="card" style="margin:var(--sp-3) 0"><b>${Tx("Example accounts")}</b><p class="small muted" style="margin:4px 0 var(--sp-3)">${mocks.map((u) => "@" + esc(u.handle || u.email)).join(", ")}</p><button type="button" class="btn small danger" data-act="delmocks">${armed === "delmocks" ? Tx("Tap again to confirm") : Tx("Delete all example accounts")}</button></section>` : ""}
         <span class="search" style="display:block;margin:var(--sp-3) 0"><i class="ic i-search"></i><input type="search" id="q" value="${esc(q)}" placeholder="${Tx("Search by name or e-mail")}" aria-label="${Tx("Search by name or e-mail")}"></span>
@@ -84,6 +111,8 @@
           <div class="adm-acts">${/^\[post:([0-9a-f-]{36})\]/.test(r.reason || "") ? `<button type="button" class="btn small ghost" data-hidepost="${esc(/^\[post:([0-9a-f-]{36})\]/.exec(r.reason)[1])}">${Tx("Hide the post")}</button>` : ""}${r.target_handle ? `<a class="btn small ghost" href="../perfil/?u=${esc(r.target_handle)}">${Tx("See profile")}</a>` : ""}${r.status === "open" ? `<button type="button" class="btn small" data-resolve="${esc(r.id)}">${Tx("Mark as handled")}</button>` : ""}
             ${users.find((u) => u.id === r.target) && !users.find((u) => u.id === r.target).hidden ? btn(users.find((u) => u.id === r.target), "hide", "Hide profile") : ""}</div></div>`).join("") : `<p class="muted">${Tx("No reports.")}</p>`}</div>`}`;
     document.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => { tab = b.dataset.tab; armed = null; render(); });
+    document.querySelectorAll("[data-days]").forEach((b) => b.onclick = () => { statDays = +b.dataset.days; loadStats(); });
+    if (tab === "stats" && !stats && !statErr) loadStats();
     $("q")?.addEventListener("input", (e) => { q = e.target.value; render(); $("q").focus(); $("q").setSelectionRange(q.length, q.length); });
     document.querySelectorAll("[data-act]").forEach((b) => b.onclick = () => act(b.dataset.act, b.dataset.u));
     document.querySelectorAll("[data-cact]").forEach((b) => b.onclick = () => {
@@ -93,6 +122,50 @@
     });
     document.querySelectorAll("[data-resolve]").forEach((b) => b.onclick = () => run(() => rpc("admin_resolve_report", { p_id: b.dataset.resolve })));
     document.querySelectorAll("[data-hidepost]").forEach((b) => b.onclick = () => run(() => rpc("moderate_post", { p_action: "hide", p_post: b.dataset.hidepost })));   // supabase/social.sql
+  }
+  // ---------- Painel: supabase/site_stats.sql ----------
+  async function loadStats() {
+    statErr = ""; stats = null; render();
+    try { stats = await rpc("admin_stats", { p_days: statDays }); }
+    catch (e) { statErr = /admin_stats|404|PGRST202/.test(String(e?.message || e)) ? Tx("Run supabase/site_stats.sql to start counting.") : Tx("Couldn't load."); }
+    render();
+  }
+  const PAGE_NAME = { feed: "Início", cards: "Coleção", decks: "Decks", communities: "Comunidades", coach: "Jogos", events: "Eventos", trades: "Trocas", prices: "Preços", profile: "Perfil", start: "Começar", entrar: "Entrar (link do e-mail)", legal: "Termos e privacidade", admin: "Admin" };
+  const ACTION_NAME = { signin_open: "Abriu “Entrar”", signin_code: "Recebeu o código", signin_done: "Entrou", deck_sample: "Deck de exemplo", deck_paste: "Colou uma lista", deck_save: "“Criar conta e salvar” deck", scan_open: "Abriu o scanner", import_open: "Abriu “Importar”", share_open: "Abriu “Compartilhar”", trade_fill: "Separar repetidas", trade_post: "Anunciar no Mural", events_search: "Buscou eventos", events_box: "Buscou eventos (Início)", profile_start: "Começou um perfil", invite: "Convidar amigos" };
+  const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
+  const num = (n) => Number(n || 0).toLocaleString(LOC);
+  function statsHtml() {
+    const seg = `<div class="seg" role="group" aria-label="${Tx("Period")}" style="margin:var(--sp-3) 0">${[7, 14, 30, 90].map((d) => `<button type="button" data-days="${d}" aria-pressed="${statDays === d}">${Tx("{n} days", { n: d })}</button>`).join("")}</div>`;
+    if (statErr) return seg + `<p class="muted" data-testid="stats-error">${esc(statErr)}</p>`;
+    if (!stats) return seg + `<div class="skel" style="height:240px"></div>`;
+    const t = stats.totals || {}, series = stats.series || [], va = +t.visits_anon || 0;
+    const kpi = (v, l, sub, id) => `<div class="stat" data-testid="kpi-${id}"><b>${esc(v)}</b><span>${esc(l)}</span>${sub ? `<small class="micro muted" style="display:block">${esc(sub)}</small>` : ""}</div>`;
+    const steps = [["Arrived without an account", va], ["Saw 2 or more pages", t.two_plus], ["Tried something", t.tried], ["Opened “Sign in”", t.opened_signin], ["Got the code", t.got_code], ["Signed in", t.signed_in]];
+    const max = Math.max(1, ...series.map((x) => +x.visits_anon || 0));
+    const dlabel = (d) => new Date(d + "T12:00:00").toLocaleDateString(LOC, { day: "numeric", month: "short" });
+    return `${seg}
+      <div class="stats-row four" data-testid="stats-kpis">${kpi(num(va), Tx("Visits without an account"), Tx("{p}% left on the first page", { p: pct(t.bounced, va) }), "visits")}
+        ${kpi(num(t.signups), Tx("Sign-ups"), Tx("{n} confirmed the e-mail", { n: num(t.signups_confirmed) }), "signups")}
+        ${kpi(num((+t.profiles_public || 0) + (+t.profiles_private || 0)), Tx("New profiles"), Tx("{a} public · {b} private", { a: num(t.profiles_public), b: num(t.profiles_private) }), "profiles")}
+        ${kpi(num(t.active_7d), Tx("Members active in 7 days"), Tx("{n} members in all", { n: num(t.members) }), "active")}</div>
+      <section class="card" style="margin-top:var(--sp-4)"><div class="hd"><h3>${Tx("Visits without an account, per day")}</h3></div>
+        <div class="st-days" data-testid="stats-days" role="img" aria-label="${esc(Tx("Visits without an account, per day"))}">${series.map((x) => `<div class="d" tabindex="0"><i style="height:${Math.round(((+x.visits_anon || 0) / max) * 100)}%"></i><span class="tip">${esc(dlabel(x.day))}: ${esc(Tx("{n} visits", { n: num(x.visits_anon) }))} · ${esc(Tx("{n} sign-ups", { n: num(x.signups) }))}</span></div>`).join("")}</div>
+        <div class="st-axis"><span>${esc(series[0] ? dlabel(series[0].day) : "")}</span><span>${esc(Tx("max {n}", { n: num(max) }))}</span><span>${esc(series.length ? dlabel(series[series.length - 1].day) : "")}</span></div>
+        <details style="margin-top:var(--sp-3)"><summary class="small">${Tx("See the numbers per day")}</summary><div class="st-wrap"><table class="st-table" data-testid="stats-daytable"><thead><tr><th>${Tx("Day")}</th><th>${Tx("Visits without an account")}</th><th>${Tx("Visits signed in")}</th><th>${Tx("Sign-ups")}</th><th>${Tx("New profiles")}</th></tr></thead>
+          <tbody>${series.slice().reverse().map((x) => `<tr><td>${esc(dlabel(x.day))}</td><td>${num(x.visits_anon)}</td><td>${num(x.visits_signed)}</td><td>${num(x.signups)}</td><td>${num(x.profiles)}</td></tr>`).join("")}</tbody></table></div></details></section>
+      <section class="card" style="margin-top:var(--sp-4)"><div class="hd"><h3>${Tx("From visit to account")}</h3><span class="small muted">${Tx("visits that started without an account")}</span></div>
+        <div class="st-funnel" data-testid="stats-funnel">${steps.map(([l, n]) => `<div class="fr"><span class="small">${esc(Tx(l))}</span><span class="track"><span class="bar" style="width:${pct(n, va)}%;display:block"></span></span><span class="n"><b>${num(n)}</b> <span class="micro muted">${pct(n, va)}%</span></span></div>`).join("")}</div>
+        <p class="small muted" style="margin:var(--sp-3) 0 0">${esc(Tx("On average {n} pages per visit.", { n: String(t.avg_views ?? 0).replace(".", lang === "pt" ? "," : ".") }))} ${esc(Tx("Someone who created the account from the e-mail link on another tab counts in Sign-ups, not here."))}</p></section>
+      <section class="card" style="margin-top:var(--sp-4)"><div class="hd"><h3>${Tx("Pages")}</h3></div><div class="st-wrap"><table class="st-table" data-testid="stats-pages"><thead><tr><th>${Tx("Page")}</th><th>${Tx("Views without an account")}</th><th>${Tx("Views signed in")}</th><th>${Tx("Arrived here")}</th><th>${Tx("Left from here")}</th></tr></thead>
+        <tbody>${(stats.pages || []).map((p) => `<tr><td>${esc(PAGE_NAME[p.page] || p.page)}</td><td>${num(p.views_anon)}</td><td>${num(p.views_signed)}</td><td>${num(p.landed)}</td><td>${num(p.left)}</td></tr>`).join("") || `<tr><td colspan="5" class="muted">${Tx("Nothing yet.")}</td></tr>`}</tbody></table></div>
+        <p class="small faint" style="margin:var(--sp-2) 0 0">${Tx("“Arrived” and “Left” count visits that started without an account: the first and the last page they saw.")}</p></section>
+      <div class="grid2" style="margin-top:var(--sp-4);gap:var(--sp-4);align-items:start">
+        <section class="card"><div class="hd"><h3>${Tx("What people tried")}</h3></div><div class="st-wrap"><table class="st-table" data-testid="stats-actions"><thead><tr><th>${Tx("Action")}</th><th>${Tx("Without an account")}</th><th>${Tx("With an account")}</th></tr></thead>
+          <tbody>${(stats.actions || []).map((a) => `<tr><td>${esc(ACTION_NAME[a.name] || a.name)}</td><td>${num(a.anon)}</td><td>${num(a.signed)}</td></tr>`).join("") || `<tr><td colspan="3" class="muted">${Tx("Nothing yet.")}</td></tr>`}</tbody></table></div></section>
+        <section class="card"><div class="hd"><h3>${Tx("Where they came from")}</h3></div><div class="st-wrap"><table class="st-table" data-testid="stats-refs"><thead><tr><th>${Tx("Site")}</th><th>${Tx("Visits")}</th></tr></thead>
+          <tbody>${(stats.refs || []).map((r) => `<tr><td>${esc(r.ref || Tx("Direct or app (WhatsApp, Instagram…)"))}</td><td>${num(r.visits)}</td></tr>`).join("") || `<tr><td colspan="2" class="muted">${Tx("Nothing yet.")}</td></tr>`}</tbody></table></div>
+          <p class="small muted" style="margin:var(--sp-3) 0 0" data-testid="stats-devices">${esc(Tx("Phone {a} · Computer {b}", { a: num(stats.devices?.mobile), b: num(stats.devices?.desktop) }))}</p></section></div>
+      <p class="small faint" style="margin-top:var(--sp-4)">${Tx("No cookies or IP: a visit is one open browser tab. Admins and “do not track” browsers aren't counted. Kept 90 days.")}</p>`;
   }
   async function run(fn) {
     try { await fn(); await load(); armed = null; render(); toast(Tx("Done")); }
@@ -112,7 +185,7 @@
   }
 
   document.documentElement.lang = LOC;
-  $("sub").textContent = Tx("Members, reports and example accounts.");
+  $("sub").textContent = Tx("Visits, members, reports and example accounts.");
   if (!me) { $("app").innerHTML = emptyBox("signedout", Tx("Sign in"), Tx("Sign in with an admin account."), `<button type="button" class="btn primary" id="si">${Tx("Sign in")}</button>`); $("si").onclick = () => window.INKWELL_SIGNIN?.(); return; }
   $("app").innerHTML = `<div class="skel" style="height:200px"></div><p class="sr-only">${Tx("Loading…")}</p>`;
   load().then(render).catch((e) => {

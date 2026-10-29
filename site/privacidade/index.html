@@ -89,11 +89,11 @@ window.INKWELL_CLOUD = (() => {
 
   // Authenticated call to the database's REST API (used by Coach Review). Errors carry a short code.
   // anon: true also works signed out (the publishable key), for the few functions open to visitors
-  async function api(path, { method = "GET", body, prefer, anon = false } = {}) {
+  async function api(path, { method = "GET", body, prefer, anon = false, keepalive = false } = {}) {
     const tok = await token();
     if (!tok && !anon) throw Object.assign(new Error("signed out"), { code: "auth" });
     const r = await fetch(`${cfg.url}/rest/v1/${path}`, {
-      method, headers: { ...headers(tok), ...(prefer ? { Prefer: prefer } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
+      method, keepalive, headers: { ...headers(tok), ...(prefer ? { Prefer: prefer } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
     if (r.status === 401) store({ ...sess, expires_at: 0 });
     if (!r.ok) {
       const code = r.status === 401 || r.status === 403 ? "permission" : r.status === 400 || r.status === 409 || r.status === 413 ? "invalid_argument" : "unavailable";
@@ -215,8 +215,9 @@ window.INKWELL_CLOUD = (() => {
       <li id="localizacao"><b>Localização, só se você pedir:</b> na página Eventos, o lugar que você usa para buscar (cidade, bairro, endereço ou CEP) fica <b>só no seu aparelho</b>. Se você marcar <i>“Salvar este lugar na minha conta”</i>, guardamos na conta um <b>ponto aproximado</b> (arredondado em cerca de 1 km), o nome do bairro ou cidade e o raio — <b>nunca a rua nem o número</b>. Serve para avisar você de eventos novos perto e para usar o mesmo lugar em outros aparelhos. Só você vê. Desmarcar apaga na hora, e ele também é apagado com a conta.</li>
       <li><b>Avisos:</b> as notificações do sino e, se você ligar os avisos no aparelho, o endereço técnico que o navegador cria para receber notificações. Desligar no sino apaga esse registro.</li>
       <li><b>Segurança:</b> denúncias enviadas e recebidas, e quando cada carta entrou na sua coleção.</li>
+      <li id="estatisticas"><b>Estatísticas de uso, sem identificar ninguém:</b> para saber se o site é útil, contamos as páginas vistas e algumas ações (por exemplo, abrir o scanner ou testar um deck). Cada aba do navegador recebe um código aleatório que some quando a aba fecha. Junto vão só: se você está com conta ou não, celular ou computador, e o nome do site de onde você veio (só o domínio). <b>Não guardamos IP, cookies, nem quem você é</b>, e não cruzamos isso com a sua conta. Navegadores com “não rastrear” (Do Not Track / Global Privacy Control) não enviam nada. Fica 90 dias e só os administradores veem os totais.</li>
     </ul>
-    <p>Não usamos cookies de rastreamento nem ferramentas de publicidade. O site guarda no seu navegador apenas preferências (idioma, filtros) e a sessão de entrada.</p>
+    <p>Não usamos cookies de rastreamento nem ferramentas de publicidade. O site guarda no seu navegador apenas preferências (idioma, filtros), a sessão de entrada e o código aleatório da aba.</p>
     <h2 id="quem-ve">4. Quem vê o quê</h2>
     <ul>
       <li>Seu perfil começa <b>privado</b>. Público, ele mostra só o que você escolheu. A coleção em si nunca aparece no perfil público.</li>
@@ -272,8 +273,9 @@ window.INKWELL_CLOUD = (() => {
       <li><b>Location, only if you ask:</b> on Events, the place you search from (city, district, address or postcode) stays <b>on your device</b>. If you tick <i>“Keep this place in my account”</i>, we keep an <b>approximate point</b> (rounded to about 1 km), the district or city name and the radius — <b>never the street or number</b>. It is used to tell you about new events nearby and to use the same place on other devices. Only you see it. Unticking deletes it at once, and it goes with the account.</li>
       <li><b>Notices:</b> the bell notifications and, if you turn notices on for a device, the technical address the browser creates to receive them. Turning them off in the bell deletes it.</li>
       <li><b>Safety:</b> reports sent and received, and when each card entered your collection.</li>
+      <li><b>Usage statistics, identifying no one:</b> to know whether the site is useful, we count pages viewed and a few actions (for example, opening the scanner or trying a deck). Each browser tab gets a random code that disappears when the tab closes. Only this goes with it: whether you are signed in, phone or computer, and the name of the site you came from (domain only). <b>We keep no IP, no cookies and not who you are</b>, and never link it to your account. Browsers with Do Not Track / Global Privacy Control send nothing. Kept 90 days; only administrators see the totals.</li>
     </ul>
-    <p>We use no tracking cookies or advertising tools. The site only keeps preferences (language, filters) and your sign-in session in your browser.</p>
+    <p>We use no tracking cookies or advertising tools. The site only keeps preferences (language, filters), your sign-in session and the tab's random code in your browser.</p>
     <h2>4. Who sees what</h2>
     <ul>
       <li>Your profile starts <b>private</b>. When public, it shows only what you chose. The collection itself never appears on the public profile.</li>
@@ -329,6 +331,22 @@ window.INKWELL_CLOUD = (() => {
   const UI = "../ui/";
   const CLOUD = window.INKWELL_CLOUD;
   const me = CLOUD?.user();
+  // ---------- site statistics (supabase/site_stats.sql; the admin Painel) ----------
+  // No cookies, no IP: a random code that lives only while this tab is open; signed in or not; phone or computer;
+  // the other site's domain. Nothing is sent from "do not track" browsers or by automated browsers.
+  const STAT_OFF = navigator.webdriver || navigator.globalPrivacyControl === true || navigator.doNotTrack === "1" || window.doNotTrack === "1";
+  let statSid = null;
+  try { statSid = sessionStorage.getItem("inkwell-sid"); if (!/^[a-f0-9]{24}$/.test(statSid || "")) { statSid = [...crypto.getRandomValues(new Uint8Array(12))].map((b) => b.toString(16).padStart(2, "0")).join(""); sessionStorage.setItem("inkwell-sid", statSid); } } catch { statSid = null; }
+  const statDev = () => (matchMedia("(pointer: coarse)").matches || innerWidth < 700 ? "mobile" : "desktop");
+  const statRef = () => { try { const h = document.referrer ? new URL(document.referrer).hostname.toLowerCase() : ""; return h && h !== location.hostname ? h.replace(/^www\./, "").slice(0, 60) : null; } catch { return null; } };
+  const statSend = (kind, name) => {
+    if (STAT_OFF || !statSid || !CLOUD || !page) return;
+    CLOUD.api("rpc/track", { method: "POST", prefer: "return=minimal", anon: true, keepalive: true, body: { p_sid: statSid, p_page: page, p_kind: kind, p_name: name || null, p_ref: kind === "view" ? statRef() : null, p_dev: statDev() } }).catch(() => {});
+  };
+  // pages call INKWELL_TRACK("scan_open") etc.; each action counts once per page view
+  const statDone = new Set();
+  window.INKWELL_TRACK = (name) => { if (!/^[a-z_]{1,30}$/.test(name || "") || statDone.has(name)) return; statDone.add(name); statSend("action", name); };
+  statSend("view");
   // Every module stays in the top bar (design "The Great Illuminary", 26/10/2026). On phones the bottom bar has
   // the four main places plus "Mais", which lists the rest; nothing is hidden behind the account menu only.
   const NAV = [
@@ -407,6 +425,7 @@ window.INKWELL_CLOUD = (() => {
   let profileName = "", syncAgo = "", isAdmin = false, news = null, myInvite = null;
   // ---------- "Convidar para o Inkwell": your invite link (perfil/?convite=…); whoever signs up through it gets your friend request ----------
   window.INKWELL_INVITE = async (btn) => {
+    window.INKWELL_TRACK("invite");
     if (!me || !CLOUD) { window.INKWELL_SIGNIN?.(); return; }
     if (!myInvite) { const p = await CLOUD.api("rpc/my_profile", { method: "POST", body: {} }).catch(() => null); if (p?.invite_code) myInvite = { code: p.invite_code, handle: p.handle, pub: !!p.is_public }; }
     const done = (t) => { if (!btn) return; const old = btn.innerHTML; btn.innerHTML = `<i class="ic i-check"></i>${t}`; setTimeout(() => { btn.innerHTML = old; }, 2500); };
@@ -517,7 +536,7 @@ window.INKWELL_CLOUD = (() => {
       email = $("iwSiEmail").value.trim();
       if (!/^\S+@\S+\.\S+$/.test(email)) { $("iwSiMsg").textContent = T("Digite seu e-mail.", "Enter your e-mail."); return; }
       const b = $("iwSiSend"); b.setAttribute("aria-busy", "true"); b.disabled = true;
-      try { await CLOUD.requestCode(email); sentAt = Date.now(); stepCode(); }
+      try { await CLOUD.requestCode(email); sentAt = Date.now(); window.INKWELL_TRACK("signin_code"); stepCode(); }
       catch { b.removeAttribute("aria-busy"); b.disabled = false; $("iwSiMsg").textContent = T("Não foi possível enviar o e-mail. Confira o endereço e a internet.", "Couldn't send the e-mail. Check the address and your connection."); }
     });
     setTimeout(() => $("iwSiEmail")?.focus(), 30);
@@ -573,7 +592,7 @@ window.INKWELL_CLOUD = (() => {
       e.preventDefault();
       if (go.disabled) return;
       go.setAttribute("aria-busy", "true"); go.disabled = true;
-      try { await CLOUD.verify(email, digits()); location.reload(); }
+      try { await CLOUD.verify(email, digits()); window.INKWELL_TRACK("signin_done"); location.reload(); }
       catch (err) {
         go.removeAttribute("aria-busy"); box.classList.add("err"); box.focus(); box.select?.();
         $("iwSiMsg").dataset.keep = "1"; sync();
@@ -589,6 +608,7 @@ window.INKWELL_CLOUD = (() => {
   sheet.addEventListener("click", (e) => { if (e.target === sheet) sheet.close(); });   // tap on the backdrop
   window.INKWELL_SIGNIN = () => {
     if (!CLOUD) return;
+    window.INKWELL_TRACK("signin_open");
     trigger = document.activeElement;
     stepEmail();
     if (!sheet.open) sheet.showModal();

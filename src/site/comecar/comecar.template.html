@@ -295,7 +295,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   }
   function change(fn) { fn(); persist(); render(); }
   function wire() {
-    $("name")?.addEventListener("input", (e) => {
+    $("name")?.addEventListener("input", (e) => { window.INKWELL_TRACK?.("profile_start");
       const was = isDirty();
       draft.displayName = e.target.value.slice(0, 40); nameErr = ""; persist();
       if (was !== isDirty()) return render();   // banner and "discard" appear or go (render keeps the cursor)

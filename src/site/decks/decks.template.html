@@ -384,7 +384,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
         <p class="small muted">${esc(rulesText(pub.format))}</p>`}
       </section>`;
     const t = $("pText");
-    t.oninput = () => { pub.text = t.value; pubSave(pub); const pos = t.selectionStart; renderPublic(); const x = $("pText"); x.focus(); x.setSelectionRange(pos, pos); };
+    t.oninput = () => { window.INKWELL_TRACK?.("deck_paste"); pub.text = t.value; pubSave(pub); const pos = t.selectionStart; renderPublic(); const x = $("pText"); x.focus(); x.setSelectionRange(pos, pos); };
     document.querySelectorAll("[data-pf]").forEach((b) => b.onclick = () => { pub.format = b.dataset.pf; pubSave(pub); renderPublic(); });
     document.querySelectorAll("[data-fixq]").forEach((inp) => inp.oninput = () => { pubFix = { i: +inp.dataset.fixq, q: inp.value }; const pos = inp.selectionStart; renderPublic();
       const x = document.querySelector(`[data-fixq="${inp.dataset.fixq}"]`); x?.focus(); x?.setSelectionRange(pos, pos); });
@@ -393,8 +393,8 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
       ls[i] = `${lineQty(ls[i])} ${c.name}`; pub.text = ls.join("\n"); pubFix = null; pubSave(pub); renderPublic();
     });
     $("signIn").onclick = () => window.INKWELL_SIGNIN?.();
-    $("pSave")?.addEventListener("click", () => { pubSave(pub); window.INKWELL_SIGNIN?.(); });
-    $("pSample")?.addEventListener("click", () => { pub = { text: SAMPLE, format: "core" }; pubSave(pub); renderPublic(); $("pText").scrollIntoView({ block: "start" }); });
+    $("pSave")?.addEventListener("click", () => { window.INKWELL_TRACK?.("deck_save"); pubSave(pub); window.INKWELL_SIGNIN?.(); });
+    $("pSample")?.addEventListener("click", () => { window.INKWELL_TRACK?.("deck_sample"); pub = { text: SAMPLE, format: "core" }; pubSave(pub); renderPublic(); $("pText").scrollIntoView({ block: "start" }); });
     $("pClear")?.addEventListener("click", () => { pub = { text: "", format: pub.format }; pubDrop(); renderPublic(); $("pText").focus(); });
   }
 
