@@ -631,3 +631,19 @@ test('export: a CSV of the collection (Excel-friendly in Portuguese) that Import
   expect(gurgi.slice(7, 13)).toEqual(['6', '1', '5', '0', '2', '0']);   // normal, foil, binder, home, trades, lent
   expect(gurgi.slice(13, 16)).toEqual(['1,50', '3,00', '12,00']);
 });   // reading it back: tools/collimport.test.mjs
+
+test('export in the Liga Lorcana template: one line per finish, set code, card number', async ({ page }) => {
+  await setup(page, { collection: { 'LOR10-10': { n: 4, f: 1 }, 'LOR13-27': { n: 2, f: 0 } } });
+  await page.goto(BASE);
+  await page.locator('[data-testid="export"]').click();
+  await page.locator('[name="exFmt"][value="liga"]').check();
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('[data-testid="export-go"]').click()]);
+  expect(dl.suggestedFilename()).toMatch(/^ligalorcana-colecao-\d{4}-\d{2}-\d{2}\.csv$/);
+  const lines = (await (await import('node:fs')).promises.readFile(await dl.path(), 'utf8')).trim().split('\r\n');
+  expect(lines[0]).toBe('Edicao (PTBR),Edicao (EN),Edicao (Sigla),Card (PT),Card (EN),Quantidade,Qualidade (M NM SP MP HP D),Idioma (BR EN DE ES FR IT JP KO RU TW),Raridade,Cor (C D O E Y F R G L M P W),Extras,Card #,Comentario,# Cards na Edicao');
+  expect(lines).toContain(',Whispers in the Well,LOR10,,Gurgi - Apple Lover,4,NM,EN,C,,,10,,');
+  expect(lines).toContain(',Whispers in the Well,LOR10,,Gurgi - Apple Lover,1,NM,EN,C,,Foil,10,,');
+  expect(lines.some((l) => /^,[^,]*,LOR13,,Pocahontas & Meeko - Adventurous Friends,2,NM,EN,/.test(l))).toBe(true);
+  expect(lines).toHaveLength(4);
+  expect(await page.evaluate(() => localStorage.getItem('inkwell-export-format'))).toBe('liga');   // remembered
+});

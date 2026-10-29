@@ -1101,6 +1101,19 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     });
     return "\ufeff" + [head, ...rows].map((r) => r.map(cell).join(sep)).join("\r\n") + "\r\n";   // BOM: Excel reads the accents right
   }
+  // Liga Lorcana's collection import: one line per card and finish (Extras = Foil), set code and card number.
+  // Condition NM and language EN unless you change them in the file; the Liga colour letters aren't filled in.
+  function ligaCsv(ids) {
+    const cell = (v) => { const t = String(v ?? ""); return /[",\n\r]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+    const head = "Edicao (PTBR),Edicao (EN),Edicao (Sigla),Card (PT),Card (EN),Quantidade,Qualidade (M NM SP MP HP D),Idioma (BR EN DE ES FR IT JP KO RU TW),Raridade,Cor (C D O E Y F R G L M P W),Extras,Card #,Comentario,# Cards na Edicao";
+    const rows = [];
+    for (const id of ids) {
+      const c = BY.get(id), o = owned(id); if (!c) continue;
+      const s = SETS.find((x) => x.code === c.set);
+      for (const [k, extra] of [["n", ""], ["f", "Foil"]]) if (o[k] > 0) rows.push(["", s?.name_en || "", c.set, "", c.name, o[k], "NM", "EN", c.rarity || "", "", extra, c.num, "", ""].map(cell).join(","));
+    }
+    return [head, ...rows].join("\r\n") + "\r\n";
+  }
   function openExport(from) {
     window.INKWELL_TRACK?.("export_csv");
     const sh = $("tradeSheet"), p = prof(); if (!p) return;
@@ -1108,11 +1121,15 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     const shownIds = filtered().filter((c) => { const q = inPlace(c.id); return q.n + q.f > 0; }).map((c) => c.id);
     const copies = (ids) => ids.reduce((t, id) => { const o = owned(id); return t + o.n + o.f; }, 0);
     const narrowed = shownIds.length && shownIds.length !== all.length;
-    let pick = "all";
+    let pick = "all", fmt = "inkwell";
+    try { if (localStorage.getItem("inkwell-export-format") === "liga") fmt = "liga"; } catch { /* */ }
     const draw = () => {
       sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="tfT">${esc(P("Exportar coleção", "Export collection"))}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
         <div class="sheet-body stack" style="gap:var(--sp-3)">
-          <p class="small muted" style="margin:0">${esc(P("Um arquivo CSV com cada carta: quantas normais e foil, onde estão (fichário, casa, trocas, emprestadas) e o preço. Abre no Excel e no Google Planilhas, e o “Importar” daqui lê de volta.", "A CSV file with each card: how many normal and foil, where they are (binder, home, trades, lent) and the price. Opens in Excel and Google Sheets, and “Import” here reads it back."))}</p>
+          <fieldset class="stack" style="gap:6px;border:0;padding:0;margin:0" data-testid="export-format"><legend class="small" style="font-weight:700;margin-bottom:4px">${esc(P("Formato", "Format"))}</legend>
+            <label class="check"><input type="radio" name="exFmt" value="inkwell" ${fmt === "inkwell" ? "checked" : ""}> <span>${esc(P("Inkwell (planilha completa)", "Inkwell (full spreadsheet)"))}<small class="muted" style="display:block">${esc(P("Cada carta com normais e foil, onde estão (fichário, casa, trocas, emprestadas) e o preço. Abre no Excel e no Google Planilhas.", "Each card with normal and foil, where they are (binder, home, trades, lent) and the price. Opens in Excel and Google Sheets."))}</small></span></label>
+            <label class="check"><input type="radio" name="exFmt" value="liga" ${fmt === "liga" ? "checked" : ""}> <span>${esc(P("Liga Lorcana", "Liga Lorcana"))}<small class="muted" style="display:block">${esc(P("O modelo do importador de coleção da Liga Lorcana: normais e foil em linhas separadas, sigla da edição e número da carta. Condição NM e idioma EN — mude no arquivo se precisar.", "The Liga Lorcana collection importer's template: normal and foil on separate lines, set code and card number. Condition NM and language EN — change them in the file if needed."))}</small></span></label></fieldset>
+          <p class="small muted" style="margin:0">${esc(P("O “Importar” daqui lê os dois formatos de volta.", "“Import” here reads both formats back."))}</p>
           ${narrowed ? `<fieldset class="stack" style="gap:6px;border:0;padding:0;margin:0"><legend class="small" style="font-weight:700;margin-bottom:4px">${esc(P("O que exportar", "What to export"))}</legend>
             <label class="check"><input type="radio" name="exPick" value="all" ${pick === "all" ? "checked" : ""}> <span>${esc(P(`A coleção inteira (${all.length} cartas, ${copies(all)} cópias)`, `The whole collection (${all.length} cards, ${copies(all)} copies)`))}</span></label>
             <label class="check"><input type="radio" name="exPick" value="shown" ${pick === "shown" ? "checked" : ""}> <span>${esc(P(`Só o que está na tela agora (${shownIds.length} cartas, com os filtros e o lugar escolhidos)`, `Only what is on screen now (${shownIds.length} cards, with the filters and place chosen)`))}</span></label></fieldset>`
@@ -1121,10 +1138,11 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
         <div class="sheet-foot"><button type="button" class="btn ghost" data-close>${Tx("Cancel")}</button><button type="button" class="btn primary" id="exGo" data-testid="export-go" ${all.length ? "" : "disabled"}><i class="ic i-export"></i>${esc(P("Baixar CSV", "Download CSV"))}</button></div>`;
       sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = () => sh.close());
       sh.querySelectorAll("[name=exPick]").forEach((r) => r.onchange = () => { pick = r.value; });
+      sh.querySelectorAll("[name=exFmt]").forEach((r) => r.onchange = () => { fmt = r.value; try { localStorage.setItem("inkwell-export-format", fmt); } catch { /* */ } });
       $("exGo").onclick = () => {
         const ids = pick === "shown" ? shownIds : all;
-        const name = `inkwell-${(p.shared || profiles.length > 1 ? collName(p) : P("colecao", "collection")).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}-${new Date().toISOString().slice(0, 10)}.csv`;
-        const url = URL.createObjectURL(new Blob([collectionCsv(ids)], { type: "text/csv;charset=utf-8" }));
+        const name = `${fmt === "liga" ? "ligalorcana" : "inkwell"}-${(p.shared || profiles.length > 1 ? collName(p) : P("colecao", "collection")).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}-${new Date().toISOString().slice(0, 10)}.csv`;
+        const url = URL.createObjectURL(new Blob([fmt === "liga" ? ligaCsv(ids) : collectionCsv(ids)], { type: "text/csv;charset=utf-8" }));
         const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 10000);
         sh.close(); toast(P(`Arquivo ${name} baixado.`, `${name} downloaded.`));
@@ -1134,7 +1152,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   }
 
   // ---------- importar: a file or a pasted list from another app (src/site/collimport.js works out which) ----------
-  const FORMAT_NAME = { dreamborn: "Dreamborn", tcgplayer: "TCGplayer", "inkwell-csv": "Inkwell", "inkwell-json": "Inkwell", json: "JSON", table: "Planilha", list: "Lista" };
+  const FORMAT_NAME = { ligalorcana: "Liga Lorcana", dreamborn: "Dreamborn", tcgplayer: "TCGplayer", "inkwell-csv": "Inkwell", "inkwell-json": "Inkwell", json: "JSON", table: "Planilha", list: "Lista" };
   function openImport(from) {
     window.INKWELL_TRACK?.("import_open");
     const sh = $("impSheet"); let res = null, mode = "max", fileName = "";

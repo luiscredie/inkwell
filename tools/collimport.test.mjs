@@ -67,3 +67,15 @@ test("Coleção's own CSV export reads back (semicolons, BOM, extra columns, dec
   assert.deepEqual(ids(r), ['LOR10-10:6/1', 'LOR13-27:2/0']);
   assert.equal(r.rejects.length, 0);
 });
+
+test('Liga Lorcana CSV: Edicao (Sigla), Card (EN), Quantidade, Extras = Foil, Card #; normal and foil on separate lines', () => {
+  const csv = 'Edicao (PTBR),Edicao (EN),Edicao (Sigla),Card (PT),Card (EN),Quantidade,Qualidade (M NM SP MP HP D),Idioma (BR EN DE ES FR IT JP KO RU TW),Raridade,Cor (C D O E Y F R G L M P W),Extras,Card #,Comentario,# Cards na Edicao\n'
+    + ',Whispers in the Well,LOR10,,Gurgi - Apple Lover,4,NM,EN,C,,,10,,\n'
+    + ',Whispers in the Well,LOR10,,Gurgi - Apple Lover,1,NM,EN,C,,Foil,10,,\n'
+    + ',Fabled,LOR9,,"Elsa - Snow Queen",2,NM,EN,U,M,,53,,\n'
+    + ',Nada,LOR99,,Ninguém,1,NM,EN,C,,,1,,\n';
+  const r = parse(csv, 'colecao_ligalorcana.csv', cards, sets);
+  assert.equal(r.format, 'ligalorcana');
+  assert.deepEqual(ids(r), ['LOR10-10:4/1', 'LOR9-53:2/0']);
+  assert.equal(r.rejects.length, 1);
+});

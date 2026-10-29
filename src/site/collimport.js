@@ -7,6 +7,7 @@
  * What it understands:
  *   - Inkwell's own export (CSV card_id,name,set,normal,foil, or JSON { collection: { id: { n, f } } })
  *   - Dreamborn CSV (Set Number, Card Number, Variant, Count, Name…)
+ *   - Liga Lorcana CSV (Edicao (Sigla), Card (EN), Quantidade, Extras = Foil, Card #…), the format its collection import uses
  *   - any spreadsheet whose header names the columns, in English or Portuguese: quantity (count, qty, quantidade…),
  *     set (number, code or name), card number, name, finish (foil, variant, printing, acabamento, extras…).
  *     TCGplayer's export fits this. Comma, semicolon (Excel in Portuguese) or tab.
@@ -106,10 +107,13 @@
     const sep = sepOf(lines[0]);
     const head = sep ? splitLine(lines[0], sep).map((h) => norm(h)) : [];
     const col = (names) => { for (const nm of names) { const i = head.indexOf(norm(nm)); if (i >= 0) return i; } return -1; };
-    const iId = col(COLS.id), iQty = col(COLS.qty), iN = col(COLS.normal), iF = col(COLS.foilQty), iSet = col(COLS.set), iNum = col(COLS.num), iName = col(COLS.name), iFin = col(COLS.finish);
+    let iId = col(COLS.id), iQty = col(COLS.qty), iN = col(COLS.normal), iF = col(COLS.foilQty), iSet = col(COLS.set), iNum = col(COLS.num), iName = col(COLS.name), iFin = col(COLS.finish);
+    // Liga Lorcana: "Card #" reads as "card" once the # goes, so its columns are named one by one
+    const liga = head.includes("edicao sigla") && head.includes("card en");
+    if (liga) { iId = -1; iN = -1; iF = -1; iSet = head.indexOf("edicao sigla"); iName = head.indexOf("card en"); iNum = head.lastIndexOf("card"); iQty = head.indexOf("quantidade"); iFin = head.indexOf("extras"); }
     const tabular = sep && (iId >= 0 || iName >= 0 || (iSet >= 0 && iNum >= 0));
     if (tabular) {
-      const format = iId >= 0 && iN >= 0 ? "inkwell-csv" : head.includes("set number") && head.includes("card number") ? "dreamborn" : head.includes("simple name") || head.includes("product id") ? "tcgplayer" : "table";
+      const format = liga ? "ligalorcana" : iId >= 0 && iN >= 0 ? "inkwell-csv" : head.includes("set number") && head.includes("card number") ? "dreamborn" : head.includes("simple name") || head.includes("product id") ? "tcgplayer" : "table";
       for (let i = 1; i < lines.length; i++) {
         const p = splitLine(lines[i], sep); if (p.every((x) => !x)) continue;
         const c = find(ix, { id: iId >= 0 ? p[iId] : null, set: iSet >= 0 ? p[iSet] : null, num: iNum >= 0 ? p[iNum] : null, name: iName >= 0 ? p[iName] : null });
