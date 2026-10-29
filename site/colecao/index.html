@@ -226,9 +226,12 @@ window.INKWELL_CLOUD = (() => {
 #scan .review { position: absolute; inset: 0; z-index: 3; background: var(--bg); color: var(--text); display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
 #scan .review header { display: flex; align-items: center; gap: var(--sp-2); padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 10px; border-bottom: 1px solid var(--line); }
 #scan .review header h2 { font-size: var(--fs-body); margin: 0; flex: 1; }
-#scan .review .items { overflow: auto; padding: 8px 12px; display: grid; gap: 8px; align-content: start; }
-#scan .review .item { display: flex; align-items: center; gap: 10px; background: var(--surface-2); border-radius: 12px; padding: 8px; }
-#scan .review .item .t { flex: 1; min-width: 0; } #scan .review .item .t b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#scan .review .items { overflow: auto; overflow-x: hidden; padding: 8px 12px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; align-content: start; }
+#scan .review .item { display: flex; align-items: center; gap: 10px; min-width: 0; background: var(--surface-2); border-radius: 12px; padding: 8px; }
+#scan .review .item > .thumb { flex: none; }
+#scan .review .item .t { flex: 1; min-width: 0; }
+#scan .review .item .t b { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; line-height: 1.25; }
+#scan .review .item .qty { flex: none; }
 #scan .review .item .t .small { display: block; }
 #scan .review footer { display: grid; gap: 8px; padding: 12px 12px calc(env(safe-area-inset-bottom, 0px) + 12px); border-top: 1px solid var(--line); }
 .imp-list { display: grid; gap: 2px; max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: var(--r-md); padding: 6px 10px; }
@@ -1458,7 +1461,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const m = new Map(); for (const a of scan.added) { const k = `${a.id}:${a.foil ? 1 : 0}`; m.set(k, (m.get(k) || 0) + 1); }
     return [...m].map(([k, n]) => { const [id, f] = k.split(":"); return { id, foil: f === "1", n }; });
   }
-  const scanPlace = () => { try { return localStorage.getItem("inkwell-scan-place") === "home" ? "home" : "binder"; } catch { return "binder"; } };
+  const scanPlace = () => { let x = "binder"; try { x = localStorage.getItem("inkwell-scan-place") || "binder"; } catch { /* */ } return x === "home" || (x === "trade" && tradeReady) ? x : "binder"; };
   function showReview() {
     scan.review = true; scan.discardArmed = false;
     const stage = $("scan").querySelector(".stage"); let box = $("scanReview");
@@ -1469,7 +1472,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         <span class="t"><b>${esc(split(c.name).join(" · ").replace(/ · $/, ""))}</b><span class="small muted">${esc([setName(c.set), "nº " + c.num, Tx(x.foil ? "foil" : "normal")].join(" · "))}</span></span>
         <div class="qty"><button type="button" data-rq="-1" aria-label="${Tx("Remove one")}">−</button><output>${x.n}</output><button type="button" data-rq="1" aria-label="${Tx("Add one")}">+</button></div></div>` : ""; }).join("")
         : `<p class="muted" style="text-align:center">${Tx("The list is empty.")}</p>`}</div>
-      <footer>${homeReady ? `<div class="seg" role="group" aria-label="${Tx("Add to")}" data-testid="scan-place" style="justify-self:center"><span class="small muted" style="align-self:center;padding:0 6px">${Tx("Add to")}</span>${[["binder", "Binder"], ["home", "Home"]].map(([k, l]) => `<button type="button" data-splace="${k}" aria-pressed="${scanPlace() === k}">${Tx(l)}</button>`).join("")}</div>` : ""}
+      <footer>${homeReady ? `<div class="seg" role="group" aria-label="${Tx("Add to")}" data-testid="scan-place" style="justify-self:center"><span class="small muted" style="align-self:center;padding:0 6px">${Tx("Add to")}</span>${[["binder", "Binder"], ["home", "Home"], ...(tradeReady ? [["trade", "Trades"]] : [])].map(([k, l]) => `<button type="button" data-splace="${k}" aria-pressed="${scanPlace() === k}">${Tx(l)}</button>`).join("")}</div>` : ""}
         <p class="small muted" style="margin:0;text-align:center">${Tx("Nothing will be saved until you confirm.")}</p>
         <button type="button" class="btn primary" id="revAdd" ${total ? "" : "disabled"}>${Tx("Add {n} cards to the collection", { n: total })}</button>
         <div class="row between"><button type="button" class="btn" id="revMore"><i class="ic i-camera"></i>${Tx("Keep scanning")}</button><button type="button" class="btn ghost" id="revDrop">${Tx("Discard the list")}</button></div></footer>`;

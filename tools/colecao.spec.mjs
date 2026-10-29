@@ -596,3 +596,19 @@ test('"Mais valiosas": by one copy\'s price (the foil when it is worth more), no
   await expect(page.locator('[data-card="LOR13-27"] [data-testid="unit-price"]')).toHaveText('R$ 9,00 foil');
   await expect(page.locator('[data-card="LOR10-10"] [data-testid="unit-price"]')).toHaveText('R$ 2,00');
 });
+
+test('scanner review on a phone: a long name wraps, and − / count / + stay on screen', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setup(page);
+  await fakeCamera(page, { file: 'Mrs._Beakley_-_Former_S.H.U.S.H._Agent__LOR10-11.jpg' });
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Escanear' }).click();
+  await expect(page.locator('[data-testid="scan-last"]')).toContainText('Beakley', { timeout: 15000 });
+  await page.getByRole('button', { name: 'Concluir' }).click();
+  const item = page.locator('[data-testid="scan-review"] [data-rev]').first();
+  const plus = await item.locator('[data-rq="1"]').boundingBox();
+  expect(plus.x + plus.width).toBeLessThanOrEqual(390);
+  await expect(item.locator('output')).toBeInViewport();
+  await item.locator('[data-rq="1"]').click();
+  await expect(item.locator('output')).toHaveText('2');
+});
