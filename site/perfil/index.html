@@ -764,6 +764,16 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     box.innerHTML = `<div class="group-head"><h3>${Tx("Achievements")}</h3><span class="small muted">${r.list.length}</span></div><div class="ach-list">${r.list.map((a) => achCard(a, r.urls[a.image], false)).join("")}</div>`;
     box.hidden = false;
   }
+  // Eventos › past event › "Registrar conquista": perfil/?editar=1&conquista=<Play Hub event id>
+  async function openAchFromEvent() {
+    const id = (new URLSearchParams(location.search).get("conquista") || "").replace(/\D/g, "").slice(0, 12); if (!id) return;
+    history.replaceState(null, "", location.pathname + "?editar=1#conquistas");
+    let ev = null;
+    try { const m = ((await rpc("my_event_marks")) || []).find((x) => String(x.rph_id) === id); if (m?.snap) ev = { id: +id, name: m.snap.name, store: m.snap.store, start: m.snap.start }; } catch { /* */ }
+    if (!ev) try { const x = await CLOUD.fn("rph-events", { id }); if (x?.id) ev = { id: +x.id, name: String(x.name || "").replace(/\s+-\s+\w+ \d{1,2}, \d{4}$/, ""), store: x.store?.name || "", start: x.start }; } catch { /* */ }
+    $("conquistas")?.scrollIntoView({ block: "start" });
+    achForm(null, $("achAdd"), ev || { id: +id, name: "", store: "", start: null });
+  }
   // my achievements, in the editor
   let myAchs = null;
   async function drawMyAchievements() {
@@ -787,7 +797,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const cv = document.createElement("canvas"); cv.width = w; cv.height = h; cv.getContext("2d").drawImage(bmp, 0, 0, w, h);
     return new Promise((ok, no) => cv.toBlob((b) => (b ? ok(b) : no(new Error("photo"))), "image/jpeg", 0.85));
   }
-  function achForm(a, from) {
+  function achForm(a, from, preEvent) {
     const sh = $("sheet"), isNew = !a;
     const f = a ? { ...a } : { kind: "league", title: "", body: "", on: new Date().toISOString().slice(0, 10), place: "", image: null, visibility: mine?.is_public ? "public" : "friends", announce: true, rph_id: null, rph_name: "", rph_store: "" };
     let marks = null, evOpen = false, evMsg = "";   // the Play Hub events you marked in Eventos (supabase/event_marks.sql)
@@ -862,6 +872,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     };
     draw(); sh.showModal(); setTimeout(() => $("aTitle")?.focus(), 30);
     sh.addEventListener("close", () => from?.focus?.(), { once: true });
+    if (preEvent) pickEvent(preEvent);
   }
   const base = () => location.href.replace(/[?#].*$/, "").replace(/[^/]*$/, "");
   const profileUrl = (h) => `${base()}?u=${encodeURIComponent(h)}`;
@@ -1051,7 +1062,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     $("fCity").oninput = (ev) => { set("city", ev.target.value.slice(0, 40), false); live(); };
     $("fMotto").oninput = (ev) => { set("motto", ev.target.value.slice(0, 60), false); live(); };
     wireRecados();
-    drawNotices(); drawMyAchievements();
+    drawNotices(); drawMyAchievements().then(openAchFromEvent);
     $("dataDl").onclick = async (ev) => {
       const b = ev.currentTarget; b.setAttribute("aria-busy", "true"); b.disabled = true;
       try {

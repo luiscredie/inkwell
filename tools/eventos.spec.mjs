@@ -13,7 +13,7 @@ const EVENTS = [
   { id: 103, name: 'Draft de sábado', start: at(6, 15), format: 'Sealed', cost_cents: 9000, currency: 'BRL', capacity: 8, registered: 2, address: 'Rua C, 3', km: 80, store: { name: 'Loja C' }, url: 'https://tcg.ravensburgerplay.com/events/103' },
 ];
 
-async function setup(page, { signedIn = true, where = true } = {}) {
+async function setup(page, { signedIn = true, where = true, extraMarks = [] } = {}) {
   const calls = [];
   await page.addInitScript(([me, signed, w]) => {
     localStorage.setItem('inkwell-lang', 'pt');
@@ -39,7 +39,7 @@ async function setup(page, { signedIn = true, where = true } = {}) {
     const body = req.postData() ? JSON.parse(req.postData()) : null;
     calls.push({ path, body });
     const json = (v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
-    if (path === 'rpc/my_event_marks') return json([{ rph_id: 102, status: 'going', registered: true, paid: false, snap: { name: 'Set Championship', start: EVENTS[1].start } }]);
+    if (path === 'rpc/my_event_marks') return json([{ rph_id: 102, status: 'going', registered: true, paid: false, snap: { name: 'Set Championship', start: EVENTS[1].start } }, ...extraMarks]);
     if (path === 'rpc/friends_on_events') return json({ 101: [{ name: 'Rodrigo', status: 'going' }] });
     if (path === 'rpc/my_events') return json([{ id: 'e1', title: 'Liga de quinta', starts_at: at(4, 19), place: 'Loja do Zé', capacity: 8, community: 'Loja do Zé', slug: 'loja-do-ze', going: 3, me: null }]);
     if (path === 'rpc/mark_event' || path === 'rpc/rsvp_event') return route.fulfill({ status: 200, contentType: 'application/json', body: 'null' });
@@ -242,4 +242,23 @@ test('a community table linked to a Play Hub event shows as one; Vou answers bot
   await ev.locator('[data-act="going"]').click();
   await expect.poll(() => calls.filter((c) => c.path === 'rpc/rsvp_event').map((c) => c.body)[0]).toEqual({ p_event: 'e9', p_status: 'going' });
   await expect(ev.locator('[data-testid="linked"]')).toContainText('4 vão');
+});
+
+test('past events: out of the list, under "Eventos passados"; Fui leads to the results and to Registrar conquista', async ({ page }) => {
+  const calls = await setup(page, { extraMarks: [{ rph_id: 90, status: 'going', registered: true, paid: true, snap: { name: 'Set Championship - Winterspell', start: at(-2, 19), store: 'Tuzzy', url: 'https://tcg.ravensburgerplay.com/events/90' } }] });
+  await page.goto(url('eventos/'));
+  await expect(page.locator('.ev[data-ev]')).toHaveCount(4);   // the past one is not in the list
+  const past = page.locator('[data-testid="past-events"] [data-testid="past-event"]');
+  await expect(past).toHaveCount(1);
+  await expect(past).toContainText('Set Championship - Winterspell');
+  await expect(past).toContainText('Você foi?');
+  await expect(past.locator('[data-testid="past-results"]')).toHaveCount(0);
+  await past.locator('[data-pact="went"]').click();
+  await expect(past.locator('[data-pact="went"]')).toHaveAttribute('aria-pressed', 'true');
+  expect(calls.filter((c) => c.path === 'rpc/mark_event').at(-1).body).toMatchObject({ p_rph_id: 90, p_status: 'went' });
+  await expect(past.locator('[data-testid="past-results"]')).toHaveAttribute('href', 'https://tcg.ravensburgerplay.com/events/90');
+  await expect(past.locator('[data-testid="past-achievement"]')).toHaveAttribute('href', '../perfil/?editar=1&conquista=90');
+  await past.locator('[data-pact="missed"]').click();
+  await expect.poll(() => calls.filter((c) => c.path === 'rpc/mark_event').at(-1).body.p_status).toBe('missed');
+  await expect(past.locator('[data-testid="past-results"]')).toHaveCount(0);
 });
