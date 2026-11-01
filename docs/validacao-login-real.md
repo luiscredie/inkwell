@@ -29,8 +29,10 @@ Antes de começar, anote em **Supabase → Authentication → Sign In / Provider
 1. Saia. Janela anônima → **Criar meu perfil** → preencha nome, tintas e uma carta → **Criar conta e salvar** → e-mail.
 2. No e-mail, **toque no link** ("Ou toque aqui para entrar") em vez de usar o código. Abre outra aba em /entrar/.
 3. Na aba nova: aperte **Entrar no Inkwell**. Esperado: ela volta para "Criar meu perfil" e diz
-   "Volte para a aba onde você começou para salvar suas alterações" (o rascunho do perfil fica só na aba original).
+   "Volte para a aba onde você começou para salvar suas alterações" — a aba original salva (só uma salva).
 4. Volte à aba original. Esperado: ela recarrega sozinha, já com conta, e salva o perfil (perfil começa **privado**).
+5. Repita, mas **feche a aba original** antes de tocar no link. Esperado: a aba nova salva o perfil
+   (o rascunho fica neste navegador por 1 dia).
 
 ## C2. Deck com o link em outra aba
 1. Repita A até o passo 3 e, no e-mail, use o **link** em vez do código.

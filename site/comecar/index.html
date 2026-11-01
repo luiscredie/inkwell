@@ -227,8 +227,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   // Texts: handoff spec/03-textos.md (English keys, Portuguese in PT)
   const PT = {
     "Guest mode": "Modo visitante", "Unsaved changes": "Alterações ainda não salvas", "Create an account to save your profile and continue later.": "Crie sua conta para salvar seu perfil e continuar depois.",
-    "Create account and save": "Criar conta e salvar", "Without an account, your changes stay in this session and may be lost when you close the tab.": "Sem uma conta, suas alterações ficam nesta sessão e podem se perder ao fechar a aba.",
-    "We could not keep a draft in this tab. Reloading or leaving may erase your changes.": "Não conseguimos guardar o rascunho nesta aba. Recarregar ou sair pode apagar suas alterações.",
+    "Create account and save": "Criar conta e salvar", "Without an account, your changes stay in this browser for a day. Create the account to keep them.": "Sem conta, suas alterações ficam neste navegador por um dia. Crie a conta para guardar de vez.",
+    "We could not keep a draft in this browser. Reloading or leaving may erase your changes.": "Não conseguimos guardar o rascunho neste navegador. Recarregar ou sair pode apagar suas alterações.",
     "Leave without saving?": "Sair sem salvar?", "If you leave without saving, you may lose your changes.": "Se sair sem salvar, você poderá perder as alterações que fez.",
     "Keep editing": "Continuar editando", "Leave without saving": "Sair sem salvar",
     "Choose your favourite cards": "Escolha suas cartas favoritas", "Search by name or character": "Buscar por nome ou personagem", "Full catalogue": "Todo o catálogo",
@@ -297,15 +297,17 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       ${foil ? `<span class="iw-foil">${Tx("Foil")}</span>` : ""}</span>`;
   };
 
-  // ---------- draft (spec/02: sessionStorage, versioned, never tokens; one key, never the rest of storage) ----------
-  const DRAFT_KEY = "inkwell-guest-draft-v1", INTENT_KEY = "inkwell-guest-intent-v1";
+  // ---------- draft (versioned, never tokens; one key, never the rest of storage) ----------
+  // It stays in this browser for a day (localStorage, like the deck tried in Decks), so the e-mail link opened in
+  // another tab — or a phone tab the system closed — still finds it. Was sessionStorage (spec/02) until 01/11/2026.
+  const DRAFT_KEY = "inkwell-guest-draft-v1", INTENT_KEY = "inkwell-guest-intent-v1", DRAFT_TTL = 864e5;
   const blank = () => ({ schemaVersion: 1, draftId: (crypto.randomUUID?.() || String(Date.now()) + Math.random().toString(16).slice(2)), updatedAt: new Date().toISOString(), rev: 0,
     displayName: "", preferredInks: [], favorites: [] });
   let storageOk = true, memory = null, draftProblem = null;
   const ss = {
-    get(k) { try { return sessionStorage.getItem(k); } catch { storageOk = false; return k === DRAFT_KEY ? memory : null; } },
-    set(k, v) { try { sessionStorage.setItem(k, v); } catch { storageOk = false; if (k === DRAFT_KEY) memory = v; } },
-    del(k) { try { sessionStorage.removeItem(k); } catch { if (k === DRAFT_KEY) memory = null; } },
+    get(k) { try { return localStorage.getItem(k); } catch { storageOk = false; return k === DRAFT_KEY ? memory : null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch { storageOk = false; if (k === DRAFT_KEY) memory = v; } },
+    del(k) { try { localStorage.removeItem(k); } catch { if (k === DRAFT_KEY) memory = null; } },
   };
   // Read a draft and keep only what validates; anything broken is reported, never thrown.
   function readDraft() {
@@ -313,6 +315,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     if (!raw) return null;
     let x; try { x = JSON.parse(raw); } catch { draftProblem = "invalid"; return blank(); }
     if (!x || typeof x !== "object") { draftProblem = "invalid"; return blank(); }
+    if (Date.now() - Date.parse(x.updatedAt || 0) > DRAFT_TTL) { ss.del(DRAFT_KEY); return null; }   // older than a day: gone
     const d = blank();
     if (x.schemaVersion !== 1) draftProblem = "invalid";
     if (typeof x.draftId === "string" && x.draftId.length <= 80) d.draftId = x.draftId;
@@ -345,7 +348,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     if (isDirty()) ss.set(DRAFT_KEY, JSON.stringify(draft)); else ss.del(DRAFT_KEY);   // back to the start = nothing to keep
   }
   // probe storage once, so the warning shows before any work is lost
-  try { sessionStorage.setItem("inkwell-guest-probe", "1"); sessionStorage.removeItem("inkwell-guest-probe"); } catch { storageOk = false; }
+  try { localStorage.setItem("inkwell-guest-probe", "1"); localStorage.removeItem("inkwell-guest-probe"); } catch { storageOk = false; }
 
   // ---------- session ----------
   const me = () => CLOUD?.user() || null;
@@ -358,14 +361,15 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const bc = "BroadcastChannel" in window ? new BroadcastChannel("inkwell-guest") : null;
   bc?.addEventListener("message", (e) => { if (e.data?.type === "ping" && isDirty()) bc.postMessage({ type: "here" }); });
   // the original tab: the session arrives through shared storage when the link is opened elsewhere
-  window.addEventListener("storage", (e) => { if (e.key === "inkwell-counter-auth" && e.newValue && intent() && status === "authenticating") location.reload(); });
-  window.addEventListener("focus", () => { if (status === "authenticating" && signedIn()) location.reload(); });
+  let linkWait = false;   // this tab came from the e-mail link and is asking whether the original tab is still there
+  window.addEventListener("storage", (e) => { if (!linkWait && e.key === "inkwell-counter-auth" && e.newValue && intent() && status === "authenticating") location.reload(); });
+  window.addEventListener("focus", () => { if (!linkWait && status === "authenticating" && signedIn()) location.reload(); });
 
   // ---------- leaving ----------
   let leavingInside = false;
   document.addEventListener("click", (e) => { const a = e.target.closest("a[href]"); if (a && a.origin === location.origin) leavingInside = true; }, true);
-  // Same-tab navigation keeps the draft (sessionStorage), so it never asks. Closing the tab may lose it: the browser decides how to warn.
-  window.addEventListener("beforeunload", (e) => { if (isDirty() && !leavingInside && status !== "saved") { e.preventDefault(); e.returnValue = ""; } setTimeout(() => { leavingInside = false; }, 0); });
+  // The draft stays in the browser for a day, so leaving never asks — unless the browser refused to keep it.
+  window.addEventListener("beforeunload", (e) => { if (!storageOk && isDirty() && !leavingInside && status !== "saved") { e.preventDefault(); e.returnValue = ""; } setTimeout(() => { leavingInside = false; }, 0); });
 
   // ---------- rendering ----------
   const app = $("app");
@@ -397,7 +401,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   }
   function notices() {
     const out = [];
-    if (!storageOk) out.push(`<div class="cm-notice err" role="alert" data-testid="storage-error">${Tx("We could not keep a draft in this tab. Reloading or leaving may erase your changes.")}</div>`);
+    if (!storageOk) out.push(`<div class="cm-notice err" role="alert" data-testid="storage-error">${Tx("We could not keep a draft in this browser. Reloading or leaving may erase your changes.")}</div>`);
     if (draftProblem === "invalid") out.push(`<div class="cm-notice err" role="alert" data-testid="draft-invalid"><span>${Tx("We could not open this draft. You can start again.")}</span><div class="row"><button type="button" class="iw-button small" id="restart">${Tx("Start again")}</button></div></div>`);
     if (signedIn() && status === "edit") out.push(`<div class="cm-notice"><span>${Tx("You have an account. Your full profile is in My Inkwell.")}</span><div class="row"><a class="iw-button small" href="../perfil/">${Tx("Open My Inkwell")}</a></div></div>`);
     return out.join("");
@@ -453,7 +457,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
             return `<button type="button" class="iw-button iw-ink-option" data-ink="${i}" aria-pressed="${on}">${on ? '<span class="ck" aria-hidden="true">✓</span>' : ""}<i style="background:${INK_HEX[i]}" aria-hidden="true"></i>${esc(inkName(i))}</button>`; }).join("")}</div>
             ${inkMsg ? `<p class="err" role="alert" data-testid="ink-max">${esc(inkMsg)}</p>` : ""}</fieldset>
           <p class="iw-muted small cm-cards-hint" style="margin:0">${Tx("Your three favourite cards are chosen in the profile preview — any card from the catalogue, even without a copy in a collection.")}</p>
-          <p class="iw-muted small" style="margin:0">${Tx("Without an account, your changes stay in this session and may be lost when you close the tab.")}</p>
+          <p class="iw-muted small" style="margin:0">${Tx("Without an account, your changes stay in this browser for a day. Create the account to keep them.")}</p>
           ${isDirty() && !locked() ? `<div class="cm-discard"><button type="button" class="iw-link" id="discard">${Tx("Discard the draft")}</button></div>` : ""}
         </form>
         <aside class="cm-side">${preview()}</aside>
@@ -693,6 +697,19 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     let answered = false;
     bc?.addEventListener("message", (e) => { if (e.data?.type === "here" && !answered) { answered = true; status = "otherTab"; render(); } });
     bc?.postMessage({ type: "ping" });
+  } else if (fromLink && signedIn() && hadDraft) {
+    // opened by the e-mail link, and the draft is in this browser: the tab where it started saves it if it is still
+    // open (it reloads when the session arrives); if it isn't (closed, or the phone put it to sleep), this tab saves
+    status = "authenticating"; linkWait = true;
+    let answered = false;
+    bc?.addEventListener("message", (e) => { if (e.data?.type === "here" && !answered) { answered = true; linkWait = false; status = "otherTab"; render(); } });
+    bc?.postMessage({ type: "ping" });
+    setTimeout(() => {
+      if (answered || status !== "authenticating") return;
+      linkWait = false;
+      if (!ss.get(DRAFT_KEY)) { status = "otherTab"; render(); return; }   // the original tab saved it meanwhile
+      if (intent()) runSave(); else { status = "edit"; render(); }   // no save was asked: just keep editing here
+    }, 900);
   } else if (signedIn() && hadDraft && intent()) {
     render(); runSave();
   }
@@ -794,7 +811,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     menu.querySelector("[data-invite]")?.addEventListener("click", (e) => window.INKWELL_INVITE(e.currentTarget));
     menu.querySelector("[data-feedback]")?.addEventListener("click", () => window.INKWELL_FEEDBACK?.());
     menu.querySelector("[data-signout]")?.addEventListener("click", () => {
-      try { sessionStorage.removeItem("inkwell-guest-intent-v1"); } catch { /* */ }   // signing out cancels a pending "save after sign-in"; the draft stays
+      try { localStorage.removeItem("inkwell-guest-intent-v1"); } catch { /* */ }   // signing out cancels a pending "save after sign-in"; the draft stays
       CLOUD?.signOut(); location.reload();
     });
   }
@@ -1062,8 +1079,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   if ((window.INKWELL_FLAGS || {}).guestProfile && page !== "start") {
     const main = document.querySelector("main");
     const note = (html, id) => { if (!main || document.getElementById(id)) return; const d = document.createElement("div"); d.id = id; d.className = "notice"; d.setAttribute("role", "status"); d.innerHTML = html; main.prepend(d); };
-    let draft = null; try { draft = JSON.parse(sessionStorage.getItem("inkwell-guest-draft-v1") || "null"); } catch { /* */ }
-    // the draft lives in this tab: other pages remind, never ask
+    let draft = null; try { draft = JSON.parse(localStorage.getItem("inkwell-guest-draft-v1") || "null"); } catch { /* */ }
+    if (draft && Date.now() - Date.parse(draft.updatedAt || 0) > 864e5) draft = null;   // kept for a day (comecar)
+    // the draft lives in this browser for a day: other pages remind, never ask
     if (draft && typeof draft === "object") note(`<span>${T("Seu Inkwell ainda não foi salvo.", "Your Inkwell isn't saved yet.")}</span> <a href="../comecar/">${T("Continuar", "Continue")}</a>`, "iwDraftNote");
     // opened by the e-mail link: if the tab with the draft is still open, send the person back there
     if (window.INKWELL_FROM_LINK && "BroadcastChannel" in window) {

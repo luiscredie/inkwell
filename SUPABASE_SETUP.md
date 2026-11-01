@@ -37,7 +37,7 @@ The Lore Counter works with no internet and sends each finished match to
    screen doesn't share Safari's sign-in, so the counter signs in by typing
    this code instead of tapping the link.
 3. **Authentication → URL Configuration → Redirect URLs**: add
-   `https://luiscredie.github.io/inkwell/counter/`.
+   `https://inkwell.com.br/counter/` (and keep the old github.io one while links to it are still around).
 
 The counter is built from the Inkwell 2 repo
 (`apps/lorecounter/build_pwa.py --config site/sync-config.json --out site/counter`).
@@ -50,7 +50,7 @@ with comments and coach access. One-time setup:
 
 1. **SQL Editor**: run `supabase/coach_review.sql`, then `supabase/game_logs_summary.sql`, after `game_logs.sql`.
 2. **Authentication → URL Configuration → Redirect URLs**: add
-   `https://luiscredie.github.io/inkwell/coach/` (or `https://luiscredie.github.io/inkwell/**`).
+   `https://inkwell.com.br/**` (the site's domain since 01/11/2026).
 3. A coach signs in with their own email. With Supabase's built-in email
    (no custom SMTP), sign-in emails only go to members of your Supabase
    organization: invite the coach there, or set up custom SMTP (e.g. Resend).
@@ -90,8 +90,8 @@ Run `supabase/loans_trades.sql`. The page records cards lent and borrowed (with
 due dates and returns) and trades (what was given and received, plus any money),
 valued at the site's Liga Lorcana prices. It reads the collection from
 `inkwell_profiles` to show how many copies are free after loans; it doesn't
-change the collection. Add `https://luiscredie.github.io/inkwell/trades/` to the
-Redirect URLs (or use `https://luiscredie.github.io/inkwell/**`).
+change the collection. Add `https://inkwell.com.br/**` to the
+Redirect URLs.
 
 ## Home feed and friends (`/feed/`)
 
@@ -99,8 +99,8 @@ Run `supabase/friends.sql`. Players find each other by display name, ask and
 accept friendships, and choose who sees their new games (only me, friends,
 everyone), optionally applying it to older games. The feed shows the player's
 and their friends' shared games, newest first, with comments. Friends never see
-opponents' names. Add `https://luiscredie.github.io/inkwell/feed/` to the
-Redirect URLs (or `https://luiscredie.github.io/inkwell/**`).
+opponents' names. Add `https://inkwell.com.br/**` to the
+Redirect URLs.
 
 ## Who sees a game: coaches, friend groups and coach groups
 
@@ -148,7 +148,7 @@ and, with it, the code from the same e-mail. To fix that, in **Authentication �
 ```html
 <h2>Entrar no Inkwell</h2>
 <p>Seu código: <b>{{ .Token }}</b></p>
-<p><a href="https://luiscredie.github.io/inkwell/entrar/?h={{ .TokenHash }}">Ou toque aqui para entrar</a></p>
+<p><a href="https://inkwell.com.br/entrar/?h={{ .TokenHash }}">Ou toque aqui para entrar</a></p>
 ```
 
 `/entrar/` signs in only when the person presses its button, so a scanner that opens the link uses nothing.
