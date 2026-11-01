@@ -11,7 +11,11 @@
 <meta name="theme-color" content="#0b192c">
 <link rel="icon" href="../ink/icon-192.png">
 <link rel="apple-touch-icon" href="../ink/icon-192.png">
-<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}.pach { margin: var(--sp-2) 0; border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--line); background: var(--surface-1); }
+.pach:empty { display: none; }
+.pach-img { display: block; width: 100%; max-height: 460px; object-fit: cover; }
+.pach-t { display: grid; gap: 4px; padding: var(--sp-3); } .pach-t .tag { justify-self: start; } .pach-t .tag .ic { width: 14px; height: 14px; margin-right: 4px; }
+</style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="../ui/tokens.css"><link rel="stylesheet" href="../ui/iw-public.css"><script>try{document.documentElement.dataset.theme=localStorage.getItem("inkwell-theme")==="noite"?"noite":"dia"}catch(e){document.documentElement.dataset.theme="dia"}</script>
 </head>
 <body>
@@ -121,6 +125,21 @@ window.INKWELL_CLOUD = (() => {
     return api(q);
   }
 
+  // Storage (supabase/achievements.sql): upload one file to a private bucket, signed links to see files, remove files.
+  async function storage(path, { method = "POST", body, type = "application/json" } = {}) {
+    const tok = await token();
+    const r = await fetch(`${cfg.url}/storage/v1/${path}`, { method, headers: { ...headers(tok), "Content-Type": type }, body: type === "application/json" && body !== undefined ? JSON.stringify(body) : body });
+    if (!r.ok) { let why = ""; try { why = String((await r.json())?.message || "").slice(0, 200); } catch { /* */ } throw Object.assign(new Error(`storage ${r.status}${why ? `: ${why}` : ""}`), { status: r.status, why }); }
+    const t = await r.text(); return t ? JSON.parse(t) : null;
+  }
+  const upload = (bucket, name, blob) => storage(`object/${bucket}/${name.split("/").map(encodeURIComponent).join("/")}`, { body: blob, type: blob.type || "application/octet-stream" });
+  async function signed(bucket, names, seconds = 3600) {
+    if (!names.length) return {};
+    const r = await storage(`object/sign/${bucket}`, { body: { expiresIn: seconds, paths: names } }).catch(() => []);
+    const out = {}; for (const x of r || []) if (x?.signedURL && !x.error) out[x.path] = `${cfg.url}/storage/v1${x.signedURL}`; return out;
+  }
+  const removeFiles = (bucket, names) => (names.length ? storage(`object/${bucket}`, { method: "DELETE", body: { prefixes: names } }) : Promise.resolve(null));
+
   // an Edge Function by GET (signed in or not: the publishable key is enough for public ones)
   async function fn(name, params = {}) {
     const tok = sess ? await token().catch(() => null) : null;
@@ -130,7 +149,7 @@ window.INKWELL_CLOUD = (() => {
   }
 
   return {
-    api, collections, fn,
+    api, collections, fn, upload, signed, removeFiles,
     user: () => { sess = load(); return sess ? { id: sess.user?.id, email: sess.user?.email } : null; },
     status: () => { sess = load(); return sess ? { signedIn: true, email: sess.user?.email || "" } : { signedIn: false }; },
     async requestCode(email) {
@@ -562,7 +581,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Create your account to save": "Crie a conta para salvar", "A code by e-mail, no password. What you did stays.": "Um código por e-mail, sem senha. O que você fez continua lá.", "Your profile, saved": "Seu perfil, salvo", "Sign in with your e-mail": "Entre com seu e-mail", "A code by e-mail, no password.": "Um código por e-mail, sem senha.",
     "Make your profile": "Monte seu perfil", "Private until you decide to make it public.": "Privado até você decidir deixar público.", "Invite your friends": "Convide seus amigos",
     "Whoever signs in through your link gets your friend request.": "Quem entrar pelo seu link recebe seu pedido de amizade.", "Terms and privacy": "Termos e privacidade", "Fan project, free, not affiliated with Disney or Ravensburger.": "Projeto de fã, gratuito, sem vínculo com a Disney ou a Ravensburger.",
-    "For you": "Para você", "Invite friends to Inkwell": "Convidar amigos para o Inkwell", "Whoever signs up through your link becomes your friend.": "Quem se cadastrar pelo seu link já vira seu amigo.", "Invite friends": "Convidar amigos", "Your account and its data were deleted.": "Sua conta e os dados dela foram excluídos.", "My communities": "Minhas comunidades", "{name} wants to be your friend": "{name} quer ser seu amigo", "{n} friend requests": "{n} pedidos de amizade",
+    "For you": "Para você", "Set Championship": "Set Championship", "League": "Liga / liguinha", "Store tournament": "Torneio da loja", "Top 8": "Top 8", "Achievement": "Conquista", "Invite friends to Inkwell": "Convidar amigos para o Inkwell", "Whoever signs up through your link becomes your friend.": "Quem se cadastrar pelo seu link já vira seu amigo.", "Invite friends": "Convidar amigos", "Your account and its data were deleted.": "Sua conta e os dados dela foram excluídos.", "My communities": "Minhas comunidades", "{name} wants to be your friend": "{name} quer ser seu amigo", "{n} friend requests": "{n} pedidos de amizade",
     "Answer in Friends": "Responda em Amigos", "A recado is waiting for you": "Um recado esperando você", "{n} recados are waiting for you": "{n} recados esperando você",
     "Approve it to show on your profile": "Aprove para aparecer no seu perfil", "Set up My Inkwell": "Monte seu Meu Inkwell", "Your cards, your deck, your friends. Private until you say so.": "Suas cartas, seu deck, seus amigos. Privado até você decidir.",
     "Find your people": "Encontre sua turma", "Join your store's or your city's community.": "Entre na comunidade da sua loja ou da sua cidade.", "left you a recado": "deixou um recado",
@@ -825,11 +844,26 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const combo = !!p.combo;
     return `${combo ? `<span class="tag info combo-tag" data-testid="combo-tag">${Tx("Combo")}</span>` : ""}<div class="pcards n${list.length}${combo ? " combo" : ""}" data-testid="post-cards">${list.map(one).join(combo ? `<span class="plus" aria-hidden="true">+</span>` : "")}</div>`;
   }
+  // a post that announces an achievement (supabase/achievements.sql): the photo and the details, loaded after the posts
+  const ACH = new Map();
+  const ACH_KIND = { set_championship: "Set Championship", league: "League", store: "Store tournament", top8: "Top 8", other: "Achievement" };
+  const achHtml = (a) => (!a ? "" : `${a.url ? `<img class="pach-img" src="${esc(a.url)}" alt="${esc(a.title)}" loading="lazy">` : ""}
+    <div class="pach-t"><span class="tag accent"><i class="ic i-sparkle"></i>${esc(Tx(ACH_KIND[a.kind] || "Achievement"))}</span><span class="small muted">${esc([a.on ? new Date(a.on + "T12:00:00").toLocaleDateString(LOC, { day: "numeric", month: "short", year: "numeric" }) : "", a.place].filter(Boolean).join(" · "))}</span>
+      ${a.body ? `<p class="small" style="margin:4px 0 0">${esc(a.body)}</p>` : ""}</div>`);
+  async function loadAchievements() {
+    const ids = [...new Set(sposts.map((p) => p.achievement).filter((id) => id && !ACH.has(id)))];
+    if (!ids.length) return;
+    const list = await CLOUD.api("rpc/achievements_by_ids", { method: "POST", body: { p_ids: ids } }).catch(() => []);
+    const urls = await CLOUD.signed("achievements", (list || []).map((a) => a.image).filter(Boolean)).catch(() => ({}));
+    for (const a of list || []) ACH.set(a.id, { ...a, url: urls[a.image] || null });
+    for (const el of document.querySelectorAll("[data-pach]")) if (ACH.has(el.dataset.pach)) el.innerHTML = achHtml(ACH.get(el.dataset.pach));
+  }
   function spostHtml(p) {
     return `<article class="card spost" id="post-${esc(p.id)}" data-spost="${esc(p.id)}" data-testid="spost">
       <div class="who">${pav(p)}<div style="min-width:0"><b>${who(p)}</b><div class="small muted">${esc(ago(p.at))} · ${Tx(p.visibility === "public" ? "All members" : "Friends only")}</div></div>
         ${p.mine ? `<button type="button" class="btn ghost small" data-pdel="${esc(p.id)}">${Tx("Delete")}</button>` : ""}</div>
       ${p.body ? `<p class="body" data-ptext="${esc(p.id)}"></p>` : ""}
+      ${p.achievement ? `<div class="pach" data-pach="${esc(p.achievement)}" data-testid="post-achievement">${achHtml(ACH.get(p.achievement))}</div>` : ""}
       ${pcardsHtml(p)}
       ${deckHtml(p.deck)}
       <div class="acts"><button type="button" class="btn ghost small" data-like="${esc(p.id)}" aria-pressed="${!!p.liked}">◆ ${Tx("Like")}${p.likes ? ` · ${p.likes}` : ""}</button>
@@ -976,6 +1010,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       : `<div class="empty"><img src="../ui/assets/empty/feed.svg" alt=""><b>${Tx("Your timeline is empty")}</b><p>${Tx("Add friends to see their games here. Your games also show up for whoever you choose.")}</p>
           <button type="button" class="btn primary" id="addFriends"><i class="ic i-user-plus"></i>${Tx("Add friends")}</button></div>`;
     $("addFriends")?.addEventListener("click", () => { if (phone()) $("openFriends").click(); else $("findPeople")?.focus(); });
+    loadAchievements();
     const byId = new Map([...notes.values()].flat().map((n) => [n.id, n]));
     el.querySelectorAll("[data-body]").forEach((s) => { s.textContent = byId.get(s.dataset.body)?.body || ""; });   // other people's text: set as text
     el.querySelectorAll("[data-cmt]").forEach((b) => b.onclick = () => { const f = el.querySelector(`[data-form="${CSS.escape(b.dataset.cmt)}"]`); f.hidden = !f.hidden; f.querySelector("input").focus(); });

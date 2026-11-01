@@ -103,6 +103,21 @@ window.INKWELL_CLOUD = (() => {
     return api(q);
   }
 
+  // Storage (supabase/achievements.sql): upload one file to a private bucket, signed links to see files, remove files.
+  async function storage(path, { method = "POST", body, type = "application/json" } = {}) {
+    const tok = await token();
+    const r = await fetch(`${cfg.url}/storage/v1/${path}`, { method, headers: { ...headers(tok), "Content-Type": type }, body: type === "application/json" && body !== undefined ? JSON.stringify(body) : body });
+    if (!r.ok) { let why = ""; try { why = String((await r.json())?.message || "").slice(0, 200); } catch { /* */ } throw Object.assign(new Error(`storage ${r.status}${why ? `: ${why}` : ""}`), { status: r.status, why }); }
+    const t = await r.text(); return t ? JSON.parse(t) : null;
+  }
+  const upload = (bucket, name, blob) => storage(`object/${bucket}/${name.split("/").map(encodeURIComponent).join("/")}`, { body: blob, type: blob.type || "application/octet-stream" });
+  async function signed(bucket, names, seconds = 3600) {
+    if (!names.length) return {};
+    const r = await storage(`object/sign/${bucket}`, { body: { expiresIn: seconds, paths: names } }).catch(() => []);
+    const out = {}; for (const x of r || []) if (x?.signedURL && !x.error) out[x.path] = `${cfg.url}/storage/v1${x.signedURL}`; return out;
+  }
+  const removeFiles = (bucket, names) => (names.length ? storage(`object/${bucket}`, { method: "DELETE", body: { prefixes: names } }) : Promise.resolve(null));
+
   // an Edge Function by GET (signed in or not: the publishable key is enough for public ones)
   async function fn(name, params = {}) {
     const tok = sess ? await token().catch(() => null) : null;
@@ -112,7 +127,7 @@ window.INKWELL_CLOUD = (() => {
   }
 
   return {
-    api, collections, fn,
+    api, collections, fn, upload, signed, removeFiles,
     user: () => { sess = load(); return sess ? { id: sess.user?.id, email: sess.user?.email } : null; },
     status: () => { sess = load(); return sess ? { signedIn: true, email: sess.user?.email || "" } : { signedIn: false }; },
     async requestCode(email) {
