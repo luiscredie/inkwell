@@ -730,3 +730,15 @@ test('achievements: link the Play Hub event (one marked in Eventos, or a pasted 
   expect(saves[0]).toMatchObject({ rph_id: '777', rph_name: 'Set Championship', rph_store: 'Taverna', on: '2026-10-25', place: 'Loja do Zé' });
   await expect(page.locator('#myAchs [data-testid="ach-rph"]')).toHaveAttribute('href', 'https://tcg.ravensburgerplay.com/events/777');
 });
+
+test('Registrar conquista from a past event opens the form with that event', async ({ page }) => {
+  await setup(page, { mine: { display_name: 'Luís', handle: 'luis', is_public: true, adult: true } });
+  const json = (r, v) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+  await page.route('**/rest/v1/rpc/achievements_of', (r) => json(r, []));
+  await page.route('**/rest/v1/rpc/my_event_marks', (r) => json(r, [{ rph_id: 90, status: 'went', snap: { name: 'Set Championship - Winterspell', store: 'Tuzzy', start: '2026-10-30T22:00:00Z' } }]));
+  await page.goto(url('perfil/?editar=1&conquista=90'));
+  await expect(page.locator('[data-testid="ach-event"]')).toContainText('Set Championship - Winterspell');
+  await expect(page.locator('#aOn')).toHaveValue('2026-10-30');
+  await expect(page.locator('#aPlace')).toHaveValue('Tuzzy');
+  await expect(page).not.toHaveURL(/conquista=/);
+});

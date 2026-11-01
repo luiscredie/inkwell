@@ -8,7 +8,9 @@
 <meta name="theme-color" content="#0b192c">
 <link rel="icon" href="../ink/icon-192.png">
 <link rel="apple-touch-icon" href="../ink/icon-192.png">
-<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}.ev.past { opacity: .95; } .ev.past .time { color: var(--text-2); }
+.ev-past { margin-top: var(--sp-6); }
+</style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="../ui/tokens.css"><script>try{document.documentElement.dataset.theme=localStorage.getItem("inkwell-theme")==="noite"?"noite":"dia"}catch(e){document.documentElement.dataset.theme="dia"}</script>
 </head>
 <body>
@@ -86,7 +88,7 @@
   // ---------- state ----------
   const LOC_KEY = "inkwell-events-where";
   let where = null; try { where = JSON.parse(localStorage.getItem(LOC_KEY) || "null"); } catch { where = null; }
-  let km = where?.km || 100, view = "list", day = null, month = null, onlyMine = false, onlyFree = false, fmt = "", order = "date", horizon = 14;
+  let km = where?.km || 100, view = "list", day = null, month = null, onlyMine = false, onlyFree = false, fmt = "", order = "date", horizon = 14, pastN = 10;
   try { order = localStorage.getItem("inkwell-events-order") === "km" ? "km" : "date"; } catch { /* */ }
   let linked = {}, events = [], marks = new Map(), friends = {}, tables = [], loading = false, failed = false;
   // acct: the place kept in the account (event_places.sql), only after the person ticks the box.
@@ -158,8 +160,11 @@
   const markedOnly = () => [...marks.values()].filter((m) => !events.some((e) => String(e.id) === String(m.rph_id)) && m.snap?.start).map((m) => ({ ...m.snap, id: +m.rph_id, kind: "rph", key: "rph:" + m.rph_id, gone: true }));
   const statusOf = (e) => (e.kind === "table" ? e.me : marks.get(String(e.id))?.status) || null;
   const ownTables = () => tables.filter((t) => !(t.rph_id && (linked[t.rph_id] || events.some((e) => e.id === t.rph_id))));   // merged into the Play Hub event
+  // an event is past 6 hours after it starts (or when it ends); past ones leave the list for "Eventos passados"
+  const isPast = (e) => { const end = e.end ? Date.parse(e.end) : Date.parse(e.start) + 6 * 3600e3; return Number.isFinite(end) && end < Date.now(); };
+  const pastList = () => [...markedOnly(), ...ownTables().filter((t) => t.me)].filter(isPast).sort((a, b) => String(b.start).localeCompare(String(a.start)));
   function all() {
-    let list = [...events, ...markedOnly(), ...ownTables()];
+    let list = [...events, ...markedOnly(), ...ownTables()].filter((e) => !isPast(e));
     if (onlyMine) list = list.filter((e) => statusOf(e));
     if (onlyFree) list = list.filter((e) => e.kind === "table" || !e.cost_cents);
     if (fmt) list = list.filter((e) => e.format === fmt);
@@ -168,7 +173,7 @@
   // two or more "going" on the same day
   function conflicts() {
     const byDay = new Map();
-    for (const e of [...events, ...markedOnly(), ...ownTables()]) if (statusOf(e) === "going") { const k = dkey(e.start); byDay.set(k, (byDay.get(k) || []).concat(e)); }
+    for (const e of [...events, ...markedOnly(), ...ownTables()]) if (statusOf(e) === "going" && !isPast(e)) { const k = dkey(e.start); byDay.set(k, (byDay.get(k) || []).concat(e)); }
     return [...byDay.entries()].filter(([, l]) => l.length > 1);
   }
 
@@ -190,7 +195,7 @@
     try {
       await rpc("mark_event", { p_rph_id: e.id, p_status: next.status, p_registered: !!next.registered, p_paid: !!next.paid, p_snap: snap });
       if (next.status) marks.set(String(e.id), { ...next, rph_id: e.id, snap: e.gone ? cur.snap : snap }); else marks.delete(String(e.id));
-      if ("status" in patch) for (const t of tables.filter((x) => x.rph_id === e.id && x.me !== next.status)) {   // the same answer on its community table
+      if ("status" in patch && !["went", "missed"].includes(next.status) && !isPast(e)) for (const t of tables.filter((x) => x.rph_id === e.id && x.me !== next.status)) {   // the same answer on its community table
         try { await rpc("rsvp_event", { p_event: t.id, p_status: next.status }); t.me = next.status; const l = (linked[e.id] || []).find((x) => x.id === t.id); if (l) { l.me = next.status; l.going = (l.going || 0) + (next.status === "going" ? 1 : 0) - (cur.status === "going" ? 1 : 0); } } catch { /* full or not a member */ }
       }
       draw();
@@ -236,6 +241,23 @@
         <button type="button" class="btn small ghost" data-act="ics" title="${T("Adicionar ao calendário", "Add to calendar")}"><i class="ic i-calendar"></i>${T("Calendário", "Calendar")}</button>
         <button type="button" class="btn small ghost" data-act="share"><i class="ic i-send"></i>${T("Compartilhar", "Share")}</button></div></article>`;
   }
+  // a past event: did you go? "Fui" leads to the results on the Play Hub and to "Registrar conquista"
+  const rphUrl = (e) => e.url || `https://tcg.ravensburgerplay.com/events/${encodeURIComponent(e.id)}`;
+  function pastHtml(e) {
+    const st = statusOf(e), went = st === "went", missed = st === "missed";
+    const when = new Date(e.start).toLocaleString(LOC, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+    return `<article class="ev past${went ? " mine" : ""}" data-past="${esc(e.key)}" data-testid="past-event">
+      <div class="top"><span class="time">${esc(when)}</span><span class="name">${esc(e.name)}</span>${e.kind === "table" ? `<span class="tag info">${T("Mesa da comunidade", "Community table")}</span>` : ""}</div>
+      <div class="where1">${e.store?.name ? `<span class="store">${esc(e.store.name)}</span>` : ""}${e.format ? `<span class="muted">${esc(e.format)}</span>` : ""}</div>
+      ${e.kind === "rph" ? `<div class="acts">${!went && !missed ? `<span class="small muted" style="align-self:center">${T("Você foi?", "Did you go?")}</span>` : ""}
+        <button type="button" class="btn small ${went ? "primary" : ""}" data-pact="went" aria-pressed="${went}">${T("Fui", "I went")}</button>
+        <button type="button" class="btn small ghost" data-pact="missed" aria-pressed="${missed}">${T("Não fui", "Didn't go")}</button>
+        <span class="grow" style="flex:1"></span>
+        ${went ? `<a class="btn small ghost" href="${esc(rphUrl(e))}" target="_blank" rel="noopener" data-testid="past-results">${T("Ver resultados no Play Hub", "See results on the Play Hub")} <i class="ic i-external"></i></a>
+          <a class="btn small" href="../perfil/?editar=1&conquista=${encodeURIComponent(e.id)}" data-testid="past-achievement"><i class="ic i-sparkle"></i>${T("Registrar conquista", "Add an achievement")}</a>` : ""}
+        <button type="button" class="btn small ghost" data-pact="clear" aria-label="${esc(T("Tirar da lista", "Remove from the list"))}" title="${esc(T("Tirar da lista", "Remove from the list"))}"><i class="ic i-close"></i></button></div>`
+        : `<div class="acts"><a class="btn small ghost" href="../comunidades/?c=${encodeURIComponent(e.slug)}#mesas">${T("Comunidade", "Community")}</a></div>`}</article>`;
+  }
   function calHtml(list) {
     const now = new Date(), base = month || new Date(now.getFullYear(), now.getMonth(), 1);
     const first = new Date(base.getFullYear(), base.getMonth(), 1), start = new Date(first); start.setDate(1 - ((first.getDay() + 6) % 7));
@@ -279,6 +301,8 @@
         : shown.length ? [...groups.entries()].map(([k, l]) => `${(view === "cal" && day) || !k ? "" : `<h2 class="ev-day">${esc(dayTitle(k))}</h2>`}<div class="ev-list">${l.map((e) => evHtml(e, clashDays.has(dkey(e.start)) && statusOf(e) === "going")).join("")}</div>`).join("")
           + (view === "list" && hidden > 0 ? `<div class="ev-more"><button type="button" class="btn" id="more" data-testid="more">${esc(T(`Ver mais ${hidden} eventos (próximas semanas)`, `See ${hidden} more events (later weeks)`))}</button></div>` : "")
         : loading ? `<span class="skel" style="height:120px;border-radius:var(--r-lg)"></span>` : `<div class="empty plain"><b>${T("Nenhum evento encontrado.", "No events found.")}</b><p>${T("Aumente o raio ou tire os filtros.", "Widen the radius or clear the filters.")}</p></div>`)
+      + (view === "list" && me && pastList().length ? `<section class="ev-past" data-testid="past-events"><h2 class="ev-day">${T("Eventos passados", "Past events")}</h2><p class="small muted" style="margin:0 0 var(--sp-3)">${T("Os que você marcou. Diga se foi: dá para ver os resultados no Play Hub e registrar uma conquista.", "The ones you marked. Say if you went: you can see the results on the Play Hub and add an achievement.")}</p>
+          <div class="ev-list">${pastList().slice(0, pastN).map(pastHtml).join("")}</div>${pastList().length > pastN ? `<div class="ev-more"><button type="button" class="btn" id="morePast">${esc(T(`Ver mais ${pastList().length - pastN}`, `See ${pastList().length - pastN} more`))}</button></div>` : ""}</section>` : "")
       + `<p class="small faint" style="margin-top:var(--sp-6)">${T("Eventos do Disney Lorcana Play Network (Ravensburger). A inscrição e o pagamento são feitos no Play Hub; aqui você só marca para se organizar.", "Events from the Disney Lorcana Play Network (Ravensburger). Registration and payment happen on the Play Hub; here you only mark them to plan.")}</p>`;
     wire();
   }
@@ -300,6 +324,13 @@
     $("retry")?.addEventListener("click", load);
     $("keepPlace")?.addEventListener("change", (e) => keepPlace(e.target.checked));
     $("more")?.addEventListener("click", () => { horizon += 30; draw(); });
+    $("morePast")?.addEventListener("click", () => { pastN += 10; draw(); });
+    const pastBy = new Map(pastList().map((e) => [e.key, e]));
+    document.querySelectorAll("[data-past] [data-pact]").forEach((b) => b.onclick = () => {
+      const e = pastBy.get(b.closest("[data-past]").dataset.past); if (!e) return;
+      const a = b.dataset.pact, st = statusOf(e);
+      mark(e, { status: a === "clear" ? null : st === a ? null : a, registered: false, paid: false });
+    });
     $("order")?.addEventListener("change", (e) => { order = e.target.value; try { localStorage.setItem("inkwell-events-order", order); } catch { /* */ } draw(); });
     $("allDays")?.addEventListener("click", () => { day = null; draw(); });
     $("mPrev")?.addEventListener("click", () => { const b = month || new Date(new Date().getFullYear(), new Date().getMonth(), 1); month = new Date(b.getFullYear(), b.getMonth() - 1, 1); draw(); });
