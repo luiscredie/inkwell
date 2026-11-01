@@ -623,6 +623,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   let pendingTimer = null, pending = new Map();   // "id:kind" -> delta, sent after 600ms
   function openCard(id, from) {
     const c = BY.get(id), sh = $("cardSheet"); if (!c) return;
+    let undeckArmed = null;   // "Desmontar" asks twice
     let mv = null;   // {k, to, qty}: the "how many?" step before moving between Fichário and Casa
     let act = null;  // {kind: "loan" | "sale", ...}: Emprestar / Vender, drawn by actPanel() below
     const draw = () => {
@@ -642,7 +643,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       const stocks = `<div class="card inset stack stocks" style="gap:0;padding:var(--sp-2) var(--sp-3)" data-testid="stocks">
         <div class="stock-h"><i class="ic i-cards"></i>${Tx("Binder")} <span class="muted">${w.binder.n + w.binder.f}</span></div>${stockRows("binder")}
         <div class="stock-h"><i class="ic i-home"></i>${Tx("Home")} <span class="muted">${w.home.n + w.home.f}</span></div>${stockRows("home")}
-        ${deckedOf(id).decks.length ? `<div class="stock-h" data-testid="stock-decks"><i class="ic i-decks"></i>${esc(P("Em decks", "In decks"))} <span class="muted">${w.decks.n + w.decks.f}</span></div>${deckedOf(id).decks.map((x) => `<a class="row between stock-row" style="min-height:44px;text-decoration:none;color:inherit" href="../decks/?deck=${encodeURIComponent(x.id)}"><span>${esc(x.name || P("Deck", "Deck"))}</span><span class="small muted">${esc([x.n ? `${x.n} normal` : "", x.f ? `${x.f} foil` : ""].filter(Boolean).join(" · "))} ›</span></a>`).join("")}` : ""}
+        ${deckedOf(id).decks.length ? `<div class="stock-h" data-testid="stock-decks"><i class="ic i-decks"></i>${esc(P("Em decks", "In decks"))} <span class="muted">${w.decks.n + w.decks.f}</span></div>${deckedOf(id).decks.map((x) => `<div class="row between stock-row" style="min-height:44px;flex-wrap:nowrap;gap:var(--sp-2)"><a href="../decks/?deck=${encodeURIComponent(x.id)}" style="text-decoration:none;color:inherit;min-width:0"><span>${esc(x.name || P("Deck", "Deck"))}</span> <span class="small muted">${esc([x.n ? `${x.n} normal` : "", x.f ? `${x.f} foil` : ""].filter(Boolean).join(" · "))} ›</span></a>
+          ${readOnly() ? "" : `<button type="button" class="btn ghost small" data-undeck="${esc(x.id)}" data-testid="undeck">${esc(undeckArmed === x.id ? P("Toque de novo: o deck todo volta ao fichário", "Tap again: the whole deck goes back") : P("Desmontar", "Take apart"))}</button>`}</div>`).join("")}` : ""}
         ${tradeReady ? `<div class="stock-h" data-testid="stock-trade"><i class="ic i-trades"></i>${esc(P("Fichário de trocas", "Trade binder"))} <span class="muted">${w.trade.n + w.trade.f}</span></div>${stockRows("trade")}` : ""}
         ${w.lent.n + w.lent.f ? `<div class="stock-h"><i class="ic i-loan"></i>${Tx("Lent out")} <span class="muted">${w.lent.n + w.lent.f}</span></div>` : ""}</div>`;
       const moveBox = () => {
@@ -674,6 +676,17 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         <div class="sheet-foot"><a class="btn" href="../trades/?tab=board&q=${encodeURIComponent(a)}"><i class="ic i-board"></i>${Tx("Post on the board")}</a></div>`;
       sh.querySelectorAll("[data-close]").forEach((x) => x.onclick = () => sh.close());
       sh.querySelectorAll("[data-d]").forEach((x) => x.onclick = () => { const [k, d, place] = x.dataset.d.split(":"); change(id, k, +d, false, place || "binder"); draw(); sh.querySelector(`[data-d="${x.dataset.d}"]`)?.focus(); });
+      sh.querySelectorAll("[data-undeck]").forEach((x) => x.onclick = async () => {
+        const deck = x.dataset.undeck; if (undeckArmed !== deck) { undeckArmed = deck; draw(); return; }
+        undeckArmed = null; x.disabled = true;
+        const p = prof(), name = deckedOf(id).decks.find((y) => y.id === deck)?.name || "";
+        try {
+          await CLOUD.api("rpc/build_deck", { method: "POST", prefer: "return=minimal", body: { p_owner: p.shared ? p.owner : null, p_profile: p.shared ? p.pname : p.profile, p_deck: deck, p_name: name, p_items: [], p_from_home: [] } });
+          for (const [k, e] of [...DECKED]) { if (!k.startsWith(`${p.profile}|`)) continue; const rest = e.decks.filter((y) => y.id !== deck); if (rest.length === e.decks.length) continue;
+            if (!rest.length) DECKED.delete(k); else DECKED.set(k, { n: rest.reduce((t, y) => t + y.n, 0), f: rest.reduce((t, y) => t + y.f, 0), decks: rest }); }
+          toast(P(`${name || "Deck"}: as cartas voltaram para o fichário.`, `${name || "Deck"}: the cards are back in the binder.`)); draw();
+        } catch { toast(Tx("Couldn't save. Try again."), null, true); draw(); }
+      });
       sh.querySelectorAll("[data-mv]").forEach((x) => x.onclick = () => { const [k, to, fr] = x.dataset.mv.split(":"); mv = { k, to, from: fr || (to === "binder" ? "home" : "binder"), qty: 1, key: x.dataset.mv }; draw(); $("mvOk")?.focus(); });
       sh.querySelectorAll("[data-mq]").forEach((x) => x.onclick = () => {
         const max = where(id)[mv.from][mv.k];
