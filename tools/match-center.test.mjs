@@ -4,7 +4,7 @@
 //   node tools/match-center.test.mjs
 import { readFile } from 'node:fs/promises';
 
-const html = await readFile(new URL('../site/index.html', import.meta.url), 'utf8');
+const html = await readFile(new URL('../legacy/site/index.html', import.meta.url), 'utf8');
 let pass = 0, fail = 0;
 const ck = (n, c) => { c ? pass++ : fail++; console.log((c ? '✓ ' : '✗ ') + n); };
 

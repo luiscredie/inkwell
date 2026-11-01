@@ -5,9 +5,9 @@ import assert from 'node:assert/strict';
 
 const root = new URL('../', import.meta.url);
 const read = (p) => fs.readFileSync(new URL(p, root), 'utf8');
-const html = read('site/index.html');
-const sw = read('site/sw.js');
-const manifest = JSON.parse(read('site/manifest.webmanifest'));
+const html = read('legacy/site/index.html');
+const sw = read('legacy/site/sw.js');
+const manifest = JSON.parse(read('legacy/site/manifest.webmanifest'));
 
 let passed = 0;
 const check = (name, fn) => { fn(); passed++; console.log('✓', name); };

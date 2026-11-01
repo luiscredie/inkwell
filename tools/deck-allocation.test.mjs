@@ -3,7 +3,7 @@
 //   node tools/deck-allocation.test.mjs
 import { readFile } from 'node:fs/promises';
 
-const html = await readFile(new URL('../site/index.html', import.meta.url), 'utf8');
+const html = await readFile(new URL('../legacy/site/index.html', import.meta.url), 'utf8');
 const sIdx = html.indexOf('static computeDeckPortfolioPlan');
 const end = html.indexOf('\n  portfolioInventory()', sIdx);
 const body = html.slice(sIdx, end);

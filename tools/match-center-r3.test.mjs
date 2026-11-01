@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import assert from "node:assert/strict";
 
-const html=fs.readFileSync(new URL("../site/index.html",import.meta.url),"utf8");
-const engine=fs.readFileSync(new URL("../site/match-center-engine.js",import.meta.url),"utf8");
+const html=fs.readFileSync(new URL("../legacy/site/index.html",import.meta.url),"utf8");
+const engine=fs.readFileSync(new URL("../legacy/site/match-center-engine.js",import.meta.url),"utf8");
 
 const checks=[
   ["engine loaded", html.includes('<script src="./match-center-engine.js"></script>')],

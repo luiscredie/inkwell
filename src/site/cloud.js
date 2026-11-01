@@ -131,7 +131,7 @@ window.INKWELL_CLOUD = (() => {
     user: () => { sess = load(); return sess ? { id: sess.user?.id, email: sess.user?.email } : null; },
     status: () => { sess = load(); return sess ? { signedIn: true, email: sess.user?.email || "" } : { signedIn: false }; },
     async requestCode(email) {
-      const redirect = cfg.redirect || location.href.split("#")[0];
+      const redirect = cfg.redirect ? new URL(cfg.redirect, location.href).href : location.href.split("#")[0];
       // where to come back after the confirmation page (/entrar/), same site only
       try { localStorage.setItem("inkwell-return", JSON.stringify({ path: location.pathname + location.search, at: Date.now() })); } catch { /* private mode */ }
       const r = await fetch(`${cfg.url}/auth/v1/otp?redirect_to=${encodeURIComponent(redirect)}`, { method: "POST", headers: headers(), body: JSON.stringify({ email, create_user: true }) });

@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 
-const html = fs.readFileSync(new URL('../site/index.html', import.meta.url), 'utf8');
+const html = fs.readFileSync(new URL('../legacy/site/index.html', import.meta.url), 'utf8');
 let passed = 0;
 const check = (name, fn) => { fn(); passed++; console.log('✓', name); };
 

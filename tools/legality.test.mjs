@@ -2,7 +2,7 @@
 // Run: node tools/legality.test.mjs
 import { readFile } from 'node:fs/promises';
 
-const html = await readFile(new URL('../site/index.html', import.meta.url), 'utf8');
+const html = await readFile(new URL('../legacy/site/index.html', import.meta.url), 'utf8');
 const start = html.indexOf('class Component extends DCLogic');
 const end = html.indexOf('</script>', start);
 const Component = new Function(

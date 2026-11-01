@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
-const source = fs.readFileSync(path.join(__dirname, "..", "site", "match-center-engine.js"), "utf8");
+const source = fs.readFileSync(path.join(__dirname, "..", "legacy", "site", "match-center-engine.js"), "utf8");
 const context = {console, setTimeout, clearTimeout, globalThis:null};
 context.globalThis = context;
 vm.runInNewContext(source, context, {filename:"match-center-engine.js"});

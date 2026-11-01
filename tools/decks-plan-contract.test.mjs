@@ -1,7 +1,7 @@
 // The Decks page (/decks/) must run the very same deck-portfolio optimizer as the Inkwell app.
 //   node tools/decks-plan-contract.test.mjs      (rebuild with: python tools/build_site_decks.py)
 import { readFile } from 'node:fs/promises';
-const app = await readFile(new URL('../site/index.html', import.meta.url), 'utf8');
+const app = await readFile(new URL('../legacy/site/index.html', import.meta.url), 'utf8');
 const page = await readFile(new URL('../site/decks/index.html', import.meta.url), 'utf8');
 const start = app.indexOf('static computeDeckPortfolioPlan(');
 let depth = 0, end = app.indexOf('{', start);

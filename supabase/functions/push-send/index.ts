@@ -8,7 +8,8 @@ import webpush from "npm:web-push@3.6.7";
 
 const URL_ = Deno.env.get("SUPABASE_URL")!;
 const KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;   // these RPCs are granted to service_role only (hardening.sql)
-const SITE = "https://luiscredie.github.io/inkwell/";
+// the site address; set the SITE_URL secret when the domain changes
+const SITE = (Deno.env.get("SITE_URL") || "https://luiscredie.github.io/inkwell/").replace(/\/*$/, "/");
 const VAPID_PUBLIC = "BLvoLCTQgS3n-1MGGoQXBZ3OO50n_-mWuhLqRbWFVK38DvLNVEK3IOO_CCSMxDkq2AoRCiInC9R4mrEM23pWQdk";
 
 type Json = Record<string, any>;

@@ -3,7 +3,7 @@
 //   node tools/visual-contract.test.mjs
 import { readFile } from 'node:fs/promises';
 
-const html = await readFile(new URL('../site/index.html', import.meta.url), 'utf8');
+const html = await readFile(new URL('../legacy/site/index.html', import.meta.url), 'utf8');
 const mirror = await readFile(new URL('../Inkwell.dc.html', import.meta.url), 'utf8');
 
 let pass = 0, fail = 0;

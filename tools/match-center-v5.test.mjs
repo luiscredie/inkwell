@@ -2,7 +2,7 @@
 // Run: node tools/match-center-v5.test.mjs
 import fs from 'node:fs';
 
-const html=fs.readFileSync(new URL('../site/index.html',import.meta.url),'utf8');
+const html=fs.readFileSync(new URL('../legacy/site/index.html',import.meta.url),'utf8');
 const start=html.indexOf('  static computeMatchCenterInsights(');
 const end=html.indexOf('\n  matchConditionLabel(',start);
 if(start<0||end<0) throw new Error('computeMatchCenterInsights not found');
