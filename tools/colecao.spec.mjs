@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test';
 const BASE = new URL('colecao/', process.env.INKWELL_URL || 'http://localhost:8080/index.html').href;
 const ME = '11111111-1111-4111-8111-111111111111';
 
-async function setup(page, { collection = { 'LOR10-10': { n: 2, f: 0 } }, added = [], home = [], trade = [], failHome = false, fresh = false } = {}) {
+async function setup(page, { collection = { 'LOR10-10': { n: 2, f: 0 } }, added = [], home = [], trade = [], decked = null, failHome = false, fresh = false } = {}) {
   let created = false;
   const calls = [];
   await page.addInitScript((me) => {
@@ -25,6 +25,7 @@ async function setup(page, { collection = { 'LOR10-10': { n: 2, f: 0 } }, added 
     if (path === 'rpc/collection_change') return failHome ? route.fulfill({ status: 400, contentType: 'application/json', body: '{"message":"x"}' }) : route.fulfill({ status: 204, body: '' });
     if (path === 'rpc/apply_collection_delta') return route.fulfill({ status: 204, body: '' });
     if (path === 'collection_trade') return trade === null ? route.fulfill({ status: 404, contentType: 'application/json', body: '{}' }) : json(trade);
+    if (path === 'collection_decked') return decked === null ? route.fulfill({ status: 404, contentType: 'application/json', body: '{}' }) : json(decked);
     if (path === 'rpc/collection_move') return route.fulfill({ status: 204, body: '' });
     if (path === 'rpc/my_duels_sync') return json(null);
     return json([]);
@@ -646,4 +647,18 @@ test('export in the Liga Lorcana template: one line per finish, set code, card n
   expect(lines.some((l) => /^,[^,]*,LOR13,,Pocahontas & Meeko - Adventurous Friends,2,NM,EN,/.test(l))).toBe(true);
   expect(lines).toHaveLength(4);
   expect(await page.evaluate(() => localStorage.getItem('inkwell-export-format'))).toBe('liga');   // remembered
+});
+
+test('Decks place: copies set aside for built decks leave the binder, and the card says which deck', async ({ page }) => {
+  await setup(page, { collection: { 'LOR10-10': { n: 6, f: 0 } }, home: [{ profile: 'luiscredie', card_id: 'LOR10-10', n: 1, f: 0 }], trade: [],
+    decked: [{ profile: 'luiscredie', deck_id: 'd1', deck_name: 'Amber Steel', card_id: 'LOR10-10', n: 4, f: 0 }] });
+  await page.goto(BASE);
+  const places = page.locator('[data-testid="places"]');
+  await expect(places.locator('[data-place="decks"]')).toContainText('4');
+  await expect(places.locator('[data-place="binder"]')).toContainText('1');   // 6 − 1 home − 4 in the deck
+  await page.locator('[data-card="LOR10-10"]').click();
+  const deck = page.locator('[data-testid="stocks"] a[href="../decks/?deck=d1"]');
+  await expect(deck).toContainText('Amber Steel');
+  await expect(deck).toContainText('4 normal');
+  await expect(page.locator('[data-testid="stocks"] [data-n="binder-n"]')).toHaveText('1');
 });
