@@ -439,7 +439,7 @@ a.list-row:hover, button.list-row:hover { background: var(--surface-2); color: i
 .field .err::before { content: ""; width: 14px; height: 14px; flex: none; background: currentColor; -webkit-mask: url(assets/icons/alert.svg) center/contain no-repeat; mask: url(assets/icons/alert.svg) center/contain no-repeat; }
 fieldset.field { border: 0; padding: 0; margin: 0; }
 fieldset.field legend { padding: 0; margin-bottom: 6px; }
-input[type=text], input[type=email], input[type=password], input[type=search], input[type=date], input[type=number], input[type=tel], input:not([type]),
+input[type=text], input[type=email], input[type=password], input[type=search], input[type=date], input[type=datetime-local], input[type=time], input[type=url], input[type=number], input[type=tel], input:not([type]),
 select, textarea {
   width: 100%; min-height: 42px; padding: 0 var(--sp-3); background: var(--field); color: var(--text);
   border: 1px solid var(--line-strong); border-radius: var(--r-md); font-size: var(--fs-body); font-weight: 400;
@@ -451,7 +451,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="true"] { border-color: var(--loss); }
 input:disabled, select:disabled, textarea:disabled { opacity: .5; }
 input[type=number] { font-variant-numeric: tabular-nums; }
-input[type=date]::-webkit-calendar-picker-indicator { filter: invert(.75) sepia(.2) hue-rotate(210deg); }
+input[type=date]::-webkit-calendar-picker-indicator, input[type=datetime-local]::-webkit-calendar-picker-indicator, input[type=time]::-webkit-calendar-picker-indicator { filter: invert(.75) sepia(.2) hue-rotate(210deg); }
+/* iPhone draws date and time fields with their own width and centred text: same width and alignment as the other fields */
+input[type=date], input[type=datetime-local], input[type=time] { -webkit-appearance: none; appearance: none; display: block; min-width: 0; max-width: 100%; box-sizing: border-box; text-align: left; line-height: 40px; }
+input[type=date]::-webkit-date-and-time-value, input[type=datetime-local]::-webkit-date-and-time-value, input[type=time]::-webkit-date-and-time-value { text-align: left; margin: 0; }
 select { appearance: none; padding-right: 36px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%23aaa3cc' stroke-width='1.8' stroke-linecap='round'%3E%3Cpath d='m1 1.5 5 5 5-5'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 12px center; }

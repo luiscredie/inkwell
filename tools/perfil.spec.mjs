@@ -729,6 +729,15 @@ test('achievements: link the Play Hub event (one marked in Eventos, or a pasted 
   await expect.poll(() => saves.length).toBe(1);
   expect(saves[0]).toMatchObject({ rph_id: '777', rph_name: 'Set Championship', rph_store: 'Taverna', on: '2026-10-25', place: 'Loja do Zé' });
   await expect(page.locator('#myAchs [data-testid="ach-rph"]')).toHaveAttribute('href', 'https://tcg.ravensburgerplay.com/events/777');
+test('on a phone, the date field is as wide as the other fields (iPhone draws it its own way)', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setup(page, { mine: { display_name: 'Luís', handle: 'luis', is_public: true, adult: true } });
+  await page.route('**/rest/v1/rpc/achievements_of', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+  await page.goto(url('perfil/?editar=1'));
+  await page.locator('[data-testid="ach-add"]').click();
+  const w = async (sel) => (await page.locator(sel).boundingBox()).width;
+  expect(Math.abs(await w('#aOn') - await w('#aTitle'))).toBeLessThan(2);
+  expect(await page.locator('#aOn').evaluate((e) => getComputedStyle(e).textAlign)).toBe('left');
 });
 
 test('Registrar conquista from a past event opens the form with that event', async ({ page }) => {
