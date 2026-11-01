@@ -57,6 +57,13 @@
 .mi-fgrid a { display: grid; justify-items: center; gap: 6px; color: var(--text); text-decoration: none; font-size: var(--fs-small); text-align: center; overflow-wrap: anywhere; }
 .mi-av.md { width: 52px; height: 52px; box-shadow: 0 0 0 2px var(--gold, #e9b949); }
 .mi-reclist { display: grid; gap: var(--sp-3); }
+.ach-list { display: grid; gap: var(--sp-3); }
+.ach { display: grid; gap: 0; border-radius: var(--r-lg); background: var(--surface-1); border: 1px solid var(--line); overflow: hidden; }
+.ach-img { display: block; width: 100%; max-height: 420px; object-fit: cover; background: var(--surface-2); border-radius: var(--r-md); }
+.ach > .ach-img { border-radius: 0; }
+.ach-t { display: grid; gap: 4px; padding: var(--sp-3) var(--sp-4) var(--sp-4); }
+.ach-t .tag { justify-self: start; } .ach-t .tag .ic { width: 14px; height: 14px; margin-right: 4px; }
+.ach-t b { font-size: var(--fs-h3, 1.15rem); } .ach-t p { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .mi-rec1 { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: var(--sp-3); padding: var(--sp-3); border-radius: var(--r-lg); background: var(--surface-1); border: 1px solid var(--line); }
 .mi-rec1 p { margin: 4px 0 0; overflow-wrap: anywhere; white-space: pre-wrap; }
 .mi-rec1 a { color: inherit; text-decoration: none; } .mi-rec1 a:hover b, .mi-rec1 b a:hover { text-decoration: underline; }
@@ -170,6 +177,16 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "It shows up after {name} approves it.": "Aparece depois que {name} aprovar.", "Send": "Enviar", "Sent. It shows up when {name} approves it.": "Enviado. Aparece quando {name} aprovar.",
     "No recados yet. Be the first.": "Nenhum recado ainda. Seja o primeiro.", "No recados yet. Friends can leave one.": "Nenhum recado ainda. Amigos podem deixar um.",
     "{n} min ago": "há {n} min", "{n} h ago": "há {n} h", "yesterday": "ontem", "{n} days ago": "há {n} dias",
+"Achievements": "Conquistas", "League": "Liga / liguinha", "Store tournament": "Torneio da loja", "Top 8": "Top 8", "Other achievement": "Outra conquista", "Set Championship": "Set Championship",
+    "friends only": "só amigos", "public": "pública", "Achievements are not available yet.": "As conquistas ainda não estão disponíveis.", "No achievements yet. Won a league or a Set Championship? Put it here, with a photo.": "Nenhuma conquista ainda. Ganhou uma liguinha ou um Set Championship? Coloque aqui, com uma foto.",
+    "Add an achievement": "Adicionar conquista", "New achievement": "Nova conquista", "Edit achievement": "Editar conquista", "Kind": "Tipo", "Title": "Título", "What did you achieve?": "O que você conquistou?",
+    "Won the Set Championship": "Campeão do Set Championship", "Won the league": "Campeão da liguinha", "Won the store tournament": "Campeão do torneio da loja", "Made the Top 8": "Top 8",
+    "When": "Quando", "Where (optional)": "Onde (opcional)", "Store or event": "Loja ou evento", "Text (optional)": "Texto (opcional)", "The deck, the final, who you want to thank…": "O deck, a final, quem você quer agradecer…",
+    "Photo (optional)": "Foto (opcional)", "Change photo": "Trocar foto", "Remove photo": "Tirar a foto", "Choose a photo": "Escolher foto", "It is resized on your device and its location data is removed.": "Ela é reduzida no seu aparelho e os dados de localização são removidos.",
+    "Everyone can see it": "Todo mundo pode ver", "Off: only friends.": "Desligado: só amigos.", "Your profile is private, so only friends see it.": "Seu perfil é privado, então só amigos veem.",
+    "Tell my friends on Início": "Avisar meus amigos no Início", "A post with the achievement.": "Um post com a conquista.", "This photo couldn't be read. Try another one.": "Não deu para ler esta foto. Tente outra.",
+    "Give it a title.": "Dê um título.", "Saving…": "Salvando…", "Saved, and your friends see it on Início.": "Salvo, e seus amigos veem no Início.", "Too many today. Try again tomorrow.": "Muitas hoje. Tente amanhã.",
+    "Your wins, with a photo: they show on your profile.": "Suas vitórias, com foto: aparecem no seu perfil.", "Deleted": "Apagada", "Edit": "Editar", "Delete": "Apagar", "Tap again to delete": "Toque de novo para apagar",
     "Request sent": "Pedido enviado", "Answer the friend request": "Responder pedido de amizade", "Add friend": "Adicionar amigo", "Friend request sent.": "Pedido de amizade enviado.",
     "Notices": "Avisos", "On this device": "Neste aparelho", "Turn off": "Desligar", "Turn on": "Ligar", "New events near you": "Eventos novos perto de você",
     "On: likes, comments, invites, tables and event notices arrive on this device.": "Ligados: curtidas, comentários, convites, mesas e avisos de eventos chegam neste aparelho.",
@@ -358,6 +375,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
         <div class="mi-col">
           <section class="mi-sec mi-showsec"><div class="group-head"><h3>${Tx("Showcase")}</h3></div>
             ${show.length ? `<div class="mi-show" data-testid="showcase">${show.map((s) => { const c = BY.get(s.id); return `<figure>${thumb(c)}<figcaption>${esc(split(c.name)[0])}</figcaption><span class="tag ${s.own ? "match" : "accent"}">${Tx(s.own ? "owns it" : "favourite")}</span>${s.foil ? `<span class="tag foil">${Tx("foil")}</span>` : ""}</figure>`; }).join("")}</div>` : `<p class="mi-empty">${Tx("Nothing here yet.")}</p>`}</section>
+          ${preview ? "" : `<section class="mi-sec mi-achs" id="achBox" data-testid="achievements" hidden></section>`}
           ${recBox}
           ${deck ? deckView(p, deck) : ""}
         </div>
@@ -386,6 +404,101 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     });
     $("report")?.addEventListener("click", () => openReport(p.handle));
     $("toEdit")?.addEventListener("click", () => { history.replaceState(null, "", "./"); editor(); });
+    if (p.handle && !p.mock) fillAchievements(p.handle);
+  }
+
+  // ---------- conquistas (supabase/achievements.sql): title, date, place, text and 1 photo ----------
+  const ACH_KINDS = [["set_championship", "Set Championship"], ["league", "League"], ["store", "Store tournament"], ["top8", "Top 8"], ["other", "Other achievement"]];
+  const achKind = (k) => Tx((ACH_KINDS.find((x) => x[0] === k) || ACH_KINDS[4])[1]);
+  const achDate = (d) => (d ? new Date(d + "T12:00:00").toLocaleDateString(LOC, { day: "numeric", month: "short", year: "numeric" }) : "");
+  function achCard(a, url, own) {
+    return `<article class="ach" data-ach="${esc(a.id)}">${url ? `<img class="ach-img" src="${esc(url)}" alt="${esc(a.title)}" loading="lazy">` : ""}
+      <div class="ach-t"><span class="tag accent"><i class="ic i-sparkle"></i>${esc(achKind(a.kind))}</span><b>${esc(a.title)}</b>
+        <span class="small muted">${esc([achDate(a.on), a.place].filter(Boolean).join(" · "))}${own ? ` · ${esc(Tx(a.visibility === "public" ? "public" : "friends only"))}` : ""}</span>
+        ${a.body ? `<p>${esc(a.body)}</p>` : ""}
+        ${own ? `<div class="row" style="gap:var(--sp-2)"><button type="button" class="btn small" data-ach-edit="${esc(a.id)}">${Tx("Edit")}</button><button type="button" class="btn small ghost" data-ach-del="${esc(a.id)}">${Tx("Delete")}</button></div>` : ""}</div></article>`;
+  }
+  async function achLoad(handle) {
+    const list = await anonRpc("achievements_of", { p_handle: handle }).catch(() => null);
+    if (!Array.isArray(list)) return null;
+    const urls = await CLOUD.signed("achievements", list.map((a) => a.image).filter(Boolean)).catch(() => ({}));
+    return { list, urls };
+  }
+  async function fillAchievements(handle) {
+    const box = $("achBox"); if (!box) return;
+    const r = await achLoad(handle); if (!r || !r.list.length) return;
+    box.innerHTML = `<div class="group-head"><h3>${Tx("Achievements")}</h3><span class="small muted">${r.list.length}</span></div><div class="ach-list">${r.list.map((a) => achCard(a, r.urls[a.image], false)).join("")}</div>`;
+    box.hidden = false;
+  }
+  // my achievements, in the editor
+  let myAchs = null;
+  async function drawMyAchievements() {
+    const box = $("myAchs"); if (!box) return;
+    if (!myAchs) { myAchs = await achLoad(null); if (!myAchs) { box.innerHTML = `<p class="small muted">${Tx("Achievements are not available yet.")}</p>`; return; } }
+    box.innerHTML = `${myAchs.list.length ? `<div class="ach-list">${myAchs.list.map((a) => achCard(a, myAchs.urls[a.image], true)).join("")}</div>` : `<p class="small muted" style="margin:0">${Tx("No achievements yet. Won a league or a Set Championship? Put it here, with a photo.")}</p>`}
+      <button type="button" class="btn primary" id="achAdd" style="margin-top:var(--sp-3)" data-testid="ach-add"><i class="ic i-plus"></i>${Tx("Add an achievement")}</button>`;
+    $("achAdd").onclick = () => achForm(null, $("achAdd"));
+    box.querySelectorAll("[data-ach-edit]").forEach((b) => b.onclick = () => achForm(myAchs.list.find((a) => a.id === b.dataset.achEdit), b));
+    box.querySelectorAll("[data-ach-del]").forEach((b) => b.onclick = async () => {
+      if (b.dataset.armed !== "1") { b.dataset.armed = "1"; b.textContent = Tx("Tap again to delete"); return; }
+      b.disabled = true;
+      try { const img = await rpc("delete_achievement", { p_id: b.dataset.achDel }); if (img) await CLOUD.removeFiles("achievements", [img]).catch(() => {}); myAchs = null; drawMyAchievements(); toast(Tx("Deleted")); }
+      catch { b.disabled = false; toast(Tx("Couldn't save. Try again."), true); }
+    });
+  }
+  // a photo: at most 1600 px, re-encoded as JPEG on this device (the re-encoding also drops the location and camera data)
+  async function shrinkPhoto(file) {
+    const bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
+    const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height)), w = Math.round(bmp.width * k), h = Math.round(bmp.height * k);
+    const cv = document.createElement("canvas"); cv.width = w; cv.height = h; cv.getContext("2d").drawImage(bmp, 0, 0, w, h);
+    return new Promise((ok, no) => cv.toBlob((b) => (b ? ok(b) : no(new Error("photo"))), "image/jpeg", 0.85));
+  }
+  function achForm(a, from) {
+    const sh = $("sheet"), isNew = !a;
+    const f = a ? { ...a } : { kind: "league", title: "", body: "", on: new Date().toISOString().slice(0, 10), place: "", image: null, visibility: mine?.is_public ? "public" : "friends", announce: true };
+    let photo = null, photoUrl = a?.image ? myAchs?.urls[a.image] || null : null, dropPhoto = false;
+    const titleFor = (k) => ({ set_championship: Tx("Won the Set Championship"), league: Tx("Won the league"), store: Tx("Won the store tournament"), top8: Tx("Made the Top 8") }[k] || "");
+    const draw = () => {
+      sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="shT">${Tx(isNew ? "New achievement" : "Edit achievement")}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
+        <div class="sheet-body stack" style="gap:var(--sp-3)" data-testid="ach-form">
+          <div class="chips" role="group" aria-label="${Tx("Kind")}">${ACH_KINDS.map(([k, l]) => `<button type="button" class="chipbtn" data-k="${k}" aria-pressed="${f.kind === k}">${Tx(l)}</button>`).join("")}</div>
+          <label class="field">${Tx("Title")}<input id="aTitle" maxlength="80" value="${esc(f.title)}" placeholder="${esc(titleFor(f.kind) || Tx("What did you achieve?"))}"></label>
+          <div class="grid2"><label class="field">${Tx("When")}<input type="date" id="aOn" value="${esc(f.on)}" min="2023-01-01" max="${new Date(Date.now() + 864e5).toISOString().slice(0, 10)}"></label>
+            <label class="field">${Tx("Where (optional)")}<input id="aPlace" maxlength="80" value="${esc(f.place)}" placeholder="${esc(Tx("Store or event"))}"></label></div>
+          <label class="field">${Tx("Text (optional)")}<textarea id="aBody" maxlength="500" rows="3" placeholder="${esc(Tx("The deck, the final, who you want to thank…"))}">${esc(f.body)}</textarea></label>
+          <div class="stack" style="gap:6px"><b class="small">${Tx("Photo (optional)")}</b>
+            ${photoUrl && !dropPhoto ? `<img src="${esc(photoUrl)}" alt="" class="ach-img" style="max-height:220px;object-fit:cover"><div class="row" style="gap:var(--sp-2)"><label class="btn small">${Tx("Change photo")}<input type="file" id="aPhoto" accept="image/*" hidden></label><button type="button" class="btn small ghost" id="aNoPhoto">${Tx("Remove photo")}</button></div>`
+              : `<label class="btn" style="justify-self:start"><i class="ic i-camera"></i>${Tx("Choose a photo")}<input type="file" id="aPhoto" accept="image/*" hidden data-testid="ach-photo"></label>`}
+            <span class="small faint">${Tx("It is resized on your device and its location data is removed.")}</span></div>
+          <label class="switch"><span>${Tx("Everyone can see it")}<small>${Tx(mine?.is_public ? "Off: only friends." : "Your profile is private, so only friends see it.")}</small></span><input type="checkbox" role="switch" id="aPublic" ${f.visibility === "public" ? "checked" : ""} ${mine?.is_public ? "" : "disabled"}></label>
+          ${isNew ? `<label class="switch"><span>${Tx("Tell my friends on Início")}<small>${Tx("A post with the achievement.")}</small></span><input type="checkbox" role="switch" id="aAnnounce" ${f.announce ? "checked" : ""}></label>` : ""}
+          <p class="small" id="aMsg" role="alert" style="margin:0"></p></div>
+        <div class="sheet-foot"><button type="button" class="btn ghost" data-close>${Tx("Cancel")}</button><button type="button" class="btn primary" id="aSave" data-testid="ach-save">${Tx("Save")}</button></div>`;
+      sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = () => sh.close());
+      const keepFields = () => { f.title = $("aTitle").value; f.on = $("aOn").value; f.place = $("aPlace").value; f.body = $("aBody").value; f.visibility = $("aPublic").checked ? "public" : "friends"; if ($("aAnnounce")) f.announce = $("aAnnounce").checked; };
+      sh.querySelectorAll("[data-k]").forEach((b) => b.onclick = () => { keepFields(); f.kind = b.dataset.k; draw(); });
+      $("aNoPhoto")?.addEventListener("click", () => { keepFields(); dropPhoto = true; photo = null; draw(); });
+      $("aPhoto").onchange = async (ev) => {
+        const file = ev.target.files?.[0]; if (!file) return; keepFields();
+        try { photo = await shrinkPhoto(file); photoUrl = URL.createObjectURL(photo); dropPhoto = false; draw(); }
+        catch { $("aMsg").textContent = Tx("This photo couldn't be read. Try another one."); }
+      };
+      $("aSave").onclick = async () => {
+        keepFields();
+        const title = (f.title.trim() || titleFor(f.kind)).slice(0, 80);
+        if (!title) { $("aMsg").textContent = Tx("Give it a title."); $("aTitle").focus(); return; }
+        const b = $("aSave"); b.disabled = true; b.textContent = Tx("Saving…");
+        try {
+          let image = dropPhoto ? null : (a?.image || null);
+          if (photo) { image = `${me.id}/${crypto.randomUUID()}.jpg`; await CLOUD.upload("achievements", image, photo); }
+          await rpc("save_achievement", { p: { id: a?.id || "", kind: f.kind, title, body: f.body.trim(), on: f.on, place: f.place.trim(), image, visibility: f.visibility, announce: isNew && !!f.announce } });
+          if (a?.image && a.image !== image) await CLOUD.removeFiles("achievements", [a.image]).catch(() => {});
+          sh.close(); myAchs = null; drawMyAchievements(); toast(Tx(isNew && f.announce ? "Saved, and your friends see it on Início." : "Saved"));
+        } catch (e) { b.disabled = false; b.textContent = Tx("Save"); $("aMsg").textContent = /too_many/.test(String(e?.message || e)) ? Tx("Too many today. Try again tomorrow.") : Tx("Couldn't save. Try again."); }
+      };
+    };
+    draw(); sh.showModal(); setTimeout(() => $("aTitle")?.focus(), 30);
+    sh.addEventListener("close", () => from?.focus?.(), { once: true });
   }
   const base = () => location.href.replace(/[?#].*$/, "").replace(/[^/]*$/, "");
   const profileUrl = (h) => `${base()}?u=${encodeURIComponent(h)}`;
@@ -523,6 +636,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
         <p class="small" id="edMsg" role="alert" style="margin:0"></p>
         <div class="ed-foot">${mine.handle && mine.is_public ? `<a class="btn ghost" href="?u=${esc(mine.handle)}">${Tx("See as others see it")}</a>` : ""}<button type="submit" class="btn primary" id="edSave">${Tx("Save")}</button></div>
       </form>
+      <section class="card" style="margin-top:var(--sp-6)" data-testid="my-achievements" id="conquistas"><h3 style="margin-top:0">${Tx("Achievements")}</h3><p class="small muted" style="margin-top:0">${Tx("Your wins, with a photo: they show on your profile.")}</p><div id="myAchs"><p class="small faint">${Tx("Loading…")}</p></div></section>
       <section class="card" style="margin-top:var(--sp-6)" data-testid="my-notices" id="avisos"><h3 style="margin-top:0">${Tx("Notices")}</h3><div id="ntBox"><p class="small muted">${Tx("Loading…")}</p></div></section>
       <section class="card" style="margin-top:var(--sp-6)" data-testid="my-data" id="seus-dados"><h3 style="margin-top:0">${Tx("Your data")}</h3>
         <p class="small muted">${Tx("Download everything linked to your account, or delete the account and all of it.")} <a href="../privacidade/">${Tx("Terms and privacy")}</a></p>
@@ -574,7 +688,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     $("fCity").oninput = (ev) => { set("city", ev.target.value.slice(0, 40), false); live(); };
     $("fMotto").oninput = (ev) => { set("motto", ev.target.value.slice(0, 60), false); live(); };
     wireRecados();
-    drawNotices();
+    drawNotices(); drawMyAchievements();
     $("dataDl").onclick = async (ev) => {
       const b = ev.currentTarget; b.setAttribute("aria-busy", "true"); b.disabled = true;
       try {
@@ -686,7 +800,8 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     $("delWord").oninput = (e) => { $("delGo").disabled = e.target.value.trim().toUpperCase() !== word; };
     $("delGo").onclick = async () => {
       $("delGo").disabled = true;
-      try { await rpc("delete_my_account", { p_confirm: word }); dirty = false; CLOUD.signOut?.(); location.href = "../feed/?conta=excluida"; }
+      try { const mineA = await anonRpc("achievements_of", { p_handle: null }).catch(() => []); const imgs = (mineA || []).map((x) => x.image).filter(Boolean); if (imgs.length) await CLOUD.removeFiles("achievements", imgs).catch(() => {});   // the photos go first (storage files are removed through the storage API)
+        await rpc("delete_my_account", { p_confirm: word }); dirty = false; CLOUD.signOut?.(); location.href = "../feed/?conta=excluida"; }
       catch (e) { $("delMsg").textContent = /last_admin/.test(String(e?.message || e)) ? Tx("You are the only admin. Add another admin before deleting this account.") : Tx("Couldn't delete. Try again."); $("delGo").disabled = false; }
     };
     sh.showModal(); setTimeout(() => $("delWord").focus(), 30);

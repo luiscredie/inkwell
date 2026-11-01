@@ -119,6 +119,21 @@ window.INKWELL_CLOUD = (() => {
     return api(q);
   }
 
+  // Storage (supabase/achievements.sql): upload one file to a private bucket, signed links to see files, remove files.
+  async function storage(path, { method = "POST", body, type = "application/json" } = {}) {
+    const tok = await token();
+    const r = await fetch(`${cfg.url}/storage/v1/${path}`, { method, headers: { ...headers(tok), "Content-Type": type }, body: type === "application/json" && body !== undefined ? JSON.stringify(body) : body });
+    if (!r.ok) { let why = ""; try { why = String((await r.json())?.message || "").slice(0, 200); } catch { /* */ } throw Object.assign(new Error(`storage ${r.status}${why ? `: ${why}` : ""}`), { status: r.status, why }); }
+    const t = await r.text(); return t ? JSON.parse(t) : null;
+  }
+  const upload = (bucket, name, blob) => storage(`object/${bucket}/${name.split("/").map(encodeURIComponent).join("/")}`, { body: blob, type: blob.type || "application/octet-stream" });
+  async function signed(bucket, names, seconds = 3600) {
+    if (!names.length) return {};
+    const r = await storage(`object/sign/${bucket}`, { body: { expiresIn: seconds, paths: names } }).catch(() => []);
+    const out = {}; for (const x of r || []) if (x?.signedURL && !x.error) out[x.path] = `${cfg.url}/storage/v1${x.signedURL}`; return out;
+  }
+  const removeFiles = (bucket, names) => (names.length ? storage(`object/${bucket}`, { method: "DELETE", body: { prefixes: names } }) : Promise.resolve(null));
+
   // an Edge Function by GET (signed in or not: the publishable key is enough for public ones)
   async function fn(name, params = {}) {
     const tok = sess ? await token().catch(() => null) : null;
@@ -128,7 +143,7 @@ window.INKWELL_CLOUD = (() => {
   }
 
   return {
-    api, collections, fn,
+    api, collections, fn, upload, signed, removeFiles,
     user: () => { sess = load(); return sess ? { id: sess.user?.id, email: sess.user?.email } : null; },
     status: () => { sess = load(); return sess ? { signedIn: true, email: sess.user?.email || "" } : { signedIn: false }; },
     async requestCode(email) {
@@ -211,6 +226,7 @@ window.INKWELL_CLOUD = (() => {
       <li><b>O que você cadastra:</b> nome, coleção, decks, lista de desejos, empréstimos e trocas, jogos (do contador ou do duels.ink, se você conectar), comentários e anotações.</li>
       <li><b>Perfil Meu Inkwell:</b> endereço (@), lema, bio, carta do avatar, tintas, cidade, vitrine e deck em destaque.</li>
       <li><b>Mensagens:</b> recados, publicações em comunidades e no Início, comentários e curtidas.</li>
+      <li id="conquistas"><b>Conquistas:</b> título, data, lugar, texto e uma foto que você escolher. A foto é reduzida no seu aparelho antes de enviar, e os dados de localização e da câmera saem nessa hora. Ela fica guardada de forma privada: só quem pode ver a conquista (você, seus amigos e, se ela for pública e seu perfil também, os visitantes) recebe um link temporário para ela. Apagar a conquista apaga a foto.</li>
       <li><b>Eventos:</b> os eventos do Play Hub que você marca (Vou/Talvez, inscrito, pago) e suas respostas às mesas das comunidades.</li>
       <li id="localizacao"><b>Localização, só se você pedir:</b> na página Eventos, o lugar que você usa para buscar (cidade, bairro, endereço ou CEP) fica <b>só no seu aparelho</b>. Se você marcar <i>“Salvar este lugar na minha conta”</i>, guardamos na conta um <b>ponto aproximado</b> (arredondado em cerca de 1 km), o nome do bairro ou cidade e o raio — <b>nunca a rua nem o número</b>. Serve para avisar você de eventos novos perto e para usar o mesmo lugar em outros aparelhos. Só você vê. Desmarcar apaga na hora, e ele também é apagado com a conta.</li>
       <li><b>Avisos:</b> as notificações do sino e, se você ligar os avisos no aparelho, o endereço técnico que o navegador cria para receber notificações. Desligar no sino apaga esse registro.</li>
@@ -269,6 +285,7 @@ window.INKWELL_CLOUD = (() => {
       <li><b>What you enter:</b> name, collection, decks, wishlist, loans and trades, games (from the counter or duels.ink, if you connect it), comments and notes.</li>
       <li><b>My Inkwell profile:</b> address (@), motto, bio, avatar card, inks, city, showcase and featured deck.</li>
       <li><b>Messages:</b> recados, posts in communities and on Home, comments and likes.</li>
+      <li><b>Achievements:</b> title, date, place, text and one photo you choose. The photo is resized on your device before it is sent, which also removes location and camera data. It is stored privately: only people who can see the achievement (you, your friends and, if it and your profile are public, visitors) get a temporary link to it. Deleting the achievement deletes the photo.</li>
       <li><b>Events:</b> the Play Hub events you mark (Going/Maybe, registered, paid) and your answers to community tables.</li>
       <li><b>Location, only if you ask:</b> on Events, the place you search from (city, district, address or postcode) stays <b>on your device</b>. If you tick <i>“Keep this place in my account”</i>, we keep an <b>approximate point</b> (rounded to about 1 km), the district or city name and the radius — <b>never the street or number</b>. It is used to tell you about new events nearby and to use the same place on other devices. Only you see it. Unticking deletes it at once, and it goes with the account.</li>
       <li><b>Notices:</b> the bell notifications and, if you turn notices on for a device, the technical address the browser creates to receive them. Turning them off in the bell deletes it.</li>

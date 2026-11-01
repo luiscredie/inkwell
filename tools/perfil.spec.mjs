@@ -630,3 +630,70 @@ test('invite friends to Inkwell: from "Para você" and from the account menu, wi
   await page.locator('.menu [data-invite]').click();
   await expect(page.locator('.menu [data-invite]')).toContainText('Link copiado');
 });
+
+// ---------- Conquistas (supabase/achievements.sql) ----------
+const ACH1 = { id: 'a1', kind: 'set_championship', title: 'Campeão do Set Championship', body: 'Steelsong 6-0', on: '2026-10-25', place: 'Loja do Zé', image: `${ME}/abc12345-0000.jpg`, visibility: 'public', mine: true };
+const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'GET,POST,DELETE,OPTIONS' };
+const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEUlEQVR4nGM4Mc0IjhiI4wAAk7IZAVNpIBEAAAAASUVORK5CYII=', 'base64');
+
+test('achievements: add one with a photo (resized, sent to storage), friends told on Início; listed in the editor; deleted with its photo', async ({ page }) => {
+  await setup(page, { mine: { display_name: 'Luís', handle: 'luis', is_public: true, adult: true } });
+  let list = [];
+  const sent = [];
+  const json = (r, v) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+  await page.route('**/rest/v1/rpc/achievements_of', (r) => json(r, list));
+  await page.route('**/rest/v1/rpc/save_achievement', (r) => { const b = JSON.parse(r.request().postData()).p; sent.push(['save', b]); list = [{ ...b, id: 'a1', mine: true }]; return json(r, 'a1'); });
+  await page.route('**/rest/v1/rpc/delete_achievement', (r) => { sent.push(['delete']); const img = list[0].image; list = []; return json(r, img); });
+  await page.route('**/storage/v1/**', (r) => { if (r.request().method() === 'OPTIONS') return r.fulfill({ status: 204, headers: CORS }); if (r.request().method() === 'GET') return r.fulfill({ status: 200, contentType: 'image/png', body: PNG }); const u = new URL(r.request().url()); sent.push(['storage', r.request().method(), u.pathname.replace(/.*\/storage\/v1\//, ''), r.request().headers()['content-type']]);
+    return u.pathname.includes('/object/sign/') ? json(r, JSON.parse(r.request().postData()).paths.map((p) => ({ path: p, signedURL: `/object/sign/achievements/${p}?token=t` }))) : json(r, {}); });
+  await page.goto(url('perfil/?editar=1'));
+  await expect(page.locator('#myAchs')).toContainText('Nenhuma conquista ainda');
+  await page.locator('[data-testid="ach-add"]').click();
+  const form = page.locator('[data-testid="ach-form"]');
+  await form.locator('[data-k="set_championship"]').click();
+  await expect(form.locator('#aTitle')).toHaveAttribute('placeholder', 'Campeão do Set Championship');
+  await form.locator('#aPlace').fill('Loja do Zé');
+  await form.locator('#aBody').fill('Steelsong 6-0');
+  await form.locator('[data-testid="ach-photo"]').setInputFiles({ name: 'foto.png', mimeType: 'image/png', buffer: PNG });
+  await expect(form.locator('img.ach-img')).toBeVisible();
+  await expect(form.locator('#aPublic')).toBeChecked();   // public profile: public by default
+  await page.locator('[data-testid="ach-save"]').click();
+  await expect(page.locator('#toast')).toContainText('seus amigos veem no Início');
+  const up = sent.find((x) => x[0] === 'storage' && x[1] === 'POST' && !x[2].includes('/sign/'));
+  expect(up[2]).toMatch(new RegExp(`^object/achievements/${ME}/[0-9a-f-]{36}\\.jpg$`));
+  expect(up[3]).toBe('image/jpeg');   // re-encoded on the device
+  const save = sent.find((x) => x[0] === 'save')[1];
+  expect(save).toMatchObject({ id: '', kind: 'set_championship', title: 'Campeão do Set Championship', place: 'Loja do Zé', body: 'Steelsong 6-0', visibility: 'public', announce: true });
+  expect(save.image).toBe(up[2].replace('object/achievements/', ''));
+  const card = page.locator('#myAchs [data-ach="a1"]');
+  await expect(card).toContainText('Campeão do Set Championship');
+  await expect(card.locator('img')).toHaveAttribute('src', /storage\/v1\/object\/sign\/achievements\//);
+  await card.locator('[data-ach-del="a1"]').click();
+  await card.locator('[data-ach-del="a1"]').click();
+  await expect(page.locator('#myAchs')).toContainText('Nenhuma conquista ainda');
+  expect(sent.some((x) => x[0] === 'storage' && x[1] === 'DELETE')).toBe(true);   // the photo goes too
+});
+
+test('achievements show on a public profile, and on Início when announced', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await setup(page, { mine: { display_name: 'Luís', adult: true } });
+  const json = (r, v) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+  await page.route('**/rest/v1/rpc/achievements_of', (r) => json(r, [{ ...ACH1, mine: false }]));
+  await page.route('**/rest/v1/rpc/achievements_by_ids', (r) => json(r, [{ ...ACH1, mine: false }]));
+  await page.route('**/storage/v1/object/sign/**', (r) => r.request().method() === 'OPTIONS' ? r.fulfill({ status: 204, headers: CORS }) : r.request().method() === 'GET' ? r.fulfill({ status: 200, contentType: 'image/png', body: PNG }) : json(r, JSON.parse(r.request().postData()).paths.map((p) => ({ path: p, signedURL: `/object/sign/achievements/${p}?token=t` }))));
+  await page.goto(url('perfil/?u=rafa_exemplo'));
+  await expect(page.locator('[data-testid="achievements"]')).toHaveCount(1);   // example profiles: none
+  await page.goto(url('perfil/?u=ana'));
+  const box = page.locator('[data-testid="achievements"]');
+  await expect(box).toBeVisible();
+  await expect(box).toContainText('Campeão do Set Championship');
+  await expect(box).toContainText('Loja do Zé');
+  await expect(box.locator('img')).toHaveAttribute('src', /object\/sign\/achievements\//);
+  await page.route('**/rest/v1/profiles?**', (r) => json(r, [{ user_id: ME, display_name: 'Luís', default_visibility: 'friends' }]));
+  await page.route('**/rest/v1/rpc/feed_posts', (r) => json(r, [{ id: 'p9', author: 'u2', name: 'Ana', handle: 'ana', avatar: null, body: 'Campeão do Set Championship', achievement: 'a1', visibility: 'friends', at: new Date().toISOString(), mine: false, likes: 0, liked: false, comments_n: 0, comments: [] }]));
+  await page.goto(url('feed/'));
+  const post = page.locator('[data-testid="post-achievement"]');
+  await expect(post).toContainText('Set Championship');
+  await expect(post).toContainText('Steelsong 6-0');
+  await expect(post.locator('img')).toBeVisible();
+});
