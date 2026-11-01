@@ -417,7 +417,7 @@ test('feed with the flag: example profile is labelled and never enters the draft
   await expect(page.getByText('Perfil de exemplo · dados fictícios').first()).toBeVisible();
   await expect(page.getByText('Taverna da Tinta (exemplo)')).toBeVisible();   // the example's community and friends say they are examples
   await expect(page.getByTestId('how-it-works').locator('li').first()).toContainText('Personalize, sem conta');
-  await page.getByRole('link', { name: 'Criar um perfil com a minha cara' }).click();
+  await page.getByRole('link', { name: 'Criar meu perfil', exact: true }).click();
   await expect(page).toHaveURL(/\/comecar\//);
   await expect(page.getByLabel('Nome de exibição')).toHaveValue('');
   expect(await draftOf(page)).toBeNull();
@@ -444,7 +444,7 @@ test('English: the page and the picker have no Portuguese left over (A21)', asyn
 test('on by default: a new visitor gets the new Início and the editor with no parameter', async ({ page }) => {
   await setup(page);
   await page.goto(new URL('feed/', ROOT).href);
-  await expect(page.getByRole('link', { name: 'Criar um perfil com a minha cara' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Criar meu perfil', exact: true })).toBeVisible();
   await page.goto(new URL('comecar/', ROOT).href);
   await expect(page.getByRole('heading', { name: 'Seu Inkwell começa aqui' })).toBeVisible();
 });

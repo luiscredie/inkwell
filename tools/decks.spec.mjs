@@ -313,7 +313,9 @@ test('the list stays through a reload and sign-up, then becomes a deck only when
   await page.goto(BASE);
   await expect(page.getByTestId('pending-deck')).toContainText('4 cartas');
   expect(saves(calls)).toHaveLength(0);
-  await page.getByRole('button', { name: 'Salvar como deck' }).click();
+  // "Criar conta e salvar" was pressed before: the save opens by itself, and still waits for the person
+  await expect(page.locator('#iSave')).toBeVisible();
+  expect(saves(calls)).toHaveLength(0);
   await page.locator('#iSave').click();
   await expect.poll(() => saves(calls).length).toBe(1);
   expect(Object.values(saves(calls)[0].body.p_deck.cards)).toEqual([4]);
@@ -410,4 +412,20 @@ test('deleting a physical deck puts its cards back in the binder first', async (
   expect(order.map((x) => x[0])).toEqual(['build', 'delete']);   // taken apart before deleting
   expect(order[0][1]).toMatchObject({ p_owner: null, p_profile: 'luiscredie', p_deck: 'deck-a', p_items: [], p_from_home: [] });
   expect(calls.length).toBeGreaterThan(0);
+});
+
+test('a list kept without pressing "save" is offered after sign-in, but nothing opens by itself', async ({ page }) => {
+  await publicSetup(page);
+  await page.goto(BASE);
+  await page.getByTestId('public-text').fill('4 Stitch - Rock Star');
+  const calls = await setup(page);
+  await page.addInitScript((me) => {
+    const exp = Math.floor(Date.now() / 1000) + 3600;
+    localStorage.setItem('inkwell-counter-auth', JSON.stringify({ access_token: 'x.' + btoa(JSON.stringify({ sub: me, exp })) + '.y', refresh_token: 'r', expires_at: exp, user: { id: me } }));
+  }, ME);
+  await page.goto(BASE);
+  await expect(page.getByTestId('pending-deck')).toBeVisible();
+  await page.waitForTimeout(300);
+  await expect(page.locator('#iSave')).toHaveCount(0);
+  expect(saves(calls)).toHaveLength(0);
 });

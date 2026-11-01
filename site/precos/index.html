@@ -183,6 +183,7 @@ window.INKWELL_CLOUD = (() => {
 })();
 </script>
 <style>
+.src-box > summary { cursor: pointer; padding: 6px 0; }
 /* layout only — components come from ../ui/tokens.css (design v2) */
 .mv .trail { gap: 2px; }
 .up { color: var(--win); } .down { color: var(--loss); }
@@ -214,7 +215,11 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   let lang = "pt";
   try { lang = localStorage.getItem("inkwell-lang") || "pt"; } catch { /* */ }
   const PT = {
-    "Prices": "Preços", "Collection": "Coleção", "Loading…": "Carregando…", "Liga Lorcana prices, {d}": "Preços da Liga Lorcana de {d}",
+    "Prices": "Preços", "Collection": "Coleção", "Loading…": "Carregando…", "Liga Lorcana prices, {d}": "Preços da Liga Lorcana de {d}", "Sources and dates": "Fontes e datas", "Prices read on {d}.": "Preços lidos em {d}.",
+    "TCGplayer (via Lorcast): market price in dollars, read on {d} and converted at R$ {r} per dollar, the rate on that day.": "TCGplayer (via Lorcast): preço de mercado em dólar, lido em {d} e convertido a R$ {r} por dólar, a cotação desse dia.",
+    "Liga Lorcana: used only where TCGplayer has no price; those prices are from {d}.": "Liga Lorcana: usada só onde o TCGplayer não tem preço; esses preços são de {d}.",
+    "MYP Cards: lowest listing, read on {d}; it doesn't separate normal and foil, language or condition.": "MYP Cards: menor anúncio, lido em {d}; não separa normal e foil, idioma nem condição.",
+    "Every value here is an estimate: it doesn't mean the card is for sale, nor that it will be sold at that price.": "Todos os valores aqui são estimativas: não significam que a carta esteja à venda, nem que será vendida por esse preço.",
     "These prices are from {d}, {n} days ago. They are refreshed by the price agent on Luis's computer.": "Estes preços são de {d}, há {n} dias. Eles são atualizados pelo agente de preços que roda no computador do Luis.",
     "Hide": "Ocultar", "TCGplayer prices, in reais at each day's dollar rate.": "Preços do TCGplayer, em reais pela cotação de cada dia.", "The chart uses the Liga Lorcana price history, until {d}.": "O gráfico usa o histórico de preços da Liga Lorcana, até {d}.", "TCGplayer prices converted at R$ {r} per dollar, {d}": "Preços do TCGplayer convertidos a R$ {r} por dólar, {d}", "Rises and drops come from the Liga Lorcana price history.": "As altas e quedas vêm do histórico de preços da Liga Lorcana.", "Movers": "Variações", "Wishlist": "Lista de desejos", "Collection value": "Valor da coleção",
     "1 day": "1 dia", "7 days": "7 dias", "30 days": "30 dias", "Latest": "Última", "Period": "Período", "Only cards I own": "Só as que tenho",
@@ -279,6 +284,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   // ---------- state ----------
   const CLOUD = window.INKWELL_CLOUD;
   const me = CLOUD?.user();
+  let ligaDate = null;
   let PRICES = {}, BR = null, pricesDate = null, usdBrl = null, HISTORY = null, histTcg = false, profiles = [], profileName = null;
   const VIEW_KEY = "inkwell-prices-view-v1";
   let v = { tab: "movers", period: "7d", owned: false, hideStale: null };
@@ -302,7 +308,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       fetch(window.INKWELL_PRICES_BR_URL || "../data/prices-br.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
     ]);
     BR = br?.cards ? br : null;
-    PRICES = pr?.prices || {}; pricesDate = pr?.generated_at || null; usdBrl = pr?.usd_brl || null;
+    PRICES = pr?.prices || {}; pricesDate = pr?.generated_at || null; usdBrl = pr?.usd_brl || null; ligaDate = pr?.liga_date || null;
     profiles = (p || []).map((x) => ({ ...x, collection: x.collection && typeof x.collection === "object" ? x.collection : {}, wishlist: x.wishlist && typeof x.wishlist === "object" ? x.wishlist : {} }));
     try { profileName = localStorage.getItem("inkwell-trades-profile"); } catch { /* */ }
     if (!profiles.some((x) => x.profile === profileName)) profileName = profiles.slice().sort((a, b) => Object.keys(b.collection).length - Object.keys(a.collection).length)[0]?.profile || null;
@@ -341,11 +347,22 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const wn = Object.keys(wish()).length;
     const tabs = [["movers", "Movers"], ["wish", "Wishlist", wn], ["value", "Collection value"]];
     $("app").innerHTML = `${stale}<div class="tabs" role="tablist">${tabs.map(([k, l, n]) => `<button type="button" class="tab" role="tab" data-tab="${k}" aria-selected="${v.tab === k}">${Tx(l)}${n ? `<span class="count quiet">${n}</span>` : ""}</button>`).join("")}</div>
-      <div id="body" role="tabpanel">${v.tab === "wish" ? wishTab() : v.tab === "value" ? valueTab() : moversTab()}</div>`;
+      <div id="body" role="tabpanel">${v.tab === "wish" ? wishTab() : v.tab === "value" ? valueTab() : moversTab()}</div>${sourcesHtml()}`;
     $("hideStale")?.addEventListener("click", () => { v.hideStale = pricesDate; saveV(); render(); });
     document.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => { v.tab = b.dataset.tab; saveV(); render(); });
     wire();
     if (keep && $(keep)) { const el = $(keep); el.focus(); try { if (caret != null) el.setSelectionRange(caret, caret); } catch { /* */ } }
+  }
+  // where each number comes from, and when: the quote (when the price was read) is not always the day the site was updated
+  function sourcesHtml() {
+    if (!pricesDate && !BR) return "";
+    const li = [];
+    if (pricesDate) li.push(usdBrl ? Tx("TCGplayer (via Lorcast): market price in dollars, read on {d} and converted at R$ {r} per dollar, the rate on that day.", { d: dateFmt(pricesDate), r: usdBrl.toLocaleString(LOC, { minimumFractionDigits: 2, maximumFractionDigits: 4 }) }) : Tx("Prices read on {d}.", { d: dateFmt(pricesDate) }));
+    if (ligaDate) li.push(Tx("Liga Lorcana: used only where TCGplayer has no price; those prices are from {d}.", { d: dateFmt(ligaDate) }));
+    if (BR?.retrieved_at) li.push(Tx("MYP Cards: lowest listing, read on {d}; it doesn't separate normal and foil, language or condition.", { d: dateFmt(BR.retrieved_at) }));
+    return `<details class="card src-box" data-testid="price-sources" style="margin-top:var(--sp-5)"><summary><b>${Tx("Sources and dates")}</b></summary>
+      <ul class="small" style="margin:var(--sp-2) 0 0;padding-left:1.2em">${li.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+      <p class="small muted" style="margin:var(--sp-2) 0 0">${Tx("Every value here is an estimate: it doesn't mean the card is for sale, nor that it will be sold at that price.")}</p></details>`;
   }
   const starBtn = (id) => { const on = !!wish()[id], c = BY.get(id), a = c ? split(c.name)[0] : id;
     return me ? `<button type="button" class="btn ghost icon small wish-btn" data-star="${esc(id)}" aria-pressed="${on}" aria-label="${esc(Tx(on ? "Remove from wishlist" : "Add to wishlist") + " · " + a)}">${on ? "★" : "☆"}</button>` : ""; };

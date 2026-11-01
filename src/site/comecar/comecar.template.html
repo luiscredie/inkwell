@@ -486,6 +486,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     ss.set(INTENT_KEY, JSON.stringify({ draftId: draft.draftId, at: Date.now() }));
     status = "authenticating";
     if (!window.INKWELL_SIGNIN) { status = "error"; render(); return; }
+    window.INKWELL_TRACK?.("profile_save");
     window.INKWELL_SIGNIN();
     // closing the sign-in sheet (or a wrong code) leaves the draft as it is
     const sheet = document.querySelector("dialog.sheet");
@@ -508,7 +509,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       saveInfo = { lostFoil: (body.showcase || []).some((s) => s.foil) && !((res?.showcase) || []).some((s) => s.foil) };
       if (draft.rev === snap.rev && draft.draftId === snap.draftId) { ss.del(DRAFT_KEY); draft = blank(); }
       ss.del(INTENT_KEY);
-      saving = false; status = "saved"; render();
+      saving = false; status = "saved"; window.INKWELL_TRACK?.("profile_saved"); render();
       $("app").querySelector('[data-testid="saved"] a')?.focus();
     } catch {
       saving = false; status = "error"; render(); $("retry")?.focus();

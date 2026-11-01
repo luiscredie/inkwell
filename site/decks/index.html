@@ -197,6 +197,7 @@ window.INKWELL_CLOUD = (() => {
 .add-results .list-row { min-height: 52px; }
 .miss .thumb { width: 56px; }
 textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(--fs-small); padding: var(--sp-3); border-radius: var(--r-md); border: 1px solid var(--line); background: var(--field); color: var(--text); resize: vertical; }
+@media (pointer: coarse) { textarea.paste { font-size: 16px; } }   /* no zoom-in on iPhone when the list gets focus */
 .health li { align-items: flex-start; }
 .health .tag { flex: none; }
 .sub .inks { margin-right: 6px; vertical-align: -1px; }
@@ -663,7 +664,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     if (!x || x.v !== 1 || typeof x.text !== "string" || Date.now() - (+x.at || 0) > PUB_TTL) { localStorage.removeItem(PUB_KEY); return null; }
     return { text: x.text.slice(0, 20000), format: x.format === "infinity" ? "infinity" : "core", at: +x.at }; } catch { return null; } };
   const pubSave = (x) => { try { if (x.text.trim()) localStorage.setItem(PUB_KEY, JSON.stringify({ v: 1, text: x.text, format: x.format, at: Date.now() })); else localStorage.removeItem(PUB_KEY); } catch { /* storage off: the list stays on the page */ } };
-  const pubDrop = () => { try { localStorage.removeItem(PUB_KEY); } catch { /* */ } };
+  const pubDrop = () => { try { localStorage.removeItem(PUB_KEY); localStorage.removeItem(SAVE_INTENT); } catch { /* */ } };
+  // "Create account and save" was pressed: after signing in (here, in another tab or by the e-mail link) the save opens by itself
+  const SAVE_INTENT = "inkwell-public-deck-save", saveIntent = () => { try { const t = +localStorage.getItem(SAVE_INTENT) || 0; return Date.now() - t < 864e5; } catch { return false; } };
   let pub = pubLoad() || { text: "", format: "core" }, pubFix = null;
   const ownPrice = (c) => one(c.id);
   const lineQty = (line) => { const m = String(line).trim().match(/^(\d{1,2})\s*x?\s+/i); return m ? +m[1] : 1; };
@@ -697,6 +700,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       return `<li class="pd-fix" data-line="${i}"><span class="small"><b>${esc(line)}</b></span>
         <input type="search" class="inline" data-fixq="${i}" value="${esc(q)}" aria-label="${esc(Tx("Search for the right card for: {l}", { l: line }))}" autocomplete="off">
         <span class="chips">${sug.length ? sug.map((c) => `<button type="button" class="chipbtn" data-fixpick="${i}" data-id="${esc(c.id)}">${esc(c.name)}</button>`).join("") : `<span class="small muted">${Tx("No card with that name.")}</span>`}</span></li>`; };
+    if (known.length) window.INKWELL_TRACK?.("deck_result");   // the visitor saw cards, legality and cost (counted once per page)
     const lines = String(pub.text).split(/\r?\n/);
     const badIdx = []; lines.forEach((l, i) => { if (r.bad.includes(l.trim())) badIdx.push(i); });
     $("app").innerHTML = `<div class="page-head"><div><h1>${Tx("Decks")}</h1><p class="sub">${Tx("Try a deck list without an account: see the cards, whether it's legal and what it costs.")}</p></div>
@@ -736,7 +740,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       ls[i] = `${lineQty(ls[i])} ${c.name}`; pub.text = ls.join("\n"); pubFix = null; pubSave(pub); renderPublic();
     });
     $("signIn").onclick = () => window.INKWELL_SIGNIN?.();
-    $("pSave")?.addEventListener("click", () => { window.INKWELL_TRACK?.("deck_save"); pubSave(pub); window.INKWELL_SIGNIN?.(); });
+    $("pSave")?.addEventListener("click", () => { window.INKWELL_TRACK?.("deck_save"); pubSave(pub); try { localStorage.setItem(SAVE_INTENT, String(Date.now())); } catch { /* */ } window.INKWELL_SIGNIN?.(); });
     $("pSample")?.addEventListener("click", () => { window.INKWELL_TRACK?.("deck_sample"); pub = { text: SAMPLE, format: "core" }; pubSave(pub); renderPublic(); $("pText").scrollIntoView({ block: "start" }); });
     $("pClear")?.addEventListener("click", () => { pub = { text: "", format: pub.format }; pubDrop(); renderPublic(); $("pText").focus(); });
   }
@@ -796,6 +800,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   }
   function wireHead() {
     $("pendKeep")?.addEventListener("click", (e) => { const x = pubLoad(); if (x) openImport(e.currentTarget, null, x); });
+    if ($("pendKeep") && saveIntent()) { try { localStorage.removeItem(SAVE_INTENT); } catch { /* */ } setTimeout(() => $("pendKeep")?.click(), 0); }   // straight to naming and saving it
     $("pendDrop")?.addEventListener("click", () => { pubDrop(); render(); });
     $("planNotice")?.addEventListener("click", (e) => { e.preventDefault(); go(null, "plan"); });
     $("new")?.addEventListener("click", () => openDeckForm(null, $("new")));
@@ -1223,7 +1228,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         deck.colors = measure(deck).inks.slice(0, 2);
         p.decks.push(deck); sh.close();
         await flush(deck, true);
-        if (initial) pubDrop();
+        if (initial) { pubDrop(); window.INKWELL_TRACK?.("deck_saved"); }   // the list tried without an account is now in the account
         go(deck.id, "list");
       };
     };
