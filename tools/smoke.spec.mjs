@@ -40,3 +40,20 @@ test('the old app files are not published any more', async ({ request }) => {
   expect(sw).toContain('unregister');
   expect(sw).not.toContain('addEventListener(\'fetch\'');
 });
+
+test('every page links the Instagram profile (a plain link, nothing from Meta loads)', async ({ page }) => {
+  const meta = [];
+  page.on('request', (r) => { if (/instagram|facebook|fbcdn|cdninstagram/.test(r.url())) meta.push(r.url()); });
+  for (const p of ['feed/', 'colecao/', 'decks/', 'eventos/', 'privacidade/']) {
+    await page.goto(ROOT + p);
+    const a = page.locator('[data-testid="instagram"]');
+    await expect(a).toHaveAttribute('href', 'https://www.instagram.com/inkwell.brasil/');
+    await expect(a).toHaveAttribute('target', '_blank');
+    await expect(a).toHaveAttribute('rel', /noopener/);
+  }
+  await page.goto(ROOT + 'feed/');
+  await expect(page.locator('[data-testid="hero-instagram"]')).toContainText('Novidades e eventos no Instagram');
+  await page.goto(ROOT + 'privacidade/');
+  await expect(page.locator('main')).toContainText('nada da Meta é carregado');
+  expect(meta).toEqual([]);
+});

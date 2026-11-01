@@ -243,7 +243,7 @@ window.INKWELL_CLOUD = (() => {
       <li>Nas listas de amigos e de membros, só aparece pelo nome quem tem perfil público.</li>
     </ul>
     <h2 id="uso">5. Para que usamos e com quem compartilhamos</h2>
-    <p>Usamos seus dados só para fazer o Inkwell funcionar. Não há venda nem compartilhamento para marketing. Os dados ficam nos serviços que hospedam o site: <b>Supabase</b> (banco de dados e entrada por e-mail) e <b>GitHub Pages</b> (as páginas). Preços vêm de fontes públicas (TCGplayer via Lorcast, lojas brasileiras) e jogos podem vir do duels.ink, se você conectar sua conta. Os eventos vêm do Play Hub da Ravensburger (consultamos pela posição aproximada, sem dados seus). Quando você digita um endereço ou CEP em Eventos, a busca vai do seu navegador direto ao <b>OpenStreetMap</b> e, para CEP, ao <b>ViaCEP</b>. Os avisos no celular passam pelo serviço de notificações do seu aparelho (Apple, Google ou Mozilla). A <b>análise com IA</b> dos jogos só monta um texto: é você quem cola na IA que escolher, na sua conta.</p>
+    <p>Usamos seus dados só para fazer o Inkwell funcionar. Não há venda nem compartilhamento para marketing. Os dados ficam nos serviços que hospedam o site: <b>Supabase</b> (banco de dados e entrada por e-mail) e <b>GitHub Pages</b> (as páginas). Preços vêm de fontes públicas (TCGplayer via Lorcast, lojas brasileiras) e jogos podem vir do duels.ink, se você conectar sua conta. Os eventos vêm do Play Hub da Ravensburger (consultamos pela posição aproximada, sem dados seus). Quando você digita um endereço ou CEP em Eventos, a busca vai do seu navegador direto ao <b>OpenStreetMap</b> e, para CEP, ao <b>ViaCEP</b>. Os avisos no celular passam pelo serviço de notificações do seu aparelho (Apple, Google ou Mozilla). A <b>análise com IA</b> dos jogos só monta um texto: é você quem cola na IA que escolher, na sua conta. O link para o nosso <b>Instagram</b> (@inkwell.brasil) só abre o Instagram em outra aba: nada da Meta é carregado no Inkwell, e lá valem as regras de privacidade do Instagram.</p>
     <h2 id="direitos">6. Seus direitos</h2>
     <p>Pela Lei Geral de Proteção de Dados (LGPD), você pode, entre outros:</p>
     <ul>
@@ -302,7 +302,7 @@ window.INKWELL_CLOUD = (() => {
       <li>In friend and member lists, only people with a public profile are named.</li>
     </ul>
     <h2>5. What we use it for, and who we share it with</h2>
-    <p>We use your data only to run Inkwell. No selling, no sharing for marketing. Data lives with the services that host the site: <b>Supabase</b> (database and e-mail sign-in) and <b>GitHub Pages</b> (the pages). Prices come from public sources (TCGplayer via Lorcast, Brazilian shops), and games may come from duels.ink if you connect your account. Events come from the Ravensburger Play Hub (we ask by approximate position, with none of your data). When you type an address or postcode on Events, the lookup goes from your browser straight to <b>OpenStreetMap</b> and, for Brazilian CEPs, <b>ViaCEP</b>. Phone notices go through your device's notification service (Apple, Google or Mozilla). The <b>AI analysis</b> of games only writes a text: you paste it into the AI you choose, in your own account.</p>
+    <p>We use your data only to run Inkwell. No selling, no sharing for marketing. Data lives with the services that host the site: <b>Supabase</b> (database and e-mail sign-in) and <b>GitHub Pages</b> (the pages). Prices come from public sources (TCGplayer via Lorcast, Brazilian shops), and games may come from duels.ink if you connect your account. Events come from the Ravensburger Play Hub (we ask by approximate position, with none of your data). When you type an address or postcode on Events, the lookup goes from your browser straight to <b>OpenStreetMap</b> and, for Brazilian CEPs, <b>ViaCEP</b>. Phone notices go through your device's notification service (Apple, Google or Mozilla). The <b>AI analysis</b> of games only writes a text: you paste it into the AI you choose, in your own account. The link to our <b>Instagram</b> (@inkwell.brasil) only opens Instagram in another tab: nothing from Meta loads on Inkwell, and Instagram's own privacy rules apply there.</p>
     <h2>6. Your rights</h2>
     <p>Under Brazil's data protection law (LGPD) you can, among others:</p>
     <ul>
@@ -526,6 +526,7 @@ window.INKWELL_CLOUD = (() => {
   sheet.className = "sheet"; sheet.id = "iwSignSheet"; sheet.setAttribute("aria-labelledby", "iwSiT");
   document.body.append(sheet);
 
+  const IG = window.INKWELL_INSTAGRAM = "https://www.instagram.com/inkwell.brasil/";
   // ---------- rights note, on every page (Inkwell stays free; the rights belong to Disney and Ravensburger) ----------
   {
     const legal = document.createElement("footer");
@@ -533,6 +534,8 @@ window.INKWELL_CLOUD = (() => {
     legal.innerHTML = T(
       `Disney Lorcana, as imagens das cartas, os símbolos das tintas e as marcas relacionadas pertencem à Disney e à Ravensburger. O Inkwell é um projeto de fã, gratuito e sem vínculo com elas. <a href="../privacidade/">Termos e privacidade</a>`,
       `Disney Lorcana, the card images, the ink symbols and related marks belong to Disney and Ravensburger. Inkwell is a free fan project, not affiliated with them. <a href="../privacidade/">Terms and privacy</a>`);
+    // the Instagram profile: a plain link (no embed, so nothing from Meta loads here)
+    legal.insertAdjacentHTML("afterbegin", `<p class="iw-social"><a href="${IG}" target="_blank" rel="noopener noreferrer" data-testid="instagram"><i class="ic i-camera" aria-hidden="true"></i> ${T("Siga o Inkwell no Instagram", "Follow Inkwell on Instagram")} · @inkwell.brasil</a></p>`);
     (document.querySelector("main") || document.body).after(legal);
   }
   let email = "", trigger = null;
