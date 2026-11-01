@@ -753,3 +753,61 @@ test('Registrar conquista from a past event opens the form with that event', asy
   await expect(page.locator('#aPlace')).toHaveValue('Tuzzy');
   await expect(page).not.toHaveURL(/conquista=/);
 });
+
+test('Início: reply to a comment (one level, @name), like a comment, delete my reply', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await setup(page, { mine: { display_name: 'Luís', adult: true } });
+  const sent = [];
+  const json = (route, v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+  const at = new Date().toISOString();
+  const c1 = { id: 'c1', name: 'Bia', handle: 'bia', body: 'Que deck!', at, mine: false, parent: null, likes: 1, liked: false };
+  const c2 = { id: 'c2', name: 'Luís', body: 'Valeu', at, mine: true, parent: 'c1', reply_name: 'Bia', likes: 0, liked: false };
+  let post = { id: 'p1', author: 'u2', name: 'Rodrigo', handle: 'rodrigo', body: 'post', visibility: 'friends', at, mine: false, likes: 0, liked: false, comments_n: 2, comments: [c1, c2] };
+  await page.route('**/rest/v1/profiles?**', (r) => json(r, [{ user_id: ME, display_name: 'Luís', default_visibility: 'friends' }]));
+  await page.route('**/rest/v1/rpc/feed_posts', (r) => json(r, [post]));
+  await page.route('**/rest/v1/rpc/like_comment', (r) => { sent.push(['like', JSON.parse(r.request().postData())]); return r.fulfill({ status: 204, body: '' }); });
+  await page.route('**/rest/v1/rpc/comment_post', (r) => { const b = JSON.parse(r.request().postData()); sent.push(['comment', b]); return json(r, post); });
+  await page.route('**/rest/v1/rpc/post_comments_all', (r) => json(r, [c1, c2, { id: 'c3', name: 'Luís', body: 'De novo', at, mine: true, parent: 'c1', reply_name: 'Bia', likes: 0, liked: false }]));
+  await page.route('**/rest/v1/rpc/moderate_post', (r) => { sent.push(['del', JSON.parse(r.request().postData())]); return r.fulfill({ status: 204, body: '' }); });
+  await page.goto(url('feed/'));
+  const p = page.locator('[data-spost="p1"]');
+  await expect(p.locator('.cmt.reply')).toContainText('@Bia Valeu');
+  // like Bia's comment
+  await p.locator('[data-clike="c1"]').click();
+  await expect(p.locator('[data-clike="c1"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(p.locator('[data-clike="c1"]')).toContainText('2');
+  expect(sent[0]).toEqual(['like', { p_comment: 'c1', p_on: true }]);
+  // reply to Bia
+  await p.locator('[data-creply="c1"]').click();
+  await expect(p.locator('.replying')).toContainText('Respondendo a Bia');
+  await p.locator('[data-pform] input').fill('De novo');
+  await p.locator('[data-psend]').click();
+  await expect(p.locator('.cmt.reply')).toHaveCount(2);
+  expect(sent[1]).toEqual(['comment', { p_post: 'p1', p_body: 'De novo', p_reply: 'c1' }]);
+  // a plain comment again has no p_reply
+  await p.locator('[data-pcmt]').click(); await p.locator('[data-pcmt]').click();
+  await expect(p.locator('.replying')).toBeHidden();
+  // the post author is not me, but my reply c2 is mine: delete it (asks twice)
+  await p.locator('[data-cdel="c2"]').click(); await p.locator('[data-cdel="c2"]').click();
+  await expect(p.locator('[data-cmt-id="c2"]')).toHaveCount(0);
+  await expect(p.locator('[data-cmt-id="c1"]')).toContainText('Que deck!');
+});
+
+test('the bell: a reply, and comment likes grouped per comment', async ({ page }) => {
+  await setup(page, { mine: { display_name: 'Luís' } });
+  const json = (route, v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+  const at = new Date().toISOString();
+  await page.route('**/rest/v1/rpc/my_notifications', (r) => json(r, [
+    { id: 'n1', kind: 'reply', name: 'Bia', ref: { post: 'p1', comment: 'c9' }, at, unread: true },
+    { id: 'n2', kind: 'comment_like', name: 'Ana', ref: { post: 'p1', comment: 'c1' }, at, unread: true },
+    { id: 'n3', kind: 'comment_like', name: 'Caio', ref: { post: 'p1', comment: 'c1' }, at, unread: true },
+    { id: 'n4', kind: 'comment_like', name: 'Duda', ref: { post: 'p1', comment: 'c1' }, at, unread: false }]));
+  await page.route('**/rest/v1/rpc/read_notifications', (r) => r.fulfill({ status: 204, body: '' }));
+  await page.goto(url('colecao/'));
+  await page.locator('#iwBell').click();
+  const m = page.locator('.menu.notif');
+  await expect(m.locator('.menu-item')).toHaveCount(2);
+  await expect(m.locator('.menu-item').first()).toContainText('Bia respondeu seu comentário');
+  await expect(m.locator('.menu-item').nth(1)).toContainText('Ana e mais 2 curtiram seu comentário');
+  await expect(page.locator('#iwBellN')).toBeHidden();
+});

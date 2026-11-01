@@ -20,7 +20,7 @@ const rpc = async (name: string, body: Json) => {
 };
 
 const SAYS: Record<string, string> = {
-  like: "curtiu seu post", comment: "comentou no seu post", rsvp: "vai na sua mesa", event: "marcou uma mesa",
+  like: "curtiu seu post", comment: "comentou no seu post", reply: "respondeu seu comentário", rsvp: "vai na sua mesa", event: "marcou uma mesa",
   community_invite: "convidou você para uma comunidade", join_request: "pediu para entrar na comunidade", join_accepted: "aceitou seu pedido",
   share_accepted: "aceitou dividir a sua coleção", loan_request: "pediu cartas emprestadas", loan_offer: "quer emprestar cartas para você",
 };

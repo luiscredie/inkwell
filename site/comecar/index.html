@@ -1071,7 +1071,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     })();
     // Notifications (supabase/social.sql): likes, comments, "Vou" on my tables, new tables in my communities.
     let notes = null;
-    const NK = { like: ["curtiu seu post", "liked your post"], comment: ["comentou no seu post", "commented on your post"], rsvp: ["vai na sua mesa", "is going to your table"], event: ["marcou uma mesa", "set up a table"],
+    const NK = { like: ["curtiu seu post", "liked your post"], comment: ["comentou no seu post", "commented on your post"], reply: ["respondeu seu comentário", "replied to your comment"],
+      comment_like: ["curtiu seu comentário", "liked your comment"], rsvp: ["vai na sua mesa", "is going to your table"], event: ["marcou uma mesa", "set up a table"],
       community_invite: ["convidou você para uma comunidade", "invited you to a community"], join_request: ["pediu para entrar", "asked to join"], join_accepted: ["aceitou seu pedido", "accepted your request"],
       event_soon: ["é amanhã ou hoje", "is coming up"], share_accepted: ["aceitou dividir a sua coleção", "joined your shared collection"],
       loan_request: ["pediu cartas emprestadas", "asked to borrow cards"], loan_offer: ["quer emprestar cartas para você", "offered to lend you cards"] };
@@ -1130,12 +1131,17 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       };
     }
     $("iwBell")?.addEventListener("click", (e) => {
-      const list = notes || [];
+      const list = [], cl = new Map();
+      for (const n of notes || []) {
+        if (n.kind !== "comment_like" || !n.ref?.comment) { list.push(n); continue; }
+        const g = cl.get(n.ref.comment);
+        if (g) { g.others++; g.unread = g.unread || n.unread; } else { const x = { ...n, others: 0 }; cl.set(n.ref.comment, x); list.push(x); }
+      }
       openMenu(e.currentTarget, `<div class="menu-label">${T("Notificações", "Notifications")}</div>${list.length ? list.map((n) => `<a class="menu-item${n.unread ? " unread" : ""}" role="menuitem" href="${noteHref(n)}"><span>${n.kind === "event_near" ? `<b>${T("Evento novo perto de você", "New event near you")}:</b> ${esc(n.ref?.text || "")}${n.ref?.store || n.ref?.at ? `<small>${esc([n.ref.store, n.ref.at ? new Date(n.ref.at).toLocaleString(lang === "en" ? "en" : "pt-BR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : ""].filter(Boolean).join(" · "))}</small>` : ""}`
         : n.kind === "event_near_many" ? `<b>${esc(T(`${n.ref?.n || "Vários"} eventos novos perto de você`, `${n.ref?.n || "Several"} new events near you`))}</b>${n.ref?.text ? ` ${esc(T("em", "in"))} ${esc(n.ref.text)}` : ""}`
-        : n.kind === "event_soon" ? `<b>${T("Lembrete", "Reminder")}:</b> ${esc(n.ref?.text || T("seu evento", "your event"))} ${esc(T(...NK.event_soon))}` : `<b>${esc(n.name || T("Alguém", "Someone"))}</b> ${esc(T(...(NK[n.kind] || ["", ""])))}`}${!/^event_(soon|near)/.test(n.kind) && (n.ref?.text || n.ref?.name) ? `<small>${esc(n.ref.text || n.ref.name)}</small>` : ""}<small>${esc(new Date(n.at).toLocaleString(lang === "en" ? "en" : "pt-BR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}</small></span></a>`).join("") : `<div class="menu-item" style="pointer-events:none"><span class="small">${T("Nada por aqui ainda.", "Nothing here yet.")}</span></div>`}<div class="push-row" id="iwPush"></div>`, "notif");
+        : n.kind === "event_soon" ? `<b>${T("Lembrete", "Reminder")}:</b> ${esc(n.ref?.text || T("seu evento", "your event"))} ${esc(T(...NK.event_soon))}` : n.kind === "comment_like" && n.others ? `<b>${esc(n.name || T("Alguém", "Someone"))}</b> ${esc(T(`e mais ${n.others} curtiram seu comentário`, `and ${n.others} more liked your comment`))}` : `<b>${esc(n.name || T("Alguém", "Someone"))}</b> ${esc(T(...(NK[n.kind] || ["", ""])))}`}${!/^event_(soon|near)/.test(n.kind) && (n.ref?.text || n.ref?.name) ? `<small>${esc(n.ref.text || n.ref.name)}</small>` : ""}<small>${esc(new Date(n.at).toLocaleString(lang === "en" ? "en" : "pt-BR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}</small></span></a>`).join("") : `<div class="menu-item" style="pointer-events:none"><span class="small">${T("Nada por aqui ainda.", "Nothing here yet.")}</span></div>`}<div class="push-row" id="iwPush"></div>`, "notif");
       drawPush();
-      if (list.some((n) => n.unread)) CLOUD.api("rpc/read_notifications", { method: "POST", body: {} }).then(() => { list.forEach((n) => { n.unread = false; }); showBell(); }).catch(() => {});
+      if (list.some((n) => n.unread)) CLOUD.api("rpc/read_notifications", { method: "POST", body: {} }).then(() => { [...list, ...(notes || [])].forEach((n) => { n.unread = false; }); showBell(); }).catch(() => {});
     });
     // Global search (supabase/search_privacy.sql): people with a public profile or my friends, and communities
     const findBtn = $("iwFind");

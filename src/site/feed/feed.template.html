@@ -139,6 +139,12 @@ body.out .page.split.home3 { display: block; }
 .spost .cmt { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: var(--sp-2); font-size: var(--fs-small); }
 .spost .cmt .pav { width: 28px; height: 28px; box-shadow: none; font-size: .8rem; }
 .spost .cmt p { margin: 0; padding: 6px 10px; border-radius: 12px; background: var(--surface-2); overflow-wrap: anywhere; white-space: pre-wrap; }
+.spost .cmt.reply { margin-left: 36px; }
+.spost .cmt.gone p { background: none; border: 1px dashed var(--line); font-style: italic; }
+.spost .cmt .at { font-weight: 600; color: var(--accent-text, var(--text)); }
+.spost .cacts { display: flex; gap: var(--sp-3); padding: 2px 10px 0; }
+.spost .cacts [aria-pressed="true"] { font-weight: 700; }
+.spost .cmtform { flex-wrap: wrap; } .spost .cmtform input { flex: 1 1 0; min-width: 0; width: auto; } .spost .cmtform .replying { flex-basis: 100%; color: var(--text-2); }
 .ev { display: grid; gap: 4px; padding: var(--sp-2) 0; border-top: 1px solid var(--line); } .ev:first-of-type { border-top: 0; }
 .ev .when { font-size: var(--fs-micro); font-weight: 800; color: var(--accent-ink); text-transform: uppercase; letter-spacing: .04em; }
 .ev .row { gap: 6px; }
@@ -220,7 +226,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "won": "venceu", "lost": "perdeu", "with {deck}": "com {deck}", "against {deck}": "contra {deck}",
     "going first": "começando", "going second": "comprando", "Lore Counter": "Contador", "duels.ink": "duels.ink",
     "{n} turns": "{n} turnos", "Open game": "Abrir jogo", "Comment": "Comentar", "{n} comments": "{n} comentários", "1 comment": "1 comentário",
-    "Write a comment": "Escreva um comentário", "Send": "Enviar", "Couldn't send. Try again.": "Não foi possível enviar. Tente de novo.",
+    "Write a comment": "Escreva um comentário", "Reply": "Responder", "Liked": "Curtiu", "Deleted comment": "Comentário apagado", "Replying to {name}": "Respondendo a {name}", "Cancel reply": "Cancelar resposta", "Write a reply": "Escreva uma resposta", "Send": "Enviar", "Couldn't send. Try again.": "Não foi possível enviar. Tente de novo.",
     "Your timeline is empty. Add friends, and choose who sees your games.": "Sua linha do tempo está vazia. Adicione amigos e escolha quem vê seus jogos.",
     "Show older games": "Ver anteriores", "You": "Você", "A player": "Um jogador", "Someone": "Alguém",
     "just now": "agora", "{n} min ago": "há {n} min", "{n} h ago": "há {n} h", "yesterday": "ontem",
@@ -507,7 +513,14 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       <div class="curve" aria-hidden="true">${bins.map((b) => `<i style="height:${Math.round((b / hi) * 100)}%"></i>`).join("")}</div><div class="curve-x">${["1", "2", "3", "4", "5", "6", "7+"].map((x) => `<span>${x}</span>`).join("")}</div>
       <span class="small muted">${esc(Tx("{n} cards · average cost {c}", { n, c: nc ? (cost / nc).toLocaleString(LOC, { maximumFractionDigits: 1 }) : "—" }))}</span></div>`;
   }
-  const cmtHtml = (c) => `<div class="cmt" data-cmt-id="${esc(c.id)}">${pav(c)}<div><div class="small"><b>${who(c)}</b> <span class="faint">· ${esc(ago(c.at))}</span>${c.mine ? ` · <button type="button" class="linkbtn small" data-cdel="${esc(c.id)}">${Tx("Delete")}</button>` : ""}</div><p data-ctext="${esc(c.id)}"></p></div></div>`;
+  // a comment; a reply (one level, supabase/comment_replies.sql) sits indented and starts with @name
+  const cmtHtml = (c, p) => c.deleted
+    ? `<div class="cmt gone${c.parent ? " reply" : ""}" data-cmt-id="${esc(c.id)}" data-testid="cmt-deleted"><span class="pav" aria-hidden="true"></span><div><p class="faint">${Tx("Deleted comment")}</p></div></div>`
+    : `<div class="cmt${c.parent ? " reply" : ""}" data-cmt-id="${esc(c.id)}">${pav(c)}<div><div class="small"><b>${who(c)}</b> <span class="faint">· ${esc(ago(c.at))}</span></div>
+      <p>${c.parent && c.reply_name ? `<span class="at">@${esc(c.reply_name)}</span> ` : ""}<span data-ctext="${esc(c.id)}"></span></p>
+      <div class="cacts small"><button type="button" class="linkbtn small" data-clike="${esc(c.id)}" aria-pressed="${!!c.liked}">${Tx(c.liked ? "Liked" : "Like")}${c.likes ? ` · ${c.likes}` : ""}</button>
+        ${me ? `<button type="button" class="linkbtn small" data-creply="${esc(c.id)}" data-cpost="${esc(p.id)}" data-cname="${esc(c.name || "")}">${Tx("Reply")}</button>` : ""}
+        ${c.mine || p.mine ? `<button type="button" class="linkbtn small" data-cdel="${esc(c.id)}">${Tx("Delete")}</button>` : ""}</div></div></div>`;
   function pcardsHtml(p) {
     const list = (Array.isArray(p.cards) && p.cards.length ? p.cards : p.card ? [{ id: p.card, foil: p.foil }] : []).filter((c) => c && IDXC.has(c.id)).slice(0, 5);
     if (!list.length) return "";
@@ -542,9 +555,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       <div class="acts"><button type="button" class="btn ghost small" data-like="${esc(p.id)}" aria-pressed="${!!p.liked}">◆ ${Tx("Like")}${p.likes ? ` · ${p.likes}` : ""}</button>
         <button type="button" class="btn ghost small" data-pcmt="${esc(p.id)}"><i class="ic i-comment"></i>${Tx("Comment ")}${p.comments_n ? ` · ${p.comments_n}` : ""}</button>
         ${p.mine ? "" : `<button type="button" class="btn ghost small" data-prep="${esc(p.id)}">${Tx("Report")}</button>`}</div>
-      <div class="cmts">${(p.comments || []).map(cmtHtml).join("")}
+      <div class="cmts">${(p.comments || []).map((c) => cmtHtml(c, p)).join("")}
         ${p.comments_n > (p.comments || []).length ? `<button type="button" class="linkbtn small" data-pall="${esc(p.id)}" style="justify-self:start">${esc(Tx("See all {n} comments", { n: p.comments_n }))}</button>` : ""}
-        <div class="cmtform" data-pform="${esc(p.id)}" hidden><input maxlength="500" placeholder="${Tx("Write a comment ")}" aria-label="${Tx("Write a comment ")}"><button type="button" class="btn" data-psend="${esc(p.id)}"><i class="ic i-send"></i>${Tx("Send")}</button></div></div>
+        <div class="cmtform" data-pform="${esc(p.id)}" hidden><span class="replying small" hidden></span><input maxlength="500" placeholder="${Tx("Write a comment ")}" aria-label="${Tx("Write a comment ")}"><button type="button" class="btn" data-psend="${esc(p.id)}"><i class="ic i-send"></i>${Tx("Send")}</button></div></div>
     </article>`;
   }
   function wireSocial(el) {
@@ -556,21 +569,42 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       const p = byId.get(b.dataset.like), on = !p.liked; p.liked = on; p.likes = (p.likes || 0) + (on ? 1 : -1); renderFeed();
       try { await rpcS("like_post", { p_post: p.id, p_on: on }); } catch { p.liked = !on; p.likes += on ? -1 : 1; renderFeed(); }
     });
-    el.querySelectorAll("[data-pcmt]").forEach((b) => b.onclick = () => { const f = el.querySelector(`[data-pform="${CSS.escape(b.dataset.pcmt)}"]`); f.hidden = !f.hidden; if (!f.hidden) f.querySelector("input").focus(); });
+    const formOf = (id) => el.querySelector(`[data-pform="${CSS.escape(id)}"]`);
+    const setReply = (f, cid, name) => { f.dataset.reply = cid || ""; const r = f.querySelector(".replying"); r.hidden = !cid;
+      r.innerHTML = cid ? `${esc(Tx("Replying to {name}", { name: name || Tx("Someone") }))} <button type="button" class="linkbtn small" data-noreply aria-label="${esc(Tx("Cancel reply"))}">✕</button>` : "";
+      r.querySelector("[data-noreply]")?.addEventListener("click", () => setReply(f, "")); f.querySelector("input").placeholder = cid ? Tx("Write a reply") : Tx("Write a comment "); };
+    el.querySelectorAll("[data-pcmt]").forEach((b) => b.onclick = () => { const f = formOf(b.dataset.pcmt); setReply(f, ""); f.hidden = !f.hidden; if (!f.hidden) f.querySelector("input").focus(); });
+    el.querySelectorAll("[data-creply]").forEach((b) => b.onclick = () => { const f = formOf(b.dataset.cpost); f.hidden = false; setReply(f, b.dataset.creply, b.dataset.cname); f.querySelector("input").focus(); });
+    const cmtOf = (id) => { for (const p of sposts) { const c = (p.comments || []).find((y) => y.id === id); if (c) return [c, p]; } return []; };
+    el.querySelectorAll("[data-clike]").forEach((b) => b.onclick = async () => {
+      if (!me) return;
+      const [c] = cmtOf(b.dataset.clike); if (!c) return; const on = !c.liked; c.liked = on; c.likes = (c.likes || 0) + (on ? 1 : -1); renderFeed();
+      try { await rpcS("like_comment", { p_comment: c.id, p_on: on }); } catch { c.liked = !on; c.likes += on ? -1 : 1; renderFeed(); }
+    });
     el.querySelectorAll("[data-psend]").forEach((b) => {
       const input = b.parentElement.querySelector("input");
       const send = async () => { const t = input.value.trim(); if (!t) return; b.disabled = true;
-        try { refresh(await rpcS("comment_post", { p_post: b.dataset.psend, p_body: t })); }
+        const reply = b.parentElement.dataset.reply || null, full = byId.get(b.dataset.psend)?.full;
+        try { const np = await rpcS("comment_post", reply ? { p_post: b.dataset.psend, p_body: t, p_reply: reply } : { p_post: b.dataset.psend, p_body: t });
+          if (full || reply) { np.comments = (await rpcS("post_comments_all", { p_post: np.id }).catch(() => null)) || np.comments; np.full = true; }
+          refresh(np); }
         catch (e) { b.disabled = false; input.placeholder = /adults_only/.test(String(e?.message || e)) ? Tx("Your profile needs the 18+ confirmation to post.") : Tx("Couldn't send. Try again."); } };
       b.onclick = send; input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); send(); } });
     });
-    el.querySelectorAll("[data-pall]").forEach((b) => b.onclick = async () => { const p = byId.get(b.dataset.pall); try { p.comments = (await rpcS("post_comments_all", { p_post: p.id })) || p.comments; p.comments_n = p.comments.length; renderFeed(); } catch { /* keep */ } });
+    el.querySelectorAll("[data-pall]").forEach((b) => b.onclick = async () => { const p = byId.get(b.dataset.pall); try { p.comments = (await rpcS("post_comments_all", { p_post: p.id })) || p.comments; p.comments_n = p.comments.filter((c) => !c.deleted).length; p.full = true; renderFeed(); } catch { /* keep */ } });
     el.querySelectorAll("[data-pdel]").forEach((b) => b.onclick = async () => {
       if (b.dataset.c !== "1") { b.dataset.c = "1"; b.textContent = Tx("Tap again to delete"); return; }
       try { await rpcS("moderate_post", { p_action: "delete", p_post: b.dataset.pdel }); sposts = sposts.filter((p) => p.id !== b.dataset.pdel); renderFeed(); } catch { b.dataset.c = ""; }
     });
     el.querySelectorAll("[data-cdel]").forEach((b) => b.onclick = async () => {
-      try { await rpcS("moderate_post", { p_action: "delete", p_comment: b.dataset.cdel }); for (const p of sposts) { const n = (p.comments || []).length; p.comments = (p.comments || []).filter((c) => c.id !== b.dataset.cdel); if (p.comments.length < n) p.comments_n--; } renderFeed(); } catch { /* keep */ }
+      if (b.dataset.c !== "1") { b.dataset.c = "1"; b.textContent = Tx("Tap again to delete"); return; }
+      const id = b.dataset.cdel;
+      try { await rpcS("moderate_post", { p_action: "delete", p_comment: id });
+        // with replies it stays as "deleted comment"; a deleted first comment goes when its last reply goes
+        for (const p of sposts) { const c = (p.comments || []).find((x) => x.id === id); if (!c) continue; p.comments_n--;
+          if (p.comments.some((x) => x.parent === id)) Object.assign(c, { deleted: true, body: "", likes: 0, liked: false, mine: false });
+          else { p.comments = p.comments.filter((x) => x.id !== id); if (c.parent && !p.comments.some((x) => x.parent === c.parent)) p.comments = p.comments.filter((x) => !(x.id === c.parent && x.deleted)); } }
+        renderFeed(); } catch { b.dataset.c = ""; }
     });
     el.querySelectorAll("[data-prep]").forEach((b) => b.onclick = () => {
       const why = prompt(Tx("Report this post?") + " " + Tx("Why?")); if (!why || why.trim().length < 3) return;
