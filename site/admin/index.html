@@ -243,7 +243,7 @@ window.INKWELL_CLOUD = (() => {
     "“Arrived” and “Left” count visits that started without an account: the first and the last page they saw.": "“Chegaram” e “Saíram” contam as visitas que começaram sem conta: a primeira e a última página vista.",
     "What people tried": "O que experimentaram", "Action": "Ação", "Without an account": "Sem conta", "With an account": "Com conta", "Where they came from": "De onde vieram", "Site": "Site", "Visits": "Visitas", "Direct or app (WhatsApp, Instagram…)": "Direto ou app (WhatsApp, Instagram…)",
     "Phone {a} · Computer {b}": "Celular {a} · Computador {b}", "No cookies or IP: a visit is one open browser tab. Admins and “do not track” browsers aren't counted. Kept 90 days.": "Sem cookies nem IP: uma visita é uma aba aberta do navegador. Admins e navegadores com “não rastrear” não contam. Guardado por 90 dias.", "Communities": "Comunidades", "{n} members": "{n} membros", "{n} posts": "{n} mensagens",
-    "See": "Ver", "Show": "Mostrar", "Hide": "Ocultar", "Delete": "Excluir", "No communities.": "Nenhuma comunidade.", "{n} members": "{n} membros",
+    "See": "Ver", "Feedback": "Feedback", "Bug": "Erro", "Idea": "Sugestão", "Other": "Outro", "Open": "Abertos", "All": "Todos", "Member": "Membro", "Visitor": "Visitante", "Reply by e-mail": "Responder por e-mail", "Reopen": "Reabrir", "No feedback.": "Nenhum feedback.", "Run supabase/feedback.sql to receive feedback.": "Rode o supabase/feedback.sql para receber feedback.", "Show": "Mostrar", "Hide": "Ocultar", "Delete": "Excluir", "No communities.": "Nenhuma comunidade.", "{n} members": "{n} membros",
   };
   const fill = (s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)) : s);
   const Tx = (en, v) => fill(lang === "pt" && en in PT ? PT[en] : en, v);
@@ -251,10 +251,24 @@ window.INKWELL_CLOUD = (() => {
   const dt = (d) => (d ? new Date(d).toLocaleDateString(LOC, { day: "numeric", month: "short", year: "numeric" }) : "");
   const CLOUD = window.INKWELL_CLOUD, me = CLOUD?.user();
   const rpc = (name, body = {}) => CLOUD.api(`rpc/${name}`, { method: "POST", body });
-  let users = [], reports = [], comms = [], tab = "stats", q = "", armed = null, stats = null, statDays = 14, statErr = "";
+  let feedback = [], fbFilter = "open";
+  let users = [], reports = [], comms = [], tab = new URLSearchParams(location.search).get("tab") === "feedback" ? "feedback" : "stats", q = "", armed = null, stats = null, statDays = 14, statErr = "";
 
   function emptyBox(img, title, text, extra = "") { return `<div class="empty"><img src="../ui/assets/empty/${img}.svg" alt=""><b>${esc(title)}</b><p>${esc(text)}</p>${extra}</div>`; }
-  async function load() { [users, reports, comms] = await Promise.all([rpc("admin_users"), rpc("admin_reports"), rpc("admin_communities").catch(() => [])]); users = users || []; reports = reports || []; comms = comms || []; }
+  async function load() { [users, reports, comms, feedback] = await Promise.all([rpc("admin_users"), rpc("admin_reports"), rpc("admin_communities").catch(() => []), rpc("admin_feedback").catch(() => null)]); users = users || []; reports = reports || []; comms = comms || []; }
+  // ---------- Feedback: supabase/feedback.sql ----------
+  const FB_KIND = { bug: ["Bug", "late"], idea: ["Idea", "info"], other: ["Other", ""] };
+  function feedbackHtml() {
+    if (!feedback) return `<p class="muted">${Tx("Run supabase/feedback.sql to receive feedback.")}</p>`;
+    const list = feedback.filter((f) => fbFilter === "all" || f.status === "open");
+    return `<div class="seg" role="radiogroup" style="margin-bottom:var(--sp-3)">${[["open", "Open"], ["all", "All"]].map(([k, l]) => `<button type="button" role="radio" aria-checked="${fbFilter === k}" data-fbf="${k}">${Tx(l)}</button>`).join("")}</div>
+      <div data-testid="feedback">${list.length ? list.map((f) => `<div class="adm-row" data-fb="${esc(f.id)}"><div class="t"><div class="tags"><span class="tag ${FB_KIND[f.kind]?.[1] || ""}">${Tx(FB_KIND[f.kind]?.[0] || "Other")}</span>${f.status === "done" ? `<span class="tag match">${Tx("handled")}</span>` : ""}</div>
+          <p class="adm-reason" data-fbtext="${esc(f.id)}"></p>
+          <span class="small muted">${esc([f.member ? (f.name || Tx("Member")) : Tx("Visitor"), f.email, dt(f.at)].filter(Boolean).join(" · "))}</span>
+          ${f.page || f.path || f.device ? `<span class="small faint">${esc([f.page && (PAGE_NAME[f.page] || f.page), f.path, f.device].filter(Boolean).join(" · "))}</span>` : ""}</div>
+        <div class="adm-acts">${f.email ? `<a class="btn small ghost" href="mailto:${esc(f.email)}?subject=${encodeURIComponent("Inkwell: seu feedback")}">${Tx("Reply by e-mail")}</a>` : ""}${f.handle ? `<a class="btn small ghost" href="../perfil/?u=${esc(f.handle)}">${Tx("See profile")}</a>` : ""}
+          <button type="button" class="btn small" data-fbdone="${esc(f.id)}" data-v="${f.status === "open"}">${Tx(f.status === "open" ? "Mark as handled" : "Reopen")}</button></div></div>`).join("") : `<p class="muted">${Tx("No feedback.")}</p>`}</div>`;
+  }
   function render() {
     const open = reports.filter((r) => r.status === "open").length, mocks = users.filter((u) => u.is_mock);
     const words = q.toLowerCase().split(/\s+/).filter(Boolean);
@@ -262,8 +276,9 @@ window.INKWELL_CLOUD = (() => {
     const btn = (u, act, label, cls = "") => `<button type="button" class="btn small ${cls}" data-act="${act}" data-u="${esc(u.id)}" ${u.is_admin && act === "delete" ? "disabled" : ""}>${armed === `${act}:${u.id}` ? Tx("Tap again to confirm") : Tx(label)}</button>`;
     $("app").innerHTML = `<div class="tabs" role="tablist"><button type="button" class="tab" role="tab" data-tab="stats" aria-selected="${tab === "stats"}">${Tx("Dashboard")}</button><button type="button" class="tab" role="tab" data-tab="users" aria-selected="${tab === "users"}">${Tx("Members")} <span class="count quiet">${users.length}</span></button>
         <button type="button" class="tab" role="tab" data-tab="reports" aria-selected="${tab === "reports"}">${Tx("Reports")} ${open ? `<span class="count">${open}</span>` : ""}</button>
+        <button type="button" class="tab" role="tab" data-tab="feedback" aria-selected="${tab === "feedback"}">${Tx("Feedback")} ${(feedback || []).filter((f) => f.status === "open").length ? `<span class="count">${feedback.filter((f) => f.status === "open").length}</span>` : ""}</button>
         <button type="button" class="tab" role="tab" data-tab="comms" aria-selected="${tab === "comms"}">${Tx("Communities")} <span class="count quiet">${comms.length}</span></button></div>
-      ${tab === "stats" ? statsHtml() : tab === "users" ? `
+      ${tab === "stats" ? statsHtml() : tab === "feedback" ? feedbackHtml() : tab === "users" ? `
         <p class="small muted">${Tx("There is no password to reset: members sign in with a code sent to their e-mail. \"Sign out everywhere\" ends every session; they sign in again with a new code.")} ${Tx("Deleting removes the account and all its data (collection, decks, games, posts). It cannot be undone.")}</p>
         ${mocks.length ? `<section class="card" style="margin:var(--sp-3) 0"><b>${Tx("Example accounts")}</b><p class="small muted" style="margin:4px 0 var(--sp-3)">${mocks.map((u) => "@" + esc(u.handle || u.email)).join(", ")}</p><button type="button" class="btn small danger" data-act="delmocks">${armed === "delmocks" ? Tx("Tap again to confirm") : Tx("Delete all example accounts")}</button></section>` : ""}
         <span class="search" style="display:block;margin:var(--sp-3) 0"><i class="ic i-search"></i><input type="search" id="q" value="${esc(q)}" placeholder="${Tx("Search by name or e-mail")}" aria-label="${Tx("Search by name or e-mail")}"></span>
@@ -289,6 +304,9 @@ window.INKWELL_CLOUD = (() => {
       if (a === "delete" && armed !== `cdel:${id}`) { armed = `cdel:${id}`; render(); return; }
       run(() => rpc("admin_community", { p_id: id, p_action: a }));
     });
+    document.querySelectorAll("[data-fbtext]").forEach((x) => { x.textContent = feedback.find((f) => f.id === x.dataset.fbtext)?.body || ""; });   // people's text: set as text
+    document.querySelectorAll("[data-fbf]").forEach((b) => b.onclick = () => { fbFilter = b.dataset.fbf; render(); });
+    document.querySelectorAll("[data-fbdone]").forEach((b) => b.onclick = () => run(() => rpc("admin_feedback_done", { p_id: b.dataset.fbdone, p_done: b.dataset.v === "true" })));
     document.querySelectorAll("[data-resolve]").forEach((b) => b.onclick = () => run(() => rpc("admin_resolve_report", { p_id: b.dataset.resolve })));
     document.querySelectorAll("[data-hidepost]").forEach((b) => b.onclick = () => run(() => rpc("moderate_post", { p_action: "hide", p_post: b.dataset.hidepost })));   // supabase/social.sql
   }
@@ -300,7 +318,7 @@ window.INKWELL_CLOUD = (() => {
     render();
   }
   const PAGE_NAME = { feed: "Início", cards: "Coleção", decks: "Decks", communities: "Comunidades", coach: "Jogos", events: "Eventos", trades: "Trocas", prices: "Preços", profile: "Perfil", start: "Começar", entrar: "Entrar (link do e-mail)", legal: "Termos e privacidade", admin: "Admin" };
-  const ACTION_NAME = { signin_open: "Abriu “Entrar”", signin_code: "Recebeu o código", signin_done: "Entrou", deck_sample: "Deck de exemplo", deck_paste: "Colou uma lista", deck_save: "“Criar conta e salvar” deck", scan_open: "Abriu o scanner", import_open: "Abriu “Importar”", share_open: "Abriu “Compartilhar”", trade_fill: "Separar repetidas", trade_post: "Anunciar no Mural", events_search: "Buscou eventos", events_box: "Buscou eventos (Início)", profile_start: "Começou um perfil", invite: "Convidar amigos" };
+  const ACTION_NAME = { signin_open: "Abriu “Entrar”", signin_code: "Recebeu o código", signin_done: "Entrou", deck_sample: "Deck de exemplo", deck_paste: "Colou uma lista", deck_save: "“Criar conta e salvar” deck", scan_open: "Abriu o scanner", import_open: "Abriu “Importar”", share_open: "Abriu “Compartilhar”", trade_fill: "Separar repetidas", trade_post: "Anunciar no Mural", events_search: "Buscou eventos", events_box: "Buscou eventos (Início)", profile_start: "Começou um perfil", invite: "Convidar amigos", feedback_send: "Enviou feedback" };
   const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
   const num = (n) => Number(n || 0).toLocaleString(LOC);
   function statsHtml() {
@@ -457,6 +475,7 @@ window.INKWELL_CLOUD = (() => {
       if (b.dataset.langPick !== lang) { try { localStorage.setItem("inkwell-lang", b.dataset.langPick); } catch { /* */ } location.reload(); }
     }));
     menu.querySelector("[data-invite]")?.addEventListener("click", (e) => window.INKWELL_INVITE(e.currentTarget));
+    menu.querySelector("[data-feedback]")?.addEventListener("click", () => window.INKWELL_FEEDBACK?.());
     menu.querySelector("[data-signout]")?.addEventListener("click", () => {
       try { sessionStorage.removeItem("inkwell-guest-intent-v1"); } catch { /* */ }   // signing out cancels a pending "save after sign-in"; the draft stays
       CLOUD?.signOut(); location.reload();
@@ -517,6 +536,7 @@ window.INKWELL_CLOUD = (() => {
     <a class="menu-item" role="menuitem" href="../feed/#amigos"><i class="ic i-user-plus"></i>${T("Amigos e privacidade", "Friends and privacy")}</a>
     <a class="menu-item" role="menuitem" href="../coach/"><i class="ic i-refresh"></i>${T("Jogos do duels.ink", "duels.ink games")}${syncAgo ? `<span class="trail">${esc(syncAgo)}</span>` : ""}</a>
     ${isAdmin ? `<a class="menu-item" role="menuitem" href="../admin/"><i class="ic i-shield"></i>Admin</a>` : ""}
+    <button type="button" class="menu-item" role="menuitem" data-feedback><i class="ic i-comment"></i>${T("Enviar feedback", "Send feedback")}</button>
     <a class="menu-item" role="menuitem" href="../privacidade/"><i class="ic i-info"></i>${T("Termos e privacidade", "Terms and privacy")}</a>
     ${langSeg()}
     <div class="menu-sep"></div>
@@ -547,9 +567,11 @@ window.INKWELL_CLOUD = (() => {
       <a class="menu-item" href="../feed/#amigos"><i class="ic i-user-plus"></i>${T("Amigos", "Friends")}</a>
       <a class="menu-item" href="../counter/"><i class="ic i-counter"></i>${T("Contador de lore", "Lore counter")}</a>
       ${me ? `<button type="button" class="menu-item" data-invite><i class="ic i-send"></i>${T("Convidar amigos para o Inkwell", "Invite friends to Inkwell")}</button>` : ""}
+      <button type="button" class="menu-item" data-feedback><i class="ic i-comment"></i>${T("Enviar feedback", "Send feedback")}</button>
     </nav></div>`;
   document.body.append(more);
   more.querySelector("[data-invite]")?.addEventListener("click", (e) => window.INKWELL_INVITE(e.currentTarget));
+  more.querySelector("[data-feedback]")?.addEventListener("click", () => { more.close(); window.INKWELL_FEEDBACK?.(); });
   more.querySelector("[data-close]").addEventListener("click", () => more.close());
   more.addEventListener("click", (e) => { if (e.target === more) more.close(); });
   more.addEventListener("close", () => { $("iwMore")?.setAttribute("aria-expanded", "false"); $("iwMore")?.focus(); });
@@ -569,8 +591,44 @@ window.INKWELL_CLOUD = (() => {
       `Disney Lorcana, as imagens das cartas, os símbolos das tintas e as marcas relacionadas pertencem à Disney e à Ravensburger. O Inkwell é um projeto de fã, gratuito e sem vínculo com elas. <a href="../privacidade/">Termos e privacidade</a>`,
       `Disney Lorcana, the card images, the ink symbols and related marks belong to Disney and Ravensburger. Inkwell is a free fan project, not affiliated with them. <a href="../privacidade/">Terms and privacy</a>`);
     // the Instagram profile: a plain link (no embed, so nothing from Meta loads here)
-    legal.insertAdjacentHTML("afterbegin", `<p class="iw-social"><a href="${IG}" target="_blank" rel="noopener noreferrer" data-testid="instagram"><i class="ic i-camera" aria-hidden="true"></i> ${T("Siga o Inkwell no Instagram", "Follow Inkwell on Instagram")} · @inkwell.brasil</a></p>`);
+    legal.insertAdjacentHTML("afterbegin", `<p class="iw-social"><button type="button" class="linkbtn" data-feedback data-testid="feedback-open"><i class="ic i-comment" aria-hidden="true"></i> ${T("Achou um erro ou tem uma ideia? Conte pra gente", "Found a bug or have an idea? Tell us")}</button>
+      <a href="${IG}" target="_blank" rel="noopener noreferrer" data-testid="instagram"><i class="ic i-camera" aria-hidden="true"></i> ${T("Siga o Inkwell no Instagram", "Follow Inkwell on Instagram")} · @inkwell.brasil</a></p>`);
+    legal.querySelector("[data-feedback]").addEventListener("click", () => window.INKWELL_FEEDBACK());
     (document.querySelector("main") || document.body).after(legal);
+  }
+  // ---------- "Enviar feedback": a bug, an idea, anything (supabase/feedback.sql; read on the admin page) ----------
+  {
+    const fb = document.createElement("dialog");
+    fb.className = "sheet"; fb.id = "iwFeedback"; fb.setAttribute("aria-labelledby", "iwFbT");
+    document.body.append(fb);
+    let kind = "bug";
+    const draw = (done = false, msg = "") => {
+      fb.innerHTML = `<div class="grab"></div>
+        <div class="sheet-head"><div><h2 id="iwFbT">${T("Enviar feedback", "Send feedback")}</h2><div class="sub">${T("Achou um erro? Tem uma ideia? A gente lê tudo.", "Found a bug? Have an idea? We read everything.")}</div></div>
+          <button type="button" class="btn ghost icon" data-close aria-label="${T("Fechar", "Close")}"><i class="ic i-close"></i></button></div>
+        <div class="sheet-body">${done ? `<div class="notice ok" data-testid="feedback-done"><i class="ic i-check"></i><div class="t">${T("Recebido. Obrigado por ajudar o Inkwell!", "Got it. Thank you for helping Inkwell!")}</div></div>` : `<form class="form" id="iwFbForm" novalidate>
+          <div class="seg" role="radiogroup" aria-label="${T("Tipo", "Kind")}">${[["bug", T("Erro", "Bug")], ["idea", T("Sugestão", "Idea")], ["other", T("Outro", "Other")]].map(([k, l]) => `<button type="button" role="radio" aria-checked="${k === kind}" data-fbk="${k}">${l}</button>`).join("")}</div>
+          <label class="field">${kind === "bug" ? T("O que aconteceu? O que você esperava?", "What happened? What did you expect?") : kind === "idea" ? T("Qual é a ideia?", "What's the idea?") : T("Mensagem", "Message")}<textarea id="iwFbText" rows="5" maxlength="2000" required></textarea></label>
+          ${me ? "" : `<label class="field">${T("Seu e-mail (opcional, para a gente responder)", "Your e-mail (optional, so we can reply)")}<input id="iwFbMail" type="email" inputmode="email" autocomplete="email" maxlength="120"></label>`}
+          <label class="check small"><input type="checkbox" id="iwFbDev" checked> ${T("Incluir a página e o aparelho (ajuda a achar erros)", "Include the page and device (helps find bugs)")}</label>
+          <p class="small" id="iwFbMsg" role="alert">${esc(msg)}</p></form>`}</div>
+        <div class="sheet-foot">${done ? `<button type="button" class="btn primary" data-close>${T("Fechar", "Close")}</button>` : `<button type="button" class="btn ghost" data-close>${T("Cancelar", "Cancel")}</button><button type="submit" form="iwFbForm" class="btn primary" id="iwFbSend">${T("Enviar", "Send")}</button>`}</div>`;
+      fb.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", () => fb.close()));
+      fb.querySelectorAll("[data-fbk]").forEach((b) => b.addEventListener("click", () => { const t = $("iwFbText").value; kind = b.dataset.fbk; draw(); $("iwFbText").value = t; $("iwFbText").focus(); }));
+      $("iwFbForm")?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const text = $("iwFbText").value.trim();
+        if (text.length < 3) { $("iwFbMsg").textContent = T("Escreva um pouco mais.", "Write a little more."); return; }
+        const dev = $("iwFbDev").checked, b = $("iwFbSend"); b.disabled = true; b.setAttribute("aria-busy", "true");
+        try {
+          await CLOUD.api("rpc/send_feedback", { method: "POST", anon: !me, prefer: "return=minimal", body: { p_kind: kind, p_body: text, p_page: page || null,
+            p_path: dev ? location.pathname.slice(0, 200) : null, p_device: dev ? `${navigator.userAgent} · ${innerWidth}x${innerHeight}`.slice(0, 200) : null, p_email: $("iwFbMail")?.value.trim() || null } });
+          window.INKWELL_TRACK("feedback_send"); draw(true);
+        } catch (err) { b.disabled = false; b.removeAttribute("aria-busy"); $("iwFbMsg").textContent = /too_many/.test(String(err?.message || err)) ? T("Muitas mensagens agora. Tente de novo mais tarde.", "Too many messages right now. Try again later.") : T("Não foi possível enviar. Tente de novo.", "Couldn't send. Try again."); }
+      });
+    };
+    fb.addEventListener("click", (e) => { if (e.target === fb) fb.close(); });
+    window.INKWELL_FEEDBACK = () => { if (!CLOUD) return; kind = "bug"; draw(); document.querySelector("dialog[open]:not(#iwFeedback)")?.close(); fb.showModal(); $("iwFbText")?.focus(); };
   }
   let email = "", trigger = null;
   function stepEmail(msg = "") {
@@ -596,7 +654,8 @@ window.INKWELL_CLOUD = (() => {
     setTimeout(() => $("iwSiEmail")?.focus(), 30);
   }
   // The e-mail code: Supabase sends 6 to 10 digits (Authentication → Providers → Email → "Email OTP Length").
-  // One field takes the whole code, typed or pasted, and never cuts it; nothing is sent until "Entrar".
+  // One field takes the whole code, typed or pasted, and never cuts it. Typed digit by digit, nothing is sent until
+  // "Entrar"; a whole code arriving at once (the iPhone's suggestion above the keyboard, or a paste) signs in by itself.
   const OTP_MIN = 6, OTP_MAX = 10, RESEND_WAIT = 60;
   let sentAt = 0;
   function stepCode(msg = "") {
@@ -623,7 +682,12 @@ window.INKWELL_CLOUD = (() => {
       else if ($("iwSiMsg").dataset.keep !== "1") say("");
       $("iwSiMsg").dataset.keep = "";
     };
-    box.addEventListener("input", sync);
+    let before = 0;
+    box.addEventListener("input", () => {
+      const n = digits().length, whole = before < 2 && n >= OTP_MIN && n <= OTP_MAX && !/[^\d\s-]/.test(box.value);
+      before = n; sync();
+      if (whole && !go.disabled) $("iwSiForm").requestSubmit();
+    });
     // resend, after the provider's minimum wait between e-mails
     const again = $("iwSiAgain");
     const tick = () => {
@@ -738,11 +802,11 @@ window.INKWELL_CLOUD = (() => {
     // Notifications (supabase/social.sql): likes, comments, "Vou" on my tables, new tables in my communities.
     let notes = null;
     const NK = { like: ["curtiu seu post", "liked your post"], comment: ["comentou no seu post", "commented on your post"], reply: ["respondeu seu comentário", "replied to your comment"],
-      comment_like: ["curtiu seu comentário", "liked your comment"], rsvp: ["vai na sua mesa", "is going to your table"], event: ["marcou uma mesa", "set up a table"],
+      comment_like: ["curtiu seu comentário", "liked your comment"], feedback: ["mandou um feedback", "sent feedback"], rsvp: ["vai na sua mesa", "is going to your table"], event: ["marcou uma mesa", "set up a table"],
       community_invite: ["convidou você para uma comunidade", "invited you to a community"], join_request: ["pediu para entrar", "asked to join"], join_accepted: ["aceitou seu pedido", "accepted your request"],
       event_soon: ["é amanhã ou hoje", "is coming up"], share_accepted: ["aceitou dividir a sua coleção", "joined your shared collection"],
       loan_request: ["pediu cartas emprestadas", "asked to borrow cards"], loan_offer: ["quer emprestar cartas para você", "offered to lend you cards"] };
-    const noteHref = (n) => /^loan_/.test(n.kind) ? "../trades/" : n.kind === "share_accepted" ? "../colecao/" : (n.kind === "event_soon" && n.ref?.rph) || /^event_near/.test(n.kind) ? "../eventos/" : n.ref?.post ? `../feed/#post-${encodeURIComponent(n.ref.post)}` : n.ref?.slug ? `../comunidades/?c=${encodeURIComponent(n.ref.slug)}${["event", "rsvp", "event_soon"].includes(n.kind) ? "#mesas" : ""}` : "../feed/";
+    const noteHref = (n) => n.kind === "feedback" ? "../admin/?tab=feedback" : /^loan_/.test(n.kind) ? "../trades/" : n.kind === "share_accepted" ? "../colecao/" : (n.kind === "event_soon" && n.ref?.rph) || /^event_near/.test(n.kind) ? "../eventos/" : n.ref?.post ? `../feed/#post-${encodeURIComponent(n.ref.post)}` : n.ref?.slug ? `../comunidades/?c=${encodeURIComponent(n.ref.slug)}${["event", "rsvp", "event_soon"].includes(n.kind) ? "#mesas" : ""}` : "../feed/";
     // the number on the app icon (installed app): the unread count, cleared when read
     const appBadge = (n) => { try { if (n && navigator.setAppBadge) navigator.setAppBadge(n).catch(() => {}); else if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {}); } catch { /* */ } };
     const showBell = () => { const b = $("iwBell"), c = $("iwBellN"); if (!b || !notes) return; b.hidden = false; const n = notes.filter((x) => x.unread).length; c.hidden = !n; c.textContent = n > 9 ? "9+" : String(n); appBadge(n);

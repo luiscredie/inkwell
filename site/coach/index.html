@@ -2202,6 +2202,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       if (b.dataset.langPick !== lang) { try { localStorage.setItem("inkwell-lang", b.dataset.langPick); } catch { /* */ } location.reload(); }
     }));
     menu.querySelector("[data-invite]")?.addEventListener("click", (e) => window.INKWELL_INVITE(e.currentTarget));
+    menu.querySelector("[data-feedback]")?.addEventListener("click", () => window.INKWELL_FEEDBACK?.());
     menu.querySelector("[data-signout]")?.addEventListener("click", () => {
       try { sessionStorage.removeItem("inkwell-guest-intent-v1"); } catch { /* */ }   // signing out cancels a pending "save after sign-in"; the draft stays
       CLOUD?.signOut(); location.reload();
@@ -2262,6 +2263,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     <a class="menu-item" role="menuitem" href="../feed/#amigos"><i class="ic i-user-plus"></i>${T("Amigos e privacidade", "Friends and privacy")}</a>
     <a class="menu-item" role="menuitem" href="../coach/"><i class="ic i-refresh"></i>${T("Jogos do duels.ink", "duels.ink games")}${syncAgo ? `<span class="trail">${esc(syncAgo)}</span>` : ""}</a>
     ${isAdmin ? `<a class="menu-item" role="menuitem" href="../admin/"><i class="ic i-shield"></i>Admin</a>` : ""}
+    <button type="button" class="menu-item" role="menuitem" data-feedback><i class="ic i-comment"></i>${T("Enviar feedback", "Send feedback")}</button>
     <a class="menu-item" role="menuitem" href="../privacidade/"><i class="ic i-info"></i>${T("Termos e privacidade", "Terms and privacy")}</a>
     ${langSeg()}
     <div class="menu-sep"></div>
@@ -2292,9 +2294,11 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       <a class="menu-item" href="../feed/#amigos"><i class="ic i-user-plus"></i>${T("Amigos", "Friends")}</a>
       <a class="menu-item" href="../counter/"><i class="ic i-counter"></i>${T("Contador de lore", "Lore counter")}</a>
       ${me ? `<button type="button" class="menu-item" data-invite><i class="ic i-send"></i>${T("Convidar amigos para o Inkwell", "Invite friends to Inkwell")}</button>` : ""}
+      <button type="button" class="menu-item" data-feedback><i class="ic i-comment"></i>${T("Enviar feedback", "Send feedback")}</button>
     </nav></div>`;
   document.body.append(more);
   more.querySelector("[data-invite]")?.addEventListener("click", (e) => window.INKWELL_INVITE(e.currentTarget));
+  more.querySelector("[data-feedback]")?.addEventListener("click", () => { more.close(); window.INKWELL_FEEDBACK?.(); });
   more.querySelector("[data-close]").addEventListener("click", () => more.close());
   more.addEventListener("click", (e) => { if (e.target === more) more.close(); });
   more.addEventListener("close", () => { $("iwMore")?.setAttribute("aria-expanded", "false"); $("iwMore")?.focus(); });
@@ -2314,8 +2318,44 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       `Disney Lorcana, as imagens das cartas, os símbolos das tintas e as marcas relacionadas pertencem à Disney e à Ravensburger. O Inkwell é um projeto de fã, gratuito e sem vínculo com elas. <a href="../privacidade/">Termos e privacidade</a>`,
       `Disney Lorcana, the card images, the ink symbols and related marks belong to Disney and Ravensburger. Inkwell is a free fan project, not affiliated with them. <a href="../privacidade/">Terms and privacy</a>`);
     // the Instagram profile: a plain link (no embed, so nothing from Meta loads here)
-    legal.insertAdjacentHTML("afterbegin", `<p class="iw-social"><a href="${IG}" target="_blank" rel="noopener noreferrer" data-testid="instagram"><i class="ic i-camera" aria-hidden="true"></i> ${T("Siga o Inkwell no Instagram", "Follow Inkwell on Instagram")} · @inkwell.brasil</a></p>`);
+    legal.insertAdjacentHTML("afterbegin", `<p class="iw-social"><button type="button" class="linkbtn" data-feedback data-testid="feedback-open"><i class="ic i-comment" aria-hidden="true"></i> ${T("Achou um erro ou tem uma ideia? Conte pra gente", "Found a bug or have an idea? Tell us")}</button>
+      <a href="${IG}" target="_blank" rel="noopener noreferrer" data-testid="instagram"><i class="ic i-camera" aria-hidden="true"></i> ${T("Siga o Inkwell no Instagram", "Follow Inkwell on Instagram")} · @inkwell.brasil</a></p>`);
+    legal.querySelector("[data-feedback]").addEventListener("click", () => window.INKWELL_FEEDBACK());
     (document.querySelector("main") || document.body).after(legal);
+  }
+  // ---------- "Enviar feedback": a bug, an idea, anything (supabase/feedback.sql; read on the admin page) ----------
+  {
+    const fb = document.createElement("dialog");
+    fb.className = "sheet"; fb.id = "iwFeedback"; fb.setAttribute("aria-labelledby", "iwFbT");
+    document.body.append(fb);
+    let kind = "bug";
+    const draw = (done = false, msg = "") => {
+      fb.innerHTML = `<div class="grab"></div>
+        <div class="sheet-head"><div><h2 id="iwFbT">${T("Enviar feedback", "Send feedback")}</h2><div class="sub">${T("Achou um erro? Tem uma ideia? A gente lê tudo.", "Found a bug? Have an idea? We read everything.")}</div></div>
+          <button type="button" class="btn ghost icon" data-close aria-label="${T("Fechar", "Close")}"><i class="ic i-close"></i></button></div>
+        <div class="sheet-body">${done ? `<div class="notice ok" data-testid="feedback-done"><i class="ic i-check"></i><div class="t">${T("Recebido. Obrigado por ajudar o Inkwell!", "Got it. Thank you for helping Inkwell!")}</div></div>` : `<form class="form" id="iwFbForm" novalidate>
+          <div class="seg" role="radiogroup" aria-label="${T("Tipo", "Kind")}">${[["bug", T("Erro", "Bug")], ["idea", T("Sugestão", "Idea")], ["other", T("Outro", "Other")]].map(([k, l]) => `<button type="button" role="radio" aria-checked="${k === kind}" data-fbk="${k}">${l}</button>`).join("")}</div>
+          <label class="field">${kind === "bug" ? T("O que aconteceu? O que você esperava?", "What happened? What did you expect?") : kind === "idea" ? T("Qual é a ideia?", "What's the idea?") : T("Mensagem", "Message")}<textarea id="iwFbText" rows="5" maxlength="2000" required></textarea></label>
+          ${me ? "" : `<label class="field">${T("Seu e-mail (opcional, para a gente responder)", "Your e-mail (optional, so we can reply)")}<input id="iwFbMail" type="email" inputmode="email" autocomplete="email" maxlength="120"></label>`}
+          <label class="check small"><input type="checkbox" id="iwFbDev" checked> ${T("Incluir a página e o aparelho (ajuda a achar erros)", "Include the page and device (helps find bugs)")}</label>
+          <p class="small" id="iwFbMsg" role="alert">${esc(msg)}</p></form>`}</div>
+        <div class="sheet-foot">${done ? `<button type="button" class="btn primary" data-close>${T("Fechar", "Close")}</button>` : `<button type="button" class="btn ghost" data-close>${T("Cancelar", "Cancel")}</button><button type="submit" form="iwFbForm" class="btn primary" id="iwFbSend">${T("Enviar", "Send")}</button>`}</div>`;
+      fb.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", () => fb.close()));
+      fb.querySelectorAll("[data-fbk]").forEach((b) => b.addEventListener("click", () => { const t = $("iwFbText").value; kind = b.dataset.fbk; draw(); $("iwFbText").value = t; $("iwFbText").focus(); }));
+      $("iwFbForm")?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const text = $("iwFbText").value.trim();
+        if (text.length < 3) { $("iwFbMsg").textContent = T("Escreva um pouco mais.", "Write a little more."); return; }
+        const dev = $("iwFbDev").checked, b = $("iwFbSend"); b.disabled = true; b.setAttribute("aria-busy", "true");
+        try {
+          await CLOUD.api("rpc/send_feedback", { method: "POST", anon: !me, prefer: "return=minimal", body: { p_kind: kind, p_body: text, p_page: page || null,
+            p_path: dev ? location.pathname.slice(0, 200) : null, p_device: dev ? `${navigator.userAgent} · ${innerWidth}x${innerHeight}`.slice(0, 200) : null, p_email: $("iwFbMail")?.value.trim() || null } });
+          window.INKWELL_TRACK("feedback_send"); draw(true);
+        } catch (err) { b.disabled = false; b.removeAttribute("aria-busy"); $("iwFbMsg").textContent = /too_many/.test(String(err?.message || err)) ? T("Muitas mensagens agora. Tente de novo mais tarde.", "Too many messages right now. Try again later.") : T("Não foi possível enviar. Tente de novo.", "Couldn't send. Try again."); }
+      });
+    };
+    fb.addEventListener("click", (e) => { if (e.target === fb) fb.close(); });
+    window.INKWELL_FEEDBACK = () => { if (!CLOUD) return; kind = "bug"; draw(); document.querySelector("dialog[open]:not(#iwFeedback)")?.close(); fb.showModal(); $("iwFbText")?.focus(); };
   }
   let email = "", trigger = null;
   function stepEmail(msg = "") {
@@ -2341,7 +2381,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     setTimeout(() => $("iwSiEmail")?.focus(), 30);
   }
   // The e-mail code: Supabase sends 6 to 10 digits (Authentication → Providers → Email → "Email OTP Length").
-  // One field takes the whole code, typed or pasted, and never cuts it; nothing is sent until "Entrar".
+  // One field takes the whole code, typed or pasted, and never cuts it. Typed digit by digit, nothing is sent until
+  // "Entrar"; a whole code arriving at once (the iPhone's suggestion above the keyboard, or a paste) signs in by itself.
   const OTP_MIN = 6, OTP_MAX = 10, RESEND_WAIT = 60;
   let sentAt = 0;
   function stepCode(msg = "") {
@@ -2368,7 +2409,12 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       else if ($("iwSiMsg").dataset.keep !== "1") say("");
       $("iwSiMsg").dataset.keep = "";
     };
-    box.addEventListener("input", sync);
+    let before = 0;
+    box.addEventListener("input", () => {
+      const n = digits().length, whole = before < 2 && n >= OTP_MIN && n <= OTP_MAX && !/[^\d\s-]/.test(box.value);
+      before = n; sync();
+      if (whole && !go.disabled) $("iwSiForm").requestSubmit();
+    });
     // resend, after the provider's minimum wait between e-mails
     const again = $("iwSiAgain");
     const tick = () => {
@@ -2483,11 +2529,11 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     // Notifications (supabase/social.sql): likes, comments, "Vou" on my tables, new tables in my communities.
     let notes = null;
     const NK = { like: ["curtiu seu post", "liked your post"], comment: ["comentou no seu post", "commented on your post"], reply: ["respondeu seu comentário", "replied to your comment"],
-      comment_like: ["curtiu seu comentário", "liked your comment"], rsvp: ["vai na sua mesa", "is going to your table"], event: ["marcou uma mesa", "set up a table"],
+      comment_like: ["curtiu seu comentário", "liked your comment"], feedback: ["mandou um feedback", "sent feedback"], rsvp: ["vai na sua mesa", "is going to your table"], event: ["marcou uma mesa", "set up a table"],
       community_invite: ["convidou você para uma comunidade", "invited you to a community"], join_request: ["pediu para entrar", "asked to join"], join_accepted: ["aceitou seu pedido", "accepted your request"],
       event_soon: ["é amanhã ou hoje", "is coming up"], share_accepted: ["aceitou dividir a sua coleção", "joined your shared collection"],
       loan_request: ["pediu cartas emprestadas", "asked to borrow cards"], loan_offer: ["quer emprestar cartas para você", "offered to lend you cards"] };
-    const noteHref = (n) => /^loan_/.test(n.kind) ? "../trades/" : n.kind === "share_accepted" ? "../colecao/" : (n.kind === "event_soon" && n.ref?.rph) || /^event_near/.test(n.kind) ? "../eventos/" : n.ref?.post ? `../feed/#post-${encodeURIComponent(n.ref.post)}` : n.ref?.slug ? `../comunidades/?c=${encodeURIComponent(n.ref.slug)}${["event", "rsvp", "event_soon"].includes(n.kind) ? "#mesas" : ""}` : "../feed/";
+    const noteHref = (n) => n.kind === "feedback" ? "../admin/?tab=feedback" : /^loan_/.test(n.kind) ? "../trades/" : n.kind === "share_accepted" ? "../colecao/" : (n.kind === "event_soon" && n.ref?.rph) || /^event_near/.test(n.kind) ? "../eventos/" : n.ref?.post ? `../feed/#post-${encodeURIComponent(n.ref.post)}` : n.ref?.slug ? `../comunidades/?c=${encodeURIComponent(n.ref.slug)}${["event", "rsvp", "event_soon"].includes(n.kind) ? "#mesas" : ""}` : "../feed/";
     // the number on the app icon (installed app): the unread count, cleared when read
     const appBadge = (n) => { try { if (n && navigator.setAppBadge) navigator.setAppBadge(n).catch(() => {}); else if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {}); } catch { /* */ } };
     const showBell = () => { const b = $("iwBell"), c = $("iwBellN"); if (!b || !notes) return; b.hidden = false; const n = notes.filter((x) => x.unread).length; c.hidden = !n; c.textContent = n > 9 ? "9+" : String(n); appBadge(n);

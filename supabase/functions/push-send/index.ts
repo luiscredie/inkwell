@@ -34,6 +34,7 @@ function message(p: Json) {
   else if (ref.slug) url = `${SITE}comunidades/?c=${encodeURIComponent(ref.slug)}${["event", "rsvp", "event_soon"].includes(p.kind) ? "#mesas" : ""}`;
   if (p.kind === "event_near") return { title: "Evento novo perto de você", body: [text, ref.store, ref.at ? new Date(ref.at).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : ""].filter(Boolean).join(" · "), url: SITE + "eventos/" };
   if (p.kind === "event_near_many") return { title: "Eventos novos perto de você", body: `${ref.n || "Vários"} eventos novos${text ? ` perto de ${text}` : ""} no Play Hub.`, url: SITE + "eventos/" };
+  if (p.kind === "feedback") return { title: `Feedback novo · ${({ bug: "Erro", idea: "Sugestão" } as Json)[ref.fk] || "Outro"}`, body: text || "Abra o admin para ler.", url: SITE + "admin/?tab=feedback" };
   if (p.kind === "event_soon") return { title: "Lembrete de evento", body: text ? `${text} é amanhã ou hoje.` : "Seu evento está chegando.", url };
   const who = p.actor || "Alguém";
   return { title: "Inkwell", body: `${who} ${SAYS[p.kind] || "mandou um aviso"}${text ? `: ${text}` : ""}`, url };

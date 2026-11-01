@@ -36,14 +36,12 @@ async function toCode(page) {
   return sheet;
 }
 
-test('an 8-digit code pasted whole is kept whole and sent only on "Entrar"', async ({ page }) => {
+test('an 8-digit code arriving whole (iPhone suggestion or paste) is kept whole and signs in by itself', async ({ page }) => {
   const calls = await setup(page);
   const sheet = await toCode(page);
   const box = sheet.getByLabel('Código do e-mail');
+  await expect(box).toHaveAttribute('autocomplete', 'one-time-code');
   await box.fill('1234 5678');            // e-mails sometimes space the digits
-  await expect(box).toHaveValue('1234 5678');
-  expect(calls.verify).toHaveLength(0);   // no automatic submit
-  await sheet.getByRole('button', { name: 'Entrar' }).click();
   await expect.poll(() => calls.verify).toEqual(['12345678']);
   await expect(page.locator('#iwSignSheet')).toBeHidden();   // reloaded, signed in
 });
@@ -72,9 +70,9 @@ test('a refused code: clear message, the code stays to be checked, ask for anoth
   await page.clock.install();
   const calls = await setup(page);
   const sheet = await toCode(page);
-  await sheet.getByLabel('Código do e-mail').fill('11111111');
-  await sheet.getByRole('button', { name: 'Entrar' }).click();
+  await sheet.getByLabel('Código do e-mail').fill('11111111');   // whole at once: tried by itself
   await expect(sheet.locator('#iwSiMsg')).toContainText('Esse código não vale');
+  expect(calls.verify).toHaveLength(1);
   await expect(sheet.getByLabel('Código do e-mail')).toHaveValue('11111111');
   const again = sheet.locator('#iwSiAgain');
   await expect(again).toBeDisabled();
