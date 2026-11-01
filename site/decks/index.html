@@ -260,7 +260,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Only {n} cards cost 1 or 2. Slow opening hands are more likely.": "Só {n} cartas de custo 1 ou 2. Mãos iniciais lentas ficam mais prováveis.",
     "{n} cards cost 1 or 2: enough early plays.": "{n} cartas de custo 1 ou 2: jogadas cedo suficientes.",
     "Only {a} of {b} are inkable. You may run short of ink.": "Só {a} de {b} são inkáveis. Pode faltar tinta.", "{a} of {b} inkable: enough ink.": "{a} de {b} inkáveis: tinta suficiente.",
-    "{n} cards missing": "{n} cartas faltando", "{n} card missing": "1 carta faltando", "{v} at {s}": "{v} no {s}", "Deck type": "Tipo de deck", "Virtual": "Virtual", "Physical": "Físico", "view only": "só ver", "my collection": "minha coleção", "collection “{n}”": "coleção “{n}”", "{n}'s collection": "coleção de {n}",
+    "{n} cards missing": "{n} cartas faltando", "{n} card missing": "1 carta faltando", "{v} at {s}": "{v} no {s}", "Tap again: delete and put the {n} cards back in the binder": "Toque de novo: apagar e devolver as {n} cartas ao fichário", "Deck deleted. Its {n} cards are back in the binder.": "Deck apagado. As {n} cartas voltaram para o fichário.", "Deck type": "Tipo de deck", "Virtual": "Virtual", "Physical": "Físico", "view only": "só ver", "my collection": "minha coleção", "collection “{n}”": "coleção “{n}”", "{n}'s collection": "coleção de {n}",
     "{n} cards will be set aside for this deck in {c}: {b} from the binder, {h} from home.": "{n} cartas vão ficar separadas para este deck na {c}: {b} do fichário, {h} de casa.",
     "{m} you don't have free (missing or already in other places) stay out.": "{m} que você não tem livres (faltando ou já em outros lugares) ficam de fora.",
     "Set the cards aside": "Separar as cartas", "None of these cards is free in {c} right now.": "Nenhuma destas cartas está livre na {c} agora.",
@@ -1239,14 +1239,21 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       wrap.querySelector(".menu")?.remove();
     };
     let armed = false;
+    // a physical deck gives its cards back to the binder before it goes (yours and any shared collection it was built in)
+    const placed = [];
+    for (const r of STOCK.decked) if (r.deck_id === d.id) { const x = placed.find((y) => !y.owner && y.profile === r.profile) || (placed.push({ owner: null, profile: r.profile, n: 0 }), placed[placed.length - 1]); x.n += (+r.n || 0) + (+r.f || 0); }
+    for (const sc of sharedColls) for (const r of sc.decked || []) if (r.deck_id === d.id && r.by_me !== false) { const x = placed.find((y) => y.owner === sc.owner && y.profile === sc.profile) || (placed.push({ owner: sc.owner, profile: sc.profile, n: 0 }), placed[placed.length - 1]); x.n += (+r.n || 0) + (+r.f || 0); }
+    const back = placed.reduce((t, x) => t + x.n, 0);
     $("mDelete").onclick = async (e) => {
       e.stopPropagation();
-      if (!armed) { armed = true; $("mDelete").innerHTML = `<i class="ic i-trash"></i>${Tx("Tap again to delete")}`; setTimeout(() => { armed = false; const x = $("mDelete"); if (x) x.innerHTML = `<i class="ic i-trash"></i>${Tx("Delete deck")}`; }, 4000); return; }
+      if (!armed) { armed = true; $("mDelete").innerHTML = `<i class="ic i-trash"></i>${back ? Tx("Tap again: delete and put the {n} cards back in the binder", { n: back }) : Tx("Tap again to delete")}`; setTimeout(() => { armed = false; const x = $("mDelete"); if (x) x.innerHTML = `<i class="ic i-trash"></i>${Tx("Delete deck")}`; }, 4000); return; }
       const p = prof();
       try {
+        for (const x of placed) await CLOUD.api("rpc/build_deck", { method: "POST", prefer: "return=minimal", body: { p_owner: x.owner, p_profile: x.profile, p_deck: d.id, p_name: String(d.name || "").slice(0, 80), p_items: [], p_from_home: [] } });
+        STOCK.decked = STOCK.decked.filter((r) => r.deck_id !== d.id); for (const sc of sharedColls) sc.decked = (sc.decked || []).filter((r) => r.deck_id !== d.id);
         await CLOUD.api("rpc/delete_deck", { method: "POST", prefer: "return=minimal", body: { p_profile: p.profile, p_deck_id: d.id } });
         p.decks = p.decks.filter((x) => x.id !== d.id);
-        toast(Tx("Deck deleted"));
+        toast(back ? Tx("Deck deleted. Its {n} cards are back in the binder.", { n: back }) : Tx("Deck deleted"));
         go(null);
       } catch { toast(Tx("Couldn't save. Try again."), null, true); }
     };

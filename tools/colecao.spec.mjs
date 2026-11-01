@@ -661,4 +661,14 @@ test('Decks place: copies set aside for built decks leave the binder, and the ca
   await expect(deck).toContainText('Amber Steel');
   await expect(deck).toContainText('4 normal');
   await expect(page.locator('[data-testid="stocks"] [data-n="binder-n"]')).toHaveText('1');
+  // "Desmontar" here (also for a deck that no longer exists): asks twice, then the cards go back to the binder
+  const builds = [];
+  await page.route('**/rest/v1/rpc/build_deck', (r) => { builds.push(JSON.parse(r.request().postData())); return r.fulfill({ status: 204, body: '' }); });
+  await page.locator('[data-testid="undeck"]').click();
+  await expect(page.locator('[data-testid="undeck"]')).toContainText('Toque de novo');
+  expect(builds).toEqual([]);
+  await page.locator('[data-testid="undeck"]').click();
+  await expect(page.locator('[data-testid="stocks"] [data-n="binder-n"]')).toHaveText('5');
+  await expect(page.locator('[data-testid="stock-decks"]')).toHaveCount(0);
+  expect(builds[0]).toMatchObject({ p_owner: null, p_profile: 'luiscredie', p_deck: 'd1', p_items: [], p_from_home: [] });
 });

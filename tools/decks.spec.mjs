@@ -392,3 +392,22 @@ test('physical or virtual: virtual moves nothing; physical sets the cards aside 
   expect(builds[1]).toMatchObject({ p_deck: 'deck-a', p_items: [], p_from_home: [] });
   expect(calls.length).toBeGreaterThan(0);
 });
+
+test('deleting a physical deck puts its cards back in the binder first', async ({ page }) => {
+  const calls = await setup(page);
+  await page.route('**/rest/v1/collection_decked**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+    { profile: 'luiscredie', deck_id: 'deck-a', deck_name: 'Amber Test', card_id: 'LOR10-10', n: 4, f: 0 }, { profile: 'luiscredie', deck_id: 'deck-a', deck_name: 'Amber Test', card_id: 'LOR10-11', n: 3, f: 1 }]) }));
+  const order = [];
+  await page.route('**/rest/v1/rpc/build_deck', (r) => { order.push(['build', JSON.parse(r.request().postData())]); return r.fulfill({ status: 204, body: '' }); });
+  await page.route('**/rest/v1/rpc/delete_deck', (r) => { order.push(['delete']); return r.fulfill({ status: 204, body: '' }); });
+  await page.goto(BASE + '?deck=deck-a');
+  await expect(page.locator('[data-testid="build-state"]')).toContainText('8 cartas separadas');
+  await page.locator('#more').click();
+  await page.locator('#mDelete').click();
+  await expect(page.locator('#mDelete')).toContainText('devolver as 8 cartas ao fichário');
+  await page.locator('#mDelete').click();
+  await expect(page.locator('#toast')).toContainText('As 8 cartas voltaram para o fichário');
+  expect(order.map((x) => x[0])).toEqual(['build', 'delete']);   // taken apart before deleting
+  expect(order[0][1]).toMatchObject({ p_owner: null, p_profile: 'luiscredie', p_deck: 'deck-a', p_items: [], p_from_home: [] });
+  expect(calls.length).toBeGreaterThan(0);
+});
