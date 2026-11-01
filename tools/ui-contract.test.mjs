@@ -6,7 +6,7 @@ import { readFile } from 'node:fs/promises';
 const read = relative => readFile(new URL(relative, import.meta.url), 'utf8');
 const [html, smoke, workflow, deployWorkflow, packageText] = await Promise.all([
   read('../legacy/site/index.html'),
-  read('./smoke.spec.mjs'),
+  read('../legacy/tools/smoke.spec.mjs'),
   read('../.github/workflows/validate.yml'),
   read('../.github/workflows/deploy-pages.yml'),
   read('../package.json'),
@@ -97,7 +97,7 @@ check(
     deployWorkflow.includes('uses: actions/upload-pages-artifact@v3') &&
     deployWorkflow.includes('build_pages_artifact.py --source site --output _site') &&
     deployWorkflow.includes('path: _site') &&
-    deployWorkflow.includes('test ! -f _site/data/ligalorcana-prices.json') &&
+    deployWorkflow.includes('data/ligalorcana-prices.json') && deployWorkflow.includes('test ! -e "_site/$f"') &&
     deployWorkflow.includes('test ! -f index.html')
 );
 check(
