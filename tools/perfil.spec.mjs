@@ -697,3 +697,36 @@ test('achievements show on a public profile, and on Início when announced', asy
   await expect(post).toContainText('Steelsong 6-0');
   await expect(post.locator('img')).toBeVisible();
 });
+
+test('achievements: link the Play Hub event (one marked in Eventos, or a pasted link); the card links to it', async ({ page }) => {
+  await setup(page, { mine: { display_name: 'Luís', handle: 'luis', is_public: true, adult: true } });
+  let list = [];
+  const saves = [];
+  const json = (r, v) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+  const past = new Date(Date.now() - 3 * 864e5).toISOString();
+  await page.route('**/rest/v1/rpc/my_event_marks', (r) => json(r, [{ rph_id: 412345, status: 'going', snap: { name: 'Liga de Terça', store: 'Loja do Zé', start: past } },
+    { rph_id: 999, status: 'going', snap: { name: 'Futuro', store: 'X', start: new Date(Date.now() + 9 * 864e5).toISOString() } }]));
+  await page.route('**/functions/v1/rph-events**', (r) => json(r, { id: 777, name: 'Set Championship - October 25, 2026', store: { name: 'Taverna' }, start: '2026-10-25T17:00:00Z' }));
+  await page.route('**/rest/v1/rpc/achievements_of', (r) => json(r, list));
+  await page.route('**/rest/v1/rpc/save_achievement', (r) => { const b = JSON.parse(r.request().postData()).p; saves.push(b); list = [{ ...b, id: 'a1', mine: true }]; return json(r, 'a1'); });
+  await page.goto(url('perfil/?editar=1'));
+  await page.locator('[data-testid="ach-add"]').click();
+  await page.locator('[data-testid="ach-event-open"]').click();
+  const pick = page.locator('[data-testid="ach-event-pick"]');
+  await expect(pick).toContainText('Liga de Terça');
+  await expect(pick).not.toContainText('Futuro');   // only events that already happened
+  await pick.locator('[data-ev="412345"]').click();
+  await expect(page.locator('[data-testid="ach-event"]')).toContainText('Liga de Terça');
+  await expect(page.locator('#aPlace')).toHaveValue('Loja do Zé');
+  await expect(page.locator('#aOn')).toHaveValue(past.slice(0, 10) === new Date(past).toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }) ? past.slice(0, 10) : new Date(past).toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }));
+  // change it to a pasted link
+  await page.locator('#evChange').click();
+  await page.locator('#evLink').fill('https://tcg.ravensburgerplay.com/events/777');
+  await page.locator('#evFind').click();
+  await expect(page.locator('[data-testid="ach-event"]')).toContainText('Set Championship');
+  await expect(page.locator('#aOn')).toHaveValue('2026-10-25');
+  await page.locator('[data-testid="ach-save"]').click();
+  await expect.poll(() => saves.length).toBe(1);
+  expect(saves[0]).toMatchObject({ rph_id: '777', rph_name: 'Set Championship', rph_store: 'Taverna', on: '2026-10-25', place: 'Loja do Zé' });
+  await expect(page.locator('#myAchs [data-testid="ach-rph"]')).toHaveAttribute('href', 'https://tcg.ravensburgerplay.com/events/777');
+});

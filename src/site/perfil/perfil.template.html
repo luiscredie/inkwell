@@ -63,6 +63,9 @@
 .ach > .ach-img { border-radius: 0; }
 .ach-t { display: grid; gap: 4px; padding: var(--sp-3) var(--sp-4) var(--sp-4); }
 .ach-t .tag { justify-self: start; } .ach-t .tag .ic { width: 14px; height: 14px; margin-right: 4px; }
+.ach-ev { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--sp-2); align-items: center; padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-md); }
+.ach-ev > .ic { color: var(--accent); }
+.ach-rph { display: inline-flex; gap: 4px; align-items: center; } .ach-rph .ic { width: 14px; height: 14px; }
 .ach-t b { font-size: var(--fs-h3, 1.15rem); } .ach-t p { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .mi-rec1 { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: var(--sp-3); padding: var(--sp-3); border-radius: var(--r-lg); background: var(--surface-1); border: 1px solid var(--line); }
 .mi-rec1 p { margin: 4px 0 0; overflow-wrap: anywhere; white-space: pre-wrap; }
@@ -177,7 +180,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "It shows up after {name} approves it.": "Aparece depois que {name} aprovar.", "Send": "Enviar", "Sent. It shows up when {name} approves it.": "Enviado. Aparece quando {name} aprovar.",
     "No recados yet. Be the first.": "Nenhum recado ainda. Seja o primeiro.", "No recados yet. Friends can leave one.": "Nenhum recado ainda. Amigos podem deixar um.",
     "{n} min ago": "há {n} min", "{n} h ago": "há {n} h", "yesterday": "ontem", "{n} days ago": "há {n} dias",
-"Achievements": "Conquistas", "League": "Liga / liguinha", "Store tournament": "Torneio da loja", "Top 8": "Top 8", "Other achievement": "Outra conquista", "Set Championship": "Set Championship",
+"Achievements": "Conquistas", "Play Hub event (optional)": "Evento do Play Hub (opcional)", "Play Hub event": "Evento do Play Hub", "Link a Play Hub event": "Ligar a um evento do Play Hub", "Change": "Trocar", "Remove the event": "Tirar o evento",
+    "Events you marked in Eventos:": "Eventos que você marcou em Eventos:", "No recent events marked in Eventos. Paste the link instead.": "Nenhum evento recente marcado em Eventos. Cole o link.", "Or paste the event link from the Play Hub": "Ou cole o link do evento no Play Hub",
+    "Play Hub event link": "Link do evento no Play Hub", "Find": "Buscar", "That doesn't look like a Play Hub event link.": "Isso não parece um link de evento do Play Hub.", "Couldn't find this event on the Play Hub.": "Não achei este evento no Play Hub.", "See on the Play Hub": "Ver no Play Hub", "League": "Liga / liguinha", "Store tournament": "Torneio da loja", "Top 8": "Top 8", "Other achievement": "Outra conquista", "Set Championship": "Set Championship",
     "friends only": "só amigos", "public": "pública", "Achievements are not available yet.": "As conquistas ainda não estão disponíveis.", "No achievements yet. Won a league or a Set Championship? Put it here, with a photo.": "Nenhuma conquista ainda. Ganhou uma liguinha ou um Set Championship? Coloque aqui, com uma foto.",
     "Add an achievement": "Adicionar conquista", "New achievement": "Nova conquista", "Edit achievement": "Editar conquista", "Kind": "Tipo", "Title": "Título", "What did you achieve?": "O que você conquistou?",
     "Won the Set Championship": "Campeão do Set Championship", "Won the league": "Campeão da liguinha", "Won the store tournament": "Campeão do torneio da loja", "Made the Top 8": "Top 8",
@@ -415,6 +420,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     return `<article class="ach" data-ach="${esc(a.id)}">${url ? `<img class="ach-img" src="${esc(url)}" alt="${esc(a.title)}" loading="lazy">` : ""}
       <div class="ach-t"><span class="tag accent"><i class="ic i-sparkle"></i>${esc(achKind(a.kind))}</span><b>${esc(a.title)}</b>
         <span class="small muted">${esc([achDate(a.on), a.place].filter(Boolean).join(" · "))}${own ? ` · ${esc(Tx(a.visibility === "public" ? "public" : "friends only"))}` : ""}</span>
+        ${a.rph_id ? `<a class="small ach-rph" href="https://tcg.ravensburgerplay.com/events/${encodeURIComponent(a.rph_id)}" target="_blank" rel="noopener" data-testid="ach-rph"><i class="ic i-calendar"></i>${esc(a.rph_name || Tx("Play Hub event"))} · ${Tx("See on the Play Hub")} <i class="ic i-external"></i></a>` : ""}
         ${a.body ? `<p>${esc(a.body)}</p>` : ""}
         ${own ? `<div class="row" style="gap:var(--sp-2)"><button type="button" class="btn small" data-ach-edit="${esc(a.id)}">${Tx("Edit")}</button><button type="button" class="btn small ghost" data-ach-del="${esc(a.id)}">${Tx("Delete")}</button></div>` : ""}</div></article>`;
   }
@@ -455,7 +461,21 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   }
   function achForm(a, from) {
     const sh = $("sheet"), isNew = !a;
-    const f = a ? { ...a } : { kind: "league", title: "", body: "", on: new Date().toISOString().slice(0, 10), place: "", image: null, visibility: mine?.is_public ? "public" : "friends", announce: true };
+    const f = a ? { ...a } : { kind: "league", title: "", body: "", on: new Date().toISOString().slice(0, 10), place: "", image: null, visibility: mine?.is_public ? "public" : "friends", announce: true, rph_id: null, rph_name: "", rph_store: "" };
+    let marks = null, evOpen = false, evMsg = "";   // the Play Hub events you marked in Eventos (supabase/event_marks.sql)
+    const dayOf = (iso) => { try { return new Date(iso).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }); } catch { return String(iso || "").slice(0, 10); } };
+    const pickEvent = (ev) => { f.rph_id = ev.id; f.rph_name = String(ev.name || "").slice(0, 120); f.rph_store = String(ev.store || "").slice(0, 80); if (ev.start) f.on = dayOf(ev.start); if (!f.place && ev.store) f.place = String(ev.store).slice(0, 80); evOpen = false; evMsg = ""; draw(); };
+    const evBox = () => {
+      if (f.rph_id && !evOpen) return `<div class="ach-ev" data-testid="ach-event"><i class="ic i-calendar"></i><span><b>${esc(f.rph_name || Tx("Play Hub event"))}</b><span class="small muted" style="display:block">${esc([f.rph_store, f.on ? achDate(f.on) : ""].filter(Boolean).join(" · "))}</span></span>
+        <span class="row" style="gap:4px;flex-wrap:nowrap"><button type="button" class="btn small ghost" id="evChange">${Tx("Change")}</button><button type="button" class="btn small ghost" id="evClear" aria-label="${esc(Tx("Remove the event"))}"><i class="ic i-close"></i></button></span></div>`;
+      if (!evOpen) return `<button type="button" class="btn small" id="evOpen" style="justify-self:start" data-testid="ach-event-open"><i class="ic i-calendar"></i>${Tx("Link a Play Hub event")}</button>`;
+      const past = (marks || []).filter((m) => m.snap?.start && Date.parse(m.snap.start) < Date.now() + 864e5).sort((x, y) => Date.parse(y.snap.start) - Date.parse(x.snap.start)).slice(0, 8);
+      return `<div class="stack" style="gap:6px" data-testid="ach-event-pick">
+        ${marks === null ? `<p class="small muted" style="margin:0">${Tx("Loading…")}</p>` : past.length ? `<span class="small muted">${Tx("Events you marked in Eventos:")}</span><div class="list tight">${past.map((m) => `<button type="button" class="list-row flat" data-ev="${esc(m.rph_id)}" style="text-align:left"><span class="t"><span>${esc(m.snap.name || "")}</span><span class="meta">${esc([m.snap.store, achDate(dayOf(m.snap.start))].filter(Boolean).join(" · "))}</span></span></button>`).join("")}</div>`
+          : `<p class="small muted" style="margin:0">${Tx("No recent events marked in Eventos. Paste the link instead.")}</p>`}
+        <div class="row" style="gap:6px;flex-wrap:nowrap"><input id="evLink" inputmode="url" style="flex:1;min-width:0" placeholder="${esc(Tx("Or paste the event link from the Play Hub"))}" aria-label="${esc(Tx("Play Hub event link"))}"><button type="button" class="btn small" id="evFind">${Tx("Find")}</button></div>
+        <span class="small" role="alert" id="evMsg">${esc(evMsg)}</span><button type="button" class="btn small ghost" id="evCancel" style="justify-self:start">${Tx("Cancel")}</button></div>`;
+    };
     let photo = null, photoUrl = a?.image ? myAchs?.urls[a.image] || null : null, dropPhoto = false;
     const titleFor = (k) => ({ set_championship: Tx("Won the Set Championship"), league: Tx("Won the league"), store: Tx("Won the store tournament"), top8: Tx("Made the Top 8") }[k] || "");
     const draw = () => {
@@ -465,6 +485,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
           <label class="field">${Tx("Title")}<input id="aTitle" maxlength="80" value="${esc(f.title)}" placeholder="${esc(titleFor(f.kind) || Tx("What did you achieve?"))}"></label>
           <div class="grid2"><label class="field">${Tx("When")}<input type="date" id="aOn" value="${esc(f.on)}" min="2023-01-01" max="${new Date(Date.now() + 864e5).toISOString().slice(0, 10)}"></label>
             <label class="field">${Tx("Where (optional)")}<input id="aPlace" maxlength="80" value="${esc(f.place)}" placeholder="${esc(Tx("Store or event"))}"></label></div>
+          <div class="stack" style="gap:6px"><b class="small">${Tx("Play Hub event (optional)")}</b>${evBox()}</div>
           <label class="field">${Tx("Text (optional)")}<textarea id="aBody" maxlength="500" rows="3" placeholder="${esc(Tx("The deck, the final, who you want to thank…"))}">${esc(f.body)}</textarea></label>
           <div class="stack" style="gap:6px"><b class="small">${Tx("Photo (optional)")}</b>
             ${photoUrl && !dropPhoto ? `<img src="${esc(photoUrl)}" alt="" class="ach-img" style="max-height:220px;object-fit:cover"><div class="row" style="gap:var(--sp-2)"><label class="btn small">${Tx("Change photo")}<input type="file" id="aPhoto" accept="image/*" hidden></label><button type="button" class="btn small ghost" id="aNoPhoto">${Tx("Remove photo")}</button></div>`
@@ -478,6 +499,19 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       const keepFields = () => { f.title = $("aTitle").value; f.on = $("aOn").value; f.place = $("aPlace").value; f.body = $("aBody").value; f.visibility = $("aPublic").checked ? "public" : "friends"; if ($("aAnnounce")) f.announce = $("aAnnounce").checked; };
       sh.querySelectorAll("[data-k]").forEach((b) => b.onclick = () => { keepFields(); f.kind = b.dataset.k; draw(); });
       $("aNoPhoto")?.addEventListener("click", () => { keepFields(); dropPhoto = true; photo = null; draw(); });
+      $("evOpen")?.addEventListener("click", () => { keepFields(); evOpen = true; draw(); if (marks === null) rpc("my_event_marks").then((r) => { marks = Array.isArray(r) ? r : []; }).catch(() => { marks = []; }).then(() => { if (evOpen) draw(); }); });
+      $("evChange")?.addEventListener("click", () => { keepFields(); evOpen = true; draw(); if (marks === null) rpc("my_event_marks").then((r) => { marks = Array.isArray(r) ? r : []; }).catch(() => { marks = []; }).then(() => { if (evOpen) draw(); }); });
+      $("evClear")?.addEventListener("click", () => { keepFields(); f.rph_id = null; f.rph_name = ""; f.rph_store = ""; draw(); });
+      $("evCancel")?.addEventListener("click", () => { keepFields(); evOpen = false; evMsg = ""; draw(); });
+      sh.querySelectorAll("[data-ev]").forEach((b) => b.onclick = () => { keepFields(); const m = marks.find((x) => String(x.rph_id) === b.dataset.ev); if (m) pickEvent({ id: +m.rph_id, name: m.snap.name, store: m.snap.store, start: m.snap.start }); });
+      $("evFind")?.addEventListener("click", async () => {
+        keepFields();
+        const v = $("evLink").value, mm = String(v).match(/events\/(\d{1,12})/) || String(v).trim().match(/^(\d{1,12})$/);
+        if (!mm) { evMsg = Tx("That doesn't look like a Play Hub event link."); draw(); $("evLink")?.focus(); return; }
+        $("evFind").disabled = true;
+        try { const x = await CLOUD.fn("rph-events", { id: mm[1] }); if (!x?.id) throw new Error("none"); pickEvent({ id: +x.id, name: String(x.name || "").replace(/\s+-\s+\w+ \d{1,2}, \d{4}$/, ""), store: x.store?.name || "", start: x.start }); }
+        catch { evMsg = Tx("Couldn't find this event on the Play Hub."); draw(); }
+      });
       $("aPhoto").onchange = async (ev) => {
         const file = ev.target.files?.[0]; if (!file) return; keepFields();
         try { photo = await shrinkPhoto(file); photoUrl = URL.createObjectURL(photo); dropPhoto = false; draw(); }
@@ -491,7 +525,8 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
         try {
           let image = dropPhoto ? null : (a?.image || null);
           if (photo) { image = `${me.id}/${crypto.randomUUID()}.jpg`; await CLOUD.upload("achievements", image, photo); }
-          await rpc("save_achievement", { p: { id: a?.id || "", kind: f.kind, title, body: f.body.trim(), on: f.on, place: f.place.trim(), image, visibility: f.visibility, announce: isNew && !!f.announce } });
+          await rpc("save_achievement", { p: { id: a?.id || "", kind: f.kind, title, body: f.body.trim(), on: f.on, place: f.place.trim(), image, visibility: f.visibility, announce: isNew && !!f.announce,
+            rph_id: f.rph_id ? String(f.rph_id) : "", rph_name: f.rph_name || "", rph_store: f.rph_store || "" } });
           if (a?.image && a.image !== image) await CLOUD.removeFiles("achievements", [a.image]).catch(() => {});
           sh.close(); myAchs = null; drawMyAchievements(); toast(Tx(isNew && f.announce ? "Saved, and your friends see it on Início." : "Saved"));
         } catch (e) { b.disabled = false; b.textContent = Tx("Save"); $("aMsg").textContent = /too_many/.test(String(e?.message || e)) ? Tx("Too many today. Try again tomorrow.") : Tx("Couldn't save. Try again."); }
