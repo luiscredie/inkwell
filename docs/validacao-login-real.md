@@ -4,9 +4,10 @@ Os testes automáticos do repositório usam um Supabase **simulado**: eles prova
 Este roteiro valida o caminho real. Ele **grava dados reais** no Supabase de produção (uma conta nova, um deck, um perfil),
 então use um e-mail de teste e apague a conta no fim (Perfil → Seus dados → Excluir conta).
 
-Antes de começar, anote em **Supabase → Authentication → Sign In / Providers → Email**:
-- **Email OTP Length** (6 a 10). O site aceita de 6 a 10 dígitos e nunca corta o código.
-- **Email OTP Expiration** (validade do código).
+Configuração atual (conferida em 01/11/2026 em Supabase → Authentication → Sign In / Providers → Email):
+- **Email OTP Length: 8 dígitos.** O site aceita de 6 a 10 e nunca corta o código.
+- **Email OTP Expiration: 1 hora.**
+- E-mail: assunto "Seu código do Inkwell"; link para `https://inkwell.com.br/entrar/?h=…`.
 
 ## A. Deck sem cadastro → conta → deck salvo (computador)
 1. Janela anônima. Abra o site → **Testar um deck sem cadastro** → **Experimentar com um deck de exemplo**.
@@ -20,8 +21,9 @@ Antes de começar, anote em **Supabase → Authentication → Sign In / Provider
    salvar **já aberta**. Dê um nome e **Salvar**. Esperado: o deck aparece na lista; o aviso some.
 
 ## B. Código expirado e reenvio
-1. Saia da conta. **Entrar** → e-mail → **Enviar código**. Espere passar a validade do código.
+1. Saia da conta. **Entrar** → e-mail → **Enviar código**. Espere passar a validade do código (1 hora).
 2. Digite o código vencido. Esperado: "Esse código não vale: está errado, expirou ou já foi usado".
+   (Sem esperar 1 hora: peça um segundo código e tente o primeiro; o esperado é o mesmo aviso.)
 3. Espere o contador de 60 s → **Mandar outro código**. Esperado: "Mandamos um código novo"; o campo fica vazio.
 4. Use o código **novo**. Esperado: entra. (O código antigo não deve mais funcionar.)
 
