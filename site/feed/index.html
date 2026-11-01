@@ -557,7 +557,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "{n} friends": "{n} amigos", "1 friend": "1 amigo", "your games: {v}": "seus jogos: {v}", "Close": "Fechar", "Requests": "Pedidos", "Add a friend": "Adicionar amigo",
     "Your timeline is empty": "Sua linha do tempo está vazia", "Add friends to see their games here. Your games also show up for whoever you choose.": "Adicione amigos para ver os jogos deles aqui. Os seus jogos também aparecem para quem você escolher.",
     "Your place in the Lorcana community.": "Seu lugar no mundo de Lorcana.", "Organise your cards, try decks, find events and your Lorcana people — with a profile that feels like you.": "Organize suas cartas, teste decks, ache eventos e encontre sua turma de Lorcana — com um perfil com a sua cara.",
-    "No sign-up to try.": "Sem cadastro para experimentar.", "Create your account only when you want to keep what you did.": "Crie sua conta só quando quiser guardar o que fez.", "Or go straight to:": "Ou vá direto:", "try a deck": "testar um deck", "see the collection": "ver a coleção", "events near you": "eventos perto de você", "Your favourite cards and your people, in a profile that feels like you.": "Suas cartas favoritas e sua turma, em um perfil com a sua cara.",
+    "No sign-up to try.": "Sem cadastro para experimentar.", "Create your account only when you want to keep what you did.": "Crie sua conta só quando quiser guardar o que fez.", "Or go straight to:": "Ou vá direto:", "News and events on Instagram:": "Novidades e eventos no Instagram:", "try a deck": "testar um deck", "see the collection": "ver a coleção", "events near you": "eventos perto de você", "Your favourite cards and your people, in a profile that feels like you.": "Suas cartas favoritas e sua turma, em um perfil com a sua cara.",
     "Start my Inkwell": "Começar meu Inkwell", "Explore the community": "Explorar a comunidade", "Demo with fictional data": "Demonstração com dados fictícios",
     "Already have an account? Sign in": "Já tem conta? Entrar", "Example recado": "Recado de exemplo", "Build your profile": "Monte seu perfil",
     "Your name": "Seu nome", "How you want to appear. Your real name and e-mail never show.": "Como você quer aparecer. Seu nome real e seu e-mail nunca aparecem.",
@@ -1067,6 +1067,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
             <a class="iw-button" href="../comunidades/">${Tx("Explore the community")}</a></div>
           <p class="iw-muted" style="margin:var(--sp-3) 0 0" data-testid="no-signup"><b>${Tx("No sign-up to try.")}</b> ${Tx("Create your account only when you want to keep what you did.")}</p>
           <p class="iw-muted small" style="margin:var(--sp-2) 0 0">${Tx("Or go straight to:")} <a class="iw-link" href="../decks/">${Tx("try a deck")}</a> · <a class="iw-link" href="../colecao/">${Tx("see the collection")}</a> · <a class="iw-link" href="../eventos/">${Tx("events near you")}</a></p>
+          <p class="iw-muted small" style="margin:var(--sp-2) 0 0" data-testid="hero-instagram">${Tx("News and events on Instagram:")} <a class="iw-link" href="https://www.instagram.com/inkwell.brasil/" target="_blank" rel="noopener noreferrer">@inkwell.brasil</a></p>
           <p style="margin:var(--sp-4) 0 0"><button type="button" class="iw-link" id="signIn2">${Tx("Already have an account? Sign in")}</button></p></div>
         <div class="iw-profile" aria-label="${esc(Tx("Demo with fictional data"))}">
           <div class="demo-cover" aria-hidden="true" style="${img("LOR10-178") ? `background-image:url('${img("LOR10-178")}')` : ""}"><span class="iw-sample-label">${Tx("Example profile · fictional data")}</span></div>
@@ -1416,6 +1417,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   sheet.className = "sheet"; sheet.id = "iwSignSheet"; sheet.setAttribute("aria-labelledby", "iwSiT");
   document.body.append(sheet);
 
+  const IG = window.INKWELL_INSTAGRAM = "https://www.instagram.com/inkwell.brasil/";
   // ---------- rights note, on every page (Inkwell stays free; the rights belong to Disney and Ravensburger) ----------
   {
     const legal = document.createElement("footer");
@@ -1423,6 +1425,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     legal.innerHTML = T(
       `Disney Lorcana, as imagens das cartas, os símbolos das tintas e as marcas relacionadas pertencem à Disney e à Ravensburger. O Inkwell é um projeto de fã, gratuito e sem vínculo com elas. <a href="../privacidade/">Termos e privacidade</a>`,
       `Disney Lorcana, the card images, the ink symbols and related marks belong to Disney and Ravensburger. Inkwell is a free fan project, not affiliated with them. <a href="../privacidade/">Terms and privacy</a>`);
+    // the Instagram profile: a plain link (no embed, so nothing from Meta loads here)
+    legal.insertAdjacentHTML("afterbegin", `<p class="iw-social"><a href="${IG}" target="_blank" rel="noopener noreferrer" data-testid="instagram"><i class="ic i-camera" aria-hidden="true"></i> ${T("Siga o Inkwell no Instagram", "Follow Inkwell on Instagram")} · @inkwell.brasil</a></p>`);
     (document.querySelector("main") || document.body).after(legal);
   }
   let email = "", trigger = null;
