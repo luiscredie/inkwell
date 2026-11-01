@@ -260,7 +260,15 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Only {n} cards cost 1 or 2. Slow opening hands are more likely.": "Só {n} cartas de custo 1 ou 2. Mãos iniciais lentas ficam mais prováveis.",
     "{n} cards cost 1 or 2: enough early plays.": "{n} cartas de custo 1 ou 2: jogadas cedo suficientes.",
     "Only {a} of {b} are inkable. You may run short of ink.": "Só {a} de {b} são inkáveis. Pode faltar tinta.", "{a} of {b} inkable: enough ink.": "{a} de {b} inkáveis: tinta suficiente.",
-    "{n} cards missing": "{n} cartas faltando", "{n} card missing": "1 carta faltando", "{v} at {s}": "{v} no {s}", "Try it with an example deck": "Experimentar com um deck de exemplo", "Example deck": "Deck de exemplo", "Amber/Steel, made to show the tool — not a competitive list. Change it as you like.": "Âmbar/Aço, feito para mostrar a ferramenta — não é lista competitiva. Mude à vontade.", "{v} estimated (MYP Cards, else TCGplayer)": "{v} estimados (MYP Cards; sem anúncio lá, TCGplayer)", "estimate": "estimativa",
+    "{n} cards missing": "{n} cartas faltando", "{n} card missing": "1 carta faltando", "{v} at {s}": "{v} no {s}", "Deck type": "Tipo de deck", "Virtual": "Virtual", "Physical": "Físico", "view only": "só ver", "my collection": "minha coleção", "collection “{n}”": "coleção “{n}”", "{n}'s collection": "coleção de {n}",
+    "{n} cards will be set aside for this deck in {c}: {b} from the binder, {h} from home.": "{n} cartas vão ficar separadas para este deck na {c}: {b} do fichário, {h} de casa.",
+    "{m} you don't have free (missing or already in other places) stay out.": "{m} que você não tem livres (faltando ou já em outros lugares) ficam de fora.",
+    "Set the cards aside": "Separar as cartas", "None of these cards is free in {c} right now.": "Nenhuma destas cartas está livre na {c} agora.",
+    "The {n} cards go back to the binder, and the deck becomes virtual.": "As {n} cartas voltam para o fichário e o deck vira virtual.", "Take it apart": "Desmontar",
+    "Built": "Montado", "{n} cards set aside in {c}.": "{n} cartas separadas na {c}.", "The list changed since then.": "A lista mudou desde então.", "Update the cards set aside": "Atualizar as cartas separadas",
+    "Virtual: the cards stay where they are; the deck only counts what you have and what's missing. Physical: the cards are set aside for this deck in your collection (Coleção › Decks).": "Virtual: as cartas ficam onde estão; o deck só conta o que você tem e o que falta. Físico: as cartas ficam separadas para este deck na sua coleção (Coleção › Decks).",
+    "Cards set aside for {d}.": "Cartas separadas para {d}.", "{d} is virtual again: the cards are back in the binder.": "{d} voltou a ser virtual: as cartas voltaram para o fichário.",
+    "Some of these cards aren't free anymore. Reload and try again.": "Algumas destas cartas não estão mais livres. Recarregue e tente de novo.", "Try it with an example deck": "Experimentar com um deck de exemplo", "Example deck": "Deck de exemplo", "Amber/Steel, made to show the tool — not a competitive list. Change it as you like.": "Âmbar/Aço, feito para mostrar a ferramenta — não é lista competitiva. Mude à vontade.", "{v} estimated (MYP Cards, else TCGplayer)": "{v} estimados (MYP Cards; sem anúncio lá, TCGplayer)", "estimate": "estimativa",
     "Estimate in reais: {s}, updated {d}. A card with no price is left out of the total, never counted as zero.": "Estimativa em reais: {s}, atualizado em {d}. Carta sem preço fica fora do total, nunca conta como zero.",
     "lowest MYP Cards listing ({d}); without one, {s}": "menor anúncio na MYP Cards ({d}); sem anúncio lá, {s}", "{n} can come from friends": "{n} podem vir de amigos", "{n} can come from friends_1": "1 pode vir de amigos",
     "You have every card for this deck.": "Você tem todas as cartas deste deck.", "Copies lent to friends still count as yours.": "Cópias emprestadas a amigos contam como suas.",
@@ -431,7 +439,99 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   // the cards you can build with: all your collections plus the ones shared with you (supabase/collection_shares.sql)
   let ALL_COLL = null;
   const coll = () => ALL_COLL || prof()?.collection || {};
-  let sharedColls = [], lendBy = new Map(), lendAsked = new Set();   // friends who lend: card_id -> [{user, name, free}]
+  let sharedColls = [], lendBy = new Map(), lendAsked = new Set();
+  // ---------- deck físico / virtual (supabase/deck_built.sql) ----------
+  // A physical deck has its cards set aside in the collection ("Decks" place in Coleção): they leave the binder (and
+  // home, when the binder is short). A virtual deck moves nothing: it only uses the collection to count what's missing.
+  // The collection is the one chosen in Coleção (yours, or one shared with you).
+  let STOCK = { ready: false, home: [], trade: [], decked: [], lent: [] }, buildAsk = null;
+  function buildSource() {
+    let key = null; try { key = localStorage.getItem("inkwell-coll-source"); } catch { /* */ }
+    const own = profiles.slice().sort((a, b) => Object.keys(b.collection).length - Object.keys(a.collection).length);
+    const sh = (x) => ({ shared: true, owner: x.owner, profile: x.profile, label: Tx("{n}'s collection", { n: String(x.owner_name || "").split(" ")[0] || "?" }), canEdit: !!x.can_edit, collection: x.collection || {},
+      home: x.home || [], trade: x.trade || [], decked: (x.decked || []), lent: [] });
+    const mine = (x) => ({ shared: false, owner: null, profile: x.profile, label: x.profile === "principal" || profiles.length === 1 ? Tx("my collection") : Tx("collection “{n}”", { n: x.profile }), canEdit: true, collection: x.collection,
+      home: STOCK.home.filter((r) => r.profile === x.profile), trade: STOCK.trade.filter((r) => r.profile === x.profile), decked: STOCK.decked.filter((r) => r.profile === x.profile), lent: STOCK.lent });
+    const s = key && key.startsWith("share:") ? sharedColls.find((x) => `share:${x.owner}:${x.profile}` === key) : null;
+    if (s) return sh(s);
+    const o = profiles.find((x) => x.profile === key);
+    if (o) return mine(o);
+    if (!Object.keys(own[0]?.collection || {}).length && sharedColls[0]) return sh(sharedColls[0]);
+    return own[0] ? mine(own[0]) : null;
+  }
+  const builtRows = (src, d) => (src?.decked || []).filter((r) => r.deck_id === d.id);
+  // where this deck's copies come from: the printings in the list first, then reprints; binder before home; normal before foil
+  function buildPlan(d, src) {
+    const sum = (rows) => { const m = new Map(); for (const r of rows) { const e = m.get(r.card_id) || { n: 0, f: 0 }; e.n += +r.n || 0; e.f += +r.f || 0; m.set(r.card_id, e); } return m; };
+    const home = sum(src.home), trade = sum(src.trade), other = sum(src.decked.filter((r) => r.deck_id !== d.id)), lent = new Map();
+    for (const it of src.lent) { const e = lent.get(it.card_id) || { n: 0, f: 0 }; e[it.foil ? "f" : "n"] += +it.qty || 0; lent.set(it.card_id, e); }
+    const g = (m, id, k) => m.get(id)?.[k] || 0;
+    const free = (id, k) => Math.max(0, (+src.collection[id]?.[k] || 0) - g(home, id, k) - g(trade, id, k) - g(lent, id, k) - g(other, id, k));
+    const atHome = (id, k) => g(home, id, k);   // home is its own place: those copies aren't in trades, lent or other decks
+    const need = new Map();
+    for (const [id, q] of Object.entries(d.cards || {})) { const c = BY.get(id); if (!c || !(+q > 0)) continue; const x = need.get(c.key) || { q: 0, ids: [] }; x.q += +q; x.ids.push(id); need.set(c.key, x); }
+    const items = new Map(), fromHome = [], used = { binder: 0, home: 0 }; let missing = 0, total = 0;
+    for (const [key, x] of need) {
+      let left = x.q; total += x.q;
+      const order = [...x.ids, ...(BYNAME.get(key) || []).map((c) => c.id).filter((id) => !x.ids.includes(id))];
+      for (const [place, k] of [["binder", "n"], ["binder", "f"], ["home", "n"], ["home", "f"]]) for (const id of order) {
+        if (left <= 0) break;
+        const q = Math.min(left, place === "binder" ? free(id, k) - (items.get(id)?.[`b${k}`] || 0) : atHome(id, k) - (items.get(id)?.[`h${k}`] || 0));
+        if (q <= 0) continue;
+        const e = items.get(id) || { card_id: id, n: 0, f: 0, bn: 0, bf: 0, hn: 0, hf: 0 }; e[k] += q; e[(place === "binder" ? "b" : "h") + k] += q; items.set(id, e);
+        if (place === "home") fromHome.push({ card_id: id, qty: q, foil: k === "f" });
+        used[place] += q; left -= q;
+      }
+      missing += Math.max(0, left);
+    }
+    return { items: [...items.values()].map(({ card_id, n, f }) => ({ card_id, n, f })), fromHome, used, missing, total };
+  }
+  function buildBox(d) {
+    if (!STOCK.ready) return "";
+    const src = buildSource(); if (!src) return "";
+    const rows = builtRows(src, d), built = rows.length > 0, inDeck = rows.reduce((t, r) => t + (+r.n || 0) + (+r.f || 0), 0);
+    const plan = buildPlan(d, src);
+    const byName = (list) => { const m = new Map(); for (const r of list) { const c = BY.get(r.card_id); if (!c) continue; m.set(c.key, (m.get(c.key) || 0) + (+r.n || 0) + (+r.f || 0)); } return [...m].sort().join("|"); };
+    const stale = built && byName(rows) !== byName(plan.items);
+    const seg = `<div class="seg" role="group" aria-label="${Tx("Deck type")}" data-testid="deck-kind"><button type="button" data-kind="virtual" aria-pressed="${!built && buildAsk !== "build"}">${Tx("Virtual")}</button><button type="button" data-kind="physical" aria-pressed="${built || buildAsk === "build"}">${Tx("Physical")}</button></div>`;
+    const ro = src.shared && !src.canEdit;
+    let body;
+    if (buildAsk === "build") body = plan.used.binder + plan.used.home
+      ? `<p class="small" style="margin:0" data-testid="build-plan">${esc(Tx("{n} cards will be set aside for this deck in {c}: {b} from the binder, {h} from home.", { n: plan.used.binder + plan.used.home, c: src.label, b: plan.used.binder, h: plan.used.home }))}${plan.missing ? " " + esc(Tx("{m} you don't have free (missing or already in other places) stay out.", { m: plan.missing })) : ""}</p>
+        <div class="row" style="gap:var(--sp-2)"><button type="button" class="btn primary" id="buildGo" data-testid="build-go">${Tx("Set the cards aside")}</button><button type="button" class="btn ghost" id="buildNo">${Tx("Cancel")}</button></div>`
+      : `<p class="small" style="margin:0">${esc(Tx("None of these cards is free in {c} right now.", { c: src.label }))}</p><button type="button" class="btn ghost" id="buildNo">${Tx("Cancel")}</button>`;
+    else if (buildAsk === "unbuild") body = `<p class="small" style="margin:0">${esc(Tx("The {n} cards go back to the binder, and the deck becomes virtual.", { n: inDeck }))}</p>
+        <div class="row" style="gap:var(--sp-2)"><button type="button" class="btn primary" id="unbuildGo" data-testid="unbuild-go">${Tx("Take it apart")}</button><button type="button" class="btn ghost" id="buildNo">${Tx("Cancel")}</button></div>`;
+    else if (built) body = `<p class="small" style="margin:0" data-testid="build-state"><span class="tag match">${Tx("Built")}</span> ${esc(Tx("{n} cards set aside in {c}.", { n: inDeck, c: src.label }))}${stale ? " " + esc(Tx("The list changed since then.")) : ""}</p>
+        ${stale && !ro ? `<button type="button" class="btn small" id="rebuild" data-testid="rebuild" style="justify-self:start">${Tx("Update the cards set aside")}</button>` : ""}`;
+    else body = `<p class="small muted" style="margin:0" data-testid="build-state">${Tx("Virtual: the cards stay where they are; the deck only counts what you have and what's missing. Physical: the cards are set aside for this deck in your collection (Coleção › Decks).")}</p>`;
+    return `<section class="card stack build-box" style="gap:var(--sp-2);margin-top:var(--sp-4)" data-testid="deck-build"><div class="row between"><b>${Tx("Deck type")}</b>${ro ? `<span class="small muted">${Tx("view only")}</span>` : seg}</div>${body}<p class="small" id="buildMsg" role="alert" style="margin:0"></p></section>`;
+  }
+  async function doBuild(d, items, fromHome) {
+    const src = buildSource();
+    const msg = (t) => { const el = $("buildMsg"); if (el) el.textContent = t; };
+    try {
+      await CLOUD.api("rpc/build_deck", { method: "POST", prefer: "return=minimal", body: { p_owner: src.shared ? src.owner : null, p_profile: src.profile, p_deck: d.id, p_name: String(d.name || "").slice(0, 80), p_items: items, p_from_home: fromHome } });
+      const strip = (list) => list.filter((r) => !(r.deck_id === d.id && r.profile === src.profile));
+      const add = items.map((x) => ({ profile: src.profile, deck_id: d.id, deck_name: d.name, card_id: x.card_id, n: x.n, f: x.f }));
+      const home = (list) => { for (const h of fromHome) { const r = list.find((x) => x.profile === src.profile && x.card_id === h.card_id); if (r) r[h.foil ? "f" : "n"] = Math.max(0, (+r[h.foil ? "f" : "n"] || 0) - h.qty); } return list; };
+      if (src.shared) { const s = sharedColls.find((x) => x.owner === src.owner && x.profile === src.profile); if (s) { s.decked = [...strip((s.decked || []).map((r) => ({ ...r, profile: src.profile }))), ...add]; home((s.home || []).map((r) => Object.assign(r, { profile: src.profile }))); } }
+      else { STOCK.decked = [...strip(STOCK.decked), ...add]; home(STOCK.home); }
+      buildAsk = null; render();
+      toast(items.length ? Tx("Cards set aside for {d}.", { d: d.name }) : Tx("{d} is virtual again: the cards are back in the binder.", { d: d.name }));
+    } catch (e) { msg(/more placed/.test(String(e?.why || "")) ? Tx("Some of these cards aren't free anymore. Reload and try again.") : Tx("Couldn't save. Try again.")); }
+  }
+  function wireBuild(d) {
+    const box = $("app").querySelector("[data-testid=deck-build]"); if (!box) return;
+    box.querySelectorAll("[data-kind]").forEach((b) => b.onclick = () => {
+      const src = buildSource(), built = builtRows(src, d).length > 0;
+      buildAsk = b.dataset.kind === "physical" ? (built ? null : "build") : built ? "unbuild" : null; render();
+    });
+    $("buildNo")?.addEventListener("click", () => { buildAsk = null; render(); });
+    $("buildGo")?.addEventListener("click", (e) => { e.currentTarget.disabled = true; const p = buildPlan(d, buildSource()); doBuild(d, p.items, p.fromHome); });
+    $("rebuild")?.addEventListener("click", (e) => { e.currentTarget.disabled = true; const p = buildPlan(d, buildSource()); doBuild(d, p.items, p.fromHome); });
+    $("unbuildGo")?.addEventListener("click", (e) => { e.currentTarget.disabled = true; doBuild(d, [], []); });
+  }   // friends who lend: card_id -> [{user, name, free}]
   const ownedName = (c) => { let n = 0; const col = coll(); for (const p of printings(c)) { const e = col[p.id]; if (e) n += (+e.n || 0) + (+e.f || 0); } return n; };
   let editing = false;
 
@@ -452,8 +552,16 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const ids = [...new Set(listings.map((l) => l.user_id).filter((u) => u !== me.id))];
     if (ids.length) for (const r of (await CLOUD.api(`profiles?user_id=in.(${ids.slice(0, 150).join(",")})&select=user_id,display_name`).catch(() => [])) || []) names.set(r.user_id, r.display_name);
     games = (gl || []).map(gameOf).filter(Boolean);
-    const sc = await CLOUD.api("rpc/shared_collections", { method: "POST", body: {} }).catch(() => []);
+    const [sc, hm, tr, dk, lo, ul] = await Promise.all([
+      CLOUD.api("rpc/shared_collections", { method: "POST", body: {} }).catch(() => []),
+      CLOUD.api("collection_home?select=profile,card_id,n,f").catch(() => []),
+      CLOUD.api("collection_trade?select=profile,card_id,n,f").catch(() => []),
+      CLOUD.api("collection_decked?select=profile,deck_id,deck_name,card_id,n,f").catch(() => null),   // null: supabase/deck_built.sql not run yet
+      CLOUD.api("loans?select=items&direction=eq.lent&returned_at=is.null").catch(() => []),
+      CLOUD.api(`user_loans?select=items&lender=eq.${me.id}&status=in.(accepted,delivered)`).catch(() => []),
+    ]);
     sharedColls = Array.isArray(sc) ? sc : [];
+    STOCK = { ready: Array.isArray(dk), home: hm || [], trade: tr || [], decked: dk || [], lent: [...(lo || []), ...(ul || [])].flatMap((x) => x.items || []) };
     ALL_COLL = {};
     for (const src of [...profiles.map((x) => x.collection), ...sharedColls.map((x) => x.collection || {})])
       for (const [id, e] of Object.entries(src || {})) { const t = ALL_COLL[id] || (ALL_COLL[id] = { n: 0, f: 0 }); t.n += +e?.n || 0; t.f += +e?.f || 0; }
@@ -701,6 +809,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         <div class="stat"><b>${m.inColl != null ? m.inColl + "%" : "—"}</b><span>${Tx("In collection")}</span></div>
         <div class="stat"><b class="money">${moneySplit(m.value)}</b><span>${Tx("Value")}</span></div>
         <div class="stat"><b class="${m.wr != null && m.wr >= 50 ? "win" : ""}">${m.wr != null ? m.wr + "%" : "—"}</b><span>${Tx("Wins")}</span></div></div>
+      ${buildBox(d)}
       <div class="tabs" role="tablist" style="margin-top:var(--sp-5)">${tabs.map(([k, l, n]) => `<button type="button" class="tab" role="tab" data-tab="${k}" aria-selected="${tab === k}">${Tx(l)}${n ? `<span class="count quiet">${n}</span>` : ""}</button>`).join("")}</div>
       <div id="tabBody" role="tabpanel">${tab === "analysis" ? analysis(d, m) : tab === "missing" ? missingTab(d, m) : tab === "games" ? gamesTab(d, m) : tab === "plan" ? planTab(d) : listTab(d, m)}</div>`;
     $("back").onclick = (e) => { e.preventDefault(); go(null); };
@@ -708,6 +817,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     $("edit").onclick = () => { editing = !editing; if (editing && tab !== "list") go(d.id, "list", true); else render(); if (editing) setTimeout(() => $("addQ")?.focus(), 0); };
     $("more").onclick = (e) => { e.stopPropagation(); toggleMenu(d, m); };
     $("metaSel").onchange = (e) => saveMeta(d, e.target.value);
+    wireBuild(d);
     wireTab(d, m, tab);
     if (keep && $(keep)) { const el = $(keep); el.focus(); try { if (caret != null) el.setSelectionRange(caret, caret); } catch { /* */ } }
   }

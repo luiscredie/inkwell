@@ -363,3 +363,32 @@ test('signed out: one tap fills an example deck — 60 cards, legal in Core, mar
   await expect(page.getByTestId('public-sample-note')).toContainText('não é lista competitiva');
   await expect(page.getByTestId('public-sample')).toHaveCount(0);
 });
+
+test('physical or virtual: virtual moves nothing; physical sets the cards aside (binder first, then home) and can be taken apart', async ({ page }) => {
+  const calls = await setup(page);
+  // fixtures: LOR10-1 2 owned (deck wants 4), the rest 4 each; one LOR10-10 copy is at home
+  await page.route('**/rest/v1/collection_home**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ profile: 'luiscredie', card_id: 'LOR10-10', n: 1, f: 0 }]) }));
+  await page.route('**/rest/v1/collection_decked**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+  const builds = [];
+  await page.route('**/rest/v1/rpc/build_deck', (r) => { builds.push(JSON.parse(r.request().postData())); return r.fulfill({ status: 204, body: '' }); });
+  await page.goto(BASE + '?deck=deck-a');
+  const box = page.locator('[data-testid="deck-build"]');
+  await expect(box.locator('[data-kind="virtual"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(box.locator('[data-testid="build-state"]')).toContainText('Virtual: as cartas ficam onde estão');
+  await box.locator('[data-kind="physical"]').click();
+  await expect(box.locator('[data-testid="build-plan"]')).toContainText('58 cartas vão ficar separadas para este deck na minha coleção: 57 do fichário, 1 de casa.');
+  await expect(box.locator('[data-testid="build-plan"]')).toContainText('2 que você não tem livres');
+  expect(builds).toEqual([]);   // nothing until confirmed
+  await box.locator('[data-testid="build-go"]').click();
+  await expect(box.locator('[data-testid="build-state"]')).toContainText('58 cartas separadas');
+  expect(builds[0]).toMatchObject({ p_owner: null, p_profile: 'luiscredie', p_deck: 'deck-a', p_name: 'Amber Test', p_from_home: [{ card_id: 'LOR10-10', qty: 1, foil: false }] });
+  expect(builds[0].p_items.find((x) => x.card_id === 'LOR10-1')).toEqual({ card_id: 'LOR10-1', n: 2, f: 0 });
+  expect(builds[0].p_items.reduce((t, x) => t + x.n + x.f, 0)).toBe(58);
+  // back to virtual: asks, then takes it apart
+  await box.locator('[data-kind="virtual"]').click();
+  await expect(box).toContainText('As 58 cartas voltam para o fichário');
+  await box.locator('[data-testid="unbuild-go"]').click();
+  await expect(box.locator('[data-kind="virtual"]')).toHaveAttribute('aria-pressed', 'true');
+  expect(builds[1]).toMatchObject({ p_deck: 'deck-a', p_items: [], p_from_home: [] });
+  expect(calls.length).toBeGreaterThan(0);
+});
