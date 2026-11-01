@@ -250,7 +250,9 @@ test('sign-up cancelled or wrong code: draft intact, no false success (A12)', as
   await page.locator('#save').click();
   await sheet.locator('#iwSiEmail').fill('ana@example.com');
   await sheet.getByRole('button', { name: 'Enviar código' }).click();
-  await sheet.locator('#iwSiCode').fill('99999999');
+  // typed digit by digit: nothing is sent until "Entrar"
+  await sheet.locator('#iwSiCode').pressSequentially('99999999');
+  expect(calls.some((c) => /verify/.test(c.path || ''))).toBe(false);
   await sheet.getByRole('button', { name: 'Entrar' }).click();
   await expect(sheet.locator('#iwSiMsg')).toContainText('Esse código não vale');
   expect((await draftOf(page)).displayName).toBe('Ana');
@@ -267,8 +269,8 @@ test('confirm the code in the same tab: the draft is saved as a private profile,
   const sheet = page.locator('#iwSignSheet');
   await sheet.locator('#iwSiEmail').fill('ana@example.com');
   await sheet.getByRole('button', { name: 'Enviar código' }).click();
+  // the whole code at once (the iPhone's suggestion, or a paste) signs in by itself
   await sheet.locator('#iwSiCode').fill('12345678');
-  await sheet.getByRole('button', { name: 'Entrar' }).click();
   await expect(page.getByTestId('saved')).toBeVisible();
   expect(saves(calls)).toHaveLength(1);
   const p = saves(calls)[0].body.p;

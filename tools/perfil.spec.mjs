@@ -55,6 +55,10 @@ async function setup(page, { signedIn = true, mine = null, admin = false, relati
     ]) : route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ code: '42501', message: 'not allowed' }) });
     if (path === 'rpc/admin_reports') return admin ? json([{ id: 'r1', reason: 'Spam', status: 'open', created_at: '2026-10-21T00:00:00Z', target: '00000000-0000-4000-a000-000000000001', target_name: 'user1 (exemplo)', target_handle: 'user1', reporter_name: 'Luís' }]) : route.fulfill({ status: 403, body: '{"message":"not allowed"}' });
     if (path === 'rpc/admin_action' || path === 'rpc/admin_resolve_report') return route.fulfill({ status: 204, body: '' });
+    if (path === 'rpc/admin_feedback') return admin ? json([
+      { id: 'f1', at: '2026-10-30T10:00:00Z', kind: 'bug', body: 'O scanner <b>não</b> abre', page: 'cards', path: '/inkwell/colecao/', device: 'iPhone · 390x844', status: 'open', email: 'eu@exemplo.com', name: null, handle: null, member: false },
+      { id: 'f2', at: '2026-10-29T10:00:00Z', kind: 'idea', body: 'Modo torneio', page: 'decks', status: 'done', email: 'bia@x.com', name: 'Bia', handle: 'bia', member: true }]) : route.fulfill({ status: 403, body: '{"message":"not allowed"}' });
+    if (path === 'rpc/admin_feedback_done' || path === 'rpc/send_feedback') return route.fulfill({ status: 204, body: '' });
     if (path === 'rpc/admin_stats') return admin ? json(STATS(body.p_days)) : route.fulfill({ status: 403, body: '{"message":"not allowed"}' });
     if (path === 'rpc/my_duels_sync') return json(null);
     return json([]);
@@ -810,4 +814,53 @@ test('the bell: a reply, and comment likes grouped per comment', async ({ page }
   await expect(m.locator('.menu-item').first()).toContainText('Bia respondeu seu comentário');
   await expect(m.locator('.menu-item').nth(1)).toContainText('Ana e mais 2 curtiram seu comentário');
   await expect(page.locator('#iwBellN')).toBeHidden();
+});
+
+test('Enviar feedback: a visitor from the footer, with an e-mail', async ({ page }) => {
+  let calls = await setup(page, { signedIn: false });
+  await page.goto(url('decks/'));
+  await page.locator('[data-testid="feedback-open"]').click();
+  const fb = page.locator('#iwFeedback');
+  await expect(fb).toBeVisible();
+  await fb.locator('[data-fbk="idea"]').click();
+  await expect(fb).toContainText('Qual é a ideia?');
+  await fb.locator('#iwFbText').fill('Filtro por set');
+  await fb.locator('#iwFbMail').fill('eu@exemplo.com');
+  await fb.locator('#iwFbSend').click();
+  await expect(fb.locator('[data-testid="feedback-done"]')).toContainText('Recebido');
+  const b = rpcCalls(calls, 'send_feedback')[0];
+  expect(b).toMatchObject({ p_kind: 'idea', p_body: 'Filtro por set', p_page: 'decks', p_path: '/decks/', p_email: 'eu@exemplo.com' });
+  expect(b.p_device).toContain('x');
+});
+
+test('Enviar feedback: a member from the menu; unticking the device sends no page or browser', async ({ page }) => {
+  const calls = await setup(page, { mine: { display_name: 'Luís' } });
+  await page.goto(url('colecao/'));
+  await page.locator('#iwAcct').click();
+  await page.locator('.menu [data-feedback]').click();
+  const fb = page.locator('#iwFeedback');
+  await expect(fb.locator('#iwFbMail')).toHaveCount(0);
+  await fb.locator('#iwFbText').fill('ok');
+  await fb.locator('#iwFbSend').click();
+  await expect(fb.locator('#iwFbMsg')).toContainText('Escreva um pouco mais');
+  await fb.locator('#iwFbText').fill('O botão de importar some');
+  await fb.locator('#iwFbDev').uncheck();
+  await fb.locator('#iwFbSend').click();
+  await expect(fb.locator('[data-testid="feedback-done"]')).toBeVisible();
+  expect(rpcCalls(calls, 'send_feedback')[0]).toEqual({ p_kind: 'bug', p_body: 'O botão de importar some', p_page: 'cards', p_path: null, p_device: null, p_email: null });
+});
+
+test('admin: Feedback tab (from the notice link), text shown as text, mark as handled', async ({ page }) => {
+  const calls = await setup(page, { mine: { display_name: 'Luís' }, admin: true });
+  await page.goto(url('admin/?tab=feedback'));
+  const list = page.locator('[data-testid="feedback"]');
+  await expect(list.locator('.adm-row')).toHaveCount(1);
+  await expect(list).toContainText('O scanner <b>não</b> abre');
+  await expect(list).toContainText('Visitante · eu@exemplo.com');
+  await expect(list).toContainText('Coleção · /inkwell/colecao/');
+  await expect(page.locator('[data-tab="feedback"] .count')).toHaveText('1');
+  await page.locator('[data-fbf="all"]').click();
+  await expect(list.locator('.adm-row')).toHaveCount(2);
+  await page.locator('[data-fbdone="f1"]').click();
+  await expect.poll(() => rpcCalls(calls, 'admin_feedback_done')[0]).toEqual({ p_id: 'f1', p_done: true });
 });
