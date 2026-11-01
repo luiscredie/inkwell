@@ -6,7 +6,7 @@ Sources live in this repo, so the page can always be rebuilt:
   src/site/cloud.js                    sign-in + REST adapter shared by the site pages
   src/site/shell.js                    top bar / tab bar / account menu / sign-in sheet
   site/data/cards.json                 card catalog (a compact index is embedded)
-  site/index.html                      the Inkwell app; its deck-portfolio optimizer is copied in
+  legacy/site/index.html               the retired Inkwell app (not published); its deck-portfolio optimizer is copied in
 
 Run after a catalog update:  python tools/build_site_decks.py
 """
@@ -69,8 +69,8 @@ def build(out: Path = SITE / "decks" / "index.html") -> Path:
     tpl = (SRC / "decks" / "decks.template.html").read_text(encoding="utf-8")
     cloud = (SRC / "cloud.js").read_text(encoding="utf-8")
     shell = (SRC / "shell.js").read_text(encoding="utf-8")
-    plan_fn = portfolio_function((SITE / "index.html").read_text(encoding="utf-8"))
-    cfg = {**CLOUD, "redirect": "https://luiscredie.github.io/inkwell/decks/"}
+    plan_fn = portfolio_function((ROOT / "legacy" / "site" / "index.html").read_text(encoding="utf-8"))
+    cfg = {**CLOUD, "redirect": "../decks/"}
     html = (tpl
             .replace("/*@CLOUD@*/", f"window.INKWELL_CLOUD_CONFIG = {json.dumps(cfg)};\n{cloud}")
             .replace("/*@CARD_INDEX@*/", f"const CARD_INDEX = {script_json(card_index(catalog))};")

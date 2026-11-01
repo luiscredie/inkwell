@@ -47,25 +47,21 @@ jobs:
         run: python tools/build_pages_artifact.py --source site --output _site --optimize-images
 
       # Nao e suite de teste — e a guarda contra publicar uma raiz quebrada.
+      # A raiz e so um redirecionamento para feed/; o app antigo foi aposentado
+      # (o codigo dele fica em legacy/, fora do site publicado).
       - name: Verify deploy root
         shell: bash
         run: |
-          test -f _site/index.html
-          test -f _site/support.js
-          test -f _site/data-manifest.json
-          test ! -f _site/data/ligalorcana-prices.json
-          test ! -f _site/card-catalog-master.json
-          test ! -f index.html
-
-      # Se um dos sete arquivos sumir, /sim/ ou links antigos podem quebrar.
-      - name: Verify simulator files
-        shell: bash
-        run: |
-          for f in index.html game.html game.js trace.html trace.js sw.js manifest.webmanifest; do
-            test -f "_site/sim/$f" || { echo "faltando: _site/sim/$f"; exit 1; }
+          for f in index.html sw.js inkwell.webmanifest feed/index.html colecao/index.html decks/index.html entrar/index.html push/sw.js sim/index.html sim/sw.js data/cards.json; do
+            test -f "_site/$f" || { echo "faltando: _site/$f"; exit 1; }
           done
-          grep -q 'src="game.js"' _site/sim/index.html
-          grep -Fq 'location.replace("./" + location.search + location.hash);' _site/sim/game.html
+          grep -q "feed" _site/index.html
+          grep -q "unregister" _site/sw.js
+          grep -q "unregister" _site/sim/sw.js
+          for f in support.js match-center-engine.js manifest.webmanifest data-manifest.json users sim/game.js data/ligalorcana-prices.json card-catalog-master.json; do
+            test ! -e "_site/$f" || { echo "nao devia publicar: _site/$f"; exit 1; }
+          done
+          test ! -f index.html
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5

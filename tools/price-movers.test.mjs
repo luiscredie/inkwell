@@ -4,7 +4,7 @@
 //   node tools/price-movers.test.mjs
 import { readFile } from 'node:fs/promises';
 
-const html = await readFile(new URL('../site/index.html', import.meta.url), 'utf8');
+const html = await readFile(new URL('../legacy/site/index.html', import.meta.url), 'utf8');
 const s = html.indexOf('static computeMovers');
 const body = html.slice(s, html.indexOf('\n  priceMovers(period)', s));
 // Wrap the static method body into a standalone function.

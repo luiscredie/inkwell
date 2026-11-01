@@ -19,6 +19,12 @@ EXCLUDED_FILES = {
     "LEIA.txt",
     "README.txt",
     "card-catalog-master.json",
+    # only the retired app (legacy/site) read these
+    "data-manifest.json",
+    "data/aliases.json",
+    "data/cards.pt.json",
+    "data/meta-decks.json",
+    "data/validation-report.json",
     "index.html.bak",
     "data/card-price-map.json",
     "data/cards.backup.json",

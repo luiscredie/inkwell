@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 
 const read = relative => readFile(new URL(relative, import.meta.url), 'utf8');
 const [html, smoke, workflow, deployWorkflow, packageText] = await Promise.all([
-  read('../site/index.html'),
+  read('../legacy/site/index.html'),
   read('./smoke.spec.mjs'),
   read('../.github/workflows/validate.yml'),
   read('../.github/workflows/deploy-pages.yml'),

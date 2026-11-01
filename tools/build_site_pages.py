@@ -14,7 +14,7 @@ Three markers are filled in at build time, so shared code lives in one place:
   /*@AIPROMPT_JS@*/ src/site/aiprompt.js     Jogos: a game as a prompt for the player's own AI
   /*@COLLIMPORT_JS@*/ src/site/collimport.js Coleção: import a collection exported by another app
   /*@CARD_INDEX@*/  compact card index from site/data/cards.json (re-run after a catalog update)
-  /*@APP_STATIC:name@*/  a pure static method copied verbatim from the Inkwell app (site/index.html), so both give the same answer
+  /*@APP_STATIC:name@*/  a pure static method copied verbatim from the Inkwell app (legacy/site/index.html — the retired app, kept as source, not published), so both give the same answer
 The Decks page has its own builder (tools/build_site_decks.py), which this script also runs.
 """
 from __future__ import annotations
@@ -74,7 +74,7 @@ def without_index(html: str) -> str:
 
 def app_static(name: str) -> str:
     """`static name(...) { ... }` from the Inkwell app, returned as `function name(...) { ... }`."""
-    app = (SITE / "index.html").read_text(encoding="utf-8")
+    app = (ROOT / "legacy" / "site" / "index.html").read_text(encoding="utf-8")
     start = app.index(f"static {name}(")
     depth, j = 0, app.index("{", start)
     for j in range(j, len(app)):

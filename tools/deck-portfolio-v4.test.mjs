@@ -1,7 +1,7 @@
 // V4 Deck Portfolio Advisor — canonical optimizer + contract tests. No deps.
 //   node tools/deck-portfolio-v4.test.mjs
 import { readFile } from 'node:fs/promises';
-const html = await readFile(new URL('../site/index.html', import.meta.url), 'utf8');
+const html = await readFile(new URL('../legacy/site/index.html', import.meta.url), 'utf8');
 const s = html.indexOf('class Component extends DCLogic'), e = html.indexOf('</script>', s);
 const Component = new Function('DCLogic', 'React', html.slice(s, e) + '\nreturn Component;')(class { setState() {} }, { createElement: () => ({}) });
 const plan = (inv, decks, o) => Component.computeDeckPortfolioPlan(inv, decks, o || { budget: 200000 });

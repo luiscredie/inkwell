@@ -3,7 +3,7 @@
 //   node tools/visual-replay.test.mjs
 import { readFile } from 'node:fs/promises';
 
-const html = await readFile(new URL('../site/index.html', import.meta.url), 'utf8');
+const html = await readFile(new URL('../legacy/site/index.html', import.meta.url), 'utf8');
 const s = html.indexOf('class Component extends DCLogic');
 const e = html.indexOf('</script>', s);
 const Component = new Function('DCLogic', 'React', html.slice(s, e) + '\nreturn Component;')(class { setState() {} }, { createElement: (t, p, ...c) => ({ t, p, c }) });

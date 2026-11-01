@@ -11,7 +11,8 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { Catalog, convert, decklistOf, namesFromEvents, type Json } from "./convert.ts";
 
 const BASE = "https://duels.ink";
-const CATALOG_URL = "https://luiscredie.github.io/inkwell/data/cards.json";
+// the site address; set the SITE_URL secret when the domain changes
+const CATALOG_URL = (Deno.env.get("SITE_URL") || "https://luiscredie.github.io/inkwell/").replace(/\/*$/, "/") + "data/cards.json";
 const MAX_PER_RUN = 12;
 const UA = "inkwell-duels-sync/1.0 (personal use)";
 const SB = Deno.env.get("SUPABASE_URL")!;
