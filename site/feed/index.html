@@ -45,6 +45,9 @@ window.INKWELL_FLAGS = (() => {
   } catch { /* storage off: the default stays */ }
   return f;
 })();
+// MYP Cards prices (data/prices-br.json): off since 01/11/2026 — the store blocks automated access, so they can't be
+// kept up to date; prices are TCGplayer only. Turn back on with true once there is an allowed way to refresh them.
+if (window.INKWELL_PRICES_BR === undefined) window.INKWELL_PRICES_BR = false;
 window.INKWELL_CLOUD = (() => {
   const cfg = window.INKWELL_CLOUD_CONFIG || {};
   if (!cfg.url || !cfg.key) return null;
