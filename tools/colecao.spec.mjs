@@ -604,6 +604,20 @@ test('by default (MYP Cards off) every card and total uses TCGplayer: card sheet
   expect(asked).toEqual([]);
 });
 
+test('a card shows the price of one copy first, and the subtotal of your copies under it (list and card sheet)', async ({ page }) => {
+  await setup(page, { collection: { 'LOR10-10': { n: 2, f: 1 }, 'LOR13-27': { n: 1, f: 0 } } });
+  await page.route('**/data/prices.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ generated_at: '2026-10-28T00:00:00Z', usd_brl: 5.4, prices: { 'LOR10-10': { n: 1, nl: 1, f: 5, fl: 5 }, 'LOR13-27': { n: 4, nl: 4 } } }) }));
+  await page.goto(BASE);
+  await page.locator('[data-view="list"]').click();
+  const row = page.locator('button.list-row[data-card="LOR10-10"]');
+  await expect(row.getByTestId('unit-price')).toContainText('R$ 5,00');           // one copy, the foil worth more
+  await expect(row.getByTestId('row-subtotal')).toHaveText('3 cópias: R$ 7,00');   // 2 × 1 + 1 foil × 5
+  await expect(page.locator('button.list-row[data-card="LOR13-27"] [data-testid="row-subtotal"]')).toHaveCount(0);   // one copy: no subtotal
+  await row.click();
+  await expect(page.getByTestId('card-unit')).toHaveText('R$ 5,00');
+  await expect(page.getByTestId('card-value')).toHaveText('R$ 7,00');
+});
+
 test('"Mais valiosas": by one copy\'s price (the foil when it is worth more), not by the sum of the copies; that price is shown', async ({ page }) => {
   await setup(page, { collection: { 'LOR10-10': { n: 8, f: 0 }, 'LOR13-27': { n: 0, f: 1 }, 'LOR10-1': { n: 1, f: 0 } } });
   await page.route('**/data/prices.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ generated_at: '2026-10-28T00:00:00Z', usd_brl: 5.4,
