@@ -14,6 +14,8 @@
 <script>/*@CLOUD@*/
 </script>
 <style>
+.buy-row { display: grid; gap: var(--sp-2); padding: var(--sp-3) 0 var(--sp-1); }
+.buy-row .buy-btns { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
 /* layout only — components come from ../ui/tokens.css (design v2) */
 .deck-row { min-height: 76px; }
 .deck-row .trail { gap: 2px; }
@@ -65,7 +67,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
   const PT = {
     "Try a deck list without an account: see the cards, whether it's legal and what it costs.": "Teste uma lista de deck sem conta: veja as cartas, se ela é legal e quanto custa.",
     "cards": "cartas", "no inks yet": "nenhuma tinta ainda", "legal": "legal", "not legal yet": "ainda não é legal", "{a} of {b} cards priced": "{a} de {b} cartas com preço", "all cards priced": "todas as cartas com preço",
-    "check": "conferir", "no price": "sem preço", "each": "cada", "{n}× = {v}": "{n}× = {v}", "other printing": "outra edição",
+    "check": "conferir", "no price": "sem preço", "each": "cada", "Buy 1 copy": "Comprar 1 cópia", "Buy {n} copies": "Comprar {n} cópias", "Stores open in a new tab": "As lojas abrem em outra aba", "{n}× = {v}": "{n}× = {v}", "other printing": "outra edição",
     "Checked as Infinity: every set, at least 60 cards, up to 2 inks, up to 4 copies of each card (counting reprints).": "Validado no formato Infinity: todos os sets, no mínimo 60 cartas, até 2 tintas, até 4 cópias de cada carta (somando reimpressões).",
     "Checked as Core: sets {s}; at least 60 cards, up to 2 inks, up to 4 copies of each card (counting reprints).": "Validado no formato Core: sets {s}; no mínimo 60 cartas, até 2 tintas, até 4 cópias de cada carta (somando reimpressões).",
     "Rules as of {d}.": "Regras de {d}.",
@@ -190,6 +192,9 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
   const thumb = (c, cls = "") => `<span class="thumb ${cls}" data-ink="${(inksOf(c)[0] || "steel").toLowerCase()}">${c.img ? `<img src="${imgUrl(c)}" alt="" loading="lazy" decoding="async" onerror="this.remove()">` : ""}</span>`;
   // The Inkwell app's optimizer, copied in at build time (tools/build_site_decks.py)
   const computeDeckPortfolioPlan = /*@PORTFOLIO@*/;
+  const tcgUrl = (c) => "https://www.tcgplayer.com/search/lorcana/product?productLineName=lorcana&q=" + encodeURIComponent(split(c.name)[0] + " " + (split(c.name)[1] || "")).replace(/%20/g, "+");
+  const buyLinks = (c, n) => `<div class="buy-row" data-testid="buy-links"><span class="small"><b>${esc(Tx(n === 1 ? "Buy 1 copy" : "Buy {n} copies", { n }))}</b> <span class="muted">· ${esc(Tx("Stores open in a new tab"))}</span></span>
+    <span class="buy-btns"><a class="btn small" href="${esc(ligaUrl(c))}" target="_blank" rel="noopener noreferrer" data-testid="buy-liga">Liga Lorcana<i class="ic i-external"></i></a><a class="btn small" href="${esc(tcgUrl(c))}" target="_blank" rel="noopener noreferrer" data-testid="buy-tcg">TCGplayer<i class="ic i-external"></i></a></span></div>`;
   const ligaUrl = (c) => "https://www.ligalorcana.com.br/?view=cards%2Fcard&card=" + encodeURIComponent(c.name).replace(/%20/g, "+") + "&tipo=1";
 
   // ---------- state ----------
@@ -714,7 +719,9 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
       if (fl.length) fromFriends += Math.min(n, fl.reduce((s2, x) => s2 + x.free, 0));
       offers.unshift(...fl.slice(0, 3).map((x) => { const k = `${x.user}|${x.card_id}`, asked = lendAsked.has(k);
         return `<div class="list-row flat two" style="min-height:52px" data-testid="friend-has"><span class="t"><span>${esc(Tx("{who} has it", { who: x.name || "—" }))}</span><span class="meta">${esc(Tx("{n} free", { n: x.free }))}</span></span>${asked ? `<a class="btn small ghost" href="../trades/">${Tx("Asked")}</a>` : `<button type="button" class="btn small" data-borrow="${esc(x.user)}" data-bcard="${esc(x.card_id)}" data-bq="${Math.min(n, x.free)}">${Tx("Ask to borrow")}</button>`}</div>`; }));
-      if (!lend.length && !fl.length) offers.push(`<div class="list-row flat two" style="min-height:52px"><span class="t"><span class="muted" style="font-weight:400">${Tx("None of your friends has it")}</span></span><a class="btn small" href="${esc(ligaUrl(c))}" target="_blank" rel="noopener">Liga Lorcana<i class="ic i-external"></i></a></div>`);
+      if (!lend.length && !fl.length && !sell.length) offers.push(`<div class="list-row flat two" style="min-height:44px"><span class="t"><span class="muted" style="font-weight:400">${Tx("None of your friends has it")}</span></span></div>`);
+      // buy it: always offered, after friends and the board — the stores open in a new tab, nothing is shared with them
+      offers.push(buyLinks(c, n));
       return `<section class="card miss" data-miss="${esc(c.id)}"><div class="row" style="flex-wrap:nowrap;align-items:flex-start;gap:var(--sp-3)">${thumb(c, "md")}<div class="grow" style="min-width:0">
         <div class="row between" style="flex-wrap:nowrap"><b>${esc(a)}${b ? ` · ${esc(b)}` : ""}</b><span class="tag warn">${esc(Tx("missing {n}", { n }))}</span></div>
         <div class="small muted" style="margin-top:2px">${esc(fromMyp(c) ? "MYP Cards" : priceSrc)} <span class="money">${p != null ? esc(money(p)) : "–"}</span></div>
