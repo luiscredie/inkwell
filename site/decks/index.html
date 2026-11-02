@@ -238,7 +238,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const PT = {
     "Try a deck list without an account: see the cards, whether it's legal and what it costs.": "Teste uma lista de deck sem conta: veja as cartas, se ela é legal e quanto custa.",
     "cards": "cartas", "no inks yet": "nenhuma tinta ainda", "legal": "legal", "not legal yet": "ainda não é legal", "{a} of {b} cards priced": "{a} de {b} cartas com preço", "all cards priced": "todas as cartas com preço",
-    "check": "conferir", "no price": "sem preço", "each": "cada", "other printing": "outra edição",
+    "check": "conferir", "no price": "sem preço", "each": "cada", "{n}× = {v}": "{n}× = {v}", "other printing": "outra edição",
     "Checked as Infinity: every set, at least 60 cards, up to 2 inks, up to 4 copies of each card (counting reprints).": "Validado no formato Infinity: todos os sets, no mínimo 60 cartas, até 2 tintas, até 4 cópias de cada carta (somando reimpressões).",
     "Checked as Core: sets {s}; at least 60 cards, up to 2 inks, up to 4 copies of each card (counting reprints).": "Validado no formato Core: sets {s}; no mínimo 60 cartas, até 2 tintas, até 4 cópias de cada carta (somando reimpressões).",
     "Rules as of {d}.": "Regras de {d}.",
@@ -693,7 +693,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const row = (e) => { const own = ownPrice(e.c), v = priceOf(e.c), [a, b] = split(e.c.name);
       return `<div class="list-row pd-row" data-card="${esc(e.id)}">${thumb(e.c, "sm")}
         <span class="t"><span><b class="num pd-q">${e.q}×</b> ${esc(a)}${m.bad.has(e.id) ? ` <span class="tag late">${Tx("check")}</span>` : ""}</span><span class="meta">${esc([b, Tx("Set {n}", { n: setNo(e.c.set) || e.c.set }) + " · nº " + e.c.num, typeName(e.c)].filter(Boolean).join(" · "))}</span></span>
-        <span class="trail">${v == null ? `<span class="tag" data-testid="no-price">${Tx("no price")}</span>` : `<b class="num">${esc(money(v * e.q))}</b><span class="micro muted">${esc(money(v))} ${Tx("each")}${own == null ? " · " + Tx("other printing") : ""}</span>`}</span></div>`; };
+        <span class="trail">${v == null ? `<span class="tag" data-testid="no-price">${Tx("no price")}</span>` : `<b class="num" data-testid="unit">${esc(money(v))}</b><span class="micro muted" data-testid="subtotal">${e.q > 1 ? esc(Tx("{n}× = {v}", { n: e.q, v: money(v * e.q) })) : ""}${own == null ? (e.q > 1 ? " · " : "") + Tx("other printing") : ""}</span>`}</span></div>`; };
     const fixBox = (line, i) => { const q = pubFix?.i === i ? pubFix.q : lineName(line), words = norm(q).split(" ").filter(Boolean);
       // forgiving: a word counts when the name has it, or a word starting with its first 3 letters ("Elza Snow Quen" finds Elsa - Snow Queen)
       const hit = (c, w) => c.k.includes(w) || (w.length >= 3 && c.k.split(" ").some((x) => x.startsWith(w.slice(0, 3))));
@@ -1068,7 +1068,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   }
   const buyRow = (r) => { const [a, b] = split(r.c.name), p = priceOf(r.c);
     return `<div class="list-row flat">${thumb(r.c, "xs")}<span class="t"><span>${esc(a)}${b ? ` · ${esc(b)}` : ""}</span><span class="meta">${esc([Tx("buy {n}", { n: r.n }), r.decks.map(deckName).join(", ")].join(" · "))}</span></span>
-      <span class="trail"><span class="money">${p != null ? esc(money(p * r.n)) : "–"}</span><a class="btn ghost small" href="${esc(ligaUrl(r.c))}" target="_blank" rel="noopener" aria-label="Liga Lorcana · ${esc(a)}"><i class="ic i-external"></i></a></span></div>`; };
+      <span class="trail"><span style="display:grid;justify-items:end"><span class="money" data-testid="buy-unit">${p != null ? esc(money(p)) : "–"}</span>${p != null && r.n > 1 ? `<span class="micro muted" data-testid="buy-subtotal">${esc(Tx("{n}× = {v}", { n: r.n, v: money(p * r.n) }))}</span>` : ""}</span><a class="btn ghost small" href="${esc(ligaUrl(r.c))}" target="_blank" rel="noopener" aria-label="Liga Lorcana · ${esc(a)}"><i class="ic i-external"></i></a></span></div>`; };
   function renderPlan() {
     const back = `<a class="back" href="./" id="back">${Tx("Decks")}</a>`;
     const head = `<div class="page-head"><div>${back}<h1 id="title">${Tx("Deck advisor")}</h1><p class="sub">${Tx("Can you build your decks with your collection?")}</p></div></div>`;

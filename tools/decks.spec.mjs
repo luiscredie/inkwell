@@ -351,6 +351,9 @@ test('signed out: the total is an estimate in reais — MYP Cards when listed th
   await page.goto(BASE);
   await page.getByTestId('public-text').fill('4 Stitch - Rock Star\n4 Elsa - Snow Queen (9-53)');
   await expect(page.getByTestId('public-total')).toHaveText('R$ 20,00');   // 4 × 3 (TCGplayer) + 4 × 2 (MYP)
+  const row = page.getByTestId('public-list').locator('.pd-row').first();
+  await expect(row.getByTestId('unit')).toHaveText(/R\$\s\d/);            // the price of one card stands out
+  await expect(row.getByTestId('subtotal')).toContainText('4× = R$');      // the copies' subtotal under it
   await expect(page.getByTestId('public-summary')).toContainText('estimativa');
   await expect(page.getByTestId('public-prices')).toContainText('Estimativa em reais: menor anúncio na MYP Cards');
 });
