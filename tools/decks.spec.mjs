@@ -104,6 +104,14 @@ test('deck detail: list, analysis, missing with friends and board, games', async
   await expect(miss).toContainText('Ana Souza empresta');
   await expect(miss).toContainText('Bruno Lima vende no Mural');
   await expect(miss.getByRole('link', { name: 'Pedir emprestado' })).toHaveAttribute('href', /trades\/\?tab=board&q=Baloo/);
+  // buying is always offered, after friends and the board: Liga Lorcana (Brazil) and TCGplayer, in a new tab
+  const buy = miss.getByTestId('buy-links');
+  await expect(buy).toContainText('Comprar');
+  await expect(buy.getByTestId('buy-liga')).toHaveAttribute('href', /^https:\/\/www\.ligalorcana\.com\.br\/\?view=cards%2Fcard&card=Baloo/);
+  await expect(buy.getByTestId('buy-tcg')).toHaveAttribute('href', /^https:\/\/www\.tcgplayer\.com\/search\/lorcana\/product\?.*q=Baloo/);
+  await expect(buy.getByTestId('buy-liga')).toHaveAttribute('target', '_blank');
+  await expect(buy.getByTestId('buy-liga')).toHaveAttribute('rel', /noopener/);
+  expect(await page.locator('[data-testid="buy-links"]').count()).toBe(await page.locator('[data-miss]').count());   // one per missing card
 
   await page.getByRole('tab', { name: 'Jogos' }).click();
   await expect(page.locator('[data-testid="games-stats"]')).toContainText('100%');
