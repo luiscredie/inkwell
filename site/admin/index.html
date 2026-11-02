@@ -243,7 +243,8 @@ window.INKWELL_CLOUD = (() => {
     "“Arrived” and “Left” count visits that started without an account: the first and the last page they saw.": "“Chegaram” e “Saíram” contam as visitas que começaram sem conta: a primeira e a última página vista.",
     "What people tried": "O que experimentaram", "Action": "Ação", "Without an account": "Sem conta", "With an account": "Com conta", "Where they came from": "De onde vieram", "Site": "Site", "Visits": "Visitas", "Direct or app (WhatsApp, Instagram…)": "Direto ou app (WhatsApp, Instagram…)",
     "Phone {a} · Computer {b}": "Celular {a} · Computador {b}", "No cookies or IP: a visit is one open browser tab. Admins and “do not track” browsers aren't counted. Kept 90 days.": "Sem cookies nem IP: uma visita é uma aba aberta do navegador. Admins e navegadores com “não rastrear” não contam. Guardado por 90 dias.", "Communities": "Comunidades", "{n} members": "{n} membros", "{n} posts": "{n} mensagens",
-    "See": "Ver", "Feedback": "Feedback", "Bug": "Erro", "Idea": "Sugestão", "Other": "Outro", "Open": "Abertos", "All": "Todos", "Member": "Membro", "Visitor": "Visitante", "Reply by e-mail": "Responder por e-mail", "Reopen": "Reabrir", "No feedback.": "Nenhum feedback.", "Run supabase/feedback.sql to receive feedback.": "Rode o supabase/feedback.sql para receber feedback.", "Show": "Mostrar", "Hide": "Ocultar", "Delete": "Excluir", "No communities.": "Nenhuma comunidade.", "{n} members": "{n} membros",
+    "See": "Ver", "Open trial": "Teste aberto", "Started (example, pasted list or profile)": "Começaram (exemplo, lista colada ou perfil)", "Saw the deck result": "Viram o resultado do deck",
+    "Pressed “Create account and save”": "Apertaram “Criar conta e salvar”", "Saved in the account": "Salvaram na conta", "Counts of actions, once per page view; a person who tries twice counts twice.": "Contagem de ações, uma por página vista; quem tenta duas vezes conta duas.", "Feedback": "Feedback", "Bug": "Erro", "Idea": "Sugestão", "Other": "Outro", "Open": "Abertos", "All": "Todos", "Member": "Membro", "Visitor": "Visitante", "Reply by e-mail": "Responder por e-mail", "Reopen": "Reabrir", "No feedback.": "Nenhum feedback.", "Run supabase/feedback.sql to receive feedback.": "Rode o supabase/feedback.sql para receber feedback.", "Show": "Mostrar", "Hide": "Ocultar", "Delete": "Excluir", "No communities.": "Nenhuma comunidade.", "{n} members": "{n} membros",
   };
   const fill = (s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)) : s);
   const Tx = (en, v) => fill(lang === "pt" && en in PT ? PT[en] : en, v);
@@ -318,8 +319,18 @@ window.INKWELL_CLOUD = (() => {
     render();
   }
   const PAGE_NAME = { feed: "Início", cards: "Coleção", decks: "Decks", communities: "Comunidades", coach: "Jogos", events: "Eventos", trades: "Trocas", prices: "Preços", profile: "Perfil", start: "Começar", entrar: "Entrar (link do e-mail)", legal: "Termos e privacidade", admin: "Admin" };
-  const ACTION_NAME = { signin_open: "Abriu “Entrar”", signin_code: "Recebeu o código", signin_done: "Entrou", deck_sample: "Deck de exemplo", deck_paste: "Colou uma lista", deck_save: "“Criar conta e salvar” deck", scan_open: "Abriu o scanner", import_open: "Abriu “Importar”", share_open: "Abriu “Compartilhar”", trade_fill: "Separar repetidas", trade_post: "Anunciar no Mural", events_search: "Buscou eventos", events_box: "Buscou eventos (Início)", profile_start: "Começou um perfil", invite: "Convidar amigos", feedback_send: "Enviou feedback" };
+  const ACTION_NAME = { signin_open: "Abriu “Entrar”", signin_code: "Recebeu o código", signin_done: "Entrou", deck_sample: "Deck de exemplo", deck_paste: "Colou uma lista", deck_save: "“Criar conta e salvar” deck", scan_open: "Abriu o scanner", import_open: "Abriu “Importar”", share_open: "Abriu “Compartilhar”", trade_fill: "Separar repetidas", trade_post: "Anunciar no Mural", events_search: "Buscou eventos", events_box: "Buscou eventos (Início)", profile_start: "Começou um perfil", invite: "Convidar amigos", feedback_send: "Enviou feedback", deck_result: "Viu o resultado do deck", deck_saved: "Salvou o deck na conta", profile_save: "“Criar conta e salvar” perfil", profile_saved: "Salvou o perfil na conta", collection_start: "“Criar conta e começar minha coleção”" };
   const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
+  // open trial: try → result → start sign-up → saved (each action counts once per page view; no e-mail or content is sent)
+  function trialHtml() {
+    const A = new Map((stats.actions || []).map((x) => [x.name, (+x.anon || 0) + (+x.signed || 0)]));
+    const sum = (...k) => k.reduce((t, n) => t + (A.get(n) || 0), 0);
+    const steps = [["Started (example, pasted list or profile)", sum("deck_sample", "deck_paste", "profile_start")], ["Saw the deck result", sum("deck_result")],
+      ["Pressed “Create account and save”", sum("deck_save", "profile_save")], ["Saved in the account", sum("deck_saved", "profile_saved")]];
+    return `<section class="card" data-testid="stats-trial"><div class="hd"><h3>${Tx("Open trial")}</h3></div>
+      <div class="st-funnel">${steps.map(([l, n]) => `<div class="fr"><span class="small">${esc(Tx(l))}</span><span class="track"><span class="bar" style="width:${pct(n, steps[0][1])}%;display:block"></span></span><span class="n"><b>${num(n)}</b> <span class="micro muted">${pct(n, steps[0][1])}%</span></span></div>`).join("")}</div>
+      <p class="small faint" style="margin:var(--sp-2) 0 0">${Tx("Counts of actions, once per page view; a person who tries twice counts twice.")}</p></section>`;
+  }
   const num = (n) => Number(n || 0).toLocaleString(LOC);
   function statsHtml() {
     const seg = `<div class="seg" role="group" aria-label="${Tx("Period")}" style="margin:var(--sp-3) 0">${[7, 14, 30, 90].map((d) => `<button type="button" data-days="${d}" aria-pressed="${statDays === d}">${Tx("{n} days", { n: d })}</button>`).join("")}</div>`;
@@ -347,6 +358,7 @@ window.INKWELL_CLOUD = (() => {
         <tbody>${(stats.pages || []).map((p) => `<tr><td>${esc(PAGE_NAME[p.page] || p.page)}</td><td>${num(p.views_anon)}</td><td>${num(p.views_signed)}</td><td>${num(p.landed)}</td><td>${num(p.left)}</td></tr>`).join("") || `<tr><td colspan="5" class="muted">${Tx("Nothing yet.")}</td></tr>`}</tbody></table></div>
         <p class="small faint" style="margin:var(--sp-2) 0 0">${Tx("“Arrived” and “Left” count visits that started without an account: the first and the last page they saw.")}</p></section>
       <div class="grid2" style="margin-top:var(--sp-4);gap:var(--sp-4);align-items:start">
+        ${trialHtml()}
         <section class="card"><div class="hd"><h3>${Tx("What people tried")}</h3></div><div class="st-wrap"><table class="st-table" data-testid="stats-actions"><thead><tr><th>${Tx("Action")}</th><th>${Tx("Without an account")}</th><th>${Tx("With an account")}</th></tr></thead>
           <tbody>${(stats.actions || []).map((a) => `<tr><td>${esc(ACTION_NAME[a.name] || a.name)}</td><td>${num(a.anon)}</td><td>${num(a.signed)}</td></tr>`).join("") || `<tr><td colspan="3" class="muted">${Tx("Nothing yet.")}</td></tr>`}</tbody></table></div></section>
         <section class="card"><div class="hd"><h3>${Tx("Where they came from")}</h3></div><div class="st-wrap"><table class="st-table" data-testid="stats-refs"><thead><tr><th>${Tx("Site")}</th><th>${Tx("Visits")}</th></tr></thead>
@@ -477,7 +489,7 @@ window.INKWELL_CLOUD = (() => {
     menu.querySelector("[data-invite]")?.addEventListener("click", (e) => window.INKWELL_INVITE(e.currentTarget));
     menu.querySelector("[data-feedback]")?.addEventListener("click", () => window.INKWELL_FEEDBACK?.());
     menu.querySelector("[data-signout]")?.addEventListener("click", () => {
-      try { sessionStorage.removeItem("inkwell-guest-intent-v1"); } catch { /* */ }   // signing out cancels a pending "save after sign-in"; the draft stays
+      try { localStorage.removeItem("inkwell-guest-intent-v1"); } catch { /* */ }   // signing out cancels a pending "save after sign-in"; the draft stays
       CLOUD?.signOut(); location.reload();
     });
   }
@@ -745,8 +757,9 @@ window.INKWELL_CLOUD = (() => {
   if ((window.INKWELL_FLAGS || {}).guestProfile && page !== "start") {
     const main = document.querySelector("main");
     const note = (html, id) => { if (!main || document.getElementById(id)) return; const d = document.createElement("div"); d.id = id; d.className = "notice"; d.setAttribute("role", "status"); d.innerHTML = html; main.prepend(d); };
-    let draft = null; try { draft = JSON.parse(sessionStorage.getItem("inkwell-guest-draft-v1") || "null"); } catch { /* */ }
-    // the draft lives in this tab: other pages remind, never ask
+    let draft = null; try { draft = JSON.parse(localStorage.getItem("inkwell-guest-draft-v1") || "null"); } catch { /* */ }
+    if (draft && Date.now() - Date.parse(draft.updatedAt || 0) > 864e5) draft = null;   // kept for a day (comecar)
+    // the draft lives in this browser for a day: other pages remind, never ask
     if (draft && typeof draft === "object") note(`<span>${T("Seu Inkwell ainda não foi salvo.", "Your Inkwell isn't saved yet.")}</span> <a href="../comecar/">${T("Continuar", "Continue")}</a>`, "iwDraftNote");
     // opened by the e-mail link: if the tab with the draft is still open, send the person back there
     if (window.INKWELL_FROM_LINK && "BroadcastChannel" in window) {

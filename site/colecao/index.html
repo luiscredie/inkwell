@@ -545,13 +545,14 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         ["users", P("Uma coleção para dois", "One collection for two"), P("Divida com quem mora com você; empreste e peça emprestado a amigos.", "Share it with someone you live with; lend to and borrow from friends.")]];
       app.innerHTML = `<section class="coll-demo" data-testid="coll-demo">
           <p class="lead" style="margin:0 0 var(--sp-4);max-width:60ch">${esc(P("Sua coleção de Lorcana organizada: o que você tem, onde está cada carta e quanto vale.", "Your Lorcana collection, organised: what you have, where each card is and what it's worth."))}</p>
-          <div class="card demo-box"><div class="row between" style="margin-bottom:var(--sp-3)"><b>${esc(P("Exemplo", "Example"))}</b><span class="tag info">${esc(P("dados fictícios", "fictional data"))}</span></div>
+          <div class="card demo-box" aria-label="${esc(P("Exemplo ilustrativo com dados fictícios", "Illustrative example with fictional data"))}"><div class="row between" style="margin-bottom:var(--sp-2)"><b>${esc(P("Exemplo ilustrativo", "Illustrative example"))}</b><span class="tag info">${esc(P("dados fictícios", "fictional data"))}</span></div>
+            <p class="small muted" style="margin:0 0 var(--sp-3)" data-testid="demo-not-yours">${esc(P("Não é a sua coleção e não dá para editar. A sua começa vazia quando você cria a conta.", "This isn't your collection and can't be edited. Yours starts empty when you create your account."))}</p>
             <div class="seg places" aria-hidden="true">${[[P("Tudo", "All"), 412], [P("Fichário", "Binder"), 290], [P("Casa", "Home"), 98], [P("Trocas", "Trades"), 18], [P("Emprestadas", "Lent"), 6]].map(([l, n], i) => `<button type="button" tabindex="-1" aria-pressed="${i === 0}">${esc(l)} <span class="n">${n}</span></button>`).join("")}</div>
             <div class="cgrid demo-grid">${demo.map(([id, n, f]) => { const c = BY.get(id); if (!c) return ""; const [a, b] = split(c.name); return `<div class="ccard">${thumb(c, "", f > 0)}<span class="pill">×${n + f}</span>${f ? `<span class="flags"><span class="tag foil">foil</span></span>` : ""}</span><span class="nm">${esc(a)}${b ? `<small>${esc(b)}</small>` : ""}</span></div>`; }).join("")}</div></div>
           <ul class="demo-feats">${feats.map(([ic, t, d]) => `<li><i class="ic i-${ic}"></i><span><b>${esc(t)}</b>${esc(d)}</span></li>`).join("")}</ul>
-          <div class="row" style="gap:var(--sp-3);margin-top:var(--sp-5)"><button type="button" class="btn primary large" id="signIn" data-testid="create-collection">${esc(P("Criar minha coleção", "Create my collection"))}</button><a class="btn large" href="../decks/">${esc(P("Testar um deck sem cadastro", "Try a deck, no sign-up"))}</a></div>
-          <p class="small faint" style="margin:var(--sp-3) 0 0">${Tx("Use your e-mail. We e-mail you a code, no password.")}</p></section>`;
-      $("signIn").onclick = () => window.INKWELL_SIGNIN?.();
+          <div class="row" style="gap:var(--sp-3);margin-top:var(--sp-5)"><button type="button" class="btn primary large" id="signIn" data-testid="create-collection">${esc(P("Criar conta e começar minha coleção", "Create an account and start my collection"))}</button><a class="btn large" href="../decks/">${esc(P("Testar um deck sem cadastro", "Try a deck, no sign-up"))}</a></div>
+          <p class="small faint" style="margin:var(--sp-3) 0 0">${esc(P("A coleção precisa de conta (é gratuita): entre com seu e-mail, mandamos um código, sem senha. Sem conta, dá para testar decks.", "The collection needs an account (it's free): sign in with your e-mail, we send a code, no password. Without one, you can try decks."))}</p></section>`;
+      $("signIn").onclick = () => { window.INKWELL_TRACK?.("collection_start"); window.INKWELL_SIGNIN?.(); };
       return;
     }
     const rows = filtered(), n = activeCount();
@@ -1953,7 +1954,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     menu.querySelector("[data-invite]")?.addEventListener("click", (e) => window.INKWELL_INVITE(e.currentTarget));
     menu.querySelector("[data-feedback]")?.addEventListener("click", () => window.INKWELL_FEEDBACK?.());
     menu.querySelector("[data-signout]")?.addEventListener("click", () => {
-      try { sessionStorage.removeItem("inkwell-guest-intent-v1"); } catch { /* */ }   // signing out cancels a pending "save after sign-in"; the draft stays
+      try { localStorage.removeItem("inkwell-guest-intent-v1"); } catch { /* */ }   // signing out cancels a pending "save after sign-in"; the draft stays
       CLOUD?.signOut(); location.reload();
     });
   }
@@ -2221,8 +2222,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   if ((window.INKWELL_FLAGS || {}).guestProfile && page !== "start") {
     const main = document.querySelector("main");
     const note = (html, id) => { if (!main || document.getElementById(id)) return; const d = document.createElement("div"); d.id = id; d.className = "notice"; d.setAttribute("role", "status"); d.innerHTML = html; main.prepend(d); };
-    let draft = null; try { draft = JSON.parse(sessionStorage.getItem("inkwell-guest-draft-v1") || "null"); } catch { /* */ }
-    // the draft lives in this tab: other pages remind, never ask
+    let draft = null; try { draft = JSON.parse(localStorage.getItem("inkwell-guest-draft-v1") || "null"); } catch { /* */ }
+    if (draft && Date.now() - Date.parse(draft.updatedAt || 0) > 864e5) draft = null;   // kept for a day (comecar)
+    // the draft lives in this browser for a day: other pages remind, never ask
     if (draft && typeof draft === "object") note(`<span>${T("Seu Inkwell ainda não foi salvo.", "Your Inkwell isn't saved yet.")}</span> <a href="../comecar/">${T("Continuar", "Continue")}</a>`, "iwDraftNote");
     // opened by the e-mail link: if the tab with the draft is still open, send the person back there
     if (window.INKWELL_FROM_LINK && "BroadcastChannel" in window) {

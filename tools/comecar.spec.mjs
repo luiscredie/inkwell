@@ -55,7 +55,7 @@ async function setup(page, { signedIn = false, profile = null, saveDelay = 0, fa
   return calls;
 }
 const saves = (calls) => calls.filter((c) => c.path === 'rpc/save_my_profile');
-const draftOf = (page) => page.evaluate((k) => JSON.parse(sessionStorage.getItem(k) || 'null'), DRAFT);
+const draftOf = (page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k) || 'null'), DRAFT);
 
 async function pickCard(page, slot, query, { set, id, finish } = {}) {
   await page.locator(`[data-slot="${slot}"] [data-pick]`).first().click();
@@ -210,12 +210,12 @@ test('discarding asks first; cancelling keeps everything (A10)', async ({ page }
   expect(await draftOf(page)).toBeNull();
 });
 
-test('no session storage: the editor works and says the draft is at risk (A11)', async ({ page }) => {
+test('no browser storage: the editor works and says the draft is at risk (A11)', async ({ page }) => {
   await setup(page);
   await page.addInitScript(() => {
     const deny = () => { throw new DOMException('denied', 'SecurityError'); };
     const real = Storage.prototype.setItem;
-    Storage.prototype.setItem = function (k, v) { if (this === window.sessionStorage && k !== 'inkwell-preview') return deny(); return real.call(this, k, v); };
+    Storage.prototype.setItem = function (k, v) { if (this === window.localStorage && k !== 'inkwell-preview' && k !== 'inkwell-lang' && k !== 'inkwell-counter-auth') return deny(); return real.call(this, k, v); };
   });
   await page.goto(PAGE);
   await expect(page.getByTestId('storage-error')).toBeVisible();
@@ -227,14 +227,14 @@ test('a broken draft opens the page with a clear restart and touches nothing els
   await setup(page);
   await page.addInitScript((k) => {
     if (sessionStorage.getItem('t-once')) return; sessionStorage.setItem('t-once', '1');
-    sessionStorage.setItem(k, '{"schemaVersion":9,"displayName":42,"favorites":[{"id":7}]}');
-    sessionStorage.setItem('other-key', 'stay');
+    localStorage.setItem(k, '{"schemaVersion":9,"displayName":42,"favorites":[{"id":7}],"updatedAt":"' + new Date().toISOString() + '"}');
+    localStorage.setItem('other-key', 'stay');
   }, DRAFT);
   await page.goto(PAGE);
   await expect(page.getByTestId('draft-invalid')).toBeVisible();
   await page.getByRole('button', { name: 'Começar novamente' }).click();
   await expect(page.getByTestId('draft-invalid')).toHaveCount(0);
-  expect(await page.evaluate(() => sessionStorage.getItem('other-key'))).toBe('stay');
+  expect(await page.evaluate(() => localStorage.getItem('other-key'))).toBe('stay');
 });
 
 test('sign-up cancelled or wrong code: draft intact, no false success (A12)', async ({ page }) => {
@@ -356,6 +356,35 @@ test('the e-mail link opened while the original tab is still open: go back to it
   await expect(b.getByTestId('other-tab')).toBeVisible();
 });
 
+test('the e-mail link opened after the original tab was closed (phones do that): this tab saves the draft, once', async ({ context }) => {
+  const a = await context.newPage();
+  const calls = await setup(a);
+  await a.goto(PAGE);
+  await a.getByLabel('Nome de exibição').fill('Ana');
+  await a.locator('#save').click();
+  await a.locator('#iwSiEmail').fill('ana@example.com');
+  await a.getByRole('button', { name: 'Enviar código' }).click();
+  await a.close();                                   // the code is not typed: the person taps the e-mail link instead
+  const b = await context.newPage();
+  const calls2 = await setup(b);
+  await b.goto(`${PAGE}#access_token=${jwt(ME)}&refresh_token=r&expires_in=3600`);
+  await expect(b.getByTestId('saved')).toBeVisible();
+  expect(saves(calls2)).toHaveLength(1);
+  expect(saves(calls2)[0].body.p.display_name).toBe('Ana');
+  expect(saves(calls)).toHaveLength(0);
+  expect(await draftOf(b)).toBeNull();
+});
+
+test('the draft is kept for a day, not longer', async ({ page }) => {
+  await setup(page);
+  await page.addInitScript((k) => { if (sessionStorage.getItem('t-old')) return; sessionStorage.setItem('t-old', '1');
+    localStorage.setItem(k, JSON.stringify({ schemaVersion: 1, draftId: 'x', rev: 1, displayName: 'Velho', preferredInks: [], favorites: [], updatedAt: new Date(Date.now() - 25 * 3600e3).toISOString() })); }, DRAFT);
+  await page.goto(PAGE);
+  await expect(page.getByLabel('Nome de exibição')).toHaveValue('');
+  expect(await draftOf(page)).toBeNull();
+  await expect(page.getByText('Sem conta, suas alterações ficam neste navegador por um dia.')).toBeVisible();
+});
+
 test('only cards I own: off for guests; loading, empty and error are distinct (A04, A25)', async ({ page }) => {
   await setup(page);
   await page.goto(PAGE);
@@ -417,7 +446,7 @@ test('feed with the flag: example profile is labelled and never enters the draft
   await expect(page.getByText('Perfil de exemplo · dados fictícios').first()).toBeVisible();
   await expect(page.getByText('Taverna da Tinta (exemplo)')).toBeVisible();   // the example's community and friends say they are examples
   await expect(page.getByTestId('how-it-works').locator('li').first()).toContainText('Personalize, sem conta');
-  await page.getByRole('link', { name: 'Criar um perfil com a minha cara' }).click();
+  await page.getByRole('link', { name: 'Criar meu perfil', exact: true }).click();
   await expect(page).toHaveURL(/\/comecar\//);
   await expect(page.getByLabel('Nome de exibição')).toHaveValue('');
   expect(await draftOf(page)).toBeNull();
@@ -444,7 +473,7 @@ test('English: the page and the picker have no Portuguese left over (A21)', asyn
 test('on by default: a new visitor gets the new Início and the editor with no parameter', async ({ page }) => {
   await setup(page);
   await page.goto(new URL('feed/', ROOT).href);
-  await expect(page.getByRole('link', { name: 'Criar um perfil com a minha cara' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Criar meu perfil', exact: true })).toBeVisible();
   await page.goto(new URL('comecar/', ROOT).href);
   await expect(page.getByRole('heading', { name: 'Seu Inkwell começa aqui' })).toBeVisible();
 });

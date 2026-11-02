@@ -58,6 +58,7 @@ test('list: search, mine, example marked; create needs 18+', async ({ page }) =>
   const cards = page.locator('[data-testid="communities"] .cm-card');
   await expect(cards).toHaveCount(2);
   await expect(cards.first()).toContainText('exemplo');
+  await expect(page.getByTestId('cm-young')).toContainText('O Inkwell é novo: por enquanto são poucas comunidades.');   // no pretending it is busy
   await page.locator('#q').fill('campinas');
   await expect(cards).toHaveCount(1);
   await page.locator('#q').fill('');

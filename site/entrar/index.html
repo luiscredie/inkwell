@@ -333,7 +333,7 @@ window.INKWELL_CLOUD = (() => {
     menu.querySelector("[data-invite]")?.addEventListener("click", (e) => window.INKWELL_INVITE(e.currentTarget));
     menu.querySelector("[data-feedback]")?.addEventListener("click", () => window.INKWELL_FEEDBACK?.());
     menu.querySelector("[data-signout]")?.addEventListener("click", () => {
-      try { sessionStorage.removeItem("inkwell-guest-intent-v1"); } catch { /* */ }   // signing out cancels a pending "save after sign-in"; the draft stays
+      try { localStorage.removeItem("inkwell-guest-intent-v1"); } catch { /* */ }   // signing out cancels a pending "save after sign-in"; the draft stays
       CLOUD?.signOut(); location.reload();
     });
   }
@@ -601,8 +601,9 @@ window.INKWELL_CLOUD = (() => {
   if ((window.INKWELL_FLAGS || {}).guestProfile && page !== "start") {
     const main = document.querySelector("main");
     const note = (html, id) => { if (!main || document.getElementById(id)) return; const d = document.createElement("div"); d.id = id; d.className = "notice"; d.setAttribute("role", "status"); d.innerHTML = html; main.prepend(d); };
-    let draft = null; try { draft = JSON.parse(sessionStorage.getItem("inkwell-guest-draft-v1") || "null"); } catch { /* */ }
-    // the draft lives in this tab: other pages remind, never ask
+    let draft = null; try { draft = JSON.parse(localStorage.getItem("inkwell-guest-draft-v1") || "null"); } catch { /* */ }
+    if (draft && Date.now() - Date.parse(draft.updatedAt || 0) > 864e5) draft = null;   // kept for a day (comecar)
+    // the draft lives in this browser for a day: other pages remind, never ask
     if (draft && typeof draft === "object") note(`<span>${T("Seu Inkwell ainda não foi salvo.", "Your Inkwell isn't saved yet.")}</span> <a href="../comecar/">${T("Continuar", "Continue")}</a>`, "iwDraftNote");
     // opened by the e-mail link: if the tab with the draft is still open, send the person back there
     if (window.INKWELL_FROM_LINK && "BroadcastChannel" in window) {

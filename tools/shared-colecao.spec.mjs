@@ -122,6 +122,7 @@ test('a visitor sees what Coleção does, with a fictional example, and can crea
   await expect(d.locator('.ccard')).toHaveCount(6);
   await expect(d).toContainText('Escaneie com a câmera');
   await expect(d).toContainText('Fichário, Casa e Trocas');
-  await expect(page.locator('[data-testid="create-collection"]')).toHaveText('Criar minha coleção');
+  await expect(page.locator('[data-testid="create-collection"]')).toHaveText('Criar conta e começar minha coleção');
+  await expect(d.locator('[data-testid="demo-not-yours"]')).toContainText('Não é a sua coleção');
   await expect(d.getByRole('link', { name: 'Testar um deck sem cadastro' })).toHaveAttribute('href', '../decks/');
 });

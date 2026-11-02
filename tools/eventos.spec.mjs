@@ -262,3 +262,13 @@ test('past events: out of the list, under "Eventos passados"; Fui leads to the r
   await expect.poll(() => calls.filter((c) => c.path === 'rpc/mark_event').at(-1).body.p_status).toBe('missed');
   await expect(past.locator('[data-testid="past-results"]')).toHaveCount(0);
 });
+
+test('no events nearby: a friendly empty state that offers a wider radius', async ({ page }) => {
+  const calls = await setup(page, { signedIn: false });
+  await page.route('**/functions/v1/rph-events**', (route) => { calls.push({ path: 'fn', q: Object.fromEntries(new URL(route.request().url()).searchParams) }); return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ events: [], total: 0 }) }); });
+  await page.goto(new URL('eventos/', process.env.INKWELL_URL || 'http://localhost:8080/index.html').href);
+  const e = page.getByTestId('events-empty');
+  await expect(e).toContainText('Nenhum evento aqui por enquanto');
+  await e.getByTestId('wider').click();
+  await expect.poll(() => calls.filter((c) => c.path === 'fn').at(-1)?.q.km).toBe('200');
+});

@@ -288,7 +288,7 @@ test('a visit is counted: one page view, and an action once; nothing from "do no
   await page.getByTestId('public-sample').click();
   await page.getByTestId('public-text').fill('4 Stitch - Rock Star');
   await page.getByTestId('public-text').fill('4 Stitch - Rock Star\n4 Elsa - Snow Queen');
-  await expect.poll(() => rpcCalls(calls, 'track').map((x) => x.p_name)).toEqual([null, 'deck_sample', 'deck_paste']);
+  await expect.poll(() => rpcCalls(calls, 'track').map((x) => x.p_name)).toEqual([null, 'deck_sample', 'deck_result', 'deck_paste']);   // the result is counted once, when it first shows
   expect(new Set(rpcCalls(calls, 'track').map((x) => x.p_sid)).size).toBe(1);   // the same visit
   // a browser with Global Privacy Control sends nothing
   const page2 = await page.context().newPage();

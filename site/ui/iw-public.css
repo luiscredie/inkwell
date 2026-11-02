@@ -141,3 +141,4 @@
 html[data-theme="dia"] { --iw-muted-c: #4a5568; --iw-focus-c: #1e3e62; --iw-danger-c: #b42335; }
 html[data-theme="dia"] .iw-public .iw-inkdots i, html[data-theme="dia"] .iw-public .iw-ink-option i { border-color: rgba(11,25,44,.25); }
 html[data-theme="dia"] .iw-public .iw-guest-banner { box-shadow: 0 -8px 24px rgba(11,25,44,.12); }
+@media (pointer: coarse) { .iw-public input:not([type="checkbox"]):not([type="radio"]), .iw-public textarea, .iw-public select { font-size: max(16px, 1em); } }

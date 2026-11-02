@@ -76,3 +76,13 @@ test('movers switch to the TCGplayer history once it has two days', async ({ pag
   await expect(page.locator('[data-testid="losers"] .list-row')).toHaveCount(0);
   await expect(page.locator('#app')).toContainText('Preços do TCGplayer, em reais pela cotação de cada dia.');
 });
+
+test('sources and dates: each source with its own date, and values are estimates', async ({ page }) => {
+  await setup(page);
+  await page.goto(BASE);
+  const s = page.getByTestId('price-sources');
+  await s.locator('summary').click();
+  await expect(s).toContainText('TCGplayer (via Lorcast)');
+  await expect(s).toContainText('MYP Cards: menor anúncio, lido em');
+  await expect(s).toContainText('estimativas');
+});

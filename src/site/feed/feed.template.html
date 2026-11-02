@@ -155,6 +155,9 @@ body.out .page.split { display: block; }
 .land-hero { position: relative; overflow: hidden; border-radius: 24px; padding: var(--sp-8) var(--sp-6); background: var(--surface-2); box-shadow: var(--e2); }
 .land-hero::before { content: ""; position: absolute; inset: 0; background: var(--hero-art, none) right -40px center / auto 135% no-repeat; opacity: .28; mask-image: linear-gradient(90deg, transparent 30%, #000 85%); -webkit-mask-image: linear-gradient(90deg, transparent 30%, #000 85%); pointer-events: none; }
 .land-hero > * { position: relative; }
+.group-head > a { display: inline-flex; align-items: center; min-height: 32px; }
+.hero-ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-top: var(--sp-5); }
+@media (max-width: 480px) { .hero-ctas > * { flex: 1 1 100%; justify-content: center; text-align: center; } }
 .land-hero h1 { font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1.05; margin: 0 0 var(--sp-3); max-width: 15ch; }
 .land-hero p { max-width: 52ch; color: var(--text-2); font-size: 1.05rem; margin: 0 0 var(--sp-5); }
 .land-cta { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; }
@@ -282,7 +285,10 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "Is it a combo?": "É um combo?", "Yes, a combo": "Sim, é combo", "No, just cards": "Não, só cartas", "Combo": "Combo", "Up to 5 cards per post.": "Até 5 cartas por post.",
     "Tell us if these cards are a combo.": "Diga se essas cartas são um combo.", "Add a card": "Mais uma carta",
     "Find your next table": "Encontre sua próxima mesa", "See all events": "Ver todos os eventos", "Official Lorcana leagues and tournaments near you, from the Play Hub. No account needed.": "Ligas e torneios oficiais de Lorcana perto de você, do Play Hub. Sem precisar de conta.",
-    "Your city, district or CEP": "Sua cidade, bairro ou CEP", "Make a profile that feels like me": "Criar um perfil com a minha cara", "Example profile · fictional data": "Perfil de exemplo · dados fictícios",
+    "Your city, district or CEP": "Sua cidade, bairro ou CEP", "Make a profile that feels like me": "Criar um perfil com a minha cara", "Try a deck, no sign-up": "Testar um deck sem cadastro", "Create my profile": "Criar meu perfil",
+    "Paste your list or try an example. See the cards, whether it's legal and an estimate of the cost.": "Cole sua lista ou experimente um exemplo. Veja as cartas, a legalidade e a estimativa de custo.",
+    "Your profile can be set up without an account too; create the account only when you want to keep it.": "O perfil também dá para montar sem conta; crie a conta só quando quiser guardar.",
+    "Also:": "Também:", "how the collection works": "como funciona a coleção", "communities": "comunidades", "Example profile · fictional data": "Perfil de exemplo · dados fictícios",
     "Friends": "Amigos", "Example friends": "Amigos de exemplo", "Community": "Comunidade", "Taverna da Tinta (example)": "Taverna da Tinta (exemplo)", "Bia (example)": "Bia (exemplo)", "left a recado": "deixou um recado", "Find where to play Lorcana near you. No account needed.": "Descubra onde jogar Lorcana perto de você. Sem precisar de conta.", "Find events": "Encontrar eventos", "See events": "Ver eventos", "Next near {place}": "Próximos perto de {place}", "you": "você", "Free": "Grátis",
     "Official events near you": "Eventos oficiais perto de você", "Play Hub near {place}": "Play Hub perto de {place}",
     "Going": "Vou", "Maybe": "Talvez", "{n} going": "{n} vão", "1 going": "1 vai", "Full": "Lotado", "See community": "Ver comunidade", "foil": "foil",
@@ -769,16 +775,17 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     const newHero = () => `<div class="iw-public" data-testid="new-hero"><section class="iw-hero" aria-labelledby="nhT">
         <div><h1 class="iw-h1" id="nhT">${Tx("Your place in the Lorcana community.")}</h1>
           <p class="iw-lead" data-testid="lead">${Tx("Organise your cards, try decks, find events and your Lorcana people — with a profile that feels like you.")}</p>
-          <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:var(--sp-5)"><a class="iw-button iw-button-primary" href="../comecar/" data-testid="start">${Tx("Make a profile that feels like me")}</a>
-            <a class="iw-button" href="../comunidades/">${Tx("Explore the community")}</a></div>
-          <p class="iw-muted" style="margin:var(--sp-3) 0 0" data-testid="no-signup"><b>${Tx("No sign-up to try.")}</b> ${Tx("Create your account only when you want to keep what you did.")}</p>
-          <p class="iw-muted small" style="margin:var(--sp-2) 0 0">${Tx("Or go straight to:")} <a class="iw-link" href="../decks/">${Tx("try a deck")}</a> · <a class="iw-link" href="../colecao/">${Tx("see the collection")}</a> · <a class="iw-link" href="../eventos/">${Tx("events near you")}</a></p>
+          <div class="hero-ctas"><a class="iw-button iw-button-primary" href="../decks/" data-testid="try-deck">${Tx("Try a deck, no sign-up")}</a>
+            <a class="iw-button" href="../comecar/" data-testid="start">${Tx("Create my profile")}</a></div>
+          <p class="iw-muted" style="margin:var(--sp-3) 0 0" data-testid="try-deck-what">${Tx("Paste your list or try an example. See the cards, whether it's legal and an estimate of the cost.")}</p>
+          <p class="iw-muted" style="margin:var(--sp-2) 0 0" data-testid="no-signup"><b>${Tx("No sign-up to try.")}</b> ${Tx("Your profile can be set up without an account too; create the account only when you want to keep it.")}</p>
+          <p class="iw-muted small" style="margin:var(--sp-2) 0 0">${Tx("Also:")} <a class="iw-link" href="../eventos/">${Tx("events near you")}</a> · <a class="iw-link" href="../colecao/">${Tx("how the collection works")}</a> · <a class="iw-link" href="../comunidades/" data-testid="hero-community">${Tx("communities")}</a></p>
           <p class="iw-muted small" style="margin:var(--sp-2) 0 0" data-testid="hero-instagram">${Tx("News and events on Instagram:")} <a class="iw-link" href="https://www.instagram.com/inkwell.brasil/" target="_blank" rel="noopener noreferrer">@inkwell.brasil</a></p>
           <p style="margin:var(--sp-4) 0 0"><button type="button" class="iw-link" id="signIn2">${Tx("Already have an account? Sign in")}</button></p></div>
         <div class="iw-profile" aria-label="${esc(Tx("Demo with fictional data"))}">
           <div class="demo-cover" aria-hidden="true" style="${img("LOR10-178") ? `background-image:url('${img("LOR10-178")}')` : ""}"><span class="iw-sample-label">${Tx("Example profile · fictional data")}</span></div>
           <div class="iw-profile-head demo-head"><span class="iw-avatar" aria-hidden="true">${img("LOR14-2") ? `<img src="${img("LOR14-2")}" alt="">` : "R"}</span>
-            <div><p class="iw-name">${Tx("Rafa (example)")}</p><span class="iw-inkdots" aria-label="${esc(lang === "pt" ? "Âmbar · Ametista" : "Amber · Amethyst")}"><i style="background:${INK_HEX.Amber}"></i><i style="background:${INK_HEX.Amethyst}"></i></span></div></div>
+            <div><p class="iw-name">${Tx("Rafa (example)")}</p><span class="iw-inkdots" role="img" aria-label="${esc(lang === "pt" ? "Âmbar · Ametista" : "Amber · Amethyst")}"><i style="background:${INK_HEX.Amber}"></i><i style="background:${INK_HEX.Amethyst}"></i></span></div></div>
           <div class="iw-showcase">${["LOR13-27", "LOR12-195", "LOR10-17"].map(demoCard).join("")}</div>
           <div class="demo-social">
             <div><span class="demo-k">${Tx("Friends")}</span><span class="demo-faces" aria-label="${esc(Tx("Example friends"))}">${["B", "D", "M", "T"].map((x, i) => `<i style="--h:${[200, 30, 140, 280][i]}">${x}</i>`).join("")}</span></div>

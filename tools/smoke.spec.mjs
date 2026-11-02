@@ -57,3 +57,17 @@ test('every page links the Instagram profile (a plain link, nothing from Meta lo
   await expect(page.locator('main')).toContainText('nada da Meta é carregado');
   expect(meta).toEqual([]);
 });
+
+test('a new visitor: the main button tries a deck with no sign-up; profile second; community smaller', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('inkwell-lang', 'pt'));
+  await page.goto(ROOT + 'feed/');
+  const main = page.getByTestId('try-deck');
+  await expect(main).toHaveText('Testar um deck sem cadastro');
+  await expect(main).toHaveClass(/iw-button-primary/);
+  await expect(page.getByTestId('start')).toHaveText('Criar meu perfil');
+  await expect(page.getByTestId('try-deck-what')).toHaveText('Cole sua lista ou experimente um exemplo. Veja as cartas, a legalidade e a estimativa de custo.');
+  await expect(page.getByTestId('hero-community')).toHaveAttribute('href', '../comunidades/');
+  await main.click();
+  await expect(page).toHaveURL(/\/decks\/$/);
+  await expect(page.getByTestId('public-sample')).toBeVisible();
+});

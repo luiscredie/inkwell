@@ -816,12 +816,12 @@ table .cardcell small { display: block; color: var(--text-2); }
 .i-refresh{-webkit-mask-image:url(assets/icons/refresh.svg);mask-image:url(assets/icons/refresh.svg)}
 
 /* rights note at the end of every page (shell.js) */
-.iw-legal { max-width: var(--page-max); margin: 0 auto; padding: 0 var(--sp-4) calc(var(--tabbar-h) + var(--sp-6) + env(safe-area-inset-bottom, 0px)); color: var(--text-2); font-size: .75rem; line-height: 1.5; opacity: .75; }
+.iw-legal { max-width: var(--page-max); margin: 0 auto; padding: 0 var(--sp-4) calc(var(--tabbar-h) + var(--sp-6) + env(safe-area-inset-bottom, 0px)); color: var(--text-2); font-size: .75rem; line-height: 1.5; }
 .iw-legal a { color: inherit; }
 @media (min-width: 761px) { .iw-legal { padding-bottom: var(--sp-6); } }
-.iw-legal .iw-social { display: flex; flex-wrap: wrap; gap: 4px var(--sp-4); margin: 0 0 var(--sp-2); font-size: .85rem; }
-.iw-legal .iw-social button { display: inline-flex; align-items: center; gap: 6px; color: inherit; font: inherit; font-weight: 600; text-decoration: none; }
-.iw-legal .iw-social a { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; font-weight: 600; }
+.iw-legal .iw-social { display: flex; flex-wrap: wrap; gap: 0 var(--sp-4); margin: 0 0 var(--sp-2); font-size: .85rem; }
+.iw-legal .iw-social button { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; color: inherit; font: inherit; font-weight: 600; text-decoration: none; }
+.iw-legal .iw-social a { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; text-decoration: none; font-weight: 600; }
 .iw-legal .iw-social a:hover { text-decoration: underline; }
 .iw-legal .iw-social .ic { width: 16px; height: 16px; }
 .iw-legal .iw-social button:hover { text-decoration: underline; }
@@ -834,6 +834,8 @@ table .cardcell small { display: block; color: var(--text-2); }
 .more-list .menu-item[aria-current="page"] { background: var(--accent-soft); }
 @media (min-width: 761px) and (max-width: 1439px) { .appbar-in { gap: var(--sp-3); } .sections a { padding: 0 9px; } .sections a .ic { display: none; } .appbar .counter-btn span { display: none; } }
 @media (min-width: 761px) and (max-width: 1099px) { .sections a { padding: 0 7px; font-size: var(--fs-small); } .appbar .end { gap: 0; } }
+/* wide screens keep the icons; the counter shows its icon only and links are a little tighter, so "Inkwell" is never cut */
+@media (min-width: 1440px) { .appbar .counter-btn span { display: none; } .sections a { padding: 0 10px; } .appbar-in { gap: var(--sp-3); } }
 @media (min-width: 761px) and (max-width: 899px) { .sections a { padding: 0 6px; font-size: var(--fs-small); } .brand { font-size: 0; gap: 0; } }
 html[data-theme="dia"] .tabbar { background: rgba(255,255,255,.97); border-top: 1px solid var(--line); box-shadow: 0 -4px 16px rgba(11,25,44,.06); }
 html[data-theme="dia"] body { background-attachment: scroll; }
@@ -867,3 +869,5 @@ dialog.iw-zoom-card [data-zclose] { position: fixed; top: calc(env(safe-area-ins
 .menu.find-menu .menu-item { gap: var(--sp-3); white-space: normal; line-height: 1.3; }
 .menu.find-menu .menu-item small { display: block; color: var(--text-2); }
 .menu.find-menu .av.sm { width: 32px; height: 32px; flex: 0 0 32px; font-size: .85rem; display: grid; place-items: center; }
+/* iPhone zooms the page into any field under 16px when it gets focus; on touch screens fields use 16px */
+@media (pointer: coarse) { input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select { font-size: max(16px, 1em); } }
