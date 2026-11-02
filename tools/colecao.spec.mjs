@@ -587,6 +587,23 @@ test('value: normal copies at the MYP Cards price when listed, foils and the res
   await expect(page.locator('[data-testid="card-prices"]')).toContainText('Normal R$ 3,00 MYP Cards');
 });
 
+test('by default (MYP Cards off) every card and total uses TCGplayer: card sheet, value and the line under it', async ({ page }) => {
+  const asked = [];
+  page.on('request', (r) => { if (r.url().includes('prices-br.json')) asked.push(r.url()); });
+  await setup(page, { collection: { 'LOR10-10': { n: 2, f: 1 }, 'LOR13-27': { n: 1, f: 0 } } });
+  await page.route('**/data/prices.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ generated_at: '2026-10-28T00:00:00Z', usd_brl: 5.4, prices: { 'LOR10-10': { n: 1, nl: 1, f: 5, fl: 5 }, 'LOR13-27': { n: 4, nl: 4 } } }) }));
+  await page.goto(BASE);
+  // 2 × 1 + 1 foil × 5 + 1 × 4 = 11, all TCGplayer
+  await expect(page.locator('[data-testid="to-prices"] b')).toHaveText('R$ 11,00');
+  await expect(page.locator('[data-testid="value-src"]')).not.toContainText('MYP');
+  await expect(page.locator('#sub')).not.toContainText('MYP');
+  await page.locator('[data-card="LOR10-10"]').click();
+  await expect(page.locator('[data-testid="card-value"]')).toHaveText('R$ 7,00');
+  await expect(page.locator('[data-testid="card-prices"]')).toContainText('Normal R$ 1,00');
+  await expect(page.locator('#cardSheet')).not.toContainText('MYP');
+  expect(asked).toEqual([]);
+});
+
 test('"Mais valiosas": by one copy\'s price (the foil when it is worth more), not by the sum of the copies; that price is shown', async ({ page }) => {
   await setup(page, { collection: { 'LOR10-10': { n: 8, f: 0 }, 'LOR13-27': { n: 0, f: 1 }, 'LOR10-1': { n: 1, f: 0 } } });
   await page.route('**/data/prices.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ generated_at: '2026-10-28T00:00:00Z', usd_brl: 5.4,
