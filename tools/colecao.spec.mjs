@@ -214,6 +214,7 @@ test('closing the scanner with cards in the list asks first; discarding saves no
 });
 
 test('sort by recently added, and the MYP Cards price in the card sheet', async ({ page }) => {
+  await page.addInitScript(() => { window.INKWELL_PRICES_BR = true; });   // MYP Cards is off by default (cloud.js)
   await setup(page, {
     collection: { 'LOR10-10': { n: 2, f: 0 }, 'LOR13-80': { n: 1, f: 0 }, 'LOR9-7': { n: 1, f: 0 } },
     added: [{ profile: 'luiscredie', card_id: 'LOR13-80', added_at: '2026-10-21T12:00:00Z' }, { profile: 'luiscredie', card_id: 'LOR9-7', added_at: '2026-10-20T12:00:00Z' }],
@@ -572,6 +573,7 @@ test('trade binder on the Mural: posts what is in it, updates what changed, remo
 });
 
 test('value: normal copies at the MYP Cards price when listed, foils and the rest at TCGplayer, said under the total', async ({ page }) => {
+  await page.addInitScript(() => { window.INKWELL_PRICES_BR = true; });   // MYP Cards is off by default (cloud.js)
   await setup(page, { collection: { 'LOR10-10': { n: 2, f: 1 }, 'LOR13-27': { n: 1, f: 0 } } });
   await page.route('**/data/prices.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ generated_at: '2026-10-28T00:00:00Z', usd_brl: 5.4, prices: { 'LOR10-10': { n: 1, nl: 1, f: 5, fl: 5 }, 'LOR13-27': { n: 4, nl: 4 } } }) }));
   await page.route('**/data/prices-br.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ retrieved_at: '2026-10-21T17:00:00Z', product_url: 'https://mypcards.com/lorcana/produto/{path}', cards: { 'LOR10-10': [3, 'x/gurgi'] } }) }));

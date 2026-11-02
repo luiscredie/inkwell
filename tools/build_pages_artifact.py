@@ -24,6 +24,7 @@ EXCLUDED_FILES = {
     "data/aliases.json",
     "data/cards.pt.json",
     "data/meta-decks.json",
+    "data/prices-br.json",          # MYP Cards: off on the site since 01/11/2026 (INKWELL_PRICES_BR in cloud.js)
     "data/validation-report.json",
     "index.html.bak",
     "data/card-price-map.json",

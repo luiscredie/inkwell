@@ -256,6 +256,7 @@ const LIST = '4 Elsa - Snow Queen\n4 Stitch - Rock Star\n2 Elza Snow Quen';
 async function publicSetup(page, prices, br) {
   const calls = await setup(page, { signedIn: false });
   if (prices) await page.route('**/data/prices.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(prices) }));
+  if (br) await page.addInitScript(() => { window.INKWELL_PRICES_BR = true; });   // MYP Cards is off by default (cloud.js)
   if (prices || br) await page.route('**/data/prices-br.json', (r) => (br ? r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(br) }) : r.fulfill({ status: 404, body: '' })));
   return calls;
 }
@@ -428,4 +429,14 @@ test('a list kept without pressing "save" is offered after sign-in, but nothing 
   await page.waitForTimeout(300);
   await expect(page.locator('#iSave')).toHaveCount(0);
   expect(saves(calls)).toHaveLength(0);
+});
+
+test('MYP Cards is off by default: TCGplayer only, prices-br.json is not even asked for', async ({ page }) => {
+  const asked = [];
+  page.on('request', (r) => { if (r.url().includes('prices-br.json')) asked.push(r.url()); });
+  await publicSetup(page);
+  await page.goto(BASE);
+  await page.getByTestId('public-sample').click();
+  await expect(page.getByTestId('public-prices')).not.toContainText('MYP');
+  expect(asked).toEqual([]);
 });

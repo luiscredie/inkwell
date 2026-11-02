@@ -320,7 +320,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     const [p, pr, , ls, fr, gl] = await Promise.all([
       CLOUD.collections("profile,updated_at,decks:data->decks,collection:data->collection"),
       fetch(window.INKWELL_PRICES_URL || "../data/prices.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
-      fetch(window.INKWELL_PRICES_BR_URL || "../data/prices-br.json").then((r) => (r.ok ? r.json() : null)).then((b) => { if (b?.cards) BR = b; }).catch(() => {}),
+      (window.INKWELL_PRICES_BR ? fetch(window.INKWELL_PRICES_BR_URL || "../data/prices-br.json") : Promise.reject(new Error("MYP Cards off"))).then((r) => (r.ok ? r.json() : null)).then((b) => { if (b?.cards) BR = b; }).catch(() => {}),
       CLOUD.api("listings?select=id,user_id,kind,card_id,qty,foil,price_brl&order=created_at.desc&limit=3000").catch(() => []),
       CLOUD.api("friendships?select=requester,addressee,status&status=eq.accepted").catch(() => []),
       CLOUD.api(`game_logs?select=game_id,played_at,summary,players:log->players&user_id=eq.${me.id}&order=played_at.desc&limit=400`).catch(() => { gamesOk = false; return []; }),
@@ -1062,7 +1062,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     Promise.all([
       fetch(window.INKWELL_PRICES_URL || "../data/prices.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
       fetch("../data/legality.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
-      fetch(window.INKWELL_PRICES_BR_URL || "../data/prices-br.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      (window.INKWELL_PRICES_BR ? fetch(window.INKWELL_PRICES_BR_URL || "../data/prices-br.json") : Promise.reject(new Error("MYP Cards off"))).then((r) => (r.ok ? r.json() : null)).catch(() => null),
     ]).then(([pr, l, br]) => {
       if (br?.cards) BR = br;
       if (pr?.prices) { PRICES = pr.prices; pricesDate = pr.generated_at; priceSrc = pr.usd_brl ? "TCGplayer" : "Liga Lorcana";

@@ -26,6 +26,7 @@ async function setup(page) {
 const wl = (calls) => calls.filter((c) => c.path === 'rpc/set_wishlist').map((c) => c.body);
 
 test('movers, wishlist and collection value', async ({ page }) => {
+  await page.addInitScript(() => { window.INKWELL_PRICES_BR = true; });   // MYP Cards is off by default (cloud.js)
   const calls = await setup(page);
   await page.goto(BASE);
   await expect(page.locator('h1')).toHaveText('Preços');
@@ -78,11 +79,21 @@ test('movers switch to the TCGplayer history once it has two days', async ({ pag
 });
 
 test('sources and dates: each source with its own date, and values are estimates', async ({ page }) => {
+  await page.addInitScript(() => { window.INKWELL_PRICES_BR = true; });   // MYP Cards is off by default (cloud.js)
   await setup(page);
   await page.goto(BASE);
   const s = page.getByTestId('price-sources');
   await s.locator('summary').click();
   await expect(s).toContainText('TCGplayer (via Lorcast)');
-  await expect(s).toContainText('MYP Cards: menor anúncio, lido em');
+  await expect(s).toContainText('MYP Cards: menor anúncio, lido em');   // only while MYP Cards is on
   await expect(s).toContainText('estimativas');
+});
+
+test('by default the prices are TCGplayer only (MYP Cards off)', async ({ page }) => {
+  await setup(page);
+  await page.goto(BASE);
+  const s = page.getByTestId('price-sources');
+  await s.locator('summary').click();
+  await expect(s).toContainText('TCGplayer (via Lorcast)');
+  await expect(s).not.toContainText('MYP');
 });
