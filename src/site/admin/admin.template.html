@@ -128,7 +128,7 @@
             ${users.find((u) => u.id === r.target) && !users.find((u) => u.id === r.target).hidden ? btn(users.find((u) => u.id === r.target), "hide", "Hide profile") : ""}</div></div>`).join("") : `<p class="muted">${Tx("No reports.")}</p>`}</div>`}`;
     document.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => { tab = b.dataset.tab; armed = null; render(); });
     document.querySelectorAll("[data-days]").forEach((b) => b.onclick = () => { statDays = +b.dataset.days; loadStats(); });
-    if (tab === "stats" && !stats && !statErr) loadStats();
+    if (tab === "stats" && !stats && !statErr && !statLoading) loadStats();
     $("q")?.addEventListener("input", (e) => { q = e.target.value; render(); $("q").focus(); $("q").setSelectionRange(q.length, q.length); });
     document.querySelectorAll("[data-act]").forEach((b) => b.onclick = () => act(b.dataset.act, b.dataset.u));
     document.querySelectorAll("[data-cact]").forEach((b) => b.onclick = () => {
@@ -143,10 +143,17 @@
     document.querySelectorAll("[data-hidepost]").forEach((b) => b.onclick = () => run(() => rpc("moderate_post", { p_action: "hide", p_post: b.dataset.hidepost })));   // supabase/social.sql
   }
   // ---------- Painel: supabase/site_stats.sql ----------
+  // one load at a time: render() starts a load when there are no numbers yet, and this draws the skeleton first —
+  // without the flag the two called each other until the stack overflowed, firing ~1000 admin_stats queries
+  let statLoading = 0;
   async function loadStats() {
+    const mine = ++statLoading;
     statErr = ""; stats = null; render();
-    try { stats = await rpc("admin_stats", { p_days: statDays }); }
-    catch (e) { statErr = /admin_stats|404|PGRST202/.test(String(e?.message || e)) ? Tx("Run supabase/site_stats.sql to start counting.") : Tx("Couldn't load."); }
+    let r = null, err = "";
+    try { r = await rpc("admin_stats", { p_days: statDays }); if (!r || typeof r !== "object") err = Tx("Couldn't load."); }
+    catch (e) { err = /admin_stats|404|PGRST202/.test(String(e?.message || e)) ? Tx("Run supabase/site_stats.sql to start counting.") : Tx("Couldn't load."); }
+    if (mine !== statLoading) return;   // another period was picked meanwhile: that answer wins
+    statLoading = 0; stats = err ? null : r; statErr = err;
     render();
   }
   const PAGE_NAME = { feed: "Início", cards: "Coleção", decks: "Decks", communities: "Comunidades", coach: "Jogos", events: "Eventos", trades: "Trocas", prices: "Preços", profile: "Perfil", start: "Começar", entrar: "Entrar (link do e-mail)", legal: "Termos e privacidade", admin: "Admin" };

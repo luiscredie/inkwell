@@ -76,8 +76,26 @@ window.INKWELL_CLOUD = (() => {
     window.INKWELL_LINK_FAILED = h.get("error_code") || h.get("error");
   }
 
+  // One refresh at a time. A page fires ~15 calls at once when it opens; with an expired token (a phone waking up
+  // after an hour) each one used to refresh on its own with the same refresh token — 16 refreshes in one second,
+  // Supabase answering 500 to some, and a page that could end up signed out. Now the calls of this page share one
+  // refresh, and pages of other tabs wait their turn (Web Locks) and pick up the tokens the first one saved.
+  let refreshing = null;
   async function token() {
     sess = load();   // another page (or the Inkwell app) may have signed in, out, or refreshed the tokens meanwhile
+    if (!sess) return null;
+    if (sess.expires_at - 60 > Date.now() / 1000) return sess.access_token;
+    if (!refreshing) {
+      const run = () => refresh();
+      refreshing = (navigator.locks?.request ? navigator.locks.request("inkwell-auth-refresh", run) : run())
+        .finally(() => { refreshing = null; });
+    }
+    return refreshing;
+  }
+  // a 401: refresh on the next call — unless that token was already replaced (a call that left before a refresh)
+  function expire(tok) { const now = load(); if (now && now.access_token === tok) store({ ...now, expires_at: 0 }); }
+  async function refresh() {
+    sess = load();   // inside the lock: another tab may have just refreshed
     if (!sess) return null;
     if (sess.expires_at - 60 > Date.now() / 1000) return sess.access_token;
     const used = sess.refresh_token;
@@ -99,7 +117,7 @@ window.INKWELL_CLOUD = (() => {
     if (!tok && !anon) throw Object.assign(new Error("signed out"), { code: "auth" });
     const r = await fetch(`${cfg.url}/rest/v1/${path}`, {
       method, keepalive, headers: { ...headers(tok), ...(prefer ? { Prefer: prefer } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
-    if (r.status === 401) store({ ...sess, expires_at: 0 });
+    if (r.status === 401) expire(tok);
     if (!r.ok) {
       const code = r.status === 401 || r.status === 403 ? "permission" : r.status === 400 || r.status === 409 || r.status === 413 ? "invalid_argument" : "unavailable";
       // the database's own reason (e.g. "adults_only", "event_full", "too_many_friend_requests") goes in the message,
@@ -180,7 +198,7 @@ window.INKWELL_CLOUD = (() => {
       const rows = logs.map((l) => ({ user_id: sess.user.id, game_id: l.game_id, source: l.source, played_at: l.played_at, log: l }));
       const r = await fetch(`${cfg.url}/rest/v1/game_logs?on_conflict=user_id,game_id`, {
         method: "POST", headers: { ...headers(tok), Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify(rows) });
-      if (r.status === 401) store({ ...sess, expires_at: 0 });   // force a refresh on the next try
+      if (r.status === 401) expire(tok);   // force a refresh on the next try
       return r.ok;
     },
   };

@@ -277,8 +277,20 @@ test('admin Painel: visits, sign-ups, profiles, the way to an account, pages, ac
   await expect(page.locator('[data-testid="stats-actions"]')).toContainText('Deck de exemplo');
   await expect(page.locator('[data-testid="stats-refs"]')).toContainText('Direto ou app');
   await expect(page.locator('[data-testid="stats-devices"]')).toHaveText('Celular 33 · Computador 7');
+  expect(rpcCalls(calls, 'admin_stats')).toEqual([{ p_days: 14 }]);   // opened once: one query (it used to fire ~1000)
   await page.locator('[data-days="30"]').click();
   await expect.poll(() => rpcCalls(calls, 'admin_stats').at(-1)).toEqual({ p_days: 30 });
+  await page.waitForTimeout(300);
+  expect(rpcCalls(calls, 'admin_stats').length).toBe(2);
+});
+
+test('admin Painel: an empty answer shows a message instead of loading forever', async ({ page }) => {
+  const calls = await setup(page, { mine: { display_name: 'Luís' }, admin: true });
+  await page.route('**/rest/v1/rpc/admin_stats', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));
+  const errs = []; page.on('pageerror', (e) => errs.push(e.message));
+  await page.goto(url('admin/'));
+  await expect(page.locator('[data-testid="stats-error"]')).toHaveText('Não foi possível carregar.');
+  expect(errs).toEqual([]);
 });
 
 test('a visit is counted: one page view, and an action once; nothing from "do not track"', async ({ page }) => {
@@ -370,6 +382,26 @@ test('phone: Amigos e privacidade opened before the data arrives shows "loading"
   await expect(page.locator('#friendsSheet [data-testid="side-loading"]')).toHaveCount(0);
   await expect(page.locator('#friendsSheet')).not.toContainText('Escolha seu nome');
   await expect(page.locator('#myName')).toHaveCount(0);
+});
+
+test('an expired session refreshes once, even with the many calls a page makes at once', async ({ page }) => {
+  await setup(page, { mine: { display_name: 'Luís' } });
+  await page.addInitScript((me) => {   // the token expired an hour ago (a phone waking up)
+    const exp = Math.floor(Date.now() / 1000) - 3600;
+    localStorage.setItem('inkwell-counter-auth', JSON.stringify({ access_token: 'x.' + btoa(JSON.stringify({ sub: me, exp })) + '.y', refresh_token: 'old', expires_at: exp, user: { id: me, email: 'luis@example.com' } }));
+  }, ME);
+  const used = [];
+  await page.route('**/auth/v1/token*', async (r) => {
+    used.push(JSON.parse(r.request().postData()).refresh_token);
+    await new Promise((ok) => setTimeout(ok, 300));
+    const exp = Math.floor(Date.now() / 1000) + 3600;
+    return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ access_token: 'x.' + btoa(JSON.stringify({ sub: ME, exp })) + '.z', refresh_token: 'new', expires_in: 3600, user: { id: ME, email: 'luis@example.com' } }) });
+  });
+  await page.goto(url('feed/'));
+  await expect(page.locator('[data-testid="for-you"]')).toBeVisible();
+  await page.waitForTimeout(800);
+  expect(used).toEqual(['old']);   // one refresh, not one per call
+  expect(JSON.parse(await page.evaluate(() => localStorage.getItem('inkwell-counter-auth'))).refresh_token).toBe('new');
 });
 
 test('signed-in home on a phone: one column, no side columns', async ({ page }) => {
