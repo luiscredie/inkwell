@@ -641,7 +641,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const CLOUD = window.INKWELL_CLOUD;
   const me = CLOUD?.user();
   const enc = encodeURIComponent;
-  let faces = new Map(), groups = [], coachGroups = [], myCoaches = [], coachCols = true, otherGroups = new Map(), myProfile = null, names = new Map(), friendships = [], posts = [], notes = new Map(), olderThan = null, moreAvailable = false, searchRes = null, myGameCount = 0;
+  let faces = new Map(), groups = [], coachGroups = [], myCoaches = [], coachCols = true, otherGroups = new Map(), myProfile = null, peopleLoaded = false, names = new Map(), friendships = [], posts = [], notes = new Map(), olderThan = null, moreAvailable = false, searchRes = null, myGameCount = 0;
   const PAGE = 25;
   const friendIds = () => friendships.filter((f) => f.status === "accepted").map((f) => (f.requester === me.id ? f.addressee : f.requester));
   const nameOf = (id) => (id === me.id ? Tx("You") : names.get(id) || Tx("A player"));
@@ -677,7 +677,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     if (cg === null) coachCols = false;
     groups = (grp || []).filter((g) => g.owner_id === me.id);
     otherGroups = new Map((grp || []).filter((g) => g.owner_id !== me.id).map((g) => [g.id, g.name]));
-    myProfile = prof?.[0] || null;
+    myProfile = prof?.[0] || null; peopleLoaded = true;
     if (myProfile) names.set(me.id, myProfile.display_name);
     friendships = fr || [];
     myGameCount = (cnt || []).length;
@@ -726,6 +726,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     $("side").innerHTML = ""; $("sheetBody").innerHTML = "";
     const el = sideEl();
     if (!me) return;
+    // still loading (the sheet can be opened before the data arrives): never ask for a name the person already has
+    if (!peopleLoaded) { el.innerHTML = `<section class="panel" data-testid="side-loading"><span class="skel" style="height:22px;width:60%"></span><span class="skel" style="height:44px;margin-top:var(--sp-3)"></span><p class="sr-only">${Tx("Loading…")}</p></section>`; return; }
     if (!myProfile) {
       el.innerHTML = `<section class="panel"><h2>${Tx("Choose your name")}</h2><p class="small muted">${Tx("Your friends find you by this name.")}</p>
         <div class="cmtform"><input id="myName" maxlength="40" aria-label="${Tx("Choose your name")}"><button type="button" class="btn primary" id="myNameSave">${Tx("Save")}</button></div></section>`;
