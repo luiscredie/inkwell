@@ -404,6 +404,23 @@ test('an expired session refreshes once, even with the many calls a page makes a
   expect(JSON.parse(await page.evaluate(() => localStorage.getItem('inkwell-counter-auth'))).refresh_token).toBe('new');
 });
 
+test('phone: searching friends keeps the same field (the keyboard stays open) and shows the results under it', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setup(page, { mine: { display_name: 'Luís' } });
+  await page.route('**/rest/v1/rpc/my_settings', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ user_id: ME, display_name: 'Luís', default_visibility: 'friends' }) }));
+  await page.route(/\/rest\/v1\/profiles\?display_name=ilike/, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ user_id: '99999999-9999-4999-8999-999999999999', display_name: 'Caique Barral' }]) }));
+  await page.goto(url('feed/#amigos'));
+  const box = page.locator('#friendsSheet #findPeople');
+  await expect(box).toBeVisible();
+  await box.evaluate((el) => { el.dataset.same = '1'; });
+  await box.focus();
+  await page.keyboard.type('Cai', { delay: 120 });
+  await expect(page.locator('#friendsSheet #found')).toContainText('Caique Barral');
+  await expect(page.locator('#friendsSheet #findPeople')).toHaveAttribute('data-same', '1');   // not redrawn
+  await expect(page.locator('#friendsSheet #findPeople')).toBeFocused();
+  await expect(page.locator('#friendsSheet #findPeople')).toHaveValue('Cai');
+});
+
 test('signed-in home on a phone: one column, no side columns', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await setup(page, { mine: { display_name: 'Luís' } });

@@ -416,12 +416,13 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       : vis === "coaches" && myProfile.default_coach_email ? `coach:${myProfile.default_coach_email}` : vis;
     const coachName = (e) => (e || "").split("@")[0];
     const av = (id) => `<span class="av">${esc(nameOf(id)[0]?.toUpperCase() || "?")}</span>`;
-    el.innerHTML = `<section class="panel stack" aria-labelledby="hFriends"><div class="row between"><h2 id="hFriends" style="margin:0">${Tx("Friends")}</h2><span class="small muted">${friends.length}</span></div>
-        <span class="search"><i class="ic i-search"></i><input type="search" id="findPeople" placeholder="${Tx("Find people by name")}" aria-label="${Tx("Add a friend")}" autocomplete="off"></span>
-        <div id="found">${searchRes ? (searchRes.length ? `<div class="list tight">${searchRes.map((p) => {
+    const foundHtml = () => (searchRes ? (searchRes.length ? `<div class="list tight">${searchRes.map((p) => {
           const rel = friendships.find((f) => [f.requester, f.addressee].includes(p.user_id));
           return `<div class="list-row flat"><span class="av sm">${esc(p.display_name[0]?.toUpperCase() || "?")}</span><span class="t"><span>${esc(p.display_name)}</span></span>${rel ? `<span class="small muted">${Tx(rel.status === "accepted" ? "Friends" : "Requested")}</span>` : `<button type="button" class="btn small" data-ask="${p.user_id}"><i class="ic i-user-plus"></i>${Tx("Invite")}</button>`}</div>`;
-        }).join("")}</div>` : `<p class="small muted">${Tx("No one found with that name.")}</p>`) : ""}</div>
+        }).join("")}</div>` : `<p class="small muted">${Tx("No one found with that name.")}</p>`) : "");
+    el.innerHTML = `<section class="panel stack" aria-labelledby="hFriends"><div class="row between"><h2 id="hFriends" style="margin:0">${Tx("Friends")}</h2><span class="small muted">${friends.length}</span></div>
+        <span class="search"><i class="ic i-search"></i><input type="search" id="findPeople" placeholder="${Tx("Find people by name")}" aria-label="${Tx("Add a friend")}" autocomplete="off"></span>
+        <div id="found">${foundHtml()}</div>
         ${incoming.length ? `<h3>${Tx("Requests")} <span class="count">${incoming.length}</span></h3>${incoming.map((f) => `<div class="list-row on-field">${av(f.requester)}<span class="t"><span>${esc(nameOf(f.requester))}</span><span class="meta">${Tx("Wants to be your friend")}</span></span>
           <span class="row"><button type="button" class="btn ghost small" data-decline="${f.requester}|${f.addressee}">${Tx("Decline")}</button><button type="button" class="btn small" data-accept="${f.requester}">${Tx("Accept")}</button></span></div>`).join("")}` : ""}
         ${outgoing.map((f) => `<div class="list-row flat">${av(f.addressee)}<span class="t"><span>${esc(nameOf(f.addressee))}</span><span class="meta">${esc(Tx("Waiting for {name}", { name: nameOf(f.addressee) }))}</span></span><button type="button" class="btn ghost small" data-decline="${f.requester}|${f.addressee}">${Tx("Cancel")}</button></div>`).join("")}
@@ -454,14 +455,17 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       clearTimeout(t);
       const q = e.target.value.trim();
       t = setTimeout(async () => {
-        if (q.length < 2) { searchRes = null; renderSide(); return; }
+        // only the results change: redrawing the whole panel took the field away and closed the phone's keyboard
+        const show = () => { const f = $("found"); if (!f) return; f.innerHTML = foundHtml(); f.querySelectorAll("[data-ask]").forEach(wireAsk); };
+        if (q.length < 2) { searchRes = null; show(); return; }
         const res = await CLOUD.api(`profiles?display_name=ilike.*${enc(q.replace(/[*%,()]/g, " "))}*&user_id=neq.${me.id}&select=user_id,display_name&limit=10`).catch(() => []);
-        searchRes = res || []; renderSide();
-        const inp = $("findPeople"); inp.value = q; inp.focus();
+        if ($("findPeople")?.value.trim() !== q) return;   // typed more meanwhile: that search shows instead
+        searchRes = res || []; show();
       }, 300);
     });
     const act = async (fn) => { try { await fn(); } finally { await loadPeople(); await loadPosts(); renderSide(); renderFeed(); } };
-    el.querySelectorAll("[data-ask]").forEach((b) => b.onclick = () => act(() => CLOUD.api("friendships", { method: "POST", prefer: "return=minimal", body: { addressee: b.dataset.ask } })));
+    function wireAsk(b) { b.onclick = () => act(() => CLOUD.api("friendships", { method: "POST", prefer: "return=minimal", body: { addressee: b.dataset.ask } })); }
+    el.querySelectorAll("[data-ask]").forEach(wireAsk);
     el.querySelectorAll("[data-accept]").forEach((b) => b.onclick = () => act(() => CLOUD.api(`friendships?requester=eq.${b.dataset.accept}&addressee=eq.${me.id}`, { method: "PATCH", prefer: "return=minimal", body: { status: "accepted", accepted_at: new Date().toISOString() } })));
     el.querySelectorAll("[data-decline]").forEach((b) => b.onclick = () => { const [r, a] = b.dataset.decline.split("|"); act(() => CLOUD.api(`friendships?requester=eq.${r}&addressee=eq.${a}`, { method: "DELETE" })); });
     el.querySelectorAll("[data-unfriend]").forEach((b) => b.onclick = () => confirmBtn(b, "Confirm removal", () => {
