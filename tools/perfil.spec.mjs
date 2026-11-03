@@ -358,6 +358,20 @@ test('signed-in home on a computer: me, shortcuts, communities in three columns'
   expect(m.x + m.width).toBeLessThanOrEqual(r.x);
 });
 
+test('phone: Amigos e privacidade opened before the data arrives shows "loading", never "Escolha seu nome"', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setup(page, { mine: { display_name: 'Luís' } });
+  let release; const gate = new Promise((r) => { release = r; });
+  await page.route('**/rest/v1/rpc/my_settings', async (r) => { await gate; return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ user_id: ME, display_name: 'Luís', default_visibility: 'friends', default_group_id: null }) }); });
+  await page.goto(url('feed/#amigos'));   // the account menu's "Amigos e privacidade" opens the sheet right away
+  await expect(page.locator('#friendsSheet [data-testid="side-loading"]')).toBeVisible();
+  await expect(page.locator('#friendsSheet')).not.toContainText('Escolha seu nome');
+  release();
+  await expect(page.locator('#friendsSheet [data-testid="side-loading"]')).toHaveCount(0);
+  await expect(page.locator('#friendsSheet')).not.toContainText('Escolha seu nome');
+  await expect(page.locator('#myName')).toHaveCount(0);
+});
+
 test('signed-in home on a phone: one column, no side columns', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await setup(page, { mine: { display_name: 'Luís' } });
