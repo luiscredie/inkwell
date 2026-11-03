@@ -71,3 +71,20 @@ test('a new visitor: the main button tries a deck with no sign-up; profile secon
   await expect(page).toHaveURL(/\/decks\/$/);
   await expect(page.getByTestId('public-sample')).toBeVisible();
 });
+
+test('account menu (light theme): the picked language is readable', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const ME = '11111111-1111-4111-8111-111111111111';
+  await page.addInitScript((me) => { localStorage.setItem('inkwell-lang', 'pt'); localStorage.setItem('inkwell-theme', 'dia'); const exp = Math.floor(Date.now() / 1000) + 3600;
+    localStorage.setItem('inkwell-counter-auth', JSON.stringify({ access_token: 'x.' + btoa(JSON.stringify({ sub: me, exp })) + '.y', refresh_token: 'r', expires_at: exp, user: { id: me, email: 'a@b.c' } })); }, ME);
+  await page.route('**/rest/v1/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+  await page.goto(new URL('decks/', process.env.INKWELL_URL || 'http://localhost:8080/index.html').href);
+  await page.locator('#iwAcct').click();
+  const pt = page.locator('.menu [data-lang-pick="pt"]');
+  await expect(pt).toBeVisible();
+  const [fg, bg] = await pt.evaluate((b) => [getComputedStyle(b).color, getComputedStyle(b).backgroundColor]);
+  const lum = (c) => { const [r, g, b2] = c.match(/\d+(\.\d+)?/g).slice(0, 3).map(Number).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b2; };
+  const [a, b] = [lum(fg), lum(bg)].sort((x, y) => y - x);
+  expect((a + 0.05) / (b + 0.05)).toBeGreaterThan(4.5);
+  if (process.env.SHOT_DIR) await page.screenshot({ path: process.env.SHOT_DIR + '/menu-lang.png' });
+});

@@ -1372,7 +1372,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     const sh = $("scan"), g = guideRect();
     sh.innerHTML = `<div class="stage"><video id="scanVideo" playsinline muted autoplay></video><div class="guide" id="scanGuide" style="left:${g.x}px;top:${g.y}px;width:${g.w}px;height:${g.h}px"></div>
       <div class="top"><button type="button" class="btn icon" data-scan-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button><h2 id="scanT">${Tx("Scan cards")}</h2><button type="button" class="btn icon" id="scanTorch" hidden aria-pressed="false" aria-label="${Tx("Light")}"><i class="ic i-sparkle"></i></button>
-        <div class="seg" role="group" aria-label="${Tx("Card")}"><button type="button" data-foil="0" aria-pressed="${!scan.foil}">${Tx("Normal")}</button><button type="button" data-foil="1" aria-pressed="${scan.foil}">${Tx("Foil")}</button></div></div>
+        <div class="seg" role="group" aria-label="${Tx("Card")}"><button type="button" data-foil="0" aria-pressed="${!scan.foil}">${Tx("Normal")}</button><button type="button" class="is-foil" data-foil="1" aria-pressed="${scan.foil}">${Tx("Foil")}</button></div></div>
       <div class="panel"><div class="say" id="scanSay" role="status" aria-live="polite">${Tx("Point the camera at one card inside the frame.")}</div><div id="scanPick"></div><div id="scanLast"></div>
         <div class="row between"><span class="small" data-testid="scan-count" id="scanCount"></span><button type="button" class="btn primary" data-scan-done>${Tx("Done scanning")}</button></div></div></div>`;
     sh.querySelectorAll("[data-scan-close], [data-scan-done]").forEach((b) => b.onclick = () => (scan.added.length ? showReview() : sh.close()));

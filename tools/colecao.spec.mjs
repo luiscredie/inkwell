@@ -119,6 +119,9 @@ test('scanner lists the cards it recognises and adds them only after review; +1,
   await page.locator('#scanUndo').click();
   await expect(page.locator('[data-testid="scan-count"]')).toHaveText('1 na lista');
   await page.locator('#scan [data-foil="1"]').click();
+  await expect(page.locator('#scan [data-foil="1"]')).toHaveCSS('background-image', /linear-gradient/);   // foil on: the foil shine
+  await expect(page.locator('#scan [data-foil="0"]')).toHaveCSS('background-image', 'none');
+  await page.screenshot({ path: process.env.SHOT_DIR ? process.env.SHOT_DIR + '/scan-foil.png' : test.info().outputPath('scan-foil.png') });
   await page.getByRole('button', { name: '+1 desta' }).click();
   await page.getByRole('button', { name: 'Concluir' }).click();
   const review = page.locator('[data-testid="scan-review"]');
