@@ -167,7 +167,7 @@ html[data-theme="dia"] {
 /* the bar stays midnight navy in the light theme: its own light-on-dark text */
 html[data-theme="dia"] .appbar { --surface-1: #13243d; --surface-3: #1b3152; --line-strong: rgba(255,255,255,.28); --text: #ffffff; --text-2: #c9d4e6; --text-3: #aab8cf; --surface-2: #1e3e62; --line-soft: rgba(255,255,255,.08); --hover-tint: rgba(255,255,255,.07);
   --accent-ink: #e8c36a; --accent-ink-hover: #f3d484; --focus: 0 0 0 2px #0b192c, 0 0 0 4px #e8c36a; color-scheme: dark; }
-html[data-theme="dia"] .appbar .menu { --text: #111c2c; --text-2: #4a5568; --text-3: #5f6b7c; --surface-2: #ffffff; --line-soft: rgba(11,25,44,.07); --hover-tint: rgba(11,25,44,.05);
+html[data-theme="dia"] .appbar .menu { --text: #111c2c; --text-2: #4a5568; --text-3: #5f6b7c; --surface-1: #ffffff; --surface-2: #ffffff; --surface-3: #e4eaf5; --field: #ffffff; --line: #dfe5ee; --line-strong: rgba(11,25,44,.28); --line-soft: rgba(11,25,44,.07); --hover-tint: rgba(11,25,44,.05);
   --accent-ink: #7e5700; --accent-ink-hover: #5f4100; --focus: 0 0 0 2px #fff, 0 0 0 5px #1e3e62; color-scheme: light; }
 
 /* ---------- 2. Base ---------- */
@@ -303,7 +303,8 @@ img, svg { display: block; max-width: 100%; }
 .menu-sep { height: 1px; margin: 6px var(--sp-2); background: var(--surface-3); }
 .menu-label { padding: var(--sp-2) var(--sp-3) 4px; color: var(--text-2); font-size: var(--fs-micro); font-weight: 600; }
 .menu .seg { margin: 0 var(--sp-2) var(--sp-2); }
-.menu .seg button[aria-pressed="true"] { background: var(--surface-1); }
+.menu .seg.block { width: auto; }   /* 100% plus the side margins went past the menu edge */
+.menu .seg button[aria-pressed="true"] { background: var(--surface-1); color: var(--text); box-shadow: 0 0 0 1px var(--line-strong), 0 1px 2px rgba(0,0,0,.12); }
 @media (max-width: 760px) { .menu { position: fixed; left: var(--sp-2); right: var(--sp-2); top: calc(var(--bar-h) + var(--sp-2)); width: auto; } }
 @keyframes iw-pop { from { opacity: 0; transform: translateY(-4px) scale(.98); } to { opacity: 1; transform: none; } }
 
@@ -416,6 +417,9 @@ a.list-row:hover, button.list-row:hover { background: var(--surface-2); color: i
 .seg button:hover { color: var(--text); }
 .seg button[aria-pressed="true"], .vis button[aria-pressed="true"],
 .seg button[aria-checked="true"] { background: var(--surface-3); color: var(--text); box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 1px 2px rgba(0,0,0,.3); }
+/* a "Foil" choice, when picked: the foil shine (like duels.ink), so it's plain which one is on */
+.seg button.is-foil[aria-pressed="true"] { background: linear-gradient(115deg, #ff9ec4 0%, #ffd77a 24%, #9ff0bf 48%, #8fd0ff 72%, #c8a2ff 100%); color: #1b1230; box-shadow: 0 1px 6px rgba(160,140,255,.45); }
+.seg button.is-foil[aria-pressed="true"]::before { content: "✦ "; }
 .seg button .ic { width: 18px; height: 18px; }
 .seg.icons button { padding: 0 10px; }
 .seg.block { display: flex; width: 100%; } .seg.block button { flex: 1; }
