@@ -38,8 +38,8 @@ def card_id(set_code: str, number: str) -> str | None:
         return f"DLPC1-{number}-{set_code}"
     if set_code in {"C2", "DIS", "CC1"}:
         return f"DLPC1-{number}-{set_code}"
-    if set_code == "D23":
-        return f"D23-{number}"
+    if set_code == "D23":   # Lorcast's "D23 Collection" (2024 on) is our D23C; our D23-1..7 are the older D23 Expo promos
+        return f"D23C-{number}"
     return None
 
 

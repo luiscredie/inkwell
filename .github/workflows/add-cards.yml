@@ -1,0 +1,77 @@
+name: Add missing cards (Lorcast)
+
+# Adds the printings of one Lorcast set that the catalog doesn't have yet (site/data/cards.json + pictures),
+# rebuilds the pages, validates, publishes in main and deploys. Existing cards are never changed.
+#   gh workflow run add-cards.yml -f set=D23 -f prefix=D23C -f name="D23 Collection"
+on:
+  workflow_dispatch:
+    inputs:
+      set:
+        description: "Lorcast set code (e.g. D23)"
+        required: true
+      prefix:
+        description: "Our id prefix (e.g. D23C)"
+        required: true
+      name:
+        description: "Set name"
+        required: false
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: catalog
+  cancel-in-progress: false
+
+jobs:
+  add:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Add the cards
+        env:
+          SET: ${{ inputs.set }}
+          PREFIX: ${{ inputs.prefix }}
+          NAME: ${{ inputs.name }}
+        run: |
+          [[ "$SET" =~ ^[A-Za-z0-9]{1,8}$ && "$PREFIX" =~ ^[A-Z0-9]{2,8}$ ]] || { echo "bad input"; exit 1; }
+          python tools/add_lorcast_cards.py --set "$SET" --prefix "$PREFIX" ${NAME:+--name "$NAME"}
+
+      - name: Prices, pages and checks
+        run: |
+          python tools/prices_from_lorcast.py --rate auto
+          python tools/build_site_pages.py
+          python tools/build_site_decks.py
+          python tools/refresh_data_manifest.py --root site
+          python tools/validate_release.py --root site
+          python tools/build_site_pages.py --check
+
+      - name: Publish
+        id: publish
+        env:
+          SET: ${{ inputs.set }}
+        run: |
+          if git diff --quiet && [ -z "$(git ls-files --others --exclude-standard site)" ]; then
+            echo "Nothing new."; echo "changed=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          git config user.name "inkwell-catalog[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site
+          git commit -m "Catalog: cards from Lorcast set $SET"
+          git push origin HEAD:main
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy
+        if: steps.publish.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy-pages.yml --ref main
