@@ -61,6 +61,7 @@ async function setup(page, { signedIn = true, mine = null, admin = false, relati
       { id: 'f2', at: '2026-10-29T10:00:00Z', kind: 'idea', body: 'Modo torneio', page: 'decks', status: 'done', email: 'bia@x.com', name: 'Bia', handle: 'bia', member: true }]) : route.fulfill({ status: 403, body: '{"message":"not allowed"}' });
     if (path === 'rpc/admin_feedback_done' || path === 'rpc/send_feedback') return route.fulfill({ status: 204, body: '' });
     if (path === 'rpc/admin_stats') return admin ? json(STATS(body.p_days)) : route.fulfill({ status: 403, body: '{"message":"not allowed"}' });
+    if (path === 'rpc/admin_metrics') return admin ? json(METRICS) : route.fulfill({ status: 403, body: '{"message":"not allowed"}' });
     if (path === 'rpc/my_duels_sync') return json(null);
     return json([]);
   });
@@ -305,6 +306,33 @@ test('admin Painel: visits, sign-ups, profiles, the way to an account, pages, ac
   expect(rpcCalls(calls, 'admin_stats').length).toBe(2);
 });
 
+const EV = ['page_view', 'try_deck_started', 'deck_sample_loaded', 'signup_started', 'signup_completed', 'deck_saved', 'profile_started', 'profile_saved', 'collection_started'];
+const METRICS = { generated_at: '2026-11-03T23:00:00Z', since: '2026-10-21T03:00:00Z', days: 14, retention_days: 90, first_event_at: '2026-10-29T12:00:00Z', visits: 12, visits_anon: 9,
+  events: EV.map((name, i) => ({ name, count: i === 0 ? 40 : i === 2 ? 3 : 0, visits: i === 0 ? 12 : i === 2 ? 3 : 0, anon: i === 0 ? 30 : i === 2 ? 3 : 0, signed: i === 0 ? 10 : 0 })),
+  members: 6, accounts_created: 2, active_7d: 0, active_30d: 1, active_since: '2026-11-03' };
+test('#145 P0-B admin metrics: the 9 events by name, real zeros, active 7d/30d, update time and how we count', async ({ page }) => {
+  const calls = await setup(page, { mine: { display_name: 'Luís' }, admin: true });
+  await page.goto(url('admin/'));
+  const m = page.getByTestId('metrics');
+  await expect(m).toBeVisible();
+  await expect(m.getByTestId('metrics-updated')).toContainText('Atualizado em');
+  await expect(m.locator('[data-ev]')).toHaveCount(9);
+  await expect(m.locator('[data-ev="deck_sample_loaded"] td').nth(1)).toHaveText('3');
+  await expect(m.locator('[data-ev="signup_completed"] td').nth(1)).toHaveText('0');   // zero is zero
+  await expect(m.getByTestId('m-active7')).toContainText('0');
+  await expect(m.getByTestId('m-active30')).toContainText('1');
+  await expect(m.getByTestId('m-visits')).toContainText('12');
+  await expect(m).toContainText('Como contamos');
+  expect(rpcCalls(calls, 'admin_metrics')).toEqual([{ p_days: 14 }]);
+});
+test('#145 P0-B admin metrics: before the SQL runs, a clear message (the rest of the Painel still works)', async ({ page }) => {
+  await setup(page, { mine: { display_name: 'Luís' }, admin: true });
+  await page.route('**/rest/v1/rpc/admin_metrics', (r) => r.fulfill({ status: 404, contentType: 'application/json', body: '{"code":"PGRST202","message":"Could not find the function public.admin_metrics"}' }));
+  await page.goto(url('admin/'));
+  await expect(page.getByTestId('metrics-error')).toContainText('metrics_p0.sql');
+  await expect(page.locator('[data-testid="kpi-visits"]')).toContainText('40');
+});
+
 test('admin Painel: an empty answer shows a message instead of loading forever', async ({ page }) => {
   const calls = await setup(page, { mine: { display_name: 'Luís' }, admin: true });
   await page.route('**/rest/v1/rpc/admin_stats', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));
@@ -325,7 +353,7 @@ test('a visit is counted: one page view, and an action once; nothing from "do no
   await page.getByTestId('public-sample').click();
   await page.getByTestId('public-text').fill('4 Stitch - Rock Star');
   await page.getByTestId('public-text').fill('4 Stitch - Rock Star\n4 Elsa - Snow Queen');
-  await expect.poll(() => rpcCalls(calls, 'track').map((x) => x.p_name)).toEqual([null, 'deck_sample', 'deck_result', 'deck_paste']);   // the result is counted once, when it first shows
+  await expect.poll(() => rpcCalls(calls, 'track').map((x) => x.p_name)).toEqual([null, 'try_deck_started', 'deck_sample_loaded', 'deck_result', 'deck_paste']);   // #145 names; the result is counted once, when it first shows
   expect(new Set(rpcCalls(calls, 'track').map((x) => x.p_sid)).size).toBe(1);   // the same visit
   // a browser with Global Privacy Control sends nothing
   const page2 = await page.context().newPage();

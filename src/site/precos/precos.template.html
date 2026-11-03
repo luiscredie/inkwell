@@ -51,8 +51,8 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "Liga Lorcana: used only where TCGplayer has no price; those prices are from {d}.": "Liga Lorcana: usada só onde o TCGplayer não tem preço; esses preços são de {d}.",
     "MYP Cards: lowest listing, read on {d}; it doesn't separate normal and foil, language or condition.": "MYP Cards: menor anúncio, lido em {d}; não separa normal e foil, idioma nem condição.",
     "Every value here is an estimate: it doesn't mean the card is for sale, nor that it will be sold at that price.": "Todos os valores aqui são estimativas: não significam que a carta esteja à venda, nem que será vendida por esse preço.",
-    "These prices are from {d}, {n} days ago. They are refreshed by the price agent on Luis's computer.": "Estes preços são de {d}, há {n} dias. Eles são atualizados pelo agente de preços que roda no computador do Luis.",
-    "Hide": "Ocultar", "TCGplayer prices, in reais at each day's dollar rate.": "Preços do TCGplayer, em reais pela cotação de cada dia.", "The chart uses the Liga Lorcana price history, until {d}.": "O gráfico usa o histórico de preços da Liga Lorcana, até {d}.", "TCGplayer prices converted at R$ {r} per dollar, {d}": "Preços do TCGplayer convertidos a R$ {r} por dólar, {d}", "Rises and drops come from the Liga Lorcana price history.": "As altas e quedas vêm do histórico de preços da Liga Lorcana.", "Movers": "Variações", "Wishlist": "Lista de desejos", "Collection value": "Valor da coleção",
+    "These prices are from {d}, {n} days ago.": "Estes preços são de {d}, há {n} dias.",
+    "Hide": "Ocultar", "TCGplayer prices, in reais at each day's dollar rate.": "Preços do TCGplayer, em reais pela cotação de cada dia.", "The chart uses the Liga Lorcana price history, until {d}.": "O gráfico usa o histórico de preços da Liga Lorcana, até {d}.", "Indicative prices: TCGplayer converted at R$ {r} per dollar, {d}": "Preços indicativos: TCGplayer convertido a R$ {r} por dólar, {d}", "Rises and drops come from the Liga Lorcana price history.": "As altas e quedas vêm do histórico de preços da Liga Lorcana.", "Movers": "Variações", "Wishlist": "Lista de desejos", "Collection value": "Valor da coleção",
     "1 day": "1 dia", "7 days": "7 dias", "30 days": "30 dias", "Latest": "Última", "Period": "Período", "Only cards I own": "Só as que tenho",
     "Biggest rises": "Maiores altas", "Biggest drops": "Maiores quedas", "No changes in this period.": "Nenhuma variação neste período.",
     "{a} to {b}": "de {a} a {b}", "foil": "foil", "Add to wishlist": "Pôr na lista de desejos", "Remove from wishlist": "Tirar da lista de desejos",
@@ -150,9 +150,10 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   function render() {
     const keep = document.activeElement?.id, caret = document.activeElement?.selectionStart;
     const days = pricesDate ? Math.floor((Date.now() - new Date(pricesDate)) / 864e5) : 0;
-    $("sub").textContent = !pricesDate ? "" : usdBrl ? Tx("TCGplayer prices converted at R$ {r} per dollar, {d}", { r: usdBrl.toLocaleString(LOC, { minimumFractionDigits: 2, maximumFractionDigits: 4 }), d: dateFmt(pricesDate) }) : Tx("Liga Lorcana prices, {d}", { d: dateFmt(pricesDate) });
-    const stale = days > 7 && v.hideStale !== pricesDate
-      ? `<div class="notice warn" data-testid="stale" style="margin-bottom:var(--sp-4)"><i class="ic i-alert"></i><span class="t">${esc(Tx("These prices are from {d}, {n} days ago. They are refreshed by the price agent on Luis's computer.", { d: dateFmt(pricesDate), n: days }))}</span><div class="actions"><button type="button" class="btn ghost small" id="hideStale">${Tx("Hide")}</button></div></div>` : "";
+    $("sub").textContent = !pricesDate ? "" : usdBrl ? Tx("Indicative prices: TCGplayer converted at R$ {r} per dollar, {d}", { r: usdBrl.toLocaleString(LOC, { minimumFractionDigits: 2, maximumFractionDigits: 4 }), d: dateFmt(pricesDate) }) : Tx("Liga Lorcana prices, {d}", { d: dateFmt(pricesDate) });
+    const pn = window.INKWELL_PRICE_NOTE?.({ prices: PRICES, generated_at: pricesDate, usd_brl: usdBrl }) || { stale: days > 3 };
+    const stale = pn.stale && v.hideStale !== pricesDate
+      ? `<div class="notice warn" data-testid="stale" style="margin-bottom:var(--sp-4)"><i class="ic i-alert"></i><span class="t">${esc(pn.text || Tx("These prices are from {d}, {n} days ago.", { d: dateFmt(pricesDate), n: days }))}</span><div class="actions"><button type="button" class="btn ghost small" id="hideStale">${Tx("Hide")}</button></div></div>` : "";
     const wn = Object.keys(wish()).length;
     const tabs = [["movers", "Movers"], ["wish", "Wishlist", wn], ["value", "Collection value"]];
     $("app").innerHTML = `${stale}<div class="tabs" role="tablist">${tabs.map(([k, l, n]) => `<button type="button" class="tab" role="tab" data-tab="${k}" aria-selected="${v.tab === k}">${Tx(l)}${n ? `<span class="count quiet">${n}</span>` : ""}</button>`).join("")}</div>

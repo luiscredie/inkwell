@@ -722,3 +722,19 @@ test('Decks place: copies set aside for built decks leave the binder, and the ca
   await expect(page.locator('[data-testid="stock-decks"]')).toHaveCount(0);
   expect(builds[0]).toMatchObject({ p_owner: null, p_profile: 'luiscredie', p_deck: 'd1', p_items: [], p_from_home: [] });
 });
+
+test('#145 P0-C: collection value shows — and a clear notice when prices do not load; the collection still works', async ({ page }) => {
+  await setup(page);
+  await page.route('**/data/prices.json', (r) => r.fulfill({ status: 503, body: '' }));
+  await page.goto(BASE);
+  await expect(page.getByTestId('price-note')).toHaveAttribute('data-state', 'unavailable');
+  await expect(page.getByTestId('to-prices')).toContainText('—');
+  await expect(page.locator('[data-card="LOR10-10"]')).toBeVisible();
+});
+test('#145 P0-C: fresh prices are labelled as indicative, in reais, with the date', async ({ page }) => {
+  await setup(page);
+  await page.route('**/data/prices.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ generated_at: new Date().toISOString(), usd_brl: 5.4, prices: { 'LOR10-10': { n: 1, nl: 1 } } }) }));
+  await page.goto(BASE);
+  await expect(page.locator('#sub')).toContainText('Preços indicativos em R$: TCGplayer');
+  await expect(page.getByTestId('price-note')).toHaveCount(0);
+});

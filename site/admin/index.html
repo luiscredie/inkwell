@@ -381,26 +381,54 @@ window.INKWELL_CLOUD = (() => {
   // ---------- Painel: supabase/site_stats.sql ----------
   // one load at a time: render() starts a load when there are no numbers yet, and this draws the skeleton first —
   // without the flag the two called each other until the stack overflowed, firing ~1000 admin_stats queries
-  let statLoading = 0;
+  let statLoading = 0, metrics = null, metricsErr = "";
+  const PP = (p, e) => (lang === "pt" ? p : e);
+  // ---------- issue #145, P0-B: the product metrics (supabase/metrics_p0.sql). Real counts only: zero shows as zero. ----------
+  const EVENT_NAME = { page_view: ["Páginas vistas", "Pages viewed"], try_deck_started: ["Começou a testar um deck", "Started trying a deck"], deck_sample_loaded: ["Carregou o deck de exemplo", "Loaded the example deck"],
+    signup_started: ["Pediu o código de entrada", "Asked for the sign-in code"], signup_completed: ["Criou a conta", "Created the account"], deck_saved: ["Salvou um deck", "Saved a deck"],
+    profile_started: ["Começou o perfil", "Started the profile"], profile_saved: ["Salvou o perfil", "Saved the profile"], collection_started: ["Começou a coleção", "Started the collection"] };
+  function metricsHtml() {
+    if (metricsErr) return `<section class="card" data-testid="metrics" style="margin-bottom:var(--sp-4)"><b>${PP("Métricas do produto", "Product metrics")}</b><p class="small muted" data-testid="metrics-error" style="margin:var(--sp-2) 0 0">${esc(metricsErr)}</p></section>`;
+    if (!metrics) return "";
+    const m = metrics, at = (x) => (x ? new Date(x).toLocaleString(LOC, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"), dd = (x) => (x ? new Date(x).toLocaleDateString(LOC, { day: "numeric", month: "short", year: "numeric" }) : "—");
+    const kpi = (v, l, id, sub) => `<div class="stat" data-testid="m-${id}"><b>${esc(num(v))}</b><span>${esc(l)}</span>${sub ? `<small class="micro muted" style="display:block">${esc(sub)}</small>` : ""}</div>`;
+    return `<section class="card" data-testid="metrics" style="margin-bottom:var(--sp-4)"><div class="hd"><h3>${PP("Métricas do produto", "Product metrics")}</h3>
+        <span class="small muted" data-testid="metrics-updated">${esc(PP(`Atualizado em ${at(m.generated_at)} · desde ${dd(m.since)}`, `Updated ${at(m.generated_at)} · since ${dd(m.since)}`))}</span></div>
+      <div class="stats-row four" style="margin-top:var(--sp-3)">${kpi(m.visits, PP("Visitas (abas únicas)", "Visits (unique tabs)"), "visits", PP(`${num(m.visits_anon)} sem conta`, `${num(m.visits_anon)} without an account`))}
+        ${kpi(m.accounts_created, PP("Contas criadas", "Accounts created"), "accounts")}
+        ${kpi(m.active_7d, PP("Membros ativos em 7 dias", "Members active in 7 days"), "active7")}
+        ${kpi(m.active_30d, PP("Membros ativos em 30 dias", "Members active in 30 days"), "active30", PP(`${num(m.members)} membros no total`, `${num(m.members)} members in all`))}</div>
+      <div class="st-wrap" style="margin-top:var(--sp-3)"><table class="st-table" data-testid="metrics-events"><thead><tr><th>${PP("Evento", "Event")}</th><th>${PP("Vezes", "Times")}</th><th>${PP("Visitas", "Visits")}</th><th>${PP("Sem conta", "Signed out")}</th><th>${PP("Com conta", "Signed in")}</th></tr></thead>
+        <tbody>${(m.events || []).map((e) => `<tr data-ev="${esc(e.name)}"><td>${esc(PP(...(EVENT_NAME[e.name] || [e.name, e.name])))} <code class="micro muted">${esc(e.name)}</code></td><td>${num(e.count)}</td><td>${num(e.visits)}</td><td>${num(e.anon)}</td><td>${num(e.signed)}</td></tr>`).join("")}</tbody></table></div>
+      <details style="margin-top:var(--sp-3)"><summary class="small">${PP("Como contamos", "How we count")}</summary><ul class="small muted" style="margin:var(--sp-2) 0 0;padding-left:1.2em">
+        <li>${PP("Visita = uma aba do navegador (código aleatório na aba; sem cookie, sem IP). A mesma pessoa em duas abas conta duas vezes.", "Visit = one browser tab (random code in the tab; no cookie, no IP). The same person in two tabs counts twice.")}</li>
+        <li>${PP("Membro ativo = conta que abriu pelo menos uma página com login no período (guardamos só conta + dia, por 90 dias)" + (m.active_since ? `; contando desde ${dd(m.active_since)}.` : "; ainda sem dados."), "Active member = account that opened at least one page signed in during the period (we keep only account + day, for 90 days)" + (m.active_since ? `; counting since ${dd(m.active_since)}.` : "; no data yet."))}</li>
+        <li>${PP("Cada ação conta uma vez por página aberta; a mesma ação repetida na mesma aba em 3 segundos conta uma vez.", "Each action counts once per page view; the same action repeated in the same tab within 3 seconds counts once.")}</li>
+        <li>${PP("Não contamos administradores, navegadores automáticos nem quem pede \"não rastrear\" (DNT/GPC). Nada de e-mail, nome, código de entrada ou conteúdo.", "Admins, automated browsers and \"do not track\" (DNT/GPC) browsers are not counted. No e-mail, name, sign-in code or content.")}</li>
+        <li>${PP(`Eventos guardados por ${m.retention_days || 90} dias` + (m.first_event_at ? `; o mais antigo é de ${dd(m.first_event_at)}.` : "."), `Events kept ${m.retention_days || 90} days` + (m.first_event_at ? `; the oldest is from ${dd(m.first_event_at)}.` : "."))}</li></ul></details></section>`;
+  }
   async function loadStats() {
     const mine = ++statLoading;
     statErr = ""; stats = null; render();
     let r = null, err = "";
+    const mp = rpc("admin_metrics", { p_days: statDays }).then((x) => (x && typeof x === "object" && !Array.isArray(x) ? { x } : { e: "empty" }), (e) => ({ e: String(e?.message || e) }));   // handled now: no unhandled rejection
     try { r = await rpc("admin_stats", { p_days: statDays }); if (!r || typeof r !== "object") err = Tx("Couldn't load."); }
     catch (e) { err = /admin_stats|404|PGRST202/.test(String(e?.message || e)) ? Tx("Run supabase/site_stats.sql to start counting.") : Tx("Couldn't load."); }
+    const m = await mp;
     if (mine !== statLoading) return;   // another period was picked meanwhile: that answer wins
+    metrics = m.x || null; metricsErr = m.e ? (/admin_metrics|404|PGRST202/.test(m.e) ? PP("Rode supabase/metrics_p0.sql para ver as métricas P0.", "Run supabase/metrics_p0.sql to see the P0 metrics.") : Tx("Couldn't load.")) : "";
     statLoading = 0; stats = err ? null : r; statErr = err;
     render();
   }
   const PAGE_NAME = { feed: "Início", cards: "Coleção", decks: "Decks", communities: "Comunidades", coach: "Jogos", events: "Eventos", trades: "Trocas", prices: "Preços", profile: "Perfil", start: "Começar", entrar: "Entrar (link do e-mail)", legal: "Termos e privacidade", admin: "Admin" };
-  const ACTION_NAME = { signin_passkey: "Entrou com passkey", passkey_created: "Criou uma passkey", signin_open: "Abriu “Entrar”", signin_code: "Recebeu o código", signin_done: "Entrou", deck_sample: "Deck de exemplo", deck_paste: "Colou uma lista", deck_save: "“Criar conta e salvar” deck", scan_open: "Abriu o scanner", import_open: "Abriu “Importar”", share_open: "Abriu “Compartilhar”", trade_fill: "Separar repetidas", trade_post: "Anunciar no Mural", events_search: "Buscou eventos", events_box: "Buscou eventos (Início)", profile_start: "Começou um perfil", invite: "Convidar amigos", feedback_send: "Enviou feedback", deck_result: "Viu o resultado do deck", deck_saved: "Salvou o deck na conta", profile_save: "“Criar conta e salvar” perfil", profile_saved: "Salvou o perfil na conta", collection_start: "“Criar conta e começar minha coleção”" };
+  const ACTION_NAME = { signin_passkey: "Entrou com passkey", passkey_created: "Criou uma passkey", signin_open: "Abriu “Entrar”", signin_code: "Recebeu o código", signup_started: "Pediu o código", signup_completed: "Criou a conta", try_deck_started: "Começou a testar um deck", deck_sample_loaded: "Deck de exemplo", profile_started: "Começou o perfil", collection_started: "Começou a coleção", signin_done: "Entrou", deck_sample: "Deck de exemplo", deck_paste: "Colou uma lista", deck_save: "“Criar conta e salvar” deck", scan_open: "Abriu o scanner", import_open: "Abriu “Importar”", share_open: "Abriu “Compartilhar”", trade_fill: "Separar repetidas", trade_post: "Anunciar no Mural", events_search: "Buscou eventos", events_box: "Buscou eventos (Início)", profile_start: "Começou um perfil", invite: "Convidar amigos", feedback_send: "Enviou feedback", deck_result: "Viu o resultado do deck", deck_saved: "Salvou o deck na conta", profile_save: "“Criar conta e salvar” perfil", profile_saved: "Salvou o perfil na conta", collection_start: "“Criar conta e começar minha coleção”" };
   const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
   // open trial: try → result → start sign-up → saved (each action counts once per page view; no e-mail or content is sent)
   function trialHtml() {
     const A = new Map((stats.actions || []).map((x) => [x.name, (+x.anon || 0) + (+x.signed || 0)]));
     const sum = (...k) => k.reduce((t, n) => t + (A.get(n) || 0), 0);
-    const steps = [["Started (example, pasted list or profile)", sum("deck_sample", "deck_paste", "profile_start")], ["Saw the deck result", sum("deck_result")],
-      ["Pressed “Create account and save”", sum("deck_save", "profile_save")], ["Saved in the account", sum("deck_saved", "profile_saved")]];
+    const steps = [["Started (example, pasted list or profile)", sum("deck_sample", "deck_sample_loaded", "deck_paste", "profile_start", "profile_started")], ["Saw the deck result", sum("deck_result")],
+      ["Pressed “Create account and save”", sum("deck_save", "profile_save")], ["Saved in the account", sum("deck_saved", "profile_saved")]];   // older and newer names (#145) both count
     return `<section class="card" data-testid="stats-trial"><div class="hd"><h3>${Tx("Open trial")}</h3></div>
       <div class="st-funnel">${steps.map(([l, n]) => `<div class="fr"><span class="small">${esc(Tx(l))}</span><span class="track"><span class="bar" style="width:${pct(n, steps[0][1])}%;display:block"></span></span><span class="n"><b>${num(n)}</b> <span class="micro muted">${pct(n, steps[0][1])}%</span></span></div>`).join("")}</div>
       <p class="small faint" style="margin:var(--sp-2) 0 0">${Tx("Counts of actions, once per page view; a person who tries twice counts twice.")}</p></section>`;
@@ -408,14 +436,14 @@ window.INKWELL_CLOUD = (() => {
   const num = (n) => Number(n || 0).toLocaleString(LOC);
   function statsHtml() {
     const seg = `<div class="seg" role="group" aria-label="${Tx("Period")}" style="margin:var(--sp-3) 0">${[7, 14, 30, 90].map((d) => `<button type="button" data-days="${d}" aria-pressed="${statDays === d}">${Tx("{n} days", { n: d })}</button>`).join("")}</div>`;
-    if (statErr) return seg + `<p class="muted" data-testid="stats-error">${esc(statErr)}</p>`;
+    if (statErr) return seg + metricsHtml() + `<p class="muted" data-testid="stats-error">${esc(statErr)}</p>`;
     if (!stats) return seg + `<div class="skel" style="height:240px"></div>`;
     const t = stats.totals || {}, series = stats.series || [], va = +t.visits_anon || 0;
     const kpi = (v, l, sub, id) => `<div class="stat" data-testid="kpi-${id}"><b>${esc(v)}</b><span>${esc(l)}</span>${sub ? `<small class="micro muted" style="display:block">${esc(sub)}</small>` : ""}</div>`;
     const steps = [["Arrived without an account", va], ["Saw 2 or more pages", t.two_plus], ["Tried something", t.tried], ["Opened “Sign in”", t.opened_signin], ["Got the code", t.got_code], ["Signed in", t.signed_in]];
     const max = Math.max(1, ...series.map((x) => +x.visits_anon || 0));
     const dlabel = (d) => new Date(d + "T12:00:00").toLocaleDateString(LOC, { day: "numeric", month: "short" });
-    return `${seg}
+    return `${seg}${metricsHtml()}
       <div class="stats-row four" data-testid="stats-kpis">${kpi(num(va), Tx("Visits without an account"), Tx("{p}% left on the first page", { p: pct(t.bounced, va) }), "visits")}
         ${kpi(num(t.signups), Tx("Sign-ups"), Tx("{n} confirmed the e-mail", { n: num(t.signups_confirmed) }), "signups")}
         ${kpi(num((+t.profiles_public || 0) + (+t.profiles_private || 0)), Tx("New profiles"), Tx("{a} public · {b} private", { a: num(t.profiles_public), b: num(t.profiles_private) }), "profiles")}
@@ -492,6 +520,21 @@ window.INKWELL_CLOUD = (() => {
   const STAT_OFF = navigator.webdriver || navigator.globalPrivacyControl === true || navigator.doNotTrack === "1" || window.doNotTrack === "1";
   let statSid = null;
   try { statSid = sessionStorage.getItem("inkwell-sid"); if (!/^[a-f0-9]{24}$/.test(statSid || "")) { statSid = [...crypto.getRandomValues(new Uint8Array(12))].map((b) => b.toString(16).padStart(2, "0")).join(""); sessionStorage.setItem("inkwell-sid", statSid); } } catch { statSid = null; }
+  // ---------- price transparency (issue #145, P0-C): one label for every page that shows prices ----------
+  // pr = site/data/prices.json (or null when it didn't load). Says the source, the currency, the date and that it's an
+  // estimate; older than PRICE_STALE_DAYS -> "desatualizados"; missing -> "indisponíveis" (pages keep working without it).
+  const PRICE_STALE_DAYS = 3;
+  window.INKWELL_PRICE_NOTE = (pr) => {
+    const at = Date.parse(pr?.generated_at || ""), ok = !!(pr && pr.prices && Object.keys(pr.prices).length && at);
+    if (!ok) return { ok: false, stale: false, text: T("Preços indisponíveis no momento. Deck e coleção funcionam normalmente; os valores voltam quando a fonte responder.", "Prices are unavailable right now. Decks and collection work as usual; values come back when the source answers.") };
+    const days = (Date.now() - at) / 864e5, when = new Date(at).toLocaleDateString(pt ? "pt-BR" : "en", { day: "numeric", month: "short", year: "numeric" });
+    const rate = pr.usd_brl ? String(pr.usd_brl).replace(".", pt ? "," : ".") : null;
+    const src = rate ? T(`preço de mercado do TCGplayer (em dólar) convertido a R$ ${rate}`, `TCGplayer market price (in dollars) converted at R$ ${rate}`) : "Liga Lorcana";
+    if (days > PRICE_STALE_DAYS) return { ok: true, stale: true, date: when, text: T(`Preços desatualizados: última atualização em ${when}. Valores em reais, apenas indicativos (${src}).`, `Prices are out of date: last updated ${when}. Values in reais, only indicative (${src}).`) };
+    return { ok: true, stale: false, date: when, text: T(`Valores indicativos em reais: ${src}, atualizado em ${when}. Não é oferta de venda.`, `Indicative values in reais: ${src}, updated ${when}. Not an offer to sell.`) };
+  };
+  window.INKWELL_PRICE_NOTE_HTML = (pr, extra = "") => { const n = window.INKWELL_PRICE_NOTE(pr);
+    return `<p class="small ${n.ok && !n.stale ? "faint" : "price-warn"}" data-testid="price-note" data-state="${!n.ok ? "unavailable" : n.stale ? "stale" : "ok"}">${n.ok && !n.stale ? "" : '<i class="ic i-alert"></i> '}${esc(n.text)}${extra ? " " + esc(extra) : ""}</p>`; };
   const statDev = () => (matchMedia("(pointer: coarse)").matches || innerWidth < 700 ? "mobile" : "desktop");
   const statRef = () => { try { const h = document.referrer ? new URL(document.referrer).hostname.toLowerCase() : ""; return h && h !== location.hostname ? h.replace(/^www\./, "").slice(0, 60) : null; } catch { return null; } };
   const statSend = (kind, name) => {
@@ -500,6 +543,8 @@ window.INKWELL_CLOUD = (() => {
   };
   // pages call INKWELL_TRACK("scan_open") etc.; each action counts once per page view
   const statDone = new Set();
+  // the account was just created (the e-mail code also signs in people who already have one): created under 15 min ago
+  window.INKWELL_NEW_ACCOUNT = () => { try { const u = JSON.parse(localStorage.getItem("inkwell-counter-auth") || "null")?.user; const t = Date.parse(u?.created_at || ""); return !!t && Date.now() - t < 15 * 60000; } catch { return false; } };
   window.INKWELL_TRACK = (name) => { if (!/^[a-z_]{1,30}$/.test(name || "") || statDone.has(name)) return; statDone.add(name); statSend("action", name); };
   statSend("view");
   // Every module stays in the top bar (design "The Great Illuminary", 26/10/2026). On phones the bottom bar has
@@ -750,7 +795,7 @@ window.INKWELL_CLOUD = (() => {
       email = $("iwSiEmail").value.trim();
       if (!/^\S+@\S+\.\S+$/.test(email)) { $("iwSiMsg").textContent = T("Digite seu e-mail.", "Enter your e-mail."); return; }
       const b = $("iwSiSend"); b.setAttribute("aria-busy", "true"); b.disabled = true;
-      try { await CLOUD.requestCode(email); sentAt = Date.now(); window.INKWELL_TRACK("signin_code"); stepCode(); }
+      try { await CLOUD.requestCode(email); sentAt = Date.now(); window.INKWELL_TRACK("signup_started"); stepCode(); }
       catch { b.removeAttribute("aria-busy"); b.disabled = false; $("iwSiMsg").textContent = T("Não foi possível enviar o e-mail. Confira o endereço e a internet.", "Couldn't send the e-mail. Check the address and your connection."); }
     });
     setTimeout(() => $("iwSiEmail")?.focus(), 30);
@@ -812,7 +857,7 @@ window.INKWELL_CLOUD = (() => {
       e.preventDefault();
       if (go.disabled) return;
       go.setAttribute("aria-busy", "true"); go.disabled = true;
-      try { await CLOUD.verify(email, digits()); window.INKWELL_TRACK("signin_done"); if (canOfferPasskey()) { try { sessionStorage.setItem(PK_NOW, "1"); } catch { /* */ } } location.reload(); }
+      try { await CLOUD.verify(email, digits()); window.INKWELL_TRACK(window.INKWELL_NEW_ACCOUNT() ? "signup_completed" : "signin_done"); if (canOfferPasskey()) { try { sessionStorage.setItem(PK_NOW, "1"); } catch { /* */ } } location.reload(); }
       catch (err) {
         go.removeAttribute("aria-busy"); box.classList.add("err"); box.focus(); box.select?.();
         $("iwSiMsg").dataset.keep = "1"; sync();

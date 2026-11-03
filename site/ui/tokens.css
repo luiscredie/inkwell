@@ -420,6 +420,9 @@ a.list-row:hover, button.list-row:hover { background: var(--surface-2); color: i
 /* a "Foil" choice, when picked: the foil shine (like duels.ink), so it's plain which one is on */
 .seg button.is-foil[aria-pressed="true"] { background: linear-gradient(115deg, #ff9ec4 0%, #ffd77a 24%, #9ff0bf 48%, #8fd0ff 72%, #c8a2ff 100%); color: #1b1230; box-shadow: 0 1px 6px rgba(160,140,255,.45); }
 .seg button.is-foil[aria-pressed="true"]::before { content: "✦ "; }
+/* prices out of date or unavailable (shell.js INKWELL_PRICE_NOTE) */
+.price-warn { color: var(--text); background: var(--warn-soft, rgba(236,192,97,.14)); border-radius: var(--r-sm); padding: 6px 10px; }
+.price-warn .ic { width: 16px; height: 16px; vertical-align: -3px; }
 /* the word "Foil" next to its count (Coleção, Decks): the same shine, as a small tag */
 .foil-word { display: inline-block; padding: 1px 8px; border-radius: 999px; background: linear-gradient(115deg, #ff9ec4 0%, #ffd77a 24%, #9ff0bf 48%, #8fd0ff 72%, #c8a2ff 100%); color: #1b1230 !important; font-weight: 700; }
 .seg button .ic { width: 18px; height: 18px; }

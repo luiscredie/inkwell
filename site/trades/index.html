@@ -295,7 +295,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Amount (R$)": "Valor (R$)", "Who you traded with": "Com quem você trocou", "Date": "Data",
     "Given": "Dado", "Received": "Recebido", "Balance": "Saldo", "even": "equilibrada",
     "You came out R$ {v} ahead": "Você saiu R$ {v} à frente", "You came out R$ {v} behind": "Você saiu R$ {v} atrás",
-    "Prices: {s}, {date}. Cards without a price count as R$ 0.": "Preços: {s}, {date}. Cartas sem preço contam como R$ 0.",
+    "In trade balances, a card with no price counts as R$ 0.": "No saldo das trocas, carta sem preço conta como R$ 0.",
     "No trades yet.": "Nenhuma troca ainda.", "with {person}": "com {person}", "paid R$ {v}": "pagou R$ {v}", "received R$ {v}": "recebeu R$ {v}",
 
     "From your Inkwell collection. Out of date? Update it in Inkwell.": "Da sua coleção no Inkwell. Desatualizada? Atualize no Inkwell.",
@@ -370,7 +370,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const CARDS = new Map((CARD_INDEX?.cards || []).map(([id, name, cost, type, ink, rarity, set, num, img]) => [id, { id, name, ink, rarity, set, num, img }]));
   const norm = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   const SEARCH = [...CARDS.values()].map((c) => ({ c, k: norm(`${c.name} ${c.id}`) }));
-  let PRICES = {}, pricesDate = null, priceSrc = "Liga Lorcana";   // "TCGplayer" while prices.json carries converted TCGplayer prices
+  let PRICES = {}, pricesDate = null, priceSrc = "TCGplayer", PRJ = null;   // PRJ: prices.json as loaded (null: unavailable)   // "TCGplayer" while prices.json carries converted TCGplayer prices
   const priceOf = (id, foil) => { const p = PRICES[id]; if (!p) return null; return foil ? (p.fl ?? p.f ?? p.nl ?? p.n ?? null) : (p.nl ?? p.n ?? null); };
   const valueOf = (items) => (items || []).reduce((s, e) => s + (priceOf(e.card_id, e.foil) || 0) * e.qty, 0);
   const cardLabel = (id) => (CARDS.get(id)?.name || Tx("Unknown card")).replace(" - ", " · ");
@@ -458,6 +458,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     autoColl = !!mp?.[0]?.auto_collection;
     const want = [...new Set([...friends, ...uloans.map(other), ...utrades.map(otherT), ...listings.map((l) => l.user_id)])].filter((id) => id !== me.id && !names.has(id));
     if (want.length) for (const r of (await CLOUD.api(`profiles?user_id=in.(${want.join(",")})&select=user_id,display_name`).catch(() => [])) || []) names.set(r.user_id, r.display_name);
+    PRJ = pr?.prices ? pr : null;
     if (pr?.prices) { PRICES = pr.prices; pricesDate = pr.generated_at; priceSrc = pr.usd_brl ? "TCGplayer" : "Liga Lorcana"; }
     try { profileName = localStorage.getItem("inkwell-trades-profile"); } catch { /* */ }
     if (!profiles.some((x) => x.profile === profileName)) profileName = profiles.sort((a, b) => Object.keys(b.collection).length - Object.keys(a.collection).length)[0]?.profile || null;
@@ -668,7 +669,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       ${live.length ? `<div class="section-title"><h2>${Tx("With friends on the site")}</h2></div><div class="stack">${live.map(siteTradeCard).join("")}</div>` : ""}
       ${trades.length || past.length ? `<div class="section-title"><h2>${Tx("Trades")}</h2></div><div class="stack">${trades.map(tradeCard).join("")}${past.map(siteTradeCard).join("")}</div>` : ""}
       ${!waiting.length && !live.length && !trades.length && !past.length ? `<div class="empty"><img src="../ui/assets/empty/trades.svg" alt=""><b>${Tx("No trades yet.")}</b><p>${Tx("Propose a trade to a friend, or note one you made off the site.")}</p></div>` : ""}
-      <p class="small faint" style="margin-top:var(--sp-6)">${esc(Tx("Prices: {s}, {date}. Cards without a price count as R$ 0.", { s: priceSrc, date: pricesDate ? fmtDate(pricesDate) : "–" }))} ${Tx("Changes go to your Inkwell collection; Inkwell picks them up on its next sync.")}</p>`;
+      <div style="margin-top:var(--sp-6)">${window.INKWELL_PRICE_NOTE_HTML ? window.INKWELL_PRICE_NOTE_HTML(PRJ, Tx("In trade balances, a card with no price counts as R$ 0.")) : ""}</div>
+      <p class="small faint">${Tx("Changes go to your Inkwell collection; Inkwell picks them up on its next sync.")}</p>`;
   }
 
   // ---------- public board ----------
@@ -977,6 +979,21 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const STAT_OFF = navigator.webdriver || navigator.globalPrivacyControl === true || navigator.doNotTrack === "1" || window.doNotTrack === "1";
   let statSid = null;
   try { statSid = sessionStorage.getItem("inkwell-sid"); if (!/^[a-f0-9]{24}$/.test(statSid || "")) { statSid = [...crypto.getRandomValues(new Uint8Array(12))].map((b) => b.toString(16).padStart(2, "0")).join(""); sessionStorage.setItem("inkwell-sid", statSid); } } catch { statSid = null; }
+  // ---------- price transparency (issue #145, P0-C): one label for every page that shows prices ----------
+  // pr = site/data/prices.json (or null when it didn't load). Says the source, the currency, the date and that it's an
+  // estimate; older than PRICE_STALE_DAYS -> "desatualizados"; missing -> "indisponíveis" (pages keep working without it).
+  const PRICE_STALE_DAYS = 3;
+  window.INKWELL_PRICE_NOTE = (pr) => {
+    const at = Date.parse(pr?.generated_at || ""), ok = !!(pr && pr.prices && Object.keys(pr.prices).length && at);
+    if (!ok) return { ok: false, stale: false, text: T("Preços indisponíveis no momento. Deck e coleção funcionam normalmente; os valores voltam quando a fonte responder.", "Prices are unavailable right now. Decks and collection work as usual; values come back when the source answers.") };
+    const days = (Date.now() - at) / 864e5, when = new Date(at).toLocaleDateString(pt ? "pt-BR" : "en", { day: "numeric", month: "short", year: "numeric" });
+    const rate = pr.usd_brl ? String(pr.usd_brl).replace(".", pt ? "," : ".") : null;
+    const src = rate ? T(`preço de mercado do TCGplayer (em dólar) convertido a R$ ${rate}`, `TCGplayer market price (in dollars) converted at R$ ${rate}`) : "Liga Lorcana";
+    if (days > PRICE_STALE_DAYS) return { ok: true, stale: true, date: when, text: T(`Preços desatualizados: última atualização em ${when}. Valores em reais, apenas indicativos (${src}).`, `Prices are out of date: last updated ${when}. Values in reais, only indicative (${src}).`) };
+    return { ok: true, stale: false, date: when, text: T(`Valores indicativos em reais: ${src}, atualizado em ${when}. Não é oferta de venda.`, `Indicative values in reais: ${src}, updated ${when}. Not an offer to sell.`) };
+  };
+  window.INKWELL_PRICE_NOTE_HTML = (pr, extra = "") => { const n = window.INKWELL_PRICE_NOTE(pr);
+    return `<p class="small ${n.ok && !n.stale ? "faint" : "price-warn"}" data-testid="price-note" data-state="${!n.ok ? "unavailable" : n.stale ? "stale" : "ok"}">${n.ok && !n.stale ? "" : '<i class="ic i-alert"></i> '}${esc(n.text)}${extra ? " " + esc(extra) : ""}</p>`; };
   const statDev = () => (matchMedia("(pointer: coarse)").matches || innerWidth < 700 ? "mobile" : "desktop");
   const statRef = () => { try { const h = document.referrer ? new URL(document.referrer).hostname.toLowerCase() : ""; return h && h !== location.hostname ? h.replace(/^www\./, "").slice(0, 60) : null; } catch { return null; } };
   const statSend = (kind, name) => {
@@ -985,6 +1002,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   };
   // pages call INKWELL_TRACK("scan_open") etc.; each action counts once per page view
   const statDone = new Set();
+  // the account was just created (the e-mail code also signs in people who already have one): created under 15 min ago
+  window.INKWELL_NEW_ACCOUNT = () => { try { const u = JSON.parse(localStorage.getItem("inkwell-counter-auth") || "null")?.user; const t = Date.parse(u?.created_at || ""); return !!t && Date.now() - t < 15 * 60000; } catch { return false; } };
   window.INKWELL_TRACK = (name) => { if (!/^[a-z_]{1,30}$/.test(name || "") || statDone.has(name)) return; statDone.add(name); statSend("action", name); };
   statSend("view");
   // Every module stays in the top bar (design "The Great Illuminary", 26/10/2026). On phones the bottom bar has
@@ -1235,7 +1254,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       email = $("iwSiEmail").value.trim();
       if (!/^\S+@\S+\.\S+$/.test(email)) { $("iwSiMsg").textContent = T("Digite seu e-mail.", "Enter your e-mail."); return; }
       const b = $("iwSiSend"); b.setAttribute("aria-busy", "true"); b.disabled = true;
-      try { await CLOUD.requestCode(email); sentAt = Date.now(); window.INKWELL_TRACK("signin_code"); stepCode(); }
+      try { await CLOUD.requestCode(email); sentAt = Date.now(); window.INKWELL_TRACK("signup_started"); stepCode(); }
       catch { b.removeAttribute("aria-busy"); b.disabled = false; $("iwSiMsg").textContent = T("Não foi possível enviar o e-mail. Confira o endereço e a internet.", "Couldn't send the e-mail. Check the address and your connection."); }
     });
     setTimeout(() => $("iwSiEmail")?.focus(), 30);
@@ -1297,7 +1316,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       e.preventDefault();
       if (go.disabled) return;
       go.setAttribute("aria-busy", "true"); go.disabled = true;
-      try { await CLOUD.verify(email, digits()); window.INKWELL_TRACK("signin_done"); if (canOfferPasskey()) { try { sessionStorage.setItem(PK_NOW, "1"); } catch { /* */ } } location.reload(); }
+      try { await CLOUD.verify(email, digits()); window.INKWELL_TRACK(window.INKWELL_NEW_ACCOUNT() ? "signup_completed" : "signin_done"); if (canOfferPasskey()) { try { sessionStorage.setItem(PK_NOW, "1"); } catch { /* */ } } location.reload(); }
       catch (err) {
         go.removeAttribute("aria-busy"); box.classList.add("err"); box.focus(); box.select?.();
         $("iwSiMsg").dataset.keep = "1"; sync();
