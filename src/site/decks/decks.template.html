@@ -127,7 +127,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     "vs {d}": "vs {d}", "went first": "começou jogando", "went second": "começou comprando", "Win": "Vitória", "Loss": "Derrota",
     "No games with this deck yet": "Nenhum jogo com este deck ainda", "Games from duels.ink show up here when the list you played matches this deck.": "Os jogos do duels.ink aparecem aqui quando a lista que você jogou bate com este deck.",
     "Add a card": "Pôr carta", "Search a card to add": "Buscar carta para pôr", "Remove one": "Tirar uma", "Add one": "Pôr uma", "Saved": "Deck salvo", "Undo": "Desfazer",
-    "Couldn't save. Try again.": "Não foi possível salvar. Tente de novo.", "Changes save right away.": "As mudanças salvam na hora.",
+    "Couldn't save. Try again.": "Não foi possível salvar. Tente de novo.", "In your collection “{c}” · this printing": "Na sua coleção “{c}” · esta arte", "Normal": "Normal", "Foil": "Foil", "One less": "Menos um", "One more": "Mais um", "In this deck: {n}": "No deck: {n}", "All your collections: {n} normal · {f} foil": "Somando todas as suas coleções: {n} normais · {f} foil", "Save to collection": "Salvar na coleção", "Collection updated": "Coleção atualizada", "Changes save right away.": "As mudanças salvam na hora.",
     "Copy limit": "Limite de cópias", "Other ink": "Outra tinta", "Not in Core": "Fora do Core", "Ink limit": "Limite de tintas", "Type at least 2 letters.": "Digite pelo menos 2 letras.", "No card found.": "Nenhuma carta encontrada.",
     "Deck name": "Nome do deck", "Inks": "Tintas", "Pick up to 2.": "Escolha até 2.", "Create deck": "Criar deck", "Save": "Salvar", "Cancel": "Cancelar", "Close": "Fechar",
     "Paste a list": "Cole a lista", "One card per line, like \"4 Stitch - Rock Star\". Lists from duels.ink, Dreamborn and Lorcanito work.": "Uma carta por linha, como \"4 Stitch - Rock Star\". Listas do duels.ink, Dreamborn e Lorcanito funcionam.",
@@ -189,7 +189,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     let best = null; for (const x of printings(c)) { const y = one(x.id); if (y != null && (best == null || y < best)) best = y; } return best; };
   const fromMyp = (c) => BR?.cards?.[c.id] != null || (one(c.id) == null && printings(c).some((x) => BR?.cards?.[x.id] != null));
   const imgUrl = (c) => (c.img ? `../lorcana-card-images/${encodeURI(c.img).replace(/'/g, "%27")}` : "");
-  const thumb = (c, cls = "") => `<span class="thumb ${cls}" data-ink="${(inksOf(c)[0] || "steel").toLowerCase()}">${c.img ? `<img src="${imgUrl(c)}" alt="" loading="lazy" decoding="async" onerror="this.remove()">` : ""}</span>`;
+  const thumb = (c, cls = "") => `<span class="thumb ${cls}" data-card="${esc(c.id)}" data-ink="${(inksOf(c)[0] || "steel").toLowerCase()}">${c.img ? `<img src="${imgUrl(c)}" alt="" loading="lazy" decoding="async" onerror="this.remove()">` : ""}</span>`;
   // The Inkwell app's optimizer, copied in at build time (tools/build_site_decks.py)
   const computeDeckPortfolioPlan = /*@PORTFOLIO@*/;
   const tcgUrl = (c) => "https://www.tcgplayer.com/search/lorcana/product?productLineName=lorcana&q=" + encodeURIComponent(split(c.name)[0] + " " + (split(c.name)[1] || "")).replace(/%20/g, "+");
@@ -1055,6 +1055,40 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
   }
 
   let toastTimer = null;
+  // ---------- tap a card: it opens large (shell.js) with your copies of that printing under it, to add what you got ----------
+  window.INKWELL_ZOOM_EXTRA = (t, close) => {
+    const c = BY.get(t.dataset.card || ""), p = me && prof();
+    if (!c || !p || p.shared) return null;
+    const own = () => p.collection[c.id] || { n: 0, f: 0 };
+    const was = { n: +own().n || 0, f: +own().f || 0 }, v = { ...was };
+    const d = decks().find((x) => x.id === route().deck), inDeck = d ? printings(c).reduce((s2, x) => s2 + (+d.cards?.[x.id] || 0), 0) : 0;
+    const all = (ALL_COLL && ALL_COLL[c.id]) || null, pq = PRICES[c.id] || {}, pn = pq.nl ?? pq.n ?? null, pf = pq.fl ?? pq.f ?? null;
+    const box = document.createElement("section"); box.className = "card zx"; box.dataset.testid = "zoom-collection";
+    const draw = () => {
+      const changed = v.n !== was.n || v.f !== was.f;
+      const step = (k, label) => `<div class="zx-row"><span>${Tx(label)}</span><span class="zx-step"><button type="button" class="btn icon" data-zx="${k}:-1" aria-label="${esc(Tx("One less") + " · " + Tx(label))}" ${v[k] ? "" : "disabled"}>−</button><b data-testid="zx-${k}">${v[k]}</b><button type="button" class="btn icon" data-zx="${k}:1" aria-label="${esc(Tx("One more") + " · " + Tx(label))}">+</button></span></div>`;
+      box.innerHTML = `<div class="small muted">${esc(Tx("In your collection “{c}” · this printing", { c: p.profile }))}</div>
+        ${step("n", "Normal")}${step("f", "Foil")}
+        ${pn != null || pf != null ? `<p class="small" style="margin:var(--sp-1) 0 0" data-testid="zx-price">${esc(priceSrc)}: ${[pn != null ? `<b class="money">${esc(money(pn))}</b> ${esc(Tx("Normal").toLowerCase())}` : "", pf != null ? `<b class="money">${esc(money(pf))}</b> foil` : ""].filter(Boolean).join(" · ")}</p>` : ""}
+        <p class="small muted" style="margin:var(--sp-1) 0 0">${esc([inDeck ? Tx("In this deck: {n}", { n: inDeck }) : "", all && (all.n !== was.n || all.f !== was.f) ? Tx("All your collections: {n} normal · {f} foil", { n: all.n, f: all.f }) : ""].filter(Boolean).join(" · "))}</p>
+        <div class="zx-foot"><button type="button" class="btn ghost" data-zx-close>${Tx(changed ? "Cancel" : "Close")}</button><button type="button" class="btn primary" data-zx-save ${changed ? "" : "disabled"}>${Tx("Save to collection")}</button></div>`;
+      box.querySelectorAll("[data-zx]").forEach((b) => b.onclick = () => { const [k, dd] = b.dataset.zx.split(":"); v[k] = Math.max(0, Math.min(99, v[k] + +dd)); draw(); box.querySelector(`[data-zx="${b.dataset.zx}"]`)?.focus(); });
+      box.querySelector("[data-zx-close]").onclick = () => close();
+      box.querySelector("[data-zx-save]").onclick = async (ev) => {
+        const delta = [["n", false], ["f", true]].filter(([k]) => v[k] !== was[k]).map(([k, foil]) => ({ card_id: c.id, qty: v[k] - was[k], foil }));
+        ev.currentTarget.disabled = true;
+        try {
+          await CLOUD.api("rpc/apply_collection_delta", { method: "POST", prefer: "return=minimal", body: { p_profile: p.profile, p_delta: delta } });
+          const e = { ...own() }; for (const x of delta) e[x.foil ? "f" : "n"] = Math.max(0, (+e[x.foil ? "f" : "n"] || 0) + x.qty);
+          if (e.n || e.f) p.collection[c.id] = e; else delete p.collection[c.id];
+          if (ALL_COLL) { const a = ALL_COLL[c.id] || (ALL_COLL[c.id] = { n: 0, f: 0 }); for (const x of delta) a[x.foil ? "f" : "n"] = Math.max(0, a[x.foil ? "f" : "n"] + x.qty); }
+          close(); toast(Tx("Collection updated")); render();
+        } catch { ev.currentTarget.disabled = false; toast(Tx("Couldn't save. Try again."), null, true); }
+      };
+    };
+    draw();
+    return box;
+  };
   function toast(text, undo, err) {
     const t = $("toast");
     t.className = `toast${err ? " err" : ""}`;

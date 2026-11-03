@@ -1819,9 +1819,10 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   // ---------- tap a card thumbnail to see it large (any page; not where the thumbnail is already a button or link) ----------
   const zoom = document.createElement("dialog");
   zoom.className = "iw-zoom-card"; zoom.id = "iwZoom"; zoom.setAttribute("aria-label", T("Carta ampliada", "Card, larger"));
-  zoom.innerHTML = `<button type="button" class="btn ghost icon" data-zclose aria-label="${T("Fechar", "Close")}"><i class="ic i-close"></i></button><figure><img alt=""><figcaption></figcaption></figure>`;
+  zoom.innerHTML = `<button type="button" class="btn ghost icon" data-zclose aria-label="${T("Fechar", "Close")}"><i class="ic i-close"></i></button><figure><img alt=""><figcaption></figcaption></figure><div class="iw-zoom-extra" hidden></div>`;
   document.body.append(zoom);
-  zoom.addEventListener("click", () => zoom.close());
+  // a tap anywhere closes it — except on what a page put under the card (window.INKWELL_ZOOM_EXTRA, e.g. Decks: your copies)
+  zoom.addEventListener("click", (e) => { if (!e.composedPath().some((x) => x.classList?.contains("iw-zoom-extra"))) zoom.close(); });   // the path, not target: a button there may have been redrawn
   const zoomable = (el) => { const t = el.closest?.(".thumb, .iw-card"); if (!t || !t.querySelector("img") || t.closest("a, button, label, summary, dialog.iw-dialog, #iwZoom, [role=button], [data-nozoom]")) return null; return t; };
   document.addEventListener("click", (e) => {
     const t = zoomable(e.target); if (!t) return;
@@ -1831,6 +1832,10 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     zoom.querySelector("img").alt = img.alt || "";
     zoom.querySelector("figcaption").textContent = img.alt || "";
     zoom.querySelector("figcaption").hidden = !img.alt;
+    const extra = zoom.querySelector(".iw-zoom-extra"); extra.replaceChildren();
+    let more = null; try { more = window.INKWELL_ZOOM_EXTRA?.(t, () => zoom.close()) || null; } catch { /* the card still opens */ }
+    if (more) extra.append(more);
+    extra.hidden = !more; zoom.classList.toggle("has-extra", !!more);
     zoom.showModal();
   }, true);
   document.addEventListener("mouseover", (e) => { const t = zoomable(e.target); if (t) t.style.cursor = "zoom-in"; });
