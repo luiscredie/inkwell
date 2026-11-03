@@ -529,6 +529,8 @@ test('Fada Madrinha: each card in its rarest printing, in foil, with the cost, w
   await expect(partner).toHaveText(/Loja Parceira/);
   await expect(partner).toHaveAttribute('href', /^https:\/\/loja\.example\/busca\?q=Tinker%20Bell/);
   await expect(partner).toHaveAttribute('rel', /sponsored/);
+  // Liga Lorcana opens that very printing (edition and number), not the plain card
+  await expect(grid.locator('[data-gala="LOR1-216"] [data-testid="buy-liga"]')).toHaveAttribute('href', 'https://www.ligalorcana.com.br/?card=Tinker+Bell+-+Giant+Fairy+%28Alternate+Art%29%28216%29&ed=LOR1&num=216&view=cards%2Fcard');
   await expect(page.locator('[data-tab="gala"]')).toHaveText('✨ Fada Madrinha');
 });
 
