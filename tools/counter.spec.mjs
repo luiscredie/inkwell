@@ -127,3 +127,77 @@ test('opponent deck skipped: asked again at the end, and can still be set from t
   expect(st.history[0].opp.inks).toEqual(['Ruby']);
   expect(st.history[0].exported).toBe(false);
 });
+
+async function plain(page, state) {
+  await page.addInitScript((st) => { if (sessionStorage.getItem('t2')) return; sessionStorage.setItem('t2', '1');
+    localStorage.setItem('inkwell-lorecounter-v3', JSON.stringify({ lang: 'pt', players: 2, decks: false, bestOf: 3, magic: false, ...st })); }, state);
+  await page.route('**/rest/v1/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+}
+
+test('match clock: 50 minutes by default, in both score pills, starts with the first lore and pauses on a tap', async ({ page }) => {
+  await page.clock.install();
+  await plain(page, {});
+  await page.goto(BASE);
+  const clk = page.locator('#pillR [data-clk]');
+  await expect(clk).toHaveText('50:00');
+  await expect(page.locator('#pillL [data-clk]')).toHaveText('50:00');   // the other player's pill, turned to face them
+  await page.locator('#h1 .zone.plus').click();                          // first lore: the clock starts
+  await page.clock.runFor(61000);
+  await expect(clk).toHaveText('48:59');
+  await page.locator('#pillR').click();                                   // pause
+  await page.clock.runFor(120000);
+  await expect(clk).toHaveText('48:59');
+  await expect(clk).toHaveClass(/paused/);
+  await page.locator('#pillR').click();                                   // go on
+  await page.clock.runFor(44 * 60000);
+  await expect(clk).toHaveClass(/low/);                                   // 5 minutes or less
+  await page.clock.runFor(6 * 60000);
+  await expect(clk).toHaveText('Tempo!');
+  // it survives a reload (times are timestamps)
+  await page.reload();
+  await expect(page.locator('#pillR [data-clk]')).toHaveText('Tempo!');
+});
+
+test('match clock: set in Ajustes (off or 30/40/50/60)', async ({ page }) => {
+  await plain(page, {});
+  await page.goto(BASE);
+  await page.click('#menuBtn');
+  await page.getByRole('button', { name: 'Ajustes' }).click();
+  await page.locator('#sClock [data-v="30"]').click();
+  await page.locator('#sClose').click();
+  await expect(page.locator('#pillR [data-clk]')).toHaveText('30:00');
+  await page.click('#menuBtn');
+  await page.getByRole('button', { name: 'Ajustes' }).click();
+  await page.locator('#sClock [data-v="0"]').click();
+  await page.locator('#sClose').click();
+  await expect(page.locator('[data-clk]')).toHaveCount(0);
+});
+
+test('turn by turn: the first to start, then each pass gives the other player a stopwatch from zero', async ({ page }) => {
+  await page.clock.install();
+  await plain(page, { turnMode: true });
+  await page.goto(BASE);
+  // before anyone starts, both panes offer "Começar meu turno"
+  await expect(page.locator('#tb1')).toHaveText('Começar meu turno');
+  await expect(page.locator('#tb2')).toHaveText('Começar meu turno');
+  await page.locator('#tb1').click();
+  await expect(page.locator('#tb2')).toBeHidden();
+  await expect(page.locator('#h1')).toHaveClass(/active/);
+  await page.clock.runFor(83000);
+  await expect(page.locator('#tb1 .tt')).toHaveText('1:23');
+  await expect(page.locator('#pillR [data-clk]')).toHaveText('48:37');   // the match clock started with the first turn
+  await page.locator('#tb1').click();                                      // pass
+  await expect(page.locator('#tb1')).toBeHidden();
+  await expect(page.locator('#tb2 .tt')).toHaveText('0:00');               // the other player's stopwatch starts from zero
+  await expect(page.locator('#tb2')).toContainText('Passar turno');
+  await page.clock.runFor(5000);
+  await expect(page.locator('#tb2 .tt')).toHaveText('0:05');
+  await page.locator('#tb2').click();
+  await expect(page.locator('#tb1 .tt')).toHaveText('0:00');
+  // a game won: turns stop, and who went first is kept in the game
+  for (let i = 0; i < 20; i++) await page.locator('#h1 .zone.plus').click();
+  await expect(page.locator('#tb1')).toBeHidden();
+  const g = await page.evaluate(() => JSON.parse(localStorage.getItem('inkwell-lorecounter-v3')).match.games[0]);
+  expect(g.first).toBe('p1');
+  expect(g.turns).toBe(3);
+});

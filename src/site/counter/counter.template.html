@@ -94,6 +94,19 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
   font-family: var(--serif); font-weight: 600; font-size: 1.15rem; color: var(--gold-soft); font-variant-numeric: lining-nums tabular-nums; pointer-events: none; }
 .pill.l { left: max(16px, env(safe-area-inset-left, 0px)); transform: translateY(-50%) rotate(180deg); }
 .pill.r { right: max(16px, env(safe-area-inset-right, 0px)); transform: translateY(-50%); }
+/* match clock: in both score pills (2 players, each facing its player) or one pill at the top (1, 3, 4 players) */
+.pill .clk, .clockpill { font-family: var(--font); font-variant-numeric: tabular-nums; font-weight: 700; letter-spacing: .02em; color: var(--ivory); }
+.pill .clk { margin-left: 4px; padding-left: 9px; border-left: 1px solid var(--hair); font-size: .95rem; }
+.clk.low { color: #f5b544; } .clk.out { color: #ff6b6b; } .clk.paused { opacity: .55; }
+.clockpill { position: absolute; z-index: 3; top: max(10px, env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); background: var(--night); padding: 6px 14px; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--hair); border: 0; font-size: 1rem; min-height: 36px; }
+.pill.tap { pointer-events: auto; cursor: pointer; border: 0; font: inherit; color: inherit; }
+/* turn by turn: the active player's pane has its turn timer and "pass the turn" */
+.half .turnbtn { position: absolute; z-index: 2; top: 14px; left: 14px; min-height: 44px; padding: 6px 14px; border-radius: 999px; border: 0;
+  background: rgba(12,14,22,.72); box-shadow: inset 0 0 0 1px rgba(246,240,225,.28); color: var(--ivory); font: 600 .9rem var(--font); display: inline-flex; align-items: center; gap: 8px; }
+.half .turnbtn[hidden] { display: none; }
+.half .turnbtn .tt { font-variant-numeric: tabular-nums; font-size: 1.15rem; font-weight: 700; color: var(--gold-soft); }
+.half .turnbtn.start { opacity: .85; }
+.half.active { box-shadow: inset 0 0 0 3px rgba(233,210,138,.55); }
 .pill i { font-style: normal; color: var(--muted); font-weight: 400; font-family: var(--font); font-size: .9rem; }
 .table:not(.n2) .pill { display: none; }
 
@@ -173,6 +186,8 @@ table.stats td.n { text-align: right; }
       yourDeck: "Seu deck", oppDeck: "Deck do oponente", pick2: "Toque em até 2 tintas", name: "Nome do deck (opcional)", left: "faltam {n}", metaDecks: "Decks do meta", metaNone: "Nenhum deck do meta com essas tintas.", pickOppNow: "Escolher deck do oponente", noOpp: "Sem deck do oponente", oppInkwell: "O oponente usa o Inkwell?", oppInkwellSub: "Se sim, procure pelo nome e escolha um dos decks dele.", no: "Não", findPh: "Nome ou @usuário", typeMore: "Digite pelo menos 2 letras.", noneFound: "Ninguém encontrado. Aparecem perfis públicos e seus amigos.", noDecks: "Nenhum deck visível", pickInks: "Escolher as tintas", friendTag: "amigo", findOff: "A busca não está disponível agora.", back: "Voltar", recent: "Recentes", myDecks: "Meus decks no Inkwell", friendDeck: "Deck de um amigo do Inkwell", back: "Voltar", save: "Salvar", noDeck: "Sem deck",
       matchOver: "Fim da partida", copy: "Copiar histórico", copied: "Copiado.", copyFail: "Selecione e copie o texto abaixo.", winRate: "Vitórias por deck do oponente", games: "Jogos", matches: "Partidas", winPct: "% vitórias",
       toCoach: "Copiar para o Coach Review", toCoachSub: "jogos novos", sentHow: "Copiado. Abra o Inkwell Coach Review, toque em Adicionar jogos e cole.", allSent: "Todos os jogos já foram copiados.", toCoachSync: "Enviar ao Coach Review", synced: "Salvo no Coach Review", syncWait: "Ainda não salvo no Coach Review; tentaremos de novo.", backCoach: "Coach Review", account: "Conta Inkwell", noAccount: "Sem conta: os jogos ficam só neste aparelho", toSend: "a enviar", upToDate: "tudo enviado", accountSub: "Entre com o e-mail da sua conta Inkwell. Os jogos são enviados quando houver internet; sem internet, ficam guardados aqui.", emailPh: "seu e-mail", sendCode: "Enviar código", codeSent: "Enviamos um código para", codePh: "código do e-mail", signIn: "Entrar", signOut: "Sair desta conta", sendNow: "Enviar agora", sentCloud: "Enviado ao Inkwell", offlineWait: "Sem internet: será enviado quando você conectar.", failCloud: "Não foi possível enviar agora; tentaremos de novo.", badCode: "Código inválido ou expirado.", badEmail: "Não foi possível enviar o código. Confira o e-mail e a internet.", signedAs: "Conectado como", savedHere: "Guardado neste aparelho; será enviado ao Inkwell.", toCloud: "Enviar ao Inkwell",
+      clock: "Relógio da partida", clockSub: "Contagem regressiva para os dois; toque no relógio para pausar", off: "Desligado",
+      turnMode: "Modo turno a turno", turnModeSub: "Cada jogador passa o turno no contador; um cronômetro mede o turno", startTurn: "Começar meu turno", passTurn: "Passar turno", timeUp: "Tempo!", turn: "Turno",
       confirmNew: "Começar nova partida? O placar volta a zero.", yes: "Sim", cancel: "Cancelar", colors: "Tintas", clear: "Apagar histórico", cleared: "Histórico apagado.", game: "Jogo", vs: "vs" },
     en: { you: "You", opp: "Opponent", player: "Player", undo: "Undo", newGame: "New game", newMatch: "New match", settings: "Settings", judge: "Show the judge", close: "Close",
       lang: "Language", langName: "Português", players: "Players", playersSub: "1 counts only your lore", bestOf: "Match", magic: "Animated magic", magicSub: "Sparkles and ink rising from your edge",
@@ -183,6 +198,8 @@ table.stats td.n { text-align: right; }
       yourDeck: "Your deck", oppDeck: "Opponent's deck", pick2: "Tap up to 2 inks", name: "Deck name (optional)", left: "{n} to go", metaDecks: "Meta decks", metaNone: "No meta deck with these inks.", pickOppNow: "Pick the opponent's deck", noOpp: "No opponent deck", oppInkwell: "Does your opponent use Inkwell?", oppInkwellSub: "If so, search their name and pick one of their decks.", no: "No", findPh: "Name or @username", typeMore: "Type at least 2 letters.", noneFound: "Nobody found. Public profiles and your friends show up.", noDecks: "No visible deck", pickInks: "Pick the inks", friendTag: "friend", findOff: "Search isn't available right now.", back: "Back", recent: "Recent", myDecks: "My Inkwell decks", friendDeck: "An Inkwell friend's deck", back: "Back", save: "Save", noDeck: "No deck",
       matchOver: "Match over", copy: "Copy history", copied: "Copied.", copyFail: "Select and copy the text below.", winRate: "Wins by opponent deck", games: "Games", matches: "Matches", winPct: "Win %",
       toCoach: "Copy for Coach Review", toCoachSub: "new games", sentHow: "Copied. Open Inkwell Coach Review, tap Add games and paste.", allSent: "All games were already copied.", toCoachSync: "Send to Coach Review", synced: "Saved to Coach Review", syncWait: "Not saved to Coach Review yet; it will retry.", backCoach: "Coach Review", account: "Inkwell account", noAccount: "No account: games stay on this device only", toSend: "to send", upToDate: "all sent", accountSub: "Sign in with your Inkwell account email. Games are sent when there is internet; offline they are kept here.", emailPh: "your email", sendCode: "Send code", codeSent: "We sent a code to", codePh: "code from the email", signIn: "Sign in", signOut: "Sign out", sendNow: "Send now", sentCloud: "Sent to Inkwell", offlineWait: "Offline: it will be sent when you connect.", failCloud: "Couldn't send now; it will retry.", badCode: "Wrong or expired code.", badEmail: "Couldn't send the code. Check the email and the connection.", signedAs: "Signed in as", savedHere: "Saved on this device; it will be sent to Inkwell.", toCloud: "Send to Inkwell",
+      clock: "Match clock", clockSub: "A countdown both players see; tap the clock to pause", off: "Off",
+      turnMode: "Turn by turn", turnModeSub: "Each player passes the turn on the counter; a stopwatch times the turn", startTurn: "Start my turn", passTurn: "Pass the turn", timeUp: "Time!", turn: "Turn",
       confirmNew: "Start a new match? The score goes back to zero.", yes: "Yes", cancel: "Cancel", colors: "Inks", clear: "Clear history", cleared: "History cleared.", game: "Game", vs: "vs" },
   };
   const SYNC = !!window.INKWELL_SYNC;
@@ -212,7 +229,8 @@ table.stats td.n { text-align: right; }
   const inkMark = (ink) => OFFICIAL_INKS
     ? `<b class="official" title="${ink}"><img src="../ink/${ink.toLowerCase()}.svg" alt=""></b>`
     : `<b style="background:${HEX[ink] || HEX.Ruby}" title="${ink}"><svg viewBox="0 0 24 24" fill="currentColor">${INK_GLYPH[ink] || ""}</svg></b>`;
-  const blank = () => ({ lang: "pt", players: 2, bestOf: 3, magic: true, decks: false, tour: true, flip: true,
+  const blank = () => ({ lang: "pt", players: 2, bestOf: 3, magic: true, decks: false, tour: true, flip: true, clockMin: 50, turnMode: false,
+    clk: { acc: 0, run: null }, turn: { seat: null, at: null, n: 0, first: null },
     color: { p1: ["Ruby"], p2: ["Sapphire"], p3: ["Emerald"], p4: ["Amber"] }, lore: zero(), wins: zero(), log: [], won: null, matchDone: false,
     match: null, history: [], recent: [] });
   let s;
@@ -244,10 +262,13 @@ table.stats td.n { text-align: right; }
         <span class="pips" id="w${i}"></span><span class="delta" id="d${i}"></span><span class="crown" id="c${i}"></span><span class="label" id="l${i}"></span>
         <span class="inkmarks" id="k${i}" aria-hidden="true"></span><span class="left" id="r${i}"></span>
         <span class="track" id="t${i}" role="img"></span>
+        <button type="button" class="turnbtn" id="tb${i}" data-turn="${seat}" hidden></button>
       </section>`;
-    }).join("") + `<div class="pill l" id="pillL"></div><div class="pill r" id="pillR"></div>
+    }).join("") + `<button type="button" class="pill l tap" id="pillL"></button><button type="button" class="pill r tap" id="pillR"></button><button type="button" class="clockpill" id="clockC" hidden></button>
       <div class="hub"><button type="button" class="menu-btn" id="menuBtn" aria-label="Menu">${SPARK}</button></div>`;
     table.querySelectorAll(".zone").forEach((z) => z.addEventListener("click", () => tap(z.dataset.seat, +z.dataset.d)));
+    table.querySelectorAll("[data-turn]").forEach((b) => b.addEventListener("click", () => passTurn(b.dataset.turn)));
+    for (const id of ["pillL", "pillR", "clockC"]) $(id).addEventListener("click", toggleClock);
     $("menuBtn").addEventListener("click", menu);
     magic.reset();
     render();
@@ -284,9 +305,13 @@ table.stats td.n { text-align: right; }
       $(`l${i}`).textContent = s.decks && s.players === 2 ? (seat === "p1" ? (m?.me ? deckText(m.me) : "") : (m?.opp && !s.tour ? deckText(m.opp) : "")) : "";
     }
     if (s.players === 2) {
-      $("pillL").innerHTML = `<span>${s.wins.p2}</span><i>—</i><span>${s.wins.p1}</span>`;
-      $("pillR").innerHTML = `<span>${s.wins.p1}</span><i>—</i><span>${s.wins.p2}</span>`;
-    }
+      const ck = s.clockMin ? `<b class="clk" data-clk></b>` : "";
+      $("pillL").innerHTML = `<span>${s.wins.p2}</span><i>—</i><span>${s.wins.p1}</span>${ck}`;
+      $("pillR").innerHTML = `<span>${s.wins.p1}</span><i>—</i><span>${s.wins.p2}</span>${ck}`;
+    } else { $("pillL").hidden = $("pillR").hidden = true; }
+    $("clockC").hidden = !(s.clockMin && s.players !== 2);
+    if (!$("clockC").hidden) $("clockC").innerHTML = `<b class="clk" data-clk></b>`;
+    tick();
     save();
   }
 
@@ -362,7 +387,7 @@ table.stats td.n { text-align: right; }
   // ---------- tapping ----------
   const pending = zero(), timers = {};
   function clearDeltas() { for (const seat of SEATS) { pending[seat] = 0; clearTimeout(timers[seat]); $(`d${n(seat)}`)?.classList.remove("show"); } }
-  function resetLore() { s.lore = zero(); s.log = []; s.gameStart = null; clearDeltas(); }
+  function resetLore() { s.lore = zero(); s.log = []; s.gameStart = null; clearDeltas(); s.turn = { seat: null, at: null, n: 0, first: null }; }
   function tap(seat, d) {
     if (s.matchDone) return startMatch();
     if (s.won) return nextGame();
@@ -370,6 +395,7 @@ table.stats td.n { text-align: right; }
     if (after === before) return;
     s.lore[seat] = after;
     s.gameStart ||= Date.now();
+    clockStart();
     s.log.push({ seat, from: before, to: after, at: Date.now() });
     if (s.log.length > 300) s.log.shift();
     pending[seat] += after - before;
@@ -535,7 +561,7 @@ table.stats td.n { text-align: right; }
 
   // ---------- games and matches ----------
   function startMatch() {
-    s.wins = zero(); resetLore(); s.won = null; s.matchDone = false;
+    s.wins = zero(); resetLore(); s.won = null; s.matchDone = false; clockReset();
     s.match = { started: new Date().toISOString(), tour: s.tour, players: s.players, best_of: s.bestOf, me: s.match?.me || null, opp: null, games: [] };
     render();
     if (s.decks && s.players === 2) pickDeck(t().yourDeck, s.match.me, (d) => {
@@ -549,12 +575,13 @@ table.stats td.n { text-align: right; }
     if (!s.match) s.match = { started: new Date().toISOString(), tour: s.tour, players: s.players, best_of: s.bestOf, me: null, opp: null, games: [] };
     // Lore totals over time: public information (Tournament Rules §5.2), kept for the lore chart in Coach Review.
     const track = s.log.filter((e) => !e.award && e.at && s.gameStart).slice(-400).map((e) => [Math.round((e.at - s.gameStart) / 1000), e.seat, e.to]);
-    const g = { winner: w, reason, conceded_by: concededBy, lore: { ...s.lore }, first: null, ended: new Date().toISOString(), track };
+    const g = { winner: w, reason, conceded_by: concededBy, lore: { ...s.lore }, first: s.turnMode ? s.turn.first : null, ended: new Date().toISOString(), track, ...(s.turnMode && s.turn.n ? { turns: s.turn.n } : {}) };
+    s.turn = { seat: null, at: null, n: 0, first: null };
     s.match.games.push(g);
     s.wins[w] += 1; s.won = w;
     s.log.push({ award: true, auto: reason === "lore", seat: w });
     clearDeltas();
-    if (s.wins[w] >= winsNeeded()) { s.matchDone = true; render(); setTimeout(finishMatch, 700); return; }
+    if (s.wins[w] >= winsNeeded()) { s.matchDone = true; clockStop(); render(); setTimeout(finishMatch, 700); return; }
     render();
     if (s.decks && !s.tour && s.players === 2) {
       open(`<h2>${t().wentFirst}</h2><div class="row"><button type="button" class="btn" id="f1">${t().me1}</button><button type="button" class="btn" id="f2">${t().opp1}</button></div><button type="button" class="btn quiet" id="fs">${t().skip}</button>`, () => {
@@ -564,6 +591,48 @@ table.stats td.n { text-align: right; }
     }
   }
   function nextGame() { resetLore(); s.won = null; render(); }
+
+  // ---------- match clock (a countdown from s.clockMin, for the whole match) and turn by turn ----------
+  // Times are kept as timestamps, so a reload, a locked screen or a sleeping phone doesn't lose them.
+  const clkElapsed = () => (s.clk?.acc || 0) + (s.clk?.run ? Date.now() - s.clk.run : 0);
+  const mmss = (ms, up) => { const t2 = Math.max(0, up ? Math.floor(ms / 1000) : Math.ceil(ms / 1000)), m = Math.floor(t2 / 60), sec = t2 % 60; return `${m}:${String(sec).padStart(2, "0")}`; };
+  function clockStart() { if (s.clockMin && !s.clk.run && !s.matchDone) { s.clk.run = Date.now(); save(); } }
+  function clockStop() { if (s.clk.run) { s.clk.acc += Date.now() - s.clk.run; s.clk.run = null; save(); } }
+  function clockReset() { s.clk = { acc: 0, run: null }; s.turn = { seat: null, at: null, n: 0, first: null }; buzzed = false; }
+  function toggleClock() { if (!s.clockMin || s.matchDone) return; if (s.clk.run) clockStop(); else s.clk.run = Date.now(); save(); tick(); }
+  let buzzed = false;
+  function tick() {
+    if (s.clockMin) {
+      const left = s.clockMin * 60000 - clkElapsed(), out = left <= 0;
+      const txt = out ? t().timeUp : mmss(left);
+      document.querySelectorAll("[data-clk]").forEach((b) => { b.textContent = txt; b.classList.toggle("out", out); b.classList.toggle("low", !out && left <= 5 * 60000); b.classList.toggle("paused", !s.clk.run && clkElapsed() > 0 && !out); });
+      if (out && !buzzed) { buzzed = true; try { navigator.vibrate?.([300, 150, 300, 150, 600]); } catch { /* */ } }
+    }
+    for (const seat of seats()) {
+      const b = $(`tb${n(seat)}`); if (!b) continue;
+      const on = s.turnMode && !s.won && !s.matchDone;
+      const mine = on && s.turn.seat === seat;
+      b.hidden = !on || (s.turn.seat && !mine);
+      b.classList.toggle("start", on && !s.turn.seat);
+      $(`h${n(seat)}`)?.classList.toggle("active", mine);
+      if (b.hidden) continue;
+      b.innerHTML = mine ? `<span class="tt">${mmss(Date.now() - s.turn.at, true)}</span><span>${t().passTurn} ›</span>` : esc(t().startTurn);
+      b.setAttribute("aria-label", mine ? `${t().turn} ${s.turn.n}: ${t().passTurn}` : t().startTurn);
+    }
+  }
+  setInterval(tick, 500);
+  // the active player passes; the next seat's turn starts and its stopwatch starts from zero
+  function passTurn(seat) {
+    if (!s.turnMode || s.won || s.matchDone) return;
+    if (s.turn.seat && s.turn.seat !== seat) return;
+    const order = seats();
+    const next = s.turn.seat ? order[(order.indexOf(seat) + 1) % order.length] : seat;
+    if (!s.turn.seat) s.turn.first = seat;
+    s.turn = { ...s.turn, seat: next, at: Date.now(), n: (s.turn.n || 0) + 1 };
+    clockStart();
+    try { navigator.vibrate?.(30); } catch { /* */ }
+    save(); tick();
+  }
   // The match-over card for the newest match in the history; an unknown opponent deck can still be picked here.
   function finishCard() {
     const m = s.history[0]; if (!m) return;
@@ -633,6 +702,8 @@ table.stats td.n { text-align: right; }
       <div class="list">
         ${seg("sPlayers", t().players, t().playersSub, [[1, "1"], [2, "2"], [3, "3"], [4, "4"]], s.players)}
         ${seg("sBest", t().bestOf, "", [[1, "Bo1"], [3, "Bo3"], [5, "Bo5"]], s.bestOf)}
+        ${seg("sClock", t().clock, t().clockSub, [[0, t().off], [30, "30"], [40, "40"], [50, "50"], [60, "60"]], s.clockMin)}
+        ${toggle("sTurn", t().turnMode, t().turnModeSub, s.turnMode)}
         ${toggle("sMagic", t().magic, t().magicSub, s.magic)}
         ${s.players > 1 ? toggle("sFlip", t().flip, "", s.flip) : ""}
       </div>
@@ -649,7 +720,7 @@ table.stats td.n { text-align: right; }
       <button type="button" class="btn" id="sClose">${t().close}</button>`, () => {
       $("sPlayers").querySelectorAll("button").forEach((b) => b.onclick = () => {
         const v = +b.dataset.v; if (v === s.players) return;
-        s.players = v; s.wins = zero(); resetLore(); s.won = null; s.matchDone = false; s.match = null;
+        s.players = v; s.wins = zero(); resetLore(); s.won = null; s.matchDone = false; s.match = null; clockReset();
         build(); settings();
       });
       $("sBest").querySelectorAll("button").forEach((b) => b.onclick = () => {
@@ -657,6 +728,8 @@ table.stats td.n { text-align: right; }
         if (!s.won && seats().some((x) => s.wins[x] >= winsNeeded())) { s.matchDone = true; }
         render(); settings();
       });
+      $("sClock").querySelectorAll("button").forEach((b) => b.onclick = () => { s.clockMin = +b.dataset.v; buzzed = false; if (!s.clockMin) clockStop(); render(); settings(); });
+      $("sTurn").onclick = () => { s.turnMode = !s.turnMode; s.turn = { seat: null, at: null, n: 0, first: null }; render(); settings(); };
       if (CLOUD) $("sCloud").onclick = () => account();
       $("sMagic").onclick = () => { s.magic = !s.magic; save(); magic.reset(); settings(); };
       if ($("sFlip")) $("sFlip").onclick = () => { s.flip = !s.flip; build(); settings(); };
