@@ -846,7 +846,24 @@ html[data-theme="dia"] .empty img { opacity: .45; }
 dialog.iw-zoom-card { padding: 0; border: 0; background: transparent; max-width: min(92vw, 520px); max-height: 92dvh; overflow: visible; }
 dialog.iw-zoom-card::backdrop { background: rgba(8,6,20,.82); }
 dialog.iw-zoom-card figure { margin: 0; display: grid; gap: var(--sp-2); justify-items: center; }
-dialog.iw-zoom-card img { display: block; max-width: min(92vw, 520px); max-height: 84dvh; width: auto; height: auto; object-fit: contain; border-radius: 4.5% / 3.2%; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+/* the size is set up front (card proportions), so it no longer depends on the picture having loaded: on iPhone a card
+   whose picture was still loading opened small and stayed small */
+dialog.iw-zoom-card img { display: block; width: min(92vw, 520px, calc(84dvh * 0.717)); max-width: none; height: auto; aspect-ratio: 1468 / 2048; object-fit: contain; border-radius: 4.5% / 3.2%; box-shadow: 0 20px 60px rgba(0,0,0,.5); background: rgba(255,255,255,.06); }
+dialog.iw-zoom-card.has-extra img { width: min(92vw, 520px, calc((92dvh - 190px) * 0.717)); }
+dialog.iw-zoom-card .iw-zoom-extra { margin-top: var(--sp-3); width: min(92vw, 520px); box-sizing: border-box; }
+dialog.iw-zoom-card .iw-zoom-extra[hidden] { display: none; }
+dialog.iw-zoom-card.has-extra { overflow: auto; }
+@media (min-width: 760px) {   /* computer: the card on the left, your copies on the right (like Dreamborn) */
+  dialog.iw-zoom-card.has-extra[open] { display: flex; align-items: center; gap: var(--sp-5); max-width: min(94vw, 900px); overflow: visible; }
+  dialog.iw-zoom-card.has-extra img { width: min(52vw, 480px, calc(88dvh * 0.717)); }
+  dialog.iw-zoom-card.has-extra .iw-zoom-extra { margin-top: 0; width: 340px; flex: none; }
+}
+.iw-zoom-extra .zx { padding: var(--sp-3) var(--sp-4); }
+.iw-zoom-extra .zx-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); min-height: 48px; }
+.iw-zoom-extra .zx-step { display: inline-flex; align-items: center; gap: var(--sp-2); }
+.iw-zoom-extra .zx-step .btn { font-size: 22px; line-height: 1; }
+.iw-zoom-extra .zx-step b { min-width: 2ch; text-align: center; font-size: var(--fs-h3); }
+.iw-zoom-extra .zx-foot { display: flex; gap: var(--sp-2); justify-content: flex-end; flex-wrap: wrap; margin-top: var(--sp-2); }
 dialog.iw-zoom-card figcaption { color: #fff; font-weight: 600; text-align: center; font-size: var(--fs-small); }
 dialog.iw-zoom-card [data-zclose] { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 12px); right: 12px; color: #fff; background: rgba(0,0,0,.4); }
 /* notifications (shell.js) */

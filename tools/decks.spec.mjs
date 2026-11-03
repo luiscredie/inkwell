@@ -482,3 +482,34 @@ test('MYP Cards is off by default: TCGplayer only, prices-br.json is not even as
   await expect(page.getByTestId('public-prices')).not.toContainText('MYP');
   expect(asked).toEqual([]);
 });
+
+test('tap a card in a deck: it opens large, with your copies of that printing; add one and save to the collection', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const calls = await setup(page);
+  await page.route('**/rest/v1/rpc/apply_collection_delta', (r) => { calls.push({ path: 'rpc/apply_collection_delta', body: JSON.parse(r.request().postData()) }); return r.fulfill({ status: 204, body: '' }); });
+  await page.goto(BASE + '?deck=deck-a&tab=missing');
+  await expect(page.locator('[data-testid="missing-summary"]')).toContainText('2 cartas faltando');
+  await page.locator('[data-miss="LOR10-1"] .thumb').click();
+  const z = page.locator('#iwZoom');
+  await expect(z).toBeVisible();
+  const box = z.getByTestId('zoom-collection');
+  await expect(box).toContainText('Na sua coleção “luiscredie” · esta arte');
+  await expect(box.getByTestId('zx-n')).toHaveText('2');
+  await expect(box.getByTestId('zx-f')).toHaveText('0');
+  await expect(box).toContainText('No deck: 4');
+  await expect(box.locator('[data-zx-save]')).toBeDisabled();
+  await box.locator('[data-zx="n:1"]').click();                 // taps inside don't close the card
+  await box.locator('[data-zx="f:1"]').click();
+  await expect(z).toBeVisible();
+  await expect(box.getByTestId('zx-n')).toHaveText('3');
+  await box.locator('[data-zx-save]').click();
+  await expect(z).toBeHidden();
+  expect(calls.filter((c) => c.path === 'rpc/apply_collection_delta').map((c) => c.body)).toEqual([{ p_profile: 'luiscredie', p_delta: [{ card_id: 'LOR10-1', qty: 1, foil: false }, { card_id: 'LOR10-1', qty: 1, foil: true }] }]);
+  await expect(page.locator('[data-miss="LOR10-1"]')).toHaveCount(0);   // 3 normal + 1 foil = the 4 the deck needs
+  // the picture has its size before it loads (it used to open small on iPhone)
+  await page.goto(BASE + '?deck=deck-a');
+  await page.locator('#tabBody .thumb').first().click();
+  await expect(z).toBeVisible();
+  const w = await z.locator('img').evaluate((i) => i.getBoundingClientRect().width);
+  expect(w).toBeGreaterThan(250);
+});
