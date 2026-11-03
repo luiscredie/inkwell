@@ -1,16 +1,16 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-03T18:01:22.570134+00:00",
+  "generated_at": "2026-11-03T23:26:53.756734+00:00",
   "status": "pass",
   "summary": {
-    "cards": 3687,
+    "cards": 3703,
     "pt_overlay_cards": 3686,
-    "priced_cards": 3583,
+    "priced_cards": 3588,
     "errors": 0,
-    "warnings": 272,
-    "missing_prices": 104,
+    "warnings": 299,
+    "missing_prices": 115,
     "missing_images": 166,
-    "missing_translations": 1,
+    "missing_translations": 17,
     "orphan_prices_detected": 0,
     "orphan_prices_removed": 0
   },
@@ -682,6 +682,10 @@
     },
     {
       "code": "MISSING_PRICE",
+      "card_id": "D23-1"
+    },
+    {
+      "code": "MISSING_PRICE",
       "card_id": "D23-2"
     },
     {
@@ -1097,8 +1101,112 @@
       "card_id": "Q2-9"
     },
     {
+      "code": "MISSING_PRICE",
+      "card_id": "D23C-7"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "D23C-8"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "D23C-9"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "D23C-10"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "D23C-11"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "D23C-12"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "D23C-13"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "D23C-14"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "D23C-15"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "D23C-16"
+    },
+    {
       "code": "MISSING_TRANSLATION",
       "card_id": "DLPC1-18-C2"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "D23C-1"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "D23C-2"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "D23C-3"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "D23C-4"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "D23C-5"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "D23C-6"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "D23C-7"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "D23C-8"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "D23C-9"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "D23C-10"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "D23C-11"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "D23C-12"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "D23C-13"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "D23C-14"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "D23C-15"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "D23C-16"
     },
     {
       "code": "PROVISIONAL_CORRECTION",

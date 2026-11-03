@@ -102,6 +102,11 @@
       "code": "Q2",
       "name_en": "Illumineer's Quest: Palace Heist",
       "name_pt": null
+    },
+    {
+      "code": "D23C",
+      "name_en": "D23 Collection",
+      "name_pt": null
     }
   ],
   "cards": [
@@ -116453,6 +116458,559 @@
           "text": "OVER HERE! Whenever this character quests, Jafar draws a card.",
           "effect": "Whenever this character quests, Jafar draws a card.",
           "ability_id": "Q2-9-A1"
+        }
+      ]
+    },
+    {
+      "card_id": "D23C-1",
+      "set_code": "D23C",
+      "card_number": "1",
+      "name_en": "Mickey Mouse - Brave Little Tailor",
+      "rarity": "P",
+      "color": "R",
+      "image_file": "images/Mickey_Mouse_-_Brave_Little_Tailor__D23C-1.avif",
+      "image_url": "https://cards.lorcast.io/card/digital/large/crd_a0a1e1bb99794f04991929ced6001ae8.avif?1723596439",
+      "ink_cost": 8,
+      "ink_color": "Ruby",
+      "card_type": "Character",
+      "inkable": 1,
+      "classification": "Dreamborn, Hero",
+      "strength": 5,
+      "willpower": 5,
+      "lore": 4,
+      "ability_text": "Evasive (Only characters with Evasive can challenge this character.)",
+      "tags": "character; closer/high-lore; fighter; durable; evasive",
+      "image_source": "lorcast",
+      "ability_text_raw": "Evasive (Only characters with Evasive can challenge this character.)",
+      "abilities": [
+        {
+          "type": "keyword",
+          "name": "Evasive",
+          "text": "Evasive (Only characters with Evasive can challenge this character.)",
+          "reminder_text": "Only characters with Evasive can challenge this character.",
+          "ability_id": "D23C-1-A1"
+        }
+      ]
+    },
+    {
+      "card_id": "D23C-2",
+      "set_code": "D23C",
+      "card_number": "2",
+      "name_en": "Cinderella - Stouthearted",
+      "rarity": "P",
+      "color": "T",
+      "image_file": "images/Cinderella_-_Stouthearted__D23C-2.avif",
+      "image_url": "https://cards.lorcast.io/card/digital/large/crd_8de3ae21bca6455bb44da9803af19ea8.avif?1723596597",
+      "ink_cost": 7,
+      "ink_color": "Steel",
+      "card_type": "Character",
+      "inkable": 1,
+      "classification": "Floodborn, Hero, Princess, Knight",
+      "strength": 5,
+      "willpower": 5,
+      "lore": 3,
+      "ability_text": "Shift 5 (You may pay 5 {i} to play this on top of one of your characters named Cinderella.)\nResist +2 (Damage dealt to this character is reduced by 2.) The Singing Sword: Whenever you play a song, this character may challenge ready characters this turn.",
+      "tags": "character; closer/high-lore; fighter; durable; damage/removal; resist; shift",
+      "image_source": "lorcast",
+      "ability_text_raw": "Shift 5 (You may pay 5 {i} to play this on top of one of your characters named Cinderella.)\r Resist +2 (Damage dealt to this character is reduced by 2.)\r The Singing Sword: Whenever you play a song, this character may challenge ready characters this turn.",
+      "abilities": [
+        {
+          "type": "keyword",
+          "name": "Shift",
+          "text": "Shift 5 (You may pay 5 {i} to play this on top of one of your characters named Cinderella.)",
+          "parameter": "5",
+          "reminder_text": "You may pay 5 {i} to play this on top of one of your characters named Cinderella.",
+          "ability_id": "D23C-2-A1"
+        },
+        {
+          "type": "keyword",
+          "name": "Resist",
+          "text": "Resist +2 (Damage dealt to this character is reduced by 2.) The Singing Sword: Whenever you play a song, this character may challenge ready characters this turn.",
+          "parameter": "+2",
+          "effect": "(Damage dealt to this character is reduced by 2.) The Singing Sword: Whenever you play a song, this character may challenge ready characters this turn.",
+          "ability_id": "D23C-2-A2"
+        }
+      ]
+    },
+    {
+      "card_id": "D23C-3",
+      "set_code": "D23C",
+      "card_number": "3",
+      "name_en": "Ursula - Deceiver",
+      "rarity": "P",
+      "color": "M",
+      "image_file": "images/Ursula_-_Deceiver__D23C-3.avif",
+      "image_url": "https://cards.lorcast.io/card/digital/large/crd_e18e96745a00405d8e927f8d4c75dc72.avif?1723596646",
+      "ink_cost": 2,
+      "ink_color": "Emerald",
+      "card_type": "Character",
+      "inkable": 1,
+      "classification": "Storyborn, Villain, Sorcerer",
+      "strength": 1,
+      "willpower": 3,
+      "lore": 1,
+      "ability_text": "YOU'LL NEVER EVEN MISS IT: When you play this character, chosen opponent reveals their hand and discards a song card of your choice.",
+      "tags": "character; discard",
+      "image_source": "lorcast",
+      "ability_text_raw": "YOU'LL NEVER EVEN MISS IT: When you play this\ncharacter, chosen opponent reveals their hand\nand discards a song card of your choice.",
+      "abilities": [
+        {
+          "type": "triggered",
+          "name": "YOU'LL NEVER EVEN MISS IT",
+          "text": "YOU'LL NEVER EVEN MISS IT: When you play this character, chosen opponent reveals their hand and discards a song card of your choice.",
+          "effect": "When you play this character, chosen opponent reveals their hand and discards a song card of your choice.",
+          "ability_id": "D23C-3-A1"
+        }
+      ]
+    },
+    {
+      "card_id": "D23C-4",
+      "set_code": "D23C",
+      "card_number": "4",
+      "name_en": "Bruno Madrigal - Undetected Uncle",
+      "rarity": "P",
+      "color": "E",
+      "image_file": "images/Bruno_Madrigal_-_Undetected_Uncle__D23C-4.avif",
+      "image_url": "https://cards.lorcast.io/card/digital/large/crd_8d986fbd95984691b7fe1a27a5e110bc.avif?1723596697",
+      "ink_cost": 4,
+      "ink_color": "Amethyst",
+      "card_type": "Character",
+      "inkable": 1,
+      "classification": "Storyborn, Ally, Madrigal",
+      "strength": 3,
+      "willpower": 3,
+      "lore": 1,
+      "ability_text": "Evasive (Only characters with Evasive can challenge this character.)\nYOU JUST HAVE TO SEE IT {e} - Name a card, then reveal the top card of your deck. If it's the named card, put it into your hand and gain 3 lore. Otherwise, put it on the top of your deck.",
+      "tags": "character; evasive; lore-scaling",
+      "image_source": "lorcast",
+      "ability_text_raw": "Evasive (Only characters with Evasive can challenge\nthis character.)\nYOU JUST HAVE TO SEE IT {e} - Name a card, then\nreveal the top card of your deck. If it's the named\ncard, put it into your hand and gain 3 lore. Otherwise,\nput it on the top of your deck.",
+      "abilities": [
+        {
+          "type": "keyword",
+          "name": "Evasive",
+          "text": "Evasive (Only characters with Evasive can challenge this character.)",
+          "reminder_text": "Only characters with Evasive can challenge this character.",
+          "ability_id": "D23C-4-A1"
+        },
+        {
+          "type": "activated",
+          "name": "YOU JUST HAVE TO SEE IT",
+          "text": "YOU JUST HAVE TO SEE IT {e} - Name a card, then reveal the top card of your deck. If it's the named card, put it into your hand and gain 3 lore. Otherwise, put it on the top of your deck.",
+          "cost_text": "{e}",
+          "effect": "Name a card, then reveal the top card of your deck. If it's the named card, put it into your hand and gain 3 lore. Otherwise, put it on the top of your deck.",
+          "ability_id": "D23C-4-A2"
+        }
+      ]
+    },
+    {
+      "card_id": "D23C-5",
+      "set_code": "D23C",
+      "card_number": "5",
+      "name_en": "Vanellope Von Schweetz - Sugar Rush Princess",
+      "rarity": "P",
+      "color": "A",
+      "image_file": "images/Vanellope_Von_Schweetz_-_Sugar_Rush_Princess__D23C-5.avif",
+      "image_url": "https://cards.lorcast.io/card/digital/large/crd_b2e4820cbbda4610b54f3e9c00fa4576.avif?1723596756",
+      "ink_cost": 4,
+      "ink_color": "Amber",
+      "card_type": "Character",
+      "inkable": 1,
+      "classification": "Floodborn, Hero, Princess, Racer",
+      "strength": 2,
+      "willpower": 4,
+      "lore": 2,
+      "ability_text": "Shift 2 (You may pay 2{i} to play this on top of one of your characters named Vanellope von Schweetz.)\nI HEREBY DECREE: Whenever you play another Princess character, all opposing characters get -1{s} until the start of your next turn.",
+      "tags": "character; quester; shift",
+      "image_source": "lorcast",
+      "ability_text_raw": "Shift 2 (You may pay 2{i} to play this on top of one of\nyour characters named Vanellope von Schweetz.)\nI HEREBY DECREE: Whenever you play another\nPrincess character, all opposing characters get -1{s}\nuntil the start of your next turn.",
+      "abilities": [
+        {
+          "type": "keyword",
+          "name": "Shift",
+          "text": "Shift 2 (You may pay 2{i} to play this on top of one of your characters named Vanellope von Schweetz.)",
+          "parameter": "2",
+          "reminder_text": "You may pay 2{i} to play this on top of one of your characters named Vanellope von Schweetz.",
+          "ability_id": "D23C-5-A1"
+        },
+        {
+          "type": "triggered",
+          "name": "I HEREBY DECREE",
+          "text": "I HEREBY DECREE: Whenever you play another Princess character, all opposing characters get -1{s} until the start of your next turn.",
+          "effect": "Whenever you play another Princess character, all opposing characters get -1{s} until the start of your next turn.",
+          "ability_id": "D23C-5-A2"
+        }
+      ]
+    },
+    {
+      "card_id": "D23C-6",
+      "set_code": "D23C",
+      "card_number": "6",
+      "name_en": "Oswald - The Lucky Rabbit",
+      "rarity": "P",
+      "color": "S",
+      "image_file": "images/Oswald_-_The_Lucky_Rabbit__D23C-6.avif",
+      "image_url": "https://cards.lorcast.io/card/digital/large/crd_9093f79568f941ccaf0f4708a1b74133.avif?1724349802",
+      "ink_cost": 2,
+      "ink_color": "Sapphire",
+      "card_type": "Character",
+      "inkable": 0,
+      "classification": "Storyborn, Hero",
+      "strength": 2,
+      "willpower": 1,
+      "lore": 2,
+      "ability_text": "FAVORABLE CHANCE - During your turn, whenever a card is put into your inkwell, you may reveal the top card of your deck. If it's an item card, you may play that item for free and it enters play exerted. Otherwise, put it on the bottom of your deck.",
+      "tags": "character; quester; uninkable",
+      "image_source": "lorcast",
+      "ability_text_raw": "FAVORABLE CHANCE - During your turn, whenever a card is put into your inkwell, you may reveal the top card of your deck. If it's an item card, you may play that item for free and it enters play exerted. Otherwise, put it on the bottom of your deck.",
+      "abilities": [
+        {
+          "type": "static",
+          "name": "FAVORABLE CHANCE",
+          "text": "FAVORABLE CHANCE - During your turn, whenever a card is put into your inkwell, you may reveal the top card of your deck. If it's an item card, you may play that item for free and it enters play exerted. Otherwise, put it on the bottom of your deck.",
+          "effect": "- During your turn, whenever a card is put into your inkwell, you may reveal the top card of your deck. If it's an item card, you may play that item for free and it enters play exerted. Otherwise, put it on the bottom of your deck.",
+          "ability_id": "D23C-6-A1"
+        }
+      ]
+    },
+    {
+      "card_id": "D23C-7",
+      "set_code": "D23C",
+      "card_number": "7",
+      "name_en": "Mickey Mouse - Playful Sorcerer",
+      "rarity": "P",
+      "color": "T",
+      "image_file": "images/Mickey_Mouse_-_Playful_Sorcerer__D23C-7.avif",
+      "image_url": "https://cards.lorcast.io/card/digital/large/crd_db6db54405ff449ba819ed521fae7df0.avif?1774402593",
+      "ink_cost": 5,
+      "ink_color": "Steel",
+      "card_type": "Character",
+      "inkable": 1,
+      "classification": "Floodborn, Hero, Sorcerer",
+      "strength": 3,
+      "willpower": 4,
+      "lore": 2,
+      "ability_text": "Shift 3 (You may pay 3{i} to play this on top of one of your characters named Mickey Mouse.)\nResist +1 (Damage dealt to this character is reduced by 1.) Sweep Away: When you play this character, deal damage to chosen character equal to the number of Broom characters you have in play.",
+      "tags": "character; quester; damage/removal; resist; shift",
+      "image_source": "lorcast",
+      "ability_text_raw": "Shift 3 (You may pay 3{i} to play this on top of one of your characters named Mickey Mouse.)\nResist +1 (Damage dealt to this character is reduced by 1.)\nSweep Away: When you play this character, deal damage to chosen character equal to the number of Broom characters you have in play.",
+      "abilities": [
+        {
+          "type": "keyword",
+          "name": "Shift",
+          "text": "Shift 3 (You may pay 3{i} to play this on top of one of your characters named Mickey Mouse.)",
+          "parameter": "3",
+          "reminder_text": "You may pay 3{i} to play this on top of one of your characters named Mickey Mouse.",
+          "ability_id": "D23C-7-A1"
+        },
+        {
+          "type": "keyword",
+          "name": "Resist",
+          "text": "Resist +1 (Damage dealt to this character is reduced by 1.) Sweep Away: When you play this character, deal damage to chosen character equal to the number of Broom characters you have in play.",
+          "parameter": "+1",
+          "effect": "(Damage dealt to this character is reduced by 1.) Sweep Away: When you play this character, deal damage to chosen character equal to the number of Broom characters you have in play.",
+          "ability_id": "D23C-7-A2"
+        }
+      ]
+    },
+    {
+      "card_id": "D23C-8",
+      "set_code": "D23C",
+      "card_number": "8",
+      "name_en": "Iago - Out of Reach",
+      "rarity": "P",
+      "color": "T",
+      "image_file": "images/Iago_-_Out_of_Reach__D23C-8.avif",
+      "image_url": "https://cards.lorcast.io/card/digital/large/crd_a2a3f642e4704e159e4e65233aacc2fb.avif?1774402627",
+      "ink_cost": 4,
+      "ink_color": "Steel",
+      "card_type": "Character",
+      "inkable": 1,
+      "classification": "Storyborn, Ally",
+      "strength": 3,
+      "willpower": 3,
+      "lore": 2,
+      "ability_text": "SELF-PRESERVATION: While you have another exerted character in play, this character can't be challenged.",
+      "tags": "character; quester",
+      "image_source": "lorcast",
+      "ability_text_raw": "SELF-PRESERVATION: While you have another\nexerted character in play, this character can't be\nchallenged.",
+      "abilities": [
+        {
+          "type": "static",
+          "name": "SELF-PRESERVATION",
+          "text": "SELF-PRESERVATION: While you have another exerted character in play, this character can't be challenged.",
+          "effect": "While you have another exerted character in play, this character can't be challenged.",
+          "ability_id": "D23C-8-A1"
+        }
+      ]
+    },
+    {
+      "card_id": "D23C-9",
+      "set_code": "D23C",
+      "card_number": "9",
+      "name_en": "Woody - Leader of the Toys",
+      "rarity": "P",
+      "color": "A",
+      "image_file": "images/Woody_-_Leader_of_the_Toys__D23C-9.avif",
+      "image_url": "https://cards.lorcast.io/card/digital/large/crd_45b622335cca43a6af2a902987571db8.avif?1790443057",
+      "ink_cost": 4,
+      "ink_color": "Amber",
+      "card_type": "Character",
+      "inkable": 1,
+      "classification": "Storyborn, Hero, Toy",
+      "strength": 3,
+      "willpower": 4,
+      "lore": 1,
+      "ability_text": "LET'S GO HOME: When you play this character, look at the top 4 cards of your deck. You may reveal a Toy character card or a location card named Andy's Room and put it into your hand. Put the rest on the bottom of your deck in any order.",
+      "tags": "character; uninkable",
+      "image_source": "lorcast",
+      "ability_text_raw": "LET'S GO HOME: When you play this character,\nlook at the top 4 cards of your deck. You may\nreveal a Toy character card or a location card\nnamed Andy's Room and put it into your hand.\nPut the rest on the bottom of your deck in\nany order.",
+      "abilities": [
+        {
+          "type": "triggered",
+          "name": "LET'S GO HOME",
+          "text": "LET'S GO HOME: When you play this character, look at the top 4 cards of your deck. You may reveal a Toy character card or a location card named Andy's Room and put it into your hand. Put the rest on the bottom of your deck in any order.",
+          "effect": "When you play this character, look at the top 4 cards of your deck. You may reveal a Toy character card or a location card named Andy's Room and put it into your hand. Put the rest on the bottom of your deck in any order.",
+          "ability_id": "D23C-9-A1"
+        }
+      ]
+    },
+    {
+      "card_id": "D23C-10",
+      "set_code": "D23C",
+      "card_number": "10",
+      "name_en": "Angel - Siren Singer",
+      "rarity": "P",
+      "color": "A",
+      "image_file": "images/Angel_-_Siren_Singer__D23C-10.avif",
+      "image_url": "https://cards.lorcast.io/card/digital/large/crd_1e5358b1c77448a494db44aee6a77602.avif?1790443064",
+      "ink_cost": 2,
+      "ink_color": "Amber",
+      "card_type": "Character",
+      "inkable": 1,
+      "classification": "Storyborn, Ally, Alien",
+      "strength": 2,
+      "willpower": 2,
+      "lore": 1,
+      "ability_text": "UNDERDOG: If this is your first turn and you're not the first player, you pay 1 {i} less to play this character.\nSinger 3 (This character counts as cost 3 to sing songs.)",
+      "tags": "character; uninkable",
+      "image_source": "lorcast",
+      "ability_text_raw": "UNDERDOG: If this is your first turn and you're\nnot the first player, you pay 1 {i} less to play this\ncharacter.\nSinger 3 (This character counts as cost 3 to\nsing songs.)",
+      "abilities": [
+        {
+          "type": "static",
+          "name": "UNDERDOG",
+          "text": "UNDERDOG: If this is your first turn and you're not the first player, you pay 1 {i} less to play this character.",
+          "effect": "If this is your first turn and you're not the first player, you pay 1 {i} less to play this character.",
+          "ability_id": "D23C-10-A1"
+        },
+        {
+          "type": "keyword",
+          "name": "Singer",
+          "text": "Singer 3 (This character counts as cost 3 to sing songs.)",
+          "parameter": "3",
+          "reminder_text": "This character counts as cost 3 to sing songs.",
+          "ability_id": "D23C-10-A2"
+        }
+      ]
+    },
+    {
+      "card_id": "D23C-11",
+      "set_code": "D23C",
+      "card_number": "11",
+      "name_en": "Pocahontas - Following the Wind",
+      "rarity": "P",
+      "color": "E",
+      "image_file": "images/Pocahontas_-_Following_the_Wind__D23C-11.avif",
+      "image_url": "https://cards.lorcast.io/card/digital/large/crd_b6ce9dfc0c3d4f62b962a6225f1f227f.avif?1790443068",
+      "ink_cost": 2,
+      "ink_color": "Amethyst",
+      "card_type": "Character",
+      "inkable": 0,
+      "classification": "Dreamborn, Hero, Princess",
+      "strength": 3,
+      "willpower": 2,
+      "lore": 1,
+      "ability_text": "WHAT IS MY PATH?: Whenever this character quests, gain lore equal to another chosen exerted character's {l}.",
+      "tags": "character; lore-scaling; uninkable",
+      "image_source": "lorcast",
+      "ability_text_raw": "WHAT IS MY PATH?: Whenever this character\nquests, gain lore equal to another chosen exerted\ncharacter's {l}.",
+      "abilities": [
+        {
+          "type": "triggered",
+          "name": "WHAT IS MY PATH?",
+          "text": "WHAT IS MY PATH?: Whenever this character quests, gain lore equal to another chosen exerted character's {l}.",
+          "effect": "Whenever this character quests, gain lore equal to another chosen exerted character's {l}.",
+          "ability_id": "D23C-11-A1"
+        }
+      ]
+    },
+    {
+      "card_id": "D23C-12",
+      "set_code": "D23C",
+      "card_number": "12",
+      "name_en": "Mushu - Stealthy Dragon",
+      "rarity": "P",
+      "color": "M",
+      "image_file": "images/Mushu_-_Stealthy_Dragon__D23C-12.avif",
+      "image_url": "https://cards.lorcast.io/card/digital/large/crd_7422061cabf943a19d4d197fa055609e.avif?1790443072",
+      "ink_cost": 3,
+      "ink_color": "Emerald",
+      "card_type": "Character",
+      "inkable": 1,
+      "classification": "Storyborn, Ally, Dragon",
+      "strength": 3,
+      "willpower": 2,
+      "lore": 1,
+      "ability_text": "Evasive (Only characters with Evasive can challenge this character.)\nTIP THE SCALES Whenever this character quests, if an opponent has more cards in their hand than you, you may draw a card.",
+      "tags": "character; draw/value; evasive",
+      "image_source": "lorcast",
+      "ability_text_raw": "Evasive (Only characters with Evasive can challenge this character.)\nTIP THE SCALES Whenever this character quests, if an opponent has more cards in their hand than you, you may draw a card.",
+      "abilities": [
+        {
+          "type": "keyword",
+          "name": "Evasive",
+          "text": "Evasive (Only characters with Evasive can challenge this character.)",
+          "reminder_text": "Only characters with Evasive can challenge this character.",
+          "ability_id": "D23C-12-A1"
+        },
+        {
+          "type": "triggered",
+          "name": "TIP THE SCALES",
+          "text": "TIP THE SCALES Whenever this character quests, if an opponent has more cards in their hand than you, you may draw a card.",
+          "effect": "Whenever this character quests, if an opponent has more cards in their hand than you, you may draw a card.",
+          "ability_id": "D23C-12-A2"
+        }
+      ]
+    },
+    {
+      "card_id": "D23C-13",
+      "set_code": "D23C",
+      "card_number": "13",
+      "name_en": "Héctor Rivera - Gone to Pieces",
+      "rarity": "P",
+      "color": "R",
+      "image_file": "images/H_ctor_Rivera_-_Gone_to_Pieces__D23C-13.avif",
+      "image_url": "https://cards.lorcast.io/card/digital/large/crd_5f7b5237476649afba3b201770efe75f.avif?1790443077",
+      "ink_cost": 4,
+      "ink_color": "Ruby",
+      "card_type": "Character",
+      "inkable": 1,
+      "classification": "Storyborn, Mentor",
+      "strength": 5,
+      "willpower": 3,
+      "lore": 1,
+      "ability_text": "Singer 6 (This character counts as cost 6 to sing songs.)\nFEEL THE MUSIC While you have a song card in your discard, this character gets +1 {l} and gains Evasive. (Only characters with Evasive can challenge them.)",
+      "tags": "character; fighter; discard; lore-scaling",
+      "image_source": "lorcast",
+      "ability_text_raw": "Singer 6 (This character counts as cost 6 to sing songs.)\nFEEL THE MUSIC While you have a song card in your discard, this character gets +1 {l} and gains Evasive. (Only characters with Evasive can challenge them.)",
+      "abilities": [
+        {
+          "type": "keyword",
+          "name": "Singer",
+          "text": "Singer 6 (This character counts as cost 6 to sing songs.)",
+          "parameter": "6",
+          "reminder_text": "This character counts as cost 6 to sing songs.",
+          "ability_id": "D23C-13-A1"
+        },
+        {
+          "type": "static",
+          "name": "FEEL THE MUSIC",
+          "text": "FEEL THE MUSIC While you have a song card in your discard, this character gets +1 {l} and gains Evasive. (Only characters with Evasive can challenge them.)",
+          "effect": "While you have a song card in your discard, this character gets +1 {l} and gains Evasive. (Only characters with Evasive can challenge them.)",
+          "ability_id": "D23C-13-A2"
+        }
+      ]
+    },
+    {
+      "card_id": "D23C-14",
+      "set_code": "D23C",
+      "card_number": "14",
+      "name_en": "Judy Hopps - Uncovering Clues",
+      "rarity": "P",
+      "color": "S",
+      "image_file": "images/Judy_Hopps_-_Uncovering_Clues__D23C-14.avif",
+      "image_url": "https://cards.lorcast.io/card/digital/large/crd_16c1121f26454ec89877082d7d011dcd.avif?1790443081",
+      "ink_cost": 4,
+      "ink_color": "Sapphire",
+      "card_type": "Character",
+      "inkable": 1,
+      "classification": "Storyborn, Hero, Detective",
+      "strength": 3,
+      "willpower": 3,
+      "lore": 1,
+      "ability_text": "THOROUGH INVESTIGATION: When you play this character and whenever she quests, look at the top 3 cards of your deck. You may reveal a Detective character card and put it into your hand. Put the rest on the bottom of your deck in any order.",
+      "tags": "character; uninkable",
+      "image_source": "lorcast",
+      "ability_text_raw": "THOROUGH INVESTIGATION: When you play this\ncharacter and whenever she quests, look at\nthe top 3 cards of your deck. You may reveal a\nDetective character card and put it into your\nhand. Put the rest on the bottom of your deck in\nany order.",
+      "abilities": [
+        {
+          "type": "triggered",
+          "name": "THOROUGH INVESTIGATION",
+          "text": "THOROUGH INVESTIGATION: When you play this character and whenever she quests, look at the top 3 cards of your deck. You may reveal a Detective character card and put it into your hand. Put the rest on the bottom of your deck in any order.",
+          "effect": "When you play this character and whenever she quests, look at the top 3 cards of your deck. You may reveal a Detective character card and put it into your hand. Put the rest on the bottom of your deck in any order.",
+          "ability_id": "D23C-14-A1"
+        }
+      ]
+    },
+    {
+      "card_id": "D23C-15",
+      "set_code": "D23C",
+      "card_number": "15",
+      "name_en": "Mr. Incredible - Taking Out the Trash",
+      "rarity": "P",
+      "color": "T",
+      "image_file": "images/Mr._Incredible_-_Taking_Out_the_Trash__D23C-15.avif",
+      "image_url": "https://cards.lorcast.io/card/digital/large/crd_14376a4c7b894cff902e5022c71297c3.avif?1790443085",
+      "ink_cost": 4,
+      "ink_color": "Steel",
+      "card_type": "Character",
+      "inkable": 1,
+      "classification": "Storyborn, Super, Hero",
+      "strength": 4,
+      "willpower": 4,
+      "lore": 1,
+      "ability_text": "KA-POW!: When you play this character, you may deal 2 damage to chosen opposing Robot or Villain character.",
+      "tags": "character; fighter; damage/removal; uninkable",
+      "image_source": "lorcast",
+      "ability_text_raw": "KA-POW!: When you play this character, you may\ndeal 2 damage to chosen opposing Robot or Villain\ncharacter.",
+      "abilities": [
+        {
+          "type": "triggered",
+          "name": "KA-POW!",
+          "text": "KA-POW!: When you play this character, you may deal 2 damage to chosen opposing Robot or Villain character.",
+          "effect": "When you play this character, you may deal 2 damage to chosen opposing Robot or Villain character.",
+          "ability_id": "D23C-15-A1"
+        }
+      ]
+    },
+    {
+      "card_id": "D23C-16",
+      "set_code": "D23C",
+      "card_number": "16",
+      "name_en": "Mad Hatter - Unruly Eccentric",
+      "rarity": "P",
+      "color": "L",
+      "image_file": "images/Mad_Hatter_-_Unruly_Eccentric__D23C-16.avif",
+      "image_url": "https://cards.lorcast.io/card/digital/large/crd_b01c656daf06443fb63d76d9df3ff108.avif?1774402653",
+      "ink_cost": 6,
+      "ink_color": "Emerald, Ruby",
+      "card_type": "Character",
+      "inkable": 1,
+      "classification": "Storyborn",
+      "strength": 3,
+      "willpower": 5,
+      "lore": 2,
+      "ability_text": "UNBIRTHDAY PRESENT: Whenever a damaged character challenges another character, you may draw a card.",
+      "tags": "character; quester; durable; draw/value; damage/removal",
+      "image_source": "lorcast",
+      "ability_text_raw": "UNBIRTHDAY PRESENT: Whenever a damaged character challenges another character, you may draw a card.",
+      "abilities": [
+        {
+          "type": "triggered",
+          "name": "UNBIRTHDAY PRESENT",
+          "text": "UNBIRTHDAY PRESENT: Whenever a damaged character challenges another character, you may draw a card.",
+          "effect": "Whenever a damaged character challenges another character, you may draw a card.",
+          "ability_id": "D23C-16-A1"
         }
       ]
     }
