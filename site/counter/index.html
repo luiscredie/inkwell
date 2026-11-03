@@ -1087,6 +1087,9 @@ table.stats td.n { text-align: right; }
 <script>
 if ("serviceWorker" in navigator && location.protocol !== "file:") {
   window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  // a new version of the counter took over: show it now (the score and the clocks are saved, nothing is lost)
+  let swReloaded = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => { if (swReloaded || !navigator.serviceWorker.controller) return; swReloaded = true; location.reload(); });
 }
 </script>
 </body>
