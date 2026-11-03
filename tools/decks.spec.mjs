@@ -353,6 +353,37 @@ test('a collection shared with me counts, and a friend who lends from their coll
   expect(posts[0]).toEqual({ lender: FRIEND, borrower: ME, created_by: ME, items: [{ card_id: 'LOR10-1', qty: 1, foil: false }], note: 'Para o deck Amber Test' });
 });
 
+test('a friend whose collection is only visible (no lending) shows up and can be asked — they decide', async ({ page }) => {
+  await setup(page);
+  const posts = [];
+  await page.route('**/rest/v1/rpc/friends_lending', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ user: FRIEND, name: 'Ana Souza', handle: 'ana', card_id: 'LOR10-1', free: 2, lend: false }]) }));
+  await page.route('**/rest/v1/user_loans', (r) => { posts.push(JSON.parse(r.request().postData())); return r.fulfill({ status: 201, body: '' }); });
+  await page.goto(BASE + '?deck=deck-a&tab=missing');
+  const row = page.locator('[data-testid="friend-has"]');
+  await expect(row).toContainText('Ana Souza tem');
+  await expect(row).toContainText('2 na coleção · a pessoa decide se empresta');
+  await expect(page.locator('[data-testid="missing-summary"]')).toContainText('1 pode vir de amigos');   // only the board offer counts; Ana wasn't promised
+  await page.locator('[data-borrow]').click();
+  await expect(row).toContainText('Pedido enviado');
+  expect(posts[0]).toMatchObject({ lender: FRIEND, borrower: ME, items: [{ card_id: 'LOR10-1', qty: 2, foil: false }] });
+});
+
+test('a deck can be shown on the public profile', async ({ page }) => {
+  const calls = await setup(page);
+  await page.goto(BASE);
+  await page.locator('#new').click();
+  await page.locator('#fName').fill('Vitrine');
+  await expect(page.locator('#fPub')).not.toBeChecked();
+  await page.locator('#fPub').check();
+  await page.locator('#fSave').click();
+  await expect.poll(() => saves(calls).length).toBe(1);
+  expect(saves(calls)[0].body.p_deck).toMatchObject({ name: 'Vitrine', public: true });
+  await page.locator('#back').click();
+  await expect(page.locator('.deck-row', { hasText: 'Vitrine' }).getByTestId('deck-public')).toHaveText('público');
+  await expect(page.locator('[data-testid="deck-public"]')).toHaveCount(1);   // the others never had it
+  for (const c of saves(calls)) if (c.body.p_deck.name !== 'Vitrine') expect(c.body.p_deck).not.toHaveProperty('public');
+});
+
 test('signed out: the total is an estimate in reais — MYP Cards when listed there, TCGplayer otherwise', async ({ page }) => {
   await publicSetup(page, { generated_at: '2026-10-25T00:00:00Z', currency: 'BRL', usd_brl: 5.4, prices: { 'LOR9-3': { n: 3, nl: 3 }, 'LOR9-53': { n: 10, nl: 10 } } },
     { retrieved_at: '2026-10-21T17:28:47Z', product_url: 'https://mypcards.com/lorcana/produto/{path}', cards: { 'LOR9-53': [2, 'x/elsa'] } });

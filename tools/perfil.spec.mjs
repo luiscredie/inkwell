@@ -11,6 +11,7 @@ const USER1 = {
   handle: 'rafa_exemplo', name: 'Rafa (exemplo)', bio: 'Jogo Âmbar/Aço competitivo.', motto: 'Quinta é dia de liga.', avatar: 'LOR14-2', inks: ['Amber', 'Steel'], city: 'São Paulo', mock: true,
   showcase: [{ id: 'LOR13-80', own: true }, { id: 'LOR14-1', own: true }, { id: 'LOR10-10', own: false }],
   deck: { name: 'Âmbar/Aço da liga', format: 'core', colors: ['Amber', 'Steel'], cards: { 'LOR14-1': 4, 'LOR14-10': 4, 'LOR14-11': 4 } },
+  public_decks: [{ id: 'd9', name: 'Rubi de sexta', format: 'core', colors: ['Ruby'], cards: { 'LOR14-1': 2 } }],
   record: { w: 8, l: 4 }, trade: { want: ['LOR14-3'], have: [] },
   friends: [{ name: 'Marina (exemplo)', handle: 'marina_exemplo', avatar: 'LOR13-80' }, { name: 'Bia (exemplo)', handle: 'bia_exemplo', avatar: 'LOR14-1' }], friends_n: 3,
   recados: [{ id: 'x1', body: 'Valeu pela troca da Mulan! Quinta tem revanche.', at: '2026-10-20T10:00:00Z', name: 'Marina (exemplo)', handle: 'marina_exemplo', avatar: 'LOR13-80' }],
@@ -102,6 +103,9 @@ test('a public profile shows only what its owner picked; signed out there is no 
   await expect(page.locator('[data-testid="showcase"] figure')).toHaveCount(3);
   await expect(page.locator('[data-testid="showcase"] .tag.match')).toHaveCount(2);   // "tem"
   await expect(page.locator('[data-testid="featured-deck"]')).toContainText('12 cartas');
+  await expect(page.locator('[data-testid="public-deck"]')).toHaveCount(1);   // + the decks marked public
+  await expect(page.locator('[data-testid="public-deck"]')).toContainText('Deck público');
+  await expect(page.locator('[data-testid="public-deck"]')).toContainText('Rubi de sexta');
   await expect(page.locator('[data-testid="record"]')).toContainText('8');
   await expect(page.locator('#report')).toHaveCount(0);
   await page.goto(url('perfil/?u=ninguem'));
