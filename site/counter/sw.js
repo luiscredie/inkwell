@@ -1,11 +1,11 @@
 /* Inkwell Lore Counter: service worker (scope: this folder).
  *
- *   app files   cache first, refreshed in the background: opens instantly with no signal,
- *               and a new version lands on the next launch
+ *   the page    network first (up to 2.5 s) when online, so an update lands at once; the saved copy offline
+ *   app files   cache first, refreshed in the background
  *   fonts       cache first (Google Fonts), so the look is the same offline
  *   everything else, including the Inkwell database, is never cached
  */
-const VERSION = "clock-2026-11-03";
+const VERSION = "fresh-2026-11-03";
 const APP = `lorecounter-${VERSION}`;
 const FONTS = "lorecounter-fonts";
 const FILES = ["./", "./index.html", "./manifest.webmanifest", "../ink/icon-192.png", "../ink/icon-512.png", "../data/meta-archetypes.json",
@@ -49,7 +49,14 @@ self.addEventListener("fetch", (e) => {
     const c = await caches.open(APP);
     const key = req.mode === "navigate" ? new URL("./index.html", scope).href : req;
     const hit = await c.match(key, { ignoreSearch: true });
-    const fresh = fetch(req).then((res) => { if (res.ok) c.put(key, res.clone()); return res; }).catch(() => null);
+    const fresh = fetch(req, req.mode === "navigate" ? { cache: "no-store" } : undefined).then((res) => { if (res.ok) c.put(key, res.clone()); return res; }).catch(() => null);
+    // the page itself: the newest version when there is signal (waiting at most 2.5 s), the saved copy when not,
+    // so an update lands the first time the counter is opened. Other files: the saved copy, refreshed behind.
+    if (req.mode === "navigate" && hit) {
+      const res = await Promise.race([fresh, new Promise((r) => setTimeout(() => r(null), 2500))]);
+      if (res && res.ok) return res;
+      e.waitUntil(fresh); return hit;
+    }
     if (hit) { e.waitUntil(fresh); return hit; }
     return (await fresh) || new Response("Offline", { status: 503 });
   })());
