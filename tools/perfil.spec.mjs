@@ -140,6 +140,27 @@ test('friends: ask from a profile; a friend can leave a recado that waits for ap
   expect(rpcCalls(calls, 'post_recado')).toEqual([{ p_handle: 'ana', p_body: 'Bora jogar sexta?' }]);
 });
 
+test('my profile: passkeys listed, deleted with a second tap', async ({ page }) => {
+  await setup(page, { mine: { display_name: 'Luís', handle: null, is_public: false, adult: true } });
+  const dels = [];
+  await page.route('**/auth/v1/passkeys**', (r) => {
+    if (r.request().method() === 'DELETE') { dels.push(new URL(r.request().url()).pathname.split('/').pop()); return r.fulfill({ status: 204, body: '' }); }
+    return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(dels.length ? [] : [{ id: 'pk1', friendly_name: 'iPhone', created_at: '2026-11-03T10:00:00Z', last_used_at: '2026-11-03T12:00:00Z' }]) });
+  });
+  await page.goto(url('perfil/'));
+  const box = page.getByTestId('my-passkeys');
+  await expect(box).toContainText('Entrar sem código');
+  await expect(box).toContainText('iPhone');
+  await expect(box).toContainText('criada em');
+  await box.locator('[data-pkdel="pk1"]').click();
+  await expect(box.locator('[data-pkdel="pk1"]')).toHaveText('Toque de novo para apagar');
+  expect(dels).toEqual([]);
+  await box.locator('[data-pkdel="pk1"]').click();
+  await expect(box).toContainText('Passkey apagada');
+  expect(dels).toEqual(['pk1']);
+  await expect(box.getByTestId('passkey-add')).toHaveText(/Criar passkey/);
+});
+
 test('my profile: recados wait for my approval', async ({ page }) => {
   const calls = await setup(page, { mine: { display_name: 'Luís', handle: 'luis', bio: '', motto: '', inks: [], city: '', showcase: [], is_public: false, adult: true, invite_code: 'abc123def0' } });
   await page.goto(url('perfil/?editar=1'));
