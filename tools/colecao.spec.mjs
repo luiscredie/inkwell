@@ -264,6 +264,20 @@ test('binder: a dual-ink card sits on its first ink pages, where the set numbers
 
 // ---------- three stocks: Fichário, Casa, Emprestadas ----------
 const rpc = (calls, name) => calls.filter((c) => c.path === `rpc/${name}`).map((c) => c.body);
+test('card sheet on a phone: each stock line fits in one row, and "Foil" has the foil shine', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setup(page, { collection: { 'LOR10-10': { n: 3, f: 1 } }, home: [], trade: [] });
+  await page.goto(BASE);
+  await page.locator('[data-card="LOR10-10"]').click();
+  const st = page.locator('[data-testid="stocks"]');
+  await expect(st).toBeVisible();
+  const rows = await st.locator('.stock-row').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().height)));
+  expect(rows.length).toBeGreaterThan(1);
+  for (const h of rows) expect(h).toBeLessThanOrEqual(64);
+  await expect(st.locator('.foil-word').first()).toHaveCSS('background-image', /linear-gradient/);
+  if (process.env.SHOT_DIR) { await st.scrollIntoViewIfNeeded(); await page.screenshot({ path: process.env.SHOT_DIR + '/card-sheet.png' }); }
+});
+
 test('stocks: binder and home counts, move a card home, binder check counts only the binder', async ({ page }) => {
   const calls = await setup(page, { collection: { 'LOR10-10': { n: 3, f: 1 }, 'LOR13-27': { n: 1, f: 0 } }, home: [{ profile: 'luiscredie', card_id: 'LOR10-10', n: 1, f: 0 }] });
   await page.goto(BASE);

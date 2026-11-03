@@ -1066,7 +1066,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     const box = document.createElement("section"); box.className = "card zx"; box.dataset.testid = "zoom-collection";
     const draw = () => {
       const changed = v.n !== was.n || v.f !== was.f;
-      const step = (k, label) => `<div class="zx-row"><span>${Tx(label)}</span><span class="zx-step"><button type="button" class="btn icon" data-zx="${k}:-1" aria-label="${esc(Tx("One less") + " · " + Tx(label))}" ${v[k] ? "" : "disabled"}>−</button><b data-testid="zx-${k}">${v[k]}</b><button type="button" class="btn icon" data-zx="${k}:1" aria-label="${esc(Tx("One more") + " · " + Tx(label))}">+</button></span></div>`;
+      const step = (k, label) => `<div class="zx-row"><span${k === "f" ? ' class="foil-word"' : ""}>${Tx(label)}</span><span class="zx-step"><button type="button" class="btn icon" data-zx="${k}:-1" aria-label="${esc(Tx("One less") + " · " + Tx(label))}" ${v[k] ? "" : "disabled"}>−</button><b data-testid="zx-${k}">${v[k]}</b><button type="button" class="btn icon" data-zx="${k}:1" aria-label="${esc(Tx("One more") + " · " + Tx(label))}">+</button></span></div>`;
       box.innerHTML = `<div class="small muted">${esc(Tx("In your collection “{c}” · this printing", { c: p.profile }))}</div>
         ${step("n", "Normal")}${step("f", "Foil")}
         ${pn != null || pf != null ? `<p class="small" style="margin:var(--sp-1) 0 0" data-testid="zx-price">${esc(priceSrc)}: ${[pn != null ? `<b class="money">${esc(money(pn))}</b> ${esc(Tx("Normal").toLowerCase())}` : "", pf != null ? `<b class="money">${esc(money(pf))}</b> foil` : ""].filter(Boolean).join(" · ")}</p>` : ""}
