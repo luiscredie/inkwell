@@ -134,21 +134,24 @@ async function plain(page, state) {
   await page.route('**/rest/v1/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
 }
 
-test('match clock: 50 minutes by default, in both score pills, starts with the first lore and pauses on a tap', async ({ page }) => {
+test('match clock: 50 minutes by default, in both score pills; a tap starts it, pauses it and goes on', async ({ page }) => {
   await page.clock.install();
   await plain(page, {});
   await page.goto(BASE);
   const clk = page.locator('#pillR [data-clk]');
-  await expect(clk).toHaveText('50:00');
-  await expect(page.locator('#pillL [data-clk]')).toHaveText('50:00');   // the other player's pill, turned to face them
-  await page.locator('#h1 .zone.plus').click();                          // first lore: the clock starts
+  await expect(clk).toHaveText('▶50:00');
+  await expect(page.locator('#pillL [data-clk]')).toHaveText('▶50:00');   // the other player's pill, turned to face them
+  await page.locator('#h1 .zone.plus').click();                            // lore alone doesn't start it
+  await page.clock.runFor(10000);
+  await expect(clk).toHaveText('▶50:00');
+  await page.locator('#pillR').click();                                     // a tap on the clock starts it
   await page.clock.runFor(61000);
-  await expect(clk).toHaveText('48:59');
-  await page.locator('#pillR').click();                                   // pause
+  await expect(clk).toHaveText('‖48:59');
+  await page.locator('#pillL').click();                                     // either player's clock pauses
   await page.clock.runFor(120000);
-  await expect(clk).toHaveText('48:59');
+  await expect(clk).toHaveText('▶48:59');
   await expect(clk).toHaveClass(/paused/);
-  await page.locator('#pillR').click();                                   // go on
+  await page.locator('#pillR').click();                                     // and goes on
   await page.clock.runFor(44 * 60000);
   await expect(clk).toHaveClass(/low/);                                   // 5 minutes or less
   await page.clock.runFor(6 * 60000);
@@ -165,7 +168,7 @@ test('match clock: set in Ajustes (off or 30/40/50/60)', async ({ page }) => {
   await page.getByRole('button', { name: 'Ajustes' }).click();
   await page.locator('#sClock [data-v="30"]').click();
   await page.locator('#sClose').click();
-  await expect(page.locator('#pillR [data-clk]')).toHaveText('30:00');
+  await expect(page.locator('#pillR [data-clk]')).toHaveText('▶30:00');
   await page.click('#menuBtn');
   await page.getByRole('button', { name: 'Ajustes' }).click();
   await page.locator('#sClock [data-v="0"]').click();
@@ -185,13 +188,15 @@ test('turn by turn: the first to start, then each pass gives the other player a 
   await expect(page.locator('#h1')).toHaveClass(/active/);
   await page.clock.runFor(83000);
   await expect(page.locator('#tb1 .tt')).toHaveText('1:23');
-  await expect(page.locator('#pillR [data-clk]')).toHaveText('48:37');   // the match clock started with the first turn
+  await expect(page.locator('#pillR [data-clk]')).toHaveText('‖48:37');   // the match clock started with the first turn
   await page.locator('#tb1').click();                                      // pass
-  await expect(page.locator('#tb1')).toBeHidden();
+  await expect(page.locator('#tb1')).toHaveText(/1:23\s*seu último turno/);   // my time, stopped, during the other player's turn
+  await expect(page.locator('#tb1')).toBeDisabled();
   await expect(page.locator('#tb2 .tt')).toHaveText('0:00');               // the other player's stopwatch starts from zero
   await expect(page.locator('#tb2')).toContainText('Passar turno');
   await page.clock.runFor(5000);
   await expect(page.locator('#tb2 .tt')).toHaveText('0:05');
+  await expect(page.locator('#tb1 .tt')).toHaveText('1:23');               // mine stays where it stopped
   await page.locator('#tb2').click();
   await expect(page.locator('#tb1 .tt')).toHaveText('0:00');
   // a game won: turns stop, and who went first is kept in the game

@@ -5,7 +5,7 @@
  *   fonts       cache first (Google Fonts), so the look is the same offline
  *   everything else, including the Inkwell database, is never cached
  */
-const VERSION = "clock-2026-11-02";
+const VERSION = "clock-2026-11-03";
 const APP = `lorecounter-${VERSION}`;
 const FONTS = "lorecounter-fonts";
 const FILES = ["./", "./index.html", "./manifest.webmanifest", "../ink/icon-192.png", "../ink/icon-512.png", "../data/meta-archetypes.json",
