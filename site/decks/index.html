@@ -264,6 +264,11 @@ window.INKWELL_CLOUD = (() => {
 .gala-card figcaption b { line-height: 1.2; }
 .gala-art { position: relative; }
 .gala-art .thumb.gala { width: 100%; border-radius: 10px; box-shadow: 0 8px 22px rgba(5,3,20,.35); }
+.gala-art { touch-action: pan-y; }
+.gala-nav { position: absolute; z-index: 3; top: 42%; width: 34px; height: 44px; border: 0; border-radius: 10px; background: rgba(10,8,24,.62); color: #fff; font-size: 26px; line-height: 1; cursor: pointer; }
+.gala-nav.prev { left: 4px; } .gala-nav.next { right: 4px; }
+.gala-nav:focus-visible { outline: 2px solid #fff; }
+.gala-pos { position: absolute; z-index: 3; left: 6px; top: 6px; padding: 2px 7px; border-radius: 999px; background: rgba(10,8,24,.78); color: #fff; font-size: var(--fs-micro); font-weight: 700; }
 .gala-q { position: absolute; z-index: 3; right: 6px; top: 6px; padding: 2px 8px; border-radius: 999px; background: rgba(10,8,24,.78); color: #fff; font-weight: 800; font-size: var(--fs-small); }
 .gala-card .buy-row { grid-template-columns: 1fr; }
 .gala-card .buy-row > .small { display: none; }
@@ -374,7 +379,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "vs {d}": "vs {d}", "went first": "começou jogando", "went second": "começou comprando", "Win": "Vitória", "Loss": "Derrota",
     "No games with this deck yet": "Nenhum jogo com este deck ainda", "Games from duels.ink show up here when the list you played matches this deck.": "Os jogos do duels.ink aparecem aqui quando a lista que você jogou bate com este deck.",
     "Add a card": "Pôr carta", "Search a card to add": "Buscar carta para pôr", "Remove one": "Tirar uma", "Add one": "Pôr uma", "Saved": "Deck salvo", "Undo": "Desfazer",
-    "Couldn't save. Try again.": "Não foi possível salvar. Tente de novo.", "In your collection “{c}” · this printing": "Na sua coleção “{c}” · esta arte", "✨ Fairy Godmother": "✨ Fada Madrinha", "Iconic": "Icônica", "Epic": "Épica", "Enchanted": "Encantada", "Promo": "Promo", "Legendary": "Lendária", "Super rare": "Super-rara", "Rare": "Rara", "Uncommon": "Incomum", "Common": "Comum", "You have {h} of {q}": "Você tem {h} de {q}", "You have them all": "Você tem todas", "Your deck with the rarest art of each card": "Toque da Fada Madrinha: seu deck com a arte mais rara de cada carta", "Same cards and rules: only the art changes. The rarest printing that exists (Iconic, Epic, Enchanted, Promo…), in foil.": "As mesmas cartas e regras: só a arte muda. A impressão mais rara que existe (Icônica, Épica, Encantada, Promo…), em foil.", "This version": "Esta versão", "Your list": "Sua lista", "You already have": "Você já tem", "To complete": "Para completar", "Prices: {s}, foil. Tap a card to see it large and add the copies you have.": "Preços: {s}, foil. Toque numa carta para ver grande e adicionar as cópias que você tem.", "Normal": "Normal", "Foil": "Foil", "One less": "Menos um", "One more": "Mais um", "In this deck: {n}": "No deck: {n}", "All your collections: {n} normal · {f} foil": "Somando todas as suas coleções: {n} normais · {f} foil", "Save to collection": "Salvar na coleção", "Collection updated": "Coleção atualizada", "Changes save right away.": "As mudanças salvam na hora.",
+    "Couldn't save. Try again.": "Não foi possível salvar. Tente de novo.", "In your collection “{c}” · this printing": "Na sua coleção “{c}” · esta arte", "✨ Fairy Godmother": "✨ Fada Madrinha", "Previous art": "Arte anterior", "Next art": "Próxima arte", "Iconic": "Icônica", "Epic": "Épica", "Enchanted": "Encantada", "Promo": "Promo", "Legendary": "Lendária", "Super rare": "Super-rara", "Rare": "Rara", "Uncommon": "Incomum", "Common": "Comum", "You have {h} of {q}": "Você tem {h} de {q}", "You have them all": "Você tem todas", "Your deck with the most special art of each card": "Toque da Fada Madrinha: seu deck com a arte mais especial de cada carta", "Same cards and rules: only the art changes. The most expensive printing of each card, in foil — swipe a card (or use the arrows) to see its other arts.": "As mesmas cartas e regras: só a arte muda. A impressão mais cara de cada carta, em foil — passe a carta para o lado (ou use as setas) para ver as outras artes.", "This version": "Esta versão", "Your list": "Sua lista", "You already have": "Você já tem", "To complete": "Para completar", "Prices: {s}, foil. Tap a card to see it large and add the copies you have.": "Preços: {s}, foil. Toque numa carta para ver grande e adicionar as cópias que você tem.", "Normal": "Normal", "Foil": "Foil", "One less": "Menos um", "One more": "Mais um", "In this deck: {n}": "No deck: {n}", "All your collections: {n} normal · {f} foil": "Somando todas as suas coleções: {n} normais · {f} foil", "Save to collection": "Salvar na coleção", "Collection updated": "Coleção atualizada", "Changes save right away.": "As mudanças salvam na hora.",
     "Copy limit": "Limite de cópias", "Other ink": "Outra tinta", "Not in Core": "Fora do Core", "Ink limit": "Limite de tintas", "Type at least 2 letters.": "Digite pelo menos 2 letras.", "No card found.": "Nenhuma carta encontrada.",
     "Deck name": "Nome do deck", "Inks": "Tintas", "Pick up to 2.": "Escolha até 2.", "Create deck": "Criar deck", "Save": "Salvar", "Cancel": "Cancelar", "Close": "Fechar",
     "Paste a list": "Cole a lista", "One card per line, like \"4 Stitch - Rock Star\". Lists from duels.ink, Dreamborn and Lorcanito work.": "Uma carta por linha, como \"4 Stitch - Rock Star\". Listas do duels.ink, Dreamborn e Lorcanito funcionam.",
@@ -1025,18 +1030,22 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const ALWAYS_FOIL = new Set(["I", "EP", "E", "P"]);
   const galaOk = (x) => RANK[x.rarity] && !/-OS$/.test(x.id);   // no oversized, puzzle inserts or quest cards
   const foilPrice = (x) => { const q = PRICES[x.id] || {}; return q.fl ?? q.f ?? q.nl ?? q.n ?? null; };
-  function galaPick(c) {
+  // every printing of the card, most expensive first (foil price); without a price, the rarer first. The first is the pick;
+  // the person can swipe (or use the arrows) to see the others, and the totals follow the art on screen.
+  function galaOpts(c) {
     const opts = printings(c).filter(galaOk);
-    return opts.sort((a, b) => RANK[b.rarity] - RANK[a.rarity] || (foilPrice(b) ?? -1) - (foilPrice(a) ?? -1))[0] || c;
+    return (opts.length ? opts : [c]).slice().sort((a, b) => (foilPrice(b) ?? -1) - (foilPrice(a) ?? -1) || RANK[b.rarity] - RANK[a.rarity]);
   }
+  const galaChoice = new Map();   // card name → printing id shown (this visit)
   function galaTab(d, m) {
     if (!m.known.length) return emptyBox("decks", Tx("This deck is empty."), Tx("Tap Edit list to add cards."));
     const byName = new Map();
     for (const [id, q] of Object.entries(d.cards || {})) { const c = BY.get(id); if (!c || !(+q > 0)) continue; const x = byName.get(c.key) || { c, q: 0 }; x.q += +q; byName.set(c.key, x); }
     const rows = [...byName.values()].map(({ c, q }) => {
-      const g = galaPick(c), e = coll()[g.id] || {}, have = Math.min(q, ALWAYS_FOIL.has(g.rarity) ? (+e.n || 0) + (+e.f || 0) : +e.f || 0);
-      return { c, g, q, have, p: foilPrice(g) };
-    }).sort((a, b) => RANK[b.g.rarity] - RANK[a.g.rarity] || (b.p ?? 0) - (a.p ?? 0) || a.g.name.localeCompare(b.g.name));
+      const opts = galaOpts(c), i = Math.max(0, opts.findIndex((x) => x.id === galaChoice.get(c.key)));
+      const g = opts[i], e = coll()[g.id] || {}, have = Math.min(q, ALWAYS_FOIL.has(g.rarity) ? (+e.n || 0) + (+e.f || 0) : +e.f || 0);
+      return { c, g, q, have, p: foilPrice(g), opts, i, top: foilPrice(opts[0]) ?? 0 };
+    }).sort((a, b) => b.top - a.top || a.c.name.localeCompare(b.c.name));   // by the top price, so swiping doesn't move the cards around
     const total = rows.reduce((s2, r) => s2 + (r.p || 0) * r.q, 0), toBuy = rows.reduce((s2, r) => s2 + (r.p || 0) * (r.q - r.have), 0);
     const copies = rows.reduce((s2, r) => s2 + r.q, 0), owned = rows.reduce((s2, r) => s2 + r.have, 0);
     const count = {}; for (const r of rows) count[r.g.rarity] = (count[r.g.rarity] || 0) + r.q;
@@ -1044,14 +1053,15 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const card = (r) => {
       const [a, b] = split(r.g.name.replace(/\s*\((Enchanted|Epic|Iconic|Alternate Art|Promo)\)\s*$/i, ""));
       const left = r.q - r.have;
-      return `<figure class="gala-card" data-gala="${esc(r.g.id)}"><div class="gala-art">${thumb(r.g, "gala foil")}<span class="gala-q">${r.q}×</span></div>
+      const nav = r.opts.length > 1 ? `<button type="button" class="gala-nav prev" data-gnav="${esc(r.c.key)}:-1" aria-label="${esc(Tx("Previous art"))}">‹</button><button type="button" class="gala-nav next" data-gnav="${esc(r.c.key)}:1" aria-label="${esc(Tx("Next art"))}">›</button><span class="gala-pos" data-testid="gala-pos">${r.i + 1}/${r.opts.length}</span>` : "";
+      return `<figure class="gala-card" data-gala="${esc(r.g.id)}" data-gkey="${esc(r.c.key)}"><div class="gala-art">${thumb(r.g, "gala foil")}<span class="gala-q">${r.q}×</span>${nav}</div>
         <figcaption><b>${esc(a)}</b>${b ? `<span class="small muted">${esc(b)}</span>` : ""}
           <span class="row" style="gap:4px;flex-wrap:wrap;margin-top:4px"><span class="tag ${RANK[r.g.rarity] >= 6 ? "foil" : ""}">${esc(Tx(RAR_NAME[r.g.rarity] || "Card"))}</span>${ALWAYS_FOIL.has(r.g.rarity) ? "" : `<span class="foil-word micro">foil</span>`}</span>
           <span class="small">${r.p != null ? `<b class="money">${esc(money(r.p))}</b> ${esc(Tx("each"))}` : `<span class="muted">${Tx("no price")}</span>`}</span>
           <span class="small ${left ? "muted" : "win"}" data-testid="gala-have">${left ? esc(Tx("You have {h} of {q}", { h: r.have, q: r.q })) : esc(Tx("You have them all"))}</span></figcaption>
         ${left ? buyLinks(r.g, left) : ""}</figure>`;
     };
-    return `<div class="notice" data-testid="gala-summary"><i class="ic i-sparkle"></i><span class="t"><b>${esc(Tx("Your deck with the rarest art of each card"))}</b>${esc(Tx("Same cards and rules: only the art changes. The rarest printing that exists (Iconic, Epic, Enchanted, Promo…), in foil."))}</span></div>
+    return `<div class="notice" data-testid="gala-summary"><i class="ic i-sparkle"></i><span class="t"><b>${esc(Tx("Your deck with the most special art of each card"))}</b>${esc(Tx("Same cards and rules: only the art changes. The most expensive printing of each card, in foil — swipe a card (or use the arrows) to see its other arts."))}</span></div>
       <div class="stats-row four" style="margin:var(--sp-3) 0" data-testid="gala-stats"><div class="stat"><b class="money">${moneySplit(total)}</b><span>${Tx("This version")}</span></div>
         <div class="stat"><b class="money">${moneySplit(m.value)}</b><span>${Tx("Your list")}</span></div>
         <div class="stat"><b>${owned}<small>/${copies}</small></b><span>${Tx("You already have")}</span></div>
@@ -1059,6 +1069,25 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       <p class="small" style="margin:0 0 var(--sp-3)">${mix}</p>
       <div class="gala-grid" data-testid="gala-grid">${rows.map(card).join("")}</div>
       <p class="small faint" style="margin-top:var(--sp-4)">${esc(Tx("Prices: {s}, foil. Tap a card to see it large and add the copies you have.", { s: priceSrc }))}</p>`;
+  }
+  function wireGala() {
+    const step = (key, dd) => {
+      const c = [...BYNAME.values()].find((l) => l[0].key === key)?.[0]; if (!c) return;
+      const opts = galaOpts(c), i = Math.max(0, opts.findIndex((x) => x.id === galaChoice.get(key)));
+      galaChoice.set(key, opts[(i + dd + opts.length) % opts.length].id); render();
+      document.querySelector(`[data-gkey="${CSS.escape(key)}"] [data-gnav$=":${dd}"]`)?.focus({ preventScroll: true });
+    };
+    document.querySelectorAll("[data-gnav]").forEach((b) => b.onclick = (e) => { e.stopPropagation(); const i = b.dataset.gnav.lastIndexOf(":"); step(b.dataset.gnav.slice(0, i), +b.dataset.gnav.slice(i + 1)); });
+    // swipe the art sideways (phone)
+    document.querySelectorAll(".gala-card[data-gkey]").forEach((f) => {
+      const art = f.querySelector(".gala-art"); if (!art || !f.querySelector("[data-gnav]")) return;
+      let x0 = null, y0 = null;
+      art.addEventListener("touchstart", (e) => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+      art.addEventListener("touchend", (e) => {
+        if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null;
+        if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) { e.preventDefault(); step(f.dataset.gkey, dx < 0 ? 1 : -1); }
+      });
+    });
   }
   function missingTab(d, m) {
     if (!m.known.length) return emptyBox("decks", Tx("This deck is empty."), Tx("Tap Edit list to add cards."));
@@ -1147,6 +1176,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       $("addRes")?.addEventListener("click", (e) => { const b = e.target.closest("[data-add]"); if (b) { setQty(d, b.dataset.add, 1); render(); $("addQ")?.focus(); } });
       $("tabBody").querySelectorAll("[data-q]").forEach((b) => b.onclick = () => { const i = b.dataset.q.lastIndexOf(":"); setQty(d, b.dataset.q.slice(0, i), +b.dataset.q.slice(i + 1)); render(); document.querySelector(`[data-q="${CSS.escape(b.dataset.q)}"]`)?.focus(); });
     }
+    if (tab === "gala") wireGala();
     if (tab === "missing") { document.querySelectorAll("[data-post]").forEach((b) => b.onclick = () => postMissing(d, b.dataset.post));
       document.querySelectorAll("[data-borrow]").forEach((b) => b.onclick = () => askBorrow(d, b)); loadLending(d, m); }
     if (tab === "plan") wirePlan();

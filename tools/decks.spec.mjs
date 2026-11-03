@@ -538,3 +538,35 @@ test('without a partner store the buy row has only Liga Lorcana and TCGplayer', 
   await expect(page.locator('[data-testid="buy-links"]').first()).toBeVisible();
   await expect(page.locator('[data-testid="buy-partner"]')).toHaveCount(0);
 });
+
+test('Fada Madrinha: the most expensive art first; the arrows (or a swipe) show the other arts and the totals follow', async ({ page }) => {
+  await setup(page, { extraDecks: [{ id: 'deck-p', name: 'Pegasus', format: 'core', colors: ['Amber'], cards: { 'LOR4-84': 4 }, created_at: '2026-10-01' }] });
+  await page.goto(BASE + '?deck=deck-p&tab=gala');
+  const card = page.locator('[data-gkey]').first();
+  await expect(card).toHaveAttribute('data-gala', 'DLPC1-1-C2');            // the promo, R$ 405 in foil — dearer than the Epic
+  await expect(card.getByTestId('gala-pos')).toHaveText(/^1\/\d+$/);
+  const total1 = await page.getByTestId('gala-stats').locator('.stat').first().innerText();
+  await card.locator('[data-gnav$=":1"]').click();
+  await expect(page.locator('[data-gkey]').first()).not.toHaveAttribute('data-gala', 'DLPC1-1-C2');
+  await expect(page.locator('[data-gkey]').first().getByTestId('gala-pos')).toHaveText(/^2\//);
+  expect(await page.getByTestId('gala-stats').locator('.stat').first().innerText()).not.toBe(total1);
+  await page.locator('[data-gkey]').first().locator('[data-gnav$=":-1"]').click();
+  await expect(page.locator('[data-gkey]').first()).toHaveAttribute('data-gala', 'DLPC1-1-C2');
+  await expect(page.locator('#iwZoom')).toBeHidden();                         // the arrows don't open the card
+});
+
+test.describe('phone', () => {
+  test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
+  test('Fada Madrinha: swiping the art left shows the next one', async ({ page }) => {
+    await setup(page, { extraDecks: [{ id: 'deck-p', name: 'Pegasus', format: 'core', colors: ['Amber'], cards: { 'LOR4-84': 4 }, created_at: '2026-10-01' }] });
+    await page.goto(BASE + '?deck=deck-p&tab=gala');
+    await expect(page.locator('[data-gkey]').first()).toHaveAttribute('data-gala', 'DLPC1-1-C2');
+    await page.locator('[data-gkey] .gala-art').first().evaluate((el) => {
+      const r = el.getBoundingClientRect(), y = r.top + r.height / 2;
+      const t = (x) => new Touch({ identifier: 1, target: el, clientX: x, clientY: y });
+      el.dispatchEvent(new TouchEvent('touchstart', { touches: [t(r.right - 20)], changedTouches: [t(r.right - 20)], bubbles: true }));
+      el.dispatchEvent(new TouchEvent('touchend', { touches: [], changedTouches: [t(r.left + 20)], bubbles: true, cancelable: true }));
+    });
+    await expect(page.locator('[data-gkey]').first().getByTestId('gala-pos')).toHaveText(/^2\//);
+  });
+});
