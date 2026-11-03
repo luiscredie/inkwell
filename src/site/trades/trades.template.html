@@ -239,7 +239,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       <div class="picker"><input type="search" data-search="${key}" placeholder="${Tx("Search a card by name")}" autocomplete="off" aria-label="${esc(label)}"><div class="sugg" data-sugg="${key}" role="listbox" hidden></div></div>
       <div class="list" data-items="${key}">${items.map((e, i) => `<div class="list-row on-field" style="grid-template-columns:auto minmax(0,1fr) auto auto">${thumb(e.card_id, "xs", e.foil)}<span class="t"><span>${esc(cardLabel(e.card_id))}</span>
           <span class="meta">${esc([e.foil ? Tx("foil") : "", priceOf(e.card_id, e.foil) != null ? brl(priceOf(e.card_id, e.foil)) : ""].filter(Boolean).join(" · "))}</span>${own && st.has ? `<span class="meta" data-stock="${key}:${i}">${esc(stockLine(st, e.card_id))}</span>` : ""}
-          <label class="check small" style="min-height:28px"><input type="checkbox" data-foil="${key}:${i}" ${e.foil ? "checked" : ""}>${Tx("foil")}</label></span>
+          <label class="check small" style="min-height:28px"><input type="checkbox" data-foil="${key}:${i}" ${e.foil ? "checked" : ""}><span class="foil-word">${Tx("foil")}</span></label></span>
         <span class="qty"><button type="button" data-dec="${key}:${i}" aria-label="−1">−</button><output>${e.qty}</output><button type="button" data-inc="${key}:${i}" aria-label="+1" ${own && st.has && e.qty + inForm(items, e.card_id, e.foil, i) >= freeOf(st, e.card_id, e.foil) ? "disabled" : ""}>+</button></span>
         <button type="button" class="btn ghost icon small" data-rm="${key}:${i}" aria-label="${esc(Tx("Remove {c}", { c: cardLabel(e.card_id) }))}"><i class="ic i-close"></i></button></div>`).join("")}</div></div>`;
   }

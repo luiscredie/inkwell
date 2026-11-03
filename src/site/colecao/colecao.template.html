@@ -28,6 +28,12 @@
 .stock-h .muted { font-weight: 600; margin-left: auto; font-variant-numeric: tabular-nums; }
 .stock-row + .stock-row { border-top: 1px solid var(--line); }
 .mv { white-space: nowrap; }
+.stock-row .sr-l { min-width: 0; }
+@media (max-width: 420px) {   /* phone: "→ Casa", "→ Trocas" and the − n + fit on one line next to Normal/Foil */
+  .stock-row .mv { padding: 0 6px; min-width: 0; }
+  .stock-row .qty.lg button { width: 38px; height: 40px; }
+  .stock-row .qty.lg output { min-width: 30px; }
+}
 .bset { max-width: 360px; }
 .act-btns { gap: var(--sp-2); margin-top: var(--sp-3); } .act-btns .btn { flex: 1; }
 .actbox { gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); box-shadow: inset 0 0 0 1px var(--accent); }
@@ -483,8 +489,8 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       const stockRows = (place) => ["n", "f"].map((k) => {
         const n = w[place][k], kl = Tx(k === "f" ? "foil" : "normal"), tos = place === "binder" ? ["home", ...(tradeReady ? ["trade"] : [])] : ["binder"];
         const mvBtn = (to) => `<button type="button" class="btn ghost small mv" data-mv="${k}:${to}${place === "trade" ? ":trade" : ""}" ${n <= 0 ? "disabled" : ""} aria-label="${esc(to === "trade" ? P(`Mover uma ${kl} para Trocas`, `Move one ${kl} to Trades`) : Tx(to === "home" ? "Move one {k} to Home" : "Move one {k} to the Binder", { k: kl }))}">${to === "trade" ? esc(P("→ Trocas", "→ Trades")) : to === "home" ? Tx("→ Home") : Tx("→ Binder")}</button>`;
-        return `<div class="row between stock-row" style="min-height:56px">
-          <div><b>${Tx(k === "f" ? "Foil" : "Normal")}</b>${place === "binder" && w.lent[k] ? `<div class="small muted">${esc(Tx("{n} lent", { n: w.lent[k] }))}</div>` : ""}</div>
+        return `<div class="row between stock-row" style="min-height:56px;flex-wrap:nowrap;gap:var(--sp-2)">
+          <div class="sr-l"><b${k === "f" ? ' class="foil-word"' : ""}>${Tx(k === "f" ? "Foil" : "Normal")}</b>${place === "binder" && w.lent[k] ? `<div class="small muted">${esc(Tx("{n} lent", { n: w.lent[k] }))}</div>` : ""}</div>
           <div class="row" style="gap:6px;flex-wrap:nowrap">
             ${tos.map(mvBtn).join("")}
             <div class="qty lg"><button type="button" data-d="${k}:-1:${place}" aria-label="${esc(Tx("Remove one {k}", { k: kl }))}" ${n <= 0 ? "disabled" : ""}>−</button><output data-n="${place}-${k}">${n}</output><button type="button" data-d="${k}:1:${place}" aria-label="${esc(Tx("Add one {k}", { k: kl }))}">+</button></div></div></div>`;
@@ -571,7 +577,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
           <div class="row between" style="gap:var(--sp-2)"><div style="min-width:0"><b>${esc(nm)}</b>${ver ? ` <span class="small muted">${esc(ver)}</span>` : ""}<div class="small muted">${esc(setName(c?.set))} · nº ${esc(c?.num || "")}${!both ? " · " + Tx(it.k === "f" ? "foil" : "normal") : ""}</div></div>
             ${a.items.length > 1 ? `<button type="button" class="btn ghost icon small" data-rm="${i}" aria-label="${esc(Tx("Remove {c}", { c: nm }))}"><i class="ic i-close"></i></button>` : ""}</div>
           <div class="row" style="gap:var(--sp-2);flex-wrap:wrap;margin-top:6px">
-            ${both ? `<div class="seg" role="group" aria-label="${Tx("Finish")}">${["n", "f"].map((k) => `<button type="button" data-fin="${i}:${k}" aria-pressed="${it.k === k}">${Tx(k === "f" ? "Foil" : "Normal")}</button>`).join("")}</div>` : ""}
+            ${both ? `<div class="seg" role="group" aria-label="${Tx("Finish")}">${["n", "f"].map((k) => `<button type="button" ${k === "f" ? 'class="is-foil" ' : ""}data-fin="${i}:${k}" aria-pressed="${it.k === k}">${Tx(k === "f" ? "Foil" : "Normal")}</button>`).join("")}</div>` : ""}
             <div class="qty"><button type="button" data-q="${i}:-1" aria-label="${Tx("One less")}" ${it.qty <= 1 ? "disabled" : ""}>−</button><output data-qn="${i}">${it.qty}</output><button type="button" data-q="${i}:1" aria-label="${Tx("One more")}" ${it.qty >= max ? "disabled" : ""}>+</button></div>
             ${sale ? `<label class="field inline-field">${Tx("Each")}<span class="prefix"><span>R$</span><input type="text" inputmode="decimal" data-price="${i}" value="${esc(it.price)}" aria-label="${esc(Tx("Price of {c}", { c: nm }))}"></span></label>` : ""}
           </div></div>`;
@@ -803,7 +809,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     const have = pg.cards.reduce((s, c) => s + tot(c), 0);
     const label = (p) => Tx("{ink} · cost {c}", { ink: inkLabel(p.ink), c: p.cost === 8 ? "8+" : p.cost });
     const qty = (c, k, place = "binder") => { const o = where(c.id)[place], n = o[k], sfx = place === "home" ? ":home" : "", [a] = split(c.name), kl = Tx(k === "f" ? "foil" : "normal");
-      return `<span class="row" style="gap:6px;flex-wrap:nowrap"><span class="micro muted" style="width:38px;text-align:right">${Tx(k === "f" ? "Foil" : "Normal")}</span><span class="qty"><button type="button" data-bq="${esc(c.id)}:${k}:-1${sfx}" aria-label="${esc(Tx("Remove one {k}", { k: kl }) + " · " + a)}" ${n <= 0 ? "disabled" : ""}>−</button><output data-bn="${place}-${k}">${n}</output><button type="button" data-bq="${esc(c.id)}:${k}:1${sfx}" aria-label="${esc(Tx("Add one {k}", { k: kl }) + " · " + a)}">+</button></span></span>`; };
+      return `<span class="row" style="gap:6px;flex-wrap:nowrap"><span class="micro ${k === "f" ? "foil-word" : "muted"}" style="${k === "f" ? "" : "width:38px;"}text-align:right">${Tx(k === "f" ? "Foil" : "Normal")}</span><span class="qty"><button type="button" data-bq="${esc(c.id)}:${k}:-1${sfx}" aria-label="${esc(Tx("Remove one {k}", { k: kl }) + " · " + a)}" ${n <= 0 ? "disabled" : ""}>−</button><output data-bn="${place}-${k}">${n}</output><button type="button" data-bq="${esc(c.id)}:${k}:1${sfx}" aria-label="${esc(Tx("Add one {k}", { k: kl }) + " · " + a)}">+</button></span></span>`; };
     const row = (c) => { const [a, b] = split(c.name), p = priceOf(c.id), viaReprint = pg.sec === "core" && !CORE_SETS.includes(c.set);
       return `<div class="list-row flat binder-row" data-bcard="${esc(c.id)}"><button type="button" class="binder-open" data-bopen="${esc(c.id)}" aria-label="${esc(Tx("See card {c}", { c: a }))}">${thumb(c, "sm", owned(c.id).f > 0)}</span></button><span class="t"><span>${esc(a)}${b ? `<small style="display:block;font-weight:400;color:var(--text-2)">${esc(b)}</small>` : ""}</span><span class="meta">${esc([setName(c.set), "nº " + c.num, rarName(c.rarity), p != null ? money(p) : ""].filter(Boolean).join(" · "))}</span>${viaReprint ? `<span class="tag" style="margin-top:4px;width:max-content" title="${esc(formatLine(c))}">${Tx("reprint")}</span>` : ""}${isDual(c) ? `<span class="tag" style="margin-top:4px;width:max-content" data-testid="dual">${inkDots(c)}${esc(inksOf(c).join(" / "))}</span>` : ""}</span>
         ${homeReady ? `<span class="trail stockcols"><span class="stockcol" data-testid="col-binder"><span class="sc-h">${Tx("Binder")}</span>${qty(c, "n")}${qty(c, "f")}</span><span class="stockcol home" data-testid="col-home"><span class="sc-h">${Tx("Home")}</span>${qty(c, "n", "home")}${qty(c, "f", "home")}</span></span>`

@@ -505,7 +505,7 @@ window.INKWELL_CARD_PICKER = (opts) => {
   }
   function finishSeg(c, where) {
     const fs = finishes(c); if (fs.length < 2) return `<span class="meta">${Tx("Foil")}</span>`;
-    return `<div class="seg" role="group" aria-label="${Tx("Finish")}">${fs.map((f) => `<button type="button" data-fin="${esc(c.id)}:${f}:${where}" aria-pressed="${finOf(c) === f}">${Tx(f === "f" ? "Foil" : "Normal")}</button>`).join("")}</div>`;
+    return `<div class="seg" role="group" aria-label="${Tx("Finish")}">${fs.map((f) => `<button type="button" ${f === "f" ? 'class="is-foil" ' : ""}data-fin="${esc(c.id)}:${f}:${where}" aria-pressed="${finOf(c) === f}">${Tx(f === "f" ? "Foil" : "Normal")}</button>`).join("")}</div>`;
   }
   function ownLine(c) {
     if (coll.state !== "ready") return "";

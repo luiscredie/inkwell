@@ -626,7 +626,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const dupe = (c, fin) => draft.favorites.some((f, i) => f && i !== pk.slot && f.id === c.id && f.foil === (fin === "f"));
   function finishSeg(c, where) {
     const fs = finishes(c); if (fs.length < 2) return `<span class="meta">${Tx("Foil")}</span>`;
-    return `<div class="seg" role="group" aria-label="${Tx("Finish")}">${fs.map((f) => `<button type="button" data-fin="${esc(c.id)}:${f}:${where}" aria-pressed="${finOf(c) === f}">${Tx(f === "f" ? "Foil" : "Normal")}</button>`).join("")}</div>`;
+    return `<div class="seg" role="group" aria-label="${Tx("Finish")}">${fs.map((f) => `<button type="button" ${f === "f" ? 'class="is-foil" ' : ""}data-fin="${esc(c.id)}:${f}:${where}" aria-pressed="${finOf(c) === f}">${Tx(f === "f" ? "Foil" : "Normal")}</button>`).join("")}</div>`;
   }
   function ownLine(c) {
     if (coll.state !== "ready") return "";
