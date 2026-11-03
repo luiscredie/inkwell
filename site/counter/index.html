@@ -114,6 +114,28 @@ window.INKWELL_CLOUD = (() => {
     return sess.access_token;
   }
 
+  // Supabase Auth endpoints used by the passkeys (same requests supabase-js makes)
+  async function auth(path, { method = "POST", body, tok } = {}) {
+    const r = await fetch(`${cfg.url}/auth/v1/${path}`, { method, headers: { ...headers(tok), "X-Supabase-Api-Version": "2024-01-01" }, body: body === undefined ? undefined : JSON.stringify(body) });
+    let j = null; try { j = r.status === 204 ? null : await r.json(); } catch { /* no body */ }
+    if (!r.ok) throw Object.assign(new Error(`auth ${path} ${r.status}`), { status: r.status, why: String(j?.msg || j?.message || j?.error_description || "").slice(0, 200), code: j?.error_code || j?.code });
+    return j;
+  }
+  const b64u = { dec: (s) => Uint8Array.from(atob(String(s).replace(/-/g, "+").replace(/_/g, "/") + "===".slice((String(s).length + 3) % 4)), (c) => c.charCodeAt(0)).buffer,
+    enc: (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "") };
+  const ids = (list) => (list || []).map((c) => ({ ...c, id: b64u.dec(c.id), type: c.type || "public-key" }));
+  const pkRequest = (o) => (typeof PublicKeyCredential.parseRequestOptionsFromJSON === "function" ? PublicKeyCredential.parseRequestOptionsFromJSON(o)
+    : { ...o, challenge: b64u.dec(o.challenge), ...(o.allowCredentials?.length ? { allowCredentials: ids(o.allowCredentials) } : {}) });
+  const pkCreate = (o) => (typeof PublicKeyCredential.parseCreationOptionsFromJSON === "function" ? PublicKeyCredential.parseCreationOptionsFromJSON(o)
+    : { ...o, challenge: b64u.dec(o.challenge), user: { ...o.user, id: b64u.dec(o.user.id) }, ...(o.excludeCredentials?.length ? { excludeCredentials: ids(o.excludeCredentials) } : {}) });
+  function pkJSON(c) {   // the credential as JSON (WebAuthn level 3 toJSON, or by hand for older browsers)
+    if (typeof c.toJSON === "function") return c.toJSON();
+    const r = c.response, out = { id: c.id, rawId: c.id, type: "public-key", clientExtensionResults: c.getClientExtensionResults?.() || {}, authenticatorAttachment: c.authenticatorAttachment || undefined, response: { clientDataJSON: b64u.enc(r.clientDataJSON) } };
+    if (r.attestationObject) out.response.attestationObject = b64u.enc(r.attestationObject);
+    if (r.authenticatorData) Object.assign(out.response, { authenticatorData: b64u.enc(r.authenticatorData), signature: b64u.enc(r.signature), userHandle: r.userHandle ? b64u.enc(r.userHandle) : undefined });
+    return out;
+  }
+
   // Authenticated call to the database's REST API (used by Coach Review). Errors carry a short code.
   // anon: true also works signed out (the publishable key), for the few functions open to visitors
   async function api(path, { method = "GET", body, prefer, anon = false, keepalive = false } = {}) {
@@ -192,6 +214,27 @@ window.INKWELL_CLOUD = (() => {
       if (!r.ok) throw Object.assign(new Error(`verify ${r.status}`), { status: r.status });
       store(session(await r.json()));
     },
+    // ---------- passkeys (Face ID / digital / chave do aparelho) — Supabase Auth, experimental (Authentication → Passkeys;
+    // relying party inkwell.com.br). The e-mail code stays: a passkey is created only after signing in with it once.
+    passkeySupported: () => typeof window.PublicKeyCredential === "function" && !!navigator.credentials?.get && (location.protocol === "https:" || location.hostname === "localhost"),
+    async passkeySignIn() {
+      const o = await auth("passkeys/authentication/options", { body: {} });
+      const cred = await navigator.credentials.get({ publicKey: pkRequest(o.options || o) });
+      if (!cred) throw Object.assign(new Error("passkey cancelled"), { code: "cancelled" });
+      const r = await auth("passkeys/authentication/verify", { body: { challenge_id: o.challenge_id, credential: pkJSON(cred) } });
+      const s = r?.access_token ? r : r?.session;
+      if (!s?.access_token) throw new Error("passkey: no session");
+      store(session(s));
+    },
+    async passkeyRegister() {
+      const tok = await token(); if (!tok) throw Object.assign(new Error("signed out"), { code: "auth" });
+      const o = await auth("passkeys/registration/options", { body: {}, tok });
+      const cred = await navigator.credentials.create({ publicKey: pkCreate(o.options || o) });
+      if (!cred) throw Object.assign(new Error("passkey cancelled"), { code: "cancelled" });
+      return auth("passkeys/registration/verify", { body: { challenge_id: o.challenge_id, credential: pkJSON(cred) }, tok });
+    },
+    async passkeys() { const tok = await token(); return tok ? auth("passkeys", { method: "GET", tok }) : []; },
+    async passkeyDelete(id) { const tok = await token(); if (tok) await auth(`passkeys/${encodeURIComponent(id)}`, { method: "DELETE", tok }); },
     signOut() {
       const old = sess; store(null);
       if (old) fetch(`${cfg.url}/auth/v1/logout`, { method: "POST", headers: headers(old.access_token) }).catch(() => {});

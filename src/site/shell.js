@@ -250,7 +250,8 @@
     sheet.innerHTML = `<div class="grab"></div>
       <div class="sheet-head"><div><h2 id="iwSiT">${T("Entrar no Inkwell", "Sign in to Inkwell")}</h2><div class="sub">${T("Sem senha. Mandamos um código.", "No password. We e-mail you a code.")}</div></div>
         <button type="button" class="btn ghost icon" data-close aria-label="${T("Fechar", "Close")}"><i class="ic i-close"></i></button></div>
-      <div class="sheet-body"><form class="form" id="iwSiForm" novalidate>
+      <div class="sheet-body">${CLOUD.passkeySupported?.() ? `<div class="stack" style="gap:var(--sp-2);margin-bottom:var(--sp-4)"><button type="button" class="btn block" id="iwSiPk" data-testid="signin-passkey"><i class="ic i-shield"></i>${T("Entrar com passkey (Face ID ou digital)", "Sign in with a passkey (Face ID or fingerprint)")}</button>
+        <p class="small faint" style="margin:0;text-align:center">${T("ou receba um código por e-mail", "or get a code by e-mail")}</p></div>` : ""}<form class="form" id="iwSiForm" novalidate>
         <label class="field">${T("E-mail", "E-mail")}<input id="iwSiEmail" type="email" inputmode="email" autocomplete="email" placeholder="voce@exemplo.com" value="${esc(email)}" required></label>
         <p class="small muted">${T("Se for a primeira vez, sua conta é criada agora. Seus jogos ficam salvos e só você decide quem vê.", "If it's your first time, your account is created now. Your games are saved and only you decide who sees them.")}</p>
         <p class="small faint">${T("Ao entrar, você concorda com os", "By signing in you agree to the")} <a href="../privacidade/">${T("Termos e a Privacidade", "Terms and Privacy")}</a>.</p>
@@ -258,6 +259,16 @@
       </form></div>
       <div class="sheet-foot"><button type="button" class="btn ghost" data-close>${T("Cancelar", "Cancel")}</button><button type="submit" form="iwSiForm" class="btn primary" id="iwSiSend">${T("Enviar código", "Send code")}</button></div>`;
     wireClose();
+    $("iwSiPk")?.addEventListener("click", async (ev) => {
+      const b = ev.currentTarget; b.setAttribute("aria-busy", "true"); b.disabled = true; $("iwSiMsg").textContent = "";
+      try { await CLOUD.passkeySignIn(); window.INKWELL_TRACK("signin_passkey"); location.reload(); }
+      catch (err) {
+        b.removeAttribute("aria-busy"); b.disabled = false;
+        $("iwSiMsg").textContent = err?.name === "NotAllowedError" || err?.code === "cancelled"
+          ? T("Cancelado ou nenhuma passkey do Inkwell neste aparelho. Entre com o código e crie uma passkey depois.", "Cancelled, or no Inkwell passkey on this device. Sign in with the code and create one afterwards.")
+          : T("Não deu para entrar com passkey agora. Use o código por e-mail.", "Couldn't sign in with a passkey right now. Use the e-mail code.");
+      }
+    });
     $("iwSiForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       email = $("iwSiEmail").value.trim();
@@ -325,7 +336,7 @@
       e.preventDefault();
       if (go.disabled) return;
       go.setAttribute("aria-busy", "true"); go.disabled = true;
-      try { await CLOUD.verify(email, digits()); window.INKWELL_TRACK("signin_done"); location.reload(); }
+      try { await CLOUD.verify(email, digits()); window.INKWELL_TRACK("signin_done"); if (canOfferPasskey()) { try { sessionStorage.setItem(PK_NOW, "1"); } catch { /* */ } } location.reload(); }
       catch (err) {
         go.removeAttribute("aria-busy"); box.classList.add("err"); box.focus(); box.select?.();
         $("iwSiMsg").dataset.keep = "1"; sync();
@@ -335,6 +346,29 @@
       }
     });
     setTimeout(() => box.focus(), 30);
+  }
+  // Right after the code: "sign in faster next time?" — once per device (not again after "Agora não"), only where passkeys work.
+  // Shown on the page that reloads signed in (so whatever that page does after signing in — saving a draft, a deck — runs first).
+  const PK_ASKED = "inkwell-passkey-offer", PK_NOW = "inkwell-passkey-offer-now";
+  const canOfferPasskey = () => { let asked = null; try { asked = localStorage.getItem(PK_ASKED); } catch { /* */ } return !asked && !!CLOUD.passkeySupported?.(); };
+  function offerPasskey(tries = 0) {
+    if (!canOfferPasskey()) return false;
+    if (document.querySelector("dialog[open]")) { if (tries < 10) setTimeout(() => offerPasskey(tries + 1), 3000); return false; }   // after what the page opened
+    const done = (v) => { try { localStorage.setItem(PK_ASKED, v); } catch { /* */ } sheet.close(); };
+    sheet.innerHTML = `<div class="grab"></div>
+      <div class="sheet-head"><div><h2 id="iwSiT">${T("Entrar mais rápido da próxima vez?", "Sign in faster next time?")}</h2><div class="sub">${T("Você entrou.", "You're in.")}</div></div></div>
+      <div class="sheet-body"><p>${T("Crie uma passkey: na próxima vez você entra com Face ID, digital ou a senha do aparelho, sem esperar o e-mail.", "Create a passkey: next time you sign in with Face ID, fingerprint or the device's lock, without waiting for the e-mail.")}</p>
+        <p class="small muted">${T("Fica guardada no seu aparelho (e no iCloud ou na conta Google, se você usa). O código por e-mail continua valendo. Você apaga quando quiser em Perfil.", "It's kept on your device (and in iCloud or your Google account, if you use them). The e-mail code still works. Delete it any time in Profile.")}</p>
+        <p class="small" id="iwSiMsg" role="alert"></p></div>
+      <div class="sheet-foot"><button type="button" class="btn ghost" id="iwPkNo">${T("Agora não", "Not now")}</button><button type="button" class="btn primary" id="iwPkYes" data-testid="passkey-create">${T("Criar passkey", "Create a passkey")}</button></div>`;
+    if (!sheet.open) sheet.showModal();
+    $("iwPkNo").onclick = () => done("no");
+    $("iwPkYes").onclick = async (ev) => {
+      const b = ev.currentTarget; b.setAttribute("aria-busy", "true"); b.disabled = true;
+      try { await CLOUD.passkeyRegister(); window.INKWELL_TRACK("passkey_created"); done("yes"); }
+      catch (err) { b.removeAttribute("aria-busy"); b.disabled = false; $("iwSiMsg").textContent = err?.name === "NotAllowedError" ? T("Cancelado. Você pode criar depois em Perfil.", "Cancelled. You can create one later in Profile.") : T("Não foi possível criar agora. Você pode tentar depois em Perfil.", "Couldn't create it now. You can try later in Profile."); }
+    };
+    return true;
   }
   function wireClose() { sheet.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", () => sheet.close())); }
   sheet.addEventListener("close", () => { trigger?.focus?.(); trigger = null; });
@@ -347,6 +381,7 @@
     if (!sheet.open) sheet.showModal();
   };
   $("iwSignIn")?.addEventListener("click", () => window.INKWELL_SIGNIN());
+  if (CLOUD?.status().signedIn) { let now = null; try { now = sessionStorage.getItem(PK_NOW); sessionStorage.removeItem(PK_NOW); } catch { /* */ } if (now) setTimeout(() => offerPasskey(), 1200); }
   // Came back from an e-mail link that no longer works: say why and offer a new code, once.
   if (window.INKWELL_LINK_FAILED && CLOUD && !CLOUD.status().signedIn) {
     setTimeout(() => {

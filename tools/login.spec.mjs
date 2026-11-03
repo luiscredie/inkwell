@@ -9,9 +9,9 @@ const FEED = new URL('feed/', ROOT).href;
 const ME = '11111111-1111-4111-8111-111111111111';
 const jwt = (sub) => { const exp = Math.floor(Date.now() / 1000) + 3600; return 'x.' + Buffer.from(JSON.stringify({ sub, exp, email: 'a@b.c' })).toString('base64url') + '.y'; };
 
-async function setup(page, { code = '12345678', otpStatus = () => 200 } = {}) {
+async function setup(page, { code = '12345678', otpStatus = () => 200, passkeyAsked = true } = {}) {
   const calls = { otp: 0, verify: [] };
-  await page.addInitScript(() => localStorage.setItem('inkwell-lang', 'pt'));
+  await page.addInitScript((asked) => { localStorage.setItem('inkwell-lang', 'pt'); if (asked) localStorage.setItem('inkwell-passkey-offer', 'no'); }, passkeyAsked);
   await page.route('**/auth/v1/**', async (route) => {
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith('/otp')) { calls.otp += 1; return route.fulfill({ status: otpStatus(calls.otp), contentType: 'application/json', body: '{}' }); }
@@ -132,4 +132,61 @@ test('/entrar/ with a used link: says so and offers a new code', async ({ page }
   await expect(page.getByRole('heading', { name: 'Este link não vale mais' })).toBeVisible();
   await page.getByRole('button', { name: 'Pedir código novo' }).click();
   await expect(page.locator('#iwSignSheet')).toBeVisible();
+});
+
+// Passkeys (Supabase Auth, experimental): a virtual authenticator stands in for Face ID / fingerprint.
+async function virtualAuthenticator(page) {
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('WebAuthn.enable');
+  await cdp.send('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true } });
+}
+const b64 = (s) => Buffer.from(s).toString('base64url');
+async function passkeyServer(page) {
+  const got = [];
+  await page.route('**/auth/v1/passkeys/**', async (route) => {
+    const path = new URL(route.request().url()).pathname.replace(/.*\/auth\/v1\//, ''), body = route.request().postData() ? JSON.parse(route.request().postData()) : null;
+    got.push({ path, body, auth: route.request().headers().authorization || '' });
+    const j = (v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+    if (path === 'passkeys/registration/options') return j({ challenge_id: 'reg1', options: { challenge: b64('challenge-registration-0001'), rp: { id: 'localhost', name: 'Inkwell' }, user: { id: b64(ME), name: 'a@b.c', displayName: 'a@b.c' }, pubKeyCredParams: [{ type: 'public-key', alg: -7 }], authenticatorSelection: { residentKey: 'required', userVerification: 'preferred' }, timeout: 60000 } });
+    if (path === 'passkeys/registration/verify') return j({ id: 'pk1', friendly_name: 'iPhone' });
+    if (path === 'passkeys/authentication/options') return j({ challenge_id: 'auth1', options: { challenge: b64('challenge-authentication-01'), rpId: 'localhost', userVerification: 'preferred', timeout: 60000 } });
+    if (path === 'passkeys/authentication/verify') return j({ access_token: jwt(ME), refresh_token: 'r2', expires_in: 3600, user: { id: ME, email: 'a@b.c' } });
+    return j([]);
+  });
+  return got;
+}
+
+test('after the code, a passkey can be created; next time "Entrar com passkey" signs in without the e-mail', async ({ page }) => {
+  await virtualAuthenticator(page);
+  const calls = await setup(page, { passkeyAsked: false });
+  const got = await passkeyServer(page);
+  const sheet = await toCode(page);
+  await sheet.getByLabel('Código do e-mail').fill('12345678');
+  await expect(sheet.locator('#iwSiT')).toHaveText('Entrar mais rápido da próxima vez?');
+  await sheet.getByTestId('passkey-create').click();
+  await expect.poll(() => got.map((g) => g.path)).toEqual(['passkeys/registration/options', 'passkeys/registration/verify']);
+  expect(got[0].auth).toMatch(/^Bearer /);                                     // only signed in
+  expect(got[1].body.challenge_id).toBe('reg1');
+  expect(got[1].body.credential.response.attestationObject).toBeTruthy();
+  await expect(page.locator('#iwSignSheet')).toBeHidden();                       // reloaded, signed in
+  // sign out, then back in with the passkey
+  await page.waitForLoadState('load');
+  await page.evaluate(() => localStorage.removeItem('inkwell-counter-auth'));   // signed out
+  await page.reload();
+  await page.evaluate(() => window.INKWELL_SIGNIN());
+  await page.getByTestId('signin-passkey').click();
+  await expect.poll(() => got.map((g) => g.path).slice(2)).toEqual(['passkeys/authentication/options', 'passkeys/authentication/verify']);
+  expect(got[3].body.challenge_id).toBe('auth1');
+  expect(got[3].body.credential.response.signature).toBeTruthy();
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('inkwell-counter-auth') || 'null')?.refresh_token)).toBe('r2');
+  expect(calls.otp).toBe(1);                                                    // no second e-mail
+});
+
+test('"Agora não" after the code: signed in, and the offer does not come back on this device', async ({ page }) => {
+  await setup(page, { passkeyAsked: false });
+  const sheet = await toCode(page);
+  await sheet.getByLabel('Código do e-mail').fill('12345678');
+  await sheet.getByRole('button', { name: 'Agora não' }).click();
+  await expect(page.locator('#iwSignSheet')).toBeHidden();
+  expect(await page.evaluate(() => localStorage.getItem('inkwell-passkey-offer'))).toBe('no');
 });
