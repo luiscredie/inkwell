@@ -293,7 +293,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Estimate in reais: {s}, updated {d}. A card with no price is left out of the total, never counted as zero.": "Estimativa em reais: {s}, atualizado em {d}. Carta sem preço fica fora do total, nunca conta como zero.",
     "lowest MYP Cards listing ({d}); without one, {s}": "menor anúncio na MYP Cards ({d}); sem anúncio lá, {s}", "{n} can come from friends": "{n} podem vir de amigos", "{n} can come from friends_1": "1 pode vir de amigos",
     "You have every card for this deck.": "Você tem todas as cartas deste deck.", "Copies lent to friends still count as yours.": "Cópias emprestadas a amigos contam como suas.",
-    "{who} lends": "{who} empresta", "{n} free": "{n} livres", "{n} free_1": "1 livre", "Ask to borrow": "Pedir emprestado", "{who} has it": "{who} tem", "Asked": "Pedido enviado", "For the deck {d}": "Para o deck {d}", "Request sent. You'll see the answer in Trades.": "Pedido enviado. A resposta aparece em Trocas.", "Too many requests today. Try tomorrow.": "Muitos pedidos hoje. Tente amanhã.", "{who} sells on the board": "{who} vende no Mural", "{v} each": "{v} cada", "See listing": "Ver anúncio",
+    "{who} lends": "{who} empresta", "{n} free": "{n} livres", "{n} free_1": "1 livre", "Ask to borrow": "Pedir emprestado", "{who} has it": "{who} tem", "{n} in their collection · they decide": "{n} na coleção · a pessoa decide se empresta", "Show on my public profile": "Mostrar no meu perfil público", "public": "público", "People who aren't your friends see it on your profile and in the Lore Counter, when your profile is public. Friends already see all your decks.": "Quem não é seu amigo vê no seu perfil e no Lore Counter, quando seu perfil é público. Amigos já veem todos os seus decks.", "Asked": "Pedido enviado", "For the deck {d}": "Para o deck {d}", "Request sent. You'll see the answer in Trades.": "Pedido enviado. A resposta aparece em Trocas.", "Too many requests today. Try tomorrow.": "Muitos pedidos hoje. Tente amanhã.", "{who} sells on the board": "{who} vende no Mural", "{v} each": "{v} cada", "See listing": "Ver anúncio",
     "None of your friends has it": "Ninguém dos seus amigos tem", "Post what's missing on the board": "Anunciar o que falta no Mural", "Looking to buy": "Procuro para comprar", "Looking to borrow": "Procuro emprestado",
     "Posted {n} cards on the board": "{n} cartas anunciadas no Mural", "Already on the board": "Já está no Mural",
     "Last games": "Últimos jogos", "See all in Games": "Ver todos em Jogos", "Going first": "Começando", "Going second": "Comprando",
@@ -782,7 +782,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       const status = m.total < MIN ? `<span class="tag warn" title="${esc(Tx("A deck needs at least {n} cards.", { n: MIN }))}">${esc(Tx(MIN - m.total === 1 ? "list: 1 card short" : "list: {n} cards short", { n: MIN - m.total }))}</span>` : m.issues.length ? `<span class="tag late">${Tx("not legal")}</span>`
         : m.missingN ? `<span class="tag" title="${esc(Tx("What the missing copies cost at market price."))}">${esc(Tx(m.missingN === 1 ? "1 card missing · {v}" : "{n} cards missing · {v}", { n: m.missingN, v: money(m.missingValue) }))}</span>` : `<span class="tag match">${Tx("complete")}</span>`;
       return `<a class="list-row deck-row" href="?deck=${encodeURIComponent(d.id)}" data-deck="${esc(d.id)}">${dots(deckInks(d, m), "lg pair")}
-        <span class="t"><span>${metaTag(metaOf(d))}${esc(d.name)}</span><span class="meta">${esc([fmtName(d.format), Tx("{a}/{b} cards", { a: m.total, b: MIN }), m.inColl != null ? Tx("{p}% in your collection", { p: m.inColl }) : "", m.missingN ? Tx(m.missingN === 1 ? "1 missing from your collection" : "{n} missing from your collection", { n: m.missingN }) : ""].filter(Boolean).join(" · "))}</span>
+        <span class="t"><span>${metaTag(metaOf(d))}${esc(d.name)}${d.public === true ? ` <span class="tag info" data-testid="deck-public">${Tx("public")}</span>` : ""}</span><span class="meta">${esc([fmtName(d.format), Tx("{a}/{b} cards", { a: m.total, b: MIN }), m.inColl != null ? Tx("{p}% in your collection", { p: m.inColl }) : "", m.missingN ? Tx(m.missingN === 1 ? "1 missing from your collection" : "{n} missing from your collection", { n: m.missingN }) : ""].filter(Boolean).join(" · "))}</span>
         <span class="meter${m.inColl === 100 ? " full" : ""}" style="--v:${m.inColl || 0}%;margin-top:8px;max-width:180px"><i></i></span></span>
         <span class="trail"><b class="num">${m.wr != null ? m.wr + "%" : "—"}</b><span class="micro muted">${esc(m.games.length ? Tx(m.games.length === 1 ? "{n} game" : "{n} games", { n: m.games.length }) : Tx("no games"))}</span>${status}</span></a>`;
     };
@@ -954,9 +954,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         ...sell.slice(0, 3).map((l) => `<div class="list-row flat two" style="min-height:52px"><span class="t"><span>${esc(Tx("{who} sells on the board", { who: who(l.user_id) }))}</span><span class="meta">${l.price_brl != null ? esc(Tx("{v} each", { v: money(+l.price_brl) })) : ""}</span></span><a class="btn small" href="../trades/?tab=board&q=${q}">${Tx("See listing")}</a></div>`),
       ];
       const fl = friendsLend(c);
-      if (fl.length) fromFriends += Math.min(n, fl.reduce((s2, x) => s2 + x.free, 0));
+      if (fl.length) fromFriends += Math.min(n, fl.filter((x) => x.lend !== false).reduce((s2, x) => s2 + x.free, 0));
       offers.unshift(...fl.slice(0, 3).map((x) => { const k = `${x.user}|${x.card_id}`, asked = lendAsked.has(k);
-        return `<div class="list-row flat two" style="min-height:52px" data-testid="friend-has"><span class="t"><span>${esc(Tx("{who} has it", { who: x.name || "—" }))}</span><span class="meta">${esc(Tx("{n} free", { n: x.free }))}</span></span>${asked ? `<a class="btn small ghost" href="../trades/">${Tx("Asked")}</a>` : `<button type="button" class="btn small" data-borrow="${esc(x.user)}" data-bcard="${esc(x.card_id)}" data-bq="${Math.min(n, x.free)}">${Tx("Ask to borrow")}</button>`}</div>`; }));
+        return `<div class="list-row flat two" style="min-height:52px" data-testid="friend-has"><span class="t"><span>${esc(Tx("{who} has it", { who: x.name || "—" }))}</span><span class="meta">${esc(x.lend === false ? Tx("{n} in their collection · they decide", { n: x.free }) : Tx("{n} free", { n: x.free }))}</span></span>${asked ? `<a class="btn small ghost" href="../trades/">${Tx("Asked")}</a>` : `<button type="button" class="btn small" data-borrow="${esc(x.user)}" data-bcard="${esc(x.card_id)}" data-bq="${Math.min(n, x.free)}">${Tx("Ask to borrow")}</button>`}</div>`; }));
       if (!lend.length && !fl.length && !sell.length) offers.push(`<div class="list-row flat two" style="min-height:44px"><span class="t"><span class="muted" style="font-weight:400">${Tx("None of your friends has it")}</span></span></div>`);
       // buy it: always offered, after friends and the board — the stores open in a new tab, nothing is shared with them
       offers.push(buyLinks(c, n));
@@ -1043,14 +1043,14 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   function flush(d, quiet) {
     const p = prof(); if (!p) return Promise.resolve();
     const snap = before; before = null;
-    const body = { id: d.id, name: d.name, format: d.format || "core", colors: (d.colors || []).length ? d.colors : measure(d).inks.slice(0, 2), cards: d.cards || {}, notes: d.notes || "" };
+    const body = { id: d.id, name: d.name, format: d.format || "core", colors: (d.colors || []).length ? d.colors : measure(d).inks.slice(0, 2), cards: d.cards || {}, notes: d.notes || "", ...(typeof d.public === "boolean" ? { public: d.public } : {}) };
     queue = queue.then(() => CLOUD.api("rpc/save_deck", { method: "POST", body: { p_profile: p.profile, p_deck: body } }))
       .then((saved) => {
         if (saved && typeof saved === "object") Object.assign(d, saved);
-        if (!quiet && snap) toast(Tx("Saved"), () => { Object.assign(d, { cards: snap.cards, colors: snap.colors, name: snap.name, format: snap.format }); flush(d, true); render(); });
+        if (!quiet && snap) toast(Tx("Saved"), () => { Object.assign(d, { cards: snap.cards, colors: snap.colors, name: snap.name, format: snap.format }, typeof d.public === "boolean" ? { public: !!snap.public } : {}); flush(d, true); render(); });
         render();
       })
-      .catch(() => { if (snap) Object.assign(d, { cards: snap.cards, colors: snap.colors, name: snap.name, format: snap.format }); toast(Tx("Couldn't save. Try again."), null, true); render(); });
+      .catch(() => { if (snap) Object.assign(d, { cards: snap.cards, colors: snap.colors, name: snap.name, format: snap.format }, typeof d.public === "boolean" ? { public: !!snap.public } : {}); toast(Tx("Couldn't save. Try again."), null, true); render(); });
     return queue;
   }
 
@@ -1166,18 +1166,20 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   }
   const newId = () => "deck-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   function openDeckForm(d, from) {
-    const sh = $("sheet"), f = { name: d?.name || "", format: d?.format || "core", colors: [...(d?.colors || [])].filter((x) => INKS.includes(x)) };
+    const sh = $("sheet"), f = { name: d?.name || "", format: d?.format || "core", colors: [...(d?.colors || [])].filter((x) => INKS.includes(x)), pub: !!d?.public };
     const draw = () => {
       sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="shT">${Tx(d ? "Rename and format" : "New deck")}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
         <div class="sheet-body"><div class="form">
           <label class="field">${Tx("Deck name")}<input id="fName" maxlength="80" value="${esc(f.name)}" autocomplete="off"></label>
           <div class="field">${Tx("Format")}<div class="seg block" role="group" aria-label="${Tx("Format")}">${[["core", "Core"], ["infinity", "Infinity"]].map(([k, l]) => `<button type="button" data-ff="${k}" aria-pressed="${f.format === k}">${Tx(l)}</button>`).join("")}</div></div>
           <div class="field">${Tx("Inks")}<span class="hint">${Tx("Pick up to 2.")}</span><div class="chips">${INKS.map((i) => `<button type="button" class="chipbtn" data-ink-pick="${i}" aria-pressed="${f.colors.includes(i)}"><span class="inks"><i data-ink="${i.toLowerCase()}"></i></span>${i}</button>`).join("")}</div></div>
+          <label class="switch"><span>${Tx("Show on my public profile")}<small>${Tx("People who aren't your friends see it on your profile and in the Lore Counter, when your profile is public. Friends already see all your decks.")}</small></span><input type="checkbox" role="switch" id="fPub" ${f.pub ? "checked" : ""}></label>
         </div></div>
         <div class="sheet-foot"><button type="button" class="btn ghost" data-close>${Tx("Cancel")}</button><button type="button" class="btn primary" id="fSave" ${f.name.trim() ? "" : "disabled"}>${Tx(d ? "Save" : "Create deck")}</button></div>`;
       openSheet(from);
       const nm = $("fName"); nm.oninput = () => { f.name = nm.value; $("fSave").disabled = !f.name.trim(); };
       sh.querySelectorAll("[data-ff]").forEach((b) => b.onclick = () => { f.format = b.dataset.ff; draw(); });
+      $("fPub").onchange = (ev) => { f.pub = ev.target.checked; };
       sh.querySelectorAll("[data-ink-pick]").forEach((b) => b.onclick = () => { const i = b.dataset.inkPick; f.colors = f.colors.includes(i) ? f.colors.filter((x) => x !== i) : [...f.colors, i].slice(-2); draw(); sh.querySelector(`[data-ink-pick="${i}"]`)?.focus(); });
       $("fSave").onclick = async () => {
         $("fSave").disabled = true;
@@ -1185,6 +1187,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         const deck = d || { id: newId(), cards: {}, notes: "" };
         before = d ? JSON.parse(JSON.stringify(d)) : null;
         Object.assign(deck, { name: f.name.trim().slice(0, 80), format: f.format, colors: f.colors });
+        if (f.pub || typeof deck.public === "boolean") deck.public = f.pub;
         if (!d) { p.decks.push(deck); editing = true; }
         sh.close();
         await flush(deck, !d);

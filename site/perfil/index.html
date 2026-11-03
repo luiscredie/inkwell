@@ -472,7 +472,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const PT = {
     "My Inkwell": "Meu Inkwell", "Loading…": "Carregando…", "Edit": "Editar", "Share": "Compartilhar", "Copy link": "Copiar link", "Link copied": "Link copiado",
     "Example · fictional profile": "Exemplo · perfil fictício", "This is a mockup to show what a profile looks like. It is not a real person.": "Isto é uma maquete para mostrar como fica um perfil. Não é uma pessoa real.",
-    "Showcase": "Vitrine", "owns it": "tem", "favourite": "favorita", "Featured deck": "Deck em destaque", "{n} cards": "{n} cartas",
+    "Showcase": "Vitrine", "owns it": "tem", "favourite": "favorita", "Featured deck": "Deck em destaque", "Public deck": "Deck público", "{n} cards": "{n} cartas",
     "Record": "Retrospecto", "wins": "vitórias", "losses": "derrotas", "Looking for": "Procura", "Offering": "Oferece", "Nothing here yet.": "Nada aqui ainda.",
     "Report profile": "Denunciar perfil", "Why are you reporting this profile?": "Por que você está denunciando este perfil?", "Send report": "Enviar denúncia", "Cancel": "Cancelar",
     "Report sent. Thank you.": "Denúncia enviada. Obrigado.", "Couldn't send. Try again.": "Não foi possível enviar. Tente de novo.", "Close": "Fechar",
@@ -641,14 +641,14 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const L = (p, t) => (p?.mock && lang === "en" && MOCK_EN[t]) || t || "";
   const ago = (d) => { const m = (Date.now() - Date.parse(d)) / 60000; if (!(m >= 0)) return ""; if (m < 60) return Tx("{n} min ago", { n: Math.max(1, Math.round(m)) }); if (m < 1440) return Tx("{n} h ago", { n: Math.round(m / 60) }); const dd = Math.round(m / 1440); return dd === 1 ? Tx("yesterday") : Tx("{n} days ago", { n: dd }); };
   const miniAv = (avatar, name, cls = "sm") => `<span class="mi-av ${cls}" style="${artStyle(avatar)}" role="img" aria-label="${esc(name || "")}"></span>`;
-  function deckView(p, deck) {
+  function deckView(p, deck, label = "Featured deck", tid = "featured-deck") {
     const cards = Object.entries(deck.cards || {}).filter(([id, n]) => BY.has(id) && n > 0).map(([id, n]) => ({ c: BY.get(id), n }));
     const total = cards.reduce((s, x) => s + x.n, 0), curve = Array(8).fill(0);
     for (const x of cards) curve[Math.min(7, +x.c.cost || 0)] += x.n;
     const max = Math.max(1, ...curve.slice(1));
     const key = cards.slice().sort((a, b) => b.n - a.n || (+b.c.cost || 0) - (+a.c.cost || 0)).slice(0, 6);
     const list = cards.slice().sort((a, b) => (+a.c.cost || 0) - (+b.c.cost || 0) || a.c.name.localeCompare(b.c.name));
-    return `<section class="card mi-sec mi-deck" data-testid="featured-deck"><div class="mi-label">${Tx("Featured deck")}</div>
+    return `<section class="card mi-sec mi-deck" data-testid="${tid}"><div class="mi-label">${Tx(label)}</div>
       <div class="row between" style="margin:var(--sp-2) 0 var(--sp-3);gap:var(--sp-2);flex-wrap:wrap"><b style="font-size:var(--fs-h3)">${esc(L(p, deck.name))}</b>
         <span class="small muted">${(deck.colors || []).map((i) => inkName(i)).join(" / ")} · ${esc(deck.format === "infinity" ? "Infinity" : "Core")} · ${Tx("{n} cards", { n: total })}</span></div>
       <div class="mi-key">${key.map((x) => `<figure>${thumb(x.c)}<figcaption>${x.n}× ${esc(split(x.c.name)[0])}</figcaption></figure>`).join("")}</div>
@@ -714,6 +714,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
           ${preview ? "" : `<section class="mi-sec mi-achs" id="achBox" data-testid="achievements" hidden></section>`}
           ${recBox}
           ${deck ? deckView(p, deck) : ""}
+          ${(p.public_decks || []).filter((x) => x && x.cards).map((x) => deckView(p, x, "Public deck", "public-deck")).join("")}
         </div>
         <div class="mi-col">
           ${friendsBox}
