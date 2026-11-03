@@ -74,8 +74,26 @@ window.INKWELL_CLOUD = (() => {
     window.INKWELL_LINK_FAILED = h.get("error_code") || h.get("error");
   }
 
+  // One refresh at a time. A page fires ~15 calls at once when it opens; with an expired token (a phone waking up
+  // after an hour) each one used to refresh on its own with the same refresh token — 16 refreshes in one second,
+  // Supabase answering 500 to some, and a page that could end up signed out. Now the calls of this page share one
+  // refresh, and pages of other tabs wait their turn (Web Locks) and pick up the tokens the first one saved.
+  let refreshing = null;
   async function token() {
     sess = load();   // another page (or the Inkwell app) may have signed in, out, or refreshed the tokens meanwhile
+    if (!sess) return null;
+    if (sess.expires_at - 60 > Date.now() / 1000) return sess.access_token;
+    if (!refreshing) {
+      const run = () => refresh();
+      refreshing = (navigator.locks?.request ? navigator.locks.request("inkwell-auth-refresh", run) : run())
+        .finally(() => { refreshing = null; });
+    }
+    return refreshing;
+  }
+  // a 401: refresh on the next call — unless that token was already replaced (a call that left before a refresh)
+  function expire(tok) { const now = load(); if (now && now.access_token === tok) store({ ...now, expires_at: 0 }); }
+  async function refresh() {
+    sess = load();   // inside the lock: another tab may have just refreshed
     if (!sess) return null;
     if (sess.expires_at - 60 > Date.now() / 1000) return sess.access_token;
     const used = sess.refresh_token;
@@ -97,7 +115,7 @@ window.INKWELL_CLOUD = (() => {
     if (!tok && !anon) throw Object.assign(new Error("signed out"), { code: "auth" });
     const r = await fetch(`${cfg.url}/rest/v1/${path}`, {
       method, keepalive, headers: { ...headers(tok), ...(prefer ? { Prefer: prefer } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
-    if (r.status === 401) store({ ...sess, expires_at: 0 });
+    if (r.status === 401) expire(tok);
     if (!r.ok) {
       const code = r.status === 401 || r.status === 403 ? "permission" : r.status === 400 || r.status === 409 || r.status === 413 ? "invalid_argument" : "unavailable";
       // the database's own reason (e.g. "adults_only", "event_full", "too_many_friend_requests") goes in the message,
@@ -178,7 +196,7 @@ window.INKWELL_CLOUD = (() => {
       const rows = logs.map((l) => ({ user_id: sess.user.id, game_id: l.game_id, source: l.source, played_at: l.played_at, log: l }));
       const r = await fetch(`${cfg.url}/rest/v1/game_logs?on_conflict=user_id,game_id`, {
         method: "POST", headers: { ...headers(tok), Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify(rows) });
-      if (r.status === 401) store({ ...sess, expires_at: 0 });   // force a refresh on the next try
+      if (r.status === 401) expire(tok);   // force a refresh on the next try
       return r.ok;
     },
   };
@@ -300,7 +318,7 @@ window.INKWELL_CLOUD = (() => {
             ${users.find((u) => u.id === r.target) && !users.find((u) => u.id === r.target).hidden ? btn(users.find((u) => u.id === r.target), "hide", "Hide profile") : ""}</div></div>`).join("") : `<p class="muted">${Tx("No reports.")}</p>`}</div>`}`;
     document.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => { tab = b.dataset.tab; armed = null; render(); });
     document.querySelectorAll("[data-days]").forEach((b) => b.onclick = () => { statDays = +b.dataset.days; loadStats(); });
-    if (tab === "stats" && !stats && !statErr) loadStats();
+    if (tab === "stats" && !stats && !statErr && !statLoading) loadStats();
     $("q")?.addEventListener("input", (e) => { q = e.target.value; render(); $("q").focus(); $("q").setSelectionRange(q.length, q.length); });
     document.querySelectorAll("[data-act]").forEach((b) => b.onclick = () => act(b.dataset.act, b.dataset.u));
     document.querySelectorAll("[data-cact]").forEach((b) => b.onclick = () => {
@@ -315,10 +333,17 @@ window.INKWELL_CLOUD = (() => {
     document.querySelectorAll("[data-hidepost]").forEach((b) => b.onclick = () => run(() => rpc("moderate_post", { p_action: "hide", p_post: b.dataset.hidepost })));   // supabase/social.sql
   }
   // ---------- Painel: supabase/site_stats.sql ----------
+  // one load at a time: render() starts a load when there are no numbers yet, and this draws the skeleton first —
+  // without the flag the two called each other until the stack overflowed, firing ~1000 admin_stats queries
+  let statLoading = 0;
   async function loadStats() {
+    const mine = ++statLoading;
     statErr = ""; stats = null; render();
-    try { stats = await rpc("admin_stats", { p_days: statDays }); }
-    catch (e) { statErr = /admin_stats|404|PGRST202/.test(String(e?.message || e)) ? Tx("Run supabase/site_stats.sql to start counting.") : Tx("Couldn't load."); }
+    let r = null, err = "";
+    try { r = await rpc("admin_stats", { p_days: statDays }); if (!r || typeof r !== "object") err = Tx("Couldn't load."); }
+    catch (e) { err = /admin_stats|404|PGRST202/.test(String(e?.message || e)) ? Tx("Run supabase/site_stats.sql to start counting.") : Tx("Couldn't load."); }
+    if (mine !== statLoading) return;   // another period was picked meanwhile: that answer wins
+    statLoading = 0; stats = err ? null : r; statErr = err;
     render();
   }
   const PAGE_NAME = { feed: "Início", cards: "Coleção", decks: "Decks", communities: "Comunidades", coach: "Jogos", events: "Eventos", trades: "Trocas", prices: "Preços", profile: "Perfil", start: "Começar", entrar: "Entrar (link do e-mail)", legal: "Termos e privacidade", admin: "Admin" };

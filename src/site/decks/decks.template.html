@@ -479,7 +479,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
         <div class="form">
           <label class="field">${Tx("Paste a list")}<span class="hint">${esc(Tx("One card per line, like \"4 Stitch - Rock Star\". Lists from duels.ink, Dreamborn and Lorcanito work."))}</span>
             <textarea class="paste" id="pText" spellcheck="false" data-testid="public-text">${esc(pub.text)}</textarea></label>
-          ${!pub.text.trim() ? `<button type="button" class="btn" id="pSample" data-testid="public-sample" style="justify-self:start"><i class="ic i-decks"></i>${Tx("Try it with an example deck")}</button>`
+          ${!pub.text.trim() ? `<button type="button" class="btn" id="pSample" data-testid="public-sample" style="justify-self:start;white-space:normal;max-width:100%;text-align:left"><i class="ic i-decks"></i>${Tx("Try it with an example deck")}</button>`
             : pub.text === SAMPLE ? `<p class="small muted" style="margin:0" data-testid="public-sample-note"><span class="tag info">${Tx("Example deck")}</span> ${Tx("Amber/Steel, made to show the tool — not a competitive list. Change it as you like.")}</p>` : ""}
           <div class="field">${Tx("Format")}<div class="seg" role="group" aria-label="${Tx("Format")}">${[["core", "Core"], ["infinity", "Infinity"]].map(([k, l]) => `<button type="button" data-pf="${k}" aria-pressed="${pub.format === k}">${Tx(l)}</button>`).join("")}</div></div>
         </div>
