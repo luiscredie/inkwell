@@ -46,6 +46,9 @@ window.INKWELL_FLAGS = (() => {
 // MYP Cards prices (data/prices-br.json): off since 01/11/2026 — the store blocks automated access, so they can't be
 // kept up to date; prices are TCGplayer only. Turn back on with true once there is an allowed way to refresh them.
 if (window.INKWELL_PRICES_BR === undefined) window.INKWELL_PRICES_BR = false;
+// The partner store (sponsor) that goes first in every "buy" row (Decks: Faltando, Fada Madrinha). None yet.
+// Set it like this: { name: "Loja X", search: "https://lojax.com.br/busca?q={q}" } — {q} becomes the card's name.
+if (window.INKWELL_PARTNER_STORE === undefined) window.INKWELL_PARTNER_STORE = null;
 window.INKWELL_CLOUD = (() => {
   const cfg = window.INKWELL_CLOUD_CONFIG || {};
   if (!cfg.url || !cfg.key) return null;

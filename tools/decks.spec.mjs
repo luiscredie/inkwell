@@ -513,3 +513,28 @@ test('tap a card in a deck: it opens large, with your copies of that printing; a
   const w = await z.locator('img').evaluate((i) => i.getBoundingClientRect().width);
   expect(w).toBeGreaterThan(250);
 });
+
+test('Fada Madrinha: each card in its rarest printing, in foil, with the cost, what you have and where to buy (partner first)', async ({ page }) => {
+  await page.addInitScript(() => { window.INKWELL_PARTNER_STORE = { name: 'Loja Parceira', search: 'https://loja.example/busca?q={q}' }; });
+  await setup(page, { extraDecks: [{ id: 'deck-g', name: 'Gala', format: 'core', colors: ['Amber'], cards: { 'LOR9-188': 2, 'LOR11-89': 4 }, created_at: '2026-10-01' }] });
+  await page.goto(BASE + '?deck=deck-g&tab=gala');
+  const grid = page.getByTestId('gala-grid');
+  await expect(grid.locator('[data-gala]')).toHaveCount(2);
+  await expect(grid.locator('[data-gala]').first()).toHaveAttribute('data-gala', 'LOR1-216');   // Tinker Bell: the Enchanted one
+  await expect(grid.locator('[data-gala="LOR1-216"]')).toContainText('Encantada');
+  await expect(grid.locator('[data-gala="LOR1-216"]')).toContainText('Você tem 0 de 2');
+  await expect(grid.locator('[data-gala="DLPC1-29-P3"]')).toContainText('Promo');            // White Rabbit: the promo
+  await expect(page.getByTestId('gala-summary')).toContainText('Fada Madrinha');
+  const partner = grid.locator('[data-gala="LOR1-216"] [data-testid="buy-partner"]');
+  await expect(partner).toHaveText(/Loja Parceira/);
+  await expect(partner).toHaveAttribute('href', /^https:\/\/loja\.example\/busca\?q=Tinker%20Bell/);
+  await expect(partner).toHaveAttribute('rel', /sponsored/);
+  await expect(page.locator('[data-tab="gala"]')).toHaveText('✨ Fada Madrinha');
+});
+
+test('without a partner store the buy row has only Liga Lorcana and TCGplayer', async ({ page }) => {
+  await setup(page);
+  await page.goto(BASE + '?deck=deck-a&tab=missing');
+  await expect(page.locator('[data-testid="buy-links"]').first()).toBeVisible();
+  await expect(page.locator('[data-testid="buy-partner"]')).toHaveCount(0);
+});

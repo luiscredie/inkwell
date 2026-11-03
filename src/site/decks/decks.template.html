@@ -21,6 +21,16 @@
 .deck-row .trail { gap: 2px; }
 .deck-row .trail b { font-size: var(--fs-h3); }
 .more-wrap { position: relative; }
+.gala-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--sp-4) var(--sp-3); }
+.gala-card { margin: 0; display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
+.gala-card figcaption { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gala-card figcaption b { line-height: 1.2; }
+.gala-art { position: relative; }
+.gala-art .thumb.gala { width: 100%; border-radius: 10px; box-shadow: 0 8px 22px rgba(5,3,20,.35); }
+.gala-q { position: absolute; z-index: 3; right: 6px; top: 6px; padding: 2px 8px; border-radius: 999px; background: rgba(10,8,24,.78); color: #fff; font-weight: 800; font-size: var(--fs-small); }
+.gala-card .buy-row { grid-template-columns: 1fr; }
+.gala-card .buy-row > .small { display: none; }
+.gala-card .buy-btns { display: flex; flex-wrap: wrap; gap: 6px; }
 .dl-row { grid-template-columns: 28px 24px 34px minmax(0,1fr) auto; }   /* count, cost, card image, name */
 .dl-row.edit { grid-template-columns: 24px 34px minmax(0,1fr) auto; }
 .dl-row > .thumb { width: 34px; display: block; border-radius: 4px; }
@@ -127,7 +137,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     "vs {d}": "vs {d}", "went first": "começou jogando", "went second": "começou comprando", "Win": "Vitória", "Loss": "Derrota",
     "No games with this deck yet": "Nenhum jogo com este deck ainda", "Games from duels.ink show up here when the list you played matches this deck.": "Os jogos do duels.ink aparecem aqui quando a lista que você jogou bate com este deck.",
     "Add a card": "Pôr carta", "Search a card to add": "Buscar carta para pôr", "Remove one": "Tirar uma", "Add one": "Pôr uma", "Saved": "Deck salvo", "Undo": "Desfazer",
-    "Couldn't save. Try again.": "Não foi possível salvar. Tente de novo.", "In your collection “{c}” · this printing": "Na sua coleção “{c}” · esta arte", "Normal": "Normal", "Foil": "Foil", "One less": "Menos um", "One more": "Mais um", "In this deck: {n}": "No deck: {n}", "All your collections: {n} normal · {f} foil": "Somando todas as suas coleções: {n} normais · {f} foil", "Save to collection": "Salvar na coleção", "Collection updated": "Coleção atualizada", "Changes save right away.": "As mudanças salvam na hora.",
+    "Couldn't save. Try again.": "Não foi possível salvar. Tente de novo.", "In your collection “{c}” · this printing": "Na sua coleção “{c}” · esta arte", "✨ Fairy Godmother": "✨ Fada Madrinha", "Iconic": "Icônica", "Epic": "Épica", "Enchanted": "Encantada", "Promo": "Promo", "Legendary": "Lendária", "Super rare": "Super-rara", "Rare": "Rara", "Uncommon": "Incomum", "Common": "Comum", "You have {h} of {q}": "Você tem {h} de {q}", "You have them all": "Você tem todas", "Your deck with the rarest art of each card": "Toque da Fada Madrinha: seu deck com a arte mais rara de cada carta", "Same cards and rules: only the art changes. The rarest printing that exists (Iconic, Epic, Enchanted, Promo…), in foil.": "As mesmas cartas e regras: só a arte muda. A impressão mais rara que existe (Icônica, Épica, Encantada, Promo…), em foil.", "This version": "Esta versão", "Your list": "Sua lista", "You already have": "Você já tem", "To complete": "Para completar", "Prices: {s}, foil. Tap a card to see it large and add the copies you have.": "Preços: {s}, foil. Toque numa carta para ver grande e adicionar as cópias que você tem.", "Normal": "Normal", "Foil": "Foil", "One less": "Menos um", "One more": "Mais um", "In this deck: {n}": "No deck: {n}", "All your collections: {n} normal · {f} foil": "Somando todas as suas coleções: {n} normais · {f} foil", "Save to collection": "Salvar na coleção", "Collection updated": "Coleção atualizada", "Changes save right away.": "As mudanças salvam na hora.",
     "Copy limit": "Limite de cópias", "Other ink": "Outra tinta", "Not in Core": "Fora do Core", "Ink limit": "Limite de tintas", "Type at least 2 letters.": "Digite pelo menos 2 letras.", "No card found.": "Nenhuma carta encontrada.",
     "Deck name": "Nome do deck", "Inks": "Tintas", "Pick up to 2.": "Escolha até 2.", "Create deck": "Criar deck", "Save": "Salvar", "Cancel": "Cancelar", "Close": "Fechar",
     "Paste a list": "Cole a lista", "One card per line, like \"4 Stitch - Rock Star\". Lists from duels.ink, Dreamborn and Lorcanito work.": "Uma carta por linha, como \"4 Stitch - Rock Star\". Listas do duels.ink, Dreamborn e Lorcanito funcionam.",
@@ -193,8 +203,12 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
   // The Inkwell app's optimizer, copied in at build time (tools/build_site_decks.py)
   const computeDeckPortfolioPlan = /*@PORTFOLIO@*/;
   const tcgUrl = (c) => "https://www.tcgplayer.com/search/lorcana/product?productLineName=lorcana&q=" + encodeURIComponent(split(c.name)[0] + " " + (split(c.name)[1] || "")).replace(/%20/g, "+");
+  // A partner store (sponsor), when there is one: window.INKWELL_PARTNER_STORE = { name: "Loja", search: "https://loja.example/busca?q={q}" }
+  // (cloud.js). It goes first in every "buy" row. Nothing about the person is sent: only the card name, in the link.
+  const PARTNER = (() => { const x = window.INKWELL_PARTNER_STORE; return x && /^https:\/\/[^\s]+\{q\}/.test(x.search || "") && x.name ? x : null; })();
+  const partnerUrl = (c) => PARTNER.search.replace("{q}", encodeURIComponent(c.name));
   const buyLinks = (c, n) => `<div class="buy-row" data-testid="buy-links"><span class="small"><b>${esc(Tx(n === 1 ? "Buy 1 copy" : "Buy {n} copies", { n }))}</b> <span class="muted">· ${esc(Tx("Stores open in a new tab"))}</span></span>
-    <span class="buy-btns"><a class="btn small" href="${esc(ligaUrl(c))}" target="_blank" rel="noopener noreferrer" data-testid="buy-liga">Liga Lorcana<i class="ic i-external"></i></a><a class="btn small" href="${esc(tcgUrl(c))}" target="_blank" rel="noopener noreferrer" data-testid="buy-tcg">TCGplayer<i class="ic i-external"></i></a></span></div>`;
+    <span class="buy-btns">${PARTNER ? `<a class="btn small primary" href="${esc(partnerUrl(c))}" target="_blank" rel="noopener noreferrer sponsored" data-testid="buy-partner">${esc(PARTNER.name)}<i class="ic i-external"></i></a>` : ""}<a class="btn small" href="${esc(ligaUrl(c))}" target="_blank" rel="noopener noreferrer" data-testid="buy-liga">Liga Lorcana<i class="ic i-external"></i></a><a class="btn small" href="${esc(tcgUrl(c))}" target="_blank" rel="noopener noreferrer" data-testid="buy-tcg">TCGplayer<i class="ic i-external"></i></a></span></div>`;
   const ligaUrl = (c) => "https://www.ligalorcana.com.br/?view=cards%2Fcard&card=" + encodeURIComponent(c.name).replace(/%20/g, "+") + "&tipo=1";
 
   // ---------- state ----------
@@ -585,11 +599,11 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
       $("back").onclick = (e) => { e.preventDefault(); go(null); };
       return;
     }
-    if (!["list", "analysis", "missing", "games", "plan"].includes(tab)) tab = "list";
+    if (!["list", "analysis", "missing", "games", "plan", "gala"].includes(tab)) tab = "list";
     const m = measure(d), inks = deckInks(d, m);
     const keep = document.activeElement?.id, caret = document.activeElement?.selectionStart;
     const when = d.updated_at ? Tx("updated {d}", { d: dateFmt(d.updated_at) }) : d.created_at ? Tx("created {d}", { d: dateFmt(d.created_at) }) : "";
-    const tabs = [["list", "List"], ["analysis", "Analysis"], ["missing", "Missing", m.missingN], ["games", "Games", 0], ["plan", "Plan"]];
+    const tabs = [["list", "List"], ["analysis", "Analysis"], ["missing", "Missing", m.missingN], ["gala", GALA_TAB], ["games", "Games", 0], ["plan", "Plan"]];
     $("app").innerHTML = `<div class="page-head"><div>${back}<h1 id="title">${esc(d.name)}</h1><p class="sub">${dots(inks)}${esc([fmtName(d.format), when].filter(Boolean).join(" · "))}</p>
         <label class="small deckmeta">${Tx("Meta")} <select class="inline" id="metaSel" data-testid="deck-meta">${(() => { const top = Math.max(14, ...CARDS.map((c) => setNo(c.set))), chosen = d.meta || localMeta[d.id] || "", auto = autoMeta(d);
           return `<option value="" ${chosen ? "" : "selected"}>${esc(auto ? Tx("Automatic ({s})", { s: metaLabel(auto) }) : Tx("No meta"))}</option>` + Array.from({ length: top }, (_, i) => `LOR${top - i}`).map((x) => `<option value="${x}" ${chosen === x ? "selected" : ""}>${esc(metaLabel(x))}</option>`).join(""); })()}</select></label></div>
@@ -601,7 +615,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
         <div class="stat"><b class="${m.wr != null && m.wr >= 50 ? "win" : ""}">${m.wr != null ? m.wr + "%" : "—"}</b><span>${Tx("Wins")}</span></div></div>
       ${buildBox(d)}
       <div class="tabs" role="tablist" style="margin-top:var(--sp-5)">${tabs.map(([k, l, n]) => `<button type="button" class="tab" role="tab" data-tab="${k}" aria-selected="${tab === k}">${Tx(l)}${n ? `<span class="count quiet">${n}</span>` : ""}</button>`).join("")}</div>
-      <div id="tabBody" role="tabpanel">${tab === "analysis" ? analysis(d, m) : tab === "missing" ? missingTab(d, m) : tab === "games" ? gamesTab(d, m) : tab === "plan" ? planTab(d) : listTab(d, m)}</div>`;
+      <div id="tabBody" role="tabpanel">${tab === "analysis" ? analysis(d, m) : tab === "missing" ? missingTab(d, m) : tab === "games" ? gamesTab(d, m) : tab === "plan" ? planTab(d) : tab === "gala" ? galaTab(d, m) : listTab(d, m)}</div>`;
     $("back").onclick = (e) => { e.preventDefault(); go(null); };
     document.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => go(d.id, b.dataset.tab, true));
     $("edit").onclick = () => { editing = !editing; if (editing && tab !== "list") go(d.id, "list", true); else render(); if (editing) setTimeout(() => $("addQ")?.focus(), 0); };
@@ -701,6 +715,48 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     const lend = mine.filter((l) => l.kind === "lend" && friends.has(l.user_id));
     const sell = mine.filter((l) => l.kind === "sell");
     return { lend, sell };
+  }
+  // ---------- Toque da Fada Madrinha: the deck with the rarest printing of each card (same rules, only the art changes) ----------
+  const GALA_TAB = "✨ Fairy Godmother";
+  const RANK = { I: 9, EP: 8, E: 7, P: 6, L: 5, SR: 4, R: 3, U: 2, C: 1 };   // Iconic > Epic > Enchanted > Promo > Legendary > …
+  const RAR_NAME = { I: "Iconic", EP: "Epic", E: "Enchanted", P: "Promo", L: "Legendary", SR: "Super rare", R: "Rare", U: "Uncommon", C: "Common" };
+  const ALWAYS_FOIL = new Set(["I", "EP", "E", "P"]);
+  const galaOk = (x) => RANK[x.rarity] && !/-OS$/.test(x.id);   // no oversized, puzzle inserts or quest cards
+  const foilPrice = (x) => { const q = PRICES[x.id] || {}; return q.fl ?? q.f ?? q.nl ?? q.n ?? null; };
+  function galaPick(c) {
+    const opts = printings(c).filter(galaOk);
+    return opts.sort((a, b) => RANK[b.rarity] - RANK[a.rarity] || (foilPrice(b) ?? -1) - (foilPrice(a) ?? -1))[0] || c;
+  }
+  function galaTab(d, m) {
+    if (!m.known.length) return emptyBox("decks", Tx("This deck is empty."), Tx("Tap Edit list to add cards."));
+    const byName = new Map();
+    for (const [id, q] of Object.entries(d.cards || {})) { const c = BY.get(id); if (!c || !(+q > 0)) continue; const x = byName.get(c.key) || { c, q: 0 }; x.q += +q; byName.set(c.key, x); }
+    const rows = [...byName.values()].map(({ c, q }) => {
+      const g = galaPick(c), e = coll()[g.id] || {}, have = Math.min(q, ALWAYS_FOIL.has(g.rarity) ? (+e.n || 0) + (+e.f || 0) : +e.f || 0);
+      return { c, g, q, have, p: foilPrice(g) };
+    }).sort((a, b) => RANK[b.g.rarity] - RANK[a.g.rarity] || (b.p ?? 0) - (a.p ?? 0) || a.g.name.localeCompare(b.g.name));
+    const total = rows.reduce((s2, r) => s2 + (r.p || 0) * r.q, 0), toBuy = rows.reduce((s2, r) => s2 + (r.p || 0) * (r.q - r.have), 0);
+    const copies = rows.reduce((s2, r) => s2 + r.q, 0), owned = rows.reduce((s2, r) => s2 + r.have, 0);
+    const count = {}; for (const r of rows) count[r.g.rarity] = (count[r.g.rarity] || 0) + r.q;
+    const mix = Object.keys(RANK).filter((k) => count[k]).map((k) => `<span class="tag ${RANK[k] >= 6 ? "foil" : ""}">${esc(Tx(RAR_NAME[k]))} ${count[k]}</span>`).join(" ");
+    const card = (r) => {
+      const [a, b] = split(r.g.name.replace(/\s*\((Enchanted|Epic|Iconic|Alternate Art|Promo)\)\s*$/i, ""));
+      const left = r.q - r.have;
+      return `<figure class="gala-card" data-gala="${esc(r.g.id)}"><div class="gala-art">${thumb(r.g, "gala foil")}<span class="gala-q">${r.q}×</span></div>
+        <figcaption><b>${esc(a)}</b>${b ? `<span class="small muted">${esc(b)}</span>` : ""}
+          <span class="row" style="gap:4px;flex-wrap:wrap;margin-top:4px"><span class="tag ${RANK[r.g.rarity] >= 6 ? "foil" : ""}">${esc(Tx(RAR_NAME[r.g.rarity] || "Card"))}</span>${ALWAYS_FOIL.has(r.g.rarity) ? "" : `<span class="foil-word micro">foil</span>`}</span>
+          <span class="small">${r.p != null ? `<b class="money">${esc(money(r.p))}</b> ${esc(Tx("each"))}` : `<span class="muted">${Tx("no price")}</span>`}</span>
+          <span class="small ${left ? "muted" : "win"}" data-testid="gala-have">${left ? esc(Tx("You have {h} of {q}", { h: r.have, q: r.q })) : esc(Tx("You have them all"))}</span></figcaption>
+        ${left ? buyLinks(r.g, left) : ""}</figure>`;
+    };
+    return `<div class="notice" data-testid="gala-summary"><i class="ic i-sparkle"></i><span class="t"><b>${esc(Tx("Your deck with the rarest art of each card"))}</b>${esc(Tx("Same cards and rules: only the art changes. The rarest printing that exists (Iconic, Epic, Enchanted, Promo…), in foil."))}</span></div>
+      <div class="stats-row four" style="margin:var(--sp-3) 0" data-testid="gala-stats"><div class="stat"><b class="money">${moneySplit(total)}</b><span>${Tx("This version")}</span></div>
+        <div class="stat"><b class="money">${moneySplit(m.value)}</b><span>${Tx("Your list")}</span></div>
+        <div class="stat"><b>${owned}<small>/${copies}</small></b><span>${Tx("You already have")}</span></div>
+        <div class="stat"><b class="money">${moneySplit(toBuy)}</b><span>${Tx("To complete")}</span></div></div>
+      <p class="small" style="margin:0 0 var(--sp-3)">${mix}</p>
+      <div class="gala-grid" data-testid="gala-grid">${rows.map(card).join("")}</div>
+      <p class="small faint" style="margin-top:var(--sp-4)">${esc(Tx("Prices: {s}, foil. Tap a card to see it large and add the copies you have.", { s: priceSrc }))}</p>`;
   }
   function missingTab(d, m) {
     if (!m.known.length) return emptyBox("decks", Tx("This deck is empty."), Tx("Tap Edit list to add cards."));
