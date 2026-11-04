@@ -13,6 +13,7 @@
 <body>
 <script>/*@CLOUD@*/
 </script>
+<script>/*@DECKVIEW_JS@*/</script>
 <style>
 .buy-row { display: grid; gap: var(--sp-2); padding: var(--sp-3) 0 var(--sp-1); }
 .buy-row .buy-btns { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
@@ -81,23 +82,10 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
 .dtc-step b { min-width: 2ch; text-align: center; }
 .dtc-foot { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
 .dtc-foot .dtc-total { margin-right: auto; }
-/* Visão geral do deck */
+/* Visão geral do deck: the grid, numbers and curve are styled by deckview.js (shared with the shared-deck page) */
 .deck-ov { margin-top: var(--sp-5); }
 .deck-ov .hd { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
 .ov-own { margin: 0 0 var(--sp-3); }
-.ov-head { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: var(--sp-4); align-items: end; margin-bottom: var(--sp-4); }
-.ov-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-3); }
-.ov-stat { display: grid; gap: 2px; min-width: 0; }
-.ov-stat b { font: 800 1.35rem/1.1 var(--display); }
-.ov-stat span { font-size: var(--fs-small); color: var(--text-2); overflow-wrap: anywhere; }
-.ov-curve { margin: 0; display: grid; gap: var(--sp-2); }
-.ov-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: var(--sp-3); }
-.ov-card { width: 100%; border-radius: 8px; box-shadow: 0 6px 16px rgba(5,3,20,.35); cursor: zoom-in; }
-.ov-card .ov-q { position: absolute; z-index: 2; top: 5%; right: 5%; padding: 1px 7px; border-radius: 999px; background: rgba(19,16,42,.9); box-shadow: inset 0 0 0 1.5px rgba(236,192,97,.8); color: #ecc061; font-weight: 800; font-size: var(--fs-small); }
-.ov-card .ov-foil { position: absolute; z-index: 2; left: 5%; bottom: 6%; padding: 1px 6px; border-radius: 999px; background: linear-gradient(90deg, #f7d98b, #c9b6ff, #8fe0c0); color: #13102a; font: 800 10px/1.4 var(--font); letter-spacing: .04em; text-transform: uppercase; font-style: normal; }
-.ov-noart { position: absolute; inset: 0; z-index: 1; display: grid; align-content: center; justify-items: center; gap: 2px; padding: 12% 8%; text-align: center; background: linear-gradient(160deg, var(--surface-2), var(--ink, var(--line-strong))); font-size: var(--fs-small); font-weight: 700; line-height: 1.2; }
-.ov-noart b { font: 800 1.1rem var(--display); }
-.ov-noart small { font-weight: 500; color: var(--text-2); }
 #ovAll { margin-top: var(--sp-3); }
 .ov-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-4); }
 .ov-out { display: grid; gap: var(--sp-3); margin: var(--sp-3) 0; }
@@ -106,18 +94,8 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
 .ov-page figcaption { display: flex; gap: var(--sp-2); flex-wrap: wrap; justify-content: center; }
 .ov-fmt button { flex: 1 1 0; min-width: 0; white-space: normal; line-height: 1.25; height: auto; min-height: 44px; padding-top: 6px; padding-bottom: 6px; }
 .ov-fmt small { display: block; opacity: .7; font-weight: 500; }
-.ov-note { margin: var(--sp-2) 0 0; }
-@media (max-width: 760px) { .ov-head { grid-template-columns: 1fr; gap: var(--sp-3); } }
-/* phone: the numbers as one wrapped line each ("60 Cartas"), most important first, and a lower curve */
-@media (max-width: 640px) {
-  .ov-stats { display: flex; flex-wrap: wrap; gap: 4px var(--sp-3); }
-  .ov-stat { display: inline-flex; align-items: baseline; gap: 5px; }
-  .ov-stat b { font-size: 1.05rem; }
-  .ov-curve .bars { height: 92px; padding-top: 14px; }
-  .ov-curve .bars-x { margin-top: 2px; }
-  .ov-own { margin-bottom: var(--sp-2); }
-}
-@media (max-width: 420px) { .ov-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-2); } .ov-card .ov-q { font-size: 11px; padding: 0 5px; } .ov-actions .btn { flex: 1 1 100%; } }
+@media (max-width: 640px) { .ov-own { margin-bottom: var(--sp-2); } }
+@media (max-width: 420px) { .ov-actions .btn { flex: 1 1 100%; } }
 </style>
 
 <main class="page" id="page">
@@ -275,6 +253,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     let best = null; for (const x of printings(c)) { const y = one(x.id); if (y != null && (best == null || y < best)) best = y; } return best; };
   const fromMyp = (c) => BR?.cards?.[c.id] != null || (one(c.id) == null && printings(c).some((x) => BR?.cards?.[x.id] != null));
   const imgUrl = (c) => (c.img ? `../lorcana-card-images/${encodeURI(c.img).replace(/'/g, "%27")}` : "");
+  const DV = window.INKWELL_DECKVIEW({ esc, Tx, split, inksOf, imgUrl, setNo: (code) => setNo(code), nameKey, LOC }); DV.style();
   const thumb = (c, cls = "") => `<span class="thumb ${cls}" data-card="${esc(c.id)}" data-ink="${(inksOf(c)[0] || "steel").toLowerCase()}">${c.img ? `<img src="${imgUrl(c)}" alt="" loading="lazy" decoding="async" onerror="this.remove()">` : ""}</span>`;
   // The Inkwell app's optimizer, copied in at build time (tools/build_site_decks.py)
   const computeDeckPortfolioPlan = /*@PORTFOLIO@*/;
@@ -720,35 +699,8 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
   // the featured deck (no stable address yet) or to an editor.
   const OV_KEY = "inkwell-deck-overview", OV_PREVIEW = 12, ovFull = new Set();
   const ovOpen = () => { try { return localStorage.getItem(OV_KEY) !== "closed"; } catch { return true; } };
-  function deckSummary(m) {
-    const s = { total: 0, distinct: 0, nonInk: 0, char: 0, action: 0, song: 0, item: 0, location: 0, avg: 0, curve: Array(7).fill(0) };
-    const names = new Set(); let cost = 0;
-    for (const { c, q } of m.known) {
-      s.total += q; names.add(c.key); cost += c.cost * q;
-      if (!c.inkable) s.nonInk += q;
-      if (c.type === "Character") s.char += q;
-      else if (c.type === "Location") s.location += q;
-      else if (c.type === "Action" || c.type === "Song" || c.song) { s.action += q; if (c.song) s.song += q; }   // a song is an action: counted once, under actions
-      else s.item += q;
-      s.curve[Math.min(7, Math.max(1, c.cost)) - 1] += q;
-    }
-    s.distinct = names.size; s.avg = s.total ? cost / s.total : 0;
-    return s;
-  }
-  const printNo = (c) => parseInt(String(c.num || "").replace(/\D+/g, ""), 10) || 0;
-  const printLabel = (c) => `${c.set} #${c.num}`;
-  // cost, then name, then printing (set, number)
-  const ovSorted = (m) => m.known.slice().sort((a, b) => a.c.cost - b.c.cost || a.c.name.localeCompare(b.c.name)
-    || setNo(a.c.set) - setNo(b.c.set) || String(a.c.set).localeCompare(String(b.c.set)) || printNo(a.c) - printNo(b.c) || a.id.localeCompare(b.id));
-  // "4 Stitch - Rock Star (LOR1-1)": the list Copiar lista already makes, plus which printing; Importar reads it back
-  // with the same printings (other sites ignore or drop the part in brackets)
-  const deckListText = (m) => ovSorted(m).map((e) => `${e.q} ${e.c.name} (${e.c.id})`).join("\n");
-  function ovTile(e) {
-    const c = e.c, foil = ALWAYS_FOIL.has(c.rarity), [a, b] = split(c.name);
-    return `<span class="thumb ov-card" data-card="${esc(c.id)}" data-ink="${(inksOf(c)[0] || "steel").toLowerCase()}" role="img" aria-label="${esc(`${e.q}× ${c.name} · ${printLabel(c)}${foil ? " · " + Tx("foil") : ""}`)}">${c.img
-      ? `<img src="${imgUrl(c)}" alt="" loading="lazy" decoding="async" onerror="this.remove()">`
-      : `<span class="ov-noart"><b>${c.cost}</b><span>${esc(a)}</span>${b ? `<small>${esc(b)}</small>` : ""}</span>`}<b class="ov-q">${e.q}×</b>${foil ? `<i class="ov-foil" title="${esc(Tx("This printing exists only in foil"))}">${Tx("Foil")}</i>` : ""}</span>`;
-  }
+  // the rules shared with the shared-deck page (src/site/deckview.js): numbers, order, foil, list text, grid
+  const deckSummary = (m) => DV.summary(m.known), ovSorted = (m) => DV.sorted(m.known), deckListText = (m) => DV.listText(m.known), ovTile = DV.tile, printLabel = DV.printLabel;
   function ownerLine(m) {
     if (!me || !prof() || prof().shared) return "";
     const by = new Map(); for (const e of m.known) by.set(e.c.key, { c: e.c, q: (by.get(e.c.key)?.q || 0) + e.q });
@@ -757,24 +709,17 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
   }
   function overview(d, m) {
     if (!m.known.length) return "";
-    const s = deckSummary(m), rows = ovSorted(m), open = ovOpen(), top = Math.max(1, ...s.curve);
+    const s = deckSummary(m), rows = ovSorted(m), open = ovOpen();
     const compact = !ovFull.has(d.id) && rows.length > OV_PREVIEW && matchMedia("(max-width: 640px)").matches;
-    const stat = (v, l, k) => `<div class="ov-stat" data-testid="ov-${k}"><b>${v}</b><span>${esc(l)}</span></div>`;
     const unknown = m.entries.length - m.known.length;
     return `<section class="card deck-ov" id="deckOv" data-testid="deck-overview" aria-labelledby="ovT">
       <div class="hd"><h3 id="ovT">${Tx("Deck overview")}</h3><button type="button" class="btn ghost small" id="ovToggle" aria-expanded="${open}" aria-controls="ovBody">${Tx(open ? "Hide" : "Show")}</button></div>
       <div id="ovBody"${open ? "" : " hidden"}>
         ${ownerLine(m)}
-        <div class="ov-head">
-          <div class="ov-stats">${stat(s.total, Tx("Cards"), "total")}${stat(s.char, Tx("Characters"), "char")}${stat(s.action, s.song ? Tx("Actions ({n} songs)", { n: s.song }) : Tx("Actions"), "action")}${stat(s.nonInk, Tx("Non-inkable"), "noink")}
-            ${stat(s.item, Tx("Items"), "item")}${stat(s.location, Tx("Locations"), "location")}${stat(s.distinct, Tx("Distinct"), "distinct")}</div>
-          <figure class="ov-curve" data-testid="ov-curve"><figcaption class="small muted">${esc(Tx("Cost curve · average {a}", { a: s.avg.toLocaleString(LOC, { maximumFractionDigits: 1 }) }))}</figcaption>
-            <div class="bars" style="--n:7">${s.curve.map((v) => `<div><b>${v}</b><i style="--v:${Math.round((v / top) * 100)}%"></i></div>`).join("")}</div>
-            <div class="bars-x" style="--n:7">${[1, 2, 3, 4, 5, 6, "7+"].map((x) => `<span>${x}</span>`).join("")}</div></figure>
-        </div>
+        ${DV.head(s)}
         <div class="ov-grid" id="ovGrid" data-testid="ov-grid">${(compact ? rows.slice(0, OV_PREVIEW) : rows).map(ovTile).join("")}</div>
         ${compact ? `<button type="button" class="btn block" id="ovAll" data-testid="ov-all">${esc(Tx("See the whole deck (+{n})", { n: rows.length - OV_PREVIEW }))}</button>` : ""}
-        ${rows.some((e) => ALWAYS_FOIL.has(e.c.rarity)) ? `<p class="small faint ov-note" data-testid="ov-foil-note">${esc(Tx("Foil: only on printings that exist only in foil. A deck does not record the finish of each copy."))}</p>` : ""}
+        ${DV.foilNote(rows)}
         ${unknown ? `<p class="small faint">${esc(Tx("{n} cards outside the catalog are not shown.", { n: unknown }))}</p>` : ""}
         <div class="ov-actions"><button type="button" class="btn" id="ovCopy" data-testid="ov-copy"><i class="ic i-list"></i>${Tx("Copy list")}</button>
           <button type="button" class="btn primary" id="ovImg" data-testid="ov-image-open"><i class="ic i-send"></i>${Tx("Share deck image")}</button></div>
@@ -1145,7 +1090,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
   const GALA_TAB = "✨ Fairy Godmother";
   const RANK = { I: 9, EP: 8, E: 7, P: 6, L: 5, SR: 4, R: 3, U: 2, C: 1 };   // Iconic > Epic > Enchanted > Promo > Legendary > …
   const RAR_NAME = { I: "Iconic", EP: "Epic", E: "Enchanted", P: "Promo", L: "Legendary", SR: "Super rare", R: "Rare", U: "Uncommon", C: "Common" };
-  const ALWAYS_FOIL = new Set(["I", "EP", "E", "P"]);
+  const ALWAYS_FOIL = DV.ALWAYS_FOIL;   // src/site/deckview.js
   const galaOk = (x) => RANK[x.rarity] && !/-OS$/.test(x.id);   // no oversized, puzzle inserts or quest cards
   const foilPrice = (x) => { const q = PRICES[x.id] || {}; return q.fl ?? q.f ?? q.nl ?? q.n ?? null; };
   // a foil with no price of its own is valued at the normal price, and always says so (same rule as Coleção and Preços)
