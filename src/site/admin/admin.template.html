@@ -151,6 +151,27 @@
   const EVENT_NAME = { page_view: ["Páginas vistas", "Pages viewed"], try_deck_started: ["Começou a testar um deck", "Started trying a deck"], deck_sample_loaded: ["Carregou o deck de exemplo", "Loaded the example deck"],
     signup_started: ["Pediu o código de entrada", "Asked for the sign-in code"], signup_completed: ["Criou a conta", "Created the account"], deck_saved: ["Salvou um deck", "Saved a deck"],
     profile_started: ["Começou o perfil", "Started the profile"], profile_saved: ["Salvou o perfil", "Saved the profile"], collection_started: ["Começou a coleção", "Started the collection"] };
+  // the try-a-deck funnel, from the same numbers (no new query). The steps are browser events counted in visits (tabs,
+  // not people) and the rates are ratios of those counts, not the same tabs followed through; next to them, what the
+  // database knows (accounts created, new accounts with a deck: real, cannot be inflated).
+  const FUNNEL = [["try_deck_started", "Deck experimentado", "Tried a deck"], ["signup_started", "Cadastro iniciado", "Sign-up started"],
+    ["signup_completed", "Cadastro concluído", "Sign-up completed"], ["deck_saved", "Deck salvo", "Deck saved"]];
+  function funnelHtml(m) {
+    const ev = new Map((m.events || []).map((e) => [e.name, e]));
+    let prev = null;
+    const rows = FUNNEL.map(([k, pt, en]) => {
+      const e = ev.get(k), v = e ? +e.visits || 0 : null;
+      // a rate only when both steps were counted, the step before is not zero and this one is not bigger
+      const rate = prev != null && v != null && prev > 0 && v <= prev ? Math.round((v / prev) * 100) + "%" : "—";
+      prev = v;
+      return `<tr data-fn="${k}"><td>${esc(PP(pt, en))}</td><td>${v == null ? "—" : num(v)}</td><td>${e ? num(e.count) : "—"}</td><td>${rate}</td></tr>`;
+    }).join("");
+    return `<div class="st-wrap" style="margin-top:var(--sp-3)" data-testid="funnel"><table class="st-table"><caption class="small" style="text-align:left;padding-bottom:var(--sp-2)"><b>${PP("Funil: experimentar um deck → deck salvo", "Funnel: try a deck → deck saved")}</b> · <span class="muted">${PP("eventos do navegador", "browser events")}</span></caption>
+      <thead><tr><th>${PP("Etapa", "Step")}</th><th>${PP("Visitas (abas)", "Visits (tabs)")}</th><th>${PP("Vezes", "Times")}</th><th>${PP("Taxa aproximada (sobre a etapa anterior)", "Approximate rate (of the step before)")}</th></tr></thead><tbody>${rows}</tbody></table>
+      <p class="small muted" style="margin:var(--sp-2) 0 0" data-testid="funnel-db">${esc(PP(`No banco (dados reais): ${num(m.accounts_created)} contas criadas` + (m.new_with_deck != null ? `, ${num(m.new_with_deck)} delas com deck salvo` : "") + ` · membros ativos (por conta): ${num(m.active_7d)} em 7 dias, ${num(m.active_30d)} em 30 dias.`,
+        `In the database (real data): ${num(m.accounts_created)} accounts created` + (m.new_with_deck != null ? `, ${num(m.new_with_deck)} of them with a saved deck` : "") + ` · active members (by account): ${num(m.active_7d)} in 7 days, ${num(m.active_30d)} in 30 days.`))}</p>
+      <p class="micro muted" style="margin:var(--sp-1) 0 0">${PP("Visitas são abas, não pessoas. A taxa é aproximada: divide o total de uma etapa pelo da anterior no período. Ninguém é acompanhado de uma etapa para a outra (o cadastro pode acontecer em outra aba ou aparelho). Sem taxa quando a etapa anterior é zero ou menor que esta.", "Visits are tabs, not people. The rate is approximate: one step's total divided by the step before, in the period. No one is followed from one step to the next (sign-up can happen in another tab or device). No rate when the step before is zero or smaller than this one.")}</p></div>`;
+  }
   function metricsHtml() {
     if (metricsErr) return `<section class="card" data-testid="metrics" style="margin-bottom:var(--sp-4)"><b>${PP("Métricas do produto", "Product metrics")}</b><p class="small muted" data-testid="metrics-error" style="margin:var(--sp-2) 0 0">${esc(metricsErr)}</p></section>`;
     if (!metrics) return "";
@@ -162,6 +183,7 @@
         ${kpi(m.accounts_created, PP("Contas criadas", "Accounts created"), "accounts", m.new_with_profile != null ? PP(`${num(m.new_with_profile)} com perfil · ${num(m.new_with_deck)} com deck`, `${num(m.new_with_profile)} with a profile · ${num(m.new_with_deck)} with a deck`) : "")}
         ${kpi(m.active_7d, PP("Membros ativos em 7 dias", "Members active in 7 days"), "active7")}
         ${kpi(m.active_30d, PP("Membros ativos em 30 dias", "Members active in 30 days"), "active30", PP(`${num(m.members)} membros no total`, `${num(m.members)} members in all`))}</div>
+      ${funnelHtml(m)}
       <div class="st-wrap" style="margin-top:var(--sp-3)"><table class="st-table" data-testid="metrics-events"><thead><tr><th>${PP("Evento", "Event")}</th><th>${PP("Vezes", "Times")}</th><th>${PP("Visitas", "Visits")}</th><th>${PP("Sem conta", "Signed out")}</th><th>${PP("Com conta", "Signed in")}</th></tr></thead>
         <tbody>${(m.events || []).map((e) => `<tr data-ev="${esc(e.name)}"><td>${esc(PP(...(EVENT_NAME[e.name] || [e.name, e.name])))} <code class="micro muted">${esc(e.name)}</code></td><td>${num(e.count)}</td><td>${num(e.visits)}</td><td>${num(e.anon)}</td><td>${num(e.signed)}</td></tr>`).join("")}</tbody></table></div>
       <details style="margin-top:var(--sp-3)"><summary class="small">${PP("Como contamos", "How we count")}</summary><ul class="small muted" style="margin:var(--sp-2) 0 0;padding-left:1.2em">
