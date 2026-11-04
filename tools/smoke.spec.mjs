@@ -169,9 +169,13 @@ test('shared reads: asked again after a profile change; nothing after sign out; 
     if (path === 'rpc/my_profile') { asked++; return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ display_name: who === B ? 'Conta B' : name }) }); }
     if (path === 'rpc/save_profile') { name = 'Depois'; return r.fulfill({ status: 204, body: '' }); }
     if (path.startsWith('object/')) return r.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+    // an existing collection: with none, the Feed creates one (a write), which rightly clears the shared answers and
+    // made this test depend on timing (CI, 04/11)
+    if (path === 'inkwell_profiles') return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ profile: 'principal', collection: {}, decks: [] }]) });
     return r.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
   });
   await page.goto(new URL('feed/', ROOT).href);
+  await page.waitForLoadState('networkidle');                                                    // the page has finished its own calls
   const name1 = () => page.evaluate(() => window.INKWELL_CLOUD.shared('rpc/my_profile').then((p) => p.display_name, (e) => 'erro: ' + e.code));
   expect(await name1()).toBe('Antes');
   const n0 = asked;
