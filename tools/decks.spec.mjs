@@ -631,32 +631,40 @@ test('prices: when the price file does not load, values show — (never R$ 0) an
 
 // ---------- Pacote 1, item 5: the whole deck into the collection ----------
 // A fake database that remembers the collection: apply_collection_delta changes it (never below zero, like the real one).
-async function collDb(page, { extraDecks = [], collection = null, apply = 'ok', delay = 0, undoFn = false } = {}) {
+async function collDb(page, { extraDecks = [], collection = null, apply = 'ok', delay = 0, undoFn = true } = {}) {
   const calls = await setup(page, { extraDecks });
   const db = fixtures(); db.profiles[0].decks.push(...extraDecks);
   if (collection) db.profiles[0].collection = collection;
-  const st = { applied: [], tracked: [], db, mode: apply };
-  await page.route('**/rest/v1/inkwell_profiles**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(db.profiles) }));
+  // a fake database that behaves like supabase/collection_undo.sql: operations by id, added once, undone once
+  const st = { applied: [], addCalls: [], undone: [], undoCalls: [], ops: new Map(), tracked: [], db, mode: apply };
+  const col = () => db.profiles[0].collection;
+  const json = (r, v, status = 200) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(v) });
+  const pgErr = (r, msg) => json(r, { code: 'P0001', message: msg }, 400);
+  await page.route('**/rest/v1/inkwell_profiles**', (r) => json(r, db.profiles));
   await page.route('**/rest/v1/rpc/track', (r) => { st.tracked.push(JSON.parse(r.request().postData()).p_name); return r.fulfill({ status: 204, body: '' }); });
-  await page.route('**/rest/v1/rpc/apply_collection_delta', async (r) => {
+  await page.route('**/rest/v1/rpc/add_collection_op', async (r) => {
     const b = JSON.parse(r.request().postData());
-    st.applied.push(b.p_delta);
+    st.addCalls.push(b);
+    if (!undoFn) return json(r, { code: 'PGRST202', message: 'Could not find the function' }, 404);
     if (delay) await new Promise((res) => setTimeout(res, delay));
-    if (st.mode === 'fail') return r.fulfill({ status: 400, contentType: 'application/json', body: '{"message":"bad delta"}' });
-    const col = db.profiles[0].collection;
-    for (const x of b.p_delta) { const e = col[x.card_id] || (col[x.card_id] = { n: 0, f: 0 }); const k = x.foil ? 'f' : 'n'; e[k] = Math.max(0, (e[k] || 0) + x.qty); }
+    if (st.mode === 'fail') return pgErr(r, 'bad delta');
+    if (st.ops.has(b.p_op)) return json(r, { status: 'already_applied' });
+    for (const x of b.p_delta) { const e = col()[x.card_id] || (col()[x.card_id] = { n: 0, f: 0 }); const k = x.foil ? 'f' : 'n'; e[k] = (e[k] || 0) + x.qty; }
+    st.ops.set(b.p_op, { delta: b.p_delta, undone: false }); st.applied.push(b.p_delta);
     if (st.mode === 'lost') { st.mode = 'ok'; return r.abort('failed'); }   // saved, but the answer never arrives
-    return r.fulfill({ status: 204, body: '' });
+    return json(r, { status: 'applied' });
   });
-  // supabase/collection_undo.sql: installed (checks and takes out in one go) or not yet (404, as PostgREST answers)
-  st.undone = [];
-  await page.route('**/rest/v1/rpc/undo_collection_delta', (r) => {
-    if (!undoFn) return r.fulfill({ status: 404, contentType: 'application/json', body: '{"code":"PGRST202","message":"Could not find the function"}' });
-    const b = JSON.parse(r.request().postData()), col = db.profiles[0].collection;
-    st.undone.push(b.p_delta);
-    if (b.p_delta.some((x) => ((col[x.card_id] || {})[x.foil ? 'f' : 'n'] || 0) < x.qty)) return r.fulfill({ status: 400, contentType: 'application/json', body: '{"code":"P0001","message":"collection_changed"}' });
-    for (const x of b.p_delta) col[x.card_id][x.foil ? 'f' : 'n'] -= x.qty;
-    return r.fulfill({ status: 204, body: '' });
+  await page.route('**/rest/v1/rpc/undo_collection_op', (r) => {
+    const b = JSON.parse(r.request().postData()), o = st.ops.get(b.p_op);
+    st.undoCalls.push(b);
+    if (!undoFn) return json(r, { code: 'PGRST202', message: 'Could not find the function' }, 404);
+    if (!o) return pgErr(r, 'op_not_found');
+    if (o.undone) return pgErr(r, 'already_undone');
+    if (o.delta.some((x) => ((col()[x.card_id] || {})[x.foil ? 'f' : 'n'] || 0) < x.qty)) return pgErr(r, 'collection_changed');
+    for (const x of o.delta) col()[x.card_id][x.foil ? 'f' : 'n'] -= x.qty;
+    o.undone = true; st.undone.push(o.delta);
+    if (st.undoMode === 'lost') { st.undoMode = 'ok'; return r.abort('failed'); }
+    return json(r, { status: 'undone' });
   });
   return st;
 }
@@ -768,7 +776,7 @@ test('deck to collection: a double tap sends once; a lost answer is checked, not
   await page.waitForTimeout(600);
   expect(st.applied.length).toBe(1);
   await expect.poll(() => st.tracked.filter((n) => n === 'deck_added_to_collection').length).toBe(1);
-  // the save goes through but its answer is lost: the page looks, sees it all there, and does not send it again
+  // the save goes through but its answer is lost: sent once more with the same operation id, the database adds nothing more
   st.mode = 'lost'; st.applied.length = 0;
   await page.getByTestId('deck-to-coll').click();
   await page.getByTestId('dtc-missing').check();
@@ -777,7 +785,9 @@ test('deck to collection: a double tap sends once; a lost answer is checked, not
   await expect(page.getByTestId('dtc')).toBeHidden();
   await expect(page.locator('#toast')).toContainText('Cartas adicionadas à coleção.');
   await page.waitForTimeout(300);
-  expect(st.applied.length).toBe(1);
+  expect(st.applied.length).toBe(1);                                                               // added once
+  const lostOp = st.addCalls.at(-1).p_op;
+  expect(st.addCalls.filter((c) => c.p_op === lostOp).length).toBe(2);                             // sent again with the same id
   expect(st.db.profiles[0].collection['LOR10-1']).toEqual({ n: 10, f: 0 });                         // 2 + 4 + 4, not + 8 more
 });
 
@@ -813,17 +823,45 @@ test('deck to collection: Undo within 10 s takes out exactly what was added; lat
   await expect(page.locator('#toast')).toBeHidden();
 });
 
-test('deck to collection: without undo_collection_delta in the database, Undo says so and changes nothing (no weaker fallback)', async ({ page }) => {
-  const st = await collDb(page);                                                                   // the function is not installed (404)
+test('deck to collection: without the functions of collection_undo.sql, nothing is added and it says so (no weaker way)', async ({ page }) => {
+  const st = await collDb(page, { undoFn: false });
+  await page.goto(BASE + '?deck=deck-a');
+  await page.getByTestId('deck-to-coll').click();
+  await page.getByTestId('dtc-go').click();
+  await expect(page.getByTestId('dtc-err')).toHaveText('Adicionar o deck inteiro não está disponível agora. Nada foi alterado.');
+  expect(st.applied).toEqual([]);
+  expect(st.db.profiles[0].collection['LOR10-1']).toEqual({ n: 2, f: 0 });
+});
+
+test('deck to collection: one operation id per confirmation; the same undo again (even straight through the API) takes nothing; a lost undo answer is not a second undo', async ({ page }) => {
+  const st = await collDb(page);
   await page.goto(BASE + '?deck=deck-a');
   await page.getByTestId('deck-to-coll').click();
   await page.getByTestId('dtc-missing').check();
   await page.getByTestId('dtc-go').click();
   await expect(page.locator('#undo')).toBeVisible();
+  const op1 = st.addCalls[0].p_op;
+  expect(op1).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
   await page.locator('#undo').click();
-  await expect(page.locator('#toast')).toContainText('O Desfazer não está disponível agora. Nada foi alterado; você pode retirar as cartas em Coleção.');
-  expect(st.applied.length).toBe(1);                                                               // only the add: no apply with negative numbers
-  expect(st.db.profiles[0].collection['LOR10-1']).toEqual({ n: 4, f: 0 });
+  await expect(page.locator('#toast')).toContainText('Desfeito');
+  expect(st.db.profiles[0].collection['LOR10-1']).toEqual({ n: 2, f: 0 });
+  // the same undo again, straight to the API: refused, the 2 Baloo you had stay
+  const again = await page.evaluate((op) => window.INKWELL_CLOUD.api('rpc/undo_collection_op', { method: 'POST', body: { p_op: op } }).then(() => 'ok', (e) => e.why || e.message), op1);
+  expect(again).toContain('already_undone');
+  expect(st.db.profiles[0].collection['LOR10-1']).toEqual({ n: 2, f: 0 });
+  // a new confirmation: a new id; its undo answer is lost: sent once more with the same id → already_undone → taken as done, once
+  await page.getByTestId('deck-to-coll').click();
+  await page.getByTestId('dtc-missing').check();
+  await page.getByTestId('dtc-go').click();
+  await expect(page.locator('#undo')).toBeVisible();
+  const op2 = st.addCalls.at(-1).p_op;
+  expect(op2).not.toBe(op1);
+  st.undoMode = 'lost';
+  await page.locator('#undo').click();
+  await expect(page.locator('#toast')).toContainText('Desfeito: as cartas adicionadas foram retiradas.');
+  expect(st.undoCalls.filter((c) => c.p_op === op2).length).toBe(2);
+  expect(st.undone.length).toBe(2);                                                                // each operation undone once
+  expect(st.db.profiles[0].collection['LOR10-1']).toEqual({ n: 2, f: 0 });
 });
 
 for (const w of [320, 360, 390]) {
