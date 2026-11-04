@@ -657,16 +657,20 @@ window.INKWELL_CLOUD = (() => {
   }
   const bar = document.createElement("header");
   bar.className = "appbar";
+  // the other language, one tap away: the US flag switches to English, the Brazilian flag to Portuguese
+  const FLAG_US = '<svg viewBox="0 0 30 20" width="24" height="16" aria-hidden="true"><rect width="30" height="20" fill="#b22234"/><g fill="#fff">' + [1, 3, 5, 7, 9, 11].map((i) => `<rect y="${(i * 20) / 13}" width="30" height="${20 / 13}"/>`).join("") + '</g><rect width="13" height="10.77" fill="#3c3b6e"/><g fill="#fff">' + [[2, 2], [5, 2], [8, 2], [11, 2], [3.5, 4.5], [6.5, 4.5], [9.5, 4.5], [2, 7], [5, 7], [8, 7], [11, 7], [3.5, 9.3], [6.5, 9.3], [9.5, 9.3]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".7"/>`).join("") + '</g></svg>';
+  const FLAG_BR = '<svg viewBox="0 0 30 20" width="24" height="16" aria-hidden="true"><rect width="30" height="20" fill="#009c3b"/><path d="M15 2.2 27.6 10 15 17.8 2.4 10z" fill="#ffdf00"/><circle cx="15" cy="10" r="4.6" fill="#002776"/><path d="M10.6 9.1c2.9-.6 6.2-.2 8.8 1.1" stroke="#fff" stroke-width=".8" fill="none"/></svg>';
+  const flagBtn = `<button type="button" class="btn ghost icon flag-btn" id="iwFlag" data-testid="lang-flag" lang="${pt ? "en" : "pt-BR"}" aria-label="${pt ? "Switch to English" : "Mudar para português"}" title="${pt ? "English" : "Português"}">${pt ? FLAG_US : FLAG_BR}</button>`;
   bar.innerHTML = `<div class="appbar-in"><a class="brand" href="../feed/"><img src="../ink/logo-coin.png" alt="" width="32" height="32">Inkwell</a>
     <nav class="sections" aria-label="${T("Seções", "Sections")}">${NAV.map(([k, href, label, ic]) => `<a href="${href}"${cur(k)} data-iw="${k}"><i class="ic i-${ic}"></i>${label}${k === "trades" ? '<span class="count" data-trades-count hidden></span>' : ""}</a>`).join("")}</nav>
     <div class="end">
       <button type="button" class="btn ghost icon" id="iwTheme" aria-pressed="${theme === "noite"}" aria-label="${theme === "noite" ? T("Usar o tema claro", "Use the light theme") : T("Usar o tema escuro", "Use the dark theme")}"><i class="ic ${theme === "noite" ? "i-sun" : "i-moon"}"></i></button>
       <a class="btn ghost counter-btn" href="../counter/" aria-label="${T("Abrir o Contador", "Open the Counter")}"><i class="ic i-counter"></i><span>${T("Contador", "Counter")}</span></a>
+      ${flagBtn}
       ${me ? `<button type="button" class="btn ghost icon" id="iwFind" aria-label="${T("Buscar pessoas e comunidades", "Search people and communities")}" aria-haspopup="dialog" aria-expanded="false" title="${T("Buscar", "Search")} ( / )"><i class="ic i-search"></i></button>` : ""}
       ${me ? `<button type="button" class="btn ghost icon bell-btn" id="iwBell" aria-label="${T("Notificações", "Notifications")}" aria-haspopup="menu" aria-expanded="false" hidden><i class="ic i-bell"></i><span class="count" id="iwBellN" hidden></span></button>` : ""}
       ${me ? `<button type="button" class="av-btn" id="iwAcct" aria-label="${T("Sua conta", "Your account")}" aria-haspopup="menu" aria-expanded="false"><span class="av" id="iwAv">${esc((me.email || "?")[0].toUpperCase())}</span><span class="count iw-badge" id="iwBadge" hidden></span></button>`
-        : `<button type="button" class="btn ghost icon" id="iwLangBtn" aria-label="${T("Aparência e idioma", "Appearance and language")}" aria-haspopup="menu" aria-expanded="false"><i class="ic i-globe"></i></button>
-           <button type="button" class="btn small" id="iwSignIn">${T("Entrar", "Sign in")}</button>`}
+        : `<button type="button" class="btn small" id="iwSignIn">${T("Entrar", "Sign in")}</button>`}
     </div></div>`;
   document.body.prepend(bar);
   const tabs = document.createElement("nav");
@@ -760,6 +764,7 @@ window.INKWELL_CLOUD = (() => {
     ${langSeg()}
     <div class="menu-sep"></div>
     <button type="button" class="menu-item" role="menuitem" data-signout><i class="ic i-logout"></i>${T("Sair", "Sign out")}</button>`));
+  $("iwFlag")?.addEventListener("click", () => { try { localStorage.setItem("inkwell-lang", pt ? "en" : "pt"); } catch { /* */ } location.reload(); });
   $("iwLangBtn")?.addEventListener("click", (e) => openMenu(e.currentTarget, `<div class="menu-label">${T("Idioma", "Language")}</div>
     ${[["pt", "Português"], ["en", "English"]].map(([k, l]) => `<button type="button" class="menu-item" role="menuitemradio" aria-checked="${k === lang}" data-lang-pick="${k}">${l}${k === lang ? '<i class="ic i-check" style="margin-left:auto;color:var(--text)"></i>' : ""}</button>`).join("")}
 `, "sm"));
