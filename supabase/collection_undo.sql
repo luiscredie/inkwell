@@ -14,8 +14,23 @@
 -- check and the removal cannot be split by a
 -- change from another device.
 --
+-- Counts, not copies: a collection keeps how
+-- many normal and foil copies of each card
+-- there are (no id per physical copy), so
+-- the undo takes out N of that card and
+-- finish, whichever copies those are.
+--
+-- The trigger inkwell_profiles_collection_
+-- added only stamps increases: the undo adds
+-- no stamp; cards added and then undone may
+-- still show as "added recently" in Coleção
+-- (as after any manual removal).
+--
 -- New: public.undo_collection_delta(text,
 --   jsonb). Nothing else changes.
+-- Production gives anon EXECUTE on new
+-- functions by default: the revoke below
+-- takes it back (do not drop it).
 -- Safe to run again.
 
 create or replace function

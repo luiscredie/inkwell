@@ -55,3 +55,29 @@ begin
 end $function$;
 revoke all on function public.apply_collection_delta(text, jsonb) from public, anon;
 grant execute on function public.apply_collection_delta(text, jsonb) to authenticated;
+-- production's trigger on inkwell_profiles (read 04/11/2026): stamps cards whose count went up
+create table if not exists public.collection_added (user_id uuid not null, profile text not null, card_id text not null,
+  added_at timestamptz not null default now(), qty int, primary key (user_id, profile, card_id));
+create or replace function public.stamp_collection_added()
+ returns trigger language plpgsql security definer set search_path to '' as $function$
+begin
+  if new.data->'collection' is not distinct from old.data->'collection' then return new; end if;
+  insert into public.collection_added (user_id, profile, card_id, added_at, qty)
+  select new.user_id, new.profile, n.key,
+         now(),
+         (coalesce((n.value->>'n')::int, 0) + coalesce((n.value->>'f')::int, 0))
+           - (coalesce((o.value->>'n')::int, 0) + coalesce((o.value->>'f')::int, 0))
+    from jsonb_each(case when jsonb_typeof(new.data->'collection') = 'object' then new.data->'collection' else '{}'::jsonb end) n
+    left join jsonb_each(case when jsonb_typeof(old.data->'collection') = 'object' then old.data->'collection' else '{}'::jsonb end) o on o.key = n.key
+   where jsonb_typeof(n.value) = 'object'
+     and length(n.key) between 1 and 40
+     and coalesce((n.value->>'n')::int, 0) + coalesce((n.value->>'f')::int, 0)
+         > coalesce((o.value->>'n')::int, 0) + coalesce((o.value->>'f')::int, 0)
+  on conflict (user_id, profile, card_id) do update set added_at = excluded.added_at, qty = excluded.qty;
+  return new;
+exception when others then
+  return new;
+end $function$;
+drop trigger if exists inkwell_profiles_collection_added on public.inkwell_profiles;
+create trigger inkwell_profiles_collection_added after update of data on public.inkwell_profiles
+  for each row execute function public.stamp_collection_added();

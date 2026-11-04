@@ -12,12 +12,15 @@ trap 'dropdb --if-exists "$DB" >/dev/null 2>&1 || true' EXIT
 A=aaaaaaaa-0000-4000-8000-000000000001; B=aaaaaaaa-0000-4000-8000-000000000002
 "${P[@]}" -f "$ROOT/tools/fixtures/collection_delta.prod-2026-11-04.sql"
 "${P[@]}" <<SQL
+delete from public.collection_added;
 delete from public.inkwell_profiles;
 insert into auth.users (id, email) values ('$A', 'a@test.invalid'), ('$B', 'b@test.invalid') on conflict (id) do nothing;
 insert into public.inkwell_profiles (user_id, profile, data, revision) values
   ('$A', 'principal', '{"collection": {"LOR10-1": {"n": 2, "f": 0}, "LOR1-216": {"n": 0, "f": 1}}}', 1),
   ('$B', 'principal', '{"collection": {"LOR10-1": {"n": 9, "f": 0}}}', 1);
 SQL
+# like production: new functions in public are executable by anon and authenticated by default (pg_default_acl)
+"${P[@]}" -c "alter default privileges in schema public grant execute on functions to anon, authenticated"
 "${P[@]}" -f "$ROOT/supabase/collection_undo.sql"
 "${P[@]}" -f "$ROOT/supabase/collection_undo.sql"   # runs again: same result
 echo "ok   runs twice"
@@ -36,6 +39,10 @@ r=$(rev $A); as $A "select public.undo_collection_delta('principal', '$UNDO')"
 [ "$(col $A LOR10-1 n)/$(col $A LOR1-216 f)" = "2/1" ] || { echo "FAIL undo"; exit 1; }
 [ "$(rev $A)" = "$((r + 1))" ] || { echo "FAIL revision"; exit 1; }
 echo "ok   undo takes out exactly what was added (6→2 normal, 2→1 foil) and bumps the revision"
+# production's trigger: the add stamped the cards as added; the undo (a decrease) adds no stamp and does not fail
+[ "$(q "select count(*) from public.collection_added where user_id = '$A'")" = "2" ] || { echo "FAIL stamps after add"; exit 1; }
+[ "$(q "select qty from public.collection_added where user_id = '$A' and card_id = 'LOR10-1'")" = "4" ] || { echo "FAIL stamp qty"; exit 1; }
+echo "ok   with production's trigger: the add is stamped (qty 4), the undo adds no stamp and does not fail"
 
 # 2. a copy taken out after the add: the undo stops, nothing changes (not even the other card)
 as $A "select public.apply_collection_delta('principal', '$ADD')"
@@ -74,12 +81,15 @@ done
 big=$(python3 -c "import json; print(json.dumps([{'card_id':'LOR10-1','qty':1}]*401))")
 fails $B "select public.undo_collection_delta('principal', '$big')" "bad delta"
 [ "$(col $B LOR10-1 n)" = "8" ] || { echo "FAIL bad input changed"; exit 1; }
-echo "ok   bad input refused: empty, not a list, 0, negative, 1.5, no card, text, 401 items"
+fails $B "select public.undo_collection_delta('principal', '[{\"card_id\":\"LOR10-1\",\"qty\":1,\"foil\":\"talvez\"}]')" "boolean"
+[ "$(col $B LOR10-1 n)" = "8" ] || { echo "FAIL bad foil changed"; exit 1; }
+echo "ok   bad input refused: empty, not a list, 0, negative, 1.5, no card, text, 401 items, foil not true/false"
 
 # 7. grants: anon cannot call it, authenticated can
 [ "$(q "select has_function_privilege('anon', 'public.undo_collection_delta(text,jsonb)', 'execute')")" = f ] || { echo "FAIL anon"; exit 1; }
 [ "$(q "select has_function_privilege('authenticated', 'public.undo_collection_delta(text,jsonb)', 'execute')")" = t ] || { echo "FAIL authenticated"; exit 1; }
-echo "ok   anon cannot run it; authenticated can"
+[ "$(q "select has_function_privilege('public', 'public.undo_collection_delta(text,jsonb)', 'execute')")" = f ] || { echo "FAIL public"; exit 1; }
+echo "ok   anon cannot run it (even with production's default grant to anon); authenticated can"
 
 # 8. at the same time: another device takes copies out while the undo runs. The undo waits for the lock and then
 #    sees the new number, so it refuses instead of taking the same copies twice

@@ -783,27 +783,27 @@ test('deck to collection: a double tap sends once; a lost answer is checked, not
 
 test('deck to collection: Undo within 10 s takes out exactly what was added; later changes block it; after 10 s it is gone', async ({ page }) => {
   await page.clock.install();
-  const st = await collDb(page);
+  const st = await collDb(page, { undoFn: true });
   await page.goto(BASE + '?deck=deck-a');
-  // 13. undo in time: back to how it was
+  // 13. undo in time: back to how it was, in one call to undo_collection_delta
   await page.getByTestId('deck-to-coll').click();
   await page.getByTestId('dtc-missing').check();
   await page.getByTestId('dtc-go').click();
   await expect(page.locator('#toast')).toContainText('Cartas adicionadas à coleção.');
   await page.clock.runFor(8000);
   await page.locator('#undo').click();
-  await expect.poll(() => st.applied.length).toBe(2);
-  expect(st.applied[1]).toEqual([{ card_id: 'LOR10-1', qty: -2, foil: false }]);
-  expect(st.db.profiles[0].collection['LOR10-1']).toEqual({ n: 2, f: 0 });
   await expect(page.locator('#toast')).toContainText('Desfeito: as cartas adicionadas foram retiradas.');
-  // 14. a copy taken out after (here or on another device): undo would be partial, so it changes nothing and says so
+  expect(st.undone).toEqual([[{ card_id: 'LOR10-1', qty: 2, foil: false }]]);
+  expect(st.applied.length).toBe(1);                                                               // never a negative apply_collection_delta
+  expect(st.db.profiles[0].collection['LOR10-1']).toEqual({ n: 2, f: 0 });
+  // 14. a copy taken out after (here or on another device): the database refuses; nothing changes; the card is named
   await page.getByTestId('deck-to-coll').click();
   await page.getByTestId('dtc-go').click();                                                        // all: +4 of each
   await expect(page.locator('#toast')).toContainText('Cartas adicionadas à coleção.');
   st.db.profiles[0].collection['LOR10-10'] = { n: 1, f: 0 };                                       // was 4 + 4 = 8, now 1
   await page.locator('#undo').click();
   await expect(page.locator('#toast')).toContainText('Não foi possível desfazer: Gurgi mudou depois de adicionada (aqui ou em outro aparelho). Nada foi alterado.');
-  expect(st.applied.length).toBe(3);                                                               // no undo call
+  expect(st.applied.length).toBe(2);
   expect(st.db.profiles[0].collection['LOR10-1']).toEqual({ n: 6, f: 0 });
   // after 10 s the Undo button is gone
   await page.getByTestId('deck-to-coll').click();
@@ -811,6 +811,19 @@ test('deck to collection: Undo within 10 s takes out exactly what was added; lat
   await expect(page.locator('#undo')).toBeVisible();
   await page.clock.runFor(10500);
   await expect(page.locator('#toast')).toBeHidden();
+});
+
+test('deck to collection: without undo_collection_delta in the database, Undo says so and changes nothing (no weaker fallback)', async ({ page }) => {
+  const st = await collDb(page);                                                                   // the function is not installed (404)
+  await page.goto(BASE + '?deck=deck-a');
+  await page.getByTestId('deck-to-coll').click();
+  await page.getByTestId('dtc-missing').check();
+  await page.getByTestId('dtc-go').click();
+  await expect(page.locator('#undo')).toBeVisible();
+  await page.locator('#undo').click();
+  await expect(page.locator('#toast')).toContainText('O Desfazer não está disponível agora. Nada foi alterado; você pode retirar as cartas em Coleção.');
+  expect(st.applied.length).toBe(1);                                                               // only the add: no apply with negative numbers
+  expect(st.db.profiles[0].collection['LOR10-1']).toEqual({ n: 4, f: 0 });
 });
 
 for (const w of [320, 360, 390]) {
