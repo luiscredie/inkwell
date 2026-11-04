@@ -57,7 +57,12 @@ window.INKWELL_CLOUD = (() => {
   const KEY = "inkwell-counter-auth";
   const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || "null"); } catch { return null; } };
   let sess = load();
-  const store = (x) => { sess = x; try { if (x) localStorage.setItem(KEY, JSON.stringify(x)); else localStorage.removeItem(KEY); } catch { /* private mode */ } };
+  const recent = new Map();   // shared reads (see shared() below)
+  // POST calls that only read (STABLE functions in the database, which cannot write) or only add page statistics
+  // (track): they keep the shared reads. Any other POST, PATCH or DELETE is a write and clears them; a function not
+  // listed here is taken as a write, so a missing name costs a repeated request, never an old answer.
+  const READ_RPC = /^rpc\/(my_[a-z_]+|feed_posts|search_all|communities_list|example_profiles|friend_decks|find_player_decks|shared_collections|friend_collection|friends_lending|share_invite_info|achievements_by_ids|achievements_of|public_profile|track)(\?|$)/;
+  const store = (x) => { sess = x; recent.clear(); try { if (x) localStorage.setItem(KEY, JSON.stringify(x)); else localStorage.removeItem(KEY); } catch { /* private mode */ } };
   const headers = (tok) => ({ apikey: cfg.key, "Content-Type": "application/json", ...(tok ? { Authorization: `Bearer ${tok}` } : {}) });
   const claims = (jwt) => { try { return JSON.parse(atob(jwt.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))); } catch { return {}; } };
   const session = (r) => {   // the same shape supabase-js keeps, so both read each other's session
@@ -139,7 +144,8 @@ window.INKWELL_CLOUD = (() => {
 
   // Authenticated call to the database's REST API (used by Coach Review). Errors carry a short code.
   // anon: true also works signed out (the publishable key), for the few functions open to visitors
-  async function api(path, { method = "GET", body, prefer, anon = false, keepalive = false } = {}) {
+  async function api(path, { method = "GET", body, prefer, anon = false, keepalive = false, read = false } = {}) {
+    if (method !== "GET" && !read && !READ_RPC.test(path)) recent.clear();   // a write (profile saved, friend added…): no shared answer from before it
     const tok = await token();
     if (!tok && !anon) throw Object.assign(new Error("signed out"), { code: "auth" });
     const r = await fetch(`${cfg.url}/rest/v1/${path}`, {
@@ -154,6 +160,18 @@ window.INKWELL_CLOUD = (() => {
     }
     const text = await r.text();
     return text ? JSON.parse(text) : null;
+  }
+
+  // The same read asked twice as a page opens (the top bar and the page both want rpc/my_profile and rpc/my_home):
+  // whoever asks first sends it, whoever asks within 5 s gets the same answer. Only for reads with no arguments.
+  // Forgotten on any write and on any change of session (sign in, sign out, another account, token refresh).
+  function shared(path) {
+    const k = (load()?.user?.id || "") + " " + path, hit = recent.get(k);
+    if (hit && Date.now() - hit.at < 5000) return hit.p;
+    const p = api(path, { method: "POST", body: {}, read: true });
+    recent.set(k, { at: Date.now(), p });
+    p.catch(() => recent.delete(k));   // a failure is not shared: the next caller tries again
+    return p;
   }
 
   // The player's collections (public.inkwell_profiles). A new account has none yet, and every collection, deck
@@ -171,6 +189,7 @@ window.INKWELL_CLOUD = (() => {
 
   // Storage (supabase/achievements.sql): upload one file to a private bucket, signed links to see files, remove files.
   async function storage(path, { method = "POST", body, type = "application/json" } = {}) {
+    if (!path.startsWith("object/sign/")) recent.clear();   // an upload or a removal is a write too
     const tok = await token();
     const r = await fetch(`${cfg.url}/storage/v1/${path}`, { method, headers: { ...headers(tok), "Content-Type": type }, body: type === "application/json" && body !== undefined ? JSON.stringify(body) : body });
     if (!r.ok) { let why = ""; try { why = String((await r.json())?.message || "").slice(0, 200); } catch { /* */ } throw Object.assign(new Error(`storage ${r.status}${why ? `: ${why}` : ""}`), { status: r.status, why }); }
@@ -193,7 +212,7 @@ window.INKWELL_CLOUD = (() => {
   }
 
   return {
-    api, collections, fn, upload, signed, removeFiles,
+    api, shared, collections, fn, upload, signed, removeFiles,
     user: () => { sess = load(); return sess ? { id: sess.user?.id, email: sess.user?.email } : null; },
     status: () => { sess = load(); return sess ? { signedIn: true, email: sess.user?.email || "" } : { signedIn: false }; },
     async requestCode(email) {
@@ -514,7 +533,7 @@ window.INKWELL_CLOUD = (() => {
     const consent = me && acct !== undefined && where ? `<label class="ev-consent" data-testid="keep-place"><input type="checkbox" id="keepPlace" ${acct ? "checked" : ""}>
       <span><b>${T(`Salvar este lugar na minha conta e me avisar de eventos novos até ${km} km`, `Keep this place in my account and tell me about new events within ${km} km`)}</b>
       <small>${T("Guardamos só um ponto aproximado (cerca de 1 km) e o nome do bairro ou cidade — nunca a rua. Só você vê. Desmarque quando quiser e ele é apagado. Para receber no celular, ligue os avisos no sino.", "We keep only an approximate point (about 1 km) and the district or city name — never the street. Only you see it. Untick any time and it is deleted. To get it on your phone, turn on notices in the bell.")} <a href="../privacidade/#localizacao">${T("Privacidade", "Privacy")}</a></small></span></label>` : "";
-    if (!where) { app.innerHTML = locBox + `<div class="empty"><img src="../ui/assets/empty/search.svg" alt=""><b>${T("Escolha onde procurar", "Choose where to look")}</b><p>${T("Use sua localização ou digite sua cidade. Ela fica só neste aparelho.", "Use your location or type your city. It stays on this device.")}</p></div>`; wire(); return; }
+    if (!where) { app.innerHTML = locBox + `<div class="empty">\u003Cimg src="../ui/assets/empty/search.svg" alt=""><b>${T("Escolha onde procurar", "Choose where to look")}</b><p>${T("Use sua localização ou digite sua cidade. Ela fica só neste aparelho.", "Use your location or type your city. It stays on this device.")}</p></div>`; wire(); return; }
     const list = all(), clash = conflicts(), clashDays = new Set(clash.map(([k]) => k));
     const formats = [...new Set(events.map((e) => e.format).filter(Boolean))].sort();
     // the list shows the next two weeks first (São Paulo alone has 200+ events in four months); "Meus" shows all
@@ -533,10 +552,10 @@ window.INKWELL_CLOUD = (() => {
         ${view === "list" ? `<label class="small">${T("Ordenar", "Sort")} <select id="order" class="inline" data-testid="order"><option value="date" ${order === "date" ? "selected" : ""}>${T("por data", "by date")}</option><option value="km" ${order === "km" ? "selected" : ""}>${T("por distância", "by distance")}</option></select></label>` : ""}
         <span class="grow"></span><span class="small muted">${loading ? T("Carregando…", "Loading…") : esc(T(`${list.length} eventos`, `${list.length} events`))}</span></div>`
       + (view === "cal" ? calHtml(list) + (day ? `<div class="row between" style="margin-top:var(--sp-3)"><h2 style="margin:0">${esc(dayTitle(day))}</h2><button type="button" class="btn small ghost" id="allDays">${T("Ver todos os dias", "All days")}</button></div>` : "") : "")
-      + (failed ? `<div class="empty"><img src="../ui/assets/empty/error.svg" alt=""><b>${T("Não conseguimos falar com o Play Hub agora.", "Couldn't reach the Play Hub now.")}</b><button type="button" class="btn" id="retry">${T("Tentar de novo", "Try again")}</button></div>`
+      + (failed ? `<div class="empty">\u003Cimg src="../ui/assets/empty/error.svg" alt=""><b>${T("Não conseguimos falar com o Play Hub agora.", "Couldn't reach the Play Hub now.")}</b><button type="button" class="btn" id="retry">${T("Tentar de novo", "Try again")}</button></div>`
         : shown.length ? [...groups.entries()].map(([k, l]) => `${(view === "cal" && day) || !k ? "" : `<h2 class="ev-day">${esc(dayTitle(k))}</h2>`}<div class="ev-list">${l.map((e) => evHtml(e, clashDays.has(dkey(e.start)) && statusOf(e) === "going")).join("")}</div>`).join("")
           + (view === "list" && hidden > 0 ? `<div class="ev-more"><button type="button" class="btn" id="more" data-testid="more">${esc(T(`Ver mais ${hidden} eventos (próximas semanas)`, `See ${hidden} more events (later weeks)`))}</button></div>` : "")
-        : loading ? `<span class="skel" style="height:120px;border-radius:var(--r-lg)"></span>` : `<div class="empty plain" data-testid="events-empty"><img src="../ui/assets/empty/search.svg" alt=""><b>${T("Nenhum evento aqui por enquanto.", "No events here for now.")}</b><p>${km < 300 ? T("As lojas publicam os eventos no Play Hub aos poucos. Tente um raio maior ou volte em alguns dias.", "Stores add events to the Play Hub over time. Try a wider radius or come back in a few days.") : T("As lojas publicam os eventos no Play Hub aos poucos. Volte em alguns dias.", "Stores add events to the Play Hub over time. Come back in a few days.")}</p>${km < 300 ? `<button type="button" class="btn" id="wider" data-testid="wider">${esc(T(`Procurar até ${[5, 10, 25, 50, 100, 200, 300].find((k) => k > km)} km`, `Search within ${[5, 10, 25, 50, 100, 200, 300].find((k) => k > km)} km`))}</button>` : ""}</div>`)
+        : loading ? `<span class="skel" style="height:120px;border-radius:var(--r-lg)"></span>` : `<div class="empty plain" data-testid="events-empty">\u003Cimg src="../ui/assets/empty/search.svg" alt=""><b>${T("Nenhum evento aqui por enquanto.", "No events here for now.")}</b><p>${km < 300 ? T("As lojas publicam os eventos no Play Hub aos poucos. Tente um raio maior ou volte em alguns dias.", "Stores add events to the Play Hub over time. Try a wider radius or come back in a few days.") : T("As lojas publicam os eventos no Play Hub aos poucos. Volte em alguns dias.", "Stores add events to the Play Hub over time. Come back in a few days.")}</p>${km < 300 ? `<button type="button" class="btn" id="wider" data-testid="wider">${esc(T(`Procurar até ${[5, 10, 25, 50, 100, 200, 300].find((k) => k > km)} km`, `Search within ${[5, 10, 25, 50, 100, 200, 300].find((k) => k > km)} km`))}</button>` : ""}</div>`)
       + (view === "list" && me && pastList().length ? `<section class="ev-past" data-testid="past-events"><h2 class="ev-day">${T("Eventos passados", "Past events")}</h2><p class="small muted" style="margin:0 0 var(--sp-3)">${T("Os que você marcou. Diga se foi: dá para ver os resultados no Play Hub e registrar uma conquista.", "The ones you marked. Say if you went: you can see the results on the Play Hub and add an achievement.")}</p>
           <div class="ev-list">${pastList().slice(0, pastN).map(pastHtml).join("")}</div>${pastList().length > pastN ? `<div class="ev-more"><button type="button" class="btn" id="morePast">${esc(T(`Ver mais ${pastList().length - pastN}`, `See ${pastList().length - pastN} more`))}</button></div>` : ""}</section>` : "")
       + `<p class="small faint" style="margin-top:var(--sp-6)">${T("Eventos do Disney Lorcana Play Network (Ravensburger). A inscrição e o pagamento são feitos no Play Hub; aqui você só marca para se organizar.", "Events from the Disney Lorcana Play Network (Ravensburger). Registration and payment happen on the Play Hub; here you only mark them to plan.")}</p>`;
@@ -678,7 +697,7 @@ window.INKWELL_CLOUD = (() => {
   const FLAG_US = '<svg viewBox="0 0 30 20" width="24" height="16" aria-hidden="true"><rect width="30" height="20" fill="#b22234"/><g fill="#fff">' + [1, 3, 5, 7, 9, 11].map((i) => `<rect y="${(i * 20) / 13}" width="30" height="${20 / 13}"/>`).join("") + '</g><rect width="13" height="10.77" fill="#3c3b6e"/><g fill="#fff">' + [[2, 2], [5, 2], [8, 2], [11, 2], [3.5, 4.5], [6.5, 4.5], [9.5, 4.5], [2, 7], [5, 7], [8, 7], [11, 7], [3.5, 9.3], [6.5, 9.3], [9.5, 9.3]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".7"/>`).join("") + '</g></svg>';
   const FLAG_BR = '<svg viewBox="0 0 30 20" width="24" height="16" aria-hidden="true"><rect width="30" height="20" fill="#009c3b"/><path d="M15 2.2 27.6 10 15 17.8 2.4 10z" fill="#ffdf00"/><circle cx="15" cy="10" r="4.6" fill="#002776"/><path d="M10.6 9.1c2.9-.6 6.2-.2 8.8 1.1" stroke="#fff" stroke-width=".8" fill="none"/></svg>';
   const flagBtn = `<button type="button" class="btn ghost icon flag-btn" id="iwFlag" data-testid="lang-flag" lang="${pt ? "en" : "pt-BR"}" aria-label="${pt ? "Switch to English" : "Mudar para português"}" title="${pt ? "English" : "Português"}">${pt ? FLAG_US : FLAG_BR}</button>`;
-  bar.innerHTML = `<div class="appbar-in"><a class="brand" href="../feed/"><img src="../ink/logo-coin.png" alt="" width="32" height="32">Inkwell</a>
+  bar.innerHTML = `<div class="appbar-in"><a class="brand" href="../feed/">\u003Cimg src="../ink/logo-coin.png" alt="" width="32" height="32">Inkwell</a>
     <nav class="sections" aria-label="${T("Seções", "Sections")}">${NAV.map(([k, href, label, ic]) => `<a href="${href}"${cur(k)} data-iw="${k}"><i class="ic i-${ic}"></i>${label}${k === "trades" ? '<span class="count" data-trades-count hidden></span>' : ""}</a>`).join("")}</nav>
     <div class="end">
       <button type="button" class="btn ghost icon" id="iwTheme" aria-pressed="${theme === "noite"}" aria-label="${theme === "noite" ? T("Usar o tema claro", "Use the light theme") : T("Usar o tema escuro", "Use the dark theme")}"><i class="ic ${theme === "noite" ? "i-sun" : "i-moon"}"></i></button>
@@ -1042,12 +1061,12 @@ window.INKWELL_CLOUD = (() => {
     });
   };
   if (me && CLOUD) {
-    CLOUD.api("rpc/my_profile", { method: "POST", body: {} })   // supabase/my_inkwell.sql
+    CLOUD.shared("rpc/my_profile")   // supabase/my_inkwell.sql (shared with the page if it asks too)
       .then((p) => { profileName = p?.display_name || ""; isAdmin = !!p?.is_admin; if (p?.invite_code) myInvite = { code: p.invite_code, handle: p.handle, pub: !!p.is_public }; return profileName ? null : CLOUD.api(`profiles?user_id=eq.${me.id}&select=display_name`); })
       .catch(() => CLOUD.api(`profiles?user_id=eq.${me.id}&select=display_name`))
       .then((r) => { if (r) profileName = r?.[0]?.display_name || ""; if (profileName) $("iwAv").textContent = profileName.trim()[0].toUpperCase(); })
       .catch(() => {});
-    CLOUD.api("rpc/my_home", { method: "POST", body: {} }).then((h) => {
+    CLOUD.shared("rpc/my_home").then((h) => {
       if (!h) return;
       let since = seenAt();
       if (!since) { window.INKWELL_MARK_SEEN(); since = Date.now(); }   // first visit: only what comes after counts
@@ -1192,7 +1211,7 @@ window.INKWELL_CLOUD = (() => {
   // ---------- tap a card thumbnail to see it large (any page; not where the thumbnail is already a button or link) ----------
   const zoom = document.createElement("dialog");
   zoom.className = "iw-zoom-card"; zoom.id = "iwZoom"; zoom.setAttribute("aria-label", T("Carta ampliada", "Card, larger"));
-  zoom.innerHTML = `<button type="button" class="btn ghost icon" data-zclose aria-label="${T("Fechar", "Close")}"><i class="ic i-close"></i></button><figure><img alt=""><figcaption></figcaption></figure><div class="iw-zoom-extra" hidden></div>`;
+  zoom.innerHTML = `<button type="button" class="btn ghost icon" data-zclose aria-label="${T("Fechar", "Close")}"><i class="ic i-close"></i></button><figure>\u003Cimg alt=""><figcaption></figcaption></figure><div class="iw-zoom-extra" hidden></div>`;
   document.body.append(zoom);
   // a tap anywhere closes it — except on what a page put under the card (window.INKWELL_ZOOM_EXTRA, e.g. Decks: your copies)
   zoom.addEventListener("click", (e) => { if (!e.composedPath().some((x) => x.classList?.contains("iw-zoom-extra"))) zoom.close(); });   // the path, not target: a button there may have been redrawn

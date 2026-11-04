@@ -438,12 +438,12 @@
     });
   };
   if (me && CLOUD) {
-    CLOUD.api("rpc/my_profile", { method: "POST", body: {} })   // supabase/my_inkwell.sql
+    CLOUD.shared("rpc/my_profile")   // supabase/my_inkwell.sql (shared with the page if it asks too)
       .then((p) => { profileName = p?.display_name || ""; isAdmin = !!p?.is_admin; if (p?.invite_code) myInvite = { code: p.invite_code, handle: p.handle, pub: !!p.is_public }; return profileName ? null : CLOUD.api(`profiles?user_id=eq.${me.id}&select=display_name`); })
       .catch(() => CLOUD.api(`profiles?user_id=eq.${me.id}&select=display_name`))
       .then((r) => { if (r) profileName = r?.[0]?.display_name || ""; if (profileName) $("iwAv").textContent = profileName.trim()[0].toUpperCase(); })
       .catch(() => {});
-    CLOUD.api("rpc/my_home", { method: "POST", body: {} }).then((h) => {
+    CLOUD.shared("rpc/my_home").then((h) => {
       if (!h) return;
       let since = seenAt();
       if (!since) { window.INKWELL_MARK_SEEN(); since = Date.now(); }   // first visit: only what comes after counts

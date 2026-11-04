@@ -59,7 +59,12 @@ window.INKWELL_CLOUD = (() => {
   const KEY = "inkwell-counter-auth";
   const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || "null"); } catch { return null; } };
   let sess = load();
-  const store = (x) => { sess = x; try { if (x) localStorage.setItem(KEY, JSON.stringify(x)); else localStorage.removeItem(KEY); } catch { /* private mode */ } };
+  const recent = new Map();   // shared reads (see shared() below)
+  // POST calls that only read (STABLE functions in the database, which cannot write) or only add page statistics
+  // (track): they keep the shared reads. Any other POST, PATCH or DELETE is a write and clears them; a function not
+  // listed here is taken as a write, so a missing name costs a repeated request, never an old answer.
+  const READ_RPC = /^rpc\/(my_[a-z_]+|feed_posts|search_all|communities_list|example_profiles|friend_decks|find_player_decks|shared_collections|friend_collection|friends_lending|share_invite_info|achievements_by_ids|achievements_of|public_profile|track)(\?|$)/;
+  const store = (x) => { sess = x; recent.clear(); try { if (x) localStorage.setItem(KEY, JSON.stringify(x)); else localStorage.removeItem(KEY); } catch { /* private mode */ } };
   const headers = (tok) => ({ apikey: cfg.key, "Content-Type": "application/json", ...(tok ? { Authorization: `Bearer ${tok}` } : {}) });
   const claims = (jwt) => { try { return JSON.parse(atob(jwt.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))); } catch { return {}; } };
   const session = (r) => {   // the same shape supabase-js keeps, so both read each other's session
@@ -141,7 +146,8 @@ window.INKWELL_CLOUD = (() => {
 
   // Authenticated call to the database's REST API (used by Coach Review). Errors carry a short code.
   // anon: true also works signed out (the publishable key), for the few functions open to visitors
-  async function api(path, { method = "GET", body, prefer, anon = false, keepalive = false } = {}) {
+  async function api(path, { method = "GET", body, prefer, anon = false, keepalive = false, read = false } = {}) {
+    if (method !== "GET" && !read && !READ_RPC.test(path)) recent.clear();   // a write (profile saved, friend added…): no shared answer from before it
     const tok = await token();
     if (!tok && !anon) throw Object.assign(new Error("signed out"), { code: "auth" });
     const r = await fetch(`${cfg.url}/rest/v1/${path}`, {
@@ -156,6 +162,18 @@ window.INKWELL_CLOUD = (() => {
     }
     const text = await r.text();
     return text ? JSON.parse(text) : null;
+  }
+
+  // The same read asked twice as a page opens (the top bar and the page both want rpc/my_profile and rpc/my_home):
+  // whoever asks first sends it, whoever asks within 5 s gets the same answer. Only for reads with no arguments.
+  // Forgotten on any write and on any change of session (sign in, sign out, another account, token refresh).
+  function shared(path) {
+    const k = (load()?.user?.id || "") + " " + path, hit = recent.get(k);
+    if (hit && Date.now() - hit.at < 5000) return hit.p;
+    const p = api(path, { method: "POST", body: {}, read: true });
+    recent.set(k, { at: Date.now(), p });
+    p.catch(() => recent.delete(k));   // a failure is not shared: the next caller tries again
+    return p;
   }
 
   // The player's collections (public.inkwell_profiles). A new account has none yet, and every collection, deck
@@ -173,6 +191,7 @@ window.INKWELL_CLOUD = (() => {
 
   // Storage (supabase/achievements.sql): upload one file to a private bucket, signed links to see files, remove files.
   async function storage(path, { method = "POST", body, type = "application/json" } = {}) {
+    if (!path.startsWith("object/sign/")) recent.clear();   // an upload or a removal is a write too
     const tok = await token();
     const r = await fetch(`${cfg.url}/storage/v1/${path}`, { method, headers: { ...headers(tok), "Content-Type": type }, body: type === "application/json" && body !== undefined ? JSON.stringify(body) : body });
     if (!r.ok) { let why = ""; try { why = String((await r.json())?.message || "").slice(0, 200); } catch { /* */ } throw Object.assign(new Error(`storage ${r.status}${why ? `: ${why}` : ""}`), { status: r.status, why }); }
@@ -195,7 +214,7 @@ window.INKWELL_CLOUD = (() => {
   }
 
   return {
-    api, collections, fn, upload, signed, removeFiles,
+    api, shared, collections, fn, upload, signed, removeFiles,
     user: () => { sess = load(); return sess ? { id: sess.user?.id, email: sess.user?.email } : null; },
     status: () => { sess = load(); return sess ? { signedIn: true, email: sess.user?.email || "" } : { signedIn: false }; },
     async requestCode(email) {
@@ -333,7 +352,15 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 /* match clock: in both score pills (2 players, each facing its player) or one pill at the top (1, 3, 4 players) */
 .pill .clk, .clockpill { font-family: var(--font); font-variant-numeric: tabular-nums; font-weight: 700; letter-spacing: .02em; color: var(--ivory); }
 .pill .clk { margin-left: 4px; padding-left: 9px; border-left: 1px solid var(--hair); font-size: .95rem; }
-@media (max-width: 380px) { .pill.tap { padding: 6px 9px; gap: 4px; } .pill .clk { margin-left: 2px; padding-left: 6px; font-size: .86rem; } .pill i { font-size: .8rem; } }
+@media (max-width: 400px) { .pill.tap { padding: 6px 9px; gap: 4px; } .pill .clk { margin-left: 2px; padding-left: 6px; font-size: .86rem; } .pill i { font-size: .8rem; } }
+/* 320-340px wide: the score pills must stay clear of the 60px menu button in the middle */
+@media (max-width: 340px) { .pill.l { left: 8px; } .pill.r { right: 8px; } .pill.tap { padding: 6px 7px; gap: 3px; font-size: 1rem; } .pill .clk { padding-left: 5px; font-size: .8rem; } }
+/* a phone on its side (little height): the number sits above "faltam" and the lore track, and the +N goes beside it */
+@media (max-height: 500px) and (orientation: landscape) {
+  .table.n2 { --numsize: min(30vh, calc(50vh - 96px)); }
+  .table.n2 .half .num { top: 30px; bottom: 56px; }
+  .table.n2 .half .delta { top: calc(50% - 13px); left: auto; right: 22%; transform: translateY(-50%); }
+}
 .clk .mk { font-style: normal; font-size: .62em; margin-right: 4px; vertical-align: .12em; opacity: .8; }
 .clk.low { color: #f5b544; } .clk.out { color: #ff6b6b; } .clk.paused { opacity: .55; }
 .clockpill { position: absolute; z-index: 3; top: max(10px, env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); background: var(--night); padding: 6px 14px; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--hair); border: 0; font-size: 1rem; min-height: 36px; }
@@ -471,7 +498,7 @@ table.stats td.n { text-align: right; }
   let OFFICIAL_INKS = false;
   fetch("../ink/amber.svg").then((r) => { if (r.ok && /svg|image/.test(r.headers.get("content-type") || "")) { OFFICIAL_INKS = true; render(); } }).catch(() => {});
   const inkMark = (ink) => OFFICIAL_INKS
-    ? `<b class="official" title="${ink}"><img src="../ink/${ink.toLowerCase()}.svg" alt=""></b>`
+    ? `<b class="official" title="${ink}">\u003Cimg src="../ink/${ink.toLowerCase()}.svg" alt=""></b>`
     : `<b style="background:${HEX[ink] || HEX.Ruby}" title="${ink}"><svg viewBox="0 0 24 24" fill="currentColor">${INK_GLYPH[ink] || ""}</svg></b>`;
   const blank = () => ({ lang: "pt", players: 2, bestOf: 3, magic: true, decks: false, tour: true, flip: true, clockMin: 50, turnMode: false,
     clk: { acc: 0, run: null }, turn: { seat: null, at: null, n: 0, first: null },
@@ -669,7 +696,7 @@ table.stats td.n { text-align: right; }
   function inkPicker(id, selected) {
     // the official ink symbols (../ink/<ink>.svg); the colour stays behind each one in case an image fails to load
     const nameOf = (i) => (s.lang === "pt" ? INK_PT[i] : i) || i;
-    return `<div class="inks" id="${id}">${INKS.map((i) => `<button type="button" class="dot sym" data-ink="${i}" aria-pressed="${selected.includes(i)}" aria-label="${esc(nameOf(i))}" style="--c:${HEX[i]}"><img src="../ink/${i.toLowerCase()}.svg" alt="" onerror="this.remove()"></button>`).join("")}</div>
+    return `<div class="inks" id="${id}">${INKS.map((i) => `<button type="button" class="dot sym" data-ink="${i}" aria-pressed="${selected.includes(i)}" aria-label="${esc(nameOf(i))}" style="--c:${HEX[i]}">\u003Cimg src="../ink/${i.toLowerCase()}.svg" alt="" onerror="this.remove()"></button>`).join("")}</div>
       <div class="dot-label">${INKS.map((i) => `<span>${esc(nameOf(i))}</span>`).join("")}</div>`;
   }
   function wireInks(id, sel, onChange) {
