@@ -514,6 +514,26 @@ test('tap a card in a deck: it opens large, with your copies of that printing; a
   expect(w).toBeGreaterThan(250);
 });
 
+test('foil with no price of its own: "estimado com base no preço normal" in Fada Madrinha and the large card; no price: out of the totals and said', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  // DLPC1-43-P3 (Ariel promo): only a normal price (R$ 380); LOR14-20 (Russell): no price at all
+  await setup(page, { extraDecks: [{ id: 'deck-e', name: 'Estimado', format: 'core', colors: ['Amber'], cards: { 'DLPC1-43-P3': 2, 'LOR14-20': 1, 'LOR10-1': 4 }, created_at: '2026-10-01' }] });
+  await page.goto(BASE + '?deck=deck-e&tab=gala');
+  const grid = page.getByTestId('gala-grid');
+  await expect(grid.locator('[data-gala="DLPC1-43-P3"]')).toContainText('R$ 380,00 cada estimado com base no preço normal');
+  await expect(grid.locator('[data-gala="LOR14-20"]')).toContainText('sem preço');
+  await expect(grid.locator('[data-testid="gala-est"]')).toHaveCount(1);                 // only the card at the normal price
+  await expect(page.getByTestId('gala-price-notes')).toHaveText('2 cópias foil com preço estimado (com base no preço normal) · 1 cópia sem preço, fora dos totais');
+  // the large card: the foil line says it is the normal price
+  await page.goto(BASE + '?deck=deck-e');
+  await page.locator('#tabBody .thumb[data-card="DLPC1-43-P3"]').first().click();
+  const box = page.locator('#iwZoom').getByTestId('zoom-collection');
+  await expect(box.getByTestId('zx-price')).toContainText('R$ 380,00 normal · R$ 380,00 foil estimado com base no preço normal');
+  await page.keyboard.press('Escape');
+  await page.locator('#tabBody .thumb[data-card="LOR10-1"]').first().click();          // a card with its own foil price: no mark
+  await expect(page.locator('#iwZoom').getByTestId('zx-foil-est')).toHaveCount(0);
+});
+
 test('Fada Madrinha: each card in its rarest printing, in foil, with the cost, what you have and where to buy (partner first)', async ({ page }) => {
   await page.addInitScript(() => { window.INKWELL_PARTNER_STORE = { name: 'Loja Parceira', search: 'https://loja.example/busca?q={q}' }; });
   await setup(page, { extraDecks: [{ id: 'deck-g', name: 'Gala', format: 'core', colors: ['Amber'], cards: { 'LOR9-188': 2, 'LOR11-89': 4 }, created_at: '2026-10-01' }] });

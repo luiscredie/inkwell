@@ -82,7 +82,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
   const PT = {
     "Try a deck list without an account: see the cards, whether it's legal and what it costs.": "Teste uma lista de deck sem conta: veja as cartas, se ela é legal e quanto custa.",
     "cards": "cartas", "no inks yet": "nenhuma tinta ainda", "legal": "legal", "not legal yet": "ainda não é legal", "{a} of {b} cards priced": "{a} de {b} cartas com preço", "all cards priced": "todas as cartas com preço",
-    "check": "conferir", "no price": "sem preço", "each": "cada", "Buy 1 copy": "Comprar 1 cópia", "Buy {n} copies": "Comprar {n} cópias", "Stores open in a new tab": "As lojas abrem em outra aba", "{n}× = {v}": "{n}× = {v}", "other printing": "outra edição",
+    "check": "conferir", "estimated from the normal price": "estimado com base no preço normal", "1 foil copy at an estimated price (from the normal price)": "1 cópia foil com preço estimado (com base no preço normal)", "{n} foil copies at an estimated price (from the normal price)": "{n} cópias foil com preço estimado (com base no preço normal)", "1 copy with no price, not in the totals": "1 cópia sem preço, fora dos totais", "{n} copies with no price, not in the totals": "{n} cópias sem preço, fora dos totais", "no price": "sem preço", "each": "cada", "Buy 1 copy": "Comprar 1 cópia", "Buy {n} copies": "Comprar {n} cópias", "Stores open in a new tab": "As lojas abrem em outra aba", "{n}× = {v}": "{n}× = {v}", "other printing": "outra edição",
     "Checked as Infinity: every set, at least 60 cards, up to 2 inks, up to 4 copies of each card (counting reprints).": "Validado no formato Infinity: todos os sets, no mínimo 60 cartas, até 2 tintas, até 4 cópias de cada carta (somando reimpressões).",
     "Checked as Core: sets {s}; at least 60 cards, up to 2 inks, up to 4 copies of each card (counting reprints).": "Validado no formato Core: sets {s}; no mínimo 60 cartas, até 2 tintas, até 4 cópias de cada carta (somando reimpressões).",
     "Rules as of {d}.": "Regras de {d}.",
@@ -736,6 +736,8 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
   const ALWAYS_FOIL = new Set(["I", "EP", "E", "P"]);
   const galaOk = (x) => RANK[x.rarity] && !/-OS$/.test(x.id);   // no oversized, puzzle inserts or quest cards
   const foilPrice = (x) => { const q = PRICES[x.id] || {}; return q.fl ?? q.f ?? q.nl ?? q.n ?? null; };
+  // a foil with no price of its own is valued at the normal price, and always says so (same rule as Coleção and Preços)
+  const foilEst = (id) => { const q = PRICES[id]; return !!q && q.fl == null && q.f == null && (q.nl ?? q.n) != null; };
   // every printing of the card, most expensive first (foil price); without a price, the rarer first. The first is the pick;
   // the person can swipe (or use the arrows) to see the others, and the totals follow the art on screen.
   function galaOpts(c) {
@@ -753,6 +755,8 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
       return { c, g, q, have, p: foilPrice(g), opts, i, top: foilPrice(opts[0]) ?? 0 };
     }).sort((a, b) => b.top - a.top || a.c.name.localeCompare(b.c.name));   // by the top price, so swiping doesn't move the cards around
     const total = rows.reduce((s2, r) => s2 + (r.p || 0) * r.q, 0), toBuy = rows.reduce((s2, r) => s2 + (r.p || 0) * (r.q - r.have), 0);
+    // copies with no price are left out of the totals and counted; foils at the normal price are counted as estimated
+    const galaNoPrice = rows.reduce((s2, r) => s2 + (r.p == null ? r.q : 0), 0), galaEst = rows.reduce((s2, r) => s2 + (r.p != null && foilEst(r.g.id) ? r.q : 0), 0);
     const copies = rows.reduce((s2, r) => s2 + r.q, 0), owned = rows.reduce((s2, r) => s2 + r.have, 0);
     const count = {}; for (const r of rows) count[r.g.rarity] = (count[r.g.rarity] || 0) + r.q;
     const mix = Object.keys(RANK).filter((k) => count[k]).map((k) => `<span class="tag ${RANK[k] >= 6 ? "foil" : ""}">${esc(Tx(RAR_NAME[k]))} ${count[k]}</span>`).join(" ");
@@ -763,7 +767,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
       return `<figure class="gala-card" data-gala="${esc(r.g.id)}" data-gkey="${esc(r.c.key)}"><div class="gala-art">${thumb(r.g, "gala foil")}<span class="gala-q">${r.q}×</span>${nav}</div>
         <figcaption><b>${esc(a)}</b>${b ? `<span class="small muted">${esc(b)}</span>` : ""}
           <span class="row" style="gap:4px;flex-wrap:wrap;margin-top:4px"><span class="tag ${RANK[r.g.rarity] >= 6 ? "foil" : ""}">${esc(Tx(RAR_NAME[r.g.rarity] || "Card"))}</span>${ALWAYS_FOIL.has(r.g.rarity) ? "" : `<span class="foil-word micro">foil</span>`}</span>
-          <span class="small">${r.p != null ? `<b class="money">${esc(money(r.p))}</b> ${esc(Tx("each"))}` : `<span class="muted">${Tx("no price")}</span>`}</span>
+          <span class="small">${r.p != null ? `<b class="money">${esc(money(r.p))}</b> ${esc(Tx("each"))}${foilEst(r.g.id) ? ` <small class="muted" data-testid="gala-est">${esc(Tx("estimated from the normal price"))}</small>` : ""}` : `<span class="muted">${Tx("no price")}</span>`}</span>
           <span class="small ${left ? "muted" : "win"}" data-testid="gala-have">${left ? esc(Tx("You have {h} of {q}", { h: r.have, q: r.q })) : esc(Tx("You have them all"))}</span></figcaption>
         ${left ? buyLinks(r.g, left, true) : ""}</figure>`;
     };
@@ -772,6 +776,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
         <div class="stat"><b class="money">${havePrices() ? moneySplit(m.value) : "—"}</b><span>${Tx("Your list")}</span></div>
         <div class="stat"><b>${owned}<small>/${copies}</small></b><span>${Tx("You already have")}</span></div>
         <div class="stat"><b class="money">${havePrices() ? moneySplit(toBuy) : "—"}</b><span>${Tx("To complete")}</span></div></div>
+      ${havePrices() && (galaNoPrice || galaEst) ? `<p class="micro muted" style="margin:calc(-1 * var(--sp-2)) 0 var(--sp-2)" data-testid="gala-price-notes">${esc([galaEst ? Tx(galaEst === 1 ? "1 foil copy at an estimated price (from the normal price)" : "{n} foil copies at an estimated price (from the normal price)", { n: galaEst }) : "", galaNoPrice ? Tx(galaNoPrice === 1 ? "1 copy with no price, not in the totals" : "{n} copies with no price, not in the totals", { n: galaNoPrice }) : ""].filter(Boolean).join(" · "))}</p>` : ""}
       <p class="small" style="margin:0 0 var(--sp-3)">${mix}</p>
       <div class="gala-grid" data-testid="gala-grid">${rows.map(card).join("")}</div>
       ${priceNote(Tx("Foil prices. Tap a card to see it large and add the copies you have."))}`;
@@ -1157,14 +1162,14 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     const own = () => p.collection[c.id] || { n: 0, f: 0 };
     const was = { n: +own().n || 0, f: +own().f || 0 }, v = { ...was };
     const d = decks().find((x) => x.id === route().deck), inDeck = d ? printings(c).reduce((s2, x) => s2 + (+d.cards?.[x.id] || 0), 0) : 0;
-    const all = (ALL_COLL && ALL_COLL[c.id]) || null, pq = PRICES[c.id] || {}, pn = pq.nl ?? pq.n ?? null, pf = pq.fl ?? pq.f ?? null;
+    const all = (ALL_COLL && ALL_COLL[c.id]) || null, pq = PRICES[c.id] || {}, pn = pq.nl ?? pq.n ?? null, pf = pq.fl ?? pq.f ?? null, pfEst = pf == null && pn != null && foilEst(c.id);
     const box = document.createElement("section"); box.className = "card zx"; box.dataset.testid = "zoom-collection";
     const draw = () => {
       const changed = v.n !== was.n || v.f !== was.f;
       const step = (k, label) => `<div class="zx-row"><span${k === "f" ? ' class="foil-word"' : ""}>${Tx(label)}</span><span class="zx-step"><button type="button" class="btn icon" data-zx="${k}:-1" aria-label="${esc(Tx("One less") + " · " + Tx(label))}" ${v[k] ? "" : "disabled"}>−</button><b data-testid="zx-${k}">${v[k]}</b><button type="button" class="btn icon" data-zx="${k}:1" aria-label="${esc(Tx("One more") + " · " + Tx(label))}">+</button></span></div>`;
       box.innerHTML = `<div class="small muted">${esc(Tx("In your collection “{c}” · this printing", { c: p.profile }))}</div>
         ${step("n", "Normal")}${step("f", "Foil")}
-        ${pn != null || pf != null ? `<p class="small" style="margin:var(--sp-1) 0 0" data-testid="zx-price">${esc(priceSrc)}: ${[pn != null ? `<b class="money">${esc(money(pn))}</b> ${esc(Tx("Normal").toLowerCase())}` : "", pf != null ? `<b class="money">${esc(money(pf))}</b> foil` : ""].filter(Boolean).join(" · ")}</p>` : ""}
+        ${pn != null || pf != null ? `<p class="small" style="margin:var(--sp-1) 0 0" data-testid="zx-price">${esc(priceSrc)}: ${[pn != null ? `<b class="money">${esc(money(pn))}</b> ${esc(Tx("Normal").toLowerCase())}` : "", pf != null ? `<b class="money">${esc(money(pf))}</b> foil` : pfEst ? `<b class="money">${esc(money(pn))}</b> foil <small class="muted" data-testid="zx-foil-est">${esc(Tx("estimated from the normal price"))}</small>` : ""].filter(Boolean).join(" · ")}</p>` : ""}
         <p class="small muted" style="margin:var(--sp-1) 0 0">${esc([inDeck ? Tx("In this deck: {n}", { n: inDeck }) : "", all && (all.n !== was.n || all.f !== was.f) ? Tx("All your collections: {n} normal · {f} foil", { n: all.n, f: all.f }) : ""].filter(Boolean).join(" · "))}</p>
         <div class="zx-foot"><button type="button" class="btn ghost" data-zx-close>${Tx(changed ? "Cancel" : "Close")}</button><button type="button" class="btn primary" data-zx-save ${changed ? "" : "disabled"}>${Tx("Save to collection")}</button></div>`;
       box.querySelectorAll("[data-zx]").forEach((b) => b.onclick = () => { const [k, dd] = b.dataset.zx.split(":"); v[k] = Math.max(0, Math.min(99, v[k] + +dd)); draw(); box.querySelector(`[data-zx="${b.dataset.zx}"]`)?.focus(); });
