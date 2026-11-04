@@ -215,8 +215,12 @@ test('links and history: another deck in the address, no deck, back, reload', as
   await setup(page);
   await page.goto(deckUrl());
   await expect(page.getByTestId('sd-name')).toHaveText('Âmbar Esmeralda');
-  await page.evaluate(() => { location.hash = '#deck-d-outro'; });
+  // another deck in the address with the page open (a same-page navigation: no reload). WebKit does not keep a
+  // history entry for a hash set by a script without a tap, so the test navigates like a person would.
+  await page.evaluate(() => { window.__samePage = true; });
+  await page.goto(deckUrl('d-outro'));
   await expect(page.getByTestId('sd-name')).toHaveText('OUTRO-DECK-MARCADOR');
+  expect(await page.evaluate(() => window.__samePage)).toBe(true);
   await page.getByTestId('sd-by').getByRole('link', { name: 'Ver perfil' }).click();
   await expect(page.getByTestId('profile')).toBeVisible();
   await expect(sd(page)).toHaveCount(0);
