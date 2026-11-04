@@ -64,6 +64,14 @@ test('Valor da coleção: a card with no price is left out of "Valor agora" and 
   await expect(page.locator('[data-testid="top-cards"] [data-card="D23-1"], [data-testid="top-cards"] .list-row:has-text("Brave Little Tailor")')).toHaveCount(0);
 });
 
+test('Valor da coleção: a foil with no foil price counts at the normal price and is marked estimated', async ({ page }) => {
+  await setup(page, { collection: { 'LOR10-10': { n: 4, f: 1 }, 'LOR8-1': { n: 1, f: 1 } } });   // LOR8-1: only a normal price
+  await page.goto(BASE + '?tab=value');
+  await expect(page.getByTestId('value-estimated')).toHaveText('Inclui 1 foil com preço estimado (sem cotação foil; usamos o preço normal)');
+  await expect(page.locator('[data-testid="top-cards"] .list-row', { hasText: 'Louie' })).toContainText('1× foil (estimado)');
+  await expect(page.locator('[data-testid="top-cards"] .list-row', { hasText: 'Gurgi' })).not.toContainText('estimado');   // LOR10-10 has a foil price
+});
+
 test('Coleção links its value to Preços', async ({ page }) => {
   await setup(page);
   await page.goto(new URL('../colecao/', BASE).href);
