@@ -379,7 +379,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "vs {d}": "vs {d}", "went first": "começou jogando", "went second": "começou comprando", "Win": "Vitória", "Loss": "Derrota",
     "No games with this deck yet": "Nenhum jogo com este deck ainda", "Games from duels.ink show up here when the list you played matches this deck.": "Os jogos do duels.ink aparecem aqui quando a lista que você jogou bate com este deck.",
     "Add a card": "Pôr carta", "Search a card to add": "Buscar carta para pôr", "Remove one": "Tirar uma", "Add one": "Pôr uma", "Saved": "Deck salvo", "Undo": "Desfazer",
-    "Couldn't save. Try again.": "Não foi possível salvar. Tente de novo.", "In your collection “{c}” · this printing": "Na sua coleção “{c}” · esta arte", "✨ Fairy Godmother": "✨ Fada Madrinha", "Previous art": "Arte anterior", "Next art": "Próxima arte", "Iconic": "Icônica", "Epic": "Épica", "Enchanted": "Encantada", "Promo": "Promo", "Legendary": "Lendária", "Super rare": "Super-rara", "Rare": "Rara", "Uncommon": "Incomum", "Common": "Comum", "You have {h} of {q}": "Você tem {h} de {q}", "You have them all": "Você tem todas", "Your deck with the most special art of each card": "Toque da Fada Madrinha: seu deck com a arte mais especial de cada carta", "Same cards and rules: only the art changes. The most expensive printing of each card, in foil — swipe a card (or use the arrows) to see its other arts.": "As mesmas cartas e regras: só a arte muda. A impressão mais cara de cada carta, em foil — passe a carta para o lado (ou use as setas) para ver as outras artes.", "This version": "Esta versão", "Your list": "Sua lista", "You already have": "Você já tem", "To complete": "Para completar", "Prices: {s}, foil. Tap a card to see it large and add the copies you have.": "Preços: {s}, foil. Toque numa carta para ver grande e adicionar as cópias que você tem.", "Normal": "Normal", "Foil": "Foil", "One less": "Menos um", "One more": "Mais um", "In this deck: {n}": "No deck: {n}", "All your collections: {n} normal · {f} foil": "Somando todas as suas coleções: {n} normais · {f} foil", "Save to collection": "Salvar na coleção", "Collection updated": "Coleção atualizada", "Changes save right away.": "As mudanças salvam na hora.",
+    "Couldn't save. Try again.": "Não foi possível salvar. Tente de novo.", "In your collection “{c}” · this printing": "Na sua coleção “{c}” · esta arte", "✨ Fairy Godmother": "✨ Fada Madrinha", "Previous art": "Arte anterior", "Next art": "Próxima arte", "Iconic": "Icônica", "Epic": "Épica", "Enchanted": "Encantada", "Promo": "Promo", "Legendary": "Lendária", "Super rare": "Super-rara", "Rare": "Rara", "Uncommon": "Incomum", "Common": "Comum", "You have {h} of {q}": "Você tem {h} de {q}", "You have them all": "Você tem todas", "Your deck with the most special art of each card": "Toque da Fada Madrinha: seu deck com a arte mais especial de cada carta", "Same cards and rules: only the art changes. The most expensive printing of each card, in foil — swipe a card (or use the arrows) to see its other arts.": "As mesmas cartas e regras: só a arte muda. A impressão mais cara de cada carta, em foil — passe a carta para o lado (ou use as setas) para ver as outras artes.", "This version": "Esta versão", "Your list": "Sua lista", "You already have": "Você já tem", "To complete": "Para completar", "Foil prices. Tap a card to see it large and add the copies you have.": "Preços de foil. Toque numa carta para ver grande e adicionar as cópias que você tem.", "Normal": "Normal", "Foil": "Foil", "One less": "Menos um", "One more": "Mais um", "In this deck: {n}": "No deck: {n}", "All your collections: {n} normal · {f} foil": "Somando todas as suas coleções: {n} normais · {f} foil", "Save to collection": "Salvar na coleção", "Collection updated": "Coleção atualizada", "Changes save right away.": "As mudanças salvam na hora.",
     "Copy limit": "Limite de cópias", "Other ink": "Outra tinta", "Not in Core": "Fora do Core", "Ink limit": "Limite de tintas", "Type at least 2 letters.": "Digite pelo menos 2 letras.", "No card found.": "Nenhuma carta encontrada.",
     "Deck name": "Nome do deck", "Inks": "Tintas", "Pick up to 2.": "Escolha até 2.", "Create deck": "Criar deck", "Save": "Salvar", "Cancel": "Cancelar", "Close": "Fechar",
     "Paste a list": "Cole a lista", "One card per line, like \"4 Stitch - Rock Star\". Lists from duels.ink, Dreamborn and Lorcanito work.": "Uma carta por linha, como \"4 Stitch - Rock Star\". Listas do duels.ink, Dreamborn e Lorcanito funcionam.",
@@ -433,7 +433,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const legal = (c, fmt) => fmt === "infinity" || !fmt || printings(c).some((p) => CORE_SETS.includes(p.set));
   const kind = (c) => (c.song ? "song" : c.type === "Character" ? "char" : c.type === "Action" ? "action" : "item");
   const typeName = (c) => Tx(c.song ? "Song" : c.type || "");
-  let PRICES = {}, pricesDate = null, priceSrc = "Liga Lorcana", PRICE_SOURCE = "";   // "TCGplayer" while prices.json carries converted TCGplayer prices
+  let PRICES = {}, pricesDate = null, priceSrc = "TCGplayer", PRICE_SOURCE = "", PRJ = null;   // PRJ: prices.json as loaded (null: unavailable)
+  const priceNote = (extra) => window.INKWELL_PRICE_NOTE_HTML ? window.INKWELL_PRICE_NOTE_HTML(PRJ, extra) : "";
+  const havePrices = () => !!(PRJ && PRJ.prices);   // "TCGplayer" while prices.json carries converted TCGplayer prices
   // Price in Brazil, the same rule as Coleção: the lowest MYP Cards listing when there is one, else TCGplayer converted
   let BR = null;
   const one = (id) => { const b = BR?.cards?.[id]?.[0]; if (b != null) return b; const q = PRICES[id]; return q ? (q.nl ?? q.n ?? null) : null; };
@@ -657,6 +659,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       fetch("../data/legality.json").then((r) => (r.ok ? r.json() : null)).then((l) => { const ls = l?.formats?.core?.legal_sets; if (Array.isArray(ls) && ls.length) CORE_SETS = ls; }).catch(() => {}),
     ]);
     profiles = (p || []).map((x) => ({ ...x, decks: Array.isArray(x.decks) ? x.decks.filter((d) => d && d.id) : [], collection: x.collection && typeof x.collection === "object" ? x.collection : {} }));
+    PRJ = pr?.prices ? pr : null;
     if (pr?.prices) { PRICES = pr.prices; pricesDate = pr.generated_at; priceSrc = pr.usd_brl ? "TCGplayer" : "Liga Lorcana"; }
     listings = ls || [];
     friends = new Set((fr || []).map((f) => (f.requester === me.id ? f.addressee : f.requester)));
@@ -820,13 +823,13 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         ${badIdx.length ? `<div class="notice warn"><i class="ic i-alert"></i><span class="t"><b>${esc(Tx(badIdx.length === 1 ? "1 line not recognised: pick the right card" : "{n} lines not recognised: pick the right card", { n: badIdx.length }))}</b></span></div>
           <ul class="pd-fixes" data-testid="public-fixes">${badIdx.map((i) => fixBox(lines[i], i)).join("")}</ul>` : ""}
         ${known.length ? `<div class="list" data-testid="public-list">${known.map(row).join("")}</div>` : ""}
-        <p class="small faint" data-testid="public-prices">${esc(pricesDate ? Tx("Estimate in reais: {s}, updated {d}. A card with no price is left out of the total, never counted as zero.", { s: PRICE_SOURCE || priceSrc, d: dateFmt(pricesDate).replace(/\.$/, "") }) : Tx("Prices didn't load. The list and the rules still work."))}${other ? " " + esc(Tx("“Other printing”: this printing has no price, so the cheapest reprint's is used.")) : ""}</p>
+        ${PRJ && window.INKWELL_PRICE_NOTE?.(PRJ).stale ? priceNote() : ""}<p class="small faint" data-testid="public-prices">${esc(pricesDate ? Tx("Estimate in reais: {s}, updated {d}. A card with no price is left out of the total, never counted as zero.", { s: PRICE_SOURCE || priceSrc, d: dateFmt(pricesDate).replace(/\.$/, "") }) : Tx("Prices didn't load. The list and the rules still work."))}${other ? " " + esc(Tx("“Other printing”: this printing has no price, so the cheapest reprint's is used.")) : ""}</p>
         <div class="notice"><i class="ic i-info"></i><span class="t"><b>${Tx("Save it and compare with your collection")}</b><span>${Tx("Create your account with a code by e-mail. This list stays in this browser for a day, so it's here when you come back.")}</span></span>
           <span class="actions"><button type="button" class="btn primary" id="pSave" data-testid="public-save">${Tx("Create account and save")}</button><button type="button" class="btn ghost" id="pClear">${Tx("Clear")}</button></span></div>` : `
         <p class="small muted">${esc(rulesText(pub.format))}</p>`}
       </section>`;
     const t = $("pText");
-    t.oninput = () => { window.INKWELL_TRACK?.("deck_paste"); pub.text = t.value; pubSave(pub); const pos = t.selectionStart; renderPublic(); const x = $("pText"); x.focus(); x.setSelectionRange(pos, pos); };
+    t.oninput = () => { window.INKWELL_TRACK?.("try_deck_started"); window.INKWELL_TRACK?.("deck_paste"); pub.text = t.value; pubSave(pub); const pos = t.selectionStart; renderPublic(); const x = $("pText"); x.focus(); x.setSelectionRange(pos, pos); };
     document.querySelectorAll("[data-pf]").forEach((b) => b.onclick = () => { pub.format = b.dataset.pf; pubSave(pub); renderPublic(); });
     document.querySelectorAll("[data-fixq]").forEach((inp) => inp.oninput = () => { pubFix = { i: +inp.dataset.fixq, q: inp.value }; const pos = inp.selectionStart; renderPublic();
       const x = document.querySelector(`[data-fixq="${inp.dataset.fixq}"]`); x?.focus(); x?.setSelectionRange(pos, pos); });
@@ -836,7 +839,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     });
     $("signIn").onclick = () => window.INKWELL_SIGNIN?.();
     $("pSave")?.addEventListener("click", () => { window.INKWELL_TRACK?.("deck_save"); pubSave(pub); try { localStorage.setItem(SAVE_INTENT, String(Date.now())); } catch { /* */ } window.INKWELL_SIGNIN?.(); });
-    $("pSample")?.addEventListener("click", () => { window.INKWELL_TRACK?.("deck_sample"); pub = { text: SAMPLE, format: "core" }; pubSave(pub); renderPublic(); $("pText").scrollIntoView({ block: "start" }); });
+    $("pSample")?.addEventListener("click", () => { window.INKWELL_TRACK?.("try_deck_started"); window.INKWELL_TRACK?.("deck_sample_loaded"); pub = { text: SAMPLE, format: "core" }; pubSave(pub); renderPublic(); $("pText").scrollIntoView({ block: "start" }); });
     $("pClear")?.addEventListener("click", () => { pub = { text: "", format: pub.format }; pubDrop(); renderPublic(); $("pText").focus(); });
   }
 
@@ -879,7 +882,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       <select class="inline" id="sort" aria-label="${Tx("Sort")}">${[["recent", "Recently played"], ["wins", "Win rate"], ["name", "Name"]].map(([k, l]) => `<option value="${k}" ${view.sort === k ? "selected" : ""}>${Tx(l)}</option>`).join("")}</select></div>
       ${planNotice()}${pendingNotice()}
       ${shown.length ? `<div class="list" id="deckList" data-testid="deck-list">${shown.map(row).join("")}</div>` : emptyBox("search", Tx(view.meta !== "all" ? "No decks with these filters." : "No decks in this format."), "")}
-      ${pricesDate ? `<p class="small faint" style="margin-top:var(--sp-4)">${esc(Tx("Prices: {s}, {d}", { s: priceSrc, d: dateFmt(pricesDate) }))}</p>` : ""}`;
+      <div style="margin-top:var(--sp-4)">${priceNote()}</div>`;
     wireHead();
     document.querySelectorAll("[data-fmt]").forEach((b) => b.onclick = () => { view.fmt = b.dataset.fmt; saveView(); render(); });
     $("sort").onchange = (e) => { view.sort = e.target.value; saveView(); render(); };
@@ -922,8 +925,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         <button type="button" class="btn ${editing ? "" : "primary"}" id="edit" aria-pressed="${editing}"><i class="ic ${editing ? "i-check" : "i-edit"}"></i>${Tx(editing ? "Done" : "Edit list")}</button></div></div>
       <div class="stats-row four" data-testid="deck-stats"><div class="stat"><b>${m.total}<small>/${MIN}</small></b><span>${Tx("Cards")}</span></div>
         <div class="stat"><b>${m.inColl != null ? m.inColl + "%" : "—"}</b><span>${Tx("In collection")}</span></div>
-        <div class="stat"><b class="money">${moneySplit(m.value)}</b><span>${Tx("Value")}</span></div>
+        <div class="stat"><b class="money">${havePrices() ? moneySplit(m.value) : "—"}</b><span>${Tx("Value")}</span></div>
         <div class="stat"><b class="${m.wr != null && m.wr >= 50 ? "win" : ""}">${m.wr != null ? m.wr + "%" : "—"}</b><span>${Tx("Wins")}</span></div></div>
+      ${priceNote()}
       ${buildBox(d)}
       <div class="tabs" role="tablist" style="margin-top:var(--sp-5)">${tabs.map(([k, l, n]) => `<button type="button" class="tab" role="tab" data-tab="${k}" aria-selected="${tab === k}">${Tx(l)}${n ? `<span class="count quiet">${n}</span>` : ""}</button>`).join("")}</div>
       <div id="tabBody" role="tabpanel">${tab === "analysis" ? analysis(d, m) : tab === "missing" ? missingTab(d, m) : tab === "games" ? gamesTab(d, m) : tab === "plan" ? planTab(d) : tab === "gala" ? galaTab(d, m) : listTab(d, m)}</div>`;
@@ -1066,13 +1070,13 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         ${left ? buyLinks(r.g, left, true) : ""}</figure>`;
     };
     return `<div class="notice" data-testid="gala-summary"><i class="ic i-sparkle"></i><span class="t"><b>${esc(Tx("Your deck with the most special art of each card"))}</b>${esc(Tx("Same cards and rules: only the art changes. The most expensive printing of each card, in foil — swipe a card (or use the arrows) to see its other arts."))}</span></div>
-      <div class="stats-row four" style="margin:var(--sp-3) 0" data-testid="gala-stats"><div class="stat"><b class="money">${moneySplit(total)}</b><span>${Tx("This version")}</span></div>
-        <div class="stat"><b class="money">${moneySplit(m.value)}</b><span>${Tx("Your list")}</span></div>
+      <div class="stats-row four" style="margin:var(--sp-3) 0" data-testid="gala-stats"><div class="stat"><b class="money">${havePrices() ? moneySplit(total) : "—"}</b><span>${Tx("This version")}</span></div>
+        <div class="stat"><b class="money">${havePrices() ? moneySplit(m.value) : "—"}</b><span>${Tx("Your list")}</span></div>
         <div class="stat"><b>${owned}<small>/${copies}</small></b><span>${Tx("You already have")}</span></div>
-        <div class="stat"><b class="money">${moneySplit(toBuy)}</b><span>${Tx("To complete")}</span></div></div>
+        <div class="stat"><b class="money">${havePrices() ? moneySplit(toBuy) : "—"}</b><span>${Tx("To complete")}</span></div></div>
       <p class="small" style="margin:0 0 var(--sp-3)">${mix}</p>
       <div class="gala-grid" data-testid="gala-grid">${rows.map(card).join("")}</div>
-      <p class="small faint" style="margin-top:var(--sp-4)">${esc(Tx("Prices: {s}, foil. Tap a card to see it large and add the copies you have.", { s: priceSrc }))}</p>`;
+      ${priceNote(Tx("Foil prices. Tap a card to see it large and add the copies you have."))}`;
   }
   function wireGala() {
     const step = (key, dd) => {
@@ -1119,8 +1123,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         <div class="list tight divided" style="margin-top:var(--sp-2)">${offers.join("")}</div></div></div></section>`;
     }).join("");
     const head = [Tx(m.missingN === 1 ? "{n} card missing" : "{n} cards missing", { n: m.missingN })];
-    const sub = [BR ? Tx("{v} estimated (MYP Cards, else TCGplayer)", { v: money(m.missingValue) }) : Tx("{v} at {s}", { v: money(m.missingValue), s: priceSrc }), fromFriends ? Tx("{n} can come from friends", { n: fromFriends }) : ""].filter(Boolean).join(" · ");
+    const sub = [!havePrices() ? "" : BR ? Tx("{v} estimated (MYP Cards, else TCGplayer)", { v: money(m.missingValue) }) : Tx("{v} at {s}", { v: money(m.missingValue), s: priceSrc }), fromFriends ? Tx("{n} can come from friends", { n: fromFriends }) : ""].filter(Boolean).join(" · ");
     return `<div class="notice" data-testid="missing-summary"><i class="ic i-info"></i><span class="t"><b>${esc(head[0])}</b>${esc(sub)}</span></div>
+      ${priceNote()}
       <div class="row" style="gap:var(--sp-2);margin:var(--sp-3) 0"><span class="small muted">${Tx("Post what's missing on the board")}</span><button type="button" class="btn small" data-post="buy">${Tx("Looking to buy")}</button><button type="button" class="btn small" data-post="borrow">${Tx("Looking to borrow")}</button></div>
       <div class="stack">${cards}</div>`;
   }
@@ -1501,6 +1506,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       (window.INKWELL_PRICES_BR ? fetch(window.INKWELL_PRICES_BR_URL || "../data/prices-br.json") : Promise.reject(new Error("MYP Cards off"))).then((r) => (r.ok ? r.json() : null)).catch(() => null),
     ]).then(([pr, l, br]) => {
       if (br?.cards) BR = br;
+      PRJ = pr?.prices ? pr : null;
       if (pr?.prices) { PRICES = pr.prices; pricesDate = pr.generated_at; priceSrc = pr.usd_brl ? "TCGplayer" : "Liga Lorcana";
         PRICE_SOURCE = pr.usd_brl ? Tx("TCGplayer market price converted at R$ {r} per dollar (Liga Lorcana where TCGplayer has none)", { r: String(pr.usd_brl).replace(".", lang === "pt" ? "," : ".") }) : "Liga Lorcana";
         if (BR) PRICE_SOURCE = Tx("lowest MYP Cards listing ({d}); without one, {s}", { d: dateFmt(BR.retrieved_at).replace(/\.$/, ""), s: PRICE_SOURCE }); }
@@ -1541,6 +1547,21 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const STAT_OFF = navigator.webdriver || navigator.globalPrivacyControl === true || navigator.doNotTrack === "1" || window.doNotTrack === "1";
   let statSid = null;
   try { statSid = sessionStorage.getItem("inkwell-sid"); if (!/^[a-f0-9]{24}$/.test(statSid || "")) { statSid = [...crypto.getRandomValues(new Uint8Array(12))].map((b) => b.toString(16).padStart(2, "0")).join(""); sessionStorage.setItem("inkwell-sid", statSid); } } catch { statSid = null; }
+  // ---------- price transparency (issue #145, P0-C): one label for every page that shows prices ----------
+  // pr = site/data/prices.json (or null when it didn't load). Says the source, the currency, the date and that it's an
+  // estimate; older than PRICE_STALE_DAYS -> "desatualizados"; missing -> "indisponíveis" (pages keep working without it).
+  const PRICE_STALE_DAYS = 3;
+  window.INKWELL_PRICE_NOTE = (pr) => {
+    const at = Date.parse(pr?.generated_at || ""), ok = !!(pr && pr.prices && Object.keys(pr.prices).length && at);
+    if (!ok) return { ok: false, stale: false, text: T("Preços indisponíveis no momento. Deck e coleção funcionam normalmente; os valores voltam quando a fonte responder.", "Prices are unavailable right now. Decks and collection work as usual; values come back when the source answers.") };
+    const days = (Date.now() - at) / 864e5, when = new Date(at).toLocaleDateString(pt ? "pt-BR" : "en", { day: "numeric", month: "short", year: "numeric" });
+    const rate = pr.usd_brl ? String(pr.usd_brl).replace(".", pt ? "," : ".") : null;
+    const src = rate ? T(`preço de mercado do TCGplayer (em dólar) convertido a R$ ${rate}`, `TCGplayer market price (in dollars) converted at R$ ${rate}`) : "Liga Lorcana";
+    if (days > PRICE_STALE_DAYS) return { ok: true, stale: true, date: when, text: T(`Preços desatualizados: última atualização em ${when}. Valores em reais, apenas indicativos (${src}).`, `Prices are out of date: last updated ${when}. Values in reais, only indicative (${src}).`) };
+    return { ok: true, stale: false, date: when, text: T(`Valores indicativos em reais: ${src}, atualizado em ${when}. Não é oferta de venda.`, `Indicative values in reais: ${src}, updated ${when}. Not an offer to sell.`) };
+  };
+  window.INKWELL_PRICE_NOTE_HTML = (pr, extra = "") => { const n = window.INKWELL_PRICE_NOTE(pr);
+    return `<p class="small ${n.ok && !n.stale ? "faint" : "price-warn"}" data-testid="price-note" data-state="${!n.ok ? "unavailable" : n.stale ? "stale" : "ok"}">${n.ok && !n.stale ? "" : '<i class="ic i-alert"></i> '}${esc(n.text)}${extra ? " " + esc(extra) : ""}</p>`; };
   const statDev = () => (matchMedia("(pointer: coarse)").matches || innerWidth < 700 ? "mobile" : "desktop");
   const statRef = () => { try { const h = document.referrer ? new URL(document.referrer).hostname.toLowerCase() : ""; return h && h !== location.hostname ? h.replace(/^www\./, "").slice(0, 60) : null; } catch { return null; } };
   const statSend = (kind, name) => {
@@ -1549,6 +1570,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   };
   // pages call INKWELL_TRACK("scan_open") etc.; each action counts once per page view
   const statDone = new Set();
+  // the account was just created (the e-mail code also signs in people who already have one): created under 15 min ago
+  window.INKWELL_NEW_ACCOUNT = () => { try { const u = JSON.parse(localStorage.getItem("inkwell-counter-auth") || "null")?.user; const t = Date.parse(u?.created_at || ""); return !!t && Date.now() - t < 15 * 60000; } catch { return false; } };
   window.INKWELL_TRACK = (name) => { if (!/^[a-z_]{1,30}$/.test(name || "") || statDone.has(name)) return; statDone.add(name); statSend("action", name); };
   statSend("view");
   // Every module stays in the top bar (design "The Great Illuminary", 26/10/2026). On phones the bottom bar has
@@ -1799,7 +1822,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       email = $("iwSiEmail").value.trim();
       if (!/^\S+@\S+\.\S+$/.test(email)) { $("iwSiMsg").textContent = T("Digite seu e-mail.", "Enter your e-mail."); return; }
       const b = $("iwSiSend"); b.setAttribute("aria-busy", "true"); b.disabled = true;
-      try { await CLOUD.requestCode(email); sentAt = Date.now(); window.INKWELL_TRACK("signin_code"); stepCode(); }
+      try { await CLOUD.requestCode(email); sentAt = Date.now(); window.INKWELL_TRACK("signup_started"); stepCode(); }
       catch { b.removeAttribute("aria-busy"); b.disabled = false; $("iwSiMsg").textContent = T("Não foi possível enviar o e-mail. Confira o endereço e a internet.", "Couldn't send the e-mail. Check the address and your connection."); }
     });
     setTimeout(() => $("iwSiEmail")?.focus(), 30);
@@ -1861,7 +1884,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       e.preventDefault();
       if (go.disabled) return;
       go.setAttribute("aria-busy", "true"); go.disabled = true;
-      try { await CLOUD.verify(email, digits()); window.INKWELL_TRACK("signin_done"); if (canOfferPasskey()) { try { sessionStorage.setItem(PK_NOW, "1"); } catch { /* */ } } location.reload(); }
+      try { await CLOUD.verify(email, digits()); window.INKWELL_TRACK(window.INKWELL_NEW_ACCOUNT() ? "signup_completed" : "signin_done"); if (canOfferPasskey()) { try { sessionStorage.setItem(PK_NOW, "1"); } catch { /* */ } } location.reload(); }
       catch (err) {
         go.removeAttribute("aria-busy"); box.classList.add("err"); box.focus(); box.select?.();
         $("iwSiMsg").dataset.keep = "1"; sync();

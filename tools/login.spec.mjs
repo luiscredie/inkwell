@@ -190,3 +190,29 @@ test('"Agora não" after the code: signed in, and the offer does not come back o
   await expect(page.locator('#iwSignSheet')).toBeHidden();
   expect(await page.evaluate(() => localStorage.getItem('inkwell-passkey-offer'))).toBe('no');
 });
+
+test('#145 P0-B: a new account sends signup_started then signup_completed (no e-mail or code in them)', async ({ page }) => {
+  await page.addInitScript(() => Object.defineProperty(Navigator.prototype, 'webdriver', { get: () => false }));
+  await setup(page);
+  const tracked = [];
+  await page.route('**/rest/v1/rpc/track', (r) => { tracked.push(JSON.parse(r.request().postData())); return r.fulfill({ status: 204, body: '' }); });
+  await page.route('**/auth/v1/verify', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ access_token: jwt(ME), refresh_token: 'r', expires_in: 3600, user: { id: ME, email: 'a@b.c', created_at: new Date().toISOString() } }) }));
+  const sheet = await toCode(page);
+  await sheet.getByLabel('Código do e-mail').fill('12345678');
+  await expect.poll(() => tracked.map((t) => t.p_name).filter(Boolean)).toEqual(expect.arrayContaining(['signin_open', 'signup_started', 'signup_completed']));
+  const blob = JSON.stringify(tracked);
+  expect(blob).not.toContain('ana@example.com');
+  expect(blob).not.toContain('12345678');
+  expect(Object.keys(tracked[0]).sort()).toEqual(['p_dev', 'p_kind', 'p_name', 'p_page', 'p_ref', 'p_sid']);   // the whole schema: nothing personal
+});
+test('#145 P0-B: an existing account signing in is not counted as a sign-up', async ({ page }) => {
+  await page.addInitScript(() => Object.defineProperty(Navigator.prototype, 'webdriver', { get: () => false }));
+  await setup(page);
+  const tracked = [];
+  await page.route('**/rest/v1/rpc/track', (r) => { tracked.push(JSON.parse(r.request().postData())); return r.fulfill({ status: 204, body: '' }); });
+  await page.route('**/auth/v1/verify', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ access_token: jwt(ME), refresh_token: 'r', expires_in: 3600, user: { id: ME, email: 'a@b.c', created_at: '2026-08-01T00:00:00Z' } }) }));
+  const sheet = await toCode(page);
+  await sheet.getByLabel('Código do e-mail').fill('12345678');
+  await expect.poll(() => tracked.map((t) => t.p_name)).toContain('signin_done');
+  expect(tracked.map((t) => t.p_name)).not.toContain('signup_completed');
+});

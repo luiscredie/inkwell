@@ -298,7 +298,7 @@ window.INKWELL_CLOUD = (() => {
       <li id="localizacao"><b>Localização, só se você pedir:</b> na página Eventos, o lugar que você usa para buscar (cidade, bairro, endereço ou CEP) fica <b>só no seu aparelho</b>. Se você marcar <i>“Salvar este lugar na minha conta”</i>, guardamos na conta um <b>ponto aproximado</b> (arredondado em cerca de 1 km), o nome do bairro ou cidade e o raio — <b>nunca a rua nem o número</b>. Serve para avisar você de eventos novos perto e para usar o mesmo lugar em outros aparelhos. Só você vê. Desmarcar apaga na hora, e ele também é apagado com a conta.</li>
       <li><b>Avisos:</b> as notificações do sino e, se você ligar os avisos no aparelho, o endereço técnico que o navegador cria para receber notificações. Desligar no sino apaga esse registro.</li>
       <li><b>Segurança:</b> denúncias enviadas e recebidas, e quando cada carta entrou na sua coleção.</li>
-      <li id="estatisticas"><b>Estatísticas de uso, sem identificar ninguém:</b> para saber se o site é útil, contamos as páginas vistas e algumas ações (por exemplo, abrir o scanner ou testar um deck). Cada aba do navegador recebe um código aleatório que some quando a aba fecha. Junto vão só: se você está com conta ou não, celular ou computador, e o nome do site de onde você veio (só o domínio). <b>Não guardamos IP, cookies, nem quem você é</b>, e não cruzamos isso com a sua conta. Navegadores com “não rastrear” (Do Not Track / Global Privacy Control) não enviam nada. Fica 90 dias e só os administradores veem os totais.</li>
+      <li id="estatisticas"><b>Estatísticas de uso, sem identificar ninguém:</b> para saber se o site é útil, contamos as páginas vistas e algumas ações (por exemplo, abrir o scanner ou testar um deck). Cada aba do navegador recebe um código aleatório que some quando a aba fecha. Junto vão só: se você está com conta ou não, celular ou computador, e o nome do site de onde você veio (só o domínio). <b>Não guardamos IP, cookies, nem quem você é</b>, e não cruzamos essas páginas e ações com a sua conta. Para saber quantos membros usam o site por semana e por mês, guardamos à parte, de quem está com conta, só a conta e o dia em que abriu o site (nenhuma página ou ação), também por 90 dias; esses dias vêm em “Baixar meus dados” e somem se você excluir a conta. Navegadores com “não rastrear” (Do Not Track / Global Privacy Control) não enviam nada. Fica 90 dias e só os administradores veem os totais.</li>
     </ul>
     <p>Não usamos cookies de rastreamento nem ferramentas de publicidade. O site guarda no seu navegador apenas preferências (idioma, filtros), a sessão de entrada e o código aleatório da aba.</p>
     <h2 id="quem-ve">4. Quem vê o quê</h2>
@@ -357,7 +357,7 @@ window.INKWELL_CLOUD = (() => {
       <li><b>Location, only if you ask:</b> on Events, the place you search from (city, district, address or postcode) stays <b>on your device</b>. If you tick <i>“Keep this place in my account”</i>, we keep an <b>approximate point</b> (rounded to about 1 km), the district or city name and the radius — <b>never the street or number</b>. It is used to tell you about new events nearby and to use the same place on other devices. Only you see it. Unticking deletes it at once, and it goes with the account.</li>
       <li><b>Notices:</b> the bell notifications and, if you turn notices on for a device, the technical address the browser creates to receive them. Turning them off in the bell deletes it.</li>
       <li><b>Safety:</b> reports sent and received, and when each card entered your collection.</li>
-      <li><b>Usage statistics, identifying no one:</b> to know whether the site is useful, we count pages viewed and a few actions (for example, opening the scanner or trying a deck). Each browser tab gets a random code that disappears when the tab closes. Only this goes with it: whether you are signed in, phone or computer, and the name of the site you came from (domain only). <b>We keep no IP, no cookies and not who you are</b>, and never link it to your account. Browsers with Do Not Track / Global Privacy Control send nothing. Kept 90 days; only administrators see the totals.</li>
+      <li><b>Usage statistics, identifying no one:</b> to know whether the site is useful, we count pages viewed and a few actions (for example, opening the scanner or trying a deck). Each browser tab gets a random code that disappears when the tab closes. Only this goes with it: whether you are signed in, phone or computer, and the name of the site you came from (domain only). <b>We keep no IP, no cookies and not who you are</b>, and never link those pages and actions to your account. To know how many members use the site each week and month, we keep separately, for signed-in people, only the account and the day it opened the site (no page or action), also for 90 days; those days come with "Download my data" and are erased if you delete the account. Browsers with Do Not Track / Global Privacy Control send nothing. Kept 90 days; only administrators see the totals.</li>
     </ul>
     <p>We use no tracking cookies or advertising tools. The site only keeps preferences (language, filters), your sign-in session and the tab's random code in your browser.</p>
     <h2>4. Who sees what</h2>
@@ -421,6 +421,21 @@ window.INKWELL_CLOUD = (() => {
   const STAT_OFF = navigator.webdriver || navigator.globalPrivacyControl === true || navigator.doNotTrack === "1" || window.doNotTrack === "1";
   let statSid = null;
   try { statSid = sessionStorage.getItem("inkwell-sid"); if (!/^[a-f0-9]{24}$/.test(statSid || "")) { statSid = [...crypto.getRandomValues(new Uint8Array(12))].map((b) => b.toString(16).padStart(2, "0")).join(""); sessionStorage.setItem("inkwell-sid", statSid); } } catch { statSid = null; }
+  // ---------- price transparency (issue #145, P0-C): one label for every page that shows prices ----------
+  // pr = site/data/prices.json (or null when it didn't load). Says the source, the currency, the date and that it's an
+  // estimate; older than PRICE_STALE_DAYS -> "desatualizados"; missing -> "indisponíveis" (pages keep working without it).
+  const PRICE_STALE_DAYS = 3;
+  window.INKWELL_PRICE_NOTE = (pr) => {
+    const at = Date.parse(pr?.generated_at || ""), ok = !!(pr && pr.prices && Object.keys(pr.prices).length && at);
+    if (!ok) return { ok: false, stale: false, text: T("Preços indisponíveis no momento. Deck e coleção funcionam normalmente; os valores voltam quando a fonte responder.", "Prices are unavailable right now. Decks and collection work as usual; values come back when the source answers.") };
+    const days = (Date.now() - at) / 864e5, when = new Date(at).toLocaleDateString(pt ? "pt-BR" : "en", { day: "numeric", month: "short", year: "numeric" });
+    const rate = pr.usd_brl ? String(pr.usd_brl).replace(".", pt ? "," : ".") : null;
+    const src = rate ? T(`preço de mercado do TCGplayer (em dólar) convertido a R$ ${rate}`, `TCGplayer market price (in dollars) converted at R$ ${rate}`) : "Liga Lorcana";
+    if (days > PRICE_STALE_DAYS) return { ok: true, stale: true, date: when, text: T(`Preços desatualizados: última atualização em ${when}. Valores em reais, apenas indicativos (${src}).`, `Prices are out of date: last updated ${when}. Values in reais, only indicative (${src}).`) };
+    return { ok: true, stale: false, date: when, text: T(`Valores indicativos em reais: ${src}, atualizado em ${when}. Não é oferta de venda.`, `Indicative values in reais: ${src}, updated ${when}. Not an offer to sell.`) };
+  };
+  window.INKWELL_PRICE_NOTE_HTML = (pr, extra = "") => { const n = window.INKWELL_PRICE_NOTE(pr);
+    return `<p class="small ${n.ok && !n.stale ? "faint" : "price-warn"}" data-testid="price-note" data-state="${!n.ok ? "unavailable" : n.stale ? "stale" : "ok"}">${n.ok && !n.stale ? "" : '<i class="ic i-alert"></i> '}${esc(n.text)}${extra ? " " + esc(extra) : ""}</p>`; };
   const statDev = () => (matchMedia("(pointer: coarse)").matches || innerWidth < 700 ? "mobile" : "desktop");
   const statRef = () => { try { const h = document.referrer ? new URL(document.referrer).hostname.toLowerCase() : ""; return h && h !== location.hostname ? h.replace(/^www\./, "").slice(0, 60) : null; } catch { return null; } };
   const statSend = (kind, name) => {
@@ -429,6 +444,8 @@ window.INKWELL_CLOUD = (() => {
   };
   // pages call INKWELL_TRACK("scan_open") etc.; each action counts once per page view
   const statDone = new Set();
+  // the account was just created (the e-mail code also signs in people who already have one): created under 15 min ago
+  window.INKWELL_NEW_ACCOUNT = () => { try { const u = JSON.parse(localStorage.getItem("inkwell-counter-auth") || "null")?.user; const t = Date.parse(u?.created_at || ""); return !!t && Date.now() - t < 15 * 60000; } catch { return false; } };
   window.INKWELL_TRACK = (name) => { if (!/^[a-z_]{1,30}$/.test(name || "") || statDone.has(name)) return; statDone.add(name); statSend("action", name); };
   statSend("view");
   // Every module stays in the top bar (design "The Great Illuminary", 26/10/2026). On phones the bottom bar has
@@ -679,7 +696,7 @@ window.INKWELL_CLOUD = (() => {
       email = $("iwSiEmail").value.trim();
       if (!/^\S+@\S+\.\S+$/.test(email)) { $("iwSiMsg").textContent = T("Digite seu e-mail.", "Enter your e-mail."); return; }
       const b = $("iwSiSend"); b.setAttribute("aria-busy", "true"); b.disabled = true;
-      try { await CLOUD.requestCode(email); sentAt = Date.now(); window.INKWELL_TRACK("signin_code"); stepCode(); }
+      try { await CLOUD.requestCode(email); sentAt = Date.now(); window.INKWELL_TRACK("signup_started"); stepCode(); }
       catch { b.removeAttribute("aria-busy"); b.disabled = false; $("iwSiMsg").textContent = T("Não foi possível enviar o e-mail. Confira o endereço e a internet.", "Couldn't send the e-mail. Check the address and your connection."); }
     });
     setTimeout(() => $("iwSiEmail")?.focus(), 30);
@@ -741,7 +758,7 @@ window.INKWELL_CLOUD = (() => {
       e.preventDefault();
       if (go.disabled) return;
       go.setAttribute("aria-busy", "true"); go.disabled = true;
-      try { await CLOUD.verify(email, digits()); window.INKWELL_TRACK("signin_done"); if (canOfferPasskey()) { try { sessionStorage.setItem(PK_NOW, "1"); } catch { /* */ } } location.reload(); }
+      try { await CLOUD.verify(email, digits()); window.INKWELL_TRACK(window.INKWELL_NEW_ACCOUNT() ? "signup_completed" : "signin_done"); if (canOfferPasskey()) { try { sessionStorage.setItem(PK_NOW, "1"); } catch { /* */ } } location.reload(); }
       catch (err) {
         go.removeAttribute("aria-busy"); box.classList.add("err"); box.focus(); box.select?.();
         $("iwSiMsg").dataset.keep = "1"; sync();

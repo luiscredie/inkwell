@@ -572,3 +572,39 @@ test.describe('phone', () => {
     await expect(page.locator('[data-gkey]').first().getByTestId('gala-pos')).toHaveText(/^2\//);
   });
 });
+
+// ---------- #145 P0-C: price transparency ----------
+const pricesAt = (iso) => ({ generated_at: iso, usd_brl: 5.4, prices: { 'LOR10-1': { n: 2, nl: 2, f: 6, fl: 6 }, 'LOR10-10': { n: 1, nl: 1 } } });
+test('prices: the deck says source, currency, date and that values are indicative', async ({ page }) => {
+  await setup(page);
+  await page.route('**/data/prices.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(pricesAt(new Date().toISOString())) }));
+  await page.goto(BASE + '?deck=deck-a');
+  const note = page.getByTestId('price-note').first();
+  await expect(note).toHaveAttribute('data-state', 'ok');
+  await expect(note).toContainText('Valores indicativos em reais');
+  await expect(note).toContainText('TCGplayer');
+  await expect(note).toContainText('R$ 5,4');
+  await expect(note).toContainText('atualizado em');
+  await page.goto(BASE + '?deck=deck-a&tab=missing');
+  await expect(page.getByTestId('price-note').first()).toHaveAttribute('data-state', 'ok');
+});
+test('prices: older than 3 days are flagged as out of date, the deck still works', async ({ page }) => {
+  await setup(page);
+  await page.route('**/data/prices.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(pricesAt(new Date(Date.now() - 5 * 864e5).toISOString())) }));
+  await page.goto(BASE + '?deck=deck-a');
+  await expect(page.getByTestId('price-note').first()).toHaveAttribute('data-state', 'stale');
+  await expect(page.getByTestId('price-note').first()).toContainText('Preços desatualizados');
+  await expect(page.locator('[data-testid="deck-stats"]')).toContainText('R$');
+});
+test('prices: when the price file does not load, values show — (never R$ 0) and the deck, list and missing cards work', async ({ page }) => {
+  await setup(page);
+  await page.route('**/data/prices.json', (r) => r.fulfill({ status: 503, body: '' }));
+  await page.goto(BASE + '?deck=deck-a');
+  await expect(page.getByTestId('price-note').first()).toHaveAttribute('data-state', 'unavailable');
+  await expect(page.getByTestId('price-note').first()).toContainText('Preços indisponíveis');
+  await expect(page.locator('[data-testid="deck-stats"] .stat').nth(2)).toContainText('—');
+  await expect(page.locator('[data-testid="deck-stats"]')).not.toContainText('R$ 0');
+  await page.goto(BASE + '?deck=deck-a&tab=missing');
+  await expect(page.locator('[data-testid="missing-summary"]')).toContainText('faltando');
+  await expect(page.locator('[data-testid="missing-summary"]')).not.toContainText('R$');
+});

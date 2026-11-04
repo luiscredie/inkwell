@@ -145,26 +145,55 @@
   // ---------- Painel: supabase/site_stats.sql ----------
   // one load at a time: render() starts a load when there are no numbers yet, and this draws the skeleton first —
   // without the flag the two called each other until the stack overflowed, firing ~1000 admin_stats queries
-  let statLoading = 0;
+  let statLoading = 0, metrics = null, metricsErr = "";
+  const PP = (p, e) => (lang === "pt" ? p : e);
+  // ---------- issue #145, P0-B: the product metrics (supabase/metrics_p0.sql). Real counts only: zero shows as zero. ----------
+  const EVENT_NAME = { page_view: ["Páginas vistas", "Pages viewed"], try_deck_started: ["Começou a testar um deck", "Started trying a deck"], deck_sample_loaded: ["Carregou o deck de exemplo", "Loaded the example deck"],
+    signup_started: ["Pediu o código de entrada", "Asked for the sign-in code"], signup_completed: ["Criou a conta", "Created the account"], deck_saved: ["Salvou um deck", "Saved a deck"],
+    profile_started: ["Começou o perfil", "Started the profile"], profile_saved: ["Salvou o perfil", "Saved the profile"], collection_started: ["Começou a coleção", "Started the collection"] };
+  function metricsHtml() {
+    if (metricsErr) return `<section class="card" data-testid="metrics" style="margin-bottom:var(--sp-4)"><b>${PP("Métricas do produto", "Product metrics")}</b><p class="small muted" data-testid="metrics-error" style="margin:var(--sp-2) 0 0">${esc(metricsErr)}</p></section>`;
+    if (!metrics) return "";
+    const m = metrics, at = (x) => (x ? new Date(x).toLocaleString(LOC, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"), dd = (x) => (x ? new Date(x).toLocaleDateString(LOC, { day: "numeric", month: "short", year: "numeric" }) : "—");
+    const kpi = (v, l, id, sub) => `<div class="stat" data-testid="m-${id}"><b>${esc(num(v))}</b><span>${esc(l)}</span>${sub ? `<small class="micro muted" style="display:block">${esc(sub)}</small>` : ""}</div>`;
+    return `<section class="card" data-testid="metrics" style="margin-bottom:var(--sp-4)"><div class="hd"><h3>${PP("Métricas do produto", "Product metrics")}</h3>
+        <span class="small muted" data-testid="metrics-updated">${esc(PP(`Atualizado em ${at(m.generated_at)} · desde ${dd(m.since)}`, `Updated ${at(m.generated_at)} · since ${dd(m.since)}`))}</span></div>
+      <div class="stats-row four" style="margin-top:var(--sp-3)">${kpi(m.visits, PP("Visitas (abas do navegador)", "Visits (browser tabs)"), "visits", PP(`${num(m.visits_anon)} sem conta · não são pessoas`, `${num(m.visits_anon)} signed out · not people`))}
+        ${kpi(m.accounts_created, PP("Contas criadas", "Accounts created"), "accounts", m.new_with_profile != null ? PP(`${num(m.new_with_profile)} com perfil · ${num(m.new_with_deck)} com deck`, `${num(m.new_with_profile)} with a profile · ${num(m.new_with_deck)} with a deck`) : "")}
+        ${kpi(m.active_7d, PP("Membros ativos em 7 dias", "Members active in 7 days"), "active7")}
+        ${kpi(m.active_30d, PP("Membros ativos em 30 dias", "Members active in 30 days"), "active30", PP(`${num(m.members)} membros no total`, `${num(m.members)} members in all`))}</div>
+      <div class="st-wrap" style="margin-top:var(--sp-3)"><table class="st-table" data-testid="metrics-events"><thead><tr><th>${PP("Evento", "Event")}</th><th>${PP("Vezes", "Times")}</th><th>${PP("Visitas", "Visits")}</th><th>${PP("Sem conta", "Signed out")}</th><th>${PP("Com conta", "Signed in")}</th></tr></thead>
+        <tbody>${(m.events || []).map((e) => `<tr data-ev="${esc(e.name)}"><td>${esc(PP(...(EVENT_NAME[e.name] || [e.name, e.name])))} <code class="micro muted">${esc(e.name)}</code></td><td>${num(e.count)}</td><td>${num(e.visits)}</td><td>${num(e.anon)}</td><td>${num(e.signed)}</td></tr>`).join("")}</tbody></table></div>
+      <details style="margin-top:var(--sp-3)"><summary class="small">${PP("Como contamos", "How we count")}</summary><ul class="small muted" style="margin:var(--sp-2) 0 0;padding-left:1.2em">
+        <li>${PP("Visita = uma aba do navegador (código aleatório na aba; sem cookie, sem IP). Não é número de pessoas: uma pessoa gera várias visitas (outra aba, outro dia, outro aparelho).", "Visit = one browser tab (random code in the tab; no cookie, no IP). Not a count of people: one person makes several visits (another tab, day or device).")}</li>
+        <li>${PP("Contas criadas, com perfil e com deck vêm do banco de dados e não podem ser infladas. Visitas e eventos são enviados pelo navegador: são indicativos (ver limitações em docs/metricas.md).", "Accounts created, with a profile and with a deck come from the database and cannot be inflated. Visits and events are sent by the browser: they are indicative (see the limits in docs/metricas.md).")}</li>
+        <li>${PP("Membro ativo = conta que abriu pelo menos uma página com login no período (guardamos só conta + dia, por 90 dias)" + (m.active_since ? `; contando desde ${dd(m.active_since)}.` : "; ainda sem dados."), "Active member = account that opened at least one page signed in during the period (we keep only account + day, for 90 days)" + (m.active_since ? `; counting since ${dd(m.active_since)}.` : "; no data yet."))}</li>
+        <li>${PP("Cada ação conta uma vez por página aberta; a mesma ação repetida na mesma aba em 3 segundos conta uma vez.", "Each action counts once per page view; the same action repeated in the same tab within 3 seconds counts once.")}</li>
+        <li>${PP("Não contamos administradores, navegadores automáticos nem quem pede \"não rastrear\" (DNT/GPC). Nada de e-mail, nome, código de entrada ou conteúdo.", "Admins, automated browsers and \"do not track\" (DNT/GPC) browsers are not counted. No e-mail, name, sign-in code or content.")}</li>
+        <li>${PP(`Eventos guardados por ${m.retention_days || 90} dias` + (m.first_event_at ? `; o mais antigo é de ${dd(m.first_event_at)}.` : "."), `Events kept ${m.retention_days || 90} days` + (m.first_event_at ? `; the oldest is from ${dd(m.first_event_at)}.` : "."))}</li></ul></details></section>`;
+  }
   async function loadStats() {
     const mine = ++statLoading;
     statErr = ""; stats = null; render();
     let r = null, err = "";
+    const mp = rpc("admin_metrics", { p_days: statDays }).then((x) => (x && typeof x === "object" && !Array.isArray(x) ? { x } : { e: "empty" }), (e) => ({ e: String(e?.message || e) }));   // handled now: no unhandled rejection
     try { r = await rpc("admin_stats", { p_days: statDays }); if (!r || typeof r !== "object") err = Tx("Couldn't load."); }
     catch (e) { err = /admin_stats|404|PGRST202/.test(String(e?.message || e)) ? Tx("Run supabase/site_stats.sql to start counting.") : Tx("Couldn't load."); }
+    const m = await mp;
     if (mine !== statLoading) return;   // another period was picked meanwhile: that answer wins
+    metrics = m.x || null; metricsErr = m.e ? (/admin_metrics|404|PGRST202/.test(m.e) ? PP("Rode supabase/metrics_p0.sql para ver as métricas P0.", "Run supabase/metrics_p0.sql to see the P0 metrics.") : Tx("Couldn't load.")) : "";
     statLoading = 0; stats = err ? null : r; statErr = err;
     render();
   }
   const PAGE_NAME = { feed: "Início", cards: "Coleção", decks: "Decks", communities: "Comunidades", coach: "Jogos", events: "Eventos", trades: "Trocas", prices: "Preços", profile: "Perfil", start: "Começar", entrar: "Entrar (link do e-mail)", legal: "Termos e privacidade", admin: "Admin" };
-  const ACTION_NAME = { signin_passkey: "Entrou com passkey", passkey_created: "Criou uma passkey", signin_open: "Abriu “Entrar”", signin_code: "Recebeu o código", signin_done: "Entrou", deck_sample: "Deck de exemplo", deck_paste: "Colou uma lista", deck_save: "“Criar conta e salvar” deck", scan_open: "Abriu o scanner", import_open: "Abriu “Importar”", share_open: "Abriu “Compartilhar”", trade_fill: "Separar repetidas", trade_post: "Anunciar no Mural", events_search: "Buscou eventos", events_box: "Buscou eventos (Início)", profile_start: "Começou um perfil", invite: "Convidar amigos", feedback_send: "Enviou feedback", deck_result: "Viu o resultado do deck", deck_saved: "Salvou o deck na conta", profile_save: "“Criar conta e salvar” perfil", profile_saved: "Salvou o perfil na conta", collection_start: "“Criar conta e começar minha coleção”" };
+  const ACTION_NAME = { signin_passkey: "Entrou com passkey", passkey_created: "Criou uma passkey", signin_open: "Abriu “Entrar”", signin_code: "Recebeu o código", signup_started: "Pediu o código", signup_completed: "Criou a conta", try_deck_started: "Começou a testar um deck", deck_sample_loaded: "Deck de exemplo", profile_started: "Começou o perfil", collection_started: "Começou a coleção", signin_done: "Entrou", deck_sample: "Deck de exemplo", deck_paste: "Colou uma lista", deck_save: "“Criar conta e salvar” deck", scan_open: "Abriu o scanner", import_open: "Abriu “Importar”", share_open: "Abriu “Compartilhar”", trade_fill: "Separar repetidas", trade_post: "Anunciar no Mural", events_search: "Buscou eventos", events_box: "Buscou eventos (Início)", profile_start: "Começou um perfil", invite: "Convidar amigos", feedback_send: "Enviou feedback", deck_result: "Viu o resultado do deck", deck_saved: "Salvou o deck na conta", profile_save: "“Criar conta e salvar” perfil", profile_saved: "Salvou o perfil na conta", collection_start: "“Criar conta e começar minha coleção”" };
   const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
   // open trial: try → result → start sign-up → saved (each action counts once per page view; no e-mail or content is sent)
   function trialHtml() {
     const A = new Map((stats.actions || []).map((x) => [x.name, (+x.anon || 0) + (+x.signed || 0)]));
     const sum = (...k) => k.reduce((t, n) => t + (A.get(n) || 0), 0);
-    const steps = [["Started (example, pasted list or profile)", sum("deck_sample", "deck_paste", "profile_start")], ["Saw the deck result", sum("deck_result")],
-      ["Pressed “Create account and save”", sum("deck_save", "profile_save")], ["Saved in the account", sum("deck_saved", "profile_saved")]];
+    const steps = [["Started (example, pasted list or profile)", sum("deck_sample", "deck_sample_loaded", "deck_paste", "profile_start", "profile_started")], ["Saw the deck result", sum("deck_result")],
+      ["Pressed “Create account and save”", sum("deck_save", "profile_save")], ["Saved in the account", sum("deck_saved", "profile_saved")]];   // older and newer names (#145) both count
     return `<section class="card" data-testid="stats-trial"><div class="hd"><h3>${Tx("Open trial")}</h3></div>
       <div class="st-funnel">${steps.map(([l, n]) => `<div class="fr"><span class="small">${esc(Tx(l))}</span><span class="track"><span class="bar" style="width:${pct(n, steps[0][1])}%;display:block"></span></span><span class="n"><b>${num(n)}</b> <span class="micro muted">${pct(n, steps[0][1])}%</span></span></div>`).join("")}</div>
       <p class="small faint" style="margin:var(--sp-2) 0 0">${Tx("Counts of actions, once per page view; a person who tries twice counts twice.")}</p></section>`;
@@ -172,14 +201,14 @@
   const num = (n) => Number(n || 0).toLocaleString(LOC);
   function statsHtml() {
     const seg = `<div class="seg" role="group" aria-label="${Tx("Period")}" style="margin:var(--sp-3) 0">${[7, 14, 30, 90].map((d) => `<button type="button" data-days="${d}" aria-pressed="${statDays === d}">${Tx("{n} days", { n: d })}</button>`).join("")}</div>`;
-    if (statErr) return seg + `<p class="muted" data-testid="stats-error">${esc(statErr)}</p>`;
+    if (statErr) return seg + metricsHtml() + `<p class="muted" data-testid="stats-error">${esc(statErr)}</p>`;
     if (!stats) return seg + `<div class="skel" style="height:240px"></div>`;
     const t = stats.totals || {}, series = stats.series || [], va = +t.visits_anon || 0;
     const kpi = (v, l, sub, id) => `<div class="stat" data-testid="kpi-${id}"><b>${esc(v)}</b><span>${esc(l)}</span>${sub ? `<small class="micro muted" style="display:block">${esc(sub)}</small>` : ""}</div>`;
     const steps = [["Arrived without an account", va], ["Saw 2 or more pages", t.two_plus], ["Tried something", t.tried], ["Opened “Sign in”", t.opened_signin], ["Got the code", t.got_code], ["Signed in", t.signed_in]];
     const max = Math.max(1, ...series.map((x) => +x.visits_anon || 0));
     const dlabel = (d) => new Date(d + "T12:00:00").toLocaleDateString(LOC, { day: "numeric", month: "short" });
-    return `${seg}
+    return `${seg}${metricsHtml()}
       <div class="stats-row four" data-testid="stats-kpis">${kpi(num(va), Tx("Visits without an account"), Tx("{p}% left on the first page", { p: pct(t.bounced, va) }), "visits")}
         ${kpi(num(t.signups), Tx("Sign-ups"), Tx("{n} confirmed the e-mail", { n: num(t.signups_confirmed) }), "signups")}
         ${kpi(num((+t.profiles_public || 0) + (+t.profiles_private || 0)), Tx("New profiles"), Tx("{a} public · {b} private", { a: num(t.profiles_public), b: num(t.profiles_private) }), "profiles")}

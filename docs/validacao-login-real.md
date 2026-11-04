@@ -51,3 +51,28 @@ Configuração atual (conferida em 01/11/2026 em Supabase → Authentication →
 
 ## O que anotar
 Para cada passo: aparelho, navegador, app de e-mail, tamanho do código, resultado esperado × real, captura de tela se falhar.
+
+## P0 #145 — teste real com conta de teste (antes da aprovação final)
+
+Quem executa: uma pessoa com acesso a uma caixa de e-mail de teste (ex.: um alias só para isso). Não colar código, link do
+e-mail, token nem print da caixa de e-mail em lugar nenhum (issue, PR, chat). Anotar só PASS/FAIL e o horário de cada passo.
+
+Pré-requisito: `supabase/metrics_p0.sql` rodado no SQL Editor (é compatível com o site atual: `track()` tem a mesma assinatura).
+
+| # | Passo (celular, aba anônima) | Esperado |
+|---|---|---|
+| R1 | inkwell.com.br → "Testar um deck sem cadastro" → "Experimentar com um deck de exemplo" | 60/60, legal, estimativa com fonte e data |
+| R2 | "Criar conta e salvar" → e-mail de teste → "Enviar código" | e-mail chega (assunto "Seu código do Inkwell") |
+| R3 | Digitar 7 dígitos e "Entrar" | "Esse código não vale…"; o que foi digitado continua; não entrou |
+| R4 | Colar o código inteiro | entra sozinho; volta a Decks com a lista e a janela de salvar abertas |
+| R5 | Dar um nome e "Salvar" | o deck aparece na lista |
+| R6 | Recarregar; voltar/avançar; sair (menu da conta) e entrar de novo com novo código | o deck continua lá |
+| R7 | "Criar meu perfil" → nome + tinta → salvar | "Seu Inkwell foi salvo", perfil privado |
+| R8 | Perfil → Seus dados → "Baixar meus dados" | arquivo tem o deck e `active_days` com o dia de hoje |
+| R9 | Perfil → Seus dados → "Excluir conta" (digitar EXCLUIR) | conta apagada |
+
+Depois de R9, o desenvolvedor confere no banco, só com contagens e sem expor dados: nenhuma linha da conta de teste ficou
+(`auth.users`, `inkwell_profiles`, `profiles`, `private.member_days`), e em `admin_metrics` aparecem os eventos
+`try_deck_started`, `deck_sample_loaded`, `signup_started`, `signup_completed`, `deck_saved`, `profile_started`, `profile_saved`
+no horário do teste. Antes do merge do PR #147 o site publicado ainda envia os nomes antigos (somados aos novos no relatório);
+`try_deck_started` e `signup_completed` só aparecem depois do merge — repetir R1–R5 nessa hora. Itens com BLOCKED não contam como aprovado.
