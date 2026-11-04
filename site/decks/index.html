@@ -337,6 +337,43 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
 .dtc-step b { min-width: 2ch; text-align: center; }
 .dtc-foot { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
 .dtc-foot .dtc-total { margin-right: auto; }
+/* Visão geral do deck */
+.deck-ov { margin-top: var(--sp-5); }
+.deck-ov .hd { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.ov-own { margin: 0 0 var(--sp-3); }
+.ov-head { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: var(--sp-4); align-items: end; margin-bottom: var(--sp-4); }
+.ov-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-3); }
+.ov-stat { display: grid; gap: 2px; min-width: 0; }
+.ov-stat b { font: 800 1.35rem/1.1 var(--display); }
+.ov-stat span { font-size: var(--fs-small); color: var(--text-2); overflow-wrap: anywhere; }
+.ov-curve { margin: 0; display: grid; gap: var(--sp-2); }
+.ov-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: var(--sp-3); }
+.ov-card { width: 100%; border-radius: 8px; box-shadow: 0 6px 16px rgba(5,3,20,.35); cursor: zoom-in; }
+.ov-card .ov-q { position: absolute; z-index: 2; top: 5%; right: 5%; padding: 1px 7px; border-radius: 999px; background: rgba(19,16,42,.9); box-shadow: inset 0 0 0 1.5px rgba(236,192,97,.8); color: #ecc061; font-weight: 800; font-size: var(--fs-small); }
+.ov-card .ov-foil { position: absolute; z-index: 2; left: 5%; bottom: 6%; padding: 1px 6px; border-radius: 999px; background: linear-gradient(90deg, #f7d98b, #c9b6ff, #8fe0c0); color: #13102a; font: 800 10px/1.4 var(--font); letter-spacing: .04em; text-transform: uppercase; font-style: normal; }
+.ov-noart { position: absolute; inset: 0; z-index: 1; display: grid; align-content: center; justify-items: center; gap: 2px; padding: 12% 8%; text-align: center; background: linear-gradient(160deg, var(--surface-2), var(--ink, var(--line-strong))); font-size: var(--fs-small); font-weight: 700; line-height: 1.2; }
+.ov-noart b { font: 800 1.1rem var(--display); }
+.ov-noart small { font-weight: 500; color: var(--text-2); }
+#ovAll { margin-top: var(--sp-3); }
+.ov-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-4); }
+.ov-out { display: grid; gap: var(--sp-3); margin: var(--sp-3) 0; }
+.ov-page { margin: 0; display: grid; gap: var(--sp-2); justify-items: center; }
+.ov-page img { width: 100%; height: auto; max-height: 60vh; object-fit: contain; border-radius: var(--r-md); background: #13102a; }
+.ov-page figcaption { display: flex; gap: var(--sp-2); flex-wrap: wrap; justify-content: center; }
+.ov-fmt button { flex: 1 1 0; min-width: 0; white-space: normal; line-height: 1.25; height: auto; min-height: 44px; padding-top: 6px; padding-bottom: 6px; }
+.ov-fmt small { display: block; opacity: .7; font-weight: 500; }
+.ov-note { margin: var(--sp-2) 0 0; }
+@media (max-width: 760px) { .ov-head { grid-template-columns: 1fr; gap: var(--sp-3); } }
+/* phone: the numbers as one wrapped line each ("60 Cartas"), most important first, and a lower curve */
+@media (max-width: 640px) {
+  .ov-stats { display: flex; flex-wrap: wrap; gap: 4px var(--sp-3); }
+  .ov-stat { display: inline-flex; align-items: baseline; gap: 5px; }
+  .ov-stat b { font-size: 1.05rem; }
+  .ov-curve .bars { height: 92px; padding-top: 14px; }
+  .ov-curve .bars-x { margin-top: 2px; }
+  .ov-own { margin-bottom: var(--sp-2); }
+}
+@media (max-width: 420px) { .ov-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-2); } .ov-card .ov-q { font-size: 11px; padding: 0 5px; } .ov-actions .btn { flex: 1 1 100%; } }
 </style>
 
 <main class="page" id="page">
@@ -422,6 +459,19 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Deck name": "Nome do deck", "Inks": "Tintas", "Pick up to 2.": "Escolha até 2.", "Create deck": "Criar deck", "Save": "Salvar", "Cancel": "Cancelar", "Close": "Fechar",
     "Paste a list": "Cole a lista", "One card per line, like \"4 Stitch - Rock Star\". Lists from duels.ink, Dreamborn and Lorcanito work.": "Uma carta por linha, como \"4 Stitch - Rock Star\". Listas do duels.ink, Dreamborn e Lorcanito funcionam.",
     "{n} cards recognised": "{n} cartas reconhecidas", "Not recognised: {l}": "Não reconhecidas: {l}", "Import deck": "Importar deck", "Imported deck": "Deck importado",
+    "Deck overview": "Visão geral do deck", "Hide": "Recolher", "Show": "Mostrar", "Distinct": "Distintas", "Non-inkable": "Não-tintáveis", "Actions ({n} songs)": "Ações ({n} músicas)", "Items": "Itens", "Locations": "Locais",
+    "Cost curve · average {a}": "Curva de custo · média {a}", "See the whole deck (+{n})": "Ver deck completo (+{n})", "{n} cards outside the catalog are not shown.": "{n} cartas fora do catálogo não aparecem aqui.",
+    "Share deck image": "Compartilhar imagem do deck",
+    "This printing exists only in foil": "Esta impressão só existe em foil", "foil": "foil", "Couldn't copy. Try again.": "Não deu para copiar. Tente de novo.", "Average cost": "Custo médio",
+    "See this deck on the public Inkwell profile": "Veja este deck no perfil público do Inkwell", "Built on Inkwell": "Montado no Inkwell", "image {a} of {b}": "imagem {a} de {b}", "Image format": "Formato da imagem",
+    "Vertical — Instagram": "Vertical — Instagram", "Horizontal — groups and Discord": "Horizontal — grupos e Discord", "Checking your public profile…": "Conferindo seu perfil público…", "Creating the image…": "Criando a imagem…",
+    "The image shows only the deck: never your collection, prices or account.": "A imagem mostra só o deck: nunca sua coleção, preços ou conta.",
+    "The QR code opens this deck on your public profile (@{h}).": "O QR code abre este deck no seu perfil público (@{h}).", "No QR code: your public profile could not be checked now.": "Sem QR code: não deu para conferir seu perfil público agora.",
+    "No QR code: this deck is not on your public profile. Make the profile public and the deck public to add it.": "Sem QR code: este deck não aparece no seu perfil público. Para incluir, deixe o perfil e o deck públicos.",
+    "No QR code for the featured deck yet: the profile has no address for it that stays right if the featured deck changes.": "Sem QR code para o deck em destaque, por enquanto: o perfil ainda não tem um endereço para ele que continue certo se o destaque mudar.",
+    "Foil: only on printings that exist only in foil. A deck does not record the finish of each copy.": "Foil: só nas impressões que existem apenas em foil. O deck não guarda o acabamento de cada cópia.",
+    "You own {a} of {b} cards of this deck · only you see this.": "Você possui {a} de {b} cartas deste deck · só você vê isto.",
+    "The deck has many different cards: {n} images.": "O deck tem muitas cartas diferentes: {n} imagens.", "Image of the deck {d}": "Imagem do deck {d}", "Download": "Baixar", "Share": "Compartilhar", "Couldn't create the image. Try again.": "Não deu para criar a imagem. Tente de novo.",
     "Rename and format": "Nome, formato e tintas", "Copy list": "Copiar lista", "List copied": "Lista copiada", "Open in the deck builder": "Abrir no montador antigo",
     "Planner and advisor": "Consultor e plano de compras", "Delete deck": "Apagar deck", "Tap again to delete": "Toque de novo para apagar", "Deck deleted": "Deck apagado",
     "Back to decks": "Voltar para Decks",
@@ -969,7 +1019,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       ${buildBox(d)}
       ${me && prof() && !prof().shared && m.known.length ? `<div class="row" style="margin-top:var(--sp-3)"><button type="button" class="btn" id="toColl" data-testid="deck-to-coll"><i class="ic i-plus"></i>${Tx("Add deck to collection")}</button></div>` : ""}
       <div class="tabs" role="tablist" style="margin-top:var(--sp-5)">${tabs.map(([k, l, n]) => `<button type="button" class="tab" role="tab" data-tab="${k}" aria-selected="${tab === k}">${Tx(l)}${n ? `<span class="count quiet">${n}</span>` : ""}</button>`).join("")}</div>
-      <div id="tabBody" role="tabpanel">${tab === "analysis" ? analysis(d, m) : tab === "missing" ? missingTab(d, m) : tab === "games" ? gamesTab(d, m) : tab === "plan" ? planTab(d) : tab === "gala" ? galaTab(d, m) : listTab(d, m)}</div>`;
+      <div id="tabBody" role="tabpanel">${tab === "analysis" ? analysis(d, m) : tab === "missing" ? missingTab(d, m) : tab === "games" ? gamesTab(d, m) : tab === "plan" ? planTab(d) : tab === "gala" ? galaTab(d, m) : listTab(d, m)}</div>
+      ${overview(d, m)}`;
     $("back").onclick = (e) => { e.preventDefault(); go(null); };
     $("toColl")?.addEventListener("click", (e) => openDeckToColl(d, e.currentTarget));
     document.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => go(d.id, b.dataset.tab, true));
@@ -978,7 +1029,347 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     $("metaSel").onchange = (e) => saveMeta(d, e.target.value);
     wireBuild(d);
     wireTab(d, m, tab);
+    wireOverview(d, m);
     if (keep && $(keep)) { const el = $(keep); el.focus(); try { if (caret != null) el.setSelectionRange(caret, caret); } catch { /* */ } }
+  }
+
+  // ---------- Visão geral do deck: the whole deck at a glance, and an image to share ----------
+  // Everything here reads only the deck's list (m.known). "You own X of Y" is a line for the signed-in owner, on this
+  // page only: the image is drawn from deckImageData(), which carries no collection data at all (nor who owns what).
+  // The QR code goes to the deck on the owner's public profile, and only when that profile really shows this deck
+  // (public profile with an address, and the deck in its list of public decks, by id); never to a private deck, to
+  // the featured deck (no stable address yet) or to an editor.
+  const OV_KEY = "inkwell-deck-overview", OV_PREVIEW = 12, ovFull = new Set();
+  const ovOpen = () => { try { return localStorage.getItem(OV_KEY) !== "closed"; } catch { return true; } };
+  function deckSummary(m) {
+    const s = { total: 0, distinct: 0, nonInk: 0, char: 0, action: 0, song: 0, item: 0, location: 0, avg: 0, curve: Array(7).fill(0) };
+    const names = new Set(); let cost = 0;
+    for (const { c, q } of m.known) {
+      s.total += q; names.add(c.key); cost += c.cost * q;
+      if (!c.inkable) s.nonInk += q;
+      if (c.type === "Character") s.char += q;
+      else if (c.type === "Location") s.location += q;
+      else if (c.type === "Action" || c.type === "Song" || c.song) { s.action += q; if (c.song) s.song += q; }   // a song is an action: counted once, under actions
+      else s.item += q;
+      s.curve[Math.min(7, Math.max(1, c.cost)) - 1] += q;
+    }
+    s.distinct = names.size; s.avg = s.total ? cost / s.total : 0;
+    return s;
+  }
+  const printNo = (c) => parseInt(String(c.num || "").replace(/\D+/g, ""), 10) || 0;
+  const printLabel = (c) => `${c.set} #${c.num}`;
+  // cost, then name, then printing (set, number)
+  const ovSorted = (m) => m.known.slice().sort((a, b) => a.c.cost - b.c.cost || a.c.name.localeCompare(b.c.name)
+    || setNo(a.c.set) - setNo(b.c.set) || String(a.c.set).localeCompare(String(b.c.set)) || printNo(a.c) - printNo(b.c) || a.id.localeCompare(b.id));
+  // "4 Stitch - Rock Star (LOR1-1)": the list Copiar lista already makes, plus which printing; Importar reads it back
+  // with the same printings (other sites ignore or drop the part in brackets)
+  const deckListText = (m) => ovSorted(m).map((e) => `${e.q} ${e.c.name} (${e.c.id})`).join("\n");
+  function ovTile(e) {
+    const c = e.c, foil = ALWAYS_FOIL.has(c.rarity), [a, b] = split(c.name);
+    return `<span class="thumb ov-card" data-card="${esc(c.id)}" data-ink="${(inksOf(c)[0] || "steel").toLowerCase()}" role="img" aria-label="${esc(`${e.q}× ${c.name} · ${printLabel(c)}${foil ? " · " + Tx("foil") : ""}`)}">${c.img
+      ? `\u003Cimg src="${imgUrl(c)}" alt="" loading="lazy" decoding="async" onerror="this.remove()">`
+      : `<span class="ov-noart"><b>${c.cost}</b><span>${esc(a)}</span>${b ? `<small>${esc(b)}</small>` : ""}</span>`}<b class="ov-q">${e.q}×</b>${foil ? `<i class="ov-foil" title="${esc(Tx("This printing exists only in foil"))}">${Tx("Foil")}</i>` : ""}</span>`;
+  }
+  function ownerLine(m) {
+    if (!me || !prof() || prof().shared) return "";
+    const by = new Map(); for (const e of m.known) by.set(e.c.key, { c: e.c, q: (by.get(e.c.key)?.q || 0) + e.q });
+    let have = 0, need = 0; for (const { c, q } of by.values()) { need += q; have += Math.min(q, ownedMine(c)); }
+    return `<p class="small ov-own" data-testid="ov-owned">${esc(Tx("You own {a} of {b} cards of this deck · only you see this.", { a: have, b: need }))}</p>`;
+  }
+  function overview(d, m) {
+    if (!m.known.length) return "";
+    const s = deckSummary(m), rows = ovSorted(m), open = ovOpen(), top = Math.max(1, ...s.curve);
+    const compact = !ovFull.has(d.id) && rows.length > OV_PREVIEW && matchMedia("(max-width: 640px)").matches;
+    const stat = (v, l, k) => `<div class="ov-stat" data-testid="ov-${k}"><b>${v}</b><span>${esc(l)}</span></div>`;
+    const unknown = m.entries.length - m.known.length;
+    return `<section class="card deck-ov" id="deckOv" data-testid="deck-overview" aria-labelledby="ovT">
+      <div class="hd"><h3 id="ovT">${Tx("Deck overview")}</h3><button type="button" class="btn ghost small" id="ovToggle" aria-expanded="${open}" aria-controls="ovBody">${Tx(open ? "Hide" : "Show")}</button></div>
+      <div id="ovBody"${open ? "" : " hidden"}>
+        ${ownerLine(m)}
+        <div class="ov-head">
+          <div class="ov-stats">${stat(s.total, Tx("Cards"), "total")}${stat(s.char, Tx("Characters"), "char")}${stat(s.action, s.song ? Tx("Actions ({n} songs)", { n: s.song }) : Tx("Actions"), "action")}${stat(s.nonInk, Tx("Non-inkable"), "noink")}
+            ${stat(s.item, Tx("Items"), "item")}${stat(s.location, Tx("Locations"), "location")}${stat(s.distinct, Tx("Distinct"), "distinct")}</div>
+          <figure class="ov-curve" data-testid="ov-curve"><figcaption class="small muted">${esc(Tx("Cost curve · average {a}", { a: s.avg.toLocaleString(LOC, { maximumFractionDigits: 1 }) }))}</figcaption>
+            <div class="bars" style="--n:7">${s.curve.map((v) => `<div><b>${v}</b><i style="--v:${Math.round((v / top) * 100)}%"></i></div>`).join("")}</div>
+            <div class="bars-x" style="--n:7">${[1, 2, 3, 4, 5, 6, "7+"].map((x) => `<span>${x}</span>`).join("")}</div></figure>
+        </div>
+        <div class="ov-grid" id="ovGrid" data-testid="ov-grid">${(compact ? rows.slice(0, OV_PREVIEW) : rows).map(ovTile).join("")}</div>
+        ${compact ? `<button type="button" class="btn block" id="ovAll" data-testid="ov-all">${esc(Tx("See the whole deck (+{n})", { n: rows.length - OV_PREVIEW }))}</button>` : ""}
+        ${rows.some((e) => ALWAYS_FOIL.has(e.c.rarity)) ? `<p class="small faint ov-note" data-testid="ov-foil-note">${esc(Tx("Foil: only on printings that exist only in foil. A deck does not record the finish of each copy."))}</p>` : ""}
+        ${unknown ? `<p class="small faint">${esc(Tx("{n} cards outside the catalog are not shown.", { n: unknown }))}</p>` : ""}
+        <div class="ov-actions"><button type="button" class="btn" id="ovCopy" data-testid="ov-copy"><i class="ic i-list"></i>${Tx("Copy list")}</button>
+          <button type="button" class="btn primary" id="ovImg" data-testid="ov-image-open"><i class="ic i-send"></i>${Tx("Share deck image")}</button></div>
+      </div></section>`;
+  }
+  function wireOverview(d, m) {
+    $("ovToggle")?.addEventListener("click", (ev) => {
+      const body = $("ovBody"), open = body.hidden; body.hidden = !open;
+      try { localStorage.setItem(OV_KEY, open ? "open" : "closed"); } catch { /* the choice is only not remembered */ }
+      ev.currentTarget.setAttribute("aria-expanded", String(open)); ev.currentTarget.textContent = Tx(open ? "Hide" : "Show");
+    });
+    $("ovAll")?.addEventListener("click", (ev) => {
+      ovFull.add(d.id); const rows = ovSorted(m), grid = $("ovGrid");
+      grid.insertAdjacentHTML("beforeend", rows.slice(OV_PREVIEW).map(ovTile).join(""));
+      ev.currentTarget.remove(); grid.children[OV_PREVIEW]?.setAttribute("tabindex", "-1"); grid.children[OV_PREVIEW]?.focus({ preventScroll: true });
+    });
+    $("ovCopy")?.addEventListener("click", () => {
+      const text = deckListText(m), done = () => toast(Tx("List copied")), fail = () => toast(Tx("Couldn't copy. Try again."), null, true);
+      try { navigator.clipboard.writeText(text).then(done, fail); } catch { fail(); }
+    });
+    $("ovImg")?.addEventListener("click", (ev) => openDeckImage(d, m, ev.currentTarget));
+  }
+
+  // ---------- the image ----------
+  const sameCards = (a, b) => { const x = Object.entries(a || {}).filter(([, q]) => +q > 0), y = Object.entries(b || {}).filter(([, q]) => +q > 0);
+    return x.length === y.length && x.every(([k, q]) => +(b[k]) === +q); };
+  // Where the QR code goes: the deck on the public profile, as anyone sees it (rpc/public_profile), or nowhere
+  async function publicDeckLink(d) {
+    if (!me || !prof() || prof().shared) return { why: "private" };
+    try {
+      const mp = await CLOUD.shared("rpc/my_profile");
+      if (!mp?.handle || !mp.is_public) return { why: "private" };
+      const pp = await CLOUD.api("rpc/public_profile", { method: "POST", body: { p_handle: mp.handle }, read: true });
+      if (!pp?.handle) return { why: "private" };
+      let anchor = null;
+      if ((pp.public_decks || []).some((x) => x && x.id === d.id && sameCards(x.cards, d.cards))) anchor = "deck-" + d.id;
+      // the featured deck has no address of its own on the profile (a QR code to "the featured deck" would open
+      // another deck once the featured one changes): no QR code for it until decks have their own address
+      if (!anchor) return { why: mp.featured_deck === d.id ? "featured" : "private" };
+      return { url: new URL(`../perfil/?u=${encodeURIComponent(pp.handle)}#${encodeURIComponent(anchor)}`, location.href).href, handle: pp.handle };
+    } catch { return { why: "offline" }; }
+  }
+  // what the image shows, and nothing else (no collection, no prices, no account)
+  function deckImageData(d, m, link) {
+    const s = deckSummary(m);
+    return { name: d.name || "", inks: deckInks(d, m).slice(0, 2), format: fmtName(d.format),
+      stats: { total: s.total, distinct: s.distinct, nonInk: s.nonInk, char: s.char, action: s.action, song: s.song, item: s.item, location: s.location, avg: Math.round(s.avg * 10) / 10 },
+      curve: s.curve.slice(),
+      cards: ovSorted(m).map(({ c, q }) => ({ id: c.id, name: c.name, cost: c.cost, inkable: c.inkable, ink: inksOf(c)[0] || "Steel", img: c.img ? imgUrl(c) : "", q, foil: ALWAYS_FOIL.has(c.rarity), print: printLabel(c) })),
+      qr: link?.url || null, handle: link?.url ? link.handle : null };
+  }
+  window.INKWELL_DECK_IMAGE = { data: (id, link = null) => { const d = decks().find((x) => x.id === id); return d ? deckImageData(d, measure(d), link) : null; }, draw: (data, fmt) => drawDeckImages(data, fmt) };
+
+  const IMG_FMT = { v: { w: 1080, h: 1350, minW: 128, file: "vertical" }, h: { w: 1920, h: 1080, minW: 140, file: "horizontal" } };
+  const CARD_R = 734 / 1024;   // the published card images (tools/build_pages_artifact.py)
+  const IW = { bg: "#13102a", panel: "rgba(30,26,59,.86)", text: "#f5f1fb", muted: "#aaa3cc", gold: "#ecc061", dark: "#13102a", light: "#f5f1fb",
+    ink: { Amber: "#f2b33d", Amethyst: "#a77ee0", Emerald: "#47b57c", Ruby: "#e25866", Sapphire: "#4a9be0", Steel: "#9aa8b5" } };
+  const FD = '"Epilogue", "Plus Jakarta Sans", system-ui, sans-serif', FB = '"Plus Jakarta Sans", system-ui, sans-serif';
+  // the biggest cards that fit; when even the smallest readable size does not fit, the deck goes on more images
+  function gridFit(n, W, H, gap) {
+    let best = null;
+    for (let cols = 1; cols <= n; cols++) { const rows = Math.ceil(n / cols), w = Math.floor(Math.min((W - (cols - 1) * gap) / cols, ((H - (rows - 1) * gap) / rows) * CARD_R)); if (!best || w > best.w) best = { cols, rows, w }; }
+    return best;
+  }
+  function pageSizes(n, W, H, gap, minW) {
+    if (gridFit(n, W, H, gap).w >= minW) return [n];
+    const cols = Math.max(1, Math.floor((W + gap) / (minW + gap))), rows = Math.max(1, Math.floor((H + gap) / (minW / CARD_R + gap))), k = Math.ceil(n / (cols * rows)), per = Math.ceil(n / k);
+    return Array.from({ length: k }, (_, i) => Math.min(per, n - i * per));
+  }
+  const rr = (ctx, x, y, w, h, r) => { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); };
+  // one line of text in at most maxW: smaller first (down to min), then cut with …
+  function fitText(ctx, text, weight, size, fam, maxW, min = size) {
+    let s = size; ctx.font = `${weight} ${s}px ${fam}`;
+    while (s > min && ctx.measureText(text).width > maxW) { s -= 1; ctx.font = `${weight} ${s}px ${fam}`; }
+    if (ctx.measureText(text).width <= maxW) return text;
+    let t = text; while (t.length > 1 && ctx.measureText(t + "…").width > maxW) t = t.slice(0, -1);
+    return t.trimEnd() + "…";
+  }
+  function wrapText(ctx, text, maxW, lines) {
+    const out = []; let cur = "";
+    for (const w of String(text).split(/\s+/)) { const t = cur ? cur + " " + w : w; if (ctx.measureText(t).width <= maxW || !cur) cur = t; else { out.push(cur); cur = w; } }
+    if (cur) out.push(cur);
+    return out.length > lines ? [...out.slice(0, lines - 1), out.slice(lines - 1).join(" ")] : out;
+  }
+  const loadImg = (src) => new Promise((res) => { if (!src) return res(null); const im = new Image(); const t = setTimeout(() => res(null), 12000);
+    im.onload = () => { clearTimeout(t); res(im.naturalWidth ? im : null); }; im.onerror = () => { clearTimeout(t); res(null); }; im.decoding = "async"; im.src = src; });
+  let qrLib = null;
+  const loadQr = () => (window.qrcode ? Promise.resolve(window.qrcode) : (qrLib ||= new Promise((res, rej) => {
+    const s = document.createElement("script"); s.src = "../ui/vendor/qrcode-generator-1.4.4.js";
+    s.onload = () => (window.qrcode ? res(window.qrcode) : rej(new Error("qr"))); s.onerror = () => { qrLib = null; rej(new Error("qr")); }; document.head.append(s);
+  })));
+  function drawQr(ctx, lib, url, x, y, size) {
+    const q = lib(0, "M"); q.addData(url); q.make();
+    const n = q.getModuleCount(), cell = Math.floor(size / (n + 8)), off = Math.round((size - cell * n) / 2);   // at least 4 modules of quiet zone
+    ctx.fillStyle = IW.light; rr(ctx, x, y, size, size, Math.round(size * 0.09)); ctx.fill();
+    ctx.fillStyle = IW.dark;
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) ctx.fillRect(x + off + c * cell, y + off + r * cell, cell, cell);
+  }
+  function drawDots(ctx, inks, x, cy, r) { inks.forEach((i, k) => { ctx.beginPath(); ctx.arc(x + r + k * (r * 2 + 10), cy, r, 0, Math.PI * 2); ctx.fillStyle = IW.ink[i] || IW.muted; ctx.fill(); }); return inks.length ? inks.length * (r * 2 + 10) : 0; }
+  function drawTile(ctx, c, img, x, y, w) {
+    const h = Math.round(w / CARD_R), r = Math.max(6, Math.round(w * 0.055));
+    ctx.save(); ctx.shadowColor = "rgba(4,2,16,.55)"; ctx.shadowBlur = Math.round(w * 0.12); ctx.shadowOffsetY = Math.round(w * 0.05);
+    ctx.fillStyle = "#1e1a3b"; rr(ctx, x, y, w, h, r); ctx.fill(); ctx.restore();
+    ctx.save(); rr(ctx, x, y, w, h, r); ctx.clip();
+    if (img) {   // the whole card, never stretched: cut to the card's shape when an image is a little off
+      const iw = img.naturalWidth, ih = img.naturalHeight; let sw = iw, sh = ih, sx = 0, sy = 0;
+      if (iw / ih > CARD_R) { sw = ih * CARD_R; sx = (iw - sw) / 2; } else { sh = iw / CARD_R; sy = (ih - sh) / 2; }
+      ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+    } else {   // no art yet: ink colour, cost, name and printing
+      const g = ctx.createLinearGradient(x, y, x + w, y + h); g.addColorStop(0, "#221d45"); g.addColorStop(1, IW.ink[c.ink] || IW.muted); ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+      const cr = Math.round(w * 0.12); ctx.beginPath(); ctx.arc(x + cr + w * 0.07, y + cr + w * 0.07, cr, 0, Math.PI * 2); ctx.fillStyle = "rgba(19,16,42,.9)"; ctx.fill();
+      ctx.lineWidth = 3; ctx.strokeStyle = c.inkable ? IW.gold : IW.muted; ctx.stroke();
+      ctx.fillStyle = IW.text; ctx.font = `800 ${Math.round(cr * 1.1)}px ${FD}`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(String(c.cost), x + cr + w * 0.07, y + cr + w * 0.07 + 1);
+      const fs = Math.max(12, Math.round(w * 0.1)); ctx.font = `700 ${fs}px ${FB}`; const ls = wrapText(ctx, c.name, w * 0.84, 4);
+      ls.forEach((l, i) => ctx.fillText(l, x + w / 2, y + h * 0.5 + (i - (ls.length - 1) / 2) * fs * 1.2));
+      ctx.font = `600 ${Math.max(11, Math.round(fs * 0.8))}px ${FB}`; ctx.fillStyle = IW.muted; ctx.fillText(c.print, x + w / 2, y + h * 0.86);
+      ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    }
+    ctx.restore();
+    // copies: top right, where the cards have no text
+    const ph = Math.max(22, Math.round(w * 0.17)), label = `${c.q}×`; ctx.font = `800 ${Math.round(ph * 0.6)}px ${FB}`;
+    const pw = Math.max(ph * 1.35, ctx.measureText(label).width + ph * 0.7), px = x + w - pw - w * 0.04, py = y + w * 0.04;
+    ctx.fillStyle = "rgba(19,16,42,.92)"; rr(ctx, px, py, pw, ph, ph / 2); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = "rgba(236,192,97,.85)"; ctx.stroke();
+    ctx.fillStyle = IW.gold; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(label, px + pw / 2, py + ph / 2 + 1);
+    if (c.foil) {   // only printings that exist only in foil (Enchanted, Epic, Iconic, promos): the deck does not say which finish
+      const fh = Math.max(18, Math.round(w * 0.13)); ctx.font = `800 ${Math.round(fh * 0.58)}px ${FB}`; const fw = ctx.measureText("FOIL").width + fh * 0.9, fx = x + w * 0.04, fy = y + w * 0.04;
+      const g = ctx.createLinearGradient(fx, fy, fx + fw, fy + fh); g.addColorStop(0, "#f7d98b"); g.addColorStop(0.5, "#c9b6ff"); g.addColorStop(1, "#8fe0c0");
+      ctx.fillStyle = g; rr(ctx, fx, fy + h - fh - w * 0.08, fw, fh, fh / 2); ctx.fill(); ctx.fillStyle = IW.dark; ctx.fillText("FOIL", fx + fw / 2, fy + h - fh / 2 - w * 0.08 + 1);
+    }
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+  }
+  function drawGrid(ctx, cards, imgs, x, y, W, H, gap) {
+    const fit = gridFit(cards.length, W, H, gap), ch = Math.round(fit.w / CARD_R);
+    const gw = fit.cols * fit.w + (fit.cols - 1) * gap, gh = fit.rows * ch + (fit.rows - 1) * gap, ox = x + Math.round((W - gw) / 2), oy = y + Math.round((H - gh) / 2);
+    cards.forEach((c, i) => { const r = Math.floor(i / fit.cols), k = i % fit.cols, inRow = Math.min(fit.cols, cards.length - r * fit.cols), rowOff = Math.round(((fit.cols - inRow) * (fit.w + gap)) / 2);
+      drawTile(ctx, c, imgs.get(c.img), ox + rowOff + k * (fit.w + gap), oy + r * (ch + gap), fit.w); });
+    return fit;
+  }
+  function drawCurve(ctx, curve, x, y, w, h, fs) {
+    const top = Math.max(1, ...curve), bw = (w - 6 * 10) / 7, base = y + h - fs - 8;
+    curve.forEach((n, i) => { const bx = x + i * (bw + 10), bh = Math.round((n / top) * (h - fs * 2 - 22));
+      const g = ctx.createLinearGradient(0, base - bh, 0, base); g.addColorStop(0, IW.gold); g.addColorStop(1, "#b98a2c"); ctx.fillStyle = g; rr(ctx, bx, base - Math.max(bh, 3), bw, Math.max(bh, 3), Math.min(6, bw / 3)); ctx.fill();
+      ctx.textAlign = "center"; ctx.fillStyle = IW.text; ctx.font = `700 ${fs}px ${FB}`; ctx.fillText(String(n), bx + bw / 2, base - Math.max(bh, 3) - 6);
+      ctx.fillStyle = IW.muted; ctx.font = `600 ${fs}px ${FB}`; ctx.fillText(i === 6 ? "7+" : String(i + 1), bx + bw / 2, y + h); });
+    ctx.textAlign = "left";
+  }
+  function drawStat(ctx, v, label, x, y, w, vs, ls) {
+    ctx.fillStyle = IW.text; ctx.font = `800 ${vs}px ${FD}`; ctx.fillText(String(v), x, y + vs);
+    ctx.fillStyle = IW.muted; ctx.fillText(fitText(ctx, label, 600, ls, FB, w - 8, Math.round(ls * 0.75)), x, y + vs + ls + 8);
+  }
+  function background(ctx, W, H, inks) {
+    ctx.fillStyle = IW.bg; ctx.fillRect(0, 0, W, H);
+    const glow = (cx, cy, r, col) => { const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r); g.addColorStop(0, col + "38"); g.addColorStop(1, col + "00"); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); };
+    glow(0, 0, Math.max(W, H) * 0.6, IW.ink[inks[0]] || IW.gold); glow(W, H, Math.max(W, H) * 0.55, IW.ink[inks[1]] || IW.ink[inks[0]] || IW.gold);
+  }
+  async function drawDeckImages(data, fmt) {
+    const t0 = performance.now(), F = IMG_FMT[fmt] || IMG_FMT.v, W = F.w, H = F.h;
+    try { await Promise.all([`800 40px ${FD}`, `600 20px ${FB}`, `700 20px ${FB}`, `800 20px ${FB}`].map((f) => document.fonts?.load(f))); } catch { /* system fonts then */ }
+    const lib = data.qr ? await loadQr().catch(() => null) : null;
+    const imgs = new Map(); await Promise.all([...new Set(data.cards.map((c) => c.img).filter(Boolean))].map(async (src) => imgs.set(src, await loadImg(src))));
+    const st = data.stats, L = {
+      cards: Tx("Cards"), distinct: Tx("Distinct"), noink: Tx("Non-inkable"), char: Tx("Characters"), action: st.song ? Tx("Actions ({n} songs)", { n: st.song }) : Tx("Actions"),
+      item: Tx("Items"), location: Tx("Locations"), avg: Tx("Average cost"), see: Tx("See this deck on the public Inkwell profile"), made: Tx("Built on Inkwell") };
+    const qrOk = !!(lib && data.qr), gap = fmt === "h" ? 18 : 14;
+    // the space the cards get, the same on every page
+    const area = fmt === "h" ? { x: 64, y: 52 + 200 + 24, w: W - 128, h: H - (52 + 200 + 24) - 40 }
+      : { x: 48, y: 48 + 290 + 24, w: W - 96, h: H - (48 + 290 + 24) - 24 - (qrOk ? 150 : 48) - 40 };
+    const sizes = pageSizes(data.cards.length, area.w, area.h, gap, F.minW), out = [];
+    let at = 0;
+    for (let p = 0; p < sizes.length; p++) {
+      const cards = data.cards.slice(at, at + sizes[p]); at += sizes[p];
+      const cv = document.createElement("canvas"); cv.width = W; cv.height = H; const ctx = cv.getContext("2d");
+      background(ctx, W, H, data.inks);
+      const pageNote = sizes.length > 1 ? " · " + Tx("image {a} of {b}", { a: p + 1, b: sizes.length }) : "";
+      if (fmt === "h") {
+        const px = 64, py = 52, pw = W - 128, ph = 200; ctx.fillStyle = IW.panel; rr(ctx, px, py, pw, ph, 28); ctx.fill();
+        const right = qrOk ? 150 + 20 + 300 : 300, curveW = 300, leftW = pw - 64 - curveW - 40 - right;
+        ctx.fillStyle = IW.text; const nm = fitText(ctx, data.name, 800, 52, FD, leftW - 90, 34); ctx.fillText(nm, px + 32, py + 30 + 46);
+        drawDots(ctx, data.inks, px + 32 + ctx.measureText(nm).width + 18, py + 30 + 30, 15);
+        ctx.fillStyle = IW.muted; ctx.font = `600 18px ${FB}`; ctx.fillText(`${data.format} · ${Tx("{n} cards", { n: st.total })}${pageNote}`, px + 32, py + 30 + 46 + 30);
+        const cells = [[st.total, L.cards], [st.distinct, L.distinct], [st.nonInk, L.noink], [st.char, L.char], [st.action, L.action], [st.item, L.item], [st.location, L.location]];
+        const wt = [1, 1, 1.2, 1.2, st.song ? 1.5 : 1, 0.85, 0.85], unit = leftW / wt.reduce((t, x) => t + x, 0);   // room for "Ações (10 músicas)"
+        let sx = px + 32; cells.forEach(([v, l], i) => { drawStat(ctx, v, l, sx, py + 118, wt[i] * unit, 32, 16); sx += wt[i] * unit; });
+        const cx = px + 32 + leftW + 40; ctx.fillStyle = IW.muted; ctx.font = `600 15px ${FB}`; ctx.fillText(Tx("Cost curve · average {a}", { a: st.avg.toLocaleString(LOC) }), cx, py + 36);
+        drawCurve(ctx, data.curve, cx, py + 48, curveW, ph - 48 - 26, 15);
+        const rx = px + pw - 32 - right;
+        if (qrOk) {
+          drawQr(ctx, lib, data.qr, px + pw - 25 - 150, py + 25, 150);
+          ctx.textAlign = "right"; const tx = px + pw - 25 - 150 - 20;
+          ctx.fillStyle = IW.text; ctx.font = `800 30px ${FD}`; ctx.fillText("inkwell", tx - ctx.measureText(".com.br").width, py + 62); ctx.fillStyle = IW.gold; ctx.fillText(".com.br", tx, py + 62);
+          ctx.fillStyle = IW.muted; ctx.font = `600 17px ${FB}`; wrapText(ctx, L.see, 290, 2).forEach((l, i) => ctx.fillText(l, tx, py + 100 + i * 24));
+          ctx.fillStyle = IW.text; ctx.font = `700 18px ${FB}`; ctx.fillText(fitText(ctx, "@" + data.handle, 700, 18, FB, 290, 14), tx, py + 160);
+          ctx.textAlign = "left";
+        } else {
+          ctx.textAlign = "right"; ctx.fillStyle = IW.text; ctx.font = `800 30px ${FD}`; ctx.fillText("inkwell", rx + right - ctx.measureText(".com.br").width, py + 62); ctx.fillStyle = IW.gold; ctx.fillText(".com.br", rx + right, py + 62);
+          ctx.fillStyle = IW.muted; ctx.font = `600 17px ${FB}`; ctx.fillText(L.made, rx + right, py + 96); ctx.textAlign = "left";
+        }
+      } else {
+        const px = 48, py = 48, pw = W - 96, ph = 290; ctx.fillStyle = IW.panel; rr(ctx, px, py, pw, ph, 28); ctx.fill();
+        ctx.fillStyle = IW.text; const nm = fitText(ctx, data.name, 800, 50, FD, pw - 56 - 90, 32); ctx.fillText(nm, px + 28, py + 28 + 44);
+        drawDots(ctx, data.inks, px + 28 + ctx.measureText(nm).width + 16, py + 28 + 28, 14);
+        ctx.fillStyle = IW.muted; ctx.font = `600 18px ${FB}`; ctx.fillText(`${data.format} · ${Tx("{n} cards", { n: st.total })}${pageNote}`, px + 28, py + 28 + 44 + 30);
+        const sw = 600, cw = sw / 4, cells = [[st.total, L.cards], [st.distinct, L.distinct], [st.nonInk, L.noink], [st.avg.toLocaleString(LOC), L.avg], [st.char, L.char], [st.action, L.action], [st.item, L.item], [st.location, L.location]];
+        cells.forEach(([v, l], i) => drawStat(ctx, v, l, px + 28 + (i % 4) * cw, py + 128 + Math.floor(i / 4) * 78, cw, 30, 15));
+        const cx = px + 28 + sw + 28, cW = pw - 56 - sw - 28; ctx.fillStyle = IW.muted; ctx.font = `600 15px ${FB}`; ctx.fillText(Tx("Cost curve"), cx, py + 128);
+        drawCurve(ctx, data.curve, cx, py + 140, cW, ph - 140 - 26, 14);
+        // footer: the QR code and where it goes, or only the address
+        const fy = H - 40 - (qrOk ? 150 : 48);
+        if (qrOk) {
+          drawQr(ctx, lib, data.qr, px, fy, 150);
+          ctx.fillStyle = IW.text; ctx.font = `700 22px ${FB}`; wrapText(ctx, L.see, 470, 2).forEach((l, i) => ctx.fillText(l, px + 150 + 24, fy + 46 + i * 30));
+          ctx.fillStyle = IW.muted; ctx.font = `600 19px ${FB}`; ctx.fillText(fitText(ctx, "@" + data.handle, 600, 19, FB, 470, 14), px + 150 + 24, fy + 120);
+        } else { ctx.fillStyle = IW.muted; ctx.font = `600 19px ${FB}`; ctx.fillText(L.made, px, fy + 32); }
+        ctx.textAlign = "right"; ctx.font = `800 32px ${FD}`; const by = qrOk ? fy + 120 : fy + 34;
+        ctx.fillStyle = IW.text; ctx.fillText("inkwell", W - 48 - ctx.measureText(".com.br").width, by); ctx.fillStyle = IW.gold; ctx.fillText(".com.br", W - 48, by); ctx.textAlign = "left";
+      }
+      drawGrid(ctx, cards, imgs, area.x, area.y, area.w, area.h, gap);
+      const blob = await new Promise((res) => cv.toBlob(res, "image/png"));
+      cv.width = cv.height = 0;   // the memory goes back now, not when the page closes
+      if (!blob) throw new Error("png");
+      out.push(blob);
+    }
+    for (const im of imgs.values()) if (im) im.src = "";
+    return { blobs: out, sizes, w: W, h: H, ms: Math.round(performance.now() - t0), qr: qrOk };
+  }
+  const slug = (s) => String(s || "deck").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "deck";
+  function openDeckImage(d, m, from) {
+    const sh = $("sheet"); let fmt = "v", link = null, urls = [], run = 0;
+    const free = () => { urls.forEach((u) => URL.revokeObjectURL(u)); urls = []; };
+    sh.className = "sheet wide";
+    sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="shT">${Tx("Share deck image")}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
+      <div class="sheet-body" data-testid="ov-image">
+        <div class="seg block ov-fmt" role="group" aria-label="${Tx("Image format")}">
+          <button type="button" data-fmt="v" aria-pressed="true">${Tx("Vertical — Instagram")}<small> 1080×1350</small></button>
+          <button type="button" data-fmt="h" aria-pressed="false">${Tx("Horizontal — groups and Discord")}<small> 1920×1080</small></button></div>
+        <p class="small" id="ovQr" data-testid="ov-qr-note">${Tx("Checking your public profile…")}</p>
+        <div class="ov-out" id="ovOut" aria-live="polite" aria-busy="true"><p class="small muted">${Tx("Creating the image…")}</p></div>
+        <p class="small faint">${Tx("The image shows only the deck: never your collection, prices or account.")}</p>
+      </div>`;
+    openSheet(from);
+    sh.addEventListener("close", free, { once: true });
+    const gen = async () => {
+      const mine = ++run, out = $("ovOut"); out.setAttribute("aria-busy", "true"); out.innerHTML = `<p class="small muted">${Tx("Creating the image…")}</p>`;
+      try {
+        if (!link) {
+          link = await publicDeckLink(d);
+          $("ovQr").textContent = link.url ? Tx("The QR code opens this deck on your public profile (@{h}).", { h: link.handle })
+            : link.why === "offline" ? Tx("No QR code: your public profile could not be checked now.")
+            : link.why === "featured" ? Tx("No QR code for the featured deck yet: the profile has no address for it that stays right if the featured deck changes.")
+            : Tx("No QR code: this deck is not on your public profile. Make the profile public and the deck public to add it.");
+          $("ovQr").dataset.qr = link.url ? "on" : "off";
+        }
+        const r = await drawDeckImages(deckImageData(d, m, link), fmt);
+        if (mine !== run || !sh.open) return;
+        free(); urls = r.blobs.map((b) => URL.createObjectURL(b));
+        const name = (i) => `inkwell-${slug(d.name)}-${IMG_FMT[fmt].file}${r.blobs.length > 1 ? "-" + (i + 1) : ""}.png`;
+        const canShare = (() => { try { return !!navigator.canShare?.({ files: [new File([r.blobs[0]], name(0), { type: "image/png" })] }); } catch { return false; } })();
+        out.dataset.ms = String(r.ms); out.dataset.pages = String(r.blobs.length); out.dataset.split = r.sizes.join(","); out.dataset.fmt = fmt;
+        out.innerHTML = `${r.blobs.length > 1 ? `<p class="small" data-testid="ov-pages">${esc(Tx("The deck has many different cards: {n} images.", { n: r.blobs.length }))}</p>` : ""}
+          ${urls.map((u, i) => `<figure class="ov-page ${fmt}">\u003Cimg src="${u}" width="${r.w}" height="${r.h}" alt="${esc(Tx("Image of the deck {d}", { d: d.name }) + (r.blobs.length > 1 ? " · " + Tx("image {a} of {b}", { a: i + 1, b: r.blobs.length }) : ""))}" data-testid="ov-png" data-nozoom>
+            <figcaption><a class="btn" href="${u}" download="${esc(name(i))}" data-testid="ov-download"><i class="ic i-export"></i>${Tx("Download")}</a>${canShare ? `<button type="button" class="btn primary" data-share="${i}"><i class="ic i-send"></i>${Tx("Share")}</button>` : ""}</figcaption></figure>`).join("")}`;
+        out.querySelectorAll("[data-share]").forEach((b) => b.onclick = () => {
+          const i = +b.dataset.share; navigator.share({ files: [new File([r.blobs[i]], name(i), { type: "image/png" })], title: d.name }).catch(() => { /* closed or not allowed: the download stays */ });
+        });
+        window.INKWELL_TRACK?.("deck_image_created");
+      } catch {
+        if (mine === run) out.innerHTML = `<p class="small" role="alert">${Tx("Couldn't create the image. Try again.")}</p>`;
+      } finally { if (mine === run) out.removeAttribute("aria-busy"); }
+    };
+    sh.querySelectorAll("[data-fmt]").forEach((b) => b.onclick = () => {
+      if (fmt === b.dataset.fmt) return; fmt = b.dataset.fmt;
+      sh.querySelectorAll("[data-fmt]").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.fmt === fmt))); gen();
+    });
+    gen();
   }
 
   // ---------- Lista ----------
@@ -1539,10 +1930,11 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       const line = raw.trim(); if (!line || /^(\/\/|#)/.test(line)) continue;
       const mm = line.match(/^(\d{1,2})\s*x?\s+(.+?)\s*$/i); if (!mm) { bad.push(line); continue; }
       const q = +mm[1], nm = mm[2].replace(/\s+[–—-]\s+/, " - ");
+      const pin = BY.get((/\(([A-Za-z0-9]+-[A-Za-z0-9]+)\)\s*$/.exec(nm) || [])[1]);   // "4 Name (LOR1-1)" (Copiar lista in Visão geral): that printing
       const opts = BYNAME.get(nameKey(nm)) || BYNAME.get(nameKey(nm.replace(/\s*-\s*/, " - ")));
       if (!opts) { bad.push(line); continue; }
       // a printing you own first, then one from a Core set, then the cheapest
-      const pick = opts.slice().sort((a, b) => ((coll()[b.id] ? 1 : 0) - (coll()[a.id] ? 1 : 0)) || (CORE_SETS.includes(b.set) - CORE_SETS.includes(a.set)) || (priceOf(a) ?? 9e9) - (priceOf(b) ?? 9e9))[0];
+      const pick = pin && opts.includes(pin) ? pin : opts.slice().sort((a, b) => ((coll()[b.id] ? 1 : 0) - (coll()[a.id] ? 1 : 0)) || (CORE_SETS.includes(b.set) - CORE_SETS.includes(a.set)) || (priceOf(a) ?? 9e9) - (priceOf(b) ?? 9e9))[0];
       out.set(pick.id, (out.get(pick.id) || 0) + q);
     }
     return { cards: Object.fromEntries(out), bad };
