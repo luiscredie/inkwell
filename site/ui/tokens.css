@@ -877,6 +877,13 @@ dialog.iw-zoom-card figcaption { color: #fff; font-weight: 600; text-align: cent
 dialog.iw-zoom-card [data-zclose] { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 12px); right: 12px; color: #fff; background: rgba(0,0,0,.4); }
 /* notifications (shell.js) */
 @media (max-width: 430px) { .appbar .brand { font-size: 0; gap: 0; } }   /* phones: the coin is the brand, so the language flag fits */
+/* the smallest phones (320–374px) signed in: six buttons and the coin fit when each button is 40px and the gaps
+   are 2px (44px buttons need ~354px); taps stay at 40px, above the 24px minimum */
+@media (max-width: 374px) {
+  .appbar-in { padding-left: var(--sp-3); padding-right: var(--sp-1); gap: var(--sp-1); }
+  .appbar .end { gap: 2px; }
+  .appbar .end > .btn.icon, .appbar .counter-btn, .appbar .av-btn { width: 40px; height: 40px; min-width: 40px; }
+}
 .flag-btn svg { display: block; border-radius: 3px; box-shadow: 0 0 0 1px rgba(255,255,255,.35); }
 .bell-btn { position: relative; }
 .bell-btn .count { position: absolute; top: 2px; right: 0; min-width: 18px; height: 18px; padding: 0 5px; font-size: 11px; }

@@ -191,3 +191,27 @@ test('shared reads: asked again after a profile change; nothing after sign out; 
   await page.evaluate((s) => localStorage.setItem('inkwell-counter-auth', s), sess(B));         // another account (e.g. in another tab)
   expect(await name1()).toBe('Conta B');
 });
+
+// P1: signed in on a phone, every button of the top bar fits, none over another, even with the bell showing
+for (const width of [320, 360, 390, 430]) {
+  test(`top bar signed in at ${width}px: nothing cut off or overlapping (bell shown too)`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 780 });
+    await page.addInitScript(() => { localStorage.setItem('inkwell-lang', 'pt'); const exp = Math.floor(Date.now() / 1000) + 3600;
+      localStorage.setItem('inkwell-counter-auth', JSON.stringify({ access_token: 'x.' + btoa(JSON.stringify({ sub: '11111111-1111-4111-8111-111111111111', exp })) + '.y', refresh_token: 'r', expires_at: exp, user: { id: '11111111-1111-4111-8111-111111111111', email: 'a@b.c' } })); });
+    await page.route('**/rest/v1/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+    await page.goto(new URL('decks/', process.env.INKWELL_URL || 'http://localhost:8080/index.html').href);
+    await expect(page.locator('#iwAcct')).toBeVisible();
+    await page.evaluate(() => { document.getElementById('iwBell').hidden = false; });
+    const r = await page.evaluate(() => {
+      const vw = document.documentElement.clientWidth, els = [document.querySelector('.appbar .brand'), ...document.querySelectorAll('.appbar .end > *:not([hidden])')];
+      const boxes = els.map((e) => e.getBoundingClientRect());
+      const out = boxes.filter((b) => b.left < -0.5 || b.right > vw + 0.5).length;
+      let overlap = 0; for (let i = 1; i < boxes.length; i++) if (boxes[i].left < boxes[i - 1].right - 0.5) overlap++;
+      return { out, overlap, n: els.length, sw: document.documentElement.scrollWidth, vw, min: Math.min(...boxes.slice(1).map((b) => b.width)) };
+    });
+    expect(r).toMatchObject({ out: 0, overlap: 0, n: 7 });
+    expect(r.sw).toBeLessThanOrEqual(r.vw);
+    expect(r.min).toBeGreaterThanOrEqual(width < 375 ? 38 : 44);   // still a comfortable tap
+    if (process.env.SHOT_DIR) await page.screenshot({ path: `${process.env.SHOT_DIR}/topbar-${width}.png`, clip: { x: 0, y: 0, width, height: 64 } });
+  });
+}
