@@ -106,7 +106,7 @@ jobs:
       - name: Serve site
         run: (cd site && python3 -m http.server 8080 &) && sleep 2
       - name: Browser smoke
-        run: INKWELL_URL=http://localhost:8080/index.html npx playwright test --project=chromium tools/smoke.spec.mjs tools/journeys.spec.mjs tools/login.spec.mjs tools/decks.spec.mjs tools/colecao.spec.mjs tools/precos.spec.mjs tools/perfil.spec.mjs tools/comunidades.spec.mjs tools/coach.spec.mjs
+        run: INKWELL_URL=http://localhost:8080/index.html npx playwright test --project=chromium tools/smoke.spec.mjs tools/journeys.spec.mjs tools/login.spec.mjs tools/decks.spec.mjs tools/colecao.spec.mjs tools/precos.spec.mjs tools/perfil.spec.mjs tools/comunidades.spec.mjs tools/coach.spec.mjs tools/counter.spec.mjs
 
   # issue #145, P0-A: the visitor journeys on an iPhone-like WebKit (Safari's engine)
   journeys-webkit:

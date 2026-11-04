@@ -352,7 +352,15 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 /* match clock: in both score pills (2 players, each facing its player) or one pill at the top (1, 3, 4 players) */
 .pill .clk, .clockpill { font-family: var(--font); font-variant-numeric: tabular-nums; font-weight: 700; letter-spacing: .02em; color: var(--ivory); }
 .pill .clk { margin-left: 4px; padding-left: 9px; border-left: 1px solid var(--hair); font-size: .95rem; }
-@media (max-width: 380px) { .pill.tap { padding: 6px 9px; gap: 4px; } .pill .clk { margin-left: 2px; padding-left: 6px; font-size: .86rem; } .pill i { font-size: .8rem; } }
+@media (max-width: 400px) { .pill.tap { padding: 6px 9px; gap: 4px; } .pill .clk { margin-left: 2px; padding-left: 6px; font-size: .86rem; } .pill i { font-size: .8rem; } }
+/* 320-340px wide: the score pills must stay clear of the 60px menu button in the middle */
+@media (max-width: 340px) { .pill.l { left: 8px; } .pill.r { right: 8px; } .pill.tap { padding: 6px 7px; gap: 3px; font-size: 1rem; } .pill .clk { padding-left: 5px; font-size: .8rem; } }
+/* a phone on its side (little height): the number sits above "faltam" and the lore track, and the +N goes beside it */
+@media (max-height: 500px) and (orientation: landscape) {
+  .table.n2 { --numsize: min(30vh, calc(50vh - 96px)); }
+  .table.n2 .half .num { top: 30px; bottom: 56px; }
+  .table.n2 .half .delta { top: calc(50% - 13px); left: auto; right: 22%; transform: translateY(-50%); }
+}
 .clk .mk { font-style: normal; font-size: .62em; margin-right: 4px; vertical-align: .12em; opacity: .8; }
 .clk.low { color: #f5b544; } .clk.out { color: #ff6b6b; } .clk.paused { opacity: .55; }
 .clockpill { position: absolute; z-index: 3; top: max(10px, env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); background: var(--night); padding: 6px 14px; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--hair); border: 0; font-size: 1rem; min-height: 36px; }

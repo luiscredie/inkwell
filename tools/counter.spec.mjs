@@ -107,7 +107,7 @@ async function winGame(page) {
   for (let i = 0; i < 20; i++) await page.mouse.click(bx.x + bx.width * 0.85, bx.y + bx.height / 2);
 }
 test('opponent deck skipped: asked again at the end, and can still be set from the result', async ({ page }) => {
-  await setup(page);
+  const calls = await setup(page);
   await newMatch(page);
   await page.getByRole('button', { name: 'Circle of Life' }).click();
   await page.getByRole('button', { name: 'Pular' }).click();                 // "O oponente usa o Inkwell?" → skip
@@ -123,9 +123,12 @@ test('opponent deck skipped: asked again at the end, and can still be set from t
   await page.getByRole('button', { name: 'Não' }).click();
   await page.locator('#dk [data-ink="Ruby"]').click();
   await page.getByRole('button', { name: 'Salvar' }).click();
+  // the deck picked afterwards marks the match unsent and sends its games again, now with the opponent's inks;
+  // only the database's OK marks it sent (checked after the send, not racing it)
+  await expect.poll(() => calls.filter((c) => c.path.startsWith('game_logs') && JSON.stringify(c.body).includes('Ruby')).length).toBeGreaterThan(0);
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('inkwell-lorecounter-v3')).history[0].exported)).toBe(true);
   const st = await page.evaluate(() => JSON.parse(localStorage.getItem('inkwell-lorecounter-v3')));
   expect(st.history[0].opp.inks).toEqual(['Ruby']);
-  expect(st.history[0].exported).toBe(false);
 });
 
 async function plain(page, state) {
@@ -206,3 +209,48 @@ test('turn by turn: the first to start, then each pass gives the other player a 
   expect(g.first).toBe('p1');
   expect(g.turns).toBe(3);
 });
+
+// Small screens (issue: score pills under the menu button at 320px; on a phone on its side the number covered "faltam"
+// and the +N; at 390px the pill with the clock touched the button). Text is measured by its inked part; 2px of slack.
+for (const [w, h] of [[320, 568], [360, 640], [390, 844], [568, 320], [667, 375], [844, 390]]) {
+  test(`small screens ${w}x${h}: score pills, number, +N and "faltam" do not overlap`, async ({ browser }) => {
+    const ctx = await browser.newContext({ viewport: { width: w, height: h }, hasTouch: true, isMobile: true });
+    const page = await ctx.newPage();
+    await plain(page, {});
+    await page.goto(BASE);
+    for (const id of ['#h1', '#h2']) for (let i = 0; i < 18; i++) await page.locator(id + ' .zone.plus').click();
+    await expect(page.locator('#o1')).toHaveText('18');
+    const r = await page.evaluate(() => {
+      // the inked part of the text (the serif font's line box has a lot of empty space above and below the digits)
+      const box = (el) => {
+        const g = document.createRange(); g.selectNodeContents(el); const r = g.getBoundingClientRect();
+        if (!el.textContent.trim() || !r.width) return { left: 0, right: 0, top: 0, bottom: 0 };
+        const cs = getComputedStyle(el), c = document.createElement('canvas').getContext('2d');
+        c.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+        const m = c.measureText(el.textContent), flip = !!el.closest('.far');
+        const top = r.top + (m.fontBoundingBoxAscent - m.actualBoundingBoxAscent), bottom = r.top + m.fontBoundingBoxAscent + m.actualBoundingBoxDescent;
+        return flip ? { left: r.left, right: r.right, top: r.bottom - (bottom - r.top), bottom: r.bottom - (top - r.top) } : { left: r.left, right: r.right, top, bottom };
+      };
+      const over = (a, b) => Math.max(0, Math.min(Math.min(a.right, b.right) - Math.max(a.left, b.left), Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)));
+      const menu = document.getElementById('menuBtn').getBoundingClientRect();
+      const out = { scroll: document.documentElement.scrollWidth - innerWidth };
+      for (const p of ['pillL', 'pillR']) out[p + '×menu'] = over(document.getElementById(p).getBoundingClientRect(), menu);
+      for (const i of [1, 2]) {
+        const num = box(document.getElementById('o' + i)), left = box(document.getElementById('r' + i)), delta = box(document.getElementById('d' + i));
+        out['num' + i + '×faltam'] = over(num, left);
+        out['num' + i + '×menu'] = over(num, menu);
+        out['num' + i + '×delta'] = over(num, delta);
+      }
+      return out;
+    });
+    expect(r.scroll).toBeLessThanOrEqual(0);
+    expect(r['pillL×menu']).toBe(0);
+    expect(r['pillR×menu']).toBe(0);
+    for (const i of [1, 2]) {
+      expect(r['num' + i + '×faltam'], JSON.stringify(r)).toBeLessThanOrEqual(2);
+      expect(r['num' + i + '×menu'], JSON.stringify(r)).toBeLessThanOrEqual(2);
+      expect(r['num' + i + '×delta'], JSON.stringify(r)).toBeLessThanOrEqual(2);
+    }
+    await ctx.close();
+  });
+}
