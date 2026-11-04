@@ -650,6 +650,32 @@ test('a card with no price is left out of the value and counted apart, never as 
   await expect(page.getByTestId('card-value')).toHaveText('sem preço');
 });
 
+test('a foil with no foil price: valued at the normal price and marked "estimado" (total, list, card sheet, export); the normal price is unchanged', async ({ page }) => {
+  // LOR13-27 has only a normal price (R$ 4): its 2 foils count at R$ 4 each and say so; LOR10-10 has a real foil price
+  await setup(page, { collection: { 'LOR10-10': { n: 2, f: 1 }, 'LOR13-27': { n: 0, f: 2 } } });
+  await page.route('**/data/prices.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ generated_at: '2026-10-28T00:00:00Z', usd_brl: 5.4, prices: { 'LOR10-10': { n: 1, nl: 1, f: 5, fl: 5 }, 'LOR13-27': { n: 4, nl: 4 } } }) }));
+  await page.route('**/data/prices-br.json', (r) => r.fulfill({ status: 404, body: '' }));
+  await page.goto(BASE);
+  await expect(page.locator('[data-testid="to-prices"] b')).toHaveText('R$ 15,00');                  // 2 × 1 + 1 × 5 + 2 × 4 (estimated)
+  await expect(page.getByTestId('value-estimated')).toHaveText('Inclui 2 foil com preço estimado (sem cotação foil; usamos o preço normal)');
+  await expect(page.getByTestId('value-unpriced')).toHaveCount(0);
+  await page.locator('[data-view="list"]').click();
+  await expect(page.locator('button.list-row[data-card="LOR13-27"] [data-testid="unit-price"]')).toHaveText('R$ 4,00 foil estimado');
+  await expect(page.locator('button.list-row[data-card="LOR10-10"] [data-testid="unit-price"]')).toHaveText('R$ 5,00 foil');   // a real foil price: no mark
+  await page.locator('button.list-row[data-card="LOR13-27"]').click();
+  await expect(page.getByTestId('card-prices')).toContainText('Normal R$ 4,00');                       // the normal price as it is
+  await expect(page.getByTestId('card-prices')).toContainText('Foil R$ 4,00 estimado sem cotação foil · preço normal');
+  await expect(page.getByTestId('foil-est').first()).toHaveAttribute('title', 'Sem cotação específica para foil: usamos o preço normal como referência.');
+  await expect(page.getByTestId('card-value')).toHaveText('R$ 8,00 foil estimado');
+  await page.keyboard.press('Escape');
+  await page.locator('[data-testid="export"]').click();
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('[data-testid="export-go"]').click()]);
+  const lines = (await (await import('node:fs')).promises.readFile(await dl.path(), 'utf8')).slice(1).trim().split('\r\n');
+  const est = lines.find((l) => l.startsWith('LOR13-27;')).split(';'), real = lines.find((l) => l.startsWith('LOR10-10;')).split(';');
+  expect(est.slice(13)).toEqual(['4,00', '4,00', '8,00', 'TCGplayer · foil estimado pelo preço normal']);
+  expect(real.at(-1)).not.toContain('estimado');
+});
+
 test('every card priced: no "sem preço" line under the value', async ({ page }) => {
   await setup(page, { collection: { 'LOR10-10': { n: 2, f: 1 } } });
   await page.route('**/data/prices.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ generated_at: '2026-10-28T00:00:00Z', usd_brl: 5.4, prices: { 'LOR10-10': { n: 1, nl: 1, f: 5, fl: 5 } } }) }));

@@ -298,7 +298,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Target": "Alvo", "Now": "Agora", "buy now": "comprar agora", "{n} cards": "{n} cartas", "{n} at or below your target": "{n} no preço-alvo ou abaixo",
     "Total now": "Total agora", "Look on the board": "Procurar no Mural", "Target price for {c}": "Preço-alvo de {c}", "no price": "sem preço",
     "you have {n}": "você tem {n}", "Lowest listing on MYP Cards": "Menor anúncio na MYP Cards", "On MYP Cards: {v} for the {n} cards listed there (lowest listing, normal and foil together, {d}).": "Na MYP Cards: {v} pelas {n} cartas anunciadas lá (menor anúncio, normal e foil juntos, {d}).", "Buy now uses the lower of TCGplayer and MYP Cards.": "\"Comprar agora\" usa o menor entre TCGplayer e MYP Cards.",
-    "Value now": "Valor agora", "+ 1 card with no price (not in the value)": "+ 1 carta sem preço (fora do valor)", "+ {n} cards with no price (not in the value)": "+ {n} cartas sem preço (fora do valor)", "Cards": "Cartas", "Change over {n} snapshots": "Variação em {n} registros", "Most valuable cards": "Cartas mais valiosas",
+    "Value now": "Valor agora", "+ 1 card with no price (not in the value)": "+ 1 carta sem preço (fora do valor)", "+ {n} cards with no price (not in the value)": "+ {n} cartas sem preço (fora do valor)", "Includes 1 foil at an estimated price (no foil price; the normal price is used)": "Inclui 1 foil com preço estimado (sem cotação foil; usamos o preço normal)", "Includes {n} foils at an estimated price (no foil price; the normal price is used)": "Inclui {n} foil com preço estimado (sem cotação foil; usamos o preço normal)", "(estimated)": "(estimado)", "Cards": "Cartas", "Change over {n} snapshots": "Variação em {n} registros", "Most valuable cards": "Cartas mais valiosas",
     "Value by date, with today's collection at each date's prices.": "Valor por data, com a coleção de hoje nos preços de cada data.",
     "Sign in to see prices for your cards": "Entre para ver os preços das suas cartas", "Use your e-mail. We e-mail you a code, no password.": "Use seu e-mail. Mandamos um código por e-mail, sem senha.", "Sign in": "Entrar",
     "Couldn't load prices.": "Não foi possível carregar os preços.", "Check your connection and try again.": "Confira a internet e tente de novo.", "Try again": "Tentar de novo",
@@ -363,6 +363,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const owned = (id) => { const e = coll()[id] || {}; return (+e.n || 0) + (+e.f || 0); };
   const priceN = (id) => { const p = PRICES[id]; return p ? (p.nl ?? p.n ?? null) : null; };
   const priceF = (id) => { const p = PRICES[id]; return p ? (p.fl ?? p.f ?? p.nl ?? p.n ?? null) : null; };
+  // a foil with no price of its own is valued at the normal price, and always says so ("estimado")
+  const foilEst = (id) => { const p = PRICES[id]; return !!p && p.fl == null && p.f == null && (p.nl ?? p.n) != null; };
   const brOf = (id) => BR?.cards?.[id]?.[0] ?? null;   // MYP Cards lowest listing (BRL), normal and foil together
   const brUrl = (id) => (BR?.cards?.[id] ? BR.product_url.replace("{path}", BR.cards[id][1]) : null);
   const best = (id) => { const a = priceN(id), b = brOf(id); return a == null ? b : b == null ? a : Math.min(a, b); };
@@ -486,8 +488,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const maxCov = Math.max(1, ...HISTORY.map((s) => Object.keys(s.prices || {}).length));
     const pts = HISTORY.filter((s) => Object.keys(s.prices || {}).length >= maxCov * 0.5).map((s) => ({ d: s.date, v: valueAt(s.prices || {}) }));
     let now = 0, cards = 0; const top = [];
-    let unpriced = 0;   // copies of cards with no price: left out of "Value now" and counted apart, never added as R$ 0
-    for (const id in col) { const n = +col[id].n || 0, f = +col[id].f || 0, pn = priceN(id), pf = priceF(id), val = (pn ?? 0) * n + (pf ?? 0) * f; now += val; cards += n + f; unpriced += (pn == null ? n : 0) + (pf == null ? f : 0); if (val > 0 && BY.has(id)) top.push({ id, val, n, f }); }
+    let unpriced = 0, estimated = 0;   // copies of cards with no price: left out of "Value now" and counted apart, never added as R$ 0
+    for (const id in col) { const n = +col[id].n || 0, f = +col[id].f || 0, pn = priceN(id), pf = priceF(id), val = (pn ?? 0) * n + (pf ?? 0) * f; now += val; cards += n + f; unpriced += (pn == null ? n : 0) + (pf == null ? f : 0); if (pf != null && f && foilEst(id)) estimated += f; if (val > 0 && BY.has(id)) top.push({ id, val, n, f }); }
     top.sort((a, b) => b.val - a.val);
     let brSum = 0, brN = 0; if (BR) for (const id in col) { const q = (+col[id].n || 0) + (+col[id].f || 0), pb = brOf(id); if (q && pb != null) { brSum += pb * q; brN += q; } }
     const first = pts[0]?.v, last = pts[pts.length - 1]?.v, ch = first ? ((last - first) / first) * 100 : null;
@@ -502,10 +504,11 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     return `<div class="stats-row three" data-testid="value-stats"><div class="stat"><b class="money">${moneySplit(now)}</b><span>${Tx("Value now")}</span></div><div class="stat"><b>${cards.toLocaleString(LOC)}</b><span>${Tx("Cards")}</span></div>
         <div class="stat"><b class="${ch == null ? "" : ch >= 0 ? "up" : "down"}">${ch == null ? "—" : `${ch >= 0 ? "+" : "−"}${Math.abs(ch).toLocaleString(LOC, { maximumFractionDigits: 1 })}%`}</b><span>${esc(Tx("Change over {n} snapshots", { n: pts.length }))}</span></div></div>
       ${unpriced ? `<p class="small muted" style="margin:var(--sp-2) 0 0" data-testid="value-unpriced">${esc(Tx(unpriced === 1 ? "+ 1 card with no price (not in the value)" : "+ {n} cards with no price (not in the value)", { n: unpriced.toLocaleString(LOC) }))}</p>` : ""}
+      ${estimated ? `<p class="small muted" style="margin:var(--sp-1) 0 0" data-testid="value-estimated">${esc(Tx(estimated === 1 ? "Includes 1 foil at an estimated price (no foil price; the normal price is used)" : "Includes {n} foils at an estimated price (no foil price; the normal price is used)", { n: estimated.toLocaleString(LOC) }))}</p>` : ""}
       ${brN ? `<p class="small muted" style="margin:var(--sp-2) 0 0" data-testid="value-br">${esc(Tx("On MYP Cards: {v} for the {n} cards listed there (lowest listing, normal and foil together, {d}).", { v: money(brSum), n: brN.toLocaleString(LOC), d: dateFmt(BR.retrieved_at) }))}</p>` : ""}
       ${chart ? `<section class="card" style="margin-top:var(--sp-4)">${chart}<p class="small faint" style="margin:var(--sp-2) 0 0">${Tx("Value by date, with today's collection at each date's prices.")}${usdBrl && !histTcg ? " " + esc(Tx("The chart uses the Liga Lorcana price history, until {d}.", { d: dateFmt(pts[pts.length - 1]?.d) })) : ""}</p></section>` : ""}
       <div class="group-head"><h3>${Tx("Most valuable cards")}</h3></div>
-      <div class="list" data-testid="top-cards">${top.slice(0, 20).map((t) => { const c = BY.get(t.id), [a, b] = split(c.name); return `<div class="list-row">${thumb(c, "xs")}<span class="t"><span>${esc(a)}${b ? ` · ${esc(b)}` : ""}</span><span class="meta">${esc([setName(c.set), "nº " + c.num, `${t.n ? t.n + "×" : ""}${t.f ? ` ${t.f}× foil` : ""}`.trim()].filter(Boolean).join(" · "))}</span></span><span class="trail"><span class="money">${esc(money(t.val))}</span></span></div>`; }).join("")}</div>`;
+      <div class="list" data-testid="top-cards">${top.slice(0, 20).map((t) => { const c = BY.get(t.id), [a, b] = split(c.name); return `<div class="list-row">${thumb(c, "xs")}<span class="t"><span>${esc(a)}${b ? ` · ${esc(b)}` : ""}</span><span class="meta">${esc([setName(c.set), "nº " + c.num, `${t.n ? t.n + "×" : ""}${t.f ? ` ${t.f}× foil${foilEst(t.id) ? " " + Tx("(estimated)") : ""}` : ""}`.trim()].filter(Boolean).join(" · "))}</span></span><span class="trail"><span class="money">${esc(money(t.val))}</span></span></div>`; }).join("")}</div>`;
   }
   const signInBox = () => emptyBox("signedout", Tx("Sign in to see prices for your cards"), Tx("Use your e-mail. We e-mail you a code, no password."), `<button type="button" class="btn primary" id="signIn">${Tx("Sign in")}</button>`);
 
