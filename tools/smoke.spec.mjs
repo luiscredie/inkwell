@@ -88,3 +88,22 @@ test('account menu (light theme): the picked language is readable', async ({ pag
   expect((a + 0.05) / (b + 0.05)).toBeGreaterThan(4.5);
   if (process.env.SHOT_DIR) await page.screenshot({ path: process.env.SHOT_DIR + '/menu-lang.png' });
 });
+
+test('language flag in the top bar: US flag switches to English, Brazilian flag back; fits a 360px phone signed in', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 780 });
+  const ME = '11111111-1111-4111-8111-111111111111';
+  await page.addInitScript((me) => { if (!localStorage.getItem('inkwell-lang')) localStorage.setItem('inkwell-lang', 'pt'); const exp = Math.floor(Date.now() / 1000) + 3600;
+    localStorage.setItem('inkwell-counter-auth', JSON.stringify({ access_token: 'x.' + btoa(JSON.stringify({ sub: me, exp })) + '.y', refresh_token: 'r', expires_at: exp, user: { id: me, email: 'a@b.c' } })); }, ME);
+  await page.route('**/rest/v1/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+  await page.goto(new URL('decks/', process.env.INKWELL_URL || 'http://localhost:8080/index.html').href);
+  const flag = page.getByTestId('lang-flag');
+  await expect(flag).toHaveAttribute('aria-label', 'Switch to English');
+  const bar = await page.locator('.appbar-in').evaluate((e) => [e.scrollWidth, e.clientWidth]);
+  expect(bar[0]).toBeLessThanOrEqual(bar[1] + 1);                 // the top bar still fits
+  if (process.env.SHOT_DIR) await page.screenshot({ path: process.env.SHOT_DIR + '/flag-pt.png', clip: { x: 0, y: 0, width: 360, height: 70 } });
+  await flag.click();
+  await expect(page.getByTestId('lang-flag')).toHaveAttribute('aria-label', 'Mudar para português');
+  await expect(page.locator('html')).toHaveAttribute('lang', /en/);
+  await page.getByTestId('lang-flag').click();
+  await expect(page.getByTestId('lang-flag')).toHaveAttribute('aria-label', 'Switch to English');
+});

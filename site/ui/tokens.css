@@ -873,6 +873,8 @@ dialog.iw-zoom-card.has-extra { overflow: auto; }
 dialog.iw-zoom-card figcaption { color: #fff; font-weight: 600; text-align: center; font-size: var(--fs-small); }
 dialog.iw-zoom-card [data-zclose] { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 12px); right: 12px; color: #fff; background: rgba(0,0,0,.4); }
 /* notifications (shell.js) */
+@media (max-width: 430px) { .appbar .brand { font-size: 0; gap: 0; } }   /* phones: the coin is the brand, so the language flag fits */
+.flag-btn svg { display: block; border-radius: 3px; box-shadow: 0 0 0 1px rgba(255,255,255,.35); }
 .bell-btn { position: relative; }
 .bell-btn .count { position: absolute; top: 2px; right: 0; min-width: 18px; height: 18px; padding: 0 5px; font-size: 11px; }
 .menu.notif { width: min(360px, calc(100vw - 24px)); max-height: min(70vh, 520px); overflow: auto; }
