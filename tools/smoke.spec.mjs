@@ -155,3 +155,35 @@ test('feed signed in: decks, my_profile and my_home are each requested once, and
   expect(n(/^rpc\/my_profile/), calls.join('\n')).toBe(1);
   expect(n(/^rpc\/my_home/), calls.join('\n')).toBe(1);
 });
+
+// PR #150 review: a shared read (CLOUD.shared) never returns what was true before a change. Within the 5 s window:
+// after a write it asks again; signed out it does not answer; another account gets its own answer.
+test('shared reads: asked again after a profile change; nothing after sign out; another account gets its own', async ({ page }) => {
+  const A = '11111111-1111-4111-8111-111111111111', B = '22222222-2222-4222-8222-222222222222';
+  const sess = (id) => { const exp = Math.floor(Date.now() / 1000) + 3600; return JSON.stringify({ access_token: 'x.' + btoa(JSON.stringify({ sub: id, exp })) + '.y', refresh_token: 'r', expires_at: exp, user: { id, email: id[0] + '@b.c' } }); };
+  let name = 'Antes', asked = 0;
+  await page.addInitScript((s) => { if (!sessionStorage.t) { sessionStorage.t = 1; localStorage.setItem('inkwell-counter-auth', s); } }, sess(A));
+  await page.route(/\/rest\/v1\/|\/auth\/v1\/|\/storage\/v1\//, (r) => {
+    const u = new URL(r.request().url()), path = u.pathname.replace(/.*\/(rest|auth|storage)\/v1\//, '');
+    const who = JSON.parse(atob((r.request().headers().authorization || 'Bearer x.e30=.y').split(' ').pop().split('.')[1] || 'e30='))?.sub;
+    if (path === 'rpc/my_profile') { asked++; return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ display_name: who === B ? 'Conta B' : name }) }); }
+    if (path === 'rpc/save_profile') { name = 'Depois'; return r.fulfill({ status: 204, body: '' }); }
+    if (path.startsWith('object/')) return r.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+    return r.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+  });
+  await page.goto(new URL('feed/', ROOT).href);
+  const name1 = () => page.evaluate(() => window.INKWELL_CLOUD.shared('rpc/my_profile').then((p) => p.display_name, (e) => 'erro: ' + e.code));
+  expect(await name1()).toBe('Antes');
+  const n0 = asked;
+  expect(await name1()).toBe('Antes');
+  expect(asked).toBe(n0);                                                                      // shared: not asked again
+  await page.evaluate(() => window.INKWELL_CLOUD.api('rpc/save_profile', { method: 'POST', body: { p_name: 'Depois' } }));
+  expect(await name1()).toBe('Depois');                                                         // a write: asked again
+  name = 'Foto';
+  await page.evaluate(() => window.INKWELL_CLOUD.upload('achievements', 'a/b.jpg', new Blob(['x'], { type: 'image/jpeg' })));
+  expect(await name1()).toBe('Foto');                                                           // an upload: asked again
+  await page.evaluate(() => window.INKWELL_CLOUD.signOut());
+  expect(await name1()).toBe('erro: auth');                                                     // signed out: no answer
+  await page.evaluate((s) => localStorage.setItem('inkwell-counter-auth', s), sess(B));         // another account (e.g. in another tab)
+  expect(await name1()).toBe('Conta B');
+});

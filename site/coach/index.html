@@ -216,7 +216,12 @@ window.INKWELL_CLOUD = (() => {
   const KEY = "inkwell-counter-auth";
   const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || "null"); } catch { return null; } };
   let sess = load();
-  const store = (x) => { sess = x; try { if (x) localStorage.setItem(KEY, JSON.stringify(x)); else localStorage.removeItem(KEY); } catch { /* private mode */ } };
+  const recent = new Map();   // shared reads (see shared() below)
+  // POST calls that only read (STABLE functions in the database, which cannot write) or only add page statistics
+  // (track): they keep the shared reads. Any other POST, PATCH or DELETE is a write and clears them; a function not
+  // listed here is taken as a write, so a missing name costs a repeated request, never an old answer.
+  const READ_RPC = /^rpc\/(my_[a-z_]+|feed_posts|search_all|communities_list|example_profiles|friend_decks|find_player_decks|shared_collections|friend_collection|friends_lending|share_invite_info|achievements_by_ids|achievements_of|public_profile|track)(\?|$)/;
+  const store = (x) => { sess = x; recent.clear(); try { if (x) localStorage.setItem(KEY, JSON.stringify(x)); else localStorage.removeItem(KEY); } catch { /* private mode */ } };
   const headers = (tok) => ({ apikey: cfg.key, "Content-Type": "application/json", ...(tok ? { Authorization: `Bearer ${tok}` } : {}) });
   const claims = (jwt) => { try { return JSON.parse(atob(jwt.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))); } catch { return {}; } };
   const session = (r) => {   // the same shape supabase-js keeps, so both read each other's session
@@ -298,7 +303,8 @@ window.INKWELL_CLOUD = (() => {
 
   // Authenticated call to the database's REST API (used by Coach Review). Errors carry a short code.
   // anon: true also works signed out (the publishable key), for the few functions open to visitors
-  async function api(path, { method = "GET", body, prefer, anon = false, keepalive = false } = {}) {
+  async function api(path, { method = "GET", body, prefer, anon = false, keepalive = false, read = false } = {}) {
+    if (method !== "GET" && !read && !READ_RPC.test(path)) recent.clear();   // a write (profile saved, friend added…): no shared answer from before it
     const tok = await token();
     if (!tok && !anon) throw Object.assign(new Error("signed out"), { code: "auth" });
     const r = await fetch(`${cfg.url}/rest/v1/${path}`, {
@@ -317,11 +323,11 @@ window.INKWELL_CLOUD = (() => {
 
   // The same read asked twice as a page opens (the top bar and the page both want rpc/my_profile and rpc/my_home):
   // whoever asks first sends it, whoever asks within 5 s gets the same answer. Only for reads with no arguments.
-  const recent = new Map();
+  // Forgotten on any write and on any change of session (sign in, sign out, another account, token refresh).
   function shared(path) {
     const k = (load()?.user?.id || "") + " " + path, hit = recent.get(k);
     if (hit && Date.now() - hit.at < 5000) return hit.p;
-    const p = api(path, { method: "POST", body: {} });
+    const p = api(path, { method: "POST", body: {}, read: true });
     recent.set(k, { at: Date.now(), p });
     p.catch(() => recent.delete(k));   // a failure is not shared: the next caller tries again
     return p;
@@ -342,6 +348,7 @@ window.INKWELL_CLOUD = (() => {
 
   // Storage (supabase/achievements.sql): upload one file to a private bucket, signed links to see files, remove files.
   async function storage(path, { method = "POST", body, type = "application/json" } = {}) {
+    if (!path.startsWith("object/sign/")) recent.clear();   // an upload or a removal is a write too
     const tok = await token();
     const r = await fetch(`${cfg.url}/storage/v1/${path}`, { method, headers: { ...headers(tok), "Content-Type": type }, body: type === "application/json" && body !== undefined ? JSON.stringify(body) : body });
     if (!r.ok) { let why = ""; try { why = String((await r.json())?.message || "").slice(0, 200); } catch { /* */ } throw Object.assign(new Error(`storage ${r.status}${why ? `: ${why}` : ""}`), { status: r.status, why }); }
