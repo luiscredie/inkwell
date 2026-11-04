@@ -983,7 +983,11 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   if (handleQ && deckQ() !== null) $("title").textContent = Tx("Shared deck");
   $("app").innerHTML = `<div class="skel" style="height:260px;border-radius:20px"></div><p class="sr-only">${Tx("Loading…")}</p>`;
   const showHandle = (h) => (deckQ() !== null ? showDeck(h, deckQ()) : showPublic(h));
-  if (handleQ) window.addEventListener("hashchange", () => { window.scrollTo(0, 0); $("app").innerHTML = `<div class="skel" style="height:260px;border-radius:20px"></div>`; showHandle(handleQ); });
+  // another deck, or none, with the page open (a link, Back, Forward): hashchange, and popstate too (WebKit does
+  // not always send hashchange when going back through a page restored from its cache); once per address
+  let routed = location.hash;
+  const reroute = () => { if (location.hash === routed) return; routed = location.hash; window.scrollTo(0, 0); $("app").innerHTML = `<div class="skel" style="height:260px;border-radius:20px"></div>`; showHandle(handleQ); };
+  if (handleQ) { window.addEventListener("hashchange", reroute); window.addEventListener("popstate", reroute); window.addEventListener("pageshow", (e) => { if (e.persisted) reroute(); }); }
   (async () => {
     if (me) { try { await loadMine(); } catch { mine = null; } await acceptPendingInvite(); }
     if (handleQ) return showHandle(handleQ);
