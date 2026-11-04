@@ -631,7 +631,7 @@ test('prices: when the price file does not load, values show — (never R$ 0) an
 
 // ---------- Pacote 1, item 5: the whole deck into the collection ----------
 // A fake database that remembers the collection: apply_collection_delta changes it (never below zero, like the real one).
-async function collDb(page, { extraDecks = [], collection = null, apply = 'ok', delay = 0 } = {}) {
+async function collDb(page, { extraDecks = [], collection = null, apply = 'ok', delay = 0, undoFn = false } = {}) {
   const calls = await setup(page, { extraDecks });
   const db = fixtures(); db.profiles[0].decks.push(...extraDecks);
   if (collection) db.profiles[0].collection = collection;
@@ -646,6 +646,16 @@ async function collDb(page, { extraDecks = [], collection = null, apply = 'ok', 
     const col = db.profiles[0].collection;
     for (const x of b.p_delta) { const e = col[x.card_id] || (col[x.card_id] = { n: 0, f: 0 }); const k = x.foil ? 'f' : 'n'; e[k] = Math.max(0, (e[k] || 0) + x.qty); }
     if (st.mode === 'lost') { st.mode = 'ok'; return r.abort('failed'); }   // saved, but the answer never arrives
+    return r.fulfill({ status: 204, body: '' });
+  });
+  // supabase/collection_undo.sql: installed (checks and takes out in one go) or not yet (404, as PostgREST answers)
+  st.undone = [];
+  await page.route('**/rest/v1/rpc/undo_collection_delta', (r) => {
+    if (!undoFn) return r.fulfill({ status: 404, contentType: 'application/json', body: '{"code":"PGRST202","message":"Could not find the function"}' });
+    const b = JSON.parse(r.request().postData()), col = db.profiles[0].collection;
+    st.undone.push(b.p_delta);
+    if (b.p_delta.some((x) => ((col[x.card_id] || {})[x.foil ? 'f' : 'n'] || 0) < x.qty)) return r.fulfill({ status: 400, contentType: 'application/json', body: '{"code":"P0001","message":"collection_changed"}' });
+    for (const x of b.p_delta) col[x.card_id][x.foil ? 'f' : 'n'] -= x.qty;
     return r.fulfill({ status: 204, body: '' });
   });
   return st;
@@ -829,3 +839,39 @@ for (const w of [320, 360, 390]) {
     if (process.env.SHOT_DIR) { await page.getByTestId('dtc-missing').check(); await loaded(); await page.screenshot({ path: `${process.env.SHOT_DIR}/dtc-${w}-faltantes.png` }); await page.getByTestId('dtc-all').check(); await loaded(); await page.screenshot({ path: `${process.env.SHOT_DIR}/dtc-${w}-todas.png` }); }
   });
 }
+
+test('deck to collection, only what is missing: a collection a friend shares with you is not yours (it does not lower what is added)', async ({ page }) => {
+  // a friend shares a collection with 2 Baloo (LOR10-1); you have 2 of the 4 the deck needs: still 2 to add, not 0
+  const st = await collDb(page);
+  await page.route('**/rest/v1/rpc/shared_collections', (r) => r.fulfill({ status: 200, contentType: 'application/json',
+    body: JSON.stringify([{ owner: FRIEND, owner_name: 'Ana Souza', profile: 'ana', can_edit: false, collection: { 'LOR10-1': { n: 2, f: 0 } } }]) }));
+  await page.goto(BASE + '?deck=deck-a');
+  await page.getByTestId('deck-to-coll').click();
+  await page.getByTestId('dtc-missing').check();
+  await expect(page.locator('[data-dtc="LOR10-1"] [data-testid="dtc-n"]')).toHaveText('2');
+  await page.getByTestId('dtc-go').click();
+  await expect.poll(() => st.applied).toEqual([[{ card_id: 'LOR10-1', qty: 2, foil: false }]]);
+});
+
+test('deck to collection: with supabase/collection_undo.sql installed, Undo is one call that checks and takes out together', async ({ page }) => {
+  const st = await collDb(page, { undoFn: true });
+  await page.goto(BASE + '?deck=deck-a');
+  await page.getByTestId('deck-to-coll').click();
+  await page.getByTestId('dtc-missing').check();
+  await page.getByTestId('dtc-go').click();
+  await expect(page.locator('#undo')).toBeVisible();
+  await page.locator('#undo').click();
+  await expect(page.locator('#toast')).toContainText('Desfeito: as cartas adicionadas foram retiradas.');
+  expect(st.undone).toEqual([[{ card_id: 'LOR10-1', qty: 2, foil: false }]]);      // the exact copies, in one call
+  expect(st.applied.length).toBe(1);                                               // no second apply_collection_delta
+  expect(st.db.profiles[0].collection['LOR10-1']).toEqual({ n: 2, f: 0 });
+  // changed after (another device): the database refuses, the page says which card and changes nothing
+  await page.getByTestId('deck-to-coll').click();
+  await page.getByTestId('dtc-go').click();
+  await expect(page.locator('#undo')).toBeVisible();
+  st.db.profiles[0].collection['LOR10-10'] = { n: 1, f: 0 };
+  await page.locator('#undo').click();
+  await expect(page.locator('#toast')).toContainText('Não foi possível desfazer: Gurgi mudou depois de adicionada (aqui ou em outro aparelho). Nada foi alterado.');
+  expect(st.db.profiles[0].collection['LOR10-1']).toEqual({ n: 6, f: 0 });
+  expect(st.applied.length).toBe(2);
+});
