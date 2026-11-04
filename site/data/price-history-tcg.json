@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "generated_at": "2026-11-03T18:01:22.493712+00:00",
+ "generated_at": "2026-11-04T18:07:08.318776+00:00",
  "source": "TCGplayer market price via Lorcast",
  "currency": "BRL",
  "path": "price-history-tcg/{date}.json",
@@ -61,6 +61,10 @@
   {
    "date": "2026-11-03",
    "usd_brl": 5.4375
+  },
+  {
+   "date": "2026-11-04",
+   "usd_brl": 5.4861
   }
  ]
 }
