@@ -329,6 +329,23 @@ test('#145 P0-B admin metrics: the 9 events by name, real zeros, active 7d/30d, 
   await expect(m).toContainText('Como contamos');
   expect(rpcCalls(calls, 'admin_metrics')).toEqual([{ p_days: 14 }]);
 });
+test('admin funnel: try a deck → sign-up → deck saved, in tabs; rates only when valid; database numbers apart', async ({ page }) => {
+  await setup(page, { mine: { display_name: 'Luís' }, admin: true });
+  const at = (name, visits, count) => ({ name, count, visits, anon: 0, signed: 0 });
+  await page.route('**/rest/v1/rpc/admin_metrics', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ...METRICS, accounts_created: 3, new_with_deck: 1, active_7d: 2, active_30d: 5,
+    events: [at('page_view', 50, 90), at('try_deck_started', 10, 14), at('signup_started', 4, 5), at('signup_completed', 0, 0), at('deck_saved', 2, 2)] }) }));
+  await page.goto(url('admin/'));
+  const f = page.getByTestId('funnel');
+  const row = (k) => f.locator(`[data-fn="${k}"] td`);
+  await expect(row('try_deck_started')).toHaveText(['Deck experimentado', '10', '14', '—']);
+  await expect(row('signup_started')).toHaveText(['Cadastro iniciado', '4', '5', '40%']);
+  await expect(row('signup_completed')).toHaveText(['Cadastro concluído', '0', '0', '0%']);
+  await expect(row('deck_saved')).toHaveText(['Deck salvo', '2', '2', '—']);   // the step before is zero: no rate
+  await expect(f).toContainText('eventos do navegador');
+  await expect(f).toContainText('Visitas são abas, não pessoas');
+  await expect(f.getByTestId('funnel-db')).toHaveText('No banco (dados reais): 3 contas criadas, 1 delas com deck salvo · membros ativos (por conta): 2 em 7 dias, 5 em 30 dias.');
+});
+
 test('#145 P0-B admin metrics: before the SQL runs, a clear message (the rest of the Painel still works)', async ({ page }) => {
   await setup(page, { mine: { display_name: 'Luís' }, admin: true });
   await page.route('**/rest/v1/rpc/admin_metrics', (r) => r.fulfill({ status: 404, contentType: 'application/json', body: '{"code":"PGRST202","message":"Could not find the function public.admin_metrics"}' }));
