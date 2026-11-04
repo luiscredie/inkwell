@@ -36,6 +36,8 @@ Nomes antigos (antes de 03/11/2026) são contados sob os novos: `deck_sample` �
 `profile_start` → `profile_started`, `collection_start` → `collection_started`, `signin_code` → `signup_started`.
 Outros eventos auxiliares continuam (`deck_result`, `deck_save`, `deck_paste`, `signin_open`, `signin_done`, `scan_open`…).
 `deck_added_to_collection` (04/11/2026): adicionou um deck inteiro à coleção. Enviado só depois de a gravação dar certo, nunca ao cancelar ou falhar.
+
+`deck_image_created` (04/11/2026): criou a imagem de um deck (Decks → Visão geral → Compartilhar imagem). Enviado quando a imagem fica pronta, uma vez por visita à página; não diz se a pessoa baixou ou compartilhou, nem qual deck.
 É um evento do navegador, como os outros desta lista: não é contagem do banco. Não leva quantidade, nome ou dado pessoal.
 Usa o `public.track` como está (nome `[a-z_]`, até 30 letras), sem mudança no esquema. Não entra nos 9 eventos do relatório P0.
 
