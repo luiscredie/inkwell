@@ -309,7 +309,7 @@ test('admin Painel: visits, sign-ups, profiles, the way to an account, pages, ac
 const EV = ['page_view', 'try_deck_started', 'deck_sample_loaded', 'signup_started', 'signup_completed', 'deck_saved', 'profile_started', 'profile_saved', 'collection_started'];
 const METRICS = { generated_at: '2026-11-03T23:00:00Z', since: '2026-10-21T03:00:00Z', days: 14, retention_days: 90, first_event_at: '2026-10-29T12:00:00Z', visits: 12, visits_anon: 9,
   events: EV.map((name, i) => ({ name, count: i === 0 ? 40 : i === 2 ? 3 : 0, visits: i === 0 ? 12 : i === 2 ? 3 : 0, anon: i === 0 ? 30 : i === 2 ? 3 : 0, signed: i === 0 ? 10 : 0 })),
-  members: 6, accounts_created: 2, active_7d: 0, active_30d: 1, active_since: '2026-11-03' };
+  members: 6, accounts_created: 2, new_with_profile: 1, new_with_deck: 0, active_7d: 0, active_30d: 1, active_since: '2026-11-03' };
 test('#145 P0-B admin metrics: the 9 events by name, real zeros, active 7d/30d, update time and how we count', async ({ page }) => {
   const calls = await setup(page, { mine: { display_name: 'Luís' }, admin: true });
   await page.goto(url('admin/'));
@@ -322,6 +322,10 @@ test('#145 P0-B admin metrics: the 9 events by name, real zeros, active 7d/30d, 
   await expect(m.getByTestId('m-active7')).toContainText('0');
   await expect(m.getByTestId('m-active30')).toContainText('1');
   await expect(m.getByTestId('m-visits')).toContainText('12');
+  await expect(m.getByTestId('m-visits')).toContainText('abas do navegador');
+  await expect(m.getByTestId('m-visits')).toContainText('não são pessoas');
+  await expect(m).not.toContainText('únic');                                      // never "visitantes únicos"
+  await expect(m.getByTestId('m-accounts')).toContainText('1 com perfil · 0 com deck');   // from the database
   await expect(m).toContainText('Como contamos');
   expect(rpcCalls(calls, 'admin_metrics')).toEqual([{ p_days: 14 }]);
 });
