@@ -227,6 +227,8 @@ test('links and history: another deck in the address, no deck, back, reload', as
   await page.goBack();
   await expect(page.getByTestId('sd-name')).toHaveText('OUTRO-DECK-MARCADOR');
   await page.goBack();
+  console.log('after 2nd back: ' + page.url());
+  await expect(page).toHaveURL(/#deck-deck-ov$/);
   await expect(page.getByTestId('sd-name')).toHaveText('Âmbar Esmeralda');
   await page.reload();
   await expect(page.getByTestId('sd-name')).toHaveText('Âmbar Esmeralda');
