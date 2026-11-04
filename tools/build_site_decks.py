@@ -19,6 +19,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import site_security  # noqa: E402
+import site_html  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src" / "site"
@@ -77,6 +78,7 @@ def build(out: Path = SITE / "decks" / "index.html") -> Path:
             .replace("/*@PORTFOLIO@*/", plan_fn)
             .replace("/*@SHELL@*/", f"window.INKWELL_SHELL = {json.dumps({'page': 'decks'})};\n{shell}"))
     html = site_security.add_head(html, "decks")
+    html = site_html.hide_img_from_preloader(html)
     for marker in ("/*@CLOUD@*/", "/*@CARD_INDEX@*/", "/*@PORTFOLIO@*/", "/*@SHELL@*/"):
         assert marker not in html, marker
     out.parent.mkdir(parents=True, exist_ok=True)
