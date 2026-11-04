@@ -343,6 +343,8 @@ test('admin funnel: try a deck → sign-up → deck saved, in tabs; rates only w
   await expect(row('deck_saved')).toHaveText(['Deck salvo', '2', '2', '—']);   // the step before is zero: no rate
   await expect(f).toContainText('eventos do navegador');
   await expect(f).toContainText('Visitas são abas, não pessoas');
+  await expect(f.locator('thead')).toContainText('Taxa aproximada');
+  await expect(f).toContainText('Ninguém é acompanhado de uma etapa para a outra');
   await expect(f.getByTestId('funnel-db')).toHaveText('No banco (dados reais): 3 contas criadas, 1 delas com deck salvo · membros ativos (por conta): 2 em 7 dias, 5 em 30 dias.');
 });
 
