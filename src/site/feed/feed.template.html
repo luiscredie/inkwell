@@ -858,11 +858,14 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
 
   // ---------- left column: me at a glance (real data only) and shortcuts ----------
   let homeData = null;
+  // one request for my collection and decks per opening, shared by the card on the left and the post composer
+  let colsP = null;
+  const myCols = () => (colsP ||= CLOUD.collections("profile,collection:data->collection,decks:data->decks").catch(() => []));
   async function renderLeft() {
     const el = $("left"); if (!el || !me) return;
     const [p, cols] = await Promise.all([
-      CLOUD.api("rpc/my_profile", { method: "POST", body: {} }).catch(() => null),
-      CLOUD.collections("profile,collection:data->collection,decks:data->decks").catch(() => []),
+      CLOUD.shared("rpc/my_profile").catch(() => null),
+      myCols(),
     ]);
     const col = (cols || []).find((c) => c.profile === "principal") || (cols || [])[0] || {};
     let cards = 0; for (const v of Object.values(col.collection || {})) cards += (+v?.n || 0) + (+v?.f || 0);
@@ -903,7 +906,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   }
   // ---------- "Para você": what is waiting, and what your communities are saying (supabase/my_account.sql my_home) ----------
   async function renderForYou() {
-    let h = null; try { h = await CLOUD.api("rpc/my_home", { method: "POST", body: {} }); } catch { h = null; }
+    let h = null; try { h = await CLOUD.shared("rpc/my_home"); } catch { h = null; }
     const box = $("forYou"); if (!box) return;
     homeData = h; renderComms(h);
     if (!h) { box.innerHTML = ""; return; }
@@ -929,10 +932,11 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   }
 
   const go = async () => {
+    colsP = null;   // "Try again" asks again
     renderForYou();
     renderEvents();
     try { await loadPeople(); renderLeft(); await Promise.all([loadPosts(), loadSocial()]); renderSide(); renderComposer(); renderFeed();
-      if (!myDecks) CLOUD.collections("profile,decks:data->decks").then((r) => { myDecks = (r || []).flatMap((x) => (Array.isArray(x.decks) ? x.decks : [])).filter((d) => d?.cards && Object.keys(d.cards).length); renderComposer(); }).catch(() => {}); if (location.hash === "#amigos") { if (phone()) $("openFriends").click(); else $("findPeople")?.focus(); } }
+      if (!myDecks) myCols().then((r) => { myDecks = (r || []).flatMap((x) => (Array.isArray(x.decks) ? x.decks : [])).filter((d) => d?.cards && Object.keys(d.cards).length); renderComposer(); }).catch(() => {}); if (location.hash === "#amigos") { if (phone()) $("openFriends").click(); else $("findPeople")?.focus(); } }
     catch { $("feed").innerHTML = `<div class="empty"><img src="../ui/assets/empty/error.svg" alt=""><b>${Tx("Couldn't load the timeline.")}</b><p>${Tx("Check your connection and try again.")}</p><button type="button" class="btn" id="retry"><i class="ic i-refresh"></i>${Tx("Try again")}</button></div>`; $("retry").onclick = go; }
   };
   go();

@@ -33,6 +33,7 @@ SKIP_TYPES = {"Non-Playable Insert", "Quest Component"}
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import build_site_decks  # noqa: E402
 import site_security  # noqa: E402
+import site_html  # noqa: E402
 
 
 def site_index(catalog: dict) -> dict:
@@ -101,7 +102,7 @@ def render(name: str, catalog: dict) -> str:
     for marker in ("/*@CLOUD_JS@*/", "/*@SHELL_JS@*/", "/*@PICKER_JS@*/", "/*@AIPROMPT_JS@*/", "/*@COLLIMPORT_JS@*/", "/*@CARD_INDEX@*/"):
         if marker in html:
             raise SystemExit(f"{name}: marker {marker} left unfilled")
-    return html
+    return site_html.hide_img_from_preloader(html)
 
 
 def main() -> int:

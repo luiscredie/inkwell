@@ -107,3 +107,51 @@ test('language flag in the top bar: US flag switches to English, Brazilian flag 
   await page.getByTestId('lang-flag').click();
   await expect(page.getByTestId('lang-flag')).toHaveAttribute('aria-label', 'Switch to English');
 });
+
+// Pacote 1, item 3. Chrome's preload scanner read `<img src="${...}">` inside the big inline scripts as tags and asked
+// for /perfil/${imgUrl(c)} and the like (404 on about half the loads); the build now writes `<img` in scripts.
+for (const p of ['feed', 'decks', 'perfil', 'comunidades', 'precos', 'comecar']) {
+  test(`${p}: no 404 while the page opens (3 loads, signed in and out)`, async ({ browser }) => {
+    const ME = '11111111-1111-4111-8111-111111111111', missing = [];
+    for (const signed of [false, true, false]) {
+      const ctx = await browser.newContext();
+      const page = await ctx.newPage();
+      if (signed) await page.addInitScript((me) => { const exp = Math.floor(Date.now() / 1000) + 3600;
+        localStorage.setItem('inkwell-counter-auth', JSON.stringify({ access_token: 'x.' + btoa(JSON.stringify({ sub: me, exp })) + '.y', refresh_token: 'r', expires_at: exp, user: { id: me, email: 'a@b.c' } })); }, ME);
+      await page.route(/\/rest\/v1\/|\/auth\/v1\//, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+      page.on('response', (r) => { if (r.status() === 404) missing.push(decodeURIComponent(new URL(r.url()).pathname)); });
+      await page.goto(new URL(p + '/', ROOT).href, { waitUntil: 'load' });
+      await page.waitForTimeout(500);
+      await ctx.close();
+    }
+    expect(missing).toEqual([]);
+  });
+}
+
+// Pacote 1, item 3. Opening Início signed in: my collection and decks, my_profile and my_home are each asked once
+// (they were asked twice: the card on the left and the post composer; the top bar and the page).
+test('feed signed in: decks, my_profile and my_home are each requested once, and both places still get them', async ({ page }) => {
+  const ME = '11111111-1111-4111-8111-111111111111', calls = [];
+  await page.addInitScript((me) => { const exp = Math.floor(Date.now() / 1000) + 3600;
+    localStorage.setItem('inkwell-counter-auth', JSON.stringify({ access_token: 'x.' + btoa(JSON.stringify({ sub: me, exp })) + '.y', refresh_token: 'r', expires_at: exp, user: { id: me, email: 'a@b.c' } })); }, ME);
+  await page.route(/\/rest\/v1\/|\/auth\/v1\//, (r) => {
+    const u = new URL(r.request().url()), path = u.pathname.replace(/.*\/(rest|auth)\/v1\//, '');
+    calls.push(path + decodeURIComponent(u.search));
+    const json = (v) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+    if (path === 'inkwell_profiles' && u.search.includes('decks')) return json([{ profile: 'principal', collection: { 'LOR1-1': { n: 2, f: 1 } }, decks: [{ id: 'd1', name: 'Âmbar Aço', cards: { 'LOR1-1': 4 } }, { id: 'd2', name: 'Rubi Safira', cards: { 'LOR1-2': 4 } }] }]);
+    if (path === 'rpc/my_profile') return json({ user_id: ME, display_name: 'Teste', handle: 'teste' });
+    if (path === 'rpc/my_home') return json({});
+    if (path === 'profiles') return json([{ user_id: ME, display_name: 'Teste' }]);   // the composer needs my profile
+    if (path === 'user') return json({ id: ME, email: 'a@b.c' });
+    return json([]);
+  });
+  await page.goto(new URL('feed/', ROOT).href);
+  await expect(page.getByTestId('me-decks')).toHaveText('2');                 // the card on the left
+  await expect(page.getByTestId('me-cards')).toHaveText('3');
+  await expect(page.locator('#cmpDeck option')).toHaveCount(3);               // the composer: "Deck…" + the 2 decks
+  await page.waitForTimeout(1000);                                            // nothing else arrives late
+  const n = (re) => calls.filter((c) => re.test(c)).length;
+  expect(n(/^inkwell_profiles\?select=.*decks/), calls.join('\n')).toBe(1);
+  expect(n(/^rpc\/my_profile/), calls.join('\n')).toBe(1);
+  expect(n(/^rpc\/my_home/), calls.join('\n')).toBe(1);
+});

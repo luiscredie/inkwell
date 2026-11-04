@@ -158,6 +158,18 @@ window.INKWELL_CLOUD = (() => {
     return text ? JSON.parse(text) : null;
   }
 
+  // The same read asked twice as a page opens (the top bar and the page both want rpc/my_profile and rpc/my_home):
+  // whoever asks first sends it, whoever asks within 5 s gets the same answer. Only for reads with no arguments.
+  const recent = new Map();
+  function shared(path) {
+    const k = (load()?.user?.id || "") + " " + path, hit = recent.get(k);
+    if (hit && Date.now() - hit.at < 5000) return hit.p;
+    const p = api(path, { method: "POST", body: {} });
+    recent.set(k, { at: Date.now(), p });
+    p.catch(() => recent.delete(k));   // a failure is not shared: the next caller tries again
+    return p;
+  }
+
   // The player's collections (public.inkwell_profiles). A new account has none yet, and every collection, deck
   // and wishlist save needs one, so the first visit creates an empty "principal" collection, then reads again.
   async function collections(select) {
@@ -195,7 +207,7 @@ window.INKWELL_CLOUD = (() => {
   }
 
   return {
-    api, collections, fn, upload, signed, removeFiles,
+    api, shared, collections, fn, upload, signed, removeFiles,
     user: () => { sess = load(); return sess ? { id: sess.user?.id, email: sess.user?.email } : null; },
     status: () => { sess = load(); return sess ? { signedIn: true, email: sess.user?.email || "" } : { signedIn: false }; },
     async requestCode(email) {
@@ -471,7 +483,7 @@ table.stats td.n { text-align: right; }
   let OFFICIAL_INKS = false;
   fetch("../ink/amber.svg").then((r) => { if (r.ok && /svg|image/.test(r.headers.get("content-type") || "")) { OFFICIAL_INKS = true; render(); } }).catch(() => {});
   const inkMark = (ink) => OFFICIAL_INKS
-    ? `<b class="official" title="${ink}"><img src="../ink/${ink.toLowerCase()}.svg" alt=""></b>`
+    ? `<b class="official" title="${ink}">\u003Cimg src="../ink/${ink.toLowerCase()}.svg" alt=""></b>`
     : `<b style="background:${HEX[ink] || HEX.Ruby}" title="${ink}"><svg viewBox="0 0 24 24" fill="currentColor">${INK_GLYPH[ink] || ""}</svg></b>`;
   const blank = () => ({ lang: "pt", players: 2, bestOf: 3, magic: true, decks: false, tour: true, flip: true, clockMin: 50, turnMode: false,
     clk: { acc: 0, run: null }, turn: { seat: null, at: null, n: 0, first: null },
@@ -669,7 +681,7 @@ table.stats td.n { text-align: right; }
   function inkPicker(id, selected) {
     // the official ink symbols (../ink/<ink>.svg); the colour stays behind each one in case an image fails to load
     const nameOf = (i) => (s.lang === "pt" ? INK_PT[i] : i) || i;
-    return `<div class="inks" id="${id}">${INKS.map((i) => `<button type="button" class="dot sym" data-ink="${i}" aria-pressed="${selected.includes(i)}" aria-label="${esc(nameOf(i))}" style="--c:${HEX[i]}"><img src="../ink/${i.toLowerCase()}.svg" alt="" onerror="this.remove()"></button>`).join("")}</div>
+    return `<div class="inks" id="${id}">${INKS.map((i) => `<button type="button" class="dot sym" data-ink="${i}" aria-pressed="${selected.includes(i)}" aria-label="${esc(nameOf(i))}" style="--c:${HEX[i]}">\u003Cimg src="../ink/${i.toLowerCase()}.svg" alt="" onerror="this.remove()"></button>`).join("")}</div>
       <div class="dot-label">${INKS.map((i) => `<span>${esc(nameOf(i))}</span>`).join("")}</div>`;
   }
   function wireInks(id, sel, onChange) {

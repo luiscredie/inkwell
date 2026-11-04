@@ -153,6 +153,18 @@ window.INKWELL_CLOUD = (() => {
     return text ? JSON.parse(text) : null;
   }
 
+  // The same read asked twice as a page opens (the top bar and the page both want rpc/my_profile and rpc/my_home):
+  // whoever asks first sends it, whoever asks within 5 s gets the same answer. Only for reads with no arguments.
+  const recent = new Map();
+  function shared(path) {
+    const k = (load()?.user?.id || "") + " " + path, hit = recent.get(k);
+    if (hit && Date.now() - hit.at < 5000) return hit.p;
+    const p = api(path, { method: "POST", body: {} });
+    recent.set(k, { at: Date.now(), p });
+    p.catch(() => recent.delete(k));   // a failure is not shared: the next caller tries again
+    return p;
+  }
+
   // The player's collections (public.inkwell_profiles). A new account has none yet, and every collection, deck
   // and wishlist save needs one, so the first visit creates an empty "principal" collection, then reads again.
   async function collections(select) {
@@ -190,7 +202,7 @@ window.INKWELL_CLOUD = (() => {
   }
 
   return {
-    api, collections, fn, upload, signed, removeFiles,
+    api, shared, collections, fn, upload, signed, removeFiles,
     user: () => { sess = load(); return sess ? { id: sess.user?.id, email: sess.user?.email } : null; },
     status: () => { sess = load(); return sess ? { signedIn: true, email: sess.user?.email || "" } : { signedIn: false }; },
     async requestCode(email) {
@@ -322,7 +334,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const CARDS = (CARD_INDEX?.cards || []).map(([id, name, cost, type, ink, rarity, set, num, img]) => ({ id, name: name || id, cost, type, ink, rarity, set, num, img, k: norm(`${name} ${set} ${num}`) }));
   const BY = new Map(CARDS.map((c) => [c.id, c]));
   const imgUrl = (c) => (c.img ? `../lorcana-card-images/${encodeURI(c.img).replace(/'/g, "%27")}` : "");
-  const thumb = (c, cls = "") => `<span class="thumb ${cls}" data-ink="${(inksOf(c)[0] || "steel").toLowerCase()}">${c.img ? `<img src="${imgUrl(c)}" alt="" loading="lazy" decoding="async" onerror="this.remove()">` : ""}</span>`;
+  const thumb = (c, cls = "") => `<span class="thumb ${cls}" data-ink="${(inksOf(c)[0] || "steel").toLowerCase()}">${c.img ? `\u003Cimg src="${imgUrl(c)}" alt="" loading="lazy" decoding="async" onerror="this.remove()">` : ""}</span>`;
   // Same movers rule as the Inkwell app, copied in at build time
   const computeMovers = function computeMovers(series, period, resolveName){
     const S=(series||[]).filter(s=>s&&s.date).slice().sort((a,b)=>a.date<b.date?-1:1);
@@ -404,7 +416,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   }
 
   // ---------- rendering ----------
-  const emptyBox = (img, title, text, btns = "") => `<div class="empty"><img src="../ui/assets/empty/${img}.svg" alt=""><b>${esc(title)}</b>${text ? `<p>${esc(text)}</p>` : ""}${btns}</div>`;
+  const emptyBox = (img, title, text, btns = "") => `<div class="empty">\u003Cimg src="../ui/assets/empty/${img}.svg" alt=""><b>${esc(title)}</b>${text ? `<p>${esc(text)}</p>` : ""}${btns}</div>`;
   function render() {
     const keep = document.activeElement?.id, caret = document.activeElement?.selectionStart;
     const days = pricesDate ? Math.floor((Date.now() - new Date(pricesDate)) / 864e5) : 0;
@@ -638,7 +650,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const FLAG_US = '<svg viewBox="0 0 30 20" width="24" height="16" aria-hidden="true"><rect width="30" height="20" fill="#b22234"/><g fill="#fff">' + [1, 3, 5, 7, 9, 11].map((i) => `<rect y="${(i * 20) / 13}" width="30" height="${20 / 13}"/>`).join("") + '</g><rect width="13" height="10.77" fill="#3c3b6e"/><g fill="#fff">' + [[2, 2], [5, 2], [8, 2], [11, 2], [3.5, 4.5], [6.5, 4.5], [9.5, 4.5], [2, 7], [5, 7], [8, 7], [11, 7], [3.5, 9.3], [6.5, 9.3], [9.5, 9.3]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".7"/>`).join("") + '</g></svg>';
   const FLAG_BR = '<svg viewBox="0 0 30 20" width="24" height="16" aria-hidden="true"><rect width="30" height="20" fill="#009c3b"/><path d="M15 2.2 27.6 10 15 17.8 2.4 10z" fill="#ffdf00"/><circle cx="15" cy="10" r="4.6" fill="#002776"/><path d="M10.6 9.1c2.9-.6 6.2-.2 8.8 1.1" stroke="#fff" stroke-width=".8" fill="none"/></svg>';
   const flagBtn = `<button type="button" class="btn ghost icon flag-btn" id="iwFlag" data-testid="lang-flag" lang="${pt ? "en" : "pt-BR"}" aria-label="${pt ? "Switch to English" : "Mudar para português"}" title="${pt ? "English" : "Português"}">${pt ? FLAG_US : FLAG_BR}</button>`;
-  bar.innerHTML = `<div class="appbar-in"><a class="brand" href="../feed/"><img src="../ink/logo-coin.png" alt="" width="32" height="32">Inkwell</a>
+  bar.innerHTML = `<div class="appbar-in"><a class="brand" href="../feed/">\u003Cimg src="../ink/logo-coin.png" alt="" width="32" height="32">Inkwell</a>
     <nav class="sections" aria-label="${T("Seções", "Sections")}">${NAV.map(([k, href, label, ic]) => `<a href="${href}"${cur(k)} data-iw="${k}"><i class="ic i-${ic}"></i>${label}${k === "trades" ? '<span class="count" data-trades-count hidden></span>' : ""}</a>`).join("")}</nav>
     <div class="end">
       <button type="button" class="btn ghost icon" id="iwTheme" aria-pressed="${theme === "noite"}" aria-label="${theme === "noite" ? T("Usar o tema claro", "Use the light theme") : T("Usar o tema escuro", "Use the dark theme")}"><i class="ic ${theme === "noite" ? "i-sun" : "i-moon"}"></i></button>
@@ -1002,12 +1014,12 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     });
   };
   if (me && CLOUD) {
-    CLOUD.api("rpc/my_profile", { method: "POST", body: {} })   // supabase/my_inkwell.sql
+    CLOUD.shared("rpc/my_profile")   // supabase/my_inkwell.sql (shared with the page if it asks too)
       .then((p) => { profileName = p?.display_name || ""; isAdmin = !!p?.is_admin; if (p?.invite_code) myInvite = { code: p.invite_code, handle: p.handle, pub: !!p.is_public }; return profileName ? null : CLOUD.api(`profiles?user_id=eq.${me.id}&select=display_name`); })
       .catch(() => CLOUD.api(`profiles?user_id=eq.${me.id}&select=display_name`))
       .then((r) => { if (r) profileName = r?.[0]?.display_name || ""; if (profileName) $("iwAv").textContent = profileName.trim()[0].toUpperCase(); })
       .catch(() => {});
-    CLOUD.api("rpc/my_home", { method: "POST", body: {} }).then((h) => {
+    CLOUD.shared("rpc/my_home").then((h) => {
       if (!h) return;
       let since = seenAt();
       if (!since) { window.INKWELL_MARK_SEEN(); since = Date.now(); }   // first visit: only what comes after counts
@@ -1152,7 +1164,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   // ---------- tap a card thumbnail to see it large (any page; not where the thumbnail is already a button or link) ----------
   const zoom = document.createElement("dialog");
   zoom.className = "iw-zoom-card"; zoom.id = "iwZoom"; zoom.setAttribute("aria-label", T("Carta ampliada", "Card, larger"));
-  zoom.innerHTML = `<button type="button" class="btn ghost icon" data-zclose aria-label="${T("Fechar", "Close")}"><i class="ic i-close"></i></button><figure><img alt=""><figcaption></figcaption></figure><div class="iw-zoom-extra" hidden></div>`;
+  zoom.innerHTML = `<button type="button" class="btn ghost icon" data-zclose aria-label="${T("Fechar", "Close")}"><i class="ic i-close"></i></button><figure>\u003Cimg alt=""><figcaption></figcaption></figure><div class="iw-zoom-extra" hidden></div>`;
   document.body.append(zoom);
   // a tap anywhere closes it — except on what a page put under the card (window.INKWELL_ZOOM_EXTRA, e.g. Decks: your copies)
   zoom.addEventListener("click", (e) => { if (!e.composedPath().some((x) => x.classList?.contains("iw-zoom-extra"))) zoom.close(); });   // the path, not target: a button there may have been redrawn

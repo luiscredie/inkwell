@@ -136,6 +136,18 @@ window.INKWELL_CLOUD = (() => {
     return text ? JSON.parse(text) : null;
   }
 
+  // The same read asked twice as a page opens (the top bar and the page both want rpc/my_profile and rpc/my_home):
+  // whoever asks first sends it, whoever asks within 5 s gets the same answer. Only for reads with no arguments.
+  const recent = new Map();
+  function shared(path) {
+    const k = (load()?.user?.id || "") + " " + path, hit = recent.get(k);
+    if (hit && Date.now() - hit.at < 5000) return hit.p;
+    const p = api(path, { method: "POST", body: {} });
+    recent.set(k, { at: Date.now(), p });
+    p.catch(() => recent.delete(k));   // a failure is not shared: the next caller tries again
+    return p;
+  }
+
   // The player's collections (public.inkwell_profiles). A new account has none yet, and every collection, deck
   // and wishlist save needs one, so the first visit creates an empty "principal" collection, then reads again.
   async function collections(select) {
@@ -173,7 +185,7 @@ window.INKWELL_CLOUD = (() => {
   }
 
   return {
-    api, collections, fn, upload, signed, removeFiles,
+    api, shared, collections, fn, upload, signed, removeFiles,
     user: () => { sess = load(); return sess ? { id: sess.user?.id, email: sess.user?.email } : null; },
     status: () => { sess = load(); return sess ? { signedIn: true, email: sess.user?.email || "" } : { signedIn: false }; },
     async requestCode(email) {
