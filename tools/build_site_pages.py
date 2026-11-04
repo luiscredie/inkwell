@@ -10,6 +10,7 @@ Each page template (src/site/<dir>/<dir>.template.html) holds the page's markup,
 Three markers are filled in at build time, so shared code lives in one place:
   /*@CLOUD_JS@*/    src/site/cloud.js   sign-in and REST calls (one session for the whole site)
   /*@SHELL_JS@*/    src/site/shell.js   top bar, tab bar, account menu, sign-in sheet
+  /*@DECKVIEW_JS@*/ src/site/deckview.js  a deck as cards (Decks > Visão geral, a shared deck on Perfil)
   /*@PICKER_JS@*/   src/site/cardpicker.js   showcase card picker (search, filters, finish, zoom)
   /*@AIPROMPT_JS@*/ src/site/aiprompt.js     Jogos: a game as a prompt for the player's own AI
   /*@COLLIMPORT_JS@*/ src/site/collimport.js Coleção: import a collection exported by another app
@@ -45,6 +46,14 @@ def site_index(catalog: dict) -> dict:
     return {"generated_at": catalog.get("generated_at"), "sets": sets, "cards": cards}
 
 
+def profile_index(catalog: dict) -> dict:
+    """Perfil: site_index plus [inkable, song] (a shared deck shows its numbers, src/site/deckview.js)."""
+    idx = site_index(catalog)
+    extra = {c["card_id"]: [1 if c.get("inkable") else 0, 1 if build_site_decks.song(c) else 0] for c in catalog.get("cards", []) if c.get("card_id")}
+    idx["cards"] = [row + extra[row[0]] for row in idx["cards"]]
+    return idx
+
+
 def coach_index(catalog: dict) -> dict:
     """Jogos (Coach Review): [id, name, cost, type, ink, lore, inkable, rarity], sorted by id."""
     rows = sorted(([c["card_id"], c["name_en"], c.get("ink_cost"), c.get("card_type"), c.get("ink_color"), c.get("lore"), c.get("inkable"), c.get("rarity")]
@@ -58,7 +67,7 @@ PAGES = {   # site dir -> card index it embeds
     "trades": site_index,
     "coach": coach_index,
     "precos": site_index,
-    "perfil": site_index,   # My Inkwell: profile editor and public profile
+    "perfil": profile_index,   # My Inkwell: profile editor and public profile
     "admin": None,
     "comunidades": site_index,
     "comecar": site_index,       # Começar meu Inkwell: guest profile editor (behind INKWELL_FLAGS.guestProfile)   # communities: stores, cities, interests
@@ -97,9 +106,10 @@ def render(name: str, catalog: dict) -> str:
     html = html.replace("/*@PICKER_JS@*/", (SRC / "cardpicker.js").read_text(encoding="utf-8"))
     html = html.replace("/*@AIPROMPT_JS@*/", (SRC / "aiprompt.js").read_text(encoding="utf-8"))
     html = html.replace("/*@COLLIMPORT_JS@*/", (SRC / "collimport.js").read_text(encoding="utf-8"))
+    html = html.replace("/*@DECKVIEW_JS@*/", (SRC / "deckview.js").read_text(encoding="utf-8"))
     if PAGES[name]:
         html = html.replace("/*@CARD_INDEX@*/", json.dumps(PAGES[name](catalog), ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/"))
-    for marker in ("/*@CLOUD_JS@*/", "/*@SHELL_JS@*/", "/*@PICKER_JS@*/", "/*@AIPROMPT_JS@*/", "/*@COLLIMPORT_JS@*/", "/*@CARD_INDEX@*/"):
+    for marker in ("/*@CLOUD_JS@*/", "/*@SHELL_JS@*/", "/*@PICKER_JS@*/", "/*@AIPROMPT_JS@*/", "/*@COLLIMPORT_JS@*/", "/*@DECKVIEW_JS@*/", "/*@CARD_INDEX@*/"):
         if marker in html:
             raise SystemExit(f"{name}: marker {marker} left unfilled")
     return site_html.hide_img_from_preloader(html)

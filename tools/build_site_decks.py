@@ -76,10 +76,11 @@ def build(out: Path = SITE / "decks" / "index.html") -> Path:
             .replace("/*@CLOUD@*/", f"window.INKWELL_CLOUD_CONFIG = {json.dumps(cfg)};\n{cloud}")
             .replace("/*@CARD_INDEX@*/", f"const CARD_INDEX = {script_json(card_index(catalog))};")
             .replace("/*@PORTFOLIO@*/", plan_fn)
+            .replace("/*@DECKVIEW_JS@*/", (SRC / "deckview.js").read_text(encoding="utf-8"))
             .replace("/*@SHELL@*/", f"window.INKWELL_SHELL = {json.dumps({'page': 'decks'})};\n{shell}"))
     html = site_security.add_head(html, "decks")
     html = site_html.hide_img_from_preloader(html)
-    for marker in ("/*@CLOUD@*/", "/*@CARD_INDEX@*/", "/*@PORTFOLIO@*/", "/*@SHELL@*/"):
+    for marker in ("/*@CLOUD@*/", "/*@CARD_INDEX@*/", "/*@PORTFOLIO@*/", "/*@SHELL@*/", "/*@DECKVIEW_JS@*/"):
         assert marker not in html, marker
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html, encoding="utf-8")

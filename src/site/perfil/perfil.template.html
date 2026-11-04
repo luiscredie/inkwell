@@ -45,11 +45,19 @@
 .mi-body { padding: 0 var(--sp-5) var(--sp-4); }
 .mi-motto { margin: 0 0 var(--sp-3); font-size: 1.2rem; font-weight: 700; color: var(--gold, #e9b949); font-style: italic; overflow-wrap: anywhere; }
 .mi-col { display: grid; gap: var(--sp-5); align-content: start; }
-.mi-deck { scroll-margin-top: 80px; }
-.mi-deck.mi-hl { box-shadow: 0 0 0 2px var(--accent), 0 0 0 6px rgba(236,192,97,.18); animation: mi-hl 2.4s ease-out 1; }
-.mi-deck.mi-hl:focus { outline: none; }
-@keyframes mi-hl { 0% { box-shadow: 0 0 0 2px var(--accent), 0 0 0 14px rgba(236,192,97,.32); } 100% { box-shadow: 0 0 0 2px var(--accent), 0 0 0 6px rgba(236,192,97,.18); } }
-@media (prefers-reduced-motion: reduce) { .mi-deck.mi-hl { animation: none; } }
+/* a shared deck (#deck-<id>): only the deck */
+.sd { display: grid; gap: var(--sp-4); max-width: 1080px; margin: 0 auto; }
+.sd-head { display: grid; gap: var(--sp-2); justify-items: start; }
+.sd-name { margin: 0; font: 800 clamp(1.6rem, 5vw, 2.4rem)/1.1 var(--display); letter-spacing: -.01em; overflow-wrap: anywhere; }
+.sd-sub { margin: 0; display: flex; flex-wrap: wrap; gap: 6px var(--sp-3); align-items: center; color: var(--text-2); }
+.sd-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 6px var(--sp-4); }
+.sd-list li { display: flex; gap: 8px; align-items: baseline; min-width: 0; }
+.sd-list li .t { min-width: 0; overflow-wrap: anywhere; }
+.sd-list .cost { flex: none; width: 22px; height: 22px; border-radius: 50%; display: inline-grid; place-items: center; background: var(--surface-2); font-weight: 800; font-size: var(--fs-micro); }
+.sd-by { margin: 0; text-align: center; color: var(--text-2); font-size: var(--fs-small); }
+.sd-cta { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: center; justify-content: space-between; }
+.sd-cta p { margin: 0; }
+@media (max-width: 420px) { .sd-list { grid-template-columns: 1fr; } }
 @media (max-width: 899px) {   /* one column: showcase, friends, recados, deck, record, trade */
   .mi-col { display: contents; }
   .mi-showsec { order: 1; } .mi-friends { order: 2; } .mi-recs { order: 3; } .mi-deck { order: 4; } .mi-recsum { order: 5; } .mi-trade { order: 6; }
@@ -133,6 +141,7 @@
 <dialog class="sheet" id="sheet" aria-labelledby="shT"></dialog>
 <dialog class="iw-dialog iw-public" id="cardPicker" aria-labelledby="pkT"></dialog>
 <script>/*@PICKER_JS@*/</script>
+<script>/*@DECKVIEW_JS@*/</script>
 <div class="toast-host"><div class="toast" id="toast" role="status" hidden></div></div>
 
 <script>
@@ -144,6 +153,14 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   let lang = "pt";
   try { lang = localStorage.getItem("inkwell-lang") || "pt"; } catch { /* */ }
   const PT = {
+    "Shared deck": "Deck compartilhado", "Deck not available": "Deck indisponível", "Couldn't open the deck now. Try again.": "Não deu para abrir o deck agora. Tente de novo.",
+    "This deck is no longer public, or this link is not valid.": "Este deck não está mais público, ou este link não é válido.", "View {name}'s profile": "Ver o perfil de {name}",
+    "Build and test your own deck on Inkwell. No sign-up needed.": "Monte e teste o seu deck no Inkwell. Sem cadastro.", "Try Inkwell": "Experimentar o Inkwell", "Edit my deck": "Editar meu deck",
+    "Cards": "Cartas", "Characters": "Personagens", "Actions": "Ações", "Actions ({n} songs)": "Ações ({n} músicas)", "Non-inkable": "Não-tintáveis", "Items": "Itens", "Locations": "Locais", "Distinct": "Distintas",
+    "Cost curve · average {a}": "Curva de custo · média {a}", "Foil": "Foil", "This printing exists only in foil": "Esta impressão só existe em foil",
+    "Foil: only on printings that exist only in foil. A deck does not record the finish of each copy.": "Foil: só nas impressões que existem apenas em foil. O deck não guarda o acabamento de cada cópia.",
+    "Tap a card to see it large.": "Toque numa carta para ampliar.", "List": "Lista", "Copy list": "Copiar lista", "List copied": "Lista copiada", "Couldn't copy. Try again.": "Não deu para copiar. Tente de novo.",
+    "{n} cards outside the catalog are not shown.": "{n} cartas fora do catálogo não aparecem aqui.", "Deck shared by {name}": "Deck compartilhado por {name}", "View profile": "Ver perfil", "Deck": "Deck",
     "My Inkwell": "Meu Inkwell", "Loading…": "Carregando…", "Edit": "Editar", "Share": "Compartilhar", "Copy link": "Copiar link", "Link copied": "Link copiado",
     "Example · fictional profile": "Exemplo · perfil fictício", "This is a mockup to show what a profile looks like. It is not a real person.": "Isto é uma maquete para mostrar como fica um perfil. Não é uma pessoa real.",
     "Showcase": "Vitrine", "owns it": "tem", "favourite": "favorita", "Featured deck": "Deck em destaque", "Public deck": "Deck público", "{n} cards": "{n} cartas",
@@ -233,12 +250,16 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const setRank = (code, i) => { const m = /^LOR(\d+)$/.exec(code) || []; const q = /^Q(\d+)$/.exec(code) || []; return m[1] ? +m[1] : q[1] ? 100 + +q[1] : 200 + i; };
   const SETS = (CARD_INDEX?.sets || []).map((x, i) => ({ ...x, rank: setRank(x.code, i) })).sort((a, b) => a.rank - b.rank);
   const setName = (code) => { const s = SETS.find((x) => x.code === code); return s ? (lang === "pt" && s.name_pt) || s.name_en || code : code; };
-  const CARDS = (CARD_INDEX?.cards || []).map(([id, name, cost, type, ink, rarity, set, num, img]) => ({ id, name: name || id, cost, type, ink, rarity, set, num, img, k: norm(`${name} ${set} ${num}`) }));
+  const CARDS = (CARD_INDEX?.cards || []).map(([id, name, cost, type, ink, rarity, set, num, img, inkable, song]) => ({ id, name: name || id, cost: +cost || 0, type, ink, rarity, set, num, img, inkable: !!inkable, song: !!song, k: norm(`${name} ${set} ${num}`) }));
   const BY = new Map(CARDS.map((c) => [c.id, c]));
   const picker = window.INKWELL_CARD_PICKER({ dialog: $("cardPicker"), cards: CARDS, sets: CARD_INDEX?.sets || [], lang,
     signedIn: () => !!CLOUD?.user()?.id, loadCollection: async () => (editing ? pickProfile(editing).collection : null) });
   const imgUrl = (c) => (c?.img ? `../lorcana-card-images/${encodeURI(c.img).replace(/'/g, "%27")}` : "");
   const thumb = (c, cls = "") => `<span class="thumb ${cls}" data-ink="${(inksOf(c || {})[0] || "steel").toLowerCase()}">${c?.img ? `<img src="${imgUrl(c)}" alt="${esc(c.name)}" loading="lazy" decoding="async" onerror="this.remove()">` : ""}</span>`;
+  // a deck as cards: the same rules and grid as Decks > Visão geral (src/site/deckview.js)
+  const nameKey = (n) => String(n || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s*\(.*?\)\s*/g, " ").replace(/[^a-z0-9]+/g, " ").trim();
+  const setNo = (code) => +(/^LOR(\d+)$/.exec(code || "") || [])[1] || 0;
+  const DV = window.INKWELL_DECKVIEW({ esc, Tx, split, inksOf, imgUrl, setNo, nameKey, LOC });
   const artStyle = (id) => { const c = BY.get(id); return c?.img ? `background-image:url('${imgUrl(c)}')` : ""; };
   const inkChip = (i) => `<span class="mi-ink"><i data-ink="${i.toLowerCase()}" style="background:var(--ink-${i.toLowerCase()})"></i>${esc(inkName(i))}</span>`;
 
@@ -315,16 +336,14 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const L = (p, t) => (p?.mock && lang === "en" && MOCK_EN[t]) || t || "";
   const ago = (d) => { const m = (Date.now() - Date.parse(d)) / 60000; if (!(m >= 0)) return ""; if (m < 60) return Tx("{n} min ago", { n: Math.max(1, Math.round(m)) }); if (m < 1440) return Tx("{n} h ago", { n: Math.round(m / 60) }); const dd = Math.round(m / 1440); return dd === 1 ? Tx("yesterday") : Tx("{n} days ago", { n: dd }); };
   const miniAv = (avatar, name, cls = "sm") => `<span class="mi-av ${cls}" style="${artStyle(avatar)}" role="img" aria-label="${esc(name || "")}"></span>`;
-  // anchor: #deck-<id> for a public deck (the QR code of a deck image, Decks > Visão geral). The featured deck has
-  // none: its id is not on the public profile, and a link to "the featured deck" would open another one after a change.
-  function deckView(p, deck, label = "Featured deck", tid = "featured-deck", anchor = "") {
+  function deckView(p, deck, label = "Featured deck", tid = "featured-deck") {
     const cards = Object.entries(deck.cards || {}).filter(([id, n]) => BY.has(id) && n > 0).map(([id, n]) => ({ c: BY.get(id), n }));
     const total = cards.reduce((s, x) => s + x.n, 0), curve = Array(8).fill(0);
     for (const x of cards) curve[Math.min(7, +x.c.cost || 0)] += x.n;
     const max = Math.max(1, ...curve.slice(1));
     const key = cards.slice().sort((a, b) => b.n - a.n || (+b.c.cost || 0) - (+a.c.cost || 0)).slice(0, 6);
     const list = cards.slice().sort((a, b) => (+a.c.cost || 0) - (+b.c.cost || 0) || a.c.name.localeCompare(b.c.name));
-    return `<section class="card mi-sec mi-deck" data-testid="${tid}"${anchor ? ` id="${esc(anchor)}" tabindex="-1"` : ""}><div class="mi-label">${Tx(label)}</div>
+    return `<section class="card mi-sec mi-deck" data-testid="${tid}"><div class="mi-label">${Tx(label)}</div>
       <div class="row between" style="margin:var(--sp-2) 0 var(--sp-3);gap:var(--sp-2);flex-wrap:wrap"><b style="font-size:var(--fs-h3)">${esc(L(p, deck.name))}</b>
         <span class="small muted">${(deck.colors || []).map((i) => inkName(i)).join(" / ")} · ${esc(deck.format === "infinity" ? "Infinity" : "Core")} · ${Tx("{n} cards", { n: total })}</span></div>
       <div class="mi-key">${key.map((x) => `<figure>${thumb(x.c)}<figcaption>${x.n}× ${esc(split(x.c.name)[0])}</figcaption></figure>`).join("")}</div>
@@ -390,7 +409,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
           ${preview ? "" : `<section class="mi-sec mi-achs" id="achBox" data-testid="achievements" hidden></section>`}
           ${recBox}
           ${deck ? deckView(p, deck) : ""}
-          ${(p.public_decks || []).filter((x) => x && x.cards).map((x) => deckView(p, x, "Public deck", "public-deck", "deck-" + x.id)).join("")}
+          ${(p.public_decks || []).filter((x) => x && x.cards).map((x) => deckView(p, x, "Public deck", "public-deck")).join("")}
         </div>
         <div class="mi-col">
           ${friendsBox}
@@ -401,21 +420,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       </div>
     </div>`;
   }
-  // A link to one deck of the profile (/perfil/?u=handle#deck-<id>): scroll to it, mark it and open its list, once.
-  // A deck no longer on the profile: the profile, as it is.
-  let deckHashDone = false;
-  function goToDeck() {
-    if (deckHashDone) return;
-    let h = ""; try { h = decodeURIComponent(location.hash.slice(1)); } catch { return; }
-    if (!/^deck-/.test(h)) return;
-    const el = document.getElementById(h); if (!el || !el.classList.contains("mi-deck")) return;
-    deckHashDone = true;
-    el.classList.add("mi-hl"); el.querySelector("details.mi-list")?.setAttribute("open", "");
-    el.scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
-    el.focus({ preventScroll: true });
-  }
   function wireView(p) {
-    setTimeout(goToDeck, 0);
     $("copyLink")?.addEventListener("click", () => shareLink(profileUrl(p.handle), p.name));
     $("addFriend")?.addEventListener("click", async (ev) => {
       const b = ev.currentTarget; b.disabled = true;
@@ -575,9 +580,57 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     try { await navigator.clipboard.writeText(url); toast(Tx("Link copied")); } catch { prompt("", url); }
   }
 
+  // ---------- a shared deck ----------
+  // Only a deck the public profile lists (public profile, public deck, found by its id) is shown; anything else gets
+  // a message and no cards. The same for visitors and members; the owner also gets "Editar meu deck".
+  let shown = 0;
+  async function showDeck(h, id) {
+    const run = ++shown;
+    let p = null, failed = false;
+    try { p = await anonRpc("public_profile", { p_handle: h }); } catch { failed = true; }
+    if (run !== shown) return;
+    const deck = p && /^[A-Za-z0-9_-]{1,60}$/.test(id) ? (p.public_decks || []).find((x) => x && x.id === id && x.cards && typeof x.cards === "object") : null;
+    const cta = `<section class="card sd-cta" data-testid="sd-cta"><p>${Tx("Build and test your own deck on Inkwell. No sign-up needed.")}</p><a class="btn" href="../decks/">${Tx("Try Inkwell")}</a></section>`;
+    if (!deck) {
+      $("title").textContent = Tx("Deck not available");
+      document.title = `${Tx("Deck not available")} · Inkwell`;
+      $("app").innerHTML = `<div class="sd" data-testid="shared-deck-missing">${emptyBox("decks", Tx("Deck not available"), failed ? Tx("Couldn't open the deck now. Try again.") : Tx("This deck is no longer public, or this link is not valid."),
+        p?.handle ? `<a class="btn" href="?u=${encodeURIComponent(p.handle)}" data-testid="sd-profile">${esc(Tx("View {name}'s profile", { name: L(p, p.name) }))}</a>` : "")}${cta}</div>`;
+      return;
+    }
+    const own = !!(mine && mine.handle && mine.handle === p.handle);
+    const known = Object.entries(deck.cards).filter(([cid, q]) => BY.has(cid) && +q > 0).map(([cid, q]) => ({ c: BY.get(cid), q: +q }));
+    const unknown = Object.entries(deck.cards).filter(([cid, q]) => !BY.has(cid) && +q > 0).reduce((t, [, q]) => t + +q, 0);
+    const s = DV.summary(known), rows = DV.sorted(known), name = L(p, deck.name) || Tx("Deck");
+    DV.style();
+    $("title").textContent = name;
+    document.title = `${name} · Inkwell`;
+    $("app").innerHTML = `<article class="sd" data-testid="shared-deck">
+      <header class="card sd-head"><div class="mi-label">${Tx("Shared deck")}</div>
+        <h2 class="sd-name" data-testid="sd-name">${esc(name)}</h2>
+        <p class="sd-sub">${(deck.colors || []).filter((i) => INKS.includes(i)).map(inkChip).join("")}<span>${esc(deck.format === "infinity" ? "Infinity" : "Core")} · ${esc(Tx("{n} cards", { n: s.total }))}</span></p>
+        ${own ? `<a class="btn small" href="../decks/?deck=${encodeURIComponent(deck.id)}" data-testid="sd-edit"><i class="ic i-edit"></i>${Tx("Edit my deck")}</a>` : ""}</header>
+      <section class="card">${DV.head(s)}</section>
+      <section class="card"><div class="group-head"><h3>${Tx("Cards")}</h3><span class="small muted">${Tx("Tap a card to see it large.")}</span></div>
+        <div class="ov-grid" data-testid="ov-grid">${rows.map(DV.tile).join("")}</div>${DV.foilNote(rows)}
+        ${unknown ? `<p class="small faint">${esc(Tx("{n} cards outside the catalog are not shown.", { n: unknown }))}</p>` : ""}</section>
+      <section class="card"><div class="group-head"><h3>${Tx("List")}</h3><button type="button" class="btn small" id="sdCopy" data-testid="sd-copy"><i class="ic i-list"></i>${Tx("Copy list")}</button></div>
+        <ul class="sd-list" data-testid="sd-list">${rows.map((e) => `<li><span class="cost">${esc(e.c.cost)}</span><span class="t"><b>${e.q}×</b> ${esc(e.c.name)} <span class="faint">${esc(DV.printLabel(e.c))}</span></span></li>`).join("")}</ul></section>
+      <p class="sd-by" data-testid="sd-by">${esc(Tx("Deck shared by {name}", { name: L(p, p.name) }))} (@${esc(p.handle)}) · <a href="?u=${encodeURIComponent(p.handle)}">${Tx("View profile")}</a></p>
+      ${own ? "" : cta}
+    </article>`;
+    $("sdCopy").onclick = () => {
+      const done = () => toast(Tx("List copied")), fail = () => toast(Tx("Couldn't copy. Try again."), true);
+      try { navigator.clipboard.writeText(DV.listText(known)).then(done, fail); } catch { fail(); }
+    };
+  }
+
   async function showPublic(h) {
     let p = null;
+    const run = ++shown;
     try { p = await anonRpc("public_profile", { p_handle: h }); } catch { p = null; }
+    if (run !== shown) return;
+    $("title").textContent = Tx("My Inkwell");
     if (!p) { $("app").innerHTML = emptyBox("search", Tx("Profile not found"), Tx("It doesn't exist, or its owner keeps it private.")); return; }
     document.title = `${p.name} · Inkwell`;
     try { p.communities = await anonRpc("profile_communities", { p_handle: h }); } catch { p.communities = null; }
@@ -924,10 +977,16 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   // ---------- boot ----------
   document.documentElement.lang = LOC;
   $("title").textContent = Tx("My Inkwell");
+  // a shared deck (/perfil/?u=<handle>#deck-<id>, the QR code of a deck image) is its own view: only the deck.
+  // Decided before anything is drawn, so the profile never shows, not even for a moment.
+  const deckQ = () => { let h = ""; try { h = decodeURIComponent(location.hash.slice(1)); } catch { return ""; } return h.startsWith("deck-") ? h.slice(5) : null; };
+  if (handleQ && deckQ() !== null) $("title").textContent = Tx("Shared deck");
   $("app").innerHTML = `<div class="skel" style="height:260px;border-radius:20px"></div><p class="sr-only">${Tx("Loading…")}</p>`;
+  const showHandle = (h) => (deckQ() !== null ? showDeck(h, deckQ()) : showPublic(h));
+  if (handleQ) window.addEventListener("hashchange", () => { window.scrollTo(0, 0); $("app").innerHTML = `<div class="skel" style="height:260px;border-radius:20px"></div>`; showHandle(handleQ); });
   (async () => {
     if (me) { try { await loadMine(); } catch { mine = null; } await acceptPendingInvite(); }
-    if (handleQ) return showPublic(handleQ);
+    if (handleQ) return showHandle(handleQ);
     if (!me) {
       if (inviteQ) { $("app").innerHTML = await inviteBanner(); wireInvite(); return; }
       return welcome();
