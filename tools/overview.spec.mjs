@@ -138,6 +138,9 @@ test('overview grid: real art, cost → name → printing, copies, foil only whe
   const foil = await page.locator('.ov-card:has(.ov-foil)').evaluateAll((els) => els.map((e) => e.dataset.card).sort());
   expect(foil).toEqual(['LOR10-207', 'LOR10-223', 'LOR10-231']);
   await expect(page.locator('.ov-card[data-card="LOR10-207"]')).toHaveAttribute('aria-label', /LOR10 #207 · foil/);
+  await expect(page.getByTestId('ov-foil-note')).toHaveText('Foil: só nas impressões que existem apenas em foil. O deck não guarda o acabamento de cada cópia.');
+  const img = await page.evaluate(() => window.INKWELL_DECK_IMAGE.data('deck-ov').cards.filter((c) => c.foil).map((c) => c.id).sort());
+  expect(img).toEqual(foil);   // the image marks exactly the same cards
   await page.locator('.ov-card[data-card="LOR10-17"]').click();
   await expect(page.locator('#iwZoom')).toBeVisible();
 });
@@ -145,7 +148,7 @@ test('overview grid: real art, cost → name → printing, copies, foil only whe
 test('overview: "Você possui X de Y" only for the owner, and never in what the image is drawn from', async ({ page }) => {
   await setup(page);
   await open(page);
-  await expect(page.getByTestId('ov-owned')).toContainText('Você possui 10 de 60 cartas deste deck.');
+  await expect(page.getByTestId('ov-owned')).toHaveText('Você possui 10 de 60 cartas deste deck · só você vê isto.');
   const data = await page.evaluate(() => window.INKWELL_DECK_IMAGE.data('deck-ov', { url: 'https://x/perfil/?u=luis#deck-deck-ov', handle: 'luis' }));
   expect(Object.keys(data).sort()).toEqual(['cards', 'curve', 'format', 'handle', 'inks', 'name', 'qr', 'stats']);
   expect(Object.keys(data.stats).sort()).toEqual(['action', 'avg', 'char', 'distinct', 'item', 'location', 'nonInk', 'song', 'total']);
@@ -205,13 +208,17 @@ test('image, horizontal (groups and Discord): a real 1920×1080 PNG with the sam
   console.log('horizontal: ' + (await sheet.locator('#ovOut').getAttribute('data-ms')) + ' ms');
 });
 
-test('QR code: the featured deck goes to #deck-featured', async ({ page }) => {
-  await setup(page, { deck: { ...OVD, public: false }, profile: { handle: 'luis', is_public: true, adult: true, featured_deck: 'deck-ov' } });
-  await open(page);
-  await makeImage(page, 'v');
-  const [p] = await pngs(page);
-  expect(p.qr).toBe(new URL('perfil/?u=luis#deck-featured', ROOT).href);
-});
+for (const pub of [false, true]) {
+  test(`QR code: none for the featured deck (deck ${pub ? 'public' : 'private'}), it has no stable address`, async ({ page }) => {
+    await setup(page, { deck: { ...OVD, public: pub }, profile: { handle: 'luis', is_public: true, adult: true, featured_deck: 'deck-ov' } });
+    await open(page);
+    const sheet = await makeImage(page, 'v');
+    await expect(sheet.getByTestId('ov-qr-note')).toHaveText('Sem QR code para o deck em destaque, por enquanto: o perfil ainda não tem um endereço para ele que continue certo se o destaque mudar.');
+    const [p] = await pngs(page);
+    expect(pngSize(p.b64)).toMatchObject({ w: 1080, h: 1350 });
+    expect(p.qr).toBeNull();
+  });
+}
 
 for (const [label, opts, note] of [
   ['a private deck', { deck: { ...OVD, public: false } }, 'Sem QR code: este deck não aparece no seu perfil público.'],
@@ -242,6 +249,12 @@ test('a deck with many different cards: more images, each one full size, every c
     const sheet = await makeImage(page, fmt);
     const n = +(await sheet.locator('#ovOut').getAttribute('data-pages'));
     expect(n).toBeGreaterThan(1);
+    // every card on exactly one image, in order, the images as even as possible
+    const split = (await sheet.locator('#ovOut').getAttribute('data-split')).split(',').map(Number);
+    expect(split).toHaveLength(n);
+    expect(split.reduce((a, b) => a + b, 0)).toBe(60);
+    expect(Math.max(...split) - Math.min(...split)).toBeLessThanOrEqual(1);
+    console.log(`${fmt}: ${n} images (${split.join(' + ')}), ${await sheet.locator('#ovOut').getAttribute('data-ms')} ms`);
     await expect(sheet.getByTestId('ov-pages')).toContainText(`${n} imagens`);
     const ps = await pngs(page);
     expect(ps).toHaveLength(n);
@@ -249,7 +262,7 @@ test('a deck with many different cards: more images, each one full size, every c
       expect(pngSize(p.b64)).toMatchObject(fmt === 'h' ? { w: 1920, h: 1080 } : { w: 1080, h: 1350 });
       expect(p.download).toBe(`inkwell-sessenta-diferentes-${fmt === 'h' ? 'horizontal' : 'vertical'}-${i + 1}.png`);
       expect(p.qr).toBe(new URL('perfil/?u=luis#deck-deck-big', ROOT).href);
-      if (i === 0) keep(`muitas-cartas-${fmt}-1.png`, p.b64);
+      keep(`muitas-cartas-${fmt}-${i + 1}.png`, p.b64);
     }
     await page.locator('#sheet [data-close]').click();
   }
@@ -279,7 +292,21 @@ for (const width of [320, 360, 390, 430]) {
       for (const el of document.querySelectorAll('[data-testid="deck-overview"], [data-testid="deck-overview"] *')) { const r = el.getBoundingClientRect(); if (r.width && (r.right > vw + 0.5 || r.left < -0.5)) out.push(el.className || el.tagName); }
       return out; });
     expect(over).toEqual([]);
-    if (process.env.OV_EVIDENCE) { mkdirSync(EVID, { recursive: true }); await page.evaluate(() => Promise.all([...document.querySelectorAll('.ov-card img')].map((i) => { i.loading = 'eager'; return i.decode().catch(() => null); }))); await ov.screenshot({ path: new URL(`celular-${width}-previa.png`, EVID).pathname }); }
+    // the head of the section stays short: the numbers in a few lines, then the curve
+    const head = await ov.locator('.ov-stats').boundingBox();
+    expect(head.height).toBeLessThanOrEqual(width <= 360 ? 100 : 76);
+    // the bars of the app as they really are: the top one stuck at the top, the tab bar at the bottom, and the
+    // last buttons of the section reachable above the tab bar
+    const bars = await page.evaluate(() => ({ app: getComputedStyle(document.querySelector('.appbar')).position, tab: getComputedStyle(document.querySelector('.tabbar')).position }));
+    expect(bars).toEqual({ app: 'sticky', tab: 'fixed' });
+    await page.evaluate(() => Promise.all([...document.querySelectorAll('.ov-card img')].map((i) => { i.loading = 'eager'; return i.decode().catch(() => null); })));
+    await ov.evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 64));
+    if (process.env.OV_EVIDENCE) { mkdirSync(EVID, { recursive: true }); await page.screenshot({ path: new URL(`celular-${width}-tela-inicio.png`, EVID).pathname }); }
+    await page.evaluate(() => window.scrollTo(0, document.scrollingElement.scrollHeight));
+    const last = await page.getByTestId('ov-image-open').boundingBox(), tab = await page.locator('.tabbar').boundingBox();
+    expect(last.y + last.height).toBeLessThanOrEqual(tab.y);
+    await page.getByTestId('ov-all').scrollIntoViewIfNeeded();
+    if (process.env.OV_EVIDENCE) await page.screenshot({ path: new URL(`celular-${width}-tela-fim.png`, EVID).pathname });
     await ov.getByTestId('ov-all').click();
     await expect(ov.locator('.ov-card')).toHaveCount(20);
     await expect(ov.getByTestId('ov-all')).toHaveCount(0);
@@ -299,6 +326,23 @@ test('computer: the whole grid at once, no "Ver deck completo"', async ({ page }
   await expect(ov.locator('.ov-card')).toHaveCount(20);
   await expect(ov.getByTestId('ov-all')).toHaveCount(0);
   if (process.env.OV_EVIDENCE) { mkdirSync(EVID, { recursive: true }); await page.evaluate(() => Promise.all([...document.querySelectorAll('.ov-card img')].map((i) => { i.loading = 'eager'; return i.decode().catch(() => null); }))); await ov.screenshot({ path: new URL('computador-1280.png', EVID).pathname }); }
+});
+
+test('time and memory to make the image (lab numbers, Chromium on a computer: not a phone)', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'memory figures come from Chromium only');
+  await setup(page);
+  await open(page);
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Performance.enable');
+  const heap = async () => { await cdp.send('HeapProfiler.collectGarbage'); const m = (await cdp.send('Performance.getMetrics')).metrics; return Math.round(m.find((x) => x.name === 'JSHeapUsedSize').value / 1048576); };
+  const before = await heap(), times = [];
+  for (const fmt of ['v', 'h', 'v', 'h']) {
+    const t = await page.evaluate(async (f) => { const d = window.INKWELL_DECK_IMAGE.data('deck-ov', { url: location.origin + '/perfil/?u=luis#deck-deck-ov', handle: 'luis' }); const r = await window.INKWELL_DECK_IMAGE.draw(d, f); return { ms: r.ms, kb: Math.round(r.blobs.reduce((a, b) => a + b.size, 0) / 1024) }; }, fmt);
+    times.push(`${fmt} ${t.ms} ms ${t.kb} KB`);
+  }
+  const after = await heap();
+  console.log(`generation: ${times.join(' · ')} · JS heap ${before} MB → ${after} MB after 4 images`);
+  expect(after - before).toBeLessThan(40);   // nothing kept: images and canvases are let go
 });
 
 test('the overview can be hidden, and stays hidden on the next visit', async ({ page }) => {
@@ -335,13 +379,16 @@ for (const vp of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
     await expect(el).toBeInViewport();
     await expect(el.locator('details.mi-list')).toHaveAttribute('open', '');
     await expect(page.locator('.mi-hl')).toHaveCount(1);
-    await expect(page.locator('#deck-featured')).not.toHaveClass(/mi-hl/);
+    await expect(page.getByTestId('featured-deck')).not.toHaveClass(/mi-hl/);
+    if (process.env.OV_EVIDENCE && vp.width === 390) { mkdirSync(EVID, { recursive: true }); await page.waitForTimeout(2600); await page.screenshot({ path: new URL('perfil-390-deck-destacado.png', EVID).pathname }); }
   });
 }
-test('profile #deck-featured marks the featured deck; a deck no longer there leaves the profile as it is', async ({ page }) => {
+test('profile: the featured deck has no anchor; #deck-featured or a deck no longer there leaves the profile as it is', async ({ page }) => {
   await profileSetup(page);
   await page.goto(new URL('perfil/?u=luis#deck-featured', ROOT).href);
-  await expect(page.locator('#deck-featured')).toHaveClass(/mi-hl/);
+  await expect(page.getByTestId('featured-deck')).toBeVisible();
+  await expect(page.getByTestId('featured-deck')).not.toHaveAttribute('id', /./);
+  await expect(page.locator('.mi-hl')).toHaveCount(0);
   await page.goto(new URL('perfil/?u=luis#deck-gone', ROOT).href);
   await page.reload();
   await expect(page.getByTestId('featured-deck')).toBeVisible();
