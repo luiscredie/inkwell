@@ -56,7 +56,12 @@ window.INKWELL_CLOUD = (() => {
   const KEY = "inkwell-counter-auth";
   const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || "null"); } catch { return null; } };
   let sess = load();
-  const store = (x) => { sess = x; try { if (x) localStorage.setItem(KEY, JSON.stringify(x)); else localStorage.removeItem(KEY); } catch { /* private mode */ } };
+  const recent = new Map();   // shared reads (see shared() below)
+  // POST calls that only read (STABLE functions in the database, which cannot write) or only add page statistics
+  // (track): they keep the shared reads. Any other POST, PATCH or DELETE is a write and clears them; a function not
+  // listed here is taken as a write, so a missing name costs a repeated request, never an old answer.
+  const READ_RPC = /^rpc\/(my_[a-z_]+|feed_posts|search_all|communities_list|example_profiles|friend_decks|find_player_decks|shared_collections|friend_collection|friends_lending|share_invite_info|achievements_by_ids|achievements_of|public_profile|track)(\?|$)/;
+  const store = (x) => { sess = x; recent.clear(); try { if (x) localStorage.setItem(KEY, JSON.stringify(x)); else localStorage.removeItem(KEY); } catch { /* private mode */ } };
   const headers = (tok) => ({ apikey: cfg.key, "Content-Type": "application/json", ...(tok ? { Authorization: `Bearer ${tok}` } : {}) });
   const claims = (jwt) => { try { return JSON.parse(atob(jwt.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))); } catch { return {}; } };
   const session = (r) => {   // the same shape supabase-js keeps, so both read each other's session
@@ -138,7 +143,8 @@ window.INKWELL_CLOUD = (() => {
 
   // Authenticated call to the database's REST API (used by Coach Review). Errors carry a short code.
   // anon: true also works signed out (the publishable key), for the few functions open to visitors
-  async function api(path, { method = "GET", body, prefer, anon = false, keepalive = false } = {}) {
+  async function api(path, { method = "GET", body, prefer, anon = false, keepalive = false, read = false } = {}) {
+    if (method !== "GET" && !read && !READ_RPC.test(path)) recent.clear();   // a write (profile saved, friend added…): no shared answer from before it
     const tok = await token();
     if (!tok && !anon) throw Object.assign(new Error("signed out"), { code: "auth" });
     const r = await fetch(`${cfg.url}/rest/v1/${path}`, {
@@ -153,6 +159,18 @@ window.INKWELL_CLOUD = (() => {
     }
     const text = await r.text();
     return text ? JSON.parse(text) : null;
+  }
+
+  // The same read asked twice as a page opens (the top bar and the page both want rpc/my_profile and rpc/my_home):
+  // whoever asks first sends it, whoever asks within 5 s gets the same answer. Only for reads with no arguments.
+  // Forgotten on any write and on any change of session (sign in, sign out, another account, token refresh).
+  function shared(path) {
+    const k = (load()?.user?.id || "") + " " + path, hit = recent.get(k);
+    if (hit && Date.now() - hit.at < 5000) return hit.p;
+    const p = api(path, { method: "POST", body: {}, read: true });
+    recent.set(k, { at: Date.now(), p });
+    p.catch(() => recent.delete(k));   // a failure is not shared: the next caller tries again
+    return p;
   }
 
   // The player's collections (public.inkwell_profiles). A new account has none yet, and every collection, deck
@@ -170,6 +188,7 @@ window.INKWELL_CLOUD = (() => {
 
   // Storage (supabase/achievements.sql): upload one file to a private bucket, signed links to see files, remove files.
   async function storage(path, { method = "POST", body, type = "application/json" } = {}) {
+    if (!path.startsWith("object/sign/")) recent.clear();   // an upload or a removal is a write too
     const tok = await token();
     const r = await fetch(`${cfg.url}/storage/v1/${path}`, { method, headers: { ...headers(tok), "Content-Type": type }, body: type === "application/json" && body !== undefined ? JSON.stringify(body) : body });
     if (!r.ok) { let why = ""; try { why = String((await r.json())?.message || "").slice(0, 200); } catch { /* */ } throw Object.assign(new Error(`storage ${r.status}${why ? `: ${why}` : ""}`), { status: r.status, why }); }
@@ -192,7 +211,7 @@ window.INKWELL_CLOUD = (() => {
   }
 
   return {
-    api, collections, fn, upload, signed, removeFiles,
+    api, shared, collections, fn, upload, signed, removeFiles,
     user: () => { sess = load(); return sess ? { id: sess.user?.id, email: sess.user?.email } : null; },
     status: () => { sess = load(); return sess ? { signedIn: true, email: sess.user?.email || "" } : { signedIn: false }; },
     async requestCode(email) {
@@ -408,7 +427,7 @@ window.INKWELL_CARD_PICKER = (opts) => {
   const imgUrl = (c) => (c?.img ? `../lorcana-card-images/${encodeURI(c.img).replace(/'/g, "%27")}` : "");
   const cardFace = (c, foil) => {
     const [a, b] = split(c?.name || ""), label = `${a}${b ? " · " + b : ""} — ${setName(c?.set)} nº ${c?.num || ""}`;
-    return `<span class="iw-card">${c?.img ? `<img src="${imgUrl(c)}" alt="${esc(label)}" width="250" height="350" loading="lazy" decoding="async" onerror="this.nextElementSibling.setAttribute('aria-hidden','false');this.remove()">` : ""}
+    return `<span class="iw-card">${c?.img ? `\u003Cimg src="${imgUrl(c)}" alt="${esc(label)}" width="250" height="350" loading="lazy" decoding="async" onerror="this.nextElementSibling.setAttribute('aria-hidden','false');this.remove()">` : ""}
       <span class="iw-fallback" aria-hidden="${c?.img ? "true" : "false"}">${esc(a)}${b ? `<br><small>${esc(b)}</small>` : ""}<br><small>${esc(setName(c?.set))} · nº ${esc(c?.num || "")}</small></span>
       ${foil ? `<span class="iw-foil">${Tx("Foil")}</span>` : ""}</span>`;
   };
@@ -628,7 +647,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const picker = window.INKWELL_CARD_PICKER({ dialog: $("cardPicker"), cards: CARDS, sets: CARD_INDEX?.sets || [], lang,
     signedIn: () => !!CLOUD?.user()?.id, loadCollection: async () => (editing ? pickProfile(editing).collection : null) });
   const imgUrl = (c) => (c?.img ? `../lorcana-card-images/${encodeURI(c.img).replace(/'/g, "%27")}` : "");
-  const thumb = (c, cls = "") => `<span class="thumb ${cls}" data-ink="${(inksOf(c || {})[0] || "steel").toLowerCase()}">${c?.img ? `<img src="${imgUrl(c)}" alt="${esc(c.name)}" loading="lazy" decoding="async" onerror="this.remove()">` : ""}</span>`;
+  const thumb = (c, cls = "") => `<span class="thumb ${cls}" data-ink="${(inksOf(c || {})[0] || "steel").toLowerCase()}">${c?.img ? `\u003Cimg src="${imgUrl(c)}" alt="${esc(c.name)}" loading="lazy" decoding="async" onerror="this.remove()">` : ""}</span>`;
   const artStyle = (id) => { const c = BY.get(id); return c?.img ? `background-image:url('${imgUrl(c)}')` : ""; };
   const inkChip = (i) => `<span class="mi-ink"><i data-ink="${i.toLowerCase()}" style="background:var(--ink-${i.toLowerCase()})"></i>${esc(inkName(i))}</span>`;
 
@@ -737,7 +756,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const isLoc = (c) => c?.type === "Location";
   function coverHtml(id, chosen) {
     const c = BY.get(id), art = c?.img ? `url('${imgUrl(c)}')` : "none";
-    if (chosen && isLoc(c)) return `<div class="mi-cover loc" data-testid="cover" data-card="${esc(id)}" style="--art:${art}"><img class="mi-loc" src="${imgUrl(c)}" alt="${esc(c.name)}" data-nozoom></div>`;
+    if (chosen && isLoc(c)) return `<div class="mi-cover loc" data-testid="cover" data-card="${esc(id)}" style="--art:${art}">\u003Cimg class="mi-loc" src="${imgUrl(c)}" alt="${esc(c.name)}" data-nozoom></div>`;
     return `<div class="mi-cover${chosen ? " chosen" : ""}" ${chosen ? `data-testid="cover" data-card="${esc(id)}"` : ""} style="${artStyle(id)};--art:${art}"><i class="mi-art"></i></div>`;
   }
   function profileView(p, { own = false, preview = false } = {}) {
@@ -813,7 +832,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const achKind = (k) => Tx((ACH_KINDS.find((x) => x[0] === k) || ACH_KINDS[4])[1]);
   const achDate = (d) => (d ? new Date(d + "T12:00:00").toLocaleDateString(LOC, { day: "numeric", month: "short", year: "numeric" }) : "");
   function achCard(a, url, own) {
-    return `<article class="ach" data-ach="${esc(a.id)}">${url ? `<img class="ach-img" src="${esc(url)}" alt="${esc(a.title)}" loading="lazy">` : ""}
+    return `<article class="ach" data-ach="${esc(a.id)}">${url ? `\u003Cimg class="ach-img" src="${esc(url)}" alt="${esc(a.title)}" loading="lazy">` : ""}
       <div class="ach-t"><span class="tag accent"><i class="ic i-sparkle"></i>${esc(achKind(a.kind))}</span><b>${esc(a.title)}</b>
         <span class="small muted">${esc([achDate(a.on), a.place].filter(Boolean).join(" · "))}${own ? ` · ${esc(Tx(a.visibility === "public" ? "public" : "friends only"))}` : ""}</span>
         ${a.rph_id ? `<a class="small ach-rph" href="https://tcg.ravensburgerplay.com/events/${encodeURIComponent(a.rph_id)}" target="_blank" rel="noopener" data-testid="ach-rph"><i class="ic i-calendar"></i>${esc(a.rph_name || Tx("Play Hub event"))} · ${Tx("See on the Play Hub")} <i class="ic i-external"></i></a>` : ""}
@@ -894,7 +913,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
           <div class="stack" style="gap:6px"><b class="small">${Tx("Play Hub event (optional)")}</b>${evBox()}</div>
           <label class="field">${Tx("Text (optional)")}<textarea id="aBody" maxlength="500" rows="3" placeholder="${esc(Tx("The deck, the final, who you want to thank…"))}">${esc(f.body)}</textarea></label>
           <div class="stack" style="gap:6px"><b class="small">${Tx("Photo (optional)")}</b>
-            ${photoUrl && !dropPhoto ? `<img src="${esc(photoUrl)}" alt="" class="ach-img" style="max-height:220px;object-fit:cover"><div class="row" style="gap:var(--sp-2)"><label class="btn small">${Tx("Change photo")}<input type="file" id="aPhoto" accept="image/*" hidden></label><button type="button" class="btn small ghost" id="aNoPhoto">${Tx("Remove photo")}</button></div>`
+            ${photoUrl && !dropPhoto ? `\u003Cimg src="${esc(photoUrl)}" alt="" class="ach-img" style="max-height:220px;object-fit:cover"><div class="row" style="gap:var(--sp-2)"><label class="btn small">${Tx("Change photo")}<input type="file" id="aPhoto" accept="image/*" hidden></label><button type="button" class="btn small ghost" id="aNoPhoto">${Tx("Remove photo")}</button></div>`
               : `<label class="btn" style="justify-self:start"><i class="ic i-camera"></i>${Tx("Choose a photo")}<input type="file" id="aPhoto" accept="image/*" hidden data-testid="ach-photo"></label>`}
             <span class="small faint">${Tx("It is resized on your device and its location data is removed.")}</span></div>
           <label class="switch"><span>${Tx("Everyone can see it")}<small>${Tx(mine?.is_public ? "Off: only friends." : "Your profile is private, so only friends see it.")}</small></span><input type="checkbox" role="switch" id="aPublic" ${f.visibility === "public" ? "checked" : ""} ${mine?.is_public ? "" : "disabled"}></label>
@@ -1226,7 +1245,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     x.fillStyle = "#7d77a8"; x.font = `500 24px ${font}`; x.fillText(Tx("Fan project, not affiliated with Disney or Ravensburger."), W / 2, H - 28);
     const blob = await new Promise((ok) => c.toBlob(ok, "image/png"));
     const url = URL.createObjectURL(blob), file = new File([blob], `inkwell-${p.handle || "card"}.png`, { type: "image/png" });
-    $("pcBox").innerHTML = `<img class="pc-prev" src="${url}" alt="${esc(Tx("Player card"))}" data-testid="player-card"><div class="row" style="gap:var(--sp-2);margin:var(--sp-3) 0">
+    $("pcBox").innerHTML = `\u003Cimg class="pc-prev" src="${url}" alt="${esc(Tx("Player card"))}" data-testid="player-card"><div class="row" style="gap:var(--sp-2);margin:var(--sp-3) 0">
       ${navigator.canShare && navigator.canShare({ files: [file] }) ? `<button type="button" class="btn primary" id="pcShare"><i class="ic i-send"></i>${Tx("Send the image")}</button>` : ""}
       <a class="btn" download="${esc(file.name)}" href="${url}">${Tx("Download")}</a></div>`;
     $("pcShare")?.addEventListener("click", () => navigator.share({ files: [file], title: "Inkwell" }).catch(() => {}));
@@ -1287,7 +1306,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       catch { b.disabled = false; drawPasskeys(Tx("Couldn't delete. Try again.")); }
     });
   }
-  function emptyBox(img, title, text, extra = "") { return `<div class="empty"><img src="../ui/assets/empty/${img}.svg" alt=""><b>${esc(title)}</b><p>${esc(text)}</p>${extra}</div>`; }
+  function emptyBox(img, title, text, extra = "") { return `<div class="empty">\u003Cimg src="../ui/assets/empty/${img}.svg" alt=""><b>${esc(title)}</b><p>${esc(text)}</p>${extra}</div>`; }
   let toastTimer = null;
   function toast(text, err) {
     const t = $("toast"); t.className = `toast${err ? " err" : ""}`;
@@ -1390,7 +1409,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const FLAG_US = '<svg viewBox="0 0 30 20" width="24" height="16" aria-hidden="true"><rect width="30" height="20" fill="#b22234"/><g fill="#fff">' + [1, 3, 5, 7, 9, 11].map((i) => `<rect y="${(i * 20) / 13}" width="30" height="${20 / 13}"/>`).join("") + '</g><rect width="13" height="10.77" fill="#3c3b6e"/><g fill="#fff">' + [[2, 2], [5, 2], [8, 2], [11, 2], [3.5, 4.5], [6.5, 4.5], [9.5, 4.5], [2, 7], [5, 7], [8, 7], [11, 7], [3.5, 9.3], [6.5, 9.3], [9.5, 9.3]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".7"/>`).join("") + '</g></svg>';
   const FLAG_BR = '<svg viewBox="0 0 30 20" width="24" height="16" aria-hidden="true"><rect width="30" height="20" fill="#009c3b"/><path d="M15 2.2 27.6 10 15 17.8 2.4 10z" fill="#ffdf00"/><circle cx="15" cy="10" r="4.6" fill="#002776"/><path d="M10.6 9.1c2.9-.6 6.2-.2 8.8 1.1" stroke="#fff" stroke-width=".8" fill="none"/></svg>';
   const flagBtn = `<button type="button" class="btn ghost icon flag-btn" id="iwFlag" data-testid="lang-flag" lang="${pt ? "en" : "pt-BR"}" aria-label="${pt ? "Switch to English" : "Mudar para português"}" title="${pt ? "English" : "Português"}">${pt ? FLAG_US : FLAG_BR}</button>`;
-  bar.innerHTML = `<div class="appbar-in"><a class="brand" href="../feed/"><img src="../ink/logo-coin.png" alt="" width="32" height="32">Inkwell</a>
+  bar.innerHTML = `<div class="appbar-in"><a class="brand" href="../feed/">\u003Cimg src="../ink/logo-coin.png" alt="" width="32" height="32">Inkwell</a>
     <nav class="sections" aria-label="${T("Seções", "Sections")}">${NAV.map(([k, href, label, ic]) => `<a href="${href}"${cur(k)} data-iw="${k}"><i class="ic i-${ic}"></i>${label}${k === "trades" ? '<span class="count" data-trades-count hidden></span>' : ""}</a>`).join("")}</nav>
     <div class="end">
       <button type="button" class="btn ghost icon" id="iwTheme" aria-pressed="${theme === "noite"}" aria-label="${theme === "noite" ? T("Usar o tema claro", "Use the light theme") : T("Usar o tema escuro", "Use the dark theme")}"><i class="ic ${theme === "noite" ? "i-sun" : "i-moon"}"></i></button>
@@ -1754,12 +1773,12 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     });
   };
   if (me && CLOUD) {
-    CLOUD.api("rpc/my_profile", { method: "POST", body: {} })   // supabase/my_inkwell.sql
+    CLOUD.shared("rpc/my_profile")   // supabase/my_inkwell.sql (shared with the page if it asks too)
       .then((p) => { profileName = p?.display_name || ""; isAdmin = !!p?.is_admin; if (p?.invite_code) myInvite = { code: p.invite_code, handle: p.handle, pub: !!p.is_public }; return profileName ? null : CLOUD.api(`profiles?user_id=eq.${me.id}&select=display_name`); })
       .catch(() => CLOUD.api(`profiles?user_id=eq.${me.id}&select=display_name`))
       .then((r) => { if (r) profileName = r?.[0]?.display_name || ""; if (profileName) $("iwAv").textContent = profileName.trim()[0].toUpperCase(); })
       .catch(() => {});
-    CLOUD.api("rpc/my_home", { method: "POST", body: {} }).then((h) => {
+    CLOUD.shared("rpc/my_home").then((h) => {
       if (!h) return;
       let since = seenAt();
       if (!since) { window.INKWELL_MARK_SEEN(); since = Date.now(); }   // first visit: only what comes after counts
@@ -1904,7 +1923,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   // ---------- tap a card thumbnail to see it large (any page; not where the thumbnail is already a button or link) ----------
   const zoom = document.createElement("dialog");
   zoom.className = "iw-zoom-card"; zoom.id = "iwZoom"; zoom.setAttribute("aria-label", T("Carta ampliada", "Card, larger"));
-  zoom.innerHTML = `<button type="button" class="btn ghost icon" data-zclose aria-label="${T("Fechar", "Close")}"><i class="ic i-close"></i></button><figure><img alt=""><figcaption></figcaption></figure><div class="iw-zoom-extra" hidden></div>`;
+  zoom.innerHTML = `<button type="button" class="btn ghost icon" data-zclose aria-label="${T("Fechar", "Close")}"><i class="ic i-close"></i></button><figure>\u003Cimg alt=""><figcaption></figcaption></figure><div class="iw-zoom-extra" hidden></div>`;
   document.body.append(zoom);
   // a tap anywhere closes it — except on what a page put under the card (window.INKWELL_ZOOM_EXTRA, e.g. Decks: your copies)
   zoom.addEventListener("click", (e) => { if (!e.composedPath().some((x) => x.classList?.contains("iw-zoom-extra"))) zoom.close(); });   // the path, not target: a button there may have been redrawn
