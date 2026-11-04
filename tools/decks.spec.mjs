@@ -628,3 +628,301 @@ test('prices: when the price file does not load, values show — (never R$ 0) an
   await expect(page.locator('[data-testid="missing-summary"]')).toContainText('faltando');
   await expect(page.locator('[data-testid="missing-summary"]')).not.toContainText('R$');
 });
+
+// ---------- Pacote 1, item 5: the whole deck into the collection ----------
+// A fake database that remembers the collection: apply_collection_delta changes it (never below zero, like the real one).
+async function collDb(page, { extraDecks = [], collection = null, apply = 'ok', delay = 0, undoFn = true } = {}) {
+  const calls = await setup(page, { extraDecks });
+  const db = fixtures(); db.profiles[0].decks.push(...extraDecks);
+  if (collection) db.profiles[0].collection = collection;
+  // a fake database that behaves like supabase/collection_undo.sql: operations by id, added once, undone once
+  const st = { applied: [], addCalls: [], undone: [], undoCalls: [], ops: new Map(), tracked: [], db, mode: apply };
+  const col = () => db.profiles[0].collection;
+  const json = (r, v, status = 200) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(v) });
+  const pgErr = (r, msg) => json(r, { code: 'P0001', message: msg }, 400);
+  await page.route('**/rest/v1/inkwell_profiles**', (r) => json(r, db.profiles));
+  await page.route('**/rest/v1/rpc/track', (r) => { st.tracked.push(JSON.parse(r.request().postData()).p_name); return r.fulfill({ status: 204, body: '' }); });
+  await page.route('**/rest/v1/rpc/add_collection_op', async (r) => {
+    const b = JSON.parse(r.request().postData());
+    st.addCalls.push(b);
+    if (!undoFn) return json(r, { code: 'PGRST202', message: 'Could not find the function' }, 404);
+    if (delay) await new Promise((res) => setTimeout(res, delay));
+    if (st.mode === 'fail') return pgErr(r, 'bad delta');
+    if (st.ops.has(b.p_op)) return json(r, { status: 'already_applied' });
+    for (const x of b.p_delta) { const e = col()[x.card_id] || (col()[x.card_id] = { n: 0, f: 0 }); const k = x.foil ? 'f' : 'n'; e[k] = (e[k] || 0) + x.qty; }
+    st.ops.set(b.p_op, { delta: b.p_delta, undone: false }); st.applied.push(b.p_delta);
+    if (st.mode === 'lost') { st.mode = 'ok'; return r.abort('failed'); }   // saved, but the answer never arrives
+    return json(r, { status: 'applied' });
+  });
+  await page.route('**/rest/v1/rpc/undo_collection_op', (r) => {
+    const b = JSON.parse(r.request().postData()), o = st.ops.get(b.p_op);
+    st.undoCalls.push(b);
+    if (!undoFn) return json(r, { code: 'PGRST202', message: 'Could not find the function' }, 404);
+    if (!o) return pgErr(r, 'op_not_found');
+    if (o.undone) return pgErr(r, 'already_undone');
+    if (o.delta.some((x) => ((col()[x.card_id] || {})[x.foil ? 'f' : 'n'] || 0) < x.qty)) return pgErr(r, 'collection_changed');
+    for (const x of o.delta) col()[x.card_id][x.foil ? 'f' : 'n'] -= x.qty;
+    o.undone = true; st.undone.push(o.delta);
+    if (st.undoMode === 'lost') { st.undoMode = 'ok'; return r.abort('failed'); }
+    return json(r, { status: 'undone' });
+  });
+  return st;
+}
+const sum = (delta) => delta.reduce((t, x) => t + x.qty, 0);
+const TINK = { id: 'deck-t', name: 'Sininho', format: 'core', colors: ['Amber'], cards: { 'LOR9-188': 2, 'LOR1-216': 2, 'NOPE-999': 3 }, created_at: '2026-10-01' };
+
+test('deck to collection: "all the cards" is chosen first, asks before saving, and Cancel changes nothing', async ({ page }) => {
+  const st = await collDb(page);
+  await page.goto(BASE + '?deck=deck-a');
+  await page.getByTestId('deck-to-coll').click();
+  const sh = page.getByTestId('dtc');
+  await expect(page.getByTestId('dtc-all')).toBeChecked();                                         // 1. option B by default
+  await expect(page.getByTestId('dtc-missing')).not.toBeChecked();
+  await expect(page.getByTestId('dtc-dest')).toHaveText('Deck: Amber Test → minha coleção');
+  await expect(page.getByTestId('dtc-warn')).toHaveText('Estas cartas serão acrescentadas mesmo que você já tenha cópias iguais.');
+  await expect(page.getByTestId('dtc-total')).toHaveText('60 cartas a adicionar');
+  expect(st.applied).toEqual([]);                                                                  // 2. nothing saved before confirming
+  await page.locator('#sheet .sheet-foot [data-close]').click();                                   // 3. Cancel
+  await expect(sh).toBeHidden();
+  expect(st.applied).toEqual([]);
+  await page.getByTestId('deck-to-coll').click();                                                  // a new operation: B again, nothing reused
+  await expect(page.getByTestId('dtc-all')).toBeChecked();
+  await page.getByTestId('dtc-missing').check();
+  await page.keyboard.press('Escape');
+  await page.getByTestId('deck-to-coll').click();
+  await expect(page.getByTestId('dtc-all')).toBeChecked();
+});
+
+test('deck to collection, all the cards: the 60 cards are added on top of what you have, in one call; survives a reload', async ({ page }) => {
+  const st = await collDb(page);
+  await page.goto(BASE + '?deck=deck-a');
+  await page.getByTestId('deck-to-coll').click();
+  await page.getByTestId('dtc-go').click();
+  await expect(page.getByTestId('dtc')).toBeHidden();
+  expect(st.applied.length).toBe(1);                                                               // one transaction
+  expect(sum(st.applied[0])).toBe(60);                                                             // 4. the 60 cards
+  expect(st.applied[0].find((x) => x.card_id === 'LOR10-1')).toEqual({ card_id: 'LOR10-1', qty: 4, foil: false });   // had 2: +4 = 6
+  expect(st.db.profiles[0].collection['LOR10-1']).toEqual({ n: 6, f: 0 });
+  await expect(page.locator('#toast')).toContainText('Cartas adicionadas à coleção.');
+  await page.reload();                                                                             // 12. persisted
+  await page.getByTestId('deck-to-coll').click();
+  await page.getByTestId('dtc-missing').check();
+  await expect(page.getByTestId('dtc-none')).toHaveText('Você já tem todas as cartas deste deck. Não há nada a acrescentar.');
+});
+
+test('deck to collection, only what is missing: adds just that; complete: says so and cannot confirm', async ({ page }) => {
+  const st = await collDb(page);
+  await page.goto(BASE + '?deck=deck-a');
+  await page.getByTestId('deck-to-coll').click();
+  await page.getByTestId('dtc-missing').check();
+  await expect(page.getByTestId('dtc-warn')).toHaveCount(0);
+  await expect(page.locator('[data-dtc]')).toHaveCount(1);                                         // only the card that is missing
+  await expect(page.locator('[data-dtc="LOR10-1"] [data-testid="dtc-n"]')).toHaveText('2');        // 5. has 2 of 4
+  await page.getByTestId('dtc-go').click();
+  await expect.poll(() => st.applied).toEqual([[{ card_id: 'LOR10-1', qty: 2, foil: false }]]);
+  await page.getByTestId('deck-to-coll').click();                                                  // 9. now complete
+  await page.getByTestId('dtc-missing').check();
+  await expect(page.getByTestId('dtc-none')).toBeVisible();
+  await expect(page.getByTestId('dtc-go')).toBeDisabled();
+});
+
+test('deck to collection: alternate arts of one card, foil-only rarity, a card not in the catalogue', async ({ page }) => {
+  // Tinker Bell - Giant Fairy: 2 × LOR9-188 (Super Rare) + 2 × LOR1-216 (Enchanted, foil only); you have 1 LOR1-216 foil
+  const col = { ...fixtures().profiles[0].collection, 'LOR1-216': { n: 0, f: 1 } };
+  const st = await collDb(page, { extraDecks: [TINK], collection: col });
+  await page.goto(BASE + '?deck=deck-t');
+  await page.getByTestId('deck-to-coll').click();
+  await expect(page.getByTestId('dtc-unknown')).toHaveText('Fora do catálogo, ficam de fora: 3× NOPE-999');   // 8.
+  await expect(page.getByTestId('dtc-total')).toHaveText('4 cartas a adicionar');                    // B: the 4 listed, none of the unknown
+  await expect(page.locator('[data-dtc="LOR1-216"] [data-testid="dtc-f"]')).toHaveText('2');        // 7. foil only: foil
+  await expect(page.locator('[data-dtc="LOR1-216"] [data-testid="dtc-n"]')).toHaveCount(0);        // no normal for it
+  await expect(page.locator('[data-dtc="LOR9-188"] [data-testid="dtc-n"]')).toHaveText('2');        // normal by default
+  await expect(page.locator('[data-dtc="LOR1-216"]')).toContainText('você tem: 0 normal · 1 foil');
+  // A: 4 needed − 1 owned = 3, first to the art you have fewer of, never more than the deck lists (6.)
+  await page.getByTestId('dtc-missing').check();
+  await expect(page.locator('[data-dtc="LOR9-188"] [data-testid="dtc-n"]')).toHaveText('2');
+  await expect(page.locator('[data-dtc="LOR1-216"] [data-testid="dtc-f"]')).toHaveText('1');
+  await expect(page.getByTestId('dtc-total')).toHaveText('3 cartas a adicionar');
+  // per card: one normal LOR9-188 becomes a foil, by hand
+  await page.locator('[data-dtc="LOR9-188"] [data-dq="LOR9-188:n:-1"]').click();
+  await page.locator('[data-dtc="LOR9-188"] [data-dq="LOR9-188:f:1"]').click();
+  await page.getByTestId('dtc-go').click();
+  await expect.poll(() => st.applied.length).toBe(1);
+  expect(st.applied[0]).toEqual([{ card_id: 'LOR9-188', qty: 1, foil: false }, { card_id: 'LOR9-188', qty: 1, foil: true }, { card_id: 'LOR1-216', qty: 1, foil: true }]);
+  expect(st.db.profiles[0].collection['LOR1-216']).toEqual({ n: 0, f: 2 });                          // existing foil kept, not turned into normal
+});
+
+test('deck to collection: a failed save changes nothing and says so; no event', async ({ page }) => {
+  await page.addInitScript(() => Object.defineProperty(Navigator.prototype, 'webdriver', { get: () => false }));
+  const st = await collDb(page, { apply: 'fail' });
+  await page.goto(BASE + '?deck=deck-a');
+  await page.getByTestId('deck-to-coll').click();
+  await page.getByTestId('dtc-go').click();
+  await expect(page.getByTestId('dtc-err')).toHaveText('Não foi possível salvar. Nada foi alterado. Tente de novo.');   // 10.
+  await expect(page.getByTestId('dtc')).toBeVisible();
+  expect(st.db.profiles[0].collection['LOR10-1']).toEqual({ n: 2, f: 0 });
+  await expect(page.getByTestId('dtc-go')).toBeEnabled();
+  await page.keyboard.press('Escape');
+  expect(st.tracked).not.toContain('deck_added_to_collection');
+});
+
+test('deck to collection: a double tap sends once; a lost answer is checked, not sent again; the event once', async ({ page }) => {
+  await page.addInitScript(() => Object.defineProperty(Navigator.prototype, 'webdriver', { get: () => false }));
+  const st = await collDb(page, { delay: 400 });
+  await page.goto(BASE + '?deck=deck-a');
+  await page.getByTestId('deck-to-coll').click();
+  await page.getByTestId('dtc-go').dblclick();                                                     // 11.
+  await expect(page.getByTestId('dtc')).toBeHidden();
+  await page.waitForTimeout(600);
+  expect(st.applied.length).toBe(1);
+  await expect.poll(() => st.tracked.filter((n) => n === 'deck_added_to_collection').length).toBe(1);
+  // the save goes through but its answer is lost: sent once more with the same operation id, the database adds nothing more
+  st.mode = 'lost'; st.applied.length = 0;
+  await page.getByTestId('deck-to-coll').click();
+  await page.getByTestId('dtc-missing').check();
+  await page.getByTestId('dtc-all').check();
+  await page.getByTestId('dtc-go').click();
+  await expect(page.getByTestId('dtc')).toBeHidden();
+  await expect(page.locator('#toast')).toContainText('Cartas adicionadas à coleção.');
+  await page.waitForTimeout(300);
+  expect(st.applied.length).toBe(1);                                                               // added once
+  const lostOp = st.addCalls.at(-1).p_op;
+  expect(st.addCalls.filter((c) => c.p_op === lostOp).length).toBe(2);                             // sent again with the same id
+  expect(st.db.profiles[0].collection['LOR10-1']).toEqual({ n: 10, f: 0 });                         // 2 + 4 + 4, not + 8 more
+});
+
+test('deck to collection: Undo within 10 s takes out exactly what was added; later changes block it; after 10 s it is gone', async ({ page }) => {
+  await page.clock.install();
+  const st = await collDb(page, { undoFn: true });
+  await page.goto(BASE + '?deck=deck-a');
+  // 13. undo in time: back to how it was, in one call to undo_collection_delta
+  await page.getByTestId('deck-to-coll').click();
+  await page.getByTestId('dtc-missing').check();
+  await page.getByTestId('dtc-go').click();
+  await expect(page.locator('#toast')).toContainText('Cartas adicionadas à coleção.');
+  await page.clock.runFor(8000);
+  await page.locator('#undo').click();
+  await expect(page.locator('#toast')).toContainText('Desfeito: as cartas adicionadas foram retiradas.');
+  expect(st.undone).toEqual([[{ card_id: 'LOR10-1', qty: 2, foil: false }]]);
+  expect(st.applied.length).toBe(1);                                                               // never a negative apply_collection_delta
+  expect(st.db.profiles[0].collection['LOR10-1']).toEqual({ n: 2, f: 0 });
+  // 14. a copy taken out after (here or on another device): the database refuses; nothing changes; the card is named
+  await page.getByTestId('deck-to-coll').click();
+  await page.getByTestId('dtc-go').click();                                                        // all: +4 of each
+  await expect(page.locator('#toast')).toContainText('Cartas adicionadas à coleção.');
+  st.db.profiles[0].collection['LOR10-10'] = { n: 1, f: 0 };                                       // was 4 + 4 = 8, now 1
+  await page.locator('#undo').click();
+  await expect(page.locator('#toast')).toContainText('Não foi possível desfazer: Gurgi mudou depois de adicionada (aqui ou em outro aparelho). Nada foi alterado.');
+  expect(st.applied.length).toBe(2);
+  expect(st.db.profiles[0].collection['LOR10-1']).toEqual({ n: 6, f: 0 });
+  // after 10 s the Undo button is gone
+  await page.getByTestId('deck-to-coll').click();
+  await page.getByTestId('dtc-go').click();
+  await expect(page.locator('#undo')).toBeVisible();
+  await page.clock.runFor(10500);
+  await expect(page.locator('#toast')).toBeHidden();
+});
+
+test('deck to collection: without the functions of collection_undo.sql, nothing is added and it says so (no weaker way)', async ({ page }) => {
+  const st = await collDb(page, { undoFn: false });
+  await page.goto(BASE + '?deck=deck-a');
+  await page.getByTestId('deck-to-coll').click();
+  await page.getByTestId('dtc-go').click();
+  await expect(page.getByTestId('dtc-err')).toHaveText('Adicionar o deck inteiro não está disponível agora. Nada foi alterado.');
+  expect(st.applied).toEqual([]);
+  expect(st.db.profiles[0].collection['LOR10-1']).toEqual({ n: 2, f: 0 });
+});
+
+test('deck to collection: one operation id per confirmation; the same undo again (even straight through the API) takes nothing; a lost undo answer is not a second undo', async ({ page }) => {
+  const st = await collDb(page);
+  await page.goto(BASE + '?deck=deck-a');
+  await page.getByTestId('deck-to-coll').click();
+  await page.getByTestId('dtc-missing').check();
+  await page.getByTestId('dtc-go').click();
+  await expect(page.locator('#undo')).toBeVisible();
+  const op1 = st.addCalls[0].p_op;
+  expect(op1).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  await page.locator('#undo').click();
+  await expect(page.locator('#toast')).toContainText('Desfeito');
+  expect(st.db.profiles[0].collection['LOR10-1']).toEqual({ n: 2, f: 0 });
+  // the same undo again, straight to the API: refused, the 2 Baloo you had stay
+  const again = await page.evaluate((op) => window.INKWELL_CLOUD.api('rpc/undo_collection_op', { method: 'POST', body: { p_op: op } }).then(() => 'ok', (e) => e.why || e.message), op1);
+  expect(again).toContain('already_undone');
+  expect(st.db.profiles[0].collection['LOR10-1']).toEqual({ n: 2, f: 0 });
+  // a new confirmation: a new id; its undo answer is lost: sent once more with the same id → already_undone → taken as done, once
+  await page.getByTestId('deck-to-coll').click();
+  await page.getByTestId('dtc-missing').check();
+  await page.getByTestId('dtc-go').click();
+  await expect(page.locator('#undo')).toBeVisible();
+  const op2 = st.addCalls.at(-1).p_op;
+  expect(op2).not.toBe(op1);
+  st.undoMode = 'lost';
+  await page.locator('#undo').click();
+  await expect(page.locator('#toast')).toContainText('Desfeito: as cartas adicionadas foram retiradas.');
+  expect(st.undoCalls.filter((c) => c.p_op === op2).length).toBe(2);
+  expect(st.undone.length).toBe(2);                                                                // each operation undone once
+  expect(st.db.profiles[0].collection['LOR10-1']).toEqual({ n: 2, f: 0 });
+});
+
+for (const w of [320, 360, 390]) {
+  test(`deck to collection on a ${w}px phone: the sheet fits, no horizontal scroll, steppers clear of each other`, async ({ page }) => {   // 15.
+    await page.setViewportSize({ width: w, height: 760 });
+    const col = { ...fixtures().profiles[0].collection, 'LOR1-216': { n: 0, f: 1 } };
+    await collDb(page, { extraDecks: [TINK], collection: col });
+    await page.goto(BASE + '?deck=deck-t');
+    await page.getByTestId('deck-to-coll').click();
+    const sh = page.locator('#sheet');
+    await expect(page.getByTestId('dtc-go')).toBeVisible();
+    const r = await sh.evaluate((d) => {
+      const rect = (e) => e.getBoundingClientRect(), over = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 0 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 0;
+      const groups = [...d.querySelectorAll('.dtc-line'), d.querySelector('.sheet-foot')].map((g) => [...g.querySelectorAll('.btn')].map(rect));   // within a line, and the footer
+      const btns = groups.flat();
+      let clash = 0; for (const g of groups) for (let i = 0; i < g.length; i++) for (let j = i + 1; j < g.length; j++) if (over(g[i], g[j])) clash++;
+      const wide = [...d.querySelectorAll('.sheet-body *, .sheet-foot *')].filter((e) => rect(e).right > innerWidth + 1).length;
+      // the sheet itself (the top bar's overflow at 320px with an account is older than this: its own fix)
+      const box = rect(d);
+      const tall = [...d.querySelectorAll('[data-dtc]')].filter((e) => rect(e).height > 240 || rect(e).height < 40).length;   // a short row (it was 812px when the art grew to its full size)
+      return { tall, scroll: Math.max(0, Math.round(box.right - innerWidth), Math.round(-box.left)), bodyScroll: d.querySelector('.sheet-body').scrollWidth - d.querySelector('.sheet-body').clientWidth, clash, wide, small: btns.filter((b) => b.height < 36).length };
+    });
+    expect(r).toEqual({ tall: 0, scroll: 0, bodyScroll: 0, clash: 0, wide: 0, small: 0 });
+    await expect(page.locator('[data-dtc="LOR9-188"]')).toBeInViewport();                         // the list is on screen, not only in the page
+    const loaded = () => page.waitForFunction(() => [...document.querySelectorAll('[data-dtc] img')].every((i) => i.complete && i.naturalWidth > 0), null, { timeout: 5000 }).catch(() => {});
+    if (process.env.SHOT_DIR) { await page.getByTestId('dtc-missing').check(); await loaded(); await page.screenshot({ path: `${process.env.SHOT_DIR}/dtc-${w}-faltantes.png` }); await page.getByTestId('dtc-all').check(); await loaded(); await page.screenshot({ path: `${process.env.SHOT_DIR}/dtc-${w}-todas.png` }); }
+  });
+}
+
+test('deck to collection, only what is missing: a collection a friend shares with you is not yours (it does not lower what is added)', async ({ page }) => {
+  // a friend shares a collection with 2 Baloo (LOR10-1); you have 2 of the 4 the deck needs: still 2 to add, not 0
+  const st = await collDb(page);
+  await page.route('**/rest/v1/rpc/shared_collections', (r) => r.fulfill({ status: 200, contentType: 'application/json',
+    body: JSON.stringify([{ owner: FRIEND, owner_name: 'Ana Souza', profile: 'ana', can_edit: false, collection: { 'LOR10-1': { n: 2, f: 0 } } }]) }));
+  await page.goto(BASE + '?deck=deck-a');
+  await page.getByTestId('deck-to-coll').click();
+  await page.getByTestId('dtc-missing').check();
+  await expect(page.locator('[data-dtc="LOR10-1"] [data-testid="dtc-n"]')).toHaveText('2');
+  await page.getByTestId('dtc-go').click();
+  await expect.poll(() => st.applied).toEqual([[{ card_id: 'LOR10-1', qty: 2, foil: false }]]);
+});
+
+test('deck to collection: with supabase/collection_undo.sql installed, Undo is one call that checks and takes out together', async ({ page }) => {
+  const st = await collDb(page, { undoFn: true });
+  await page.goto(BASE + '?deck=deck-a');
+  await page.getByTestId('deck-to-coll').click();
+  await page.getByTestId('dtc-missing').check();
+  await page.getByTestId('dtc-go').click();
+  await expect(page.locator('#undo')).toBeVisible();
+  await page.locator('#undo').click();
+  await expect(page.locator('#toast')).toContainText('Desfeito: as cartas adicionadas foram retiradas.');
+  expect(st.undone).toEqual([[{ card_id: 'LOR10-1', qty: 2, foil: false }]]);      // the exact copies, in one call
+  expect(st.applied.length).toBe(1);                                               // no second apply_collection_delta
+  expect(st.db.profiles[0].collection['LOR10-1']).toEqual({ n: 2, f: 0 });
+  // changed after (another device): the database refuses, the page says which card and changes nothing
+  await page.getByTestId('deck-to-coll').click();
+  await page.getByTestId('dtc-go').click();
+  await expect(page.locator('#undo')).toBeVisible();
+  st.db.profiles[0].collection['LOR10-10'] = { n: 1, f: 0 };
+  await page.locator('#undo').click();
+  await expect(page.locator('#toast')).toContainText('Não foi possível desfazer: Gurgi mudou depois de adicionada (aqui ou em outro aparelho). Nada foi alterado.');
+  expect(st.db.profiles[0].collection['LOR10-1']).toEqual({ n: 6, f: 0 });
+  expect(st.applied.length).toBe(2);
+});

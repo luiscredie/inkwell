@@ -63,6 +63,24 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
 @media (max-width: 760px) { .pd-sum { grid-template-columns: repeat(2, minmax(0, 1fr)); } .pd .notice { flex-wrap: wrap; } .pd .notice .actions { width: 100%; margin-left: 0; } }
 .settag { font-weight: 700; margin-right: 6px; vertical-align: 1px; }
 .deck-row .t > span:first-child { white-space: normal; overflow: visible; }
+/* the whole deck into the collection (Pacote 1, item 5) */
+.dtc-modes { display: grid; gap: var(--sp-2); margin: var(--sp-3) 0; }
+.dtc-modes label { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-md); cursor: pointer; }
+.dtc-modes label:has(input:checked) { border-color: var(--accent, currentColor); box-shadow: inset 0 0 0 1px var(--accent, currentColor); }
+.dtc-modes input { margin-top: 3px; flex: none; }
+.dtc-line { display: grid; grid-template-columns: 44px minmax(0, 1fr); column-gap: var(--sp-3); row-gap: var(--sp-2); align-items: start; padding: var(--sp-2) 0; }
+.dtc-line .thumb { width: 44px; height: auto; aspect-ratio: 5 / 7; overflow: hidden; border-radius: 4px; }
+.dtc-line .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dtc-line .t { display: grid; gap: 2px; min-width: 0; }
+.dtc-line .t > span { white-space: normal; overflow-wrap: anywhere; }
+.dtc-line .t > span:first-child { font-weight: 600; }
+.dtc-line .meta { font-size: var(--fs-sm, .85rem); color: var(--muted); line-height: 1.35; }
+.dtc-steps { grid-column: 1 / -1; display: flex; gap: var(--sp-3); justify-content: flex-end; flex-wrap: wrap; }
+.dtc-step { display: inline-flex; align-items: center; gap: 6px; }
+.dtc-step .btn { min-width: 40px; min-height: 40px; font-size: 20px; line-height: 1; }
+.dtc-step b { min-width: 2ch; text-align: center; }
+.dtc-foot { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.dtc-foot .dtc-total { margin-right: auto; }
 </style>
 
 <main class="page" id="page">
@@ -142,6 +160,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     "vs {d}": "vs {d}", "went first": "começou jogando", "went second": "começou comprando", "Win": "Vitória", "Loss": "Derrota",
     "No games with this deck yet": "Nenhum jogo com este deck ainda", "Games from duels.ink show up here when the list you played matches this deck.": "Os jogos do duels.ink aparecem aqui quando a lista que você jogou bate com este deck.",
     "Add a card": "Pôr carta", "Search a card to add": "Buscar carta para pôr", "Remove one": "Tirar uma", "Add one": "Pôr uma", "Saved": "Deck salvo", "Undo": "Desfazer",
+    "Add deck to collection": "Adicionar deck à coleção", "Deck: {d} → {c}": "Deck: {d} → {c}", "What to add": "O que adicionar", "All the deck's cards": "Todas as cartas do deck", "Every copy in the list, added to the ones you already have. For a deck you bought or got.": "Todas as cópias da lista, somadas às que você já tem. Para um deck que você comprou ou ganhou.", "Only what's missing": "Só as que faltam", "Only what it takes to complete the deck; copies in your collections, in any art or finish, count (not collections shared with you).": "Só o necessário para completar o deck; contam as cópias das suas coleções, em qualquer arte ou acabamento (não as compartilhadas com você).", "These cards are added even if you already have the same copies.": "Estas cartas serão acrescentadas mesmo que você já tenha cópias iguais.", "You already have every card of this deck. Nothing to add.": "Você já tem todas as cartas deste deck. Não há nada a acrescentar.", "Not in the catalogue, left out: {c}": "Fora do catálogo, ficam de fora: {c}", "1 card to add": "1 carta a adicionar", "{n} cards to add": "{n} cartas a adicionar", "Adding…": "Adicionando…", "Confirm and add": "Confirmar e adicionar", "in the deck: {n}": "no deck: {n}", "you have: {n} normal · {f} foil": "você tem: {n} normal · {f} foil", "foil only": "só existe em foil", "Couldn't confirm the save. Reload the page and check the collection before trying again.": "Não foi possível confirmar a gravação. Recarregue a página e confira a coleção antes de tentar de novo.", "Couldn't save. Nothing was changed. Try again.": "Não foi possível salvar. Nada foi alterado. Tente de novo.", "Cards added to the collection.": "Cartas adicionadas à coleção.", "Couldn't undo: {c} changed after being added (here or on another device). Nothing was changed.": "Não foi possível desfazer: {c} mudou depois de adicionada (aqui ou em outro aparelho). Nada foi alterado.", "Couldn't undo: these cards changed after being added (here or on another device). Nothing was changed.": "Não foi possível desfazer: estas cartas mudaram depois de adicionadas (aqui ou em outro aparelho). Nada foi alterado.", "Undo isn't available right now. Nothing was changed; you can take the cards out in Coleção.": "O Desfazer não está disponível agora. Nada foi alterado; você pode retirar as cartas em Coleção.", "Couldn't undo. Nothing was changed. Check the collection before trying again.": "Não foi possível desfazer. Nada foi alterado. Confira a coleção antes de tentar de novo.", "This was already undone.": "Isso já foi desfeito.", "Adding a whole deck isn't available right now. Nothing was changed.": "Adicionar o deck inteiro não está disponível agora. Nada foi alterado.", "Undone: the cards added were taken out.": "Desfeito: as cartas adicionadas foram retiradas.", "Couldn't undo. Check the collection before trying again.": "Não foi possível desfazer. Confira a coleção antes de tentar de novo.",
     "Couldn't save. Try again.": "Não foi possível salvar. Tente de novo.", "In your collection “{c}” · this printing": "Na sua coleção “{c}” · esta arte", "✨ Fairy Godmother": "✨ Fada Madrinha", "Previous art": "Arte anterior", "Next art": "Próxima arte", "Iconic": "Icônica", "Epic": "Épica", "Enchanted": "Encantada", "Promo": "Promo", "Legendary": "Lendária", "Super rare": "Super-rara", "Rare": "Rara", "Uncommon": "Incomum", "Common": "Comum", "You have {h} of {q}": "Você tem {h} de {q}", "You have them all": "Você tem todas", "Your deck with the most special art of each card": "Toque da Fada Madrinha: seu deck com a arte mais especial de cada carta", "Same cards and rules: only the art changes. The most expensive printing of each card, in foil — swipe a card (or use the arrows) to see its other arts.": "As mesmas cartas e regras: só a arte muda. A impressão mais cara de cada carta, em foil — passe a carta para o lado (ou use as setas) para ver as outras artes.", "This version": "Esta versão", "Your list": "Sua lista", "You already have": "Você já tem", "To complete": "Para completar", "Foil prices. Tap a card to see it large and add the copies you have.": "Preços de foil. Toque numa carta para ver grande e adicionar as cópias que você tem.", "Normal": "Normal", "Foil": "Foil", "One less": "Menos um", "One more": "Mais um", "In this deck: {n}": "No deck: {n}", "All your collections: {n} normal · {f} foil": "Somando todas as suas coleções: {n} normais · {f} foil", "Save to collection": "Salvar na coleção", "Collection updated": "Coleção atualizada", "Changes save right away.": "As mudanças salvam na hora.",
     "Copy limit": "Limite de cópias", "Other ink": "Outra tinta", "Not in Core": "Fora do Core", "Ink limit": "Limite de tintas", "Type at least 2 letters.": "Digite pelo menos 2 letras.", "No card found.": "Nenhuma carta encontrada.",
     "Deck name": "Nome do deck", "Inks": "Tintas", "Pick up to 2.": "Escolha até 2.", "Create deck": "Criar deck", "Save": "Salvar", "Cancel": "Cancelar", "Close": "Fechar",
@@ -627,9 +646,11 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
         <div class="stat"><b class="${m.wr != null && m.wr >= 50 ? "win" : ""}">${m.wr != null ? m.wr + "%" : "—"}</b><span>${Tx("Wins")}</span></div></div>
       ${priceNote()}
       ${buildBox(d)}
+      ${me && prof() && !prof().shared && m.known.length ? `<div class="row" style="margin-top:var(--sp-3)"><button type="button" class="btn" id="toColl" data-testid="deck-to-coll"><i class="ic i-plus"></i>${Tx("Add deck to collection")}</button></div>` : ""}
       <div class="tabs" role="tablist" style="margin-top:var(--sp-5)">${tabs.map(([k, l, n]) => `<button type="button" class="tab" role="tab" data-tab="${k}" aria-selected="${tab === k}">${Tx(l)}${n ? `<span class="count quiet">${n}</span>` : ""}</button>`).join("")}</div>
       <div id="tabBody" role="tabpanel">${tab === "analysis" ? analysis(d, m) : tab === "missing" ? missingTab(d, m) : tab === "games" ? gamesTab(d, m) : tab === "plan" ? planTab(d) : tab === "gala" ? galaTab(d, m) : listTab(d, m)}</div>`;
     $("back").onclick = (e) => { e.preventDefault(); go(null); };
+    $("toColl")?.addEventListener("click", (e) => openDeckToColl(d, e.currentTarget));
     document.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => go(d.id, b.dataset.tab, true));
     $("edit").onclick = () => { editing = !editing; if (editing && tab !== "list") go(d.id, "list", true); else render(); if (editing) setTimeout(() => $("addQ")?.focus(), 0); };
     $("more").onclick = (e) => { e.stopPropagation(); toggleMenu(d, m); };
@@ -1026,6 +1047,139 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     sh.onclick = (e) => { if (e.target === sh) sh.close(); };
     sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = () => sh.close());
   }
+
+  // ---------- the whole deck into the collection (Pacote 1, item 5) ----------
+  // "all" (the default every time): every copy the deck lists, on top of what you already have (a deck you bought).
+  // "missing": only what the deck still lacks, counted as on the Missing tab (any art and finish, all your collections),
+  // given first to the printings the deck lists and never more than the deck lists. Always asks; one
+  // apply_collection_delta call (one transaction, never below zero, other devices pull it). Undo for 10 s takes out
+  // exactly what was added, and only if every one of those copies is still there; otherwise it changes nothing.
+  const foilOnly = (c) => ALWAYS_FOIL.has(c.rarity);   // Enchanted, Epic, Iconic and promos exist only in foil
+  // what is yours: your own collections only (all of them). A collection a friend shares with you is not yours, so it
+  // never lowers what "only what's missing" adds (the Missing tab, for building, does count shared copies).
+  const ownedMine = (c) => { let n = 0; for (const p of profiles) for (const x of printings(c)) { const e = p.collection?.[x.id]; if (e) n += (+e.n || 0) + (+e.f || 0); } return n; };
+  const collLabel = (p) => (p.profile === "principal" || profiles.length === 1 ? Tx("my collection") : Tx("collection “{n}”", { n: p.profile }));
+  function deckToCollLines(d, mode) {
+    const col = prof()?.collection || {};
+    const entries = Object.entries(d.cards || {}).map(([id, q]) => ({ id, q: Math.max(0, Math.floor(+q || 0)), c: BY.get(id) })).filter((e) => e.q > 0);
+    const unknown = entries.filter((e) => !e.c).map((e) => ({ id: e.id, q: e.q }));
+    const known = entries.filter((e) => e.c).sort((a, b) => a.c.cost - b.c.cost || a.c.name.localeCompare(b.c.name) || a.id.localeCompare(b.id));
+    const add = new Map(known.map((e) => [e.id, mode === "missing" ? 0 : e.q]));
+    if (mode === "missing") {
+      const byKey = new Map(); for (const e of known) { const g = byKey.get(e.c.key) || []; g.push(e); byKey.set(e.c.key, g); }
+      for (const g of byKey.values()) {
+        let left = Math.max(0, g.reduce((t, e) => t + e.q, 0) - ownedMine(g[0].c));
+        for (const e of g) { if (!left) break; const mine = (+col[e.id]?.n || 0) + (+col[e.id]?.f || 0), k = Math.min(left, Math.max(0, e.q - mine)); add.set(e.id, k); left -= k; }
+        for (const e of g) { if (!left) break; const k = Math.min(left, e.q - add.get(e.id)); add.set(e.id, add.get(e.id) + k); left -= k; }
+      }
+    }
+    const lines = known.map((e) => { const k = add.get(e.id) || 0, fo = foilOnly(e.c);
+      return { id: e.id, c: e.c, q: e.q, n: fo ? 0 : k, f: fo ? k : 0, foilOnly: fo, had: { n: +col[e.id]?.n || 0, f: +col[e.id]?.f || 0 } }; });
+    return { lines, unknown };
+  }
+  const readColl = async (p) => { const r = await CLOUD.api(`inkwell_profiles?select=profile,collection:data->collection&profile=eq.${encodeURIComponent(p.profile)}`);
+    return (Array.isArray(r) ? r : []).find((x) => x.profile === p.profile)?.collection || {}; };
+  const qtyIn = (col, x) => +(col?.[x.card_id]?.[x.foil ? "f" : "n"]) || 0;
+  // An operation id (uuid) per confirmation. supabase/collection_undo.sql keeps what each operation put in, so:
+  // the same add sent again (its answer was lost) adds nothing more, and the undo takes out exactly that, once.
+  const newOpId = () => { if (crypto.randomUUID) return crypto.randomUUID();
+    const b = crypto.getRandomValues(new Uint8Array(16)); b[6] = (b[6] & 15) | 64; b[8] = (b[8] & 63) | 128;
+    const h = [...b].map((x) => x.toString(16).padStart(2, "0")).join(""); return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`; };
+  // a call whose answer never came (no status) is sent once more with the same id: safe, the database adds it once
+  async function callOnceMore(path, body) {
+    try { return await CLOUD.api(path, { method: "POST", body }); }
+    catch (e) { if (e.status) throw e; return CLOUD.api(path, { method: "POST", body }).catch((e2) => { throw Object.assign(e2, { retried: true }); }); }
+  }
+  async function applyOnce(p, delta, op) {
+    try { await callOnceMore("rpc/add_collection_op", { p_profile: p.profile, p_delta: delta, p_op: op }); }   // applied or already_applied
+    catch (e) {
+      if (e.status === 404) throw Object.assign(new Error("unavailable"), { code: "unavailable" });
+      if (!e.status) throw Object.assign(new Error("unknown"), { code: "unknown" });   // twice without an answer
+      throw Object.assign(new Error("not applied"), { code: "none" });
+    }
+  }
+  function bumpLocal(p, delta, sign) {
+    p.collection = p.collection || {};
+    for (const x of delta) {
+      const k = x.foil ? "f" : "n", e = p.collection[x.card_id] || (p.collection[x.card_id] = { n: 0, f: 0 });
+      e[k] = Math.max(0, (+e[k] || 0) + sign * x.qty); if (!e.n && !e.f) delete p.collection[x.card_id];
+      if (ALL_COLL) { const a = ALL_COLL[x.card_id] || (ALL_COLL[x.card_id] = { n: 0, f: 0 }); a[k] = Math.max(0, (+a[k] || 0) + sign * x.qty); }
+    }
+  }
+  // Undo: only in the database (undo_collection_op): it takes out what that operation put in, once, with the
+  // collection locked. The collection keeps counts per card and finish, not individual copies. If the function is not
+  // there, it says so and changes nothing (no weaker way).
+  const shortNames = (now, delta) => [...new Set(delta.filter((x) => qtyIn(now, x) < x.qty).map((x) => split(BY.get(x.card_id)?.name || x.card_id)[0]))].slice(0, 3).join(", ");
+  async function undoAdd(p, delta, op) {
+    const done = () => { bumpLocal(p, delta, -1); render(); toast(Tx("Undone: the cards added were taken out.")); };
+    try { await callOnceMore("rpc/undo_collection_op", { p_op: op }); done(); }
+    catch (e) {
+      const why = e.why || e.message || "";
+      if (/already_undone/.test(why)) { if (e.retried) done(); else toast(Tx("This was already undone.")); }   // a retry: our first call did it
+      else if (/collection_changed/.test(why)) {
+        let now = null; try { now = await readColl(p); } catch { /* */ }
+        const names = now ? shortNames(now, delta) : "";
+        toast(names ? Tx("Couldn't undo: {c} changed after being added (here or on another device). Nothing was changed.", { c: names }) : Tx("Couldn't undo: these cards changed after being added (here or on another device). Nothing was changed."), null, true, 8000);
+      } else if (e.status === 404 && !/op_not_found/.test(why)) toast(Tx("Undo isn't available right now. Nothing was changed; you can take the cards out in Coleção."), null, true, 8000);
+      else toast(Tx("Couldn't undo. Nothing was changed. Check the collection before trying again."), null, true, 8000);
+    }
+  }
+  function openDeckToColl(d, from) {
+    const p = prof(); if (!me || !p || p.shared) return;
+    const sh = $("sheet");
+    let mode = "all", st = deckToCollLines(d, mode), busy = false, err = "";   // a new choice every time: nothing is reused
+    const op = newOpId();   // this confirmation's operation; a new one each time the sheet opens
+    const total = () => st.lines.reduce((t, l) => t + l.n + l.f, 0);
+    const step = (l, k) => `<span class="dtc-step"><span class="micro ${k === "f" ? "foil-word" : ""}">${Tx(k === "n" ? "Normal" : "Foil")}</span>
+      <button type="button" class="btn icon" data-dq="${esc(l.id)}:${k}:-1" aria-label="${esc(Tx("One less") + " · " + Tx(k === "n" ? "Normal" : "Foil"))}" ${l[k] ? "" : "disabled"}>−</button>
+      <b data-testid="dtc-${k}">${l[k]}</b>
+      <button type="button" class="btn icon" data-dq="${esc(l.id)}:${k}:1" aria-label="${esc(Tx("One more") + " · " + Tx(k === "n" ? "Normal" : "Foil"))}" ${(k === "n" && l.foilOnly) || l.n + l.f >= 99 ? "disabled" : ""}>+</button></span>`;
+    const line = (l) => { const [a, b] = split(l.c.name);
+      return `<div class="dtc-line" data-dtc="${esc(l.id)}">${thumb(l.c, "xs")}<span class="t"><span>${esc(a)}${b ? ` · ${esc(b)}` : ""}</span>
+        <span class="meta">${esc([`${l.c.set} · nº ${l.c.num}`, Tx("in the deck: {n}", { n: l.q }), Tx("you have: {n} normal · {f} foil", { n: l.had.n, f: l.had.f }), l.foilOnly ? Tx("foil only") : ""].filter(Boolean).join(" · "))}</span></span>
+        <span class="dtc-steps">${l.foilOnly ? "" : step(l, "n")}${step(l, "f")}</span></div>`; };
+    const draw = () => {
+      const t = total(), shown = mode === "all" ? st.lines : st.lines.filter((l) => l.n + l.f > 0 || l.touched);
+      sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="shT">${Tx("Add deck to collection")}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
+        <div class="sheet-body" data-testid="dtc">
+          <p class="small" style="margin:0" data-testid="dtc-dest">${esc(Tx("Deck: {d} → {c}", { d: d.name, c: collLabel(p) }))}</p>
+          <div class="dtc-modes" role="radiogroup" aria-label="${esc(Tx("What to add"))}">
+            <label><input type="radio" name="dtcMode" value="all" data-testid="dtc-all" ${mode === "all" ? "checked" : ""}><span><b>${Tx("All the deck's cards")}</b><small class="muted" style="display:block">${Tx("Every copy in the list, added to the ones you already have. For a deck you bought or got.")}</small></span></label>
+            <label><input type="radio" name="dtcMode" value="missing" data-testid="dtc-missing" ${mode === "missing" ? "checked" : ""}><span><b>${Tx("Only what's missing")}</b><small class="muted" style="display:block">${Tx("Only what it takes to complete the deck; copies in your collections, in any art or finish, count (not collections shared with you).")}</small></span></label>
+          </div>
+          ${mode === "all" ? `<p class="notice small" data-testid="dtc-warn" style="margin:0 0 var(--sp-2)"><i class="ic i-alert"></i><span>${Tx("These cards are added even if you already have the same copies.")}</span></p>` : ""}
+          ${mode === "missing" && !t && !shown.length ? `<p class="small" data-testid="dtc-none">${Tx("You already have every card of this deck. Nothing to add.")}</p>` : ""}
+          <div class="divided" data-testid="dtc-lines">${shown.map(line).join("")}</div>
+          ${st.unknown.length ? `<p class="small muted" data-testid="dtc-unknown">${esc(Tx("Not in the catalogue, left out: {c}", { c: st.unknown.map((u) => `${u.q}× ${u.id}`).join(", ") }))}</p>` : ""}
+          ${err ? `<p class="small" role="alert" data-testid="dtc-err" style="color:var(--danger, #b42318)">${esc(err)}</p>` : ""}
+        </div>
+        <div class="sheet-foot dtc-foot"><span class="dtc-total small" data-testid="dtc-total">${esc(Tx(t === 1 ? "1 card to add" : "{n} cards to add", { n: t }))}</span>
+          <button type="button" class="btn ghost" data-close>${Tx("Cancel")}</button>
+          <button type="button" class="btn primary" id="dtcGo" data-testid="dtc-go" ${t && !busy ? "" : "disabled"}>${Tx(busy ? "Adding…" : "Confirm and add")}</button></div>`;
+      sh.querySelectorAll('[name="dtcMode"]').forEach((r) => r.onchange = () => { mode = r.value; st = deckToCollLines(d, mode); err = ""; draw(); });
+      sh.querySelectorAll("[data-dq]").forEach((b) => b.onclick = () => { const [id, k, dd] = b.dataset.dq.split(":"), l = st.lines.find((x) => x.id === id);
+        l[k] = Math.max(0, Math.min(99 - (k === "n" ? l.f : l.n), l[k] + +dd)); l.touched = true; draw(); sh.querySelector(`[data-dq="${CSS.escape(b.dataset.dq)}"]`)?.focus(); });
+      $("dtcGo").onclick = async () => {
+        if (busy) return;   // a second tap while it is being saved does nothing
+        busy = true; err = ""; draw();
+        const delta = st.lines.flatMap((l) => [l.n ? { card_id: l.id, qty: l.n, foil: false } : null, l.f ? { card_id: l.id, qty: l.f, foil: true } : null]).filter(Boolean);
+        try {
+          await applyOnce(p, delta, op);
+          sh.close(); bumpLocal(p, delta, 1); render();
+          window.INKWELL_TRACK?.("deck_added_to_collection");
+          let undone = false;
+          toast(Tx("Cards added to the collection."), () => { if (undone) return; undone = true; undoAdd(p, delta, op); }, false, 10000);
+        } catch (e) {
+          busy = false;
+          err = e.code === "unavailable" ? Tx("Adding a whole deck isn't available right now. Nothing was changed.") : e.code === "unknown" ? Tx("Couldn't confirm the save. Reload the page and check the collection before trying again.") : Tx("Couldn't save. Nothing was changed. Try again.");
+          draw();
+        }
+      };
+      sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = () => sh.close());
+    };
+    draw();
+    openSheet(from);
+  }
   const newId = () => "deck-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   function openDeckForm(d, from) {
     const sh = $("sheet"), f = { name: d?.name || "", format: d?.format || "core", colors: [...(d?.colors || [])].filter((x) => INKS.includes(x)), pub: !!d?.public };
@@ -1189,13 +1343,13 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     draw();
     return box;
   };
-  function toast(text, undo, err) {
+  function toast(text, undo, err, ms = 5000) {
     const t = $("toast");
     t.className = `toast${err ? " err" : ""}`;
     t.innerHTML = `<i class="ic ${err ? "i-alert" : "i-check"}"></i><span>${esc(text)}</span>${undo ? `<button type="button" class="btn ghost small" id="undo"><i class="ic i-undo"></i>${Tx("Undo")}</button>` : ""}`;
     t.hidden = false;
     if (undo) $("undo").onclick = () => { t.hidden = true; undo(); };
-    clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 5000);
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, ms);
   }
 
   // ---------- boot ----------
