@@ -17,22 +17,33 @@
 
 begin;
 
--- Stop (changing nothing) if
--- my_data_export() is not the version this
--- file was written against, so an export key
--- added elsewhere is never dropped by the
--- full replacement below.
+-- Stop (changing nothing) unless
+-- my_data_export() is exactly one of two
+-- known versions:
+--  * production's, checked on 03/11/2026
+--    (before this migration), or
+--  * the one this migration writes (so it
+--    can run again).
+-- Any other version (even one that already
+-- has active_days) aborts the transaction, so
+-- an export key added elsewhere is never
+-- dropped by the full replacement below.
+-- md5 of the definition without carriage
+-- returns (the SQL Editor may add them).
 do $$
-declare d text := pg_get_functiondef(
-  'public.my_data_export()'::regprocedure);
+declare h text := md5(replace(
+  pg_get_functiondef(
+    'public.my_data_export()'::regprocedure),
+  chr(13), ''));
 begin
-  if md5(d) <> '512c960ad77521c6f20670dfc2'
-       || '3bb314'
-     and position('active_days' in d) = 0
-  then
+  if h not in (
+    -- production, 03/11/2026
+    '5be3e54d478864f304c9c919f2de7679',
+    -- written by this migration
+    'd56e421601e41eabc2ea03422360cb03') then
     raise exception 'my_data_export() is '
-      'not the expected version (md5 %); '
-      'nothing was changed', md5(d);
+      'not a known version (md5 %); '
+      'nothing was changed', h;
   end if;
 end $$;
 

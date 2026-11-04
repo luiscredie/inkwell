@@ -43,6 +43,9 @@ echo "ok   only the expected functions changed: $changed"
 snap > /tmp/m_again.txt
 diff -q /tmp/m_after.txt /tmp/m_again.txt >/dev/null || { echo "FAIL a second run changed functions"; exit 1; }
 echo "ok   a second run changes nothing"
+norm() { "${PSQL[@]}" -c "select md5(replace(pg_get_functiondef('public.my_data_export()'::regprocedure), chr(13), ''))"; }
+[ "$(norm)" = d56e421601e41eabc2ea03422360cb03 ] || { echo "FAIL the migrated my_data_export() is not the approved one: $(norm)"; exit 1; }
+echo "ok   my_data_export() is exactly the approved migrated version"
 
 "${PSQL[@]}" <<'SQL'
 \set QUIET on
@@ -113,6 +116,23 @@ do $$ begin
 end $$;
 SQL
 
+# a function already migrated but changed afterwards (it still has active_days): the migration stops and changes nothing
+dropdb --if-exists "${DB}_3" >/dev/null 2>&1 || true
+createdb -T "$DB" "${DB}_3"
+P3=(psql -X -q -At -v ON_ERROR_STOP=1 -d "${DB}_3")
+"${P3[@]}" -c "select pg_get_functiondef('public.my_data_export()'::regprocedure)" | sed "s/'active_days', coalesce((/'added_later', 1, 'active_days', coalesce((/" > /tmp/m_changed.sql
+echo ";" >> /tmp/m_changed.sql
+"${P3[@]}" -f /tmp/m_changed.sql
+grep -q added_later <("${P3[@]}" -c "select pg_get_functiondef('public.my_data_export()'::regprocedure)") || { echo "FAIL could not prepare the changed function"; exit 1; }
+before3=$("${P3[@]}" -c "select md5(pg_get_functiondef(p.oid)) from pg_proc p where p.oid in ('public.my_data_export()'::regprocedure, 'public.track(text,text,text,text,text,text)'::regprocedure, 'public.admin_metrics(integer)'::regprocedure) order by 1" | tr '\n' ' ')
+if "${P3[@]}" -f "$ROOT/supabase/metrics_p0.sql" >/dev/null 2>/tmp/m_err3.txt; then echo "FAIL it overwrote a migrated-then-changed my_data_export()"; exit 1; fi
+grep -q "not a known version" /tmp/m_err3.txt || { echo "FAIL wrong error: $(cat /tmp/m_err3.txt)"; exit 1; }
+after3=$("${P3[@]}" -c "select md5(pg_get_functiondef(p.oid)) from pg_proc p where p.oid in ('public.my_data_export()'::regprocedure, 'public.track(text,text,text,text,text,text)'::regprocedure, 'public.admin_metrics(integer)'::regprocedure) order by 1" | tr '\n' ' ')
+[ "$before3" = "$after3" ] || { echo "FAIL something changed"; exit 1; }
+grep -q added_later <("${P3[@]}" -c "select pg_get_functiondef('public.my_data_export()'::regprocedure)") || { echo "FAIL the changed function was overwritten"; exit 1; }
+dropdb "${DB}_3"
+echo "ok   a migrated my_data_export() changed afterwards is not overwritten (the migration stops, nothing changes)"
+
 # a my_data_export() that is not the expected one: the migration stops and changes nothing
 dropdb --if-exists "${DB}_2" >/dev/null 2>&1 || true
 createdb -T "$DB" "${DB}_2"
@@ -120,7 +140,7 @@ P2=(psql -X -q -At -v ON_ERROR_STOP=1 -d "${DB}_2")
 "${P2[@]}" -c "drop table private.member_days cascade; drop function public.admin_metrics(int); create or replace function public.my_data_export() returns jsonb language sql stable as \$\$ select '{\"other\": 1}'::jsonb \$\$;"
 before2=$("${P2[@]}" -c "select md5(pg_get_functiondef('public.track(text,text,text,text,text,text)'::regprocedure))")
 if "${P2[@]}" -f "$ROOT/supabase/metrics_p0.sql" >/dev/null 2>/tmp/m_err.txt; then echo "FAIL it ran over an unexpected my_data_export()"; exit 1; fi
-grep -q "not the expected version" /tmp/m_err.txt || { echo "FAIL wrong error: $(cat /tmp/m_err.txt)"; exit 1; }
+grep -q "not a known version" /tmp/m_err.txt || { echo "FAIL wrong error: $(cat /tmp/m_err.txt)"; exit 1; }
 [ "$("${P2[@]}" -c "select to_regclass('private.member_days') is null")" = t ] || { echo "FAIL a table was created"; exit 1; }
 [ "$("${P2[@]}" -c "select md5(pg_get_functiondef('public.track(text,text,text,text,text,text)'::regprocedure))")" = "$before2" ] || { echo "FAIL track() changed"; exit 1; }
 dropdb "${DB}_2"

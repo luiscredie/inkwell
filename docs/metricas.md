@@ -68,7 +68,11 @@ Outros eventos auxiliares continuam (`deck_result`, `deck_save`, `deck_paste`, `
 
 ## Migração e testes
 
-`supabase/metrics_p0.sql` roda numa transação; para (sem mudar nada) se `my_data_export()` não for a versão esperada.
+`supabase/metrics_p0.sql` roda numa transação. Só segue se `my_data_export()` for exatamente uma de duas versões (md5 da definição
+sem `\r`): a de produção validada em 03/11/2026 (`5be3e54d…`) ou a que esta migração escreve (`d56e4216…`, para poder rodar de novo).
+Qualquer outra versão, mesmo uma já migrada e alterada depois, interrompe a transação inteira sem mudar nada.
 `tools/metrics_p0_sql_test.sh` confere num Postgres local: só as funções esperadas mudam, rodar duas vezes não muda mais nada,
 exportação com os dias, exclusão da conta apaga os dias, retenção de 90 dias, só admin lê as métricas, tabelas fechadas para
-`anon`/`authenticated`, deduplicação e limite por minuto.
+`anon`/`authenticated`, deduplicação, limite por minuto, e que uma função migrada e alterada depois não é sobrescrita.
+`tools/fixtures/prod_shape.2026-11-04.sql` é uma cópia isolada do formato de produção (colunas, definições com as quebras de linha
+originais e permissões, lidas só por consulta em 04/11/2026; sem dados): a migração foi rodada nela duas vezes, com os mesmos resultados.
