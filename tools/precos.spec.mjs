@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
 const BASE = new URL('precos/', process.env.INKWELL_URL || 'http://localhost:8080/index.html').href;
 const ME = '11111111-1111-4111-8111-111111111111';
 
-async function setup(page) {
+async function setup(page, { collection = { 'LOR10-10': { n: 4, f: 0 }, 'LOR13-31': { n: 1, f: 1 } } } = {}) {
   const calls = [];
   await page.addInitScript((me) => {
     localStorage.setItem('inkwell-lang', 'pt');
@@ -16,7 +16,7 @@ async function setup(page) {
     const req = route.request(), path = new URL(req.url()).pathname.replace(/.*\/rest\/v1\//, '');
     calls.push({ path, body: req.postData() ? JSON.parse(req.postData()) : null });
     const json = (v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
-    if (path === 'inkwell_profiles') return json([{ profile: 'luiscredie', collection: { 'LOR10-10': { n: 4, f: 0 }, 'LOR13-31': { n: 1, f: 1 } }, wishlist: { 'LOR13-31': { t: 999 }, 'LOR10-1': 1 } }]);
+    if (path === 'inkwell_profiles') return json([{ profile: 'luiscredie', collection, wishlist: { 'LOR13-31': { t: 999 }, 'LOR10-1': 1 } }]);
     if (path === 'rpc/set_wishlist') return route.fulfill({ status: 204, body: '' });
     if (path === 'rpc/my_duels_sync') return json(null);
     return json([]);
@@ -55,6 +55,13 @@ test('movers, wishlist and collection value', async ({ page }) => {
   await expect(page.locator('svg.vchart')).toBeVisible();
   await expect(page.locator('[data-testid="value-br"]')).toContainText('Na MYP Cards');
   await expect(page.locator('[data-testid="top-cards"] .list-row')).toHaveCount(2);
+});
+
+test('Valor da coleção: a card with no price is left out of "Valor agora" and counted apart, never as R$ 0', async ({ page }) => {
+  await setup(page, { collection: { 'LOR10-10': { n: 4, f: 0 }, 'D23-1': { n: 1, f: 1 } } });   // D23-1: a D23 promo with no price
+  await page.goto(BASE + '?tab=value');
+  await expect(page.getByTestId('value-unpriced')).toHaveText('+ 2 cartas sem preço (fora do valor)');
+  await expect(page.locator('[data-testid="top-cards"] [data-card="D23-1"], [data-testid="top-cards"] .list-row:has-text("Brave Little Tailor")')).toHaveCount(0);
 });
 
 test('Coleção links its value to Preços', async ({ page }) => {

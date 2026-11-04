@@ -568,13 +568,14 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
 
   // ---------- rendering ----------
   function stats() {
-    let cards = 0, value = 0, viaMyp = 0;
-    for (const id of Object.keys(coll())) { const { n, f } = inPlace(id); cards += n + f; value += (priceOf(id) || 0) * n + (priceOf(id, true) || 0) * f; if (mypOf(id) != null) viaMyp += (mypOf(id) || 0) * n; }
+    // a card with no price is left out of the value and counted apart, never added as R$ 0
+    let cards = 0, value = 0, viaMyp = 0, unpriced = 0;
+    for (const id of Object.keys(coll())) { const { n, f } = inPlace(id), pn = priceOf(id), pf = priceOf(id, true); cards += n + f; value += (pn ?? 0) * n + (pf ?? 0) * f; unpriced += (pn == null ? n : 0) + (pf == null ? f : 0); if (mypOf(id) != null) viaMyp += (mypOf(id) || 0) * n; }
     const share = value ? Math.round((viaMyp / value) * 100) : 0;
     const lent = [...lentN.values(), ...lentF.values()].reduce((a, b) => a + b, 0);
     return `<div class="stats-row three" data-testid="coll-stats"><div class="stat"><b>${cards.toLocaleString(LOC)}</b><span>${Tx("Cards")}</span></div>
       <a class="stat" href="../precos/?tab=value" data-testid="to-prices" style="text-decoration:none;color:inherit"><b class="money">${PRJ ? moneySplit(value) : "—"}</b><span>${esc(P("Valor estimado", "Estimated value"))} ›</span>${value ? `<small class="micro muted" data-testid="value-src" style="display:block" title="${esc(BR ? P("Preço no Brasil: menor anúncio na MYP Cards para cópias normais; TCGplayer convertido para foil e cartas sem anúncio lá", "Price in Brazil: lowest MYP Cards listing for normal copies; TCGplayer converted for foils and cards not listed there") : P("Preço do TCGplayer convertido para reais, atualizado todo dia", "TCGplayer price converted to reais, updated daily"))}">${esc(share >= 100 ? "MYP Cards" : share > 0 ? P(`${share}% MYP · resto TCG`, `${share}% MYP · rest TCG`) : priceSrc)}</small>` : ""}</a>
-      <div class="stat"><b>${lent.toLocaleString(LOC)}</b><span>${Tx("Lent out")}</span></div></div>`;
+      <div class="stat"><b>${lent.toLocaleString(LOC)}</b><span>${Tx("Lent out")}</span></div></div>${PRJ && unpriced ? `<p class="micro muted" style="margin:var(--sp-1) 0 0" data-testid="value-unpriced">${esc(unpriced === 1 ? P("+ 1 carta sem preço (fora do valor estimado)", "+ 1 card with no price (not in the estimated value)") : P(`+ ${unpriced.toLocaleString(LOC)} cartas sem preço (fora do valor estimado)`, `+ ${unpriced.toLocaleString(LOC)} cards with no price (not in the estimated value)`))}</p>` : ""}`;
   }
   const qtyText = (o, ln, hm = 0) => [o.n ? Tx("{n} normal", { n: o.n }) : "", o.f ? Tx("{n} foil", { n: o.f }) : "", hm ? Tx("{n} at home", { n: hm }) : "", ln ? Tx("{n} lent", { n: ln }) : ""].filter(Boolean).join(" · ");
   function gridCard(c) {
@@ -589,7 +590,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   function listRow(c) {
     const o = owned(c.id), ln = lentOf(c.id), q = inPlace(c.id), tp = topPrice(c.id, q), p = tp.v;
     const pn = priceOf(c.id), pf = priceOf(c.id, true), copies = (q?.n || 0) + (q?.f || 0);
-    const sub = copies > 1 && (pn != null || pf != null) ? (pn || 0) * (q.n || 0) + (pf || 0) * (q.f || 0) : null;
+    const sub = copies > 1 && (pn != null || !q.n) && (pf != null || !q.f) ? (pn ?? 0) * (q.n || 0) + (pf ?? 0) * (q.f || 0) : null;   // no subtotal with a copy that has no price
     return `<button type="button" class="list-row" data-card="${esc(c.id)}">${thumb(c, "sm", o.f > 0)}</span>
       <span class="t"><span>${esc(split(c.name).join(" · ").replace(/ · $/, ""))}</span><span class="meta">${esc(setName(c.set))} · nº ${esc(c.num)}${addedText(c)}</span>${o.n + o.f || ln ? `<span class="meta">${esc(qtyText(o, ln, ((h) => h.n + h.f)(homeOf(c.id))))}</span>` : ""}</span>
       <span class="trail"><span style="display:grid;justify-items:end"><span class="money" data-testid="unit-price">${p != null ? esc(money(p)) + (tp.foil ? ` <small class="micro">foil</small>` : "") : "–"}</span>${sub != null ? `<span class="micro muted" data-testid="row-subtotal">${esc(P(`${copies} cópias: ${money(sub)}`, `${copies} copies: ${money(sub)}`))}</span>` : ""}</span>${ln ? `<span class="tag info">${Tx("lent")}</span>` : ""}</span></button>`;
@@ -720,7 +721,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     let act = null;  // {kind: "loan" | "sale", ...}: Emprestar / Vender, drawn by actPanel() below
     const draw = () => {
       const o = owned(id), pn = priceOf(id), pf = priceOf(id, true), [a, b] = split(c.name);
-      const value = (pn || 0) * o.n + (pf || 0) * o.f, lw = lentWho.get(id) || [];
+      const value = (pn ?? 0) * o.n + (pf ?? 0) * o.f, noPrice = (pn == null ? o.n : 0) + (pf == null ? o.f : 0), lw = lentWho.get(id) || [];
       const w = where(id);
       // one stock: Normal and Foil with − / +, and a button that moves one copy to the other stock
       const stockRows = (place) => ["n", "f"].map((k) => {
@@ -759,7 +760,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
           <p class="small" style="margin:var(--sp-2) 0 0" data-testid="card-format">${esc(formatLine(c))}</p>
           <div class="row between" style="align-items:flex-end;margin:var(--sp-4) 0">
             <div>${(() => { const u = topPrice(id, o); return `<div class="small muted">${esc(P("Preço unitário", "Unit price"))}${u.foil ? " · foil" : ""}</div><div class="hero-num" style="color:var(--money)" data-testid="card-unit">${u.v != null ? esc(money(u.v)) : "–"}</div>`; })()}
-              ${o.n + o.f ? `<div class="small muted" style="margin-top:2px">${esc(Tx("Value of your {n}", { n: o.n + o.f }))}: <b class="money" data-testid="card-value">${esc(money(value))}</b></div>` : ""}</div>
+              ${o.n + o.f ? `<div class="small muted" style="margin-top:2px">${esc(Tx("Value of your {n}", { n: o.n + o.f }))}: <b class="money" data-testid="card-value">${noPrice === o.n + o.f ? esc(P("sem preço", "no price")) : esc(money(value)) + (noPrice ? ` <small class="micro">${esc(P(`+ ${noPrice} sem preço`, `+ ${noPrice} with no price`))}</small>` : "")}</b></div>` : ""}</div>
             <div class="small muted" style="text-align:right" data-testid="card-prices">${Tx("Normal")} ${pn != null ? esc(money(pn)) : "–"} <span class="faint">${esc(srcOf(id, false))}</span><br>${Tx("Foil")} ${pf != null ? esc(money(pf)) : "–"} <span class="faint">${esc(priceSrc)}</span></div></div>
           ${brLine(id)}
           ${act ? `<div id="actBox" data-testid="act-${act.kind}"></div>` : `${homeReady ? (mv ? moveBox() : stocks) : `<div class="card inset stack" style="gap:0;padding:var(--sp-2) var(--sp-3)">${row("n", Tx("Normal"), o.n, lentN.get(id) || 0)}${row("f", Tx("Foil"), o.f, lentF.get(id) || 0)}</div>`}
@@ -1366,7 +1367,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       const c = BY.get(id), w = where(id), pn = priceOf(id), pf = priceOf(id, true);
       return [id, c?.name || "", c?.set || "", c ? setName(c.set) : "", c?.num || "", c ? rarName(c.rarity) : "", c ? inksOf(c).join("/") : "", w.all.n, w.all.f,
         w.binder.n + w.binder.f, w.home.n + w.home.f, ...(tradeReady ? [w.trade.n + w.trade.f] : []), ...(deckedReady ? [w.decks.n + w.decks.f] : []), w.lent.n + w.lent.f,
-        dec(pn), dec(pf), dec((pn || 0) * w.all.n + (pf || 0) * w.all.f), srcOf(id, false)];
+        dec(pn), dec(pf), dec((pn == null || !w.all.n) && (pf == null || !w.all.f) ? null : (pn ?? 0) * w.all.n + (pf ?? 0) * w.all.f), srcOf(id, false)];
     });
     return "\ufeff" + [head, ...rows].map((r) => r.map(cell).join(sep)).join("\r\n") + "\r\n";   // BOM: Excel reads the accents right
   }

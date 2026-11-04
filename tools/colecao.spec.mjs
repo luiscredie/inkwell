@@ -635,6 +635,29 @@ test('a card shows the price of one copy first, and the subtotal of your copies 
   await expect(page.getByTestId('card-value')).toHaveText('R$ 7,00');
 });
 
+test('a card with no price is left out of the value and counted apart, never as R$ 0 (total, list, card sheet)', async ({ page }) => {
+  // D23-1 has no price at all (a D23 promo); before, its 3 copies went into the total as R$ 0 with nothing said
+  await setup(page, { collection: { 'LOR10-10': { n: 2, f: 1 }, 'LOR13-27': { n: 1, f: 0 }, 'D23-1': { n: 1, f: 2 } } });
+  await page.route('**/data/prices.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ generated_at: '2026-10-28T00:00:00Z', usd_brl: 5.4, prices: { 'LOR10-10': { n: 1, nl: 1, f: 5, fl: 5 }, 'LOR13-27': { n: 4, nl: 4 } } }) }));
+  await page.goto(BASE);
+  await expect(page.locator('[data-testid="to-prices"] b')).toHaveText('R$ 11,00');                              // 2 × 1 + 1 foil × 5 + 1 × 4
+  await expect(page.getByTestId('value-unpriced')).toHaveText('+ 3 cartas sem preço (fora do valor estimado)');
+  await page.locator('[data-view="list"]').click();
+  const row = page.locator('button.list-row[data-card="D23-1"]');
+  await expect(row.getByTestId('unit-price')).toHaveText('–');
+  await expect(row.getByTestId('row-subtotal')).toHaveCount(0);                                                  // no "3 cópias: R$ 0,00"
+  await row.click();
+  await expect(page.getByTestId('card-value')).toHaveText('sem preço');
+});
+
+test('every card priced: no "sem preço" line under the value', async ({ page }) => {
+  await setup(page, { collection: { 'LOR10-10': { n: 2, f: 1 } } });
+  await page.route('**/data/prices.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ generated_at: '2026-10-28T00:00:00Z', usd_brl: 5.4, prices: { 'LOR10-10': { n: 1, nl: 1, f: 5, fl: 5 } } }) }));
+  await page.goto(BASE);
+  await expect(page.locator('[data-testid="to-prices"] b')).toHaveText('R$ 7,00');
+  await expect(page.getByTestId('value-unpriced')).toHaveCount(0);
+});
+
 test('"Mais valiosas": by one copy\'s price (the foil when it is worth more), not by the sum of the copies; that price is shown', async ({ page }) => {
   await setup(page, { collection: { 'LOR10-10': { n: 8, f: 0 }, 'LOR13-27': { n: 0, f: 1 }, 'LOR10-1': { n: 1, f: 0 } } });
   await page.route('**/data/prices.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ generated_at: '2026-10-28T00:00:00Z', usd_brl: 5.4,
@@ -681,6 +704,8 @@ test('export: a CSV of the collection (Excel-friendly in Portuguese) that Import
   const gurgi = lines.find((l) => l.startsWith('LOR10-10;')).split(';');
   expect(gurgi.slice(7, 13)).toEqual(['6', '1', '5', '0', '2', '0']);   // normal, foil, binder, home, trades, lent
   expect(gurgi.slice(13, 16)).toEqual(['1,50', '3,00', '12,00']);
+  const noPrice = lines.find((l) => l.startsWith('LOR13-27;')).split(';');
+  expect(noPrice.slice(13, 16)).toEqual(['', '', '']);   // no price: empty, not "0,00"
 });   // reading it back: tools/collimport.test.mjs
 
 test('export in the Liga Lorcana template: one line per finish, set code, card number', async ({ page }) => {
