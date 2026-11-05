@@ -874,7 +874,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const byName = new Map();
     for (const e of known) { const x = byName.get(e.c.key) || { c: e.c, q: 0 }; x.q += e.q; byName.set(e.c.key, x); }
     let need = 0, have = 0, missingValue = 0; const missing = [];
-    for (const { c, q } of byName.values()) { const o = Math.min(q, ownedName(c)); need += q; have += o; if (q > o) { missing.push({ c, n: q - o }); missingValue += (priceOf(c) || 0) * (q - o); } }
+    // what is missing counts only my own collections: a collection a friend shares with me shows who has the card
+    // (Faltando: "Possui"), it never makes the card mine
+    for (const { c, q } of byName.values()) { const o = Math.min(q, ownedMine(c)); need += q; have += o; if (q > o) { missing.push({ c, n: q - o }); missingValue += (priceOf(c) || 0) * (q - o); } }
     const value = known.reduce((s, e) => s + (priceOf(e.c) || 0) * e.q, 0);
     const colors = (d.colors || []).filter((x) => INKS.includes(x));
     const used = new Set(colors); for (const e of known) for (const i of inksOf(e.c)) used.add(i);
@@ -1609,6 +1611,11 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   function friendsLend(c) {   // per friend, the printing they have most of
     const best = new Map();
     for (const p of printings(c)) for (const x of lendBy.get(p.id) || []) { const b = best.get(x.user); if (!b || x.free > b.free) best.set(x.user, x); }
+    // collections shared with me (rpc/shared_collections): the owner has the card — "Possui", they decide
+    for (const sc of sharedColls) for (const p of printings(c)) {
+      const e = sc.collection?.[p.id], n = e ? (+e.n || 0) + (+e.f || 0) : 0;
+      if (n > 0 && !best.has(sc.owner)) best.set(sc.owner, { user: sc.owner, name: sc.owner_name || "—", card_id: p.id, free: n, lend: false });
+    }
     return [...best.values()].sort((a, b) => b.free - a.free);
   }
   let lendFor = null;
