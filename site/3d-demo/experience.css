@@ -128,3 +128,11 @@
 .hero-stories .fan .card3d:nth-child(2){width:126px;margin-left:-63px}
 }
 @media(prefers-reduced-motion:reduce){.hero-stories .fan .card3d,.binder-book,.binder-leaf{animation:none!important;transition:none!important}}
+
+/* P0 collector realism: 9 pockets per physical page (3 x 3). */
+.binder-slots{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));align-items:stretch}
+.binder-page{min-height:690px}
+.binder-pocket{min-height:0;aspect-ratio:0.78;overflow:hidden;background:linear-gradient(130deg,#302041,#24172f)}
+.binder-pocket::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;border-radius:9px;border-top:2px solid #fff5;box-shadow:inset 0 5px 8px #fff1,inset 0 -4px 9px #0003;background:linear-gradient(110deg,transparent 40%,#ffffff0c 52%,transparent 63%)}
+.binder-pocket .card3d{width:94%;max-width:none}
+@media(max-width:850px){.binder-page{min-height:0}.binder-slots{gap:6px}.binder-pocket{aspect-ratio:.77}.binder-pocket .card3d{width:93%}}
