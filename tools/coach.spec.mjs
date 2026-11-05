@@ -125,14 +125,15 @@ test('stats: record, match win rate, streak, MMR, charts, matrix, deck versions'
   await expect(page.locator('[data-testid="record"]')).toContainText(`${rows.length} jogos`);
   await expect(page.locator('[data-testid="record"] b.win')).toHaveText(String(w));
   // 30 best-of-3 days, 29 linked by match id (day 5, a win, is not): 21–8; games still count one by one
-  await expect(T('Partidas')).toContainText('em melhor de 3');
-  await expect(T('Partidas')).toContainText('21–8');
+  await expect(T('Bo3 confirmados')).toContainText('em melhor de 3');
+  await expect(T('Bo3 confirmados')).toContainText('21–8');
   await expect(T('Sequência')).toBeVisible();
   await expect(page.locator('[data-testid="mmr"]')).toContainText('pico');
   await expect(page.locator('.mx td').first()).toBeVisible();
   // filter one queue, then a deck: versions appear and a version shows its list and what changed
   await page.locator('#svQueue').selectOption('Core Set 14 BO1');
-  await expect(T('Partidas')).toHaveCount(0);
+  await expect(T('Bo3 confirmados')).toContainText('0');   // none confirmed here: zero, with how to group, not "no history"
+  await expect(T('Bo3 confirmados')).toContainText('Importe o match.json para agrupar');
   await expect(page.locator('[data-testid="record"]')).toContainText('30 jogos');
   await page.locator('#svQueue').selectOption('all');
   await expect(page.locator('#svDeck')).toHaveCount(0);   // one deck only: no deck picker, its versions show directly
@@ -277,7 +278,7 @@ test('match.json links my best-of-3: one entry with the score, games inside, opp
     'duels-g9': dg(9, '2026-10-20T23:30:00Z', true, 'Outro') };
   const patches = [];
   const rowOf = (l) => ({ user_id: ME, game_id: l.game_id, source: 'duels_ink', played_at: l.played_at, visibility: 'private', created_at: l.played_at,
-    mid: l.event.match_id || null, mgn: l.event.match_games ? String(l.event.match_games) : null, on0: l.players[0].name, on1: l.players[1].name, om1: 'false',
+    mid: l.event.match_id || null, mgn: l.event.match_games ? String(l.event.match_games) : null, gim: l.event.game_in_match ? String(l.event.game_in_match) : null, on0: l.players[0].name, on1: l.players[1].name, om1: 'false',
     summary: { result: l.result.winner === 'p1' ? 'win' : 'loss', my_deck: 'Amber/Steel', opp_deck: 'Ruby', my_lore: l.result.final_lore.p1, opp_lore: l.result.final_lore.p2, went_first: l.players[0].went_first } });
   await page.addInitScript((me) => {
     localStorage.setItem('inkwell-lang', 'pt');
@@ -297,8 +298,9 @@ test('match.json links my best-of-3: one entry with the score, games inside, opp
     return json(path.startsWith('rpc/') ? null : []);
   });
   await page.goto(url('coach/'));
-  await expect(page.locator('.game')).toHaveCount(4);
+  await expect(page.locator('.game')).toHaveCount(4);   // the old games all show, one by one
   await expect(page.locator('details.bo3')).toHaveCount(0);   // nothing grouped before the match file
+  await expect(page.getByTestId('bo3-hint')).toContainText('importe o match.json de cada partida');
   const manifest = { matchId: 'M-1', matchFormat: 'bo3', playerNames: ['Luís', 'Zé'], matchWinner: 'Luís',
     games: [{ gameId: 'g1', gameNumber: 1, winner: 'Zé', matchScoreAfter: '0-1' }, { gameId: 'g2', gameNumber: 2, winner: 'Luís', matchScoreAfter: '1-1' },
       { gameId: 'g3', gameNumber: 3, winner: 'Luís', matchScoreAfter: '2-1' }, { gameId: 'gX', gameNumber: 3, winner: 'Luís' }] };

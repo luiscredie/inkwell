@@ -129,7 +129,8 @@ window.INKWELL_NO_STORE_MSG = "Your games appear here after you sign in.";
     "Your decks": "Seus decks", "Your inks": "Suas cores", "Against each deck": "Contra cada deck", "Opponent's inks": "Cores do oponente",
     "Tap a row to see those games. Faded rows: under 5 games.": "Toque numa linha para ver os jogos. Linhas apagadas: menos de 5 jogos.",
     "Won": "Vitórias", "Going first": "Começando", "Going second": "Comprando", "Show games against {deck}": "Mostrar jogos contra {deck}",
-    "{n} game, {w} won": "{n} jogo, {w} vitória(s)", "{n} games, {w} won": "{n} jogos, {w} vitórias", "Games per day": "Jogos por dia", "Games by hour of the day": "Jogos por hora do dia", "MMR from {a} to {b}, peak {p}": "MMR de {a} para {b}, pico {p}", "Peak {v}": "Pico {v}", "Matchup matrix": "Matriz de confrontos", "Your colors (rows) against the opponent's colors (columns). Small number: games.": "Suas cores (linhas) contra as cores do oponente (colunas). Número pequeno: jogos.", "You / Opp": "Você / Oponente", "Deck versions": "Versões do deck", "Each version is a different list found in your games with this deck.": "Cada versão é uma lista diferente encontrada nos seus jogos com este deck.", "Version": "Versão", "Version {n}": "Versão {n}", "latest": "mais recente", "Loading the list…": "Carregando a lista…", "Changes from version {n}": "Mudanças desde a versão {n}", "Last 7 days": "Últimos 7 dias", "Queue": "Fila", "All queues": "Todas as filas", "Other games": "Outros jogos", "Deck": "Deck", "All versions": "Todas as versões", "wins": "vitórias", "losses": "derrotas", "Win rate": "Vitórias", "Match win rate": "Partidas", "{w}–{l} in best-of-3": "{w}–{l} em melhor de 3", "On the play": "Começando", "On the draw": "Comprando", "Win streak": "Sequência", "Best: {n}": "Melhor: {n}", "Your best": "Sua melhor", "Play or draw": "Começar ou comprar", "Went first: {n} games ({p})": "Começou: {n} jogos ({p})", "Went second: {n} games ({p})": "Comprou: {n} jogos ({p})", "MMR": "MMR", "now": "agora", "peak": "pico", "in this period": "no período", "{n}d": "{n}d", "No games in these days.": "Nenhum jogo nesses dias.", "Peak hours ({tz})": "Horários ({tz})", "{w}W · {l}L": "{w}V · {l}D", "{w}W / {n}": "{w}V / {n}",
+    "{n} game, {w} won": "{n} jogo, {w} vitória(s)", "{n} games, {w} won": "{n} jogos, {w} vitórias", "Games per day": "Jogos por dia", "Games by hour of the day": "Jogos por hora do dia", "MMR from {a} to {b}, peak {p}": "MMR de {a} para {b}, pico {p}", "Peak {v}": "Pico {v}", "Matchup matrix": "Matriz de confrontos", "Your colors (rows) against the opponent's colors (columns). Small number: games.": "Suas cores (linhas) contra as cores do oponente (colunas). Número pequeno: jogos.", "You / Opp": "Você / Oponente", "Deck versions": "Versões do deck", "Each version is a different list found in your games with this deck.": "Cada versão é uma lista diferente encontrada nos seus jogos com este deck.", "Version": "Versão", "Version {n}": "Versão {n}", "latest": "mais recente", "Loading the list…": "Carregando a lista…", "Changes from version {n}": "Mudanças desde a versão {n}", "Last 7 days": "Últimos 7 dias", "Queue": "Fila", "All queues": "Todas as filas", "Other games": "Outros jogos", "Deck": "Deck", "All versions": "Todas as versões", "wins": "vitórias", "losses": "derrotas", "Win rate": "Vitórias", "Match win rate": "Partidas", "Confirmed Bo3": "Bo3 confirmados", "Import match.json to group them": "Importe o match.json para agrupar",
+    "Older duels.ink best-of-3 games show one by one. To group them, import each match's match.json (from the duels.ink export ZIP) in Add games.": "Bo3 antigos do duels.ink aparecem game a game. Para agrupá-los, importe o match.json de cada partida (do ZIP exportado pelo duels.ink) em Adicionar jogos.", "{w}–{l} in best-of-3": "{w}–{l} em melhor de 3", "On the play": "Começando", "On the draw": "Comprando", "Win streak": "Sequência", "Best: {n}": "Melhor: {n}", "Your best": "Sua melhor", "Play or draw": "Começar ou comprar", "Went first: {n} games ({p})": "Começou: {n} jogos ({p})", "Went second: {n} games ({p})": "Comprou: {n} jogos ({p})", "MMR": "MMR", "now": "agora", "peak": "pico", "in this period": "no período", "{n}d": "{n}d", "No games in these days.": "Nenhum jogo nesses dias.", "Peak hours ({tz})": "Horários ({tz})", "{w}W · {l}L": "{w}V · {l}D", "{w}W / {n}": "{w}V / {n}",
     // account panel (site)
     "Sign in": "Entrar", "Use your Inkwell account email. Your Lore Counter games appear here.": "Use o e-mail da sua conta Inkwell. Os jogos do Contador de lore aparecem aqui.",
     "Email": "E-mail", "Send code": "Enviar código", "Code from the email": "Código do e-mail",
@@ -512,7 +513,7 @@ window.INKWELL_CLOUD = (() => {
       const pub = coll === "public_games";
       return rows.filter((r) => (r.visibility === "public") === pub).map((r) => ({ id: r.game_id,
         data: { log: logs.get(r.game_id) || stub(r), summary: r.summary || summarize(logs.get(r.game_id) || stub(r)), played_at: r.played_at, source: r.source, added_at: r.created_at, visibility: r.visibility, audience: audienceOf(r),
-          audience_label: audienceLabel(r), match_id: r.mid || null, match_games: +r.mgn || null, opp_name: player === COMMUNITY ? null : oppName(r),
+          audience_label: audienceLabel(r), match_id: r.mid || null, match_games: +r.mgn || null, in_match: +r.gim || null, opp_name: player === COMMUNITY ? null : oppName(r),
           ...(player === COMMUNITY ? { owner_name: r.user_id === me.id ? "You" : names.get(r.user_id) || Tx("A player") } : {}) } }));
     }
     if (coll === "notes" || coll === "public_notes") {
@@ -539,7 +540,7 @@ window.INKWELL_CLOUD = (() => {
 
   // + the duels.ink match a game belongs to (set only from a verified match.json, linkMatch) and the opponent's name
   //   (the database keeps it only in private games; shared ones say "Opponent")
-  const SEL_OLD = "select=user_id,game_id,source,played_at,summary,visibility,group_id,created_at,mid:log->event->>match_id,mgn:log->event->>match_games,on0:log->players->0->>name,on1:log->players->1->>name,om1:log->players->1->>is_me";
+  const SEL_OLD = "select=user_id,game_id,source,played_at,summary,visibility,group_id,created_at,mid:log->event->>match_id,mgn:log->event->>match_games,gim:log->event->>game_in_match,on0:log->players->0->>name,on1:log->players->1->>name,om1:log->players->1->>is_me";
   let SEL = SEL_OLD + ",coach_email,coach_group_id";
   const games = (q) => CLOUD.api(`game_logs?${q}&${SEL}`).catch((e) => {   // database without the coach columns yet
     if (SEL === SEL_OLD) throw e;
@@ -1230,6 +1231,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       }).join("");
       $("games").querySelectorAll(".deckgrp").forEach((d) => d.addEventListener("toggle", () => { d.open ? closedDecks.delete(d.dataset.deck) : closedDecks.add(d.dataset.deck); }));
     }
+    if (isOwner && all.some((g) => g.doc.in_match && !g.doc.match_id))
+      $("games").insertAdjacentHTML("beforeend", `<p class="small muted" data-testid="bo3-hint" style="margin:var(--sp-3) 2px 0">${Tx("Older duels.ink best-of-3 games show one by one. To group them, import each match's match.json (from the duels.ink export ZIP) in Add games.")}</p>`);
     $("games").querySelectorAll(".game").forEach((b) => b.onclick = () => openGame(b.dataset.k));
   }
 
@@ -1754,7 +1757,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       </div>
       <div class="tiles" data-testid="tiles">
         ${tile(Tx("Win rate"), pct(T.w, T.n), esc(Tx("{w}W · {l}L", { w: T.w, l: T.n - T.w })))}
-        ${M.length ? tile(Tx("Match win rate"), pct(mw, M.length), esc(Tx("{w}–{l} in best-of-3", { w: mw, l: M.length - mw }))) : ""}
+        ${tile(Tx("Confirmed Bo3"), M.length ? pct(mw, M.length) : "0", esc(M.length ? Tx("{w}–{l} in best-of-3", { w: mw, l: M.length - mw }) : Tx("Import match.json to group them")))}
         ${tile(Tx("On the play"), pct(T.fw, T.fn), T.fn ? esc(Tx("{w}W / {n}", { w: T.fw, n: T.fn })) : "", "play")}
         ${tile(Tx("On the draw"), pct(T.dw, T.dn), T.dn ? esc(Tx("{w}W / {n}", { w: T.dw, n: T.dn })) : "", "draw")}
         ${tile(Tx("Win streak"), st.cur, st.best > st.cur ? esc(Tx("Best: {n}", { n: st.best })) : st.best ? Tx("Your best") : "")}
