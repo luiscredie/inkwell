@@ -339,18 +339,22 @@ test('a list older than a day is gone', async ({ page }) => {
   await expect(page.getByTestId('public-text')).toHaveValue('');
 });
 
-test('a collection shared with me counts, and a friend who lends from their collection can be asked', async ({ page }) => {
+test('a collection a friend shares with me does not make the card mine: still missing, the friend shows as "Possui"; a lender can be asked', async ({ page }) => {
   await setup(page);
   const posts = [];
   await page.route('**/rest/v1/rpc/shared_collections', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ owner: SELLER, owner_name: 'Bruno', profile: 'principal', can_edit: true, collection: { 'LOR10-1': { n: 1, f: 0 } }, home: [] }]) }));
   await page.route('**/rest/v1/rpc/friends_lending', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ user: FRIEND, name: 'Ana Souza', handle: 'ana', card_id: 'LOR10-1', free: 3 }]) }));
   await page.route('**/rest/v1/user_loans', (r) => { posts.push(JSON.parse(r.request().postData())); return r.fulfill({ status: 201, body: '' }); });
   await page.goto(BASE + '?deck=deck-a&tab=missing');
-  await expect(page.locator('[data-testid="missing-summary"]')).toContainText('1 carta faltando');   // 2 mine + 1 shared of 4
-  await expect(page.locator('[data-testid="friend-has"]')).toContainText('Ana Souza tem');
-  await page.locator('[data-borrow]').click();
-  await expect(page.locator('[data-testid="friend-has"]')).toContainText('Pedido enviado');
-  expect(posts[0]).toEqual({ lender: FRIEND, borrower: ME, created_by: ME, items: [{ card_id: 'LOR10-1', qty: 1, foil: false }], note: 'Para o deck Amber Test' });
+  await expect(page.locator('[data-testid="missing-summary"]')).toContainText('2 cartas faltando');   // needs 4, I have 2: Bruno's shared copy does not count
+  await expect(page.locator('[data-miss="LOR10-1"] .tag.warn')).toHaveText('falta 2');
+  const bruno = page.locator('[data-testid="friend-has"]').filter({ hasText: 'Bruno' });
+  await expect(bruno.locator('[data-tag]')).toHaveText('Possui');
+  await expect(bruno).toContainText('1 na coleção');
+  await expect(page.locator('[data-testid="friend-has"]').filter({ hasText: 'Ana Souza' })).toContainText('Ana Souza tem');
+  await page.locator(`[data-borrow="${FRIEND}"]`).click();
+  await expect(page.locator('[data-testid="friend-has"]').filter({ hasText: 'Ana Souza' })).toContainText('Pedido enviado');
+  expect(posts[0]).toEqual({ lender: FRIEND, borrower: ME, created_by: ME, items: [{ card_id: 'LOR10-1', qty: 2, foil: false }], note: 'Para o deck Amber Test' });
 });
 
 test('a friend whose collection is only visible (no lending) shows up and can be asked — they decide', async ({ page }) => {
@@ -925,4 +929,38 @@ test('deck to collection: with supabase/collection_undo.sql installed, Undo is o
   await expect(page.locator('#toast')).toContainText('Não foi possível desfazer: Gurgi mudou depois de adicionada (aqui ou em outro aparelho). Nada foi alterado.');
   expect(st.db.profiles[0].collection['LOR10-1']).toEqual({ n: 6, f: 0 });
   expect(st.applied.length).toBe(2);
+});
+
+test('Faltando: friends who can help, as Possui / Empresta / Troca, with face and profile only for public profiles', async ({ page }) => {
+  await setup(page);
+  const OTHER = '99999999-9999-4999-8999-999999999999';
+  await page.route('**/rest/v1/listings**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+    { id: 'l1', user_id: FRIEND, kind: 'lend', card_id: 'LOR10-1', qty: 1, foil: false, price_brl: null },
+    { id: 't1', user_id: FRIEND, kind: 'trade', card_id: 'LOR10-1', qty: 2, foil: false, price_brl: null },
+    { id: 't2', user_id: OTHER, kind: 'trade', card_id: 'LOR10-1', qty: 1, foil: false, price_brl: null }]) }));   // not a friend: no "Troca"
+  await page.route('**/rest/v1/rpc/friends_lending', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+    { user: FRIEND, name: 'Ana Souza', handle: 'ana', card_id: 'LOR10-1', free: 3, lend: true },
+    { user: SELLER, name: 'Bruno Lima', handle: 'bruno_privado', card_id: 'LOR10-1', free: 2, lend: false }]) }));
+  await page.route('**/rest/v1/rpc/my_friends', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+    { id: FRIEND, name: 'Ana Souza', handle: 'ana', avatar: 'LOR10-17' }, { id: SELLER, name: 'Bruno Lima', handle: null, avatar: null }]) }));
+  await page.goto(BASE + '?deck=deck-a&tab=missing');
+  const card = page.locator('[data-miss="LOR10-1"]');
+  const has = card.locator('[data-testid="friend-has"]');
+  await expect(has).toHaveCount(2);
+  const ana = has.filter({ hasText: 'Ana Souza' }), bruno = has.filter({ hasText: 'Bruno Lima' });
+  await expect(ana.locator('[data-tag]')).toHaveText('Empresta');
+  await expect(ana).toContainText('3 livres');
+  await expect(ana.locator('a.fav')).toHaveAttribute('href', '../perfil/?u=ana');
+  await expect(ana.locator('a.fav img')).toHaveCount(1);
+  await expect(bruno.locator('[data-tag]')).toHaveText('Possui');
+  await expect(bruno).toContainText('2 na coleção');
+  await expect(bruno.locator('a.fav')).toHaveCount(0);                      // private profile: no link, no avatar
+  expect(await card.innerHTML()).not.toContain('bruno_privado');           // its address never reaches the page
+  await expect(card.locator('[data-testid="friend-lends"] [data-tag]')).toHaveText('Empresta');
+  const trades = card.locator('[data-testid="friend-trades"]');
+  await expect(trades).toHaveCount(1);                                       // only the friend's explicit offer
+  await expect(trades.locator('[data-tag]')).toHaveText('Troca');
+  await expect(trades).toContainText('Ana Souza oferece em troca');
+  await expect(trades).toContainText('2 no Mural');
+  if (process.env.SHOT_DIR) await card.screenshot({ path: process.env.SHOT_DIR + '/faltando-amigos.png' });
 });
