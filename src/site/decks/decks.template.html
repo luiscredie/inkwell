@@ -44,6 +44,10 @@
 .add-results { max-height: 340px; overflow: auto; margin-top: var(--sp-2); }
 .add-results .list-row { min-height: 52px; }
 .miss .thumb { width: 56px; }
+.miss .list-row .t > .fwho { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 6px; }
+.miss .fav { flex: none; width: 26px; height: 26px; border-radius: 50%; overflow: hidden; display: inline-grid; place-items: center; background: var(--surface-3); color: var(--text); font-weight: 800; font-size: var(--fs-small); text-decoration: none; box-shadow: 0 0 0 1.5px var(--line-strong); }
+.miss .fav img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; transform: scale(1.9); transform-origin: 50% 25%; }
+.miss .ftag { vertical-align: 1px; }
 textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(--fs-small); padding: var(--sp-3); border-radius: var(--r-md); border: 1px solid var(--line); background: var(--field); color: var(--text); resize: vertical; }
 @media (pointer: coarse) { textarea.paste { font-size: 16px; } }   /* no zoom-in on iPhone when the list gets focus */
 .health li { align-items: flex-start; }
@@ -168,6 +172,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     "Estimate in reais: {s}, updated {d}. A card with no price is left out of the total, never counted as zero.": "Estimativa em reais: {s}, atualizado em {d}. Carta sem preço fica fora do total, nunca conta como zero.",
     "lowest MYP Cards listing ({d}); without one, {s}": "menor anúncio na MYP Cards ({d}); sem anúncio lá, {s}", "{n} can come from friends": "{n} podem vir de amigos", "{n} can come from friends_1": "1 pode vir de amigos",
     "You have every card for this deck.": "Você tem todas as cartas deste deck.", "Copies lent to friends still count as yours.": "Cópias emprestadas a amigos contam como suas.",
+    "Lends": "Empresta", "Trades": "Troca", "Has it": "Possui", "{who} offers it in trade": "{who} oferece em troca", "{n} on the board": "{n} no Mural", "Profile of {who}": "Perfil de {who}",
     "{who} lends": "{who} empresta", "{n} free": "{n} livres", "{n} free_1": "1 livre", "Ask to borrow": "Pedir emprestado", "{who} has it": "{who} tem", "{n} in their collection · they decide": "{n} na coleção · a pessoa decide se empresta", "Show on my public profile": "Mostrar no meu perfil público", "public": "público", "People who aren't your friends see it on your profile and in the Lore Counter, when your profile is public. Friends already see all your decks.": "Quem não é seu amigo vê no seu perfil e no Lore Counter, quando seu perfil é público. Amigos já veem todos os seus decks.", "Asked": "Pedido enviado", "For the deck {d}": "Para o deck {d}", "Request sent. You'll see the answer in Trades.": "Pedido enviado. A resposta aparece em Trocas.", "Too many requests today. Try tomorrow.": "Muitos pedidos hoje. Tente amanhã.", "{who} sells on the board": "{who} vende no Mural", "{v} each": "{v} cada", "See listing": "Ver anúncio",
     "None of your friends has it": "Ninguém dos seus amigos tem", "Post what's missing on the board": "Anunciar o que falta no Mural", "Looking to buy": "Procuro para comprar", "Looking to borrow": "Procuro emprestado",
     "Posted {n} cards on the board": "{n} cartas anunciadas no Mural", "Already on the board": "Já está no Mural",
@@ -1084,7 +1089,8 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     const mine = listings.filter((l) => l.user_id !== me.id && keys.has(l.card_id));
     const lend = mine.filter((l) => l.kind === "lend" && friends.has(l.user_id));
     const sell = mine.filter((l) => l.kind === "sell");
-    return { lend, sell };
+    const trade = mine.filter((l) => l.kind === "trade" && friends.has(l.user_id));   // an explicit trade offer on the board
+    return { lend, sell, trade };
   }
   // ---------- Toque da Fada Madrinha: the deck with the rarest printing of each card (same rules, only the art changes) ----------
   const GALA_TAB = "✨ Fairy Godmother";
@@ -1162,19 +1168,20 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     if (!m.missing.length) return emptyBox("collection", Tx("You have every card for this deck."), Tx("Copies lent to friends still count as yours."));
     let fromFriends = 0;
     const cards = m.missing.map(({ c, n }) => {
-      const { lend, sell } = offersFor(c), [a, b] = split(c.name), p = priceOf(c);
+      const { lend, sell, trade } = offersFor(c), [a, b] = split(c.name), p = priceOf(c);
       if (lend.length) fromFriends += Math.min(n, lend.reduce((s, l) => s + l.qty, 0));
       const who = (u) => names.get(u) || "—";
       const q = encodeURIComponent(a);
       const offers = [
-        ...lend.slice(0, 3).map((l) => `<div class="list-row flat two" style="min-height:52px"><span class="t"><span>${esc(Tx("{who} lends", { who: who(l.user_id) }))}</span><span class="meta">${esc(Tx("{n} free", { n: l.qty }))}</span></span><a class="btn small" href="../trades/?tab=board&q=${q}">${Tx("Ask to borrow")}</a></div>`),
+        ...lend.slice(0, 3).map((l) => `<div class="list-row flat two" style="min-height:52px" data-testid="friend-lends"><span class="t"><span class="fwho">${friendFace(l.user_id, who(l.user_id))}${friendTag("lend")}${esc(Tx("{who} lends", { who: who(l.user_id) }))}</span><span class="meta">${esc(Tx("{n} free", { n: l.qty }))}</span></span><a class="btn small" href="../trades/?tab=board&q=${q}">${Tx("Ask to borrow")}</a></div>`),
+        ...trade.slice(0, 3).map((l) => `<div class="list-row flat two" style="min-height:52px" data-testid="friend-trades"><span class="t"><span class="fwho">${friendFace(l.user_id, who(l.user_id))}${friendTag("trade")}${esc(Tx("{who} offers it in trade", { who: who(l.user_id) }))}</span><span class="meta">${esc(Tx("{n} on the board", { n: l.qty }))}</span></span><a class="btn small" href="../trades/?tab=board&q=${q}">${Tx("See listing")}</a></div>`),
         ...sell.slice(0, 3).map((l) => `<div class="list-row flat two" style="min-height:52px"><span class="t"><span>${esc(Tx("{who} sells on the board", { who: who(l.user_id) }))}</span><span class="meta">${l.price_brl != null ? esc(Tx("{v} each", { v: money(+l.price_brl) })) : ""}</span></span><a class="btn small" href="../trades/?tab=board&q=${q}">${Tx("See listing")}</a></div>`),
       ];
       const fl = friendsLend(c);
       if (fl.length) fromFriends += Math.min(n, fl.filter((x) => x.lend !== false).reduce((s2, x) => s2 + x.free, 0));
       offers.unshift(...fl.slice(0, 3).map((x) => { const k = `${x.user}|${x.card_id}`, asked = lendAsked.has(k);
-        return `<div class="list-row flat two" style="min-height:52px" data-testid="friend-has"><span class="t"><span>${esc(Tx("{who} has it", { who: x.name || "—" }))}</span><span class="meta">${esc(x.lend === false ? Tx("{n} in their collection · they decide", { n: x.free }) : Tx("{n} free", { n: x.free }))}</span></span>${asked ? `<a class="btn small ghost" href="../trades/">${Tx("Asked")}</a>` : `<button type="button" class="btn small" data-borrow="${esc(x.user)}" data-bcard="${esc(x.card_id)}" data-bq="${Math.min(n, x.free)}">${Tx("Ask to borrow")}</button>`}</div>`; }));
-      if (!lend.length && !fl.length && !sell.length) offers.push(`<div class="list-row flat two" style="min-height:44px"><span class="t"><span class="muted" style="font-weight:400">${Tx("None of your friends has it")}</span></span></div>`);
+        return `<div class="list-row flat two" style="min-height:52px" data-testid="friend-has"><span class="t"><span class="fwho">${friendFace(x.user, x.name)}${friendTag(x.lend === false ? "has" : "lend")}${esc(Tx("{who} has it", { who: x.name || "—" }))}</span><span class="meta">${esc(x.lend === false ? Tx("{n} in their collection · they decide", { n: x.free }) : Tx("{n} free", { n: x.free }))}</span></span>${asked ? `<a class="btn small ghost" href="../trades/">${Tx("Asked")}</a>` : `<button type="button" class="btn small" data-borrow="${esc(x.user)}" data-bcard="${esc(x.card_id)}" data-bq="${Math.min(n, x.free)}">${Tx("Ask to borrow")}</button>`}</div>`; }));
+      if (!lend.length && !fl.length && !sell.length && !trade.length) offers.push(`<div class="list-row flat two" style="min-height:44px"><span class="t"><span class="muted" style="font-weight:400">${Tx("None of your friends has it")}</span></span></div>`);
       // buy it: always offered, after friends and the board — the stores open in a new tab, nothing is shared with them
       offers.push(buyLinks(c, n));
       return `<section class="card miss" data-miss="${esc(c.id)}"><div class="row" style="flex-wrap:nowrap;align-items:flex-start;gap:var(--sp-3)">${thumb(c, "md")}<div class="grow" style="min-width:0">
@@ -1189,6 +1196,13 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
       <div class="row" style="gap:var(--sp-2);margin:var(--sp-3) 0"><span class="small muted">${Tx("Post what's missing on the board")}</span><button type="button" class="btn small" data-post="buy">${Tx("Looking to buy")}</button><button type="button" class="btn small" data-post="borrow">${Tx("Looking to borrow")}</button></div>
       <div class="stack">${cards}</div>`;
   }
+  // Possui (in a collection open to me, they decide) · Empresta (they said they lend) · Troca (an offer on the board)
+  const friendTag = (k) => `<span class="tag ${k === "lend" ? "win" : k === "trade" ? "info" : ""} ftag" data-tag="${k}">${Tx(k === "lend" ? "Lends" : k === "trade" ? "Trades" : "Has it")}</span>`;
+  // a friend's face: avatar and link only for a public profile (rpc/my_friends, private.face); else the initial, no link
+  let faces = null;
+  const friendFace = (id, name) => { const f = faces?.get(id), img = f?.avatar && BY.get(f.avatar)?.img ? imgUrl(BY.get(f.avatar)) : "";
+    const inner = img ? `<img src="${img}" alt="" loading="lazy" decoding="async">` : esc(String(name || "?")[0].toUpperCase());
+    return f?.handle ? `<a class="fav" href="../perfil/?u=${encodeURIComponent(f.handle)}" aria-label="${esc(Tx("Profile of {who}", { who: name || "" }))}">${inner}</a>` : `<span class="fav" aria-hidden="true">${inner}</span>`; };
   function friendsLend(c) {   // per friend, the printing they have most of
     const best = new Map();
     for (const p of printings(c)) for (const x of lendBy.get(p.id) || []) { const b = best.get(x.user); if (!b || x.free > b.free) best.set(x.user, x); }
@@ -1200,9 +1214,11 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     if (lendFor === key) return; lendFor = key;
     const ids = [...new Set(m.missing.flatMap(({ c }) => printings(c).map((p) => p.id)))].slice(0, 400);
     if (!ids.length) return;
-    const r = await CLOUD.api("rpc/friends_lending", { method: "POST", body: { p_cards: ids } }).catch(() => []);
+    const [r, fr] = await Promise.all([CLOUD.api("rpc/friends_lending", { method: "POST", body: { p_cards: ids } }).catch(() => []),
+      faces ? null : CLOUD.api("rpc/my_friends", { method: "POST", body: {} }).catch(() => [])]);
+    if (fr) faces = new Map((Array.isArray(fr) ? fr : []).filter((f) => f?.id).map((f) => [f.id, f]));
     lendBy = new Map(); for (const x of Array.isArray(r) ? r : []) (lendBy.get(x.card_id) || lendBy.set(x.card_id, []).get(x.card_id)).push({ ...x, free: +x.free || 0 });
-    if (lendBy.size) render();
+    if (lendBy.size || faces?.size) render();
   }
   async function askBorrow(d, b) {
     const k = `${b.dataset.borrow}|${b.dataset.bcard}`; b.disabled = true;
