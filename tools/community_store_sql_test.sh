@@ -78,9 +78,28 @@ fails $A "select public.decide_community_store('$C1', 'approved')" "not allowed"
 fails $O "select public.admin_community_stores()" "not allowed"
 eq "$(as $D "select jsonb_array_length(public.admin_community_stores())")" 2 "admin queue"
 fails $D "select public.decide_community_store('$C1', 'maybe')" bad_decision
-as $D "select public.decide_community_store('$C1', 'approved', 'conferido no Play Hub')" >/dev/null
-eq "$(view '' loja-um | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d["status"],d["verified"])')" "approved True" "approved"
-ok "5. only a site admin approves; owner/admin of the community can't; the page then says verified"
+fails $D "select public.decide_community_store('$C1', 'approved', 'parece certo')" check_required          # no check: refused
+OFFICIAL='{"method":"playhub","store":{"id":17617,"name":"Muito Colecionaveis Comercio de Jogos e Acessorios Ltda","city":"Campinas","address":"Av Brasil 1456, Jardim Chapadao, CAMPINAS-SP"}}'
+as $D "select public.decide_community_store('$C1', 'approved', null, '$OFFICIAL')" >/dev/null
+eq "$(view '' loja-um | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d["status"],d["verified"],d["check"],"|",d["name"])')" "approved True playhub | Muito Colecionaveis Comercio de Jogos e Acessorios Ltda" "approved with the Play Hub's data"
+ok "5. only a site admin approves, and only with a check; owner/admin of the community can't; the page then says verified"
+
+# 5b. forged requests: what the browser sends is never what gets approved
+# loja-dois asked for store 999 under another store's name (step 3). The admin's Play Hub lookup of 999 says otherwise.
+fails $D "select public.decide_community_store('$C2', 'approved', null, '{\"method\":\"playhub\",\"store\":{\"id\":17617,\"name\":\"Muito Colecionaveis\"}}')" store_mismatch   # data of another id
+fails $D "select public.decide_community_store('$C2', 'approved', null, '{\"method\":\"playhub\",\"store\":{\"id\":999}}')" check_required                                # no official name
+fails $D "select public.decide_community_store('$C2', 'approved', null, '{\"method\":\"wish\"}')" check_required
+fails $D "select public.decide_community_store('$C2', 'approved', 'ok', '{\"method\":\"manual\",\"confirmed\":true}')" check_required                                       # manual needs a real note
+fails $D "select public.decide_community_store('$C2', 'approved', 'liguei para a loja e conferi', '{\"method\":\"manual\"}')" check_required                                 # and the explicit confirmation
+eq "$(view '' loja-dois | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d["verified"],d["check"])')" "False None" "still not verified"
+as $D "select public.decide_community_store('$C2', 'approved', null, '{\"method\":\"playhub\",\"store\":{\"id\":999,\"name\":\"Loja Real 999\",\"city\":\"Recife\"}}')" >/dev/null
+eq "$(view '' loja-dois | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d["verified"],d["name"],d["city"])')" "True Loja Real 999 Recife" "official name replaces the forged one"
+fails $X "select public.decide_community_store('$C2', 'approved', null, '$OFFICIAL')" "not allowed"   # the requester can't approve, whatever the check
+eq "$(q "select string_agg(coalesce(check_method, '-'), ',' order by id) from private.community_store_log where action = 'approve'")" "playhub,playhub" "log keeps the check"
+"${P[@]}" -c "update public.community_stores set status = 'pending', check_method = null where community_id = '$C2'"
+as $D "select public.decide_community_store('$C2', 'approved', 'loja sem eventos no Play Hub; conferi a página da loja e falei com o dono', '{\"method\":\"manual\",\"confirmed\":true}')" >/dev/null
+eq "$(view '' loja-dois | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d["verified"],d["check"],d["name"])')" "True manual Loja Real 999" "manual check"
+ok "5b. forged name/id: approval needs the Play Hub's data for the same id (it replaces the request) or an explicit manual check with a note"
 
 # 6. no second verified community for the same store
 fails $X "select public.request_community_store('loja-dois', '$STORE')" store_taken
@@ -122,7 +141,7 @@ ok "8. RLS on, no table access for anon/authenticated; visitors can only call co
 before=$(q "select count(*) from public.communities")
 "${P[@]}" -f "$ROOT/supabase/community_store_rollback.sql" >/dev/null 2>&1
 "${P[@]}" -f "$ROOT/supabase/community_store_rollback.sql" >/dev/null 2>&1
-eq "$(q "select (to_regclass('public.community_stores') is null and to_regclass('private.community_store_log') is null and to_regprocedure('public.community_store(text)') is null and to_regprocedure('public.decide_community_store(uuid,text,text)') is null)::text")" true "rollback"
+eq "$(q "select (to_regclass('public.community_stores') is null and to_regclass('private.community_store_log') is null and to_regprocedure('public.community_store(text)') is null and to_regprocedure('public.decide_community_store(uuid,text,text,jsonb)') is null)::text")" true "rollback"
 eq "$(q "select count(*) from public.communities")" "$before" "communities kept"
 "${P[@]}" -f "$ROOT/supabase/community_store.sql" >/dev/null
 ok "9. rollback (run twice) removes the table, the log and the functions only; communities stay; reinstall works"

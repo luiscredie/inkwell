@@ -287,7 +287,8 @@ const SEV = [   // as rph-events answers for store 17617 (tools/fixtures/rph-sto
   { id: 1250002, name: 'Evento antigo', start: soon(-3, 10), format: 'Core Constructed', category: 'weekly', category_source: 'api', store: { id: 17617 }, url: 'https://tcg.ravensburgerplay.com/events/1250002' },   // past: left out
 ];
 const STORE = { store_id: 17617, name: 'Muito Colecionaveis', city: 'Campinas', address: 'Av Brasil 1456', status: 'approved', verified: true };
-const storeFn = (events = SEV) => (q) => (q.stores ? [{ id: 17617, name: 'Muito Colecionaveis', city: 'Campinas', state: 'SP', address: 'Av Brasil 1456, Campinas' }, { id: 99001, name: 'Muito Colecionaveis', city: 'Recife', state: 'PE', address: 'Rua X, 1' }]
+const storeFn = (events = SEV, complete = true) => (q) => (q.stores ? { stores: [{ id: 17617, name: 'Muito Colecionaveis', city: 'Campinas', state: 'SP', address: 'Av Brasil 1456, Campinas' }, { id: 99001, name: 'Muito Colecionaveis', city: 'Recife', state: 'PE', address: 'Rua X, 1' }], total: complete ? 2 : 400, complete }
+  : q.store_info ? (q.store_info === '17617' ? { found: true, store: { id: 17617, name: 'Muito Colecionaveis Comercio de Jogos e Acessorios Ltda', city: 'Campinas', address: 'Av Brasil 1456, Jardim Chapadao' }, events: 23 } : { found: false, store: null, events: 0 })
   : q.store ? { events, total: events.length, received: events.length, complete: true, issues: [] } : { events: [] });
 
 test('store community, verified: its Play Hub events for a visitor, categories, official link, details by keyboard', async ({ page }) => {
@@ -395,19 +396,39 @@ test('store community on a phone, in English: fits the screen', async ({ page })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
-test('admin: store links to check, approve; owners of a community cannot approve', async ({ page }) => {
+test('admin: each request next to the Play Hub\'s own data; approve with it, or only after an explicit manual check', async ({ page }) => {
   const calls = await setup(page, { rpcs: {
     'rpc/my_profile': () => ({ display_name: 'Luís', adult: true, hidden: false, is_admin: true }),
     'rpc/admin_users': () => [], 'rpc/admin_reports': () => [], 'rpc/admin_communities': () => [], 'rpc/admin_feedback': () => [],
-    'rpc/admin_community_stores': () => [{ community_id: 'c-1', slug: 'loja-do-ze', community: 'Loja do Zé', store_id: 17617, name: 'Muito Colecionaveis', city: 'Campinas', address: 'Av Brasil 1456', status: 'pending', requested_by: 'Luís', requested_at: '2026-11-05T12:00:00Z', verified_elsewhere: false },
-      { community_id: 'c-2', slug: 'outra', community: 'Outra', store_id: 555, name: 'Loja Y', status: 'pending', requested_at: '2026-11-05T12:00:00Z', verified_elsewhere: true }],
+    'rpc/admin_community_stores': () => [
+      { community_id: 'c-1', slug: 'loja-do-ze', community: 'Loja do Zé', store_id: 17617, name: 'Loja Oficial do Zé', city: 'Campinas', status: 'pending', requested_by: 'Zé', requested_at: '2026-11-05T12:00:00Z', verified_elsewhere: false },   // a forged name
+      { community_id: 'c-2', slug: 'outra', community: 'Outra', store_id: 555, name: 'Loja Y', status: 'pending', requested_at: '2026-11-05T12:00:00Z', verified_elsewhere: false },
+      { community_id: 'c-3', slug: 'terceira', community: 'Terceira', store_id: 777, name: 'Loja Z', status: 'pending', requested_at: '2026-11-05T12:00:00Z', verified_elsewhere: true }],
     'rpc/decide_community_store': () => undefined,
-  } });
+  }, fn: storeFn() });
   await page.goto(url('admin/?tab=feedback'));
   await page.locator('[data-tab="comms"]').click();
-  const box = page.getByTestId('admin-store-links');
-  await expect(box).toContainText('Loja do Zé → Muito Colecionaveis');
-  await expect(box.locator('[data-c="c-2"][data-sdec="approved"]')).toBeDisabled();   // already verified elsewhere
-  await box.locator('[data-c="c-1"][data-sdec="approved"]').click();
-  await expect.poll(() => rpcCalls(calls, 'decide_community_store')[0]).toEqual({ p_community: 'c-1', p_decision: 'approved' });
+  const row = (id) => page.locator(`[data-slink="${id}"]`);
+  await expect(row('c-1').getByTestId('ph-check')).toContainText('Play Hub: Muito Colecionaveis Comercio de Jogos e Acessorios Ltda');
+  await expect(row('c-1').getByTestId('ph-differs')).toBeVisible();                     // the forged name is flagged
+  await expect(row('c-2').getByTestId('ph-check')).toContainText('não tem evento no Play Hub');
+  await expect(row('c-2').locator('[data-sdec="approved"]')).toBeDisabled();            // no Play Hub data: not without a manual check
+  await expect(row('c-3').locator('[data-sdec="approved"]')).toBeDisabled();            // already verified elsewhere
+  await row('c-1').locator('[data-sdec="approved"]').click();
+  await expect.poll(() => rpcCalls(calls, 'decide_community_store')[0]).toEqual({ p_community: 'c-1', p_decision: 'approved',
+    p_check: { method: 'playhub', store: { id: 17617, name: 'Muito Colecionaveis Comercio de Jogos e Acessorios Ltda', city: 'Campinas', address: 'Av Brasil 1456, Jardim Chapadao' } } });   // the Play Hub's data, not the request's
+  await row('c-2').locator('[data-mcheck="c-2"]').check();
+  await expect(row('c-2').locator('[data-sdec="approved"]')).toBeDisabled();            // still needs a note
+  await row('c-2').locator('[data-mnote="c-2"]').fill('Liguei para a loja e conferi o ID');
+  await expect(row('c-2').locator('[data-sdec="approved"]')).toBeEnabled();
+  await row('c-2').locator('[data-sdec="approved"]').click();
+  await expect.poll(() => rpcCalls(calls, 'decide_community_store')[1]).toEqual({ p_community: 'c-2', p_decision: 'approved', p_note: 'Liguei para a loja e conferi o ID', p_check: { method: 'manual', confirmed: true } });
+});
+
+test('store search: when the Play Hub has more stores than we read, the owner is told to type more', async ({ page }) => {
+  await setup(page, { rpcs: { 'rpc/community_store': () => null }, fn: storeFn(SEV, false) });
+  await page.goto(url('comunidades/?c=loja-do-ze'));
+  await page.locator('#pickStore').click();
+  await page.locator('#stQ').fill('Mu'); await page.locator('#stQ').press('Enter');
+  await expect(page.getByTestId('store-partial-search')).toContainText('só parte delas aparece');
 });

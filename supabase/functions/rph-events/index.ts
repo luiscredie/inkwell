@@ -4,7 +4,8 @@
 //   GET ?geocode=Campinas                                               -> { lat, lng, label } (Open-Meteo geocoder)
 //   GET ?id=904881                                                      -> one event (to link a community table)
 //   GET ?store=17617&from=…&to=…                                        -> that store's events, same shape as the list (store communities)
-//   GET ?stores=Colecionaveis                                           -> [{ id, name, city, state, country, address }] Lorcana stores by name
+//   GET ?stores=Colecionaveis                                           -> { stores: [{ id, name, city, state, country, address }], total, complete }
+//   GET ?store_info=17617                                               -> { found, store, events } the Play Hub's own data for a store id (admins check links)
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { categorize, reviewObserved } from "./categories.js";
 import { fetchAll } from "./paginate.js";
@@ -80,21 +81,43 @@ async function events(where: { lat: number; lng: number; km: number } | { store:
   return data;
 }
 
-// Lorcana stores by name, to pick a community's store. The Play Hub's /game-stores/ has one row per store and
-// game (and ignores game_slug), so keep the Lorcana rows and each store once. Matches names only, not cities.
+// The Play Hub's own name/city/address for a store, from its events (any status): GET /stores/<id>/ doesn't exist
+// and /game-stores/ can't filter by store id (05/11/2026). A store with no event on the Play Hub can't be looked up
+// this way: { found: false }, and the admin checks it by hand.
+const storeOut = (s: Json) => ({ id: s.id, name: s.name, city: s.city || null, state: s.state || null, country: s.country || null,
+  address: typeof s.full_address === "string" ? s.full_address.replace(/\s*\n\s*/g, ", ").slice(0, 300) : null });
+async function storeInfo(id: number) {
+  const key = "store_info|" + id;
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.at < TTL) return hit.data;
+  const u = new URLSearchParams({ game_slug: "disney-lorcana", store: String(id), page_size: "1" });
+  const r = await fetch(`${API}/events/?${u}`, { headers: HEADERS, signal: AbortSignal.timeout(10000) });
+  if (!r.ok) throw new Error(`play hub ${r.status}`);
+  const d = await r.json(), s = d?.results?.[0]?.store;
+  const data = s?.id === id ? { found: true, store: storeOut(s), events: d.count ?? null } : { found: false, store: null, events: 0 };
+  cache.set(key, { at: Date.now(), data });
+  return data;
+}
+
+// Lorcana stores by name, to pick a community's store. /game-stores/ has one row per store and game; game_id=1
+// (Disney Lorcana) filters on the Play Hub's side, and the slug is checked again here. Pages are read with
+// paginate.js (same limits, dedupe of rows) up to 300 rows; each store once. Matches names only, not cities.
+const STORE_ROWS = 300;
 async function stores(q: string) {
   const key = "stores|" + q.toLowerCase();
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < TTL) return hit.data;
-  const u = new URLSearchParams({ game_slug: "disney-lorcana", search: q, page_size: "50" });
-  const r = await fetch(`${API}/game-stores/?${u}`, { headers: HEADERS, signal: AbortSignal.timeout(10000) });
-  if (!r.ok) throw new Error(`play hub ${r.status}`);
+  const read = await fetchAll(async (page: number, size: number) => {
+    const u = new URLSearchParams({ game_id: "1", search: q, page: String(page), page_size: String(size) });
+    const r = await fetch(`${API}/game-stores/?${u}`, { headers: HEADERS, signal: AbortSignal.timeout(8000) });
+    if (!r.ok) throw new Error(`play hub ${r.status}`);
+    return await r.json();
+  }, { pageSize: 100, retrySize: 75, maxEvents: STORE_ROWS, budgetMs: 15000 });
   const seen = new Set();
-  const data = ((await r.json())?.results || [])
-    .filter((g: Json) => g?.game?.slug === "disney-lorcana" && g?.store?.id && !seen.has(g.store.id) && seen.add(g.store.id))
-    .slice(0, 20).map(({ store: s }: Json) => ({ id: s.id, name: s.name, city: s.city || null, state: s.state || null, country: s.country || null,
-      address: typeof s.full_address === "string" ? s.full_address.replace(/\s*\n\s*/g, ", ").slice(0, 300) : null }));
-  cache.set(key, { at: Date.now(), data });
+  const list = read.events.filter((g: Json) => g?.game?.slug === "disney-lorcana" && g?.store?.id && !seen.has(g.store.id) && seen.add(g.store.id)).map((g: Json) => storeOut(g.store));
+  if (!read.complete) console.warn("rph-events: store search incomplete", JSON.stringify({ q, count: read.count, received: read.received, issues: read.issues }));
+  const data = { stores: list, total: read.count, complete: read.complete };
+  cache.set(key, { at: read.complete ? Date.now() : Date.now() - TTL + 60_000, data });
   return data;
 }
 
@@ -138,7 +161,9 @@ Deno.serve(async (req) => {
       return json(data);
     }
     const st = u.searchParams.get("stores");
-    if (st != null) return json(st.trim().length >= 2 ? await stores(st.trim().slice(0, 60)) : []);
+    if (st != null) return json(st.trim().length >= 2 ? await stores(st.trim().slice(0, 60)) : { stores: [], total: 0, complete: true });
+    const si = u.searchParams.get("store_info");
+    if (si != null) return /^\d{1,12}$/.test(si) && +si >= 1 ? json(await storeInfo(+si)) : json({ error: "bad store" }, 400);
     const g = u.searchParams.get("geocode");
     if (g) return json(g.trim().length >= 2 ? await geocode(g.trim().slice(0, 100)) : null);
     const lat = num(u.searchParams.get("lat"), -90, 90), lng = num(u.searchParams.get("lng"), -180, 180);

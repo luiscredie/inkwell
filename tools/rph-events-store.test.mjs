@@ -34,12 +34,57 @@ test('?stores=: Lorcana stores only, each store once, with id, city and address'
   answer = playHub; calls = [];
   const { status, body } = await get('stores=Colecionaveis');
   assert.equal(status, 200);
-  assert.deepEqual(body.map((s) => s.id), [17531, 17617, 17543]);   // 6 rows (Lorcana + Riftbound) -> 3 stores
-  const s = body.find((x) => x.id === 17617);
+  assert.deepEqual(body.stores.map((s) => s.id), [17531, 17617, 17543]);   // 6 rows (Lorcana + Riftbound) -> 3 stores
+  assert.equal(body.complete, true);
+  const s = body.stores.find((x) => x.id === 17617);
   assert.equal(s.city, 'Campinas');
   assert.ok(!/\n/.test(s.address) && /Av Brasil 1456/.test(s.address));
-  assert.equal(calls.at(-1).searchParams.get('search'), 'Colecionaveis');
-  assert.deepEqual((await get('stores=a')).body, []);   // too short: no call
+  const q = calls.at(-1).searchParams;
+  assert.deepEqual([q.get('search'), q.get('game_id'), q.get('page_size')], ['Colecionaveis', '1', '100']);   // Lorcana filtered on the Play Hub's side
+  assert.deepEqual((await get('stores=a')).body, { stores: [], total: 0, complete: true });   // too short: no call
+});
+
+// /game-stores/ pages (game_id=1, 05/11/2026: "games" matched 1540 Lorcana stores; page_size up to 1000 accepted)
+const gsRow = (i, game = 'disney-lorcana') => ({ id: 'gs-' + i + game, game: { slug: game }, store: { id: 30000 + i, name: 'Loja ' + i, city: 'Cidade ' + i, full_address: 'Rua ' + i } });
+const gsPages = (rows, size) => (u) => {
+  if (!u.pathname.endsWith('/game-stores/')) return playHub(u);
+  const page = +u.searchParams.get('page'), n = +u.searchParams.get('page_size') || size, b = (page - 1) * n;
+  return { count: rows.length, results: rows.slice(b, b + n), next_page_number: b + n < rows.length ? page + 1 : null };
+};
+test('?stores=: a Lorcana store that is only on the second page is found; each store once', async () => {
+  const rows = [...Array.from({ length: 100 }, (_, i) => gsRow(i)), gsRow(150), { ...gsRow(3), id: 'gs-3-second-row' }, gsRow(151, 'riftbound')];   // #30150 on page 2; #30003 in a second row
+  answer = gsPages(rows); calls = [];
+  const { body } = await get('stores=Loja2');
+  assert.ok(body.stores.some((s) => s.id === 30150), 'store from page 2');
+  assert.equal(body.stores.length, 101);
+  assert.equal(new Set(body.stores.map((s) => s.id)).size, 101);
+  assert.ok(!body.stores.some((s) => s.id === 30151), 'other games out');
+  assert.equal(body.complete, true);
+  assert.deepEqual(calls.filter((u) => u.pathname.endsWith('/game-stores/')).map((u) => u.searchParams.get('page')), ['1', '2']);
+});
+test('?stores=: more rows than the safe limit (300) or a page that fails: marked incomplete, not hidden', async () => {
+  answer = gsPages(Array.from({ length: 1540 }, (_, i) => gsRow(i))); calls = [];
+  const big = (await get('stores=games')).body;
+  assert.deepEqual([big.stores.length, big.total, big.complete], [300, 1540, false]);
+  assert.equal(calls.filter((u) => u.pathname.endsWith('/game-stores/')).length, 3);
+  const rows = Array.from({ length: 150 }, (_, i) => gsRow(1000 + i));
+  answer = (u) => (u.pathname.endsWith('/game-stores/') && u.searchParams.get('page') === '2' ? new Error('down') : gsPages(rows)(u));
+  const cut = (await get('stores=cut')).body;
+  assert.deepEqual([cut.stores.length, cut.complete], [100, false]);
+});
+
+test('?store_info=: the Play Hub\'s own name and address for a store id (from its events); unknown ids are not found', async () => {
+  answer = (u) => (u.pathname.endsWith('/events/') ? (u.searchParams.get('store') === '17617' ? { count: 23, results: [FIX.store_events.results[0]] } : { count: 0, results: [] }) : playHub(u));
+  calls = [];
+  const ok = (await get('store_info=17617')).body;
+  assert.equal(ok.found, true);
+  assert.equal(ok.store.id, 17617);
+  assert.match(ok.store.name, /Muito Colecionaveis/);
+  assert.equal(ok.events, 23);
+  const q = calls.at(-1).searchParams;
+  assert.ok(!q.has('display_statuses'), 'past events count too');
+  assert.deepEqual((await get('store_info=424242')).body, { found: false, store: null, events: 0 });
+  for (const bad of ['x', '0', '1234567890123']) assert.equal((await get('store_info=' + bad)).status, 400);
 });
 
 test('?store=: the store\'s events with the same categories, no location needed', async () => {

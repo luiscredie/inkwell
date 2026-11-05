@@ -76,7 +76,12 @@
     "Phone {a} · Computer {b}": "Celular {a} · Computador {b}", "No cookies or IP: a visit is one open browser tab. Admins and “do not track” browsers aren't counted. Kept 90 days.": "Sem cookies nem IP: uma visita é uma aba aberta do navegador. Admins e navegadores com “não rastrear” não contam. Guardado por 90 dias.", "Communities": "Comunidades", "{n} members": "{n} membros", "{n} posts": "{n} mensagens",
     "See": "Ver", "Open trial": "Teste aberto", "Started (example, pasted list or profile)": "Começaram (exemplo, lista colada ou perfil)", "Saw the deck result": "Viram o resultado do deck",
     "Pressed “Create account and save”": "Apertaram “Criar conta e salvar”", "Saved in the account": "Salvaram na conta", "Counts of actions, once per page view; a person who tries twice counts twice.": "Contagem de ações, uma por página vista; quem tenta duas vezes conta duas.", "Feedback": "Feedback", "Bug": "Erro", "Idea": "Sugestão", "Other": "Outro", "Open": "Abertos", "All": "Todos", "Member": "Membro", "Visitor": "Visitante", "Reply by e-mail": "Responder por e-mail", "Reopen": "Reabrir", "No feedback.": "Nenhum feedback.", "Run supabase/feedback.sql to receive feedback.": "Rode o supabase/feedback.sql para receber feedback.", "Show": "Mostrar", "Hide": "Ocultar", "Delete": "Excluir", "No communities.": "Nenhuma comunidade.", "Store links to check": "Vínculos de loja para conferir", "Check on the Play Hub that this community represents the store before approving.": "Confira no Play Hub que esta comunidade representa a loja antes de aprovar.",
-    "Approve": "Aprovar", "Refuse": "Recusar", "Already verified for another community": "Já verificada para outra comunidade", "asked by {n}": "pedido por {n}", "{n} members": "{n} membros",
+    "Approve": "Aprovar", "Refuse": "Recusar",
+    "Requested: {v}": "Pedido: {v}", "Play Hub: {v}": "Play Hub: {v}", "Checking on the Play Hub…": "Consultando o Play Hub…", "The requested name is not the Play Hub's": "O nome pedido não é o do Play Hub",
+    "This store has no event on the Play Hub, so its name can't be checked here. Check it yourself before approving.": "Esta loja não tem evento no Play Hub, então o nome não pode ser conferido aqui. Confira por fora antes de aprovar.",
+    "Couldn't reach the Play Hub. Check it yourself, or try again.": "Não foi possível consultar o Play Hub. Confira por fora ou tente de novo.",
+    "I checked myself that this community represents store ID {id}": "Conferi por fora que esta comunidade representa a loja ID {id}", "How you checked (required)": "Como você conferiu (obrigatório)",
+    "Approving saves the Play Hub's name and address, not the requested ones.": "Ao aprovar, ficam o nome e o endereço do Play Hub, não os do pedido.", "Already verified for another community": "Já verificada para outra comunidade", "asked by {n}": "pedido por {n}", "{n} members": "{n} membros",
   };
   const fill = (s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)) : s);
   const Tx = (en, v) => fill(lang === "pt" && en in PT ? PT[en] : en, v);
@@ -85,10 +90,10 @@
   const CLOUD = window.INKWELL_CLOUD, me = CLOUD?.user();
   const rpc = (name, body = {}) => CLOUD.api(`rpc/${name}`, { method: "POST", body });
   let feedback = [], fbFilter = "open";
-  let users = [], reports = [], comms = [], storeLinks = [], tab = new URLSearchParams(location.search).get("tab") === "feedback" ? "feedback" : "stats", q = "", armed = null, stats = null, statDays = 14, statErr = "";
+  let users = [], reports = [], comms = [], storeLinks = [], manual = {}, tab = new URLSearchParams(location.search).get("tab") === "feedback" ? "feedback" : "stats", q = "", armed = null, stats = null, statDays = 14, statErr = "";
 
   function emptyBox(img, title, text, extra = "") { return `<div class="empty"><img src="../ui/assets/empty/${img}.svg" alt=""><b>${esc(title)}</b><p>${esc(text)}</p>${extra}</div>`; }
-  async function load() { [users, reports, comms, feedback] = await Promise.all([rpc("admin_users"), rpc("admin_reports"), rpc("admin_communities").catch(() => []), rpc("admin_feedback").catch(() => null)]); storeLinks = (await rpc("admin_community_stores", { p_status: "pending" }).catch(() => [])) || []; users = users || []; reports = reports || []; comms = comms || []; }
+  async function load() { [users, reports, comms, feedback] = await Promise.all([rpc("admin_users"), rpc("admin_reports"), rpc("admin_communities").catch(() => []), rpc("admin_feedback").catch(() => null)]); storeLinks = (await rpc("admin_community_stores", { p_status: "pending" }).catch(() => [])) || []; checkStores(); users = users || []; reports = reports || []; comms = comms || []; }
   // ---------- Feedback: supabase/feedback.sql ----------
   const FB_KIND = { bug: ["Bug", "late"], idea: ["Idea", "info"], other: ["Other", ""] };
   function feedbackHtml() {
@@ -120,9 +125,7 @@
             <span class="small faint">${esc([Tx("joined {d}", { d: dt(u.created_at) }), u.last_sign_in_at ? Tx("last sign-in {d}", { d: dt(u.last_sign_in_at) }) : Tx("never signed in"), Tx("{n} games", { n: u.games })].join(" · "))}</span></div>
           <div class="adm-acts">${u.handle && u.is_public ? `<a class="btn small ghost" href="../perfil/?u=${esc(u.handle)}">${Tx("See profile")}</a>` : ""}${btn(u, u.hidden ? "unhide" : "hide", u.hidden ? "Show profile" : "Hide profile")}${btn(u, "signout", "Sign out everywhere")}${btn(u, "delete", "Delete account", "danger")}</div></div>`).join("")}</div>`
       : tab === "comms" ? `${storeLinks.length ? `<section class="card" data-testid="admin-store-links" style="margin-bottom:var(--sp-3)"><b>${Tx("Store links to check")}</b><p class="small muted" style="margin:4px 0 var(--sp-2)">${Tx("Check on the Play Hub that this community represents the store before approving.")}</p>
-          ${storeLinks.map((x) => `<div class="adm-row" data-slink="${esc(x.community_id)}"><div class="t"><b>${esc(x.community)} → ${esc(x.name)}</b><span class="small muted">${esc([x.city, x.address, "ID " + x.store_id, x.requested_by ? Tx("asked by {n}", { n: x.requested_by }) : "", dt(x.requested_at)].filter(Boolean).join(" · "))}</span>
-            ${x.verified_elsewhere ? `<div class="tags"><span class="tag warn">${Tx("Already verified for another community")}</span></div>` : ""}</div>
-            <div class="adm-acts"><a class="btn small ghost" href="../comunidades/?c=${esc(x.slug)}">${Tx("See")}</a><button type="button" class="btn small" data-sdec="approved" data-c="${esc(x.community_id)}" ${x.verified_elsewhere ? "disabled" : ""}>${Tx("Approve")}</button><button type="button" class="btn small ghost" data-sdec="rejected" data-c="${esc(x.community_id)}">${Tx("Refuse")}</button></div></div>`).join("")}</section>` : ""}<div data-testid="admin-comms">${comms.length ? comms.map((c) => `<div class="adm-row"><div class="t"><b>${esc(c.name)}</b><span class="small muted">${esc([c.city, c.owner ? Tx("by {n}", { n: c.owner }) : ""].filter(Boolean).join(" · "))}</span>
+          ${storeLinks.map(storeLinkRow).join("")}</section>` : ""}<div data-testid="admin-comms">${comms.length ? comms.map((c) => `<div class="adm-row"><div class="t"><b>${esc(c.name)}</b><span class="small muted">${esc([c.city, c.owner ? Tx("by {n}", { n: c.owner }) : ""].filter(Boolean).join(" · "))}</span>
             <div class="tags">${c.mock ? `<span class="tag accent">${Tx("example")}</span>` : ""}${c.hidden ? `<span class="tag warn">${Tx("hidden")}</span>` : ""}<span class="tag">${esc(Tx("{n} members", { n: c.members }))}</span><span class="tag">${esc(Tx("{n} posts", { n: c.posts }))}</span></div></div>
           <div class="adm-acts">${c.hidden ? "" : `<a class="btn small ghost" href="../comunidades/?c=${esc(c.slug)}">${Tx("See")}</a>`}<button type="button" class="btn small" data-cact="${c.hidden ? "unhide" : "hide"}" data-c="${esc(c.id)}">${Tx(c.hidden ? "Show" : "Hide")}</button>
             <button type="button" class="btn small danger" data-cact="delete" data-c="${esc(c.id)}">${armed === `cdel:${c.id}` ? Tx("Tap again to confirm") : Tx("Delete")}</button></div></div>`).join("") : `<p class="muted">${Tx("No communities.")}</p>`}</div>`
@@ -140,7 +143,10 @@
       if (a === "delete" && armed !== `cdel:${id}`) { armed = `cdel:${id}`; render(); return; }
       run(() => rpc("admin_community", { p_id: id, p_action: a }));
     });
-    document.querySelectorAll("[data-sdec]").forEach((b) => b.onclick = () => run(() => rpc("decide_community_store", { p_community: b.dataset.c, p_decision: b.dataset.sdec })));   // community_store.sql
+    document.querySelectorAll("[data-sdec]").forEach((b) => b.onclick = () => decideStore(b.dataset.c, b.dataset.sdec));
+    document.querySelectorAll("[data-mcheck]").forEach((i) => i.onchange = () => { (manual[i.dataset.mcheck] ||= {}).ok = i.checked; render(); });
+    document.querySelectorAll("[data-mnote]").forEach((i) => i.oninput = () => { const m = (manual[i.dataset.mnote] ||= {}); const was = (m.note || "").trim().length >= 10; m.note = i.value; if (was !== (m.note.trim().length >= 10)) { render(); const j = document.querySelector(`[data-mnote="${i.dataset.mnote}"]`); j?.focus(); j?.setSelectionRange(m.note.length, m.note.length); } });
+    document.querySelectorAll("[data-recheck]").forEach((b) => b.onclick = () => { const x = storeLinks.find((y) => y.community_id === b.dataset.recheck); if (x) { x.ph = null; checkStores(); render(); } });
     document.querySelectorAll("[data-fbtext]").forEach((x) => { x.textContent = feedback.find((f) => f.id === x.dataset.fbtext)?.body || ""; });   // people's text: set as text
     document.querySelectorAll("[data-fbf]").forEach((b) => b.onclick = () => { fbFilter = b.dataset.fbf; render(); });
     document.querySelectorAll("[data-fbdone]").forEach((b) => b.onclick = () => run(() => rpc("admin_feedback_done", { p_id: b.dataset.fbdone, p_done: b.dataset.v === "true" })));
@@ -259,6 +265,45 @@
           <tbody>${(stats.refs || []).map((r) => `<tr><td>${esc(r.ref || Tx("Direct or app (WhatsApp, Instagram…)"))}</td><td>${num(r.visits)}</td></tr>`).join("") || `<tr><td colspan="2" class="muted">${Tx("Nothing yet.")}</td></tr>`}</tbody></table></div>
           <p class="small muted" style="margin:var(--sp-3) 0 0" data-testid="stats-devices">${esc(Tx("Phone {a} · Computer {b}", { a: num(stats.devices?.mobile), b: num(stats.devices?.desktop) }))}</p></section></div>
       <p class="small faint" style="margin-top:var(--sp-4)">${Tx("No cookies or IP: a visit is one open browser tab. Admins and “do not track” browsers aren't counted. Kept 90 days.")}</p>`;
+  }
+  // ---------- store links (supabase/community_store.sql): what was asked vs the Play Hub's own data for that id ----------
+  // The request comes from the community's browser, so it is never what gets approved: the Play Hub's data for the same
+  // store.id (rph-events ?store_info=) is shown next to it and saved on approval; with no Play Hub data, approving needs
+  // an explicit manual check with a note.
+  const same = (a, b) => String(a || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim() === String(b || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  function checkStores() {
+    for (const x of storeLinks) if (!x.ph) {
+      x.ph = { loading: true };
+      CLOUD.fn("rph-events", { store_info: x.store_id }).then((d) => { x.ph = d && typeof d === "object" ? d : { error: true }; }, () => { x.ph = { error: true }; }).then(() => { if (tab === "comms") render(); });
+    }
+  }
+  const manualReady = (x) => !!manual[x.community_id]?.ok && (manual[x.community_id]?.note || "").trim().length >= 10;
+  function storeLinkRow(x) {
+    const id = x.community_id, ph = x.ph || { loading: true }, m = manual[id] || {};
+    const official = ph.found && String(ph.store?.id) === String(x.store_id) ? ph.store : null;
+    const canApprove = !x.verified_elsewhere && (official || manualReady(x));
+    const manualBox = !official && !ph.loading ? `<label class="small row" style="gap:6px;margin-top:var(--sp-2)"><input type="checkbox" data-mcheck="${esc(id)}" ${m.ok ? "checked" : ""}>${esc(Tx("I checked myself that this community represents store ID {id}", { id: x.store_id }))}</label>
+        <label class="small" style="display:block;margin-top:4px">${Tx("How you checked (required)")}<input class="input" data-mnote="${esc(id)}" maxlength="300" value="${esc(m.note || "")}" style="width:100%"></label>` : "";
+    return `<div class="adm-row" data-slink="${esc(id)}"><div class="t"><b>${esc(x.community)}</b>
+        <span class="small muted">${esc(Tx("Requested: {v}", { v: [x.name, x.city, x.address, "ID " + x.store_id].filter(Boolean).join(" · ") }))}</span>
+        <span class="small" data-testid="ph-check">${ph.loading ? esc(Tx("Checking on the Play Hub…"))
+          : official ? `<b>${esc(Tx("Play Hub: {v}", { v: [official.name, official.city, official.address].filter(Boolean).join(" · ") }))}</b>${same(official.name, x.name) ? "" : ` <span class="tag warn" data-testid="ph-differs">${Tx("The requested name is not the Play Hub's")}</span>`}<br><span class="faint">${Tx("Approving saves the Play Hub's name and address, not the requested ones.")}</span>`
+          : ph.error ? `${esc(Tx("Couldn't reach the Play Hub. Check it yourself, or try again."))} <button type="button" class="btn small ghost" data-recheck="${esc(id)}">${Tx("Try again")}</button>`
+          : esc(Tx("This store has no event on the Play Hub, so its name can't be checked here. Check it yourself before approving."))}</span>
+        <span class="small faint">${esc([x.requested_by ? Tx("asked by {n}", { n: x.requested_by }) : "", dt(x.requested_at)].filter(Boolean).join(" · "))}</span>
+        ${x.verified_elsewhere ? `<div class="tags"><span class="tag warn">${Tx("Already verified for another community")}</span></div>` : ""}${manualBox}</div>
+      <div class="adm-acts"><a class="btn small ghost" href="../comunidades/?c=${esc(x.slug)}">${Tx("See")}</a><button type="button" class="btn small" data-sdec="approved" data-c="${esc(id)}" ${canApprove ? "" : "disabled"}>${Tx("Approve")}</button><button type="button" class="btn small ghost" data-sdec="rejected" data-c="${esc(id)}">${Tx("Refuse")}</button></div></div>`;
+  }
+  function decideStore(id, decision) {
+    const x = storeLinks.find((y) => y.community_id === id); if (!x) return;
+    const official = x.ph?.found && String(x.ph.store?.id) === String(x.store_id) ? x.ph.store : null, m = manual[id] || {};
+    const body = { p_community: id, p_decision: decision };
+    if (decision === "approved") {
+      if (official) body.p_check = { method: "playhub", store: official };
+      else if (manualReady(x)) { body.p_check = { method: "manual", confirmed: true }; body.p_note = m.note.trim(); }
+      else return;
+    }
+    run(() => rpc("decide_community_store", body));   // community_store.sql checks all of this again
   }
   async function run(fn) {
     try { await fn(); await load(); armed = null; render(); toast(Tx("Done")); }

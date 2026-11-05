@@ -554,7 +554,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "* Type identified by Inkwell from the events on the Play Hub; not an official Ravensburger label.": "* Tipo identificado pelo Inkwell a partir dos eventos do Play Hub; não é uma classificação oficial da Ravensburger.",
     "Search by the store's name as it appears on the Play Hub.": "Busque pelo nome da loja como aparece no Play Hub.", "Store name": "Nome da loja", "Search": "Buscar",
     "No Lorcana store with that name on the Play Hub.": "Nenhuma loja de Lorcana com esse nome no Play Hub.", "Couldn't search now. Try again.": "Não foi possível buscar agora. Tente de novo.",
-    "Choose": "Escolher", "Current store": "Loja atual", "Remove the link": "Remover o vínculo", "Link removed.": "Vínculo removido.",
+    "Choose": "Escolher", "Too many stores with that name: only part of them is listed. Type more of the name.": "Muitas lojas com esse nome: só parte delas aparece. Digite mais do nome.", "Current store": "Loja atual", "Remove the link": "Remover o vínculo", "Link removed.": "Vínculo removido.",
     "After you choose, an Inkwell admin checks it before the community shows as verified. The events show up already, marked as not verified.": "Depois da escolha, um admin da Inkwell confere antes de a comunidade aparecer como verificada. Os eventos já aparecem, marcados como não verificados.",
     "Request sent. An Inkwell admin will check it.": "Pedido enviado. Um admin da Inkwell vai conferir.", "This store is already verified for another community.": "Esta loja já está verificada para outra comunidade.",
     "Admin note: {n}": "Nota do admin: {n}", "under review": "em análise", "verified": "verificada", "refused": "recusada",
@@ -735,7 +735,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   }
   function openStore() {
     const sh = $("sheet"), c = view;
-    let q2 = "", res = null, msg = "", busy = false, armedRm = false;
+    let q2 = "", res = null, partial = false, msg = "", busy = false, armedRm = false;
     const stTag = (s) => `<span class="tag ${s.status === "approved" ? "match" : s.status === "pending" ? "info" : "late"}">${Tx(s.status === "approved" ? "verified" : s.status === "pending" ? "under review" : "refused")}</span>`;
     const draw = () => {
       const s = c.store;
@@ -745,6 +745,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
             ${s.note ? `<div class="small" style="margin-top:4px">${esc(Tx("Admin note: {n}", { n: s.note }))}</div>` : ""}<button type="button" class="btn small ghost" id="stRm" style="margin-top:var(--sp-2)">${Tx(armedRm ? "Tap again to confirm" : "Remove the link")}</button></div>` : ""}
           <form class="form" id="stF" role="search"><label class="field">${Tx("Store name")}<span class="row" style="gap:6px;flex-wrap:nowrap"><input id="stQ" type="search" minlength="2" maxlength="60" value="${esc(q2)}" autocomplete="off"><button type="submit" class="btn" ${busy ? "disabled" : ""}>${Tx("Search")}</button></span><span class="hint">${Tx("Search by the store's name as it appears on the Play Hub.")}</span></label></form>
           ${res === null ? "" : res.length ? `<div style="display:grid;gap:var(--sp-2)" data-testid="store-results">${res.map((x) => `<div class="card row between" style="gap:var(--sp-2)"><div style="min-width:0"><b>${esc(x.name)}</b><div class="small muted">${esc([[x.city, x.state].filter(Boolean).join(" - "), x.address, "ID " + x.id].filter(Boolean).join(" · "))}</div></div><button type="button" class="btn small primary" data-pickstore="${esc(x.id)}">${Tx("Choose")}</button></div>`).join("")}</div>` : `<p class="muted" data-testid="store-noresult">${Tx("No Lorcana store with that name on the Play Hub.")}</p>`}
+          ${res && partial ? `<p class="small muted" data-testid="store-partial-search">${Tx("Too many stores with that name: only part of them is listed. Type more of the name.")}</p>` : ""}
           <p class="small" id="stMsg" role="alert">${esc(msg)}</p>
           <p class="small faint">${Tx("After you choose, an Inkwell admin checks it before the community shows as verified. The events show up already, marked as not verified.")}</p></div>`;
       sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = () => sh.close());
@@ -752,7 +753,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       $("stF").onsubmit = async (e) => {
         e.preventDefault(); if (q2.trim().length < 2) { $("stQ").focus(); return; }
         busy = true; msg = ""; draw();
-        try { res = (await CLOUD.fn("rph-events", { stores: q2.trim() })) || []; } catch { res = null; msg = Tx("Couldn't search now. Try again."); }
+        try { const d = await CLOUD.fn("rph-events", { stores: q2.trim() }); res = Array.isArray(d?.stores) ? d.stores : []; partial = d?.complete === false; }
+        catch { res = null; msg = Tx("Couldn't search now. Try again."); }
         busy = false; draw(); (sh.querySelector("[data-pickstore]") || $("stQ")).focus();
       };
       sh.querySelectorAll("[data-pickstore]").forEach((b) => b.onclick = async () => {
