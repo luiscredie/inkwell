@@ -13,7 +13,7 @@ const EVENTS = [
   { id: 103, name: 'Draft de sábado', start: at(6, 15), format: 'Sealed', cost_cents: 9000, currency: 'BRL', capacity: 8, registered: 2, address: 'Rua C, 3', km: 80, store: { name: 'Loja C' }, url: 'https://tcg.ravensburgerplay.com/events/103' },
 ];
 
-async function setup(page, { signedIn = true, where = true, extraMarks = [] } = {}) {
+async function setup(page, { signedIn = true, where = true, extraMarks = [], events = EVENTS } = {}) {
   const calls = [];
   await page.addInitScript(([me, signed, w]) => {
     localStorage.setItem('inkwell-lang', 'pt');
@@ -25,7 +25,7 @@ async function setup(page, { signedIn = true, where = true, extraMarks = [] } = 
   await page.route('**/functions/v1/rph-events**', (route) => {
     const q = new URL(route.request().url()).searchParams;
     calls.push({ path: 'fn', q: Object.fromEntries(q) });
-    const body = q.get('geocode') ? { lat: -22.9, lng: -47.06, label: 'Campinas, SP, BR' } : { events: EVENTS, total: 3 };
+    const body = q.get('geocode') ? { lat: -22.9, lng: -47.06, label: 'Campinas, SP, BR' } : { events, total: events.length };
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
   });
   await page.route('https://nominatim.openstreetmap.org/**', (route) => {
@@ -271,4 +271,88 @@ test('no events nearby: a friendly empty state that offers a wider radius', asyn
   await expect(e).toContainText('Nenhum evento aqui por enquanto');
   await e.getByTestId('wider').click();
   await expect.poll(() => calls.filter((c) => c.path === 'fn').at(-1)?.q.km).toBe('200');
+});
+
+// types (rph-events/categories.js) + search: what the function now sends, incl. an unknown id and a suspended one
+const TYPED = [
+  { ...EVENTS[0], id: 201, name: 'Weekly Play (Constructed)', category: 'weekly', category_source: 'api', template_name: 'Weekly Play (Constructed)', store: { name: 'Pimp My Deck', city: 'São Paulo' } },
+  { ...EVENTS[0], id: 202, name: 'Gold House Into the Inkdark Prerelease (Sealed)', format: 'Sealed', category: 'prerelease', category_source: 'observed', template_name: null, address: 'Rua das Flores, 10, Campinas', store: { name: 'Gold House', city: 'Campinas' } },
+  { ...EVENTS[0], id: 203, name: 'Hyperia City Set Championship', category: 'set_championship', category_source: 'observed', template_name: null, store: { name: 'Banzai', city: 'Santos' } },
+  { ...EVENTS[0], id: 204, name: 'Torneio misterioso', category: 'other', category_source: 'unknown', template_id: 'nope', template_name: null, store: { name: 'Loja X', city: 'Sorocaba' } },
+  { ...EVENTS[0], id: 205, name: 'liga', category: 'set_championship', category_source: 'observed', name_divergence: true, template_name: null, store: { name: 'Garbosa TCG', city: 'Jundiaí' } },   // #1007371's case
+  { ...EVENTS[0], id: 206, name: 'Evento antigo do app' },   // an older function: no category at all
+];
+
+test('types: combinable chips, a flagged name keeps its type, unknown ids under Outros, nothing disappears', async ({ page }) => {
+  const calls = await setup(page, { events: TYPED });
+  await page.goto(url('eventos/'));
+  await expect(page.locator('.ev')).toHaveCount(8);   // 6 events + my community table + my marked #102 (out of range): none lost
+  await expect(page.locator('[data-ev="rph:202"] [data-testid="cat"]')).toHaveText('Pré-release*');
+  await expect(page.locator('[data-ev="rph:202"] [data-testid="cat"]')).toHaveAttribute('data-src', 'observed');
+  await expect(page.locator('[data-ev="rph:201"] [data-testid="cat"]')).toHaveText('Weekly Play/Liga');
+  await expect(page.locator('[data-testid="observed-note"]')).toContainText('não é uma classificação oficial');
+  await page.locator('[data-ev="rph:202"] [data-act="going"]').click();   // the type is kept with the mark, for when it leaves the search
+  await expect.poll(() => calls.find((c) => c.path === 'rpc/mark_event')?.body.p_snap).toMatchObject({ category: 'prerelease', category_source: 'observed' });
+  const chip = (k) => page.locator(`.ev-find [data-cat="${k}"]`);
+  await expect(chip('celebration')).toHaveCount(0);   // no event of that type: no empty chip
+  await expect(page.locator('[data-ev="rph:205"] [data-testid="cat"]')).toHaveText('Set Championship*');   // "liga": the template decides
+  await expect(chip('set_championship')).toContainText('2');
+  await expect(chip('other')).toContainText('3');     // unknown id, no category, and the marked #102 kept from an old snapshot
+  await chip('prerelease').click();
+  await expect(page.locator('.ev')).toHaveCount(1);
+  await chip('set_championship').click();             // combinable: Pré-release OR Set Championship
+  await expect(page.locator('.ev')).toHaveCount(3);
+  await chip('prerelease').click(); await chip('set_championship').click();
+  await chip('other').click();
+  await expect(page.locator('[data-ev="rph:204"], [data-ev="rph:206"], [data-ev="rph:102"]')).toHaveCount(3);
+  await expect(page.locator('.ev')).toHaveCount(3);
+  await chip('tables').click();
+  await expect(page.locator('[data-ev="tb:e1"]')).toHaveCount(1);
+  await expect(page.locator('.ev')).toHaveCount(4);
+  await page.locator('#q').fill('liga');              // type + search combine: only "Liga de quinta" (table); "liga" is Set Championship
+  await expect(page.locator('.ev')).toHaveCount(1);
+  await chip('set_championship').click();
+  await expect(page.locator('[data-ev="rph:205"], [data-ev="tb:e1"]')).toHaveCount(2);
+  await expect(page.locator('.ev')).toHaveCount(2);
+});
+
+test('search by name, store, city and address, with the format filter; kept on the device; empty state clears', async ({ page }) => {
+  await setup(page, { events: TYPED });
+  await page.goto(url('eventos/'));
+  const q = page.locator('#q');
+  await q.fill('inkdark');                         await expect(page.locator('.ev')).toHaveCount(1);
+  await q.fill('banzai');                          await expect(page.locator('[data-ev="rph:203"]')).toHaveCount(1);
+  await q.fill('jundiai');                         await expect(page.locator('[data-ev="rph:205"]')).toHaveCount(1);   // city, no accent
+  await q.fill('rua das flores');                  await expect(page.locator('[data-ev="rph:202"]')).toHaveCount(1);
+  await q.pressSequentially(' ');                  await expect(q).toBeFocused();   // typing keeps the focus
+  await q.fill('campinas');
+  await page.locator('#fmt').selectOption('Sealed');
+  await expect(page.locator('.ev')).toHaveCount(1);
+  await page.locator('#q').fill('banzai');                              // search + format (Banzai is Core Constructed): nothing
+  await expect(page.locator('.ev')).toHaveCount(0);
+  await expect(page.locator('[data-testid="filters-empty"]')).toContainText('Nenhum evento com esses filtros');
+  await page.reload();                                                  // the search is remembered, the rest is not
+  await expect(page.locator('#q')).toHaveValue('banzai');
+  await expect(page.locator('.ev')).toHaveCount(1);                     // the format filter was not kept
+  await page.locator('#q').fill('zzz');
+  await page.locator('[data-testid="clear-filters-empty"]').click();
+  await expect(page.locator('#q')).toHaveValue('');
+  await expect(page.locator('.ev')).toHaveCount(8);
+  expect(await page.evaluate(() => localStorage.getItem('inkwell-events-q'))).toBeNull();
+});
+
+test('an incomplete answer from the Play Hub: the events that came are shown, with a notice and a retry', async ({ page }) => {
+  const calls = await setup(page, { signedIn: false });
+  let n = 0;
+  await page.route('**/functions/v1/rph-events**', (route) => {
+    calls.push({ path: 'fn' }); n++;
+    const body = n === 1 ? { events: EVENTS, total: 4, received: 3, complete: false, issues: [{ kind: 'missing', count: 4, received: 3, missing: 1 }] } : { events: EVENTS, total: 3, received: 3, complete: true, issues: [] };
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+  });
+  await page.goto(url('eventos/'));
+  await expect(page.locator('.ev')).toHaveCount(3);
+  await expect(page.getByTestId('partial')).toContainText('O Play Hub informou 4 eventos, mas só recebemos 3');
+  await page.locator('#retryP').click();
+  await expect(page.getByTestId('partial')).toHaveCount(0);
+  await expect(page.locator('.ev')).toHaveCount(3);
 });

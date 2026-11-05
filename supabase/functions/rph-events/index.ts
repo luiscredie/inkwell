@@ -1,9 +1,11 @@
 // rph-events: Disney Lorcana events near a place, from the Ravensburger Play Hub (tcg.ravensburgerplay.com),
 // for the Eventos page. Public data, no key (the same API the Play Hub site uses); cached here for 15 minutes.
-//   GET ?lat=-23.55&lng=-46.63&km=100&from=2026-10-27&to=2027-01-31   -> { events: [...], total }
+//   GET ?lat=-23.55&lng=-46.63&km=100&from=2026-10-27&to=2027-01-31   -> { events: [...], total, received, complete, issues, divergences }
 //   GET ?geocode=Campinas                                               -> { lat, lng, label } (Open-Meteo geocoder)
 //   GET ?id=904881                                                      -> one event (to link a community table)
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { categorize, reviewObserved } from "./categories.js";
+import { fetchAll } from "./paginate.js";
 
 const API = "https://api.cloudflare.ravensburgerplay.com/hydraproxy/api/v2";
 const HEADERS = { "Content-Type": "application/json", Referer: "https://tcg.ravensburgerplay.com/" };
@@ -16,9 +18,10 @@ const json = (v: unknown, status = 200) => new Response(JSON.stringify(v), { sta
 const num = (v: string | null, lo: number, hi: number) => { const n = Number(v); return Number.isFinite(n) && n >= lo && n <= hi ? n : null; };
 const day = (v: string | null) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
 
-function slim(e: Json) {
+function slim(e: Json, templates: Record<string, string> = {}) {
   const s = e.store || {};
   return {
+    ...categorize(e, templates),   // template_id, template_name, category, category_source (+ name_divergence)
     id: e.id, name: e.name, start: e.start_datetime, end: e.end_datetime || null,
     format: e.gameplay_format?.name || null, type: e.event_type || e.event_format || null,
     cost_cents: e.cost_in_cents ?? null, currency: e.currency || null,
@@ -32,25 +35,43 @@ function slim(e: Json) {
   };
 }
 
+// template id -> name (Weekly Play (Constructed), Learn-to-Play…). Best effort: if it fails, events still load
+// and only the observed ids get a category (see categories.js).
+let tpl: { at: number; data: Record<string, string> } | null = null;
+async function templates() {
+  if (tpl && Date.now() - tpl.at < 6 * 3600e3) return tpl.data;
+  try {
+    const r = await fetch(`${API}/event-configuration-templates/?game_slug=disney-lorcana`, { headers: HEADERS });
+    if (!r.ok) throw new Error(`templates ${r.status}`);
+    const d = await r.json(), list = Array.isArray(d) ? d : d?.results || [];
+    tpl = { at: Date.now(), data: Object.fromEntries(list.filter((t: Json) => t?.id && t?.name).map((t: Json) => [t.id, t.name])) };
+  } catch (e) { console.warn("rph-events: templates unavailable", String(e)); return tpl?.data || {}; }
+  return tpl.data;
+}
+
 async function events(lat: number, lng: number, km: number, from: string, to: string) {
   const key = [lat.toFixed(2), lng.toFixed(2), km, from, to].join("|");
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < TTL) return hit.data;
-  const out: Json[] = [];
-  let total = 0;
-  for (let page = 1; page <= 5; page++) {
+  // every page, each event once; a short or interrupted read is reported (paginate.js), never hidden
+  const read = await fetchAll(async (page: number, size: number) => {
     const q = new URLSearchParams({ game_slug: "disney-lorcana", latitude: String(lat), longitude: String(lng), num_miles: String(Math.round(km / 1.609)),
-      page: String(page), page_size: "100", start_date_after: `${from}T00:00:00Z`, start_date_before: `${to}T23:59:59Z` });
+      page: String(page), page_size: String(size), start_date_after: `${from}T00:00:00Z`, start_date_before: `${to}T23:59:59Z` });
     q.append("display_statuses", "upcoming"); q.append("display_statuses", "inProgress");
-    const r = await fetch(`${API}/events/?${q}`, { headers: HEADERS });
+    const r = await fetch(`${API}/events/?${q}`, { headers: HEADERS, signal: AbortSignal.timeout(10000) });
     if (!r.ok) throw new Error(`play hub ${r.status}`);
-    const d = await r.json();
-    total = d.count ?? d.total ?? 0;
-    out.push(...(d.results || []).map(slim));
-    if (!d.next_page_number) break;
-  }
-  const data = { events: out.sort((a, b) => String(a.start).localeCompare(String(b.start))), total };
-  cache.set(key, { at: Date.now(), data });
+    return await r.json();
+  });
+  // monitoring: these lines are the ones to watch in the function's logs
+  if (!read.complete) console.warn("rph-events: incomplete", JSON.stringify({ key, count: read.count, received: read.received, issues: read.issues }));
+  else if (read.issues.length) console.info("rph-events: pagination", JSON.stringify({ key, count: read.count, received: read.received, issues: read.issues }));
+  const t = await templates();
+  const divergences = reviewObserved(read.events, t);   // flagged names, for investigation; categories are not changed
+  if (divergences.length) console.warn("rph-events: event names that disagree with an observed template", JSON.stringify(divergences));
+  const out = read.events.map((e) => slim(e, t));
+  const data = { divergences, events: out.sort((a, b) => String(a.start).localeCompare(String(b.start))), total: read.count,
+    received: read.received, complete: read.complete, issues: read.issues };
+  cache.set(key, { at: read.complete ? Date.now() : Date.now() - TTL + 60_000, data });   // an incomplete read is kept 1 minute only
   return data;
 }
 
@@ -89,7 +110,7 @@ Deno.serve(async (req) => {
       if (!r.ok) throw new Error(`play hub ${r.status}`);
       const e = await r.json();
       if (e?.game?.slug && e.game.slug !== "disney-lorcana") return json(null, 404);
-      const data = slim(e);
+      const data = slim(e, await templates());   // same rule as the list: the category depends on the template only
       cache.set("id|" + id, { at: Date.now(), data });
       return json(data);
     }

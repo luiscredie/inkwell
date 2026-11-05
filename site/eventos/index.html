@@ -300,6 +300,8 @@ window.INKWELL_CLOUD = (() => {
 .ev-consent { display: flex; gap: var(--sp-3); align-items: flex-start; padding: var(--sp-3) var(--sp-4); border-radius: var(--r-lg); background: var(--surface-1); border: 1px dashed var(--line-strong); margin: calc(-1 * var(--sp-1)) 0 var(--sp-3); cursor: pointer; }
 .ev-consent input { margin-top: 3px; width: 18px; height: 18px; flex: none; }
 .ev-consent small { display: block; color: var(--text-2); margin-top: 2px; }
+.ev-find { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; margin-bottom: var(--sp-3); }
+.ev-find input { flex: 1 1 220px; min-width: 0; }
 .ev-more { display: flex; justify-content: center; margin-top: var(--sp-4); }
 .ev .acts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 4px; }
 .ev .linked { font-size: var(--fs-small); color: var(--text-2); }
@@ -345,7 +347,19 @@ window.INKWELL_CLOUD = (() => {
   let where = null; try { where = JSON.parse(localStorage.getItem(LOC_KEY) || "null"); } catch { where = null; }
   let km = where?.km || 100, view = "list", day = null, month = null, onlyMine = false, onlyFree = false, fmt = "", order = "date", horizon = 14, pastN = 10;
   try { order = localStorage.getItem("inkwell-events-order") === "km" ? "km" : "date"; } catch { /* */ }
-  let linked = {}, events = [], marks = new Map(), friends = {}, tables = [], loading = false, failed = false;
+  // search (kept on this device) and event types (combinable; none ticked = all). The type comes from rph-events
+  // (categories.js): the Play Hub template, or an observed id; anything not recognised is "other", never dropped.
+  const Q_KEY = "inkwell-events-q";
+  let q = ""; try { q = localStorage.getItem(Q_KEY) || ""; } catch { /* */ }
+  const cats = new Set();
+  const CATS = [["prerelease", "Pré-release", "Prerelease"], ["set_championship", "Set Championship", "Set Championship"], ["weekly", "Weekly Play/Liga", "Weekly Play"],
+    ["celebration", "Championship Celebration", "Championship Celebration"], ["other", "Outros", "Other"], ["tables", "Mesas da comunidade", "Community tables"]];
+  const catOf = (e) => (e.kind === "table" ? "tables" : CATS.some(([k]) => k === e.category && k !== "tables") ? e.category : "other");
+  const catLabel = (k) => { const c = CATS.find(([x]) => x === k); return c ? T(c[1], c[2]) : k; };
+  const norm = (t) => String(t ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const matches = (e, words) => { const hay = norm([e.name, e.store?.name, e.store?.city, e.address].join(" ")); return words.every((w) => hay.includes(w)); };
+  const filtering = () => !!(q.trim() || cats.size || fmt || onlyFree || onlyMine);
+  let partial = null, linked = {}, events = [], marks = new Map(), friends = {}, tables = [], loading = false, failed = false;
   // acct: the place kept in the account (event_places.sql), only after the person ticks the box.
   // undefined = not available (signed out, or the SQL isn't there); null = not saved; object = saved.
   let acct;
@@ -400,7 +414,8 @@ window.INKWELL_CLOUD = (() => {
     try {
       const d = await CLOUD.fn("rph-events", { lat: where.lat.toFixed(4), lng: where.lng.toFixed(4), km });
       events = (d.events || []).map((e) => ({ ...e, kind: "rph", key: "rph:" + e.id }));
-    } catch { failed = true; events = []; }
+      partial = d.complete === false ? { total: +d.total || 0, received: +d.received || events.length } : null;   // the Play Hub didn't send everything
+    } catch { failed = true; events = []; partial = null; }
     // community tables linked to these Play Hub events (community_tables.sql): shown on the event, not twice
     try { const r = events.length ? await rpc("rph_tables", { p_ids: events.map((e) => e.id).slice(0, 400) }) : {}; linked = r && !Array.isArray(r) ? r : {}; } catch { linked = {}; }
     if (me) {
@@ -418,13 +433,21 @@ window.INKWELL_CLOUD = (() => {
   // an event is past 6 hours after it starts (or when it ends); past ones leave the list for "Eventos passados"
   const isPast = (e) => { const end = e.end ? Date.parse(e.end) : Date.parse(e.start) + 6 * 3600e3; return Number.isFinite(end) && end < Date.now(); };
   const pastList = () => [...markedOnly(), ...ownTables().filter((t) => t.me)].filter(isPast).sort((a, b) => String(b.start).localeCompare(String(a.start)));
-  function all() {
+  // every filter but the type, so the type chips can show their counts
+  function base() {
     let list = [...events, ...markedOnly(), ...ownTables()].filter((e) => !isPast(e));
     if (onlyMine) list = list.filter((e) => statusOf(e));
     if (onlyFree) list = list.filter((e) => e.kind === "table" || !e.cost_cents);
     if (fmt) list = list.filter((e) => e.format === fmt);
+    const words = norm(q).split(/\s+/).filter(Boolean);
+    if (words.length) list = list.filter((e) => matches(e, words));
+    return list;
+  }
+  function all() {
+    const list = cats.size ? base().filter((e) => cats.has(catOf(e))) : base();
     return list.sort((a, b) => String(a.start).localeCompare(String(b.start)));
   }
+  function clearFilters() { q = ""; cats.clear(); fmt = ""; onlyFree = false; onlyMine = false; try { localStorage.removeItem(Q_KEY); } catch { /* */ } draw(); }
   // two or more "going" on the same day
   function conflicts() {
     const byDay = new Map();
@@ -446,7 +469,7 @@ window.INKWELL_CLOUD = (() => {
     }
     const cur = marks.get(String(e.id)) || { status: null, registered: false, paid: false };
     const next = { ...cur, ...patch };
-    const snap = e.gone ? {} : { name: e.name, start: e.start, end: e.end, store: e.store?.name || null, address: e.address, url: e.url, format: e.format, cost_cents: e.cost_cents, currency: e.currency };
+    const snap = e.gone ? {} : { name: e.name, start: e.start, end: e.end, store: e.store?.name || null, address: e.address, url: e.url, format: e.format, cost_cents: e.cost_cents, currency: e.currency, category: e.category, category_source: e.category_source };   // the type follows a marked event out of range
     try {
       await rpc("mark_event", { p_rph_id: e.id, p_status: next.status, p_registered: !!next.registered, p_paid: !!next.paid, p_snap: snap });
       if (next.status) marks.set(String(e.id), { ...next, rph_id: e.id, snap: e.gone ? cur.snap : snap }); else marks.delete(String(e.id));
@@ -476,12 +499,20 @@ window.INKWELL_CLOUD = (() => {
   }
 
   // ---------- drawing ----------
+  // the type on the card; "observed" says it isn't an official Play Hub label
+  function catTag(e) {
+    if (e.kind !== "rph" || e.gone) return "";
+    const k = catOf(e), label = k === "other" ? e.template_name : catLabel(k);
+    if (!label) return "";
+    const obs = e.category_source === "observed";
+    return `<span class="tag" data-testid="cat" data-cat="${esc(k)}" data-src="${esc(e.category_source || "")}"${obs ? ` title="${esc(T("Tipo identificado pelo Inkwell a partir dos eventos do Play Hub, não informado oficialmente", "Type identified by Inkwell from Play Hub events, not an official label"))}"` : ""}>${esc(label)}${obs ? "*" : ""}</span>`;
+  }
   function evHtml(e, clash) {
     const st = statusOf(e), m = marks.get(String(e.id)), fr = e.kind === "rph" ? friends[e.id] || [] : [];
     const going = fr.filter((f) => f.status === "going"), maybe = fr.filter((f) => f.status === "maybe");
     const spots = e.capacity ? `${e.registered ?? e.going ?? 0}/${e.capacity} ${T("inscritos", "registered")}` : "";
     return `<article class="ev${st ? " mine" : ""}${clash ? " conflict" : ""}" data-ev="${esc(e.key)}">
-      <div class="top"><span class="time">${esc(hhmm(e.start))}</span><span class="name">${esc(e.name)}</span>${e.kind === "table" ? `<span class="tag info">${T("Mesa da comunidade", "Community table")}</span>` : ""}${clash ? `<span class="tag late">${T("Mesmo dia", "Same day")}</span>` : ""}${e.kind === "rph" && !e.gone ? `<span class="price${e.cost_cents ? "" : " free"}" data-testid="price">${esc(money(e.cost_cents, e.currency))}</span>` : ""}</div>
+      <div class="top"><span class="time">${esc(hhmm(e.start))}</span><span class="name">${esc(e.name)}</span>${e.kind === "table" ? `<span class="tag info">${T("Mesa da comunidade", "Community table")}</span>` : ""}${catTag(e)}${clash ? `<span class="tag late">${T("Mesmo dia", "Same day")}</span>` : ""}${e.kind === "rph" && !e.gone ? `<span class="price${e.cost_cents ? "" : " free"}" data-testid="price">${esc(money(e.cost_cents, e.currency))}</span>` : ""}</div>
       ${order === "km" && view === "list" ? `<div class="when">${esc(dayShort(e.start))}</div>` : ""}
       <div class="where1">${e.store?.name ? `<span class="store">${esc(e.store.name)}</span>` : ""}${e.format ? `<span class="muted">${esc(e.format)}</span>` : ""}</div>
       ${e.address || spots || e.km != null ? `<div class="meta sub">${e.km != null ? `<span>${e.km} km</span>` : ""}${e.address ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.address)}" target="_blank" rel="noopener">${esc(e.address)}</a>` : ""}${spots ? `<span>${esc(spots)}</span>` : ""}</div>` : ""}
@@ -525,7 +556,7 @@ window.INKWELL_CLOUD = (() => {
         return `<button type="button" data-day="${k}" class="${d.getMonth() !== first.getMonth() ? "out" : ""} ${k === todayK ? "today" : ""}" aria-pressed="${day === k}" aria-label="${esc(dayTitle(k))}: ${l.length}"><span class="n">${d.getDate()}</span><span class="dots">${l.slice(0, 8).map((e) => `<i class="${clash.has(k) && statusOf(e) === "going" ? "x" : statusOf(e) ? "go" : e.kind === "table" ? "tb" : ""}"></i>`).join("")}</span></button>`; }).join("")}</div>`;
   }
   function draw() {
-    const app = $("app");
+    const app = $("app"), typing = document.activeElement?.id === "q" ? $("q").selectionStart : null;
     const locBox = `<section class="ev-loc" data-testid="where"><div class="where">${where ? `${esc(where.label || T("Minha localização", "My location"))}<small>${T(`Até ${km} km`, `Within ${km} km`)}</small>` : T("Onde você joga?", "Where do you play?")}</div>
       <button type="button" class="btn small" id="geo"><i class="ic i-globe"></i>${T("Usar minha localização", "Use my location")}</button>
       <form id="cityF"><input id="city" type="search" placeholder="${T("ou digite cidade, bairro, endereço ou CEP", "or type a city, district, address or postcode")}" aria-label="${T("Cidade, bairro, endereço ou CEP", "City, district, address or postcode")}"><button type="submit" class="btn small">${T("Buscar", "Search")}</button></form>
@@ -537,31 +568,46 @@ window.INKWELL_CLOUD = (() => {
     const list = all(), clash = conflicts(), clashDays = new Set(clash.map(([k]) => k));
     const formats = [...new Set(events.map((e) => e.format).filter(Boolean))].sort();
     // the list shows the next two weeks first (São Paulo alone has 200+ events in four months); "Meus" shows all
-    const until = Date.now() + horizon * 864e5, cut = view === "list" && !onlyMine ? list.filter((e) => new Date(e.start).getTime() <= until) : list;
+    // a search or a type looks at every date
+    const until = Date.now() + horizon * 864e5, cut = view === "list" && !onlyMine && !q.trim() && !cats.size ? list.filter((e) => new Date(e.start).getTime() <= until) : list;
     const hidden = list.length - cut.length;
     let shown = view === "cal" && day ? list.filter((e) => dkey(e.start) === day) : cut;
     if (view === "list" && order === "km") shown = shown.slice().sort((a, b) => (a.km ?? 1e9) - (b.km ?? 1e9) || String(a.start).localeCompare(String(b.start)));
+    const counts = new Map(); for (const e of base()) counts.set(catOf(e), (counts.get(catOf(e)) || 0) + 1);
+    const chips = CATS.filter(([k]) => counts.get(k) || cats.has(k));
+    const find = `<div class="ev-find" data-testid="find"><input id="q" type="search" value="${esc(q)}" placeholder="${T("Buscar por nome, loja, cidade ou endereço", "Search by name, store, city or address")}" aria-label="${T("Buscar eventos", "Search events")}">
+      ${chips.length > 1 || cats.size ? `<div class="row" role="group" aria-label="${T("Tipo de evento", "Event type")}" style="gap:6px;flex-wrap:wrap">${chips.map(([k]) => `<button type="button" class="chipbtn" data-cat="${k}" aria-pressed="${cats.has(k)}">${esc(catLabel(k))} <span class="muted">${counts.get(k) || 0}</span></button>`).join("")}</div>` : ""}
+      ${filtering() ? `<button type="button" class="btn small ghost" id="clearF" data-testid="clear-filters">${T("Limpar filtros", "Clear filters")}</button>` : ""}</div>`;
     const groups = new Map();
     if (view === "list" && order === "km") groups.set("", shown);
     else for (const e of shown) { const k = dkey(e.start); groups.set(k, (groups.get(k) || []).concat(e)); }
     app.innerHTML = locBox + consent
       + (clash.length ? `<div class="ev-warn" role="alert" data-testid="clash"><i class="ic i-alert"></i><div>${clash.map(([k, l]) => `<div><b>${esc(dayTitle(k))}:</b> ${T("você marcou \"Vou\" em", "you said Going to")} ${l.length} ${T("eventos", "events")} (${l.map((e) => esc(e.name)).join(" · ")})</div>`).join("")}</div></div>` : "")
+      + (partial && !failed ? `<div class="ev-warn" role="status" data-testid="partial"><i class="ic i-alert"></i><div>${esc(T(`O Play Hub informou ${partial.total} eventos, mas só recebemos ${partial.received}. Alguns podem estar faltando.`, `The Play Hub reported ${partial.total} events but sent ${partial.received}. Some may be missing.`))} <button type="button" class="btn small ghost" id="retryP">${T("Tentar de novo", "Try again")}</button></div></div>` : "")
       + `<div class="ev-bar"><div class="seg" role="group" aria-label="${T("Ver", "View")}"><button type="button" data-view="list" aria-pressed="${view === "list"}">${T("Lista", "List")}</button><button type="button" data-view="cal" aria-pressed="${view === "cal"}">${T("Calendário", "Calendar")}</button></div>
         <button type="button" class="chipbtn" id="mine" aria-pressed="${onlyMine}">${T("Meus eventos", "My events")}</button><button type="button" class="chipbtn" id="free" aria-pressed="${onlyFree}">${T("Grátis", "Free")}</button>
         ${formats.length > 1 ? `<select id="fmt" class="inline" aria-label="${T("Formato", "Format")}"><option value="">${T("Todos os formatos", "All formats")}</option>${formats.map((f) => `<option ${f === fmt ? "selected" : ""}>${esc(f)}</option>`).join("")}</select>` : ""}
         ${view === "list" ? `<label class="small">${T("Ordenar", "Sort")} <select id="order" class="inline" data-testid="order"><option value="date" ${order === "date" ? "selected" : ""}>${T("por data", "by date")}</option><option value="km" ${order === "km" ? "selected" : ""}>${T("por distância", "by distance")}</option></select></label>` : ""}
-        <span class="grow"></span><span class="small muted">${loading ? T("Carregando…", "Loading…") : esc(T(`${list.length} eventos`, `${list.length} events`))}</span></div>`
+        <span class="grow"></span><span class="small muted">${loading ? T("Carregando…", "Loading…") : esc(T(`${list.length} eventos`, `${list.length} events`))}</span></div>` + find
       + (view === "cal" ? calHtml(list) + (day ? `<div class="row between" style="margin-top:var(--sp-3)"><h2 style="margin:0">${esc(dayTitle(day))}</h2><button type="button" class="btn small ghost" id="allDays">${T("Ver todos os dias", "All days")}</button></div>` : "") : "")
       + (failed ? `<div class="empty">\u003Cimg src="../ui/assets/empty/error.svg" alt=""><b>${T("Não conseguimos falar com o Play Hub agora.", "Couldn't reach the Play Hub now.")}</b><button type="button" class="btn" id="retry">${T("Tentar de novo", "Try again")}</button></div>`
         : shown.length ? [...groups.entries()].map(([k, l]) => `${(view === "cal" && day) || !k ? "" : `<h2 class="ev-day">${esc(dayTitle(k))}</h2>`}<div class="ev-list">${l.map((e) => evHtml(e, clashDays.has(dkey(e.start)) && statusOf(e) === "going")).join("")}</div>`).join("")
           + (view === "list" && hidden > 0 ? `<div class="ev-more"><button type="button" class="btn" id="more" data-testid="more">${esc(T(`Ver mais ${hidden} eventos (próximas semanas)`, `See ${hidden} more events (later weeks)`))}</button></div>` : "")
-        : loading ? `<span class="skel" style="height:120px;border-radius:var(--r-lg)"></span>` : `<div class="empty plain" data-testid="events-empty">\u003Cimg src="../ui/assets/empty/search.svg" alt=""><b>${T("Nenhum evento aqui por enquanto.", "No events here for now.")}</b><p>${km < 300 ? T("As lojas publicam os eventos no Play Hub aos poucos. Tente um raio maior ou volte em alguns dias.", "Stores add events to the Play Hub over time. Try a wider radius or come back in a few days.") : T("As lojas publicam os eventos no Play Hub aos poucos. Volte em alguns dias.", "Stores add events to the Play Hub over time. Come back in a few days.")}</p>${km < 300 ? `<button type="button" class="btn" id="wider" data-testid="wider">${esc(T(`Procurar até ${[5, 10, 25, 50, 100, 200, 300].find((k) => k > km)} km`, `Search within ${[5, 10, 25, 50, 100, 200, 300].find((k) => k > km)} km`))}</button>` : ""}</div>`)
+        : loading ? `<span class="skel" style="height:120px;border-radius:var(--r-lg)"></span>`
+        : filtering() && !(view === "cal" && day) ? `<div class="empty plain" data-testid="filters-empty">\u003Cimg src="../ui/assets/empty/search.svg" alt=""><b>${T("Nenhum evento com esses filtros.", "No events match these filters.")}</b><p>${T("Mude a busca ou os filtros, ou limpe tudo para ver todos os eventos.", "Change the search or filters, or clear them to see every event.")}</p><button type="button" class="btn" id="clearF2" data-testid="clear-filters-empty">${T("Limpar filtros", "Clear filters")}</button></div>`
+        : `<div class="empty plain" data-testid="events-empty">\u003Cimg src="../ui/assets/empty/search.svg" alt=""><b>${T("Nenhum evento aqui por enquanto.", "No events here for now.")}</b><p>${km < 300 ? T("As lojas publicam os eventos no Play Hub aos poucos. Tente um raio maior ou volte em alguns dias.", "Stores add events to the Play Hub over time. Try a wider radius or come back in a few days.") : T("As lojas publicam os eventos no Play Hub aos poucos. Volte em alguns dias.", "Stores add events to the Play Hub over time. Come back in a few days.")}</p>${km < 300 ? `<button type="button" class="btn" id="wider" data-testid="wider">${esc(T(`Procurar até ${[5, 10, 25, 50, 100, 200, 300].find((k) => k > km)} km`, `Search within ${[5, 10, 25, 50, 100, 200, 300].find((k) => k > km)} km`))}</button>` : ""}</div>`)
       + (view === "list" && me && pastList().length ? `<section class="ev-past" data-testid="past-events"><h2 class="ev-day">${T("Eventos passados", "Past events")}</h2><p class="small muted" style="margin:0 0 var(--sp-3)">${T("Os que você marcou. Diga se foi: dá para ver os resultados no Play Hub e registrar uma conquista.", "The ones you marked. Say if you went: you can see the results on the Play Hub and add an achievement.")}</p>
           <div class="ev-list">${pastList().slice(0, pastN).map(pastHtml).join("")}</div>${pastList().length > pastN ? `<div class="ev-more"><button type="button" class="btn" id="morePast">${esc(T(`Ver mais ${pastList().length - pastN}`, `See ${pastList().length - pastN} more`))}</button></div>` : ""}</section>` : "")
+      + (events.some((e) => e.category_source === "observed") ? `<p class="small faint" style="margin-top:var(--sp-6)" data-testid="observed-note">${T("* Tipo identificado pelo Inkwell a partir dos eventos publicados no Play Hub; não é uma classificação oficial da Ravensburger.", "* Type identified by Inkwell from the events on the Play Hub; not an official Ravensburger label.")}</p>` : "")
       + `<p class="small faint" style="margin-top:var(--sp-6)">${T("Eventos do Disney Lorcana Play Network (Ravensburger). A inscrição e o pagamento são feitos no Play Hub; aqui você só marca para se organizar.", "Events from the Disney Lorcana Play Network (Ravensburger). Registration and payment happen on the Play Hub; here you only mark them to plan.")}</p>`;
     wire();
+    if (typing != null && $("q")) { $("q").focus(); try { $("q").setSelectionRange(typing, typing); } catch { /* */ } }
   }
   function wire() {
+    $("q")?.addEventListener("input", (e) => { q = e.target.value; try { if (q.trim()) localStorage.setItem(Q_KEY, q); else localStorage.removeItem(Q_KEY); } catch { /* */ } draw(); });
+    document.querySelectorAll(".ev-find [data-cat]").forEach((b) => b.onclick = () => { const k = b.dataset.cat; if (cats.has(k)) cats.delete(k); else cats.add(k); draw(); });
+    $("clearF")?.addEventListener("click", clearFilters);
+    $("clearF2")?.addEventListener("click", clearFilters);
     $("wider")?.addEventListener("click", () => { km = [5, 10, 25, 50, 100, 200, 300].find((k) => k > km) || 300; save(); load(); });
     $("geo").onclick = () => {
       if (!navigator.geolocation) { toast(T("Seu navegador não informa a localização.", "Location isn't available."), true); return; }
@@ -578,6 +624,7 @@ window.INKWELL_CLOUD = (() => {
     $("free")?.addEventListener("click", () => { onlyFree = !onlyFree; draw(); });
     $("fmt")?.addEventListener("change", (e) => { fmt = e.target.value; draw(); });
     $("retry")?.addEventListener("click", load);
+    $("retryP")?.addEventListener("click", load);
     $("keepPlace")?.addEventListener("change", (e) => keepPlace(e.target.checked));
     $("more")?.addEventListener("click", () => { horizon += 30; draw(); });
     $("morePast")?.addEventListener("click", () => { pastN += 10; draw(); });
