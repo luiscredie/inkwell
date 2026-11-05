@@ -4,6 +4,7 @@
 //   GET ?geocode=Campinas                                               -> { lat, lng, label } (Open-Meteo geocoder)
 //   GET ?id=904881                                                      -> one event (to link a community table)
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { checkObserved, classify } from "./categories.js";
 
 const API = "https://api.cloudflare.ravensburgerplay.com/hydraproxy/api/v2";
 const HEADERS = { "Content-Type": "application/json", Referer: "https://tcg.ravensburgerplay.com/" };
@@ -16,9 +17,10 @@ const json = (v: unknown, status = 200) => new Response(JSON.stringify(v), { sta
 const num = (v: string | null, lo: number, hi: number) => { const n = Number(v); return Number.isFinite(n) && n >= lo && n <= hi ? n : null; };
 const day = (v: string | null) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
 
-function slim(e: Json) {
+function slim(e: Json, templates: Record<string, string> = {}, suspended = new Map()) {
   const s = e.store || {};
   return {
+    ...classify(e.event_configuration_template, templates, suspended),   // template_id, template_name, category, category_source
     id: e.id, name: e.name, start: e.start_datetime, end: e.end_datetime || null,
     format: e.gameplay_format?.name || null, type: e.event_type || e.event_format || null,
     cost_cents: e.cost_in_cents ?? null, currency: e.currency || null,
@@ -32,11 +34,25 @@ function slim(e: Json) {
   };
 }
 
+// template id -> name (Weekly Play (Constructed), Learn-to-Play…). Best effort: if it fails, events still load
+// and only the observed ids get a category (see categories.js).
+let tpl: { at: number; data: Record<string, string> } | null = null;
+async function templates() {
+  if (tpl && Date.now() - tpl.at < 6 * 3600e3) return tpl.data;
+  try {
+    const r = await fetch(`${API}/event-configuration-templates/?game_slug=disney-lorcana`, { headers: HEADERS });
+    if (!r.ok) throw new Error(`templates ${r.status}`);
+    const d = await r.json(), list = Array.isArray(d) ? d : d?.results || [];
+    tpl = { at: Date.now(), data: Object.fromEntries(list.filter((t: Json) => t?.id && t?.name).map((t: Json) => [t.id, t.name])) };
+  } catch (e) { console.warn("rph-events: templates unavailable", String(e)); return tpl?.data || {}; }
+  return tpl.data;
+}
+
 async function events(lat: number, lng: number, km: number, from: string, to: string) {
   const key = [lat.toFixed(2), lng.toFixed(2), km, from, to].join("|");
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < TTL) return hit.data;
-  const out: Json[] = [];
+  const raw: Json[] = [];
   let total = 0;
   for (let page = 1; page <= 5; page++) {
     const q = new URLSearchParams({ game_slug: "disney-lorcana", latitude: String(lat), longitude: String(lng), num_miles: String(Math.round(km / 1.609)),
@@ -46,10 +62,13 @@ async function events(lat: number, lng: number, km: number, from: string, to: st
     if (!r.ok) throw new Error(`play hub ${r.status}`);
     const d = await r.json();
     total = d.count ?? d.total ?? 0;
-    out.push(...(d.results || []).map(slim));
+    raw.push(...(d.results || []));
     if (!d.next_page_number) break;
   }
-  const data = { events: out.sort((a, b) => String(a.start).localeCompare(String(b.start))), total };
+  const t = await templates(), { suspended, divergences } = checkObserved(raw);
+  if (divergences.length) console.warn("rph-events: observed template suspended", JSON.stringify(divergences));
+  const out = raw.map((e) => slim(e, t, suspended));
+  const data = { divergences, events: out.sort((a, b) => String(a.start).localeCompare(String(b.start))), total };
   cache.set(key, { at: Date.now(), data });
   return data;
 }
@@ -89,7 +108,7 @@ Deno.serve(async (req) => {
       if (!r.ok) throw new Error(`play hub ${r.status}`);
       const e = await r.json();
       if (e?.game?.slug && e.game.slug !== "disney-lorcana") return json(null, 404);
-      const data = slim(e);
+      const data = slim(e, await templates(), checkObserved([e]).suspended);
       cache.set("id|" + id, { at: Date.now(), data });
       return json(data);
     }
