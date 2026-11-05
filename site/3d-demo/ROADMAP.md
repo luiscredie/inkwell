@@ -67,3 +67,19 @@ O teste de sintaxe JavaScript passou; **isso não equivale a validação de nave
 5. Clique em qualquer carta, movimente o cursor, teste foil, verso, relação com outras cartas e Escape.
 6. Entre em Feed, mude slides, verifique entradas dos cartões e os controles do carrossel.
 7. Ative **reduzir movimento** no dispositivo e confirme que o conteúdo permanece operável.
+
+## Estabilização P1 — correções após parecer do conselho (05/11/2026)
+
+**Problema observado pelo usuário:** ao clicar no fichário, encontrou uma experiência de conceito, não o fichário funcional esperado.
+
+**Correções implementadas (somente em `3d-demo/`):**
+- O botão `Fichário interativo` abre diretamente a visão navegável. A capa animada permanece disponível ao usar **Fechar** e **Abrir meu fichário**, mas não bloqueia mais o acesso inicial.
+- No mobile (até 850 px), a lógica serve **seis cartas por página**, em vez de renderizar 12 e esconder a folha esquerda por CSS. Em telas maiores, duas folhas com seis cartas cada (12 por visão).
+- Mudança de orientação/largura recalcula o índice para evitar saltos ou cartas inacessíveis.
+- Diálogo de carta: controle do Tab dentro da janela, foco inicial no botão Fechar, restauração do foco anterior ao encerrar, Escape.
+- As 24 imagens referenciadas foram encontradas pelo nome na listagem de arquivos GitHub do acervo (verificação de existência no repositório, **não** de transferência HTTP na página publicada).
+- Removidas artes de conceito embutidas não utilizadas no catálogo JavaScript, reduzindo aproximadamente 121 KB de texto da fonte.
+
+**Verificações realizadas:** compilação/sintaxe JS sem erro; teste isolado da função `binderView` mostrando exatamente 24 IDs distintos nas quatro páginas mobile e duas desktop, sem omissão. O teste de renderização ao vivo em navegador e a medição de desempenho seguem pendentes.
+
+**Aceite do conselho ainda pendente:** teste visual mobile/desktop, abertura de todas as cartas sem 404, acessibilidade com leitor de tela, FPS/LCP reais e confirmação de deploy do novo SHA. Não anunciar GO para P2 antes disso.
