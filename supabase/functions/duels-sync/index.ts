@@ -8,7 +8,7 @@
 // Tokens: each player's own (saved with public.set_my_duels_token, supabase/duels_tokens.sql);
 // a row without one uses the DUELS_TOKEN secret (read-only duels.ink API token). SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are provided by the platform.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { Catalog, convert, decklistOf, namesFromEvents, type Json } from "./convert.ts";
+import { Catalog, convert, decklistOf, linkMatchFromRow, namesFromEvents, type Json } from "./convert.ts";
 
 const BASE = "https://duels.ink";
 // the site address; set the SITE_URL secret when the domain changes
@@ -91,6 +91,8 @@ async function syncUser(userId: string, token: string, cat: Catalog) {
 
 // Rewrites my deck list in the duels.ink games already stored, from match history (fixes lists that lost cards
 // the catalogue matched only by a variant id or by name). Lists the player edited by hand are left alone.
+// Also gives each stored best-of-3 game its match id from the same history row (only the log changes; nothing is
+// added; a game already in a match stays). Safe to run again: what is already linked or right is not written.
 async function refreshDecks(userId: string, token: string, cat: Catalog) {
   const rows: Json[] = [];
   let cursor: string | null = null;
@@ -113,7 +115,7 @@ async function refreshDecks(userId: string, token: string, cat: Catalog) {
     await sleep(2100);
   }
   const byGame = new Map(rows.map((r) => [`duels-${r.game_id}`, r]));
-  let changed = 0, checked = 0;
+  let changed = 0, checked = 0, linked = 0;
   const ids = [...byGame.keys()];
   for (let i = 0; i < ids.length; i += 40) {
     const chunk = ids.slice(i, i + 40).map((x) => `"${x}"`).join(",");
@@ -121,21 +123,28 @@ async function refreshDecks(userId: string, token: string, cat: Catalog) {
     const patch: Json[] = [];
     for (const g of stored) {
       checked++;
+      const row = byGame.get(g.game_id)!;
+      const match = linkMatchFromRow(g.log, row);
+      if (match) linked++;
+      let deck = false;
       const me = (g.log?.players || []).find((p: Json) => p.is_me);
-      if (!me?.deck || (me.deck.list_source && me.deck.list_source !== "duels_ink")) continue;
-      const d = decklistOf(byGame.get(g.game_id)!, cat, names);
-      const sum = (l: Json[]) => (l || []).reduce((n, e) => n + (Number(e.qty) || 0), 0);
-      if (sum(d.list) <= sum(me.deck.list) && !d.unresolved.length === !me.deck.unresolved) continue;
-      me.deck.list = d.list;
-      if (d.unresolved.length) me.deck.unresolved = d.unresolved; else delete me.deck.unresolved;
-      patch.push(g);
+      if (me?.deck && !(me.deck.list_source && me.deck.list_source !== "duels_ink")) {
+        const d = decklistOf(row, cat, names);
+        const sum = (l: Json[]) => (l || []).reduce((n, e) => n + (Number(e.qty) || 0), 0);
+        if (!(sum(d.list) <= sum(me.deck.list) && !d.unresolved.length === !me.deck.unresolved)) {
+          me.deck.list = d.list;
+          if (d.unresolved.length) me.deck.unresolved = d.unresolved; else delete me.deck.unresolved;
+          deck = true;
+        }
+      }
+      if (match || deck) patch.push(g);
     }
     for (const g of patch) {
       await db(`game_logs?user_id=eq.${userId}&game_id=eq.${encodeURIComponent(g.game_id)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ log: g.log }) });
       changed++;
     }
   }
-  return { mode: "refresh_decks", history: rows.length, checked, changed, unknown_ids: [...unknown.keys()].filter((id) => !names.has(id)) };
+  return { mode: "refresh_decks", history: rows.length, checked, changed, linked, more: !!cursor, unknown_ids: [...unknown.keys()].filter((id) => !names.has(id)) };
 }
 
 Deno.serve(async (req) => {
