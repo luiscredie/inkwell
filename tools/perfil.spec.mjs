@@ -138,6 +138,7 @@ test('friends: ask from a profile; a friend can leave a recado that waits for ap
   await page2.locator('#recBody').fill('Bora jogar sexta?');
   await page2.locator('#recForm button[type=submit]').click();
   await expect(page2.locator('#toast')).toContainText('Aparece quando Ana aprovar');
+  await expect(page2.getByTestId('rec-sent')).toContainText('Enviado. Aparece quando Ana aprovar.');   // stays on the page for the author
   expect(rpcCalls(calls, 'post_recado')).toEqual([{ p_handle: 'ana', p_body: 'Bora jogar sexta?' }]);
 });
 
@@ -160,6 +161,43 @@ test('my profile: passkeys listed, deleted with a second tap', async ({ page }) 
   await expect(box).toContainText('Passkey apagada');
   expect(dels).toEqual(['pk1']);
   await expect(box.getByTestId('passkey-add')).toHaveText(/Criar passkey/);
+});
+
+test('recados: the notice opens the ones waiting — Aprovar shows "Ver no meu perfil", Recusar hides it', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const calls = await setup(page, { mine: { display_name: 'Luís', handle: 'luis', bio: '', motto: '', inks: [], city: '', showcase: [], is_public: true, adult: true, invite_code: 'abc123def0' } });
+  await page.route('**/rest/v1/rpc/my_recados', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+    { id: 'r9', body: 'Bora jogar sexta?', status: 'pending', created_at: '2026-10-21T10:00:00Z', author_name: 'Ana', author_handle: 'ana', author_avatar: 'LOR14-1' },
+    { id: 'r8', body: 'Spam aqui', status: 'pending', created_at: '2026-10-21T09:00:00Z', author_name: 'Zé', author_handle: null, author_avatar: null },
+    { id: 'r7', body: 'Já aprovado', status: 'shown', created_at: '2026-10-20T09:00:00Z', author_name: 'Bia', author_handle: 'bia', author_avatar: null }]) }));
+  await page.goto(url('feed/'));
+  await expect(page.getByTestId('fy-recados')).toHaveAttribute('href', '../perfil/?editar=1&recados=1');   // Início's tile goes straight there
+  await page.goto(url('perfil/?editar=1&recados=1'));
+  const sh = page.getByTestId('rec-sheet');
+  await expect(sh).toBeVisible();
+  await expect(sh.locator('[data-rec]')).toHaveCount(2);                 // only the ones waiting
+  const ana = sh.locator('[data-rec="r9"]');
+  await expect(ana).toContainText('Ana');
+  await expect(ana).toContainText('Bora jogar sexta?');
+  await ana.locator('[data-rs="shown"]').click();
+  await expect(ana).toContainText('Aprovado');
+  await expect(ana.getByTestId('rec-view')).toHaveAttribute('href', './?u=luis#recados');
+  const ze = sh.locator('[data-rec="r8"]');
+  await ze.locator('[data-rs="hidden"]').click();
+  await expect(ze).toContainText('Recusado · só você vê');
+  await expect(ze.getByTestId('rec-view')).toHaveCount(0);
+  if (process.env.SHOT_DIR) await page.screenshot({ path: process.env.SHOT_DIR + '/recados-sheet.png' });
+  const patch = (id) => calls.find((c) => c.full.startsWith(`recados?id=eq.${id}`)).body;
+  expect(patch('r9')).toMatchObject({ status: 'shown' });
+  expect(patch('r8')).toMatchObject({ status: 'hidden' });
+});
+
+test('recados: the waiting sheet is only mine — a visitor with ?recados=1 sees the public profile, nothing waiting', async ({ page }) => {
+  const calls = await setup(page, { signedIn: false });
+  await page.goto(url('perfil/?u=rafa_exemplo&recados=1'));
+  await expect(page.getByTestId('recados')).toContainText('Valeu pela troca da Mulan!');   // approved ones, public
+  await expect(page.getByTestId('rec-sheet')).toHaveCount(0);
+  expect(calls.filter((c) => c.path === 'rpc/my_recados')).toHaveLength(0);
 });
 
 test('my profile: recados wait for my approval', async ({ page }) => {
