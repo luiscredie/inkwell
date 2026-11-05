@@ -337,6 +337,12 @@ window.INKWELL_CLOUD = (() => {
 .ach-t b { font-size: var(--fs-h3, 1.15rem); } .ach-t p { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .mi-rec1 { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: var(--sp-3); padding: var(--sp-3); border-radius: var(--r-lg); background: var(--surface-1); border: 1px solid var(--line); }
 .mi-rec1 p { margin: 4px 0 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+/* recados as testimonials: the message first, a gold line on the side; waiting ones stand out in the sheet */
+.mi-recs .mi-rec1, .mi-recq { border-left: 3px solid var(--gold, #e9b949); }
+.mi-recs .mi-rec1 p, .mi-recq p { font-size: 1.02rem; line-height: 1.45; color: var(--text); }
+.mi-recs .mi-rec1 p::before { content: "“"; color: var(--gold, #e9b949); font-weight: 800; margin-right: 2px; }
+.mi-recq { background: var(--accent-soft, var(--surface-2)); }
+.rec-sent { margin: var(--sp-2) 0 0; display: flex; gap: 6px; align-items: center; color: var(--win); font-weight: 600; font-size: var(--fs-small); }
 .mi-rec1 a { color: inherit; text-decoration: none; } .mi-rec1 a:hover b, .mi-rec1 b a:hover { text-decoration: underline; }
 .mi-recform { display: grid; gap: var(--sp-2); margin-bottom: var(--sp-3); }
 .mi-key { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--sp-2); }
@@ -726,7 +732,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Communities you created pass to their longest-standing member, or are deleted if nobody else is in them. Download your data first if you want a copy.": "Comunidades que você criou passam para o membro mais antigo, ou são apagadas se não houver mais ninguém. Baixe seus dados antes, se quiser uma cópia.",
     "Type {w} to confirm": "Digite {w} para confirmar", "You are the only admin. Add another admin before deleting this account.": "Você é o único administrador. Adicione outro antes de excluir esta conta.", "Couldn't delete. Try again.": "Não foi possível excluir. Tente de novo.", "Communities": "Comunidades", "owner": "dono", "See the full list": "Ver a lista completa",
     "Motto": "Lema", "A short line that sums you up.": "Uma frase curta que resume você.",
-    "Recados waiting for you": "Recados esperando você", "Only you see them until you approve.": "Só você vê até aprovar.", "Approve": "Aprovar", "Hide": "Ocultar", "Delete": "Excluir",
+    "Recados waiting for you": "Recados esperando você", "Only you see them until you approve.": "Só você vê até aprovar.", "Approve": "Aprovar", "Decline": "Recusar", "Approved": "Aprovado", "See on my profile": "Ver no meu perfil", "It shows on your profile when it is public.": "Aparece no seu perfil quando ele estiver público.",
+    "Declined · only you see it": "Recusado · só você vê", "No recados waiting.": "Nenhum recado esperando.", "Hide": "Ocultar", "Delete": "Excluir",
     "On your profile": "No seu perfil", "Hidden": "Ocultos", "No recados yet.": "Nenhum recado ainda.", "Show again": "Mostrar de novo",
     "{name} wants to be your friend": "{name} quer ser seu amigo", "You came through their invite. Accept?": "Você chegou pelo convite. Aceitar?", "Accept": "Aceitar", "Not now": "Agora não",
     "You and {name} are friends already.": "Você e {name} já são amigos.",
@@ -877,7 +884,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const friendsBox = preview ? "" : `<section class="card mi-sec mi-friends" data-testid="friends"><div class="row between"><div class="mi-label">${Tx("Friends")}</div><span class="small muted">${fn === 1 ? Tx("1 friend") : Tx("{n} friends", { n: fn })}</span></div>
       ${friends.length ? `<div class="mi-fgrid">${friends.slice(0, 9).map((f) => `<a href="?u=${encodeURIComponent(f.handle)}">${miniAv(f.avatar, f.name, "md")}<span>${esc(L(p, f.name))}</span></a>`).join("")}</div>` : `<p class="mi-empty">${fn ? Tx("Their friends keep their profiles private.") : Tx("No friends here yet.")}</p>`}
       ${fn > friends.length && friends.length ? `<p class="small faint" style="margin:var(--sp-2) 0 0">${Tx("+{n} with a private profile", { n: fn - friends.length })}</p>` : ""}</section>`;
-    const recBox = preview ? "" : `<section class="mi-sec mi-recs" data-testid="recados"><div class="group-head"><h3>${Tx("Recados")}</h3>${recs.length ? `<span class="small muted">${recs.length}</span>` : ""}</div>
+    const recBox = preview ? "" : `<section class="mi-sec mi-recs" data-testid="recados" id="recados"><div class="group-head"><h3>${Tx("Recados")}</h3>${recs.length ? `<span class="small muted">${recs.length}</span>` : ""}</div>
       ${p.can_recado ? `<form class="mi-recform" id="recForm"><label class="sr-only" for="recBody">${Tx("Leave a recado")}</label><textarea id="recBody" maxlength="500" rows="2" placeholder="${esc(Tx("Leave a recado for {name}", { name: split(p.name || "")[0] }))}"></textarea>
         <div class="row between"><span class="small faint">${Tx("It shows up after {name} approves it.", { name: esc(p.name || "") })}</span><button type="submit" class="btn small primary">${Tx("Send")}</button></div></form>` : ""}
       ${recs.length ? `<div class="mi-reclist">${recs.map((r) => `<article class="mi-rec1">${r.handle ? `<a href="?u=${encodeURIComponent(r.handle)}">${miniAv(r.avatar, r.name)}</a>` : miniAv(null, r.name)}
@@ -926,7 +933,10 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     $("recForm")?.addEventListener("submit", async (ev) => {
       ev.preventDefault(); const t = $("recBody"), body = t.value.trim(); if (!body) { t.focus(); return; }
       const b = ev.currentTarget.querySelector("button"); b.disabled = true;
-      try { await rpc("post_recado", { p_handle: p.handle, p_body: body }); t.value = ""; toast(Tx("Sent. It shows up when {name} approves it.", { name: p.name })); }
+      try { await rpc("post_recado", { p_handle: p.handle, p_body: body }); t.value = "";
+        const sent = Tx("Sent. It shows up when {name} approves it.", { name: p.name });
+        $("recForm").querySelector(".rec-sent")?.remove();
+        $("recForm").insertAdjacentHTML("beforeend", `<p class="rec-sent" role="status" data-testid="rec-sent"><i class="ic i-check"></i>${esc(sent)}</p>`); toast(sent); }
       catch { toast(Tx("Couldn't send. Try again."), true); }
       b.disabled = false;
     });
@@ -1272,13 +1282,41 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     if (keep && $(keep)) { $(keep).focus(); try { if (caret != null) $(keep).setSelectionRange(caret, caret); } catch { /* */ } }
   }
   let myRecs = null;
+  // ?recados=1 (the notice "Recados para aprovar"): a sheet with only the recados waiting, Aprovar / Recusar on each.
+  // Recusar = the same "hidden" status as Ocultar (the author is not told); the same PATCH as the list below.
+  async function openRecadosSheet() {
+    const sh = $("sheet");
+    const myPage = mine?.handle && mine?.is_public ? `./?u=${encodeURIComponent(mine.handle)}` : "";
+    const draw = () => {
+      const pend = (myRecs || []).filter((r) => r.status === "pending" || r._done);
+      sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="shT">${Tx("Recados waiting for you")}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
+        <div class="sheet-body" data-testid="rec-sheet">${myRecs == null ? `<p class="small faint">${Tx("Loading…")}</p>` : pend.length ? `<p class="small faint" style="margin:0 0 var(--sp-3)">${Tx("Only you see them until you approve.")}</p><div class="mi-reclist">${pend.map((r) => `<article class="mi-rec1 mi-recq" data-rec="${esc(r.id)}">${r.author_handle ? `<a href="./?u=${encodeURIComponent(r.author_handle)}">${miniAv(r.author_avatar, r.author_name)}</a>` : miniAv(r.author_avatar, r.author_name)}
+          <div><div class="small"><b>${r.author_handle ? `<a href="./?u=${encodeURIComponent(r.author_handle)}">${esc(r.author_name || "")}</a>` : esc(r.author_name || "")}</b> <span class="faint">· ${esc(ago(r.created_at))}</span></div><p>${esc(r.body)}</p>
+          <div class="row" style="gap:var(--sp-2);margin-top:var(--sp-2);flex-wrap:wrap">${r._done === "shown" ? `<span class="tag win">${Tx("Approved")}</span>${myPage ? `<a class="btn small" href="${myPage}#recados" data-testid="rec-view">${Tx("See on my profile")}</a>` : `<span class="small faint">${Tx("It shows on your profile when it is public.")}</span>`}`
+            : r._done === "hidden" ? `<span class="tag">${Tx("Declined · only you see it")}</span>`
+            : `<button type="button" class="btn small primary" data-rs="shown">${Tx("Approve")}</button><button type="button" class="btn small ghost" data-rs="hidden">${Tx("Decline")}</button>`}</div></div></article>`).join("")}</div>`
+          : `<p class="mi-empty" data-testid="rec-none">${Tx("No recados waiting.")}</p>`}</div>`;
+      sh.querySelector("[data-close]").onclick = () => sh.close();
+      sh.querySelectorAll("[data-rs]").forEach((b) => b.onclick = async () => {
+        const id = b.closest("[data-rec]").dataset.rec, a = b.dataset.rs; b.disabled = true;
+        try {
+          await CLOUD.api(`recados?id=eq.${id}`, { method: "PATCH", prefer: "return=minimal", body: { status: a, decided_at: new Date().toISOString() } });
+          myRecs = myRecs.map((r) => (r.id === id ? { ...r, status: a, _done: a } : r)); draw();
+          if ($("myRecs")) { $("myRecs").innerHTML = recadosBox(); wireRecados(); }
+        } catch { b.disabled = false; toast(Tx("Couldn't save. Try again."), true); }
+      });
+    };
+    draw(); if (!sh.open) sh.showModal();
+    sh.addEventListener("close", () => { myRecs = (myRecs || []).map(({ _done, ...r }) => r); }, { once: true });
+    if (myRecs == null) { try { myRecs = (await rpc("my_recados")) || []; } catch { myRecs = []; } draw(); }
+  }
   function recadosBox() {
     if (!myRecs) return `<p class="small faint">${Tx("Loading…")}</p>`;
     const pend = myRecs.filter((r) => r.status === "pending"), shown = myRecs.filter((r) => r.status === "shown"), hid = myRecs.filter((r) => r.status === "hidden");
     const row = (r, acts) => `<article class="mi-rec1" data-rec="${esc(r.id)}">${miniAv(r.author_avatar, r.author_name)}<div><div class="small"><b>${esc(r.author_name || "")}</b> <span class="faint">· ${esc(ago(r.created_at))}</span></div><p>${esc(r.body)}</p>
       <div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap">${acts.map(([k, l, cls]) => `<button type="button" class="btn small ${cls || ""}" data-ra="${k}">${Tx(l)}</button>`).join("")}</div></div></article>`;
     return `${pend.length ? `<div class="mi-label">${Tx("Recados waiting for you")}</div><p class="small faint" style="margin:4px 0 var(--sp-2)">${Tx("Only you see them until you approve.")}</p><div class="mi-reclist">${pend.map((r) => row(r, [["shown", "Approve", "primary"], ["hidden", "Hide"], ["del", "Delete", "ghost"]])).join("")}</div>` : ""}
-      ${shown.length ? `<div class="mi-label" style="margin-top:var(--sp-4)">${Tx("On your profile")}</div><div class="mi-reclist" style="margin-top:var(--sp-2)">${shown.map((r) => row(r, [["hidden", "Hide"], ["del", "Delete", "ghost"]])).join("")}</div>` : ""}
+      ${shown.length ? `<div class="mi-label" style="margin-top:var(--sp-4)">${Tx("On your profile")}${mine?.handle && mine?.is_public ? ` · <a href="./?u=${encodeURIComponent(mine.handle)}#recados">${Tx("See on my profile")}</a>` : ""}</div><div class="mi-reclist" style="margin-top:var(--sp-2)">${shown.map((r) => row(r, [["hidden", "Hide"], ["del", "Delete", "ghost"]])).join("")}</div>` : ""}
       ${hid.length ? `<div class="mi-label" style="margin-top:var(--sp-4)">${Tx("Hidden")}</div><div class="mi-reclist" style="margin-top:var(--sp-2)">${hid.map((r) => row(r, [["shown", "Show again"], ["del", "Delete", "ghost"]])).join("")}</div>` : ""}
       ${myRecs.length ? "" : `<p class="mi-empty">${Tx("No recados yet.")}</p>`}`;
   }
@@ -1486,6 +1524,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   if (handleQ) { window.addEventListener("hashchange", reroute); window.addEventListener("popstate", reroute); window.addEventListener("pageshow", (e) => { if (e.persisted) reroute(); }); }
   (async () => {
     if (me) { try { await loadMine(); } catch { mine = null; } await acceptPendingInvite(); }
+    if (me && qs.has("recados")) setTimeout(() => openRecadosSheet(), 0);   // the notice "Recados para aprovar"
     if (handleQ) return showHandle(handleQ);
     if (!me) {
       if (inviteQ) { $("app").innerHTML = await inviteBanner(); wireInvite(); return; }
@@ -1659,7 +1698,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const item = (href, ic, text, n) => (n ? `<a class="menu-item" role="menuitem" href="${href}"><i class="ic i-${ic}"></i>${text}<span class="trail"><span class="count">${n}</span></span></a>` : "");
     return `<div class="menu-sep"></div><div class="menu-label">${T("Novidades", "New for you")}</div>
       ${item("../feed/#amigos", "user-plus", news.requests === 1 ? T("Pedido de amizade", "Friend request") : T("Pedidos de amizade", "Friend requests"), news.requests)}
-      ${item("../perfil/?editar=1#recados", "comment", news.recados === 1 ? T("Recado para aprovar", "Recado to approve") : T("Recados para aprovar", "Recados to approve"), news.recados)}
+      ${item("../perfil/?editar=1&recados=1", "comment", news.recados === 1 ? T("Recado para aprovar", "Recado to approve") : T("Recados para aprovar", "Recados to approve"), news.recados)}
       ${item("../feed/", "board", T("Mensagens nas comunidades", "Community messages"), news.posts)}
       ${item("../trades/?tab=board", "trades", news.wants === 1 ? T("Carta que você quer no mural", "A card you want on the board") : T("Cartas que você quer no mural", "Cards you want on the board"), news.wants || 0)}`;
   };
