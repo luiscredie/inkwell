@@ -336,7 +336,10 @@ window.INKWELL_CLOUD = (() => {
     "This store has no event on the Play Hub, so its name can't be checked here. Check it yourself before approving.": "Esta loja não tem evento no Play Hub, então o nome não pode ser conferido aqui. Confira por fora antes de aprovar.",
     "Couldn't reach the Play Hub. Check it yourself, or try again.": "Não foi possível consultar o Play Hub. Confira por fora ou tente de novo.",
     "I checked myself that this community represents store ID {id}": "Conferi por fora que esta comunidade representa a loja ID {id}", "How you checked (required)": "Como você conferiu (obrigatório)",
-    "Approving saves the Play Hub's name and address, not the requested ones.": "Ao aprovar, ficam o nome e o endereço do Play Hub, não os do pedido.", "Already verified for another community": "Já verificada para outra comunidade", "asked by {n}": "pedido por {n}", "{n} members": "{n} membros",
+    "Approving saves the Play Hub's name and address, not the requested ones.": "Ao aprovar, ficam o nome e o endereço do Play Hub, não os do pedido.",
+    "I checked that whoever runs this community is authorized to represent the store": "Conferi que quem administra esta comunidade está autorizado a representar a loja",
+    "Evidence of the authorization (required)": "Evidência da autorização (obrigatório)",
+    "Knowing the store isn't enough: the badge needs the authorization checked.": "Saber qual é a loja não basta: o selo exige a autorização conferida.", "Already verified for another community": "Já verificada para outra comunidade", "asked by {n}": "pedido por {n}", "{n} members": "{n} membros",
   };
   const fill = (s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)) : s);
   const Tx = (en, v) => fill(lang === "pt" && en in PT ? PT[en] : en, v);
@@ -400,6 +403,8 @@ window.INKWELL_CLOUD = (() => {
     });
     document.querySelectorAll("[data-sdec]").forEach((b) => b.onclick = () => decideStore(b.dataset.c, b.dataset.sdec));
     document.querySelectorAll("[data-mcheck]").forEach((i) => i.onchange = () => { (manual[i.dataset.mcheck] ||= {}).ok = i.checked; render(); });
+    document.querySelectorAll("[data-rcheck]").forEach((i) => i.onchange = () => { (manual[i.dataset.rcheck] ||= {}).rok = i.checked; render(); });
+    document.querySelectorAll("[data-rnote]").forEach((i) => i.oninput = () => { const m = (manual[i.dataset.rnote] ||= {}); const was = (m.ev || "").trim().length >= 10; m.ev = i.value; if (was !== (m.ev.trim().length >= 10)) { render(); const j = document.querySelector(`[data-rnote="${i.dataset.rnote}"]`); j?.focus(); j?.setSelectionRange(m.ev.length, m.ev.length); } });
     document.querySelectorAll("[data-mnote]").forEach((i) => i.oninput = () => { const m = (manual[i.dataset.mnote] ||= {}); const was = (m.note || "").trim().length >= 10; m.note = i.value; if (was !== (m.note.trim().length >= 10)) { render(); const j = document.querySelector(`[data-mnote="${i.dataset.mnote}"]`); j?.focus(); j?.setSelectionRange(m.note.length, m.note.length); } });
     document.querySelectorAll("[data-recheck]").forEach((b) => b.onclick = () => { const x = storeLinks.find((y) => y.community_id === b.dataset.recheck); if (x) { x.ph = null; checkStores(); render(); } });
     document.querySelectorAll("[data-fbtext]").forEach((x) => { x.textContent = feedback.find((f) => f.id === x.dataset.fbtext)?.body || ""; });   // people's text: set as text
@@ -533,10 +538,11 @@ window.INKWELL_CLOUD = (() => {
     }
   }
   const manualReady = (x) => !!manual[x.community_id]?.ok && (manual[x.community_id]?.note || "").trim().length >= 10;
+  const reprReady = (x) => !!manual[x.community_id]?.rok && (manual[x.community_id]?.ev || "").trim().length >= 10;   // the representation, checked apart
   function storeLinkRow(x) {
     const id = x.community_id, ph = x.ph || { loading: true }, m = manual[id] || {};
     const official = ph.found && String(ph.store?.id) === String(x.store_id) ? ph.store : null;
-    const canApprove = !x.verified_elsewhere && (official || manualReady(x));
+    const canApprove = !x.verified_elsewhere && (official || manualReady(x)) && reprReady(x);
     const manualBox = !official && !ph.loading ? `<label class="small row" style="gap:6px;margin-top:var(--sp-2)"><input type="checkbox" data-mcheck="${esc(id)}" ${m.ok ? "checked" : ""}>${esc(Tx("I checked myself that this community represents store ID {id}", { id: x.store_id }))}</label>
         <label class="small" style="display:block;margin-top:4px">${Tx("How you checked (required)")}<input class="input" data-mnote="${esc(id)}" maxlength="300" value="${esc(m.note || "")}" style="width:100%"></label>` : "";
     return `<div class="adm-row" data-slink="${esc(id)}"><div class="t"><b>${esc(x.community)}</b>
@@ -546,7 +552,10 @@ window.INKWELL_CLOUD = (() => {
           : ph.error ? `${esc(Tx("Couldn't reach the Play Hub. Check it yourself, or try again."))} <button type="button" class="btn small ghost" data-recheck="${esc(id)}">${Tx("Try again")}</button>`
           : esc(Tx("This store has no event on the Play Hub, so its name can't be checked here. Check it yourself before approving."))}</span>
         <span class="small faint">${esc([x.requested_by ? Tx("asked by {n}", { n: x.requested_by }) : "", dt(x.requested_at)].filter(Boolean).join(" · "))}</span>
-        ${x.verified_elsewhere ? `<div class="tags"><span class="tag warn">${Tx("Already verified for another community")}</span></div>` : ""}${manualBox}</div>
+        ${x.verified_elsewhere ? `<div class="tags"><span class="tag warn">${Tx("Already verified for another community")}</span></div>` : ""}${manualBox}
+        ${ph.loading ? "" : `<div data-testid="repr-check" style="margin-top:var(--sp-2)"><span class="small faint">${Tx("Knowing the store isn't enough: the badge needs the authorization checked.")}</span>
+          <label class="small row" style="gap:6px;margin-top:4px"><input type="checkbox" data-rcheck="${esc(id)}" ${m.rok ? "checked" : ""}>${Tx("I checked that whoever runs this community is authorized to represent the store")}</label>
+          <label class="small" style="display:block;margin-top:4px">${Tx("Evidence of the authorization (required)")}<input class="input" data-rnote="${esc(id)}" maxlength="300" value="${esc(m.ev || "")}" style="width:100%"></label></div>`}</div>
       <div class="adm-acts"><a class="btn small ghost" href="../comunidades/?c=${esc(x.slug)}">${Tx("See")}</a><button type="button" class="btn small" data-sdec="approved" data-c="${esc(id)}" ${canApprove ? "" : "disabled"}>${Tx("Approve")}</button><button type="button" class="btn small ghost" data-sdec="rejected" data-c="${esc(id)}">${Tx("Refuse")}</button></div></div>`;
   }
   function decideStore(id, decision) {
@@ -554,8 +563,10 @@ window.INKWELL_CLOUD = (() => {
     const official = x.ph?.found && String(x.ph.store?.id) === String(x.store_id) ? x.ph.store : null, m = manual[id] || {};
     const body = { p_community: id, p_decision: decision };
     if (decision === "approved") {
-      if (official) body.p_check = { method: "playhub", store: official };
-      else if (manualReady(x)) { body.p_check = { method: "manual", confirmed: true }; body.p_note = m.note.trim(); }
+      if (!reprReady(x)) return;
+      const representation = { confirmed: true, evidence: m.ev.trim() };
+      if (official) body.p_check = { method: "playhub", store: official, representation };
+      else if (manualReady(x)) { body.p_check = { method: "manual", confirmed: true, representation }; body.p_note = m.note.trim(); }
       else return;
     }
     run(() => rpc("decide_community_store", body));   // community_store.sql checks all of this again

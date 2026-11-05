@@ -414,15 +414,24 @@ test('admin: each request next to the Play Hub\'s own data; approve with it, or 
   await expect(row('c-2').getByTestId('ph-check')).toContainText('não tem evento no Play Hub');
   await expect(row('c-2').locator('[data-sdec="approved"]')).toBeDisabled();            // no Play Hub data: not without a manual check
   await expect(row('c-3').locator('[data-sdec="approved"]')).toBeDisabled();            // already verified elsewhere
+  await expect(row('c-1').locator('[data-sdec="approved"]')).toBeDisabled();            // the store is known, the representation isn't yet
+  await row('c-1').locator('[data-rcheck="c-1"]').check();
+  await expect(row('c-1').locator('[data-sdec="approved"]')).toBeDisabled();            // still needs the evidence
+  await row('c-1').locator('[data-rnote="c-1"]').fill('E-mail do dono pelo endereço oficial');
   await row('c-1').locator('[data-sdec="approved"]').click();
   await expect.poll(() => rpcCalls(calls, 'decide_community_store')[0]).toEqual({ p_community: 'c-1', p_decision: 'approved',
-    p_check: { method: 'playhub', store: { id: 17617, name: 'Muito Colecionaveis Comercio de Jogos e Acessorios Ltda', city: 'Campinas', address: 'Av Brasil 1456, Jardim Chapadao' } } });   // the Play Hub's data, not the request's
+    p_check: { method: 'playhub', store: { id: 17617, name: 'Muito Colecionaveis Comercio de Jogos e Acessorios Ltda', city: 'Campinas', address: 'Av Brasil 1456, Jardim Chapadao' },   // the Play Hub's data, not the request's
+      representation: { confirmed: true, evidence: 'E-mail do dono pelo endereço oficial' } } });
   await row('c-2').locator('[data-mcheck="c-2"]').check();
   await expect(row('c-2').locator('[data-sdec="approved"]')).toBeDisabled();            // still needs a note
   await row('c-2').locator('[data-mnote="c-2"]').fill('Liguei para a loja e conferi o ID');
+  await expect(row('c-2').locator('[data-sdec="approved"]')).toBeDisabled();            // identity checked by hand, representation not yet
+  await row('c-2').locator('[data-rcheck="c-2"]').check();
+  await row('c-2').locator('[data-rnote="c-2"]').fill('Dono confirmou por telefone');
   await expect(row('c-2').locator('[data-sdec="approved"]')).toBeEnabled();
   await row('c-2').locator('[data-sdec="approved"]').click();
-  await expect.poll(() => rpcCalls(calls, 'decide_community_store')[1]).toEqual({ p_community: 'c-2', p_decision: 'approved', p_note: 'Liguei para a loja e conferi o ID', p_check: { method: 'manual', confirmed: true } });
+  await expect.poll(() => rpcCalls(calls, 'decide_community_store')[1]).toEqual({ p_community: 'c-2', p_decision: 'approved', p_note: 'Liguei para a loja e conferi o ID',
+    p_check: { method: 'manual', confirmed: true, representation: { confirmed: true, evidence: 'Dono confirmou por telefone' } } });
 });
 
 test('store search: when the Play Hub has more stores than we read, the owner is told to type more', async ({ page }) => {

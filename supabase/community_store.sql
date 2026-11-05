@@ -10,6 +10,9 @@
 --     approval: the admin approves with a check — "playhub": the Play Hub's own data for that store.id
 --     (rph-events ?store_info=), which then replaces the requested snapshot; or "manual": an explicit
 --     confirmation with a note saying how it was checked (stores with no event on the Play Hub);
+--   * knowing which store it is doesn't prove the community's managers may speak for it: approving (the
+--     "verified store" badge) also needs the admin's explicit confirmation that they checked that authorization,
+--     with a note of the evidence. Method, evidence, admin and date go to the link and to the log;
 --   * one link per community; a store can be verified for one community only (and nobody can ask for a store
 --     already verified elsewhere);
 --   * changing the store sends the link back to "pending"; removing it is always allowed to the managers;
@@ -30,6 +33,7 @@ create table if not exists public.community_stores (
   check_method text check (check_method in ('playhub', 'manual')),
   note text check (length(note) <= 300));
 alter table public.community_stores add column if not exists check_method text check (check_method in ('playhub', 'manual'));
+alter table public.community_stores add column if not exists representation_evidence text check (length(representation_evidence) <= 300);
 create index if not exists community_stores_store on public.community_stores (store_id);
 -- the same store can't be verified for two communities
 create unique index if not exists community_stores_one_verified on public.community_stores (store_id) where status = 'approved';
@@ -44,6 +48,7 @@ create table if not exists private.community_store_log (
   check_method text,
   note text);
 alter table private.community_store_log add column if not exists check_method text;
+alter table private.community_store_log add column if not exists representation_evidence text;
 
 alter table public.community_stores enable row level security;
 alter table private.community_store_log enable row level security;
@@ -74,7 +79,7 @@ begin
   values (c.id, sid, nm, private.clip(p_store->>'city', 80), private.clip(p_store->>'address', 300), 'pending', auth.uid(), now())
   on conflict (community_id) do update set store_id = excluded.store_id, store_name = excluded.store_name, store_city = excluded.store_city,
     store_address = excluded.store_address, status = 'pending', requested_by = excluded.requested_by, requested_at = now(),
-    decided_by = null, decided_at = null, check_method = null, note = null;
+    decided_by = null, decided_at = null, check_method = null, representation_evidence = null, note = null;
   insert into private.community_store_log (community_id, store_id, action, actor) values (c.id, sid, 'request', auth.uid());
   return jsonb_build_object('store_id', sid, 'status', 'pending');
 end $$;
@@ -113,7 +118,7 @@ begin
   if not private.is_admin() then raise exception 'not allowed' using errcode = '42501'; end if;
   return (select coalesce(jsonb_agg(jsonb_build_object('community_id', s.community_id, 'slug', c.slug, 'community', c.name,
       'store_id', s.store_id, 'name', s.store_name, 'city', s.store_city, 'address', s.store_address, 'status', s.status,
-      'requested_by', p.display_name, 'requested_at', s.requested_at, 'note', s.note, 'check', s.check_method,
+      'requested_by', p.display_name, 'requested_at', s.requested_at, 'note', s.note, 'check', s.check_method, 'representation_evidence', s.representation_evidence,
       'verified_elsewhere', exists (select 1 from public.community_stores o where o.store_id = s.store_id and o.status = 'approved' and o.community_id <> s.community_id))
       order by s.requested_at), '[]'::jsonb)
     from public.community_stores s join public.communities c on c.id = s.community_id
@@ -124,11 +129,14 @@ end $$;
 -- p_check, required to approve:
 --   {"method": "playhub", "store": {"id": 17617, "name": "…", "city": "…", "address": "…"}} — the Play Hub's own data
 --     for the requested store.id; the id must match, and that data replaces the requester's snapshot;
---   {"method": "manual", "confirmed": true} with p_note saying how it was checked (at least 10 characters).
+--   {"method": "manual", "confirmed": true} with p_note saying how it was checked (at least 10 characters);
+-- and, in both cases, the representation: "representation": {"confirmed": true, "evidence": "…"} (at least 10
+-- characters) — the admin checked that the community's managers are authorized to represent the store.
 drop function if exists public.decide_community_store(uuid, text, text);
 create or replace function public.decide_community_store(p_community uuid, p_decision text, p_note text default null, p_check jsonb default null)
 returns void language plpgsql security definer set search_path = '' as $$
 declare s public.community_stores; m text := p_check->>'method'; o jsonb := p_check->'store';
+  ev text := private.clip(p_check->'representation'->>'evidence', 300);
 begin
   if not private.is_admin() then raise exception 'not allowed' using errcode = '42501'; end if;
   if p_decision not in ('approved', 'rejected') then raise exception 'bad_decision'; end if;
@@ -146,15 +154,20 @@ begin
     else
       raise exception 'check_required';
     end if;
+    if coalesce(p_check->'representation'->>'confirmed', '') <> 'true' or length(coalesce(ev, '')) < 10 then
+      raise exception 'representation_required';   -- the store is known, but not that they may represent it
+    end if;
   end if;
   update public.community_stores set status = p_decision, decided_by = auth.uid(), decided_at = now(), note = private.clip(p_note, 300),
       check_method = case when p_decision = 'approved' then m end,
+      representation_evidence = case when p_decision = 'approved' then ev end,
       store_name = case when p_decision = 'approved' and m = 'playhub' then private.clip(o->>'name', 120) else store_name end,
       store_city = case when p_decision = 'approved' and m = 'playhub' then private.clip(o->>'city', 80) else store_city end,
       store_address = case when p_decision = 'approved' and m = 'playhub' then private.clip(o->>'address', 300) else store_address end
    where community_id = p_community;
-  insert into private.community_store_log (community_id, store_id, action, actor, check_method, note)
-  values (p_community, s.store_id, case p_decision when 'approved' then 'approve' else 'reject' end, auth.uid(), case when p_decision = 'approved' then m end, private.clip(p_note, 300));
+  insert into private.community_store_log (community_id, store_id, action, actor, check_method, representation_evidence, note)
+  values (p_community, s.store_id, case p_decision when 'approved' then 'approve' else 'reject' end, auth.uid(),
+    case when p_decision = 'approved' then m end, case when p_decision = 'approved' then ev end, private.clip(p_note, 300));
 end $$;
 
 revoke all on function public.request_community_store(text, jsonb), public.remove_community_store(text), public.community_store(text),

@@ -79,25 +79,37 @@ fails $O "select public.admin_community_stores()" "not allowed"
 eq "$(as $D "select jsonb_array_length(public.admin_community_stores())")" 2 "admin queue"
 fails $D "select public.decide_community_store('$C1', 'maybe')" bad_decision
 fails $D "select public.decide_community_store('$C1', 'approved', 'parece certo')" check_required          # no check: refused
-OFFICIAL='{"method":"playhub","store":{"id":17617,"name":"Muito Colecionaveis Comercio de Jogos e Acessorios Ltda","city":"Campinas","address":"Av Brasil 1456, Jardim Chapadao, CAMPINAS-SP"}}'
+OFFICIAL_STORE='{"method":"playhub","store":{"id":17617,"name":"Muito Colecionaveis Comercio de Jogos e Acessorios Ltda","city":"Campinas","address":"Av Brasil 1456, Jardim Chapadao, CAMPINAS-SP"}}'
+REPR='"representation":{"confirmed":true,"evidence":"falei com o dono pelo e-mail oficial da loja"}'
+OFFICIAL="${OFFICIAL_STORE%\}},$REPR}"
+# the store's identity alone is not enough: the badge needs the representation confirmed, with evidence
+fails $D "select public.decide_community_store('$C1', 'approved', null, '$OFFICIAL_STORE')" representation_required
+fails $D "select public.decide_community_store('$C1', 'approved', null, '${OFFICIAL_STORE%\}},\"representation\":{\"confirmed\":false,\"evidence\":\"falei com o dono da loja\"}}')" representation_required
+fails $D "select public.decide_community_store('$C1', 'approved', null, '${OFFICIAL_STORE%\}},\"representation\":{\"confirmed\":true,\"evidence\":\"ok\"}}')" representation_required
+fails $D "select public.decide_community_store('$C1', 'approved', null, '${OFFICIAL_STORE%\}},\"representation\":{\"confirmed\":\"yes\",\"evidence\":\"falei com o dono da loja\"}}')" representation_required
+eq "$(view '' loja-um | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d["status"],d["verified"])')" "pending False" "no badge without the representation"
 as $D "select public.decide_community_store('$C1', 'approved', null, '$OFFICIAL')" >/dev/null
+eq "$(q "select l.check_method || '|' || l.representation_evidence || '|' || (l.actor = '$D') || '|' || (l.at > now() - interval '1 minute') from private.community_store_log l where l.community_id = '$C1' and l.action = 'approve'")" "playhub|falei com o dono pelo e-mail oficial da loja|true|true" "log: method, evidence, admin, date"
+eq "$(as $D "select (public.admin_community_stores(null)->0)->>'representation_evidence'")" "falei com o dono pelo e-mail oficial da loja" "admin sees the evidence"
+eq "$(view '' loja-um | python3 -c 'import json,sys;print("representation_evidence" in json.load(sys.stdin))')" False "evidence is not public"
 eq "$(view '' loja-um | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d["status"],d["verified"],d["check"],"|",d["name"])')" "approved True playhub | Muito Colecionaveis Comercio de Jogos e Acessorios Ltda" "approved with the Play Hub's data"
-ok "5. only a site admin approves, and only with a check; owner/admin of the community can't; the page then says verified"
+ok "5. only a site admin approves, with the store's check AND the representation confirmed with evidence; logged with method, evidence, admin and date"
 
 # 5b. forged requests: what the browser sends is never what gets approved
 # loja-dois asked for store 999 under another store's name (step 3). The admin's Play Hub lookup of 999 says otherwise.
 fails $D "select public.decide_community_store('$C2', 'approved', null, '{\"method\":\"playhub\",\"store\":{\"id\":17617,\"name\":\"Muito Colecionaveis\"}}')" store_mismatch   # data of another id
 fails $D "select public.decide_community_store('$C2', 'approved', null, '{\"method\":\"playhub\",\"store\":{\"id\":999}}')" check_required                                # no official name
 fails $D "select public.decide_community_store('$C2', 'approved', null, '{\"method\":\"wish\"}')" check_required
-fails $D "select public.decide_community_store('$C2', 'approved', 'ok', '{\"method\":\"manual\",\"confirmed\":true}')" check_required                                       # manual needs a real note
-fails $D "select public.decide_community_store('$C2', 'approved', 'liguei para a loja e conferi', '{\"method\":\"manual\"}')" check_required                                 # and the explicit confirmation
+fails $D "select public.decide_community_store('$C2', 'approved', 'ok', '{\"method\":\"manual\",\"confirmed\":true,\"representation\":{\"confirmed\":true,\"evidence\":\"contrato social e e-mail da loja conferidos\"}}')" check_required                                       # manual needs a real note
+fails $D "select public.decide_community_store('$C2', 'approved', 'liguei para a loja e conferi', '{\"method\":\"manual\",\"representation\":{\"confirmed\":true,\"evidence\":\"contrato social e e-mail da loja conferidos\"}}')" check_required                                 # and the explicit confirmation
 eq "$(view '' loja-dois | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d["verified"],d["check"])')" "False None" "still not verified"
-as $D "select public.decide_community_store('$C2', 'approved', null, '{\"method\":\"playhub\",\"store\":{\"id\":999,\"name\":\"Loja Real 999\",\"city\":\"Recife\"}}')" >/dev/null
+as $D "select public.decide_community_store('$C2', 'approved', null, '{\"method\":\"playhub\",\"store\":{\"id\":999,\"name\":\"Loja Real 999\",\"city\":\"Recife\"},\"representation\":{\"confirmed\":true,\"evidence\":\"contrato social e e-mail da loja conferidos\"}}')" >/dev/null
 eq "$(view '' loja-dois | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d["verified"],d["name"],d["city"])')" "True Loja Real 999 Recife" "official name replaces the forged one"
 fails $X "select public.decide_community_store('$C2', 'approved', null, '$OFFICIAL')" "not allowed"   # the requester can't approve, whatever the check
 eq "$(q "select string_agg(coalesce(check_method, '-'), ',' order by id) from private.community_store_log where action = 'approve'")" "playhub,playhub" "log keeps the check"
 "${P[@]}" -c "update public.community_stores set status = 'pending', check_method = null where community_id = '$C2'"
-as $D "select public.decide_community_store('$C2', 'approved', 'loja sem eventos no Play Hub; conferi a página da loja e falei com o dono', '{\"method\":\"manual\",\"confirmed\":true}')" >/dev/null
+fails $D "select public.decide_community_store('$C2', 'approved', 'loja sem eventos no Play Hub; conferi a página da loja', '{\"method\":\"manual\",\"confirmed\":true}')" representation_required   # manual identity, still needs the representation
+as $D "select public.decide_community_store('$C2', 'approved', 'loja sem eventos no Play Hub; conferi a página da loja', '{\"method\":\"manual\",\"confirmed\":true,\"representation\":{\"confirmed\":true,\"evidence\":\"contrato social e e-mail da loja conferidos\"}}')" >/dev/null
 eq "$(view '' loja-dois | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d["verified"],d["check"],d["name"])')" "True manual Loja Real 999" "manual check"
 ok "5b. forged name/id: approval needs the Play Hub's data for the same id (it replaces the request) or an explicit manual check with a note"
 
