@@ -104,3 +104,27 @@
 .spotlight-data h2{font-size:27px}.spotlight-actions{gap:6px}
 }
 @media(prefers-reduced-motion:reduce){.binder-cover,.binder-cover.is-opening,.binder-book.is-turning-next .binder-page.right,.binder-book.is-turning-prev .binder-page.left,.hero-stories *,.story-page .post,.spotlight-stage .card3d,.hero-stories .postshine{animation:none!important}}
+
+/* P0 mobile card clarity and responsive binder interactions — 2026-11-05 */
+@media(max-width:850px){
+.hero-stories .fan{height:255px;display:flex;align-items:center;justify-content:center;isolation:isolate}
+.hero-stories .fan .card3d{animation:none!important;filter:drop-shadow(0 10px 12px #080414a0);transition:transform .18s ease}
+.hero-stories .fan .card3d:nth-child(1){--shift:-67px;--angle:-10deg;z-index:1}
+.hero-stories .fan .card3d:nth-child(2){--shift:0px;--angle:0deg;z-index:3}
+.hero-stories .fan .card3d:nth-child(3){--shift:67px;--angle:10deg;z-index:2}
+.hero-stories .fan .cardface:after{opacity:.13}
+.binder-stage{min-height:0}
+.binder-book{transition:transform .22s ease,filter .22s ease}
+.binder-leaf{animation:none}
+.binder-page.right{transform:none!important}
+.binder-book.is-turning-next .binder-page.right{animation:mobile-next .24s ease-out both}
+.binder-book.is-turning-prev .binder-page.right{animation:mobile-prev .24s ease-out both}
+.binder-pocket .card3d{transition:transform .16s ease}
+}
+@media(max-width:390px){
+.hero-stories .fan .card3d:nth-child(1){--shift:-53px}
+.hero-stories .fan .card3d:nth-child(3){--shift:53px}
+.hero-stories .fan .card3d{width:112px;margin-left:-56px}
+.hero-stories .fan .card3d:nth-child(2){width:126px;margin-left:-63px}
+}
+@media(prefers-reduced-motion:reduce){.hero-stories .fan .card3d,.binder-book,.binder-leaf{animation:none!important;transition:none!important}}
