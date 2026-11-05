@@ -1003,3 +1003,89 @@ test('admin: Feedback tab (from the notice link), text shown as text, mark as ha
   await page.locator('[data-fbdone="f1"]').click();
   await expect.poll(() => rpcCalls(calls, 'admin_feedback_done')[0]).toEqual({ p_id: 'f1', p_done: true });
 });
+
+// ---------- Amigos (/amigos/) ----------
+async function friendsSetup(page, { friends, shared = [], lending = [], games = [], wishlist = { 'LOR10-17': 1, 'LOR10-10': 1 }, open = {} } = {}) {
+  const asked = [];
+  await page.addInitScript((me) => {
+    localStorage.setItem('inkwell-lang', 'pt');
+    const exp = Math.floor(Date.now() / 1000) + 3600;
+    localStorage.setItem('inkwell-counter-auth', JSON.stringify({ access_token: 'x.' + btoa(JSON.stringify({ sub: me, exp })) + '.y', refresh_token: 'r', expires_at: exp, user: { id: me, email: 'luis@example.com' } }));
+  }, ME);
+  await page.route('**/rest/v1/**', (route) => {
+    const req = route.request(), u = new URL(req.url()), path = u.pathname.replace(/.*\/rest\/v1\//, '');
+    const body = req.postData() ? JSON.parse(req.postData()) : null;
+    asked.push({ path, body });
+    const json = (v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+    if (path === 'rpc/my_friends') return json(friends);
+    if (path === 'rpc/shared_collections') return json(shared);
+    if (path === 'rpc/friends_lending') return json(lending);
+    if (path === 'rpc/friend_collection') return json(open[body.p_handle] || { view: false });
+    if (path === 'game_logs') return json(games);
+    if (path.startsWith('inkwell_profiles')) return json([{ profile: 'principal', wishlist }]);
+    return json(path.startsWith('rpc/') ? null : []);
+  });
+  return asked;
+}
+const FA = '22222222-2222-4222-8222-222222222222', FB = '33333333-3333-4333-8333-333333333333', FC = '44444444-4444-4444-8444-444444444444';
+
+test('Amigos: each friend with profile, shared collection, wishlist cards they have, latest game; private profiles stay private', async ({ page }) => {
+  const asked = await friendsSetup(page, {
+    friends: [{ id: FB, name: 'Bia', handle: null, avatar: null }, { id: FA, name: 'Ana', handle: 'ana', avatar: 'LOR10-17' }, { id: FC, name: 'Caio', handle: 'caio', avatar: null }],
+    shared: [{ owner: FA, owner_name: 'Ana', profile: 'principal', can_edit: false, collection: { 'LOR10-1': { n: 3, f: 1 }, 'LOR10-2': { n: 2, f: 0 } } }],
+    lending: [{ user: FA, name: 'Ana', card_id: 'LOR10-17', lend: true, free: 1 }, { user: FA, name: 'Ana', card_id: 'LOR10-10', lend: true, free: 2 }],
+    games: [{ user_id: FA, played_at: new Date(Date.now() - 3 * 864e5).toISOString() }],
+    open: { caio: { view: true, lend: false, cards: 140 } } });
+  await page.goto(url('amigos/'));
+  const list = page.getByTestId('fr-list');
+  await expect(list.locator('.fr')).toHaveCount(3);
+  await expect(list.locator('.fr').first()).toHaveAttribute('data-friend', FA);   // most recent activity first
+  const ana = list.locator(`[data-friend="${FA}"]`);
+  await expect(ana).toContainText('@ana');
+  await expect(ana.getByTestId('fr-coll')).toHaveText('Coleção aberta para você · 6 cartas');
+  await expect(ana.getByTestId('fr-lend')).toHaveText('Tem 2 da sua lista de desejos · empresta');
+  await expect(ana.getByTestId('fr-last')).toHaveText('Último jogo há 3 dias');
+  await expect(ana.getByTestId('fr-profile')).toHaveAttribute('href', '../perfil/?u=ana');
+  await expect(ana.locator('.av')).toHaveAttribute('style', /background-image/);
+  await ana.getByTestId('fr-open-coll').click();
+  await expect(page).toHaveURL(/colecao\/$/);
+  expect(await page.evaluate(() => localStorage.getItem('inkwell-coll-source'))).toBe(`share:${FA}:principal`);
+  await page.goBack();
+  const caio = page.locator(`[data-friend="${FC}"]`);
+  await expect(caio.getByTestId('fr-coll')).toHaveText('Coleção aberta aos amigos · 140 cartas');
+  await expect(caio.getByTestId('fr-open-coll')).toHaveAttribute('href', '../colecao/?amigo=caio');
+  const bia = page.locator(`[data-friend="${FB}"]`);
+  await expect(bia).toContainText('Perfil privado');
+  await expect(bia).toContainText('Nada compartilhado com você ainda.');
+  await expect(bia.getByTestId('fr-profile')).toHaveCount(0);
+  // only the reads the other pages make; the private friend is never looked up by address
+  expect([...new Set(asked.filter((a) => a.path === 'rpc/friend_collection').map((a) => a.body.p_handle))].sort()).toEqual(['ana', 'caio']);
+  expect(asked.find((a) => a.path === 'rpc/friends_lending').body.p_cards.sort()).toEqual(['LOR10-10', 'LOR10-17']);
+  expect(asked.find((a) => a.path === 'game_logs')).toBeTruthy();
+});
+
+test('Amigos: no friends yet — what friends bring and how to add them; signed out asks to sign in', async ({ page, browser }) => {
+  await friendsSetup(page, { friends: [] });
+  await page.goto(url('amigos/'));
+  const e = page.getByTestId('fr-empty');
+  await expect(e).toContainText('Você ainda não tem amigos no Inkwell');
+  await expect(e.getByRole('link', { name: 'Adicionar e gerenciar amigos' })).toHaveAttribute('href', '../feed/#amigos');
+  const ctx = await browser.newContext(); const p2 = await ctx.newPage();
+  await p2.goto(url('amigos/'));
+  await expect(p2.getByRole('button', { name: 'Entrar' }).last()).toBeVisible();
+  await ctx.close();
+});
+
+test('Amigos on a phone: in "Mais", and the page fits a 360px screen', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 780 });
+  await friendsSetup(page, { friends: [{ id: FA, name: 'Ana Maria Souza de Oliveira', handle: 'ana', avatar: 'LOR10-17' }],
+    shared: [{ owner: FA, profile: 'principal', collection: { 'LOR10-1': { n: 1 } } }], lending: [{ user: FA, card_id: 'LOR10-17', lend: true, free: 1 }] });
+  await page.goto(url('feed/'));
+  await page.locator('#iwMore').click();
+  await page.locator('#iwMoreSheet a[href="../amigos/"]').click();
+  await expect(page.getByTestId('fr-list').locator('.fr')).toHaveCount(1);
+  const r = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, vw: innerWidth }));
+  expect(r.sw).toBeLessThanOrEqual(r.vw);
+  await expect(page.locator('#iwMoreSheet a[href="../amigos/"]')).toHaveAttribute('aria-current', 'page');
+  if (process.env.SHOT_DIR) await page.screenshot({ path: process.env.SHOT_DIR + '/amigos-360.png' });
+});
