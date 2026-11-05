@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Amigos · Inkwell</title>
+<meta name="description" content="Seus amigos no Inkwell: perfis, coleções compartilhadas, cartas para emprestar e o que jogaram por último.">
+<meta name="theme-color" content="#0b192c">
+<link rel="icon" href="../ink/icon-192.png">
+<link rel="apple-touch-icon" href="../ink/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="../ui/tokens.css"><script>try{document.documentElement.dataset.theme=localStorage.getItem("inkwell-theme")==="noite"?"noite":"dia"}catch(e){document.documentElement.dataset.theme="dia"}</script>
+</head>
+<body>
+<script>window.INKWELL_CLOUD_CONFIG = {"url": "https://sorefaetiaebmjploanp.supabase.co", "key": "sb_publishable_RkAWW-ENz70CXA6_QV7aHw_MpfD7Gn2", "redirect": "../amigos/"};
+/*@CLOUD_JS@*/</script>
+<style>
+/* layout only — components come from ../ui/tokens.css (design v2) */
+.fr-list { display: grid; gap: var(--sp-3); }
+.fr { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: var(--sp-3); align-items: start; }
+.fr .av { width: 52px; height: 52px; border-radius: 50%; background: var(--surface-3) 50% 20% / 210% auto no-repeat; box-shadow: 0 0 0 2px var(--accent);
+  display: grid; place-items: center; font: 800 1.2rem var(--display); color: var(--text); text-decoration: none; }
+.fr .t { display: grid; gap: 4px; min-width: 0; }
+.fr .t b { font-size: var(--fs-h3); overflow-wrap: anywhere; }
+.fr .facts { display: flex; flex-wrap: wrap; gap: 4px var(--sp-3); color: var(--text-2); font-size: var(--fs-small); }
+.fr .facts span { display: inline-flex; align-items: center; gap: 5px; }
+.fr .facts .ic { width: 15px; height: 15px; }
+.fr .acts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.fr .acts .btn { min-height: 40px; }
+.fr-top { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-4); }
+@media (max-width: 420px) { .fr .acts .btn { flex: 1 1 calc(50% - var(--sp-2)); justify-content: center; } }
+</style>
+
+<main class="page" id="page">
+  <div class="page-head"><div><h1 id="title">Amigos</h1><p class="sub" id="sub"></p></div></div>
+  <div id="app"><div class="skel" style="height:160px;border-radius:20px"></div></div>
+</main>
+<div class="toast-host"><div class="toast" id="toast" role="status" hidden></div></div>
+
+<script>
+const CARD_INDEX = /*@CARD_INDEX@*/;
+(() => {
+  "use strict";
+  // Amigos: my friends, each with what is already shared with me. Reads only what the other pages read:
+  // rpc/my_friends (name always; address and avatar only for public profiles), rpc/shared_collections (collections
+  // a friend opened to me), rpc/friends_lending (friends who have cards of my wishlist, from collections opened to
+  // friends) and the friends' latest game I can already see in the Feed (visibility not private). Nothing new.
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  let lang = "pt"; try { lang = localStorage.getItem("inkwell-lang") || "pt"; } catch { /* */ }
+  const T = (pt, en) => (lang === "en" ? en : pt);
+  const LOC = lang === "en" ? "en" : "pt-BR";
+  const CLOUD = window.INKWELL_CLOUD, me = CLOUD?.user();
+  const rpc = (name, body = {}) => CLOUD.api(`rpc/${name}`, { method: "POST", body });
+  const IMG = new Map((CARD_INDEX?.cards || []).map((c) => [c[0], c[8]]));
+  const art = (id) => { const f = IMG.get(id); return f ? `../lorcana-card-images/${encodeURI(f).replace(/'/g, "%27")}` : ""; };
+  const ago = (iso) => {
+    const d = Date.parse(iso); if (!d) return "";
+    const m = Math.round((Date.now() - d) / 60000), h = m / 60, dd = h / 24;
+    if (m < 60) return T("agora há pouco", "just now"); if (h < 24) return T(`há ${Math.round(h)} h`, `${Math.round(h)} h ago`);
+    if (dd < 2) return T("ontem", "yesterday"); if (dd < 30) return T(`há ${Math.round(dd)} dias`, `${Math.round(dd)} days ago`);
+    return new Date(d).toLocaleDateString(LOC, { day: "numeric", month: "short", year: "numeric" });
+  };
+  const num = (n) => Number(n || 0).toLocaleString(LOC);
+  document.title = T("Amigos · Inkwell", "Friends · Inkwell");
+  $("title").textContent = T("Amigos", "Friends");
+  $("sub").textContent = T("Perfis, coleções que abriram para você, cartas que podem emprestar e o último jogo compartilhado.", "Profiles, collections opened to you, cards they can lend and their latest shared game.");
+  const manage = `<a class="btn" href="../feed/#amigos"><i class="ic i-user-plus"></i>${T("Adicionar e gerenciar amigos", "Add and manage friends")}</a>`;
+  const invite = `<button type="button" class="btn ghost" data-invite><i class="ic i-send"></i>${T("Convidar para o Inkwell", "Invite to Inkwell")}</button>`;
+  const wire = () => document.querySelectorAll("[data-invite]").forEach((b) => b.onclick = () => window.INKWELL_INVITE?.(b));
+
+  async function load() {
+    if (!me || !CLOUD) {
+      $("app").innerHTML = `<div class="empty"><img src="../ui/assets/empty/signedout.svg" alt=""><b>${T("Entre para ver seus amigos", "Sign in to see your friends")}</b>
+        <p>${T("Seus amigos, as coleções que abriram para você e o que podem emprestar ficam aqui.", "Your friends, the collections they opened to you and what they can lend show up here.")}</p>
+        <button type="button" class="btn primary" id="signin">${T("Entrar", "Sign in")}</button></div>`;
+      $("signin").onclick = () => window.INKWELL_SIGNIN?.();
+      return;
+    }
+    let friends = null;
+    try { friends = await rpc("my_friends"); } catch { friends = null; }
+    if (!Array.isArray(friends)) {
+      $("app").innerHTML = `<div class="empty"><img src="../ui/assets/empty/error.svg" alt=""><b>${T("Não deu para carregar seus amigos", "Couldn't load your friends")}</b><p>${T("Tente de novo em instantes.", "Try again in a moment.")}</p><button type="button" class="btn" id="again">${T("Tentar de novo", "Try again")}</button></div>`;
+      $("again").onclick = () => { $("app").innerHTML = `<div class="skel" style="height:160px;border-radius:20px"></div>`; load(); };
+      return;
+    }
+    friends = friends.filter((f) => f && f.id);
+    if (!friends.length) {
+      $("app").innerHTML = `<div class="empty" data-testid="fr-empty"><img src="../ui/assets/empty/feed.svg" alt=""><b>${T("Você ainda não tem amigos no Inkwell", "You have no friends on Inkwell yet")}</b>
+        <p>${T("Com amigos, você vê os jogos deles no Início, as coleções que abrirem para você e quem pode emprestar as cartas que você procura.", "With friends you see their games on Home, the collections they open to you and who can lend the cards you want.")}</p>
+        <div class="row" style="justify-content:center;gap:var(--sp-2)">${manage}${invite}</div></div>`;
+      wire();
+      return;
+    }
+    const ids = friends.map((f) => f.id);
+    // one read each, in parallel; any of them missing just leaves its line out
+    const [shared, games, mine] = await Promise.all([
+      rpc("shared_collections").catch(() => []),
+      CLOUD.api(`game_logs?user_id=in.(${ids.join(",")})&visibility=neq.private&select=user_id,played_at&order=played_at.desc.nullslast&limit=${Math.min(1000, ids.length * 20)}`).catch(() => []),
+      CLOUD.api("inkwell_profiles?select=profile,wishlist:data->wishlist").catch(() => []),
+    ]);
+    const want = [...new Set((mine || []).flatMap((p) => Object.keys(p.wishlist && typeof p.wishlist === "object" ? p.wishlist : {})))].slice(0, 400);
+    // a collection a friend opened to all friends (Coleção > Compartilhar): the same light check the profile makes,
+    // for friends with a public address, at most 24
+    const [lending, opened] = await Promise.all([
+      want.length ? rpc("friends_lending", { p_cards: want }).catch(() => []) : [],
+      Promise.all(friends.filter((f) => f.handle).slice(0, 24).map((f) => rpc("friend_collection", { p_handle: f.handle, p_full: false }).then((r) => [f.id, r], () => [f.id, null]))),
+    ]);
+    const open = new Map(opened.filter(([, r]) => r?.view).map(([id, r]) => [id, r]));
+    const coll = new Map(), last = new Map(), lend = new Map();
+    for (const s of Array.isArray(shared) ? shared : []) {
+      const n = Object.values(s.collection || {}).reduce((t, e) => t + (+e?.n || 0) + (+e?.f || 0), 0);
+      if (!coll.has(s.owner)) coll.set(s.owner, []);
+      coll.get(s.owner).push({ profile: s.profile, n });
+    }
+    for (const g of games || []) if (!last.has(g.user_id) && g.played_at) last.set(g.user_id, g.played_at);
+    for (const l of Array.isArray(lending) ? lending : []) {
+      const x = lend.get(l.user) || { cards: new Set(), lends: false }; x.cards.add(l.card_id); x.lends ||= !!l.lend; lend.set(l.user, x);
+    }
+    const order = (f) => last.get(f.id) || "";
+    friends.sort((a, b) => String(order(b)).localeCompare(String(order(a))) || String(a.name || "").localeCompare(String(b.name || "")));
+    const card = (f) => {
+      const src = f.avatar ? art(f.avatar) : "", name = f.name || T("Amigo", "Friend"), prof = f.handle ? `../perfil/?u=${encodeURIComponent(f.handle)}` : "";
+      const cs = coll.get(f.id) || [], ld = lend.get(f.id), at = last.get(f.id), op = !cs.length && open.get(f.id);
+      const avatar = `<${prof ? `a href="${prof}"` : "span"} class="av" style="${src ? `background-image:url('${src}')` : ""}" aria-hidden="true" tabindex="-1">${src ? "" : esc(name[0].toUpperCase())}</${prof ? "a" : "span"}>`;
+      const facts = [
+        op ? `<span data-testid="fr-coll"><i class="ic i-cards"></i>${esc(T(`Coleção aberta aos amigos · ${num(op.cards)} cartas${op.lend ? " · empresta" : ""}`, `Collection open to friends · ${num(op.cards)} cards${op.lend ? " · lends" : ""}`))}</span>` : "",
+        cs.length ? `<span data-testid="fr-coll"><i class="ic i-cards"></i>${esc(T(`Coleção aberta para você · ${num(cs.reduce((t, c) => t + c.n, 0))} cartas`, `Collection open to you · ${num(cs.reduce((t, c) => t + c.n, 0))} cards`))}</span>` : "",
+        ld ? `<span data-testid="fr-lend"><i class="ic i-loan"></i>${esc(T(`Tem ${ld.cards.size} da sua lista de desejos${ld.lends ? " · empresta" : ""}`, `Has ${ld.cards.size} of your wishlist${ld.lends ? " · lends" : ""}`))}</span>` : "",
+        at ? `<span data-testid="fr-last"><i class="ic i-games"></i>${esc(T(`Último jogo ${ago(at)}`, `Last game ${ago(at)}`))}</span>` : "",
+      ].filter(Boolean).join("");
+      return `<article class="card fr" data-friend="${esc(f.id)}">${avatar}
+        <div class="t"><b>${esc(name)}</b>${f.handle ? `<span class="small muted">@${esc(f.handle)}</span>` : `<span class="small muted">${T("Perfil privado", "Private profile")}</span>`}
+          ${facts ? `<div class="facts">${facts}</div>` : `<div class="facts"><span>${T("Nada compartilhado com você ainda.", "Nothing shared with you yet.")}</span></div>`}</div>
+        <div class="acts">${prof ? `<a class="btn small" href="${prof}" data-testid="fr-profile"><i class="ic i-eye"></i>${T("Ver perfil", "View profile")}</a>` : ""}
+          ${cs.map((c) => `<a class="btn small" href="../colecao/" data-coll="share:${esc(f.id)}:${esc(c.profile)}" data-testid="fr-open-coll"><i class="ic i-cards"></i>${cs.length > 1 ? esc(T(`Coleção “${c.profile}”`, `Collection “${c.profile}”`)) : T("Ver coleção", "See collection")}</a>`).join("")}
+          ${op ? `<a class="btn small" href="../colecao/?amigo=${encodeURIComponent(f.handle)}" data-testid="fr-open-coll"><i class="ic i-cards"></i>${T("Ver coleção", "See collection")}</a>` : ""}
+          ${ld ? `<a class="btn small ghost" href="../precos/"><i class="ic i-loan"></i>${T("Minha lista de desejos", "My wishlist")}</a>` : ""}</div></article>`;
+    };
+    $("app").innerHTML = `<div class="fr-top">${manage}${invite}</div>
+      <div class="fr-list" data-testid="fr-list">${friends.map(card).join("")}</div>
+      ${!want.length ? `<p class="small muted" style="margin-top:var(--sp-4)" data-testid="fr-wish-hint">${T("Dica: com cartas na sua lista de desejos, aparece aqui quem tem cada uma.", "Tip: with cards on your wishlist, this shows who has each one.")}</p>` : ""}`;
+    // the shared collection opens in Coleção (the same choice Coleção remembers)
+    document.querySelectorAll("[data-coll]").forEach((a) => a.addEventListener("click", () => { try { localStorage.setItem("inkwell-coll-source", a.dataset.coll); } catch { /* */ } }));
+    wire();
+  }
+  load();
+})();
+</script>
+
+<script>window.INKWELL_SHELL = {"page": "friends"};
+/*@SHELL_JS@*/</script>
+</body>
+</html>
