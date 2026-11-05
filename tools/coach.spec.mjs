@@ -360,7 +360,26 @@ test('Feed: a linked best-of-3 is one post with the match score; an unlinked gam
   await expect(bo3.locator('.score')).toHaveText('2–1');
   await page.locator('details.bo3g summary').click();
   await expect(page.locator('details.bo3g li')).toHaveCount(3);
-  await expect(page.locator('details.bo3g li').first()).toContainText('Jogo 1: Perdeu 9–20');
+  const g1 = page.locator('details.bo3g li').first();
+  await expect(g1.locator('.n')).toHaveText('Jogo 1');
+  await expect(g1.locator('.loss')).toHaveText('Perdeu');
+  await expect(g1.locator('.lore')).toHaveText('9–20');
+  await expect(g1.getByRole('link', { name: 'Abrir jogo' })).toHaveAttribute('href', /game=duels-g1/);
+  // both decks as split ink tokens, coloured from the inks (Amber/Steel vs Ruby)
+  const sp = page.getByTestId('bo3-matchup').getByTestId('inksplit');
+  await expect(sp).toHaveCount(2);
+  expect(await sp.first().locator('i').evaluateAll((els) => els.map((e) => e.dataset.ink))).toEqual(['amber', 'steel']);
+  const bg = await sp.nth(1).locator('i').first().evaluate((e) => getComputedStyle(e).backgroundColor);
+  expect(bg).not.toBe('rgba(0, 0, 0, 0)');
+  if (process.env.SHOT_DIR) for (const th of ['dia', 'noite']) { await page.evaluate((t) => { document.documentElement.dataset.theme = t; }, th); await page.locator('article.post:has([data-testid="feed-bo3"])').screenshot({ path: `${process.env.SHOT_DIR}/feed-bo3-${th}.png` }); }
+  // the composer's "who sees" list: readable options in both themes (they were white on the system's white list)
+  for (const th of ['dia', 'noite']) {
+    await page.evaluate((t) => { document.documentElement.dataset.theme = t; }, th);
+    const c = await page.locator('#cmpVis option[value="public"]').evaluate((o) => [getComputedStyle(o).color, getComputedStyle(o).backgroundColor]);
+    const lum = (x) => { const [r, g, b] = x.match(/\d+(\.\d+)?/g).slice(0, 3).map(Number).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+    const [a, b] = [lum(c[0]), lum(c[1])].sort((x, y) => y - x);
+    expect((a + 0.05) / (b + 0.05), `${th}: ${c}`).toBeGreaterThan(4.5);
+  }
   expect(asked).toContain('mid:log->event->>match_id');
   expect(asked).not.toMatch(/players|name/);   // the feed never reads opponents' names
 });

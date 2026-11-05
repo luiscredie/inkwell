@@ -23,6 +23,18 @@
 #side .panel h2 { margin-bottom: var(--sp-3); }
 #side .list-row .row { flex-wrap: nowrap; }
 .post .comment span { min-width: 0; overflow-wrap: anywhere; }
+/* Bo3 cards: each deck's inks as a split token, and the games in tidy rows */
+.inksplit { display: inline-flex; width: 26px; height: 14px; border-radius: 999px; overflow: hidden; vertical-align: -2px; margin-right: 6px; flex: none; box-shadow: 0 0 0 1px var(--line-strong); }
+.inksplit i { flex: 1; background: var(--ink, var(--ink-steel)); }
+.post .match.vs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px var(--sp-2); }
+.post .match.vs > span { display: inline-flex; align-items: center; min-width: 0; }
+.bo3g > summary { cursor: pointer; color: var(--text-2); font-weight: 600; min-height: 32px; display: flex; align-items: center; }
+.bo3g ul { list-style: none; margin: var(--sp-2) 0 0; padding: 0; display: grid; gap: 6px; }
+.bo3g li { display: grid; grid-template-columns: minmax(56px, auto) auto 1fr auto; align-items: center; gap: var(--sp-3); padding: 6px 6px 6px var(--sp-3); border-radius: var(--r-md); background: var(--surface-2); font-size: var(--fs-small); }
+.bo3g li .n { color: var(--text-2); font-weight: 600; }
+.bo3g li .lore { font-weight: 700; font-variant-numeric: tabular-nums; }
+.bo3g li .win { color: var(--win); } .bo3g li .loss { color: var(--loss); }
+.bo3g li .btn { min-height: 36px; }
 .cmtform { display: flex; gap: var(--sp-2); }
 .older { display: flex; justify-content: center; margin-top: var(--sp-4); }
 #openFriends[hidden] + #feed { margin-top: 0 !important; }
@@ -706,6 +718,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     if (r.visibility === "group") { const own = groups.find((g) => g.id === r.group_id); return own ? Tx("Group: {name}", { name: own.name }) : otherGroups.has(r.group_id) ? Tx("Group: {name}", { name: otherGroups.get(r.group_id) }) : Tx("group"); }
     return Tx(r.visibility === "coaches" ? "coaches" : r.visibility);   // a coach-only game shows up here only for its owner
   }
+  // a deck's two inks as one small split token (Bo3 cards), the colours from the ink tokens
+  const inkSplit = (v) => { const xs = String(v || "").split(/[\/,]\s*/).map((c) => c.trim().toLowerCase()).filter(Boolean).slice(0, 2);
+    return xs.length ? `<span class="inksplit" aria-hidden="true" data-testid="inksplit">${xs.map((c) => `<i data-ink="${esc(c)}"></i>`).join("")}</span>` : ""; };
   const inks2 = (s) => `<span class="inks">${String(s || "").split(/[\/,]\s*/).filter(Boolean).slice(0, 2).map((c) => `<i data-ink="${esc(c.trim().toLowerCase())}"></i>`).join("")}</span>`;
   // a duels.ink best-of-3 linked in Jogos (match.json): one post with the match score and its games inside; games of
   // it not shared here are not counted, and the post says how many of the match's games it shows
@@ -719,9 +734,11 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     return `<article class="card post" data-key="${esc(key)}">
       <div class="who"><span class="av">${esc(who[0]?.toUpperCase() || "?")}</span><div><b>${esc(who)}</b><div class="small">${esc(meta)}</div></div></div>
       ${match ? `<div class="res" data-testid="feed-bo3"><span class="word ${mw >= 2 ? "win" : ml >= 2 ? "loss" : ""}">Bo3 · ${Tx(mw >= 2 ? "Won" : ml >= 2 ? "Lost" : "Incomplete")}</span><span class="score">${mw}–${ml}</span></div>
-        <details class="bo3g"><summary class="small">${esc(Tx(r.mgn && match.length < +r.mgn ? "{n} of {t} games shared" : "{n} games", { n: match.length, t: r.mgn }))}</summary><ul class="small">${match.map((g, i) => `<li>${Tx("Game {n}", { n: i + 1 })}: ${Tx(g.summary?.result === "win" ? "Won" : "Lost")} ${esc(g.summary?.my_lore ?? 0)}–${esc(g.summary?.opp_lore ?? 0)} · <a href="../coach/?player=${enc(g.user_id)}&game=${enc(g.game_id)}">${Tx("Open game")}</a></li>`).join("")}</ul></details>`
+        <details class="bo3g"><summary class="small">${esc(Tx(r.mgn && match.length < +r.mgn ? "{n} of {t} games shared" : "{n} games", { n: match.length, t: r.mgn }))}</summary><ul>${match.map((g, i) => { const gw = g.summary?.result === "win";
+          return `<li><span class="n">${Tx("Game {n}", { n: i + 1 })}</span><b class="${gw ? "win" : "loss"}">${Tx(gw ? "Won" : "Lost")}</b><span class="lore">${esc(g.summary?.my_lore ?? 0)}–${esc(g.summary?.opp_lore ?? 0)}</span><a class="btn ghost small" href="../coach/?player=${enc(g.user_id)}&game=${enc(g.game_id)}"><i class="ic i-eye"></i>${Tx("Open game")}</a></li>`; }).join("")}</ul></details>`
       : `<div class="res"><span class="word ${win ? "win" : "loss"}">${Tx(win ? "Won" : "Lost")}</span><span class="score">${esc(s.my_lore ?? 0)}–${esc(s.opp_lore ?? 0)}</span></div>`}
-      ${myDeck || opp ? `<p class="match">${myDeck ? `${inks2(s.my_inks || myDeck)}<b>${esc(myDeck)}</b>` : ""}${opp ? ` ${Tx("against")} ${inks2(s.opp_inks || opp)}<b>${esc(opp)}</b>` : ""}</p>` : ""}
+      ${myDeck || opp ? (match ? `<p class="match vs" data-testid="bo3-matchup">${myDeck ? `<span>${inkSplit(s.my_inks || myDeck)}<b>${esc(myDeck)}</b></span>` : ""}${opp ? `<span class="muted">${Tx("against")}</span><span>${inkSplit(s.opp_inks || opp)}<b>${esc(opp)}</b></span>` : ""}</p>`
+        : `<p class="match">${myDeck ? `${inks2(s.my_inks || myDeck)}<b>${esc(myDeck)}</b>` : ""}${opp ? ` ${Tx("against")} ${inks2(s.opp_inks || opp)}<b>${esc(opp)}</b>` : ""}</p>`) : ""}
       ${cm.slice(-3).map((n) => { const a = nameOf(n.author) === Tx("A player") ? n.author_name || Tx("Someone") : nameOf(n.author); return `<div class="comment"><span class="av sm">${esc(a[0]?.toUpperCase() || "?")}</span><span class="muted"><b>${esc(a)}</b> <span data-body="${esc(n.id)}"></span></span></div>`; }).join("")}
       <div class="cmtform" data-form="${esc(key)}" hidden><input maxlength="1000" placeholder="${Tx("Write a comment")}" aria-label="${Tx("Write a comment")}"><button type="button" class="btn" data-send="${esc(key)}"><i class="ic i-send"></i>${Tx("Send")}</button></div>
       <div class="acts"><a class="btn ghost small" href="../coach/?player=${enc(r.user_id)}&game=${enc(r.game_id)}"><i class="ic i-eye"></i>${Tx("Open game")}</a><button type="button" class="btn ghost small" data-cmt="${esc(key)}"><i class="ic i-comment"></i>${Tx("Comment")}${cm.length ? ` · ${cm.length}` : ""}</button></div>
