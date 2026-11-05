@@ -542,6 +542,22 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Members": "Membros", "Remove": "Remover", "Manage members": "Gerenciar membros", "You joined {name}.": "Você entrou em {name}.", "You left {name}.": "Você saiu de {name}.",
     "{n} min ago": "há {n} min", "{n} h ago": "há {n} h", "yesterday": "ontem", "{n} days ago": "há {n} dias", "Someone": "Alguém",
     "Fan project, not affiliated with Disney or Ravensburger.": "Projeto de fã, sem vínculo com a Disney ou a Ravensburger.", "Terms and privacy": "Termos e privacidade",
+    "Store events": "Eventos da loja", "Store on the Play Hub": "Loja no Play Hub", "Choose the store": "Escolher a loja", "Choose another store": "Escolher outra loja",
+    "Pick this community's store on the Play Hub and its events show up here on their own.": "Escolha a loja desta comunidade no Play Hub e os eventos dela aparecem aqui sozinhos.",
+    "Store verified": "Loja verificada", "Store link under review": "Vínculo com a loja em análise", "Store link refused": "Vínculo com a loja recusado",
+    "Events {store} publishes on the Play Hub. Inkwell hasn't verified yet that this community represents the store.": "Eventos que {store} publica no Play Hub. A Inkwell ainda não verificou que esta comunidade representa a loja.",
+    "An Inkwell admin didn't confirm this store, so its events aren't shown.": "Um admin da Inkwell não confirmou esta loja, por isso os eventos não aparecem.",
+    "No upcoming events from this store on the Play Hub.": "Nenhum evento futuro desta loja no Play Hub.", "The rest of the community is below.": "O resto da comunidade continua abaixo.",
+    "Couldn't reach the Play Hub now.": "Não conseguimos falar com o Play Hub agora.", "The Play Hub reported {t} events but sent {r}. Some may be missing.": "O Play Hub informou {t} eventos, mas só recebemos {r}. Alguns podem estar faltando.",
+    "See event": "Ver evento", "Register on the Play Hub": "Inscrever-se no Play Hub", "{r}/{c} registered": "{r}/{c} inscritos", "See all {n}": "Ver todos os {n}",
+    "Prerelease": "Pré-release", "Set Championship": "Set Championship", "Weekly Play/League": "Weekly Play/Liga", "Championship Celebration": "Championship Celebration", "Other": "Outros",
+    "* Type identified by Inkwell from the events on the Play Hub; not an official Ravensburger label.": "* Tipo identificado pelo Inkwell a partir dos eventos do Play Hub; não é uma classificação oficial da Ravensburger.",
+    "Search by the store's name as it appears on the Play Hub.": "Busque pelo nome da loja como aparece no Play Hub.", "Store name": "Nome da loja", "Search": "Buscar",
+    "No Lorcana store with that name on the Play Hub.": "Nenhuma loja de Lorcana com esse nome no Play Hub.", "Couldn't search now. Try again.": "Não foi possível buscar agora. Tente de novo.",
+    "Choose": "Escolher", "Current store": "Loja atual", "Remove the link": "Remover o vínculo", "Link removed.": "Vínculo removido.",
+    "After you choose, an Inkwell admin checks it before the community shows as verified. The events show up already, marked as not verified.": "Depois da escolha, um admin da Inkwell confere antes de a comunidade aparecer como verificada. Os eventos já aparecem, marcados como não verificados.",
+    "Request sent. An Inkwell admin will check it.": "Pedido enviado. Um admin da Inkwell vai conferir.", "This store is already verified for another community.": "Esta loja já está verificada para outra comunidade.",
+    "Admin note: {n}": "Nota do admin: {n}", "under review": "em análise", "verified": "verificada", "refused": "recusada",
   };
   const MOCK_EN = {
     "Taverna da Tinta (exemplo)": "Taverna da Tinta (example)", "Encantadas & Cia (exemplo)": "Encantadas & Co. (example)",
@@ -610,18 +626,22 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   async function loadView(slug) {
     const v = await rpc("community_view", { p_slug: slug });
     if (v) {
-      const [ev, ac] = await Promise.all([rpc("community_events", { p_slug: slug }).catch(() => null), rpc("community_access", { p_slug: slug }).catch(() => null)]);
-      v.events = ev; v.access = ac;
+      const [ev, ac, st] = await Promise.all([rpc("community_events", { p_slug: slug }).catch(() => null), rpc("community_access", { p_slug: slug }).catch(() => null),
+        v.kind === "store" && !v.mock ? rpc("community_store", { p_slug: slug }).catch(() => null) : null]);   // community_store.sql; optional
+      v.events = ev; v.access = ac; v.store = st?.store_id ? st : null;
     }
     return v;
   }
-  const reloadView = async () => { view = await loadView(view.slug); };
+  const reloadView = async () => {
+    const was = view; view = await loadView(view.slug);
+    if (view && was?.sev && was.store?.store_id === view.store?.store_id) view.sev = was.sev; else loadStore();   // same store: keep its events
+  };
   async function showOne(slug) {
     view = await loadView(slug);
     $("head").hidden = true;
     if (!view) { $("app").innerHTML = emptyBox("search", Tx("Community not found"), Tx("It doesn't exist, or it was hidden."), `<a class="btn" href="./">${Tx("Back")}</a>`); return; }
     document.title = `${L(view.mock, view.name)} · Inkwell`;
-    drawOne();
+    drawOne(); loadStore();
   }
   // store details: shown to everyone, like a shop sign; links only to web and Instagram addresses we built
   function contactHtml(c) {
@@ -647,6 +667,110 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     if (/(^|\.)ravensburgerplay\.com$/.test(host)) return Tx("See on the Play Hub");
     return esc(Tx("Open link ({site})", { site: host || "link" }));
   }
+  // ---------- Store communities: the store's own events on the Play Hub (rph-events ?store=, community_store.sql) ----------
+  // The same events, categories and marks as the Eventos page: marks go through mark_event with the Play Hub id.
+  let marks = null, sevN = 6;
+  const CAT = { prerelease: "Prerelease", set_championship: "Set Championship", weekly: "Weekly Play/League", celebration: "Championship Celebration", other: "Other" };
+  const isPast = (e) => { const end = e.end ? Date.parse(e.end) : Date.parse(e.start) + 6 * 3600e3; return Number.isFinite(end) && end < Date.now(); };   // as on Eventos
+  async function loadStore() {
+    const c = view;
+    if (!c?.store || c.store.status === "rejected") return;
+    c.sev = { loading: true }; drawOne();
+    let sev;
+    try {
+      const d = await CLOUD.fn("rph-events", { store: c.store.store_id });
+      sev = { events: (d?.events || []).filter((e) => !isPast(e)), partial: d?.complete === false ? { t: +d.total || 0, r: +d.received || 0 } : null };
+    } catch { sev = { failed: true }; }
+    if (me && !marks) { try { marks = new Map(((await rpc("my_event_marks")) || []).map((m) => [String(m.rph_id), m])); } catch { marks = new Map(); } }
+    c.sev = sev;
+    if (view === c) drawOne();
+  }
+  function catTag(e) {
+    const k = CAT[e.category] ? e.category : "other", label = k === "other" && e.template_name ? e.template_name : Tx(CAT[k]);
+    return `<span class="tag" data-testid="sev-cat" data-cat="${esc(k)}">${esc(label)}${e.category_source === "observed" ? "*" : ""}</span>`;
+  }
+  function sevCard(e) {
+    const st = marks?.get(String(e.id))?.status || null;
+    const price = e.cost_cents ? (e.cost_cents / 100).toLocaleString(LOC, { style: "currency", currency: e.currency || "BRL" }) : Tx("Free");
+    const spots = e.capacity ? Tx("{r}/{c} registered", { r: e.registered ?? 0, c: e.capacity }) : "";
+    return `<article class="cm-ev" data-sev="${esc(e.id)}"><div class="when">${esc(evWhen(e.start))}</div><b>${esc(e.name)}</b>
+        <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:4px">${catTag(e)}${e.format ? `<span class="tag">${esc(e.format)}</span>` : ""}<span class="tag">${esc(price)}</span>${spots ? `<span class="tag">${esc(spots)}</span>` : ""}</div>
+        <details class="small" style="margin-top:var(--sp-2)"><summary>${Tx("See event")}</summary>${e.address ? `<p style="margin:4px 0"><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.address)}" target="_blank" rel="noopener">${esc(e.address)}</a></p>` : ""}${e.description ? `<p style="margin:4px 0;white-space:pre-wrap;overflow-wrap:anywhere">${linkify(e.description)}</p>` : ""}</details>
+        <div class="row" style="gap:6px;margin-top:var(--sp-2);flex-wrap:wrap"><button type="button" class="btn small ${st === "going" ? "primary" : ""}" data-smark="${esc(e.id)}:going" aria-pressed="${st === "going"}">${Tx("Going")}</button><button type="button" class="btn small ghost" data-smark="${esc(e.id)}:maybe" aria-pressed="${st === "maybe"}">${Tx("Maybe")}</button>
+          <a class="btn small" href="${esc(e.url || `https://tcg.ravensburgerplay.com/events/${encodeURIComponent(e.id)}`)}" target="_blank" rel="noopener" data-testid="sev-register">${Tx("Register on the Play Hub")} <i class="ic i-external"></i></a></div></article>`;
+  }
+  function storeBadge(c) {
+    const s = c.store;
+    if (!s || c.kind !== "store") return "";
+    if (s.status === "approved") return `<span class="tag match" data-testid="store-badge" data-status="approved"><i class="ic i-check"></i>${Tx("Store verified")}</span>`;
+    if (s.status === "pending") return `<span class="tag info" data-testid="store-badge" data-status="pending">${Tx("Store link under review")}</span>`;
+    return `<span class="tag late" data-testid="store-badge" data-status="rejected">${Tx("Store link refused")}</span>`;   // only managers get a refused link
+  }
+  function storeHtml(c, canManage) {
+    if (c.mock || c.kind !== "store") return "";
+    const s = c.store, pick = canManage ? `<button type="button" class="btn small" id="pickStore"><i class="ic i-edit"></i>${Tx(s ? "Store on the Play Hub" : "Choose the store")}</button>` : "";
+    const head = `<div class="group-head"><h2>${Tx("Store events")}</h2>${s ? pick : ""}</div>`;
+    if (!s) return canManage ? `<section id="loja" data-testid="store-events">${head}<div class="cm-locked" data-testid="store-none"><b>${Tx("Pick this community's store on the Play Hub and its events show up here on their own.")}</b><div style="margin-top:var(--sp-2)">${pick}</div></div></section>` : "";
+    if (s.status === "rejected") return canManage ? `<section id="loja" data-testid="store-events">${head}<div class="cm-locked" data-testid="store-refused"><b>${Tx("An Inkwell admin didn't confirm this store, so its events aren't shown.")}</b>${s.note ? `<div class="small" style="margin-top:4px">${esc(Tx("Admin note: {n}", { n: s.note }))}</div>` : ""}</div></section>` : "";
+    const sev = c.sev || { loading: true }, list = sev.events || [];
+    return `<section id="loja" data-testid="store-events">${head}
+      ${s.verified ? "" : `<p class="small muted" data-testid="store-unverified" style="margin:0 0 var(--sp-2)">${esc(Tx("Events {store} publishes on the Play Hub. Inkwell hasn't verified yet that this community represents the store.", { store: list[0]?.store?.name || s.name }))}</p>`}
+      ${sev.partial ? `<div class="cm-locked" role="status" data-testid="store-partial" style="margin-bottom:var(--sp-2)">${esc(Tx("The Play Hub reported {t} events but sent {r}. Some may be missing.", sev.partial))} <button type="button" class="btn small ghost" id="sevRetry2">${Tx("Try again")}</button></div>` : ""}
+      ${sev.loading ? `<span class="skel" style="height:96px;border-radius:var(--r-lg)"></span>`
+        : sev.failed ? `<div class="cm-locked" role="alert" data-testid="store-error"><b>${Tx("Couldn't reach the Play Hub now.")}</b> <span class="small">${Tx("The rest of the community is below.")}</span><div style="margin-top:var(--sp-2)"><button type="button" class="btn small" id="sevRetry">${Tx("Try again")}</button></div></div>`
+        : list.length ? `<div class="cm-evs" style="display:grid;gap:var(--sp-2)">${list.slice(0, sevN).map(sevCard).join("")}</div>${list.length > sevN ? `<button type="button" class="btn small ghost" id="sevMore" style="margin-top:var(--sp-2)">${esc(Tx("See all {n}", { n: list.length }))}</button>` : ""}
+            ${list.some((e) => e.category_source === "observed") ? `<p class="small faint" style="margin:var(--sp-2) 0 0">${Tx("* Type identified by Inkwell from the events on the Play Hub; not an official Ravensburger label.")}</p>` : ""}`
+        : `<div class="cm-locked" data-testid="store-empty"><b>${Tx("No upcoming events from this store on the Play Hub.")}</b> <span class="small">${Tx("The rest of the community is below.")}</span></div>`}</section>`;
+  }
+  async function markStore(id, st) {
+    if (!me) { window.INKWELL_SIGNIN?.(); return; }
+    const e = (view.sev?.events || []).find((x) => String(x.id) === id); if (!e) return;
+    const cur = marks?.get(id) || {}, next = cur.status === st ? null : st;
+    const snap = { name: e.name, start: e.start, end: e.end, store: e.store?.name || null, address: e.address, url: e.url, format: e.format, cost_cents: e.cost_cents, currency: e.currency, category: e.category, category_source: e.category_source };
+    try {
+      await rpc("mark_event", { p_rph_id: e.id, p_status: next, p_registered: !!cur.registered, p_paid: !!cur.paid, p_snap: snap });   // event_marks.sql, shared with Eventos
+      if (next) marks.set(id, { ...cur, status: next, rph_id: e.id, snap }); else marks.delete(id);
+      drawOne();
+    } catch { toast(Tx("Couldn't send. Try again."), true); }
+  }
+  function openStore() {
+    const sh = $("sheet"), c = view;
+    let q2 = "", res = null, msg = "", busy = false, armedRm = false;
+    const stTag = (s) => `<span class="tag ${s.status === "approved" ? "match" : s.status === "pending" ? "info" : "late"}">${Tx(s.status === "approved" ? "verified" : s.status === "pending" ? "under review" : "refused")}</span>`;
+    const draw = () => {
+      const s = c.store;
+      sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="shT">${Tx("Store on the Play Hub")}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
+        <div class="sheet-body">
+          ${s ? `<div class="card" data-testid="store-current" style="margin-bottom:var(--sp-3)"><div class="small faint">${Tx("Current store")}</div><b>${esc(s.name)}</b> ${stTag(s)}<div class="small muted">${esc([s.city, s.address, "ID " + s.store_id].filter(Boolean).join(" · "))}</div>
+            ${s.note ? `<div class="small" style="margin-top:4px">${esc(Tx("Admin note: {n}", { n: s.note }))}</div>` : ""}<button type="button" class="btn small ghost" id="stRm" style="margin-top:var(--sp-2)">${Tx(armedRm ? "Tap again to confirm" : "Remove the link")}</button></div>` : ""}
+          <form class="form" id="stF" role="search"><label class="field">${Tx("Store name")}<span class="row" style="gap:6px;flex-wrap:nowrap"><input id="stQ" type="search" minlength="2" maxlength="60" value="${esc(q2)}" autocomplete="off"><button type="submit" class="btn" ${busy ? "disabled" : ""}>${Tx("Search")}</button></span><span class="hint">${Tx("Search by the store's name as it appears on the Play Hub.")}</span></label></form>
+          ${res === null ? "" : res.length ? `<div style="display:grid;gap:var(--sp-2)" data-testid="store-results">${res.map((x) => `<div class="card row between" style="gap:var(--sp-2)"><div style="min-width:0"><b>${esc(x.name)}</b><div class="small muted">${esc([[x.city, x.state].filter(Boolean).join(" - "), x.address, "ID " + x.id].filter(Boolean).join(" · "))}</div></div><button type="button" class="btn small primary" data-pickstore="${esc(x.id)}">${Tx("Choose")}</button></div>`).join("")}</div>` : `<p class="muted" data-testid="store-noresult">${Tx("No Lorcana store with that name on the Play Hub.")}</p>`}
+          <p class="small" id="stMsg" role="alert">${esc(msg)}</p>
+          <p class="small faint">${Tx("After you choose, an Inkwell admin checks it before the community shows as verified. The events show up already, marked as not verified.")}</p></div>`;
+      sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = () => sh.close());
+      $("stQ").oninput = (e) => { q2 = e.target.value; };
+      $("stF").onsubmit = async (e) => {
+        e.preventDefault(); if (q2.trim().length < 2) { $("stQ").focus(); return; }
+        busy = true; msg = ""; draw();
+        try { res = (await CLOUD.fn("rph-events", { stores: q2.trim() })) || []; } catch { res = null; msg = Tx("Couldn't search now. Try again."); }
+        busy = false; draw(); (sh.querySelector("[data-pickstore]") || $("stQ")).focus();
+      };
+      sh.querySelectorAll("[data-pickstore]").forEach((b) => b.onclick = async () => {
+        const x = res.find((r) => String(r.id) === b.dataset.pickstore); if (!x) return;
+        b.disabled = true;
+        try { await rpc("request_community_store", { p_slug: c.slug, p_store: { id: String(x.id), name: x.name, city: x.city || "", address: x.address || "" } }); }
+        catch (err) { msg = Tx(/store_taken/.test(String(err?.message || err)) ? "This store is already verified for another community." : "Couldn't save. Try again."); draw(); return; }
+        sh.close(); await reloadView(); drawOne(); toast(Tx("Request sent. An Inkwell admin will check it."));
+      });
+      $("stRm")?.addEventListener("click", async () => {
+        if (!armedRm) { armedRm = true; draw(); return; }
+        try { await rpc("remove_community_store", { p_slug: c.slug }); } catch { msg = Tx("Couldn't save. Try again."); armedRm = false; draw(); return; }
+        sh.close(); await reloadView(); drawOne(); toast(Tx("Link removed."));
+      });
+    };
+    draw(); sh.showModal(); setTimeout(() => $("stQ")?.focus(), 30);
+  }
+
   function eventsHtml(c, isMember, canManage) {
     if (!Array.isArray(c.events) || c.mock) return "";
     const ev = (e) => `<article class="cm-ev${e.cancelled ? " off" : ""}" data-ev="${esc(e.id)}"><div class="when">${esc(evWhen(e.starts_at))}${e.cancelled ? ` · ${Tx("cancelled")}` : ""}</div>
@@ -736,13 +860,13 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     $("app").innerHTML = `${m ? `<div class="cm-mock" data-testid="mock-banner"><i class="ic i-info"></i><span>${Tx("Example · fictional community")}. ${Tx("This is a mockup to show what a community looks like. Its people are not real.")}</span></div>` : ""}
       <a class="back" href="./">${Tx("Communities")}</a>
       <section class="cm-hero" style="margin-top:var(--sp-3)">${coverHtml(c)}
-        <div class="cm-id"><span class="cm-av" style="${art(c.avatar)}"></span><div style="min-width:0"><h1>${esc(L(m, c.name))}</h1><div class="small muted">${esc([Tx(KIND[c.kind] || "Store"), c.city, members(c.member_n || 0)].filter(Boolean).join(" · "))}</div></div></div>
+        <div class="cm-id"><span class="cm-av" style="${art(c.avatar)}"></span><div style="min-width:0"><h1>${esc(L(m, c.name))}</h1><div class="small muted">${esc([Tx(KIND[c.kind] || "Store"), c.city, members(c.member_n || 0)].filter(Boolean).join(" · "))}</div>${storeBadge(c) ? `<div style="margin-top:4px">${storeBadge(c)}</div>` : ""}</div></div>
         <div class="cm-body">${c.description ? `<p>${esc(L(m, c.description))}</p>` : ""}
           ${contactHtml(c)}
           <div class="cm-acts">${join}${canManage ? `<button type="button" class="btn" id="edit"><i class="ic i-edit"></i>${Tx("Edit")}</button><button type="button" class="btn ghost" id="manage">${Tx("Manage members")}${c.access?.requests?.length ? ` <span class="count">${c.access.requests.length}</span>` : ""}</button>${c.access ? `<button type="button" class="btn ghost" id="invite"><i class="ic i-user-plus"></i>${Tx("Invite")}</button>` : ""}` : ""}
             <button type="button" class="btn ghost" id="share"><i class="ic i-send"></i>${Tx("Share")}</button></div></div></section>
       <div class="cm-cols">
-        <div style="display:grid;gap:var(--sp-5);align-content:start">${eventsHtml(c, isMember, canManage)}
+        <div style="display:grid;gap:var(--sp-5);align-content:start">${storeHtml(c, canManage)}${eventsHtml(c, isMember, canManage)}
         <section data-testid="conversation"><div class="group-head"><h2>${Tx("Conversation")}</h2></div>
           ${c.posts ? `${isMember && !m ? `<form class="cm-compose" id="compose"><label class="sr-only" for="body">${Tx("Write to the community")}</label><textarea id="body" maxlength="1000" rows="3" placeholder="${Tx("Write to the community")}"></textarea><div class="row" style="justify-content:flex-end"><button type="submit" class="btn primary small">${Tx("Post")}</button></div></form>` : ""}
             ${c.posts.length ? `<div class="cm-posts">${c.posts.map(post).join("")}</div>` : `<p class="muted">${Tx("No messages yet. Say hi!")}</p>`}`
@@ -768,6 +892,10 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     $("leave")?.addEventListener("click", () => { if (armed !== "leave") { armed = "leave"; drawOne(); return; } act(() => rpc("join_community", { p_slug: c.slug, p_join: false }), Tx("You left {name}.", { name: c.name })); });
     $("edit")?.addEventListener("click", () => openForm(c));
     $("evNew")?.addEventListener("click", () => openEvent(null));
+    $("pickStore")?.addEventListener("click", openStore);
+    $("sevRetry")?.addEventListener("click", loadStore); $("sevRetry2")?.addEventListener("click", loadStore);
+    $("sevMore")?.addEventListener("click", () => { sevN = 1e4; drawOne(); });
+    document.querySelectorAll("[data-smark]").forEach((b) => b.onclick = () => { const [id, st] = b.dataset.smark.split(":"); markStore(id, st); });
     document.querySelectorAll("[data-evedit]").forEach((b) => b.onclick = () => openEvent((c.events || []).find((x) => x.id === b.dataset.evedit)));
     document.querySelectorAll("[data-rsvp]").forEach((b) => b.onclick = async () => {
       const [id, st] = b.dataset.rsvp.split(":"), cur = (c.events || []).find((x) => x.id === id);

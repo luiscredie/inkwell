@@ -3,6 +3,8 @@
 //   GET ?lat=-23.55&lng=-46.63&km=100&from=2026-10-27&to=2027-01-31   -> { events: [...], total, received, complete, issues, divergences }
 //   GET ?geocode=Campinas                                               -> { lat, lng, label } (Open-Meteo geocoder)
 //   GET ?id=904881                                                      -> one event (to link a community table)
+//   GET ?store=17617&from=…&to=…                                        -> that store's events, same shape as the list (store communities)
+//   GET ?stores=Colecionaveis                                           -> [{ id, name, city, state, country, address }] Lorcana stores by name
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { categorize, reviewObserved } from "./categories.js";
 import { fetchAll } from "./paginate.js";
@@ -49,13 +51,16 @@ async function templates() {
   return tpl.data;
 }
 
-async function events(lat: number, lng: number, km: number, from: string, to: string) {
-  const key = [lat.toFixed(2), lng.toFixed(2), km, from, to].join("|");
+// near a place, or (store) at one Play Hub store wherever the visitor is: the same reading, categories and checks
+async function events(where: { lat: number; lng: number; km: number } | { store: number }, from: string, to: string) {
+  const key = ("store" in where ? ["store", where.store] : [where.lat.toFixed(2), where.lng.toFixed(2), where.km]).concat([from, to]).join("|");
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < TTL) return hit.data;
+  const by: Record<string, string> = "store" in where ? { store: String(where.store) }
+    : { latitude: String(where.lat), longitude: String(where.lng), num_miles: String(Math.round(where.km / 1.609)) };
   // every page, each event once; a short or interrupted read is reported (paginate.js), never hidden
   const read = await fetchAll(async (page: number, size: number) => {
-    const q = new URLSearchParams({ game_slug: "disney-lorcana", latitude: String(lat), longitude: String(lng), num_miles: String(Math.round(km / 1.609)),
+    const q = new URLSearchParams({ game_slug: "disney-lorcana", ...by,
       page: String(page), page_size: String(size), start_date_after: `${from}T00:00:00Z`, start_date_before: `${to}T23:59:59Z` });
     q.append("display_statuses", "upcoming"); q.append("display_statuses", "inProgress");
     const r = await fetch(`${API}/events/?${q}`, { headers: HEADERS, signal: AbortSignal.timeout(10000) });
@@ -72,6 +77,24 @@ async function events(lat: number, lng: number, km: number, from: string, to: st
   const data = { divergences, events: out.sort((a, b) => String(a.start).localeCompare(String(b.start))), total: read.count,
     received: read.received, complete: read.complete, issues: read.issues };
   cache.set(key, { at: read.complete ? Date.now() : Date.now() - TTL + 60_000, data });   // an incomplete read is kept 1 minute only
+  return data;
+}
+
+// Lorcana stores by name, to pick a community's store. The Play Hub's /game-stores/ has one row per store and
+// game (and ignores game_slug), so keep the Lorcana rows and each store once. Matches names only, not cities.
+async function stores(q: string) {
+  const key = "stores|" + q.toLowerCase();
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.at < TTL) return hit.data;
+  const u = new URLSearchParams({ game_slug: "disney-lorcana", search: q, page_size: "50" });
+  const r = await fetch(`${API}/game-stores/?${u}`, { headers: HEADERS, signal: AbortSignal.timeout(10000) });
+  if (!r.ok) throw new Error(`play hub ${r.status}`);
+  const seen = new Set();
+  const data = ((await r.json())?.results || [])
+    .filter((g: Json) => g?.game?.slug === "disney-lorcana" && g?.store?.id && !seen.has(g.store.id) && seen.add(g.store.id))
+    .slice(0, 20).map(({ store: s }: Json) => ({ id: s.id, name: s.name, city: s.city || null, state: s.state || null, country: s.country || null,
+      address: typeof s.full_address === "string" ? s.full_address.replace(/\s*\n\s*/g, ", ").slice(0, 300) : null }));
+  cache.set(key, { at: Date.now(), data });
   return data;
 }
 
@@ -114,6 +137,8 @@ Deno.serve(async (req) => {
       cache.set("id|" + id, { at: Date.now(), data });
       return json(data);
     }
+    const st = u.searchParams.get("stores");
+    if (st != null) return json(st.trim().length >= 2 ? await stores(st.trim().slice(0, 60)) : []);
     const g = u.searchParams.get("geocode");
     if (g) return json(g.trim().length >= 2 ? await geocode(g.trim().slice(0, 100)) : null);
     const lat = num(u.searchParams.get("lat"), -90, 90), lng = num(u.searchParams.get("lng"), -180, 180);
@@ -121,8 +146,13 @@ Deno.serve(async (req) => {
     const today = new Date().toISOString().slice(0, 10);
     const from = day(u.searchParams.get("from")) ?? today;
     const to = day(u.searchParams.get("to")) ?? new Date(Date.now() + 120 * 864e5).toISOString().slice(0, 10);
+    const store = u.searchParams.get("store");
+    if (store != null) {
+      if (!/^\d{1,12}$/.test(store) || +store < 1) return json({ error: "bad store" }, 400);
+      return json(await events({ store: +store }, from, to));
+    }
     if (lat == null || lng == null) return json({ error: "lat and lng are required" }, 400);
-    return json(await events(lat, lng, km, from, to));
+    return json(await events({ lat, lng, km }, from, to));
   } catch (e) {
     return json({ error: String((e as Error).message || e).slice(0, 200) }, 502);
   }
