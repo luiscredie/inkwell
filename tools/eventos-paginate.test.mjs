@@ -19,7 +19,7 @@ const recorded = (calls = []) => async (page, size) => {
 // a fake Play Hub: offset pages over `n` events, page_size capped at 250, and the real bug on demand — at a
 // boundary listed in ties[size], the event before and after it swap places between the two pages (same start
 // time, no fixed order), so one comes twice and the other never.
-function fake(n, { ties = {}, failAt = null, calls = [] } = {}) {
+function fake(n, { ties = {}, failAt = null, calls = [], count = n } = {}) {
   const base = Array.from({ length: n }, (_, i) => ({ id: 1000 + i }));
   return async (page, asked) => {
     calls.push([page, asked]);
@@ -27,7 +27,7 @@ function fake(n, { ties = {}, failAt = null, calls = [] } = {}) {
     const size = Math.min(asked, 250), view = base.slice(), b = (page - 1) * size;
     if ((ties[size] || []).includes(b)) [view[b - 1], view[b]] = [view[b], view[b - 1]];
     const results = view.slice(b, b + size);
-    return { count: n, results, next_page_number: b + size < n ? page + 1 : null };
+    return { count, results, next_page_number: b + size < n ? page + 1 : null };
   };
 }
 
@@ -87,7 +87,7 @@ test('still short after the retry: reported as incomplete with the numbers, neve
 test('the API stops answering mid-way: keep what came, say it is incomplete', async () => {
   const r = await fetchAll(fake(900, { failAt: (page) => page === 3 }));
   assert.deepEqual([r.received, r.count, r.complete], [500, 900, false]);
-  assert.deepEqual(kinds(r), ['error', 'missing']);
+  assert.deepEqual(kinds(r), ['error', 'error', 'retry', 'missing']);   // the error gets one retry read; it failed too
   assert.match(r.issues[0].error, /503/);
 });
 
@@ -110,4 +110,33 @@ test('safety caps: at most MAX_EVENTS and the time budget, both reported', async
   assert.equal(slow.complete, false);
   assert.ok(kinds(slow).includes('time_budget'));
   assert.ok(slow.received > 0 && slow.received < 2000);
+});
+
+// interrupted reads where what came matches the count (the count is stale, or more pages were still due)
+test('interrupted by an error with received = count: not complete, flagged "unconfirmed"', async () => {
+  const r = await fetchAll(fake(600, { count: 500, failAt: (page) => page === 3 }));
+  assert.deepEqual([r.received, r.count, r.complete], [500, 500, false]);
+  assert.deepEqual(kinds(r), ['error', 'error', 'retry', 'unconfirmed']);
+});
+
+test('interrupted by an error with received = count, and the retry read reaches the end: complete', async () => {
+  const r = await fetchAll(fake(600, { count: 500, failAt: (page, size) => size === 250 && page === 3 }));
+  assert.deepEqual([r.first_pass, r.received, r.complete], [500, 600, true]);
+  assert.deepEqual(r.issues.map((i) => [i.kind, i.recovered]), [['error', undefined], ['retry', 100]]);
+});
+
+test('stopped by the time budget or the page cap with received = count: not complete, no retry', async () => {
+  let t = 0; const calls = [];
+  const slow = await fetchAll(fake(600, { count: 500, calls }), { now: () => (t += 13000) });   // 13 s per call: the 25 s budget runs out before page 3
+  assert.deepEqual([slow.received, slow.complete], [500, false]);
+  assert.deepEqual(kinds(slow), ['time_budget', 'unconfirmed']);
+  assert.ok(calls.every(([, size]) => size === 250), 'no retry read');
+  const capped = await fetchAll(fake(600, { count: 500 }), { maxEvents: 500 });
+  assert.deepEqual([capped.received, capped.complete], [500, false]);
+  assert.deepEqual(kinds(capped), ['page_cap', 'unconfirmed']);
+});
+
+test('a read that reaches the end normally with received = count stays complete', async () => {
+  const r = await fetchAll(fake(500));
+  assert.deepEqual([r.received, r.complete, r.issues], [500, true, []]);
 });

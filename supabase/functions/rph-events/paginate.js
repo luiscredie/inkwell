@@ -20,40 +20,47 @@ export async function fetchAll(fetchPage, { pageSize = PAGE_SIZE, retrySize = RE
   const t0 = now(), byId = new Map(), issues = [];
   let count = null, repeated = 0;
 
+  // one read of the whole list; returns how it ended: "done" (the API said there is no next page), or why it
+  // stopped early: "error", "page_cap", "time_budget"
   async function pass(size, first) {
     const maxPages = Math.ceil(maxEvents / size);
     for (let page = 1; page <= maxPages; page++) {
-      if (page > 1 && now() - t0 > budgetMs) { issues.push({ kind: "time_budget", page, size }); return false; }
+      if (page > 1 && now() - t0 > budgetMs) { issues.push({ kind: "time_budget", page, size }); return "time_budget"; }
       let d;
       try { d = await fetchPage(page, size); }
       catch (e) {
         if (first && page === 1) throw e;   // nothing to show: the caller answers 502, as before
         issues.push({ kind: "error", page, size, error: String(e?.message || e).slice(0, 120) });
-        return false;
+        return "error";
       }
       if (count == null && Number.isFinite(+(d?.count ?? d?.total))) count = +(d.count ?? d.total);
       const results = Array.isArray(d?.results) ? d.results : [];
       for (const e of results) { if (e?.id == null) continue; if (byId.has(e.id)) { if (first) repeated++; } else byId.set(e.id, e); }
-      if (!d?.next_page_number || !results.length) return true;
-      if (page === maxPages) { issues.push({ kind: "page_cap", pages: maxPages, size, max_events: maxEvents }); return false; }
+      if (!d?.next_page_number || !results.length) return "done";
+      if (page === maxPages) { issues.push({ kind: "page_cap", pages: maxPages, size, max_events: maxEvents }); return "page_cap"; }
     }
-    return true;
+    return "done";
   }
 
-  let done = await pass(pageSize, true);
+  const first = await pass(pageSize, true);
   const firstPass = byId.size;
-  // short on events and the first read finished: one more read with other page boundaries
-  if (done && count != null && byId.size < count && byId.size < maxEvents) {
+  // one more read with other page boundaries when the first one finished short, or was cut by an error (a hiccup
+  // may pass). Not after the page cap or the time budget: a second read would hit them again.
+  let second = null;
+  if ((first === "done" && count != null && byId.size < count && byId.size < maxEvents) || first === "error") {
     const before = byId.size;
-    done = await pass(retrySize, false);
+    second = await pass(retrySize, false);
     issues.push({ kind: "retry", size: retrySize, recovered: byId.size - before });
   }
+  // the end of the list was confirmed only if one of the reads reached its last page
+  const finished = first === "done" || second === "done";
   const events = [...byId.values()];
   const missing = count != null ? Math.max(0, count - events.length) : 0;
   if (missing) issues.push({ kind: "missing", count, received: events.length, missing });
   if (repeated) issues.push({ kind: "repeated", repeated });
-  // complete = every event the API counted came (repeats alone don't make it incomplete: they were removed;
-  // an error in the retry pass doesn't either, if nothing is missing). Without a count, any stop is incomplete.
-  const complete = count != null ? missing === 0 : !issues.some((i) => ["error", "page_cap", "time_budget"].includes(i.kind));
+  if (!finished && !missing) issues.push({ kind: "unconfirmed", count, received: events.length });   // as many as counted, but more pages were due
+  // complete = a read reached the end of the list AND every event the API counted came. Repeats alone don't make it
+  // incomplete (they were removed); an error in the retry doesn't either if the first read finished and nothing is missing.
+  const complete = finished && missing === 0;
   return { events, count: count ?? events.length, received: events.length, first_pass: firstPass, complete, issues };
 }
