@@ -74,6 +74,22 @@ export function decklistOf(row: Json, cat: Catalog, names: Map<string, string> =
 const PRIMARY = new Set(["ink", "play", "shift", "sing", "quest", "challenge", "activate"]);
 const REASON: Record<string, string | null> = { concession: "concede", lore: "lore", abandoned: "other", deck_out: "deck_out", timeout: "time" };
 
+// A duels.ink best-of-3: the match id match history gives each of its games (match_id, match_format "bo3").
+// The same cleaning as the match.json import in Jogos (src/site/coach), so both give the same id.
+export function matchIdOf(row: Json): string | null {
+  if (String(row?.match_format || "").toLowerCase() !== "bo3") return null;
+  const id = String(row?.match_id ?? "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 80);
+  return id || null;
+}
+// A stored game's log gets the match id from its own history row (same duels.ink game id). True when it changed.
+// A log already in a match (from match.json or an earlier sync) is left as it is: never moved to another match.
+export function linkMatchFromRow(log: Json, row: Json): boolean {
+  const id = matchIdOf(row);
+  if (!id || !log || log.source_ref?.game_id !== row.game_id || log.event?.match_id) return false;
+  log.event = { ...(log.event || {}), match_id: id, match_format: "bo3" };
+  return true;
+}
+
 export function convert(row: Json, events: Json[], cat: Catalog, meName: string): Json {
   const mine = Number(row.your_player);
   const seatOf = (n: any) => (n === null || n === undefined ? null : Number(n) === mine ? "p1" : "p2");
@@ -183,7 +199,8 @@ export function convert(row: Json, events: Json[], cat: Catalog, meName: string)
 
   const deck = decklistOf(row, cat, namesFromEvents(events));
   const colors = (s?: string) => [...new Set(String(s || "").split("/").map((c) => c.trim()).filter(Boolean).map((c) => c[0].toUpperCase() + c.slice(1).toLowerCase()))].sort();
-  const ev: Json = { name: row.queue_name || row.mode, kind: "online", game_in_match: row.match_game_number };
+  const mid = matchIdOf(row);
+  const ev: Json = { name: row.queue_name || row.mode, kind: "online", game_in_match: row.match_game_number, match_id: mid, match_format: mid ? "bo3" : null };
   for (const k of Object.keys(ev)) if (ev[k] === null || ev[k] === undefined) delete ev[k];
   return {
     format_version: "1.0", game_id: `duels-${row.game_id}`, source: "duels_ink",
