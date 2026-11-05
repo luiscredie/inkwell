@@ -359,7 +359,7 @@ window.INKWELL_CLOUD = (() => {
   const norm = (t) => String(t ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   const matches = (e, words) => { const hay = norm([e.name, e.store?.name, e.store?.city, e.address].join(" ")); return words.every((w) => hay.includes(w)); };
   const filtering = () => !!(q.trim() || cats.size || fmt || onlyFree || onlyMine);
-  let linked = {}, events = [], marks = new Map(), friends = {}, tables = [], loading = false, failed = false;
+  let partial = null, linked = {}, events = [], marks = new Map(), friends = {}, tables = [], loading = false, failed = false;
   // acct: the place kept in the account (event_places.sql), only after the person ticks the box.
   // undefined = not available (signed out, or the SQL isn't there); null = not saved; object = saved.
   let acct;
@@ -414,7 +414,8 @@ window.INKWELL_CLOUD = (() => {
     try {
       const d = await CLOUD.fn("rph-events", { lat: where.lat.toFixed(4), lng: where.lng.toFixed(4), km });
       events = (d.events || []).map((e) => ({ ...e, kind: "rph", key: "rph:" + e.id }));
-    } catch { failed = true; events = []; }
+      partial = d.complete === false ? { total: +d.total || 0, received: +d.received || events.length } : null;   // the Play Hub didn't send everything
+    } catch { failed = true; events = []; partial = null; }
     // community tables linked to these Play Hub events (community_tables.sql): shown on the event, not twice
     try { const r = events.length ? await rpc("rph_tables", { p_ids: events.map((e) => e.id).slice(0, 400) }) : {}; linked = r && !Array.isArray(r) ? r : {}; } catch { linked = {}; }
     if (me) {
@@ -582,6 +583,7 @@ window.INKWELL_CLOUD = (() => {
     else for (const e of shown) { const k = dkey(e.start); groups.set(k, (groups.get(k) || []).concat(e)); }
     app.innerHTML = locBox + consent
       + (clash.length ? `<div class="ev-warn" role="alert" data-testid="clash"><i class="ic i-alert"></i><div>${clash.map(([k, l]) => `<div><b>${esc(dayTitle(k))}:</b> ${T("você marcou \"Vou\" em", "you said Going to")} ${l.length} ${T("eventos", "events")} (${l.map((e) => esc(e.name)).join(" · ")})</div>`).join("")}</div></div>` : "")
+      + (partial && !failed ? `<div class="ev-warn" role="status" data-testid="partial"><i class="ic i-alert"></i><div>${esc(T(`O Play Hub informou ${partial.total} eventos, mas só recebemos ${partial.received}. Alguns podem estar faltando.`, `The Play Hub reported ${partial.total} events but sent ${partial.received}. Some may be missing.`))} <button type="button" class="btn small ghost" id="retryP">${T("Tentar de novo", "Try again")}</button></div></div>` : "")
       + `<div class="ev-bar"><div class="seg" role="group" aria-label="${T("Ver", "View")}"><button type="button" data-view="list" aria-pressed="${view === "list"}">${T("Lista", "List")}</button><button type="button" data-view="cal" aria-pressed="${view === "cal"}">${T("Calendário", "Calendar")}</button></div>
         <button type="button" class="chipbtn" id="mine" aria-pressed="${onlyMine}">${T("Meus eventos", "My events")}</button><button type="button" class="chipbtn" id="free" aria-pressed="${onlyFree}">${T("Grátis", "Free")}</button>
         ${formats.length > 1 ? `<select id="fmt" class="inline" aria-label="${T("Formato", "Format")}"><option value="">${T("Todos os formatos", "All formats")}</option>${formats.map((f) => `<option ${f === fmt ? "selected" : ""}>${esc(f)}</option>`).join("")}</select>` : ""}
@@ -622,6 +624,7 @@ window.INKWELL_CLOUD = (() => {
     $("free")?.addEventListener("click", () => { onlyFree = !onlyFree; draw(); });
     $("fmt")?.addEventListener("change", (e) => { fmt = e.target.value; draw(); });
     $("retry")?.addEventListener("click", load);
+    $("retryP")?.addEventListener("click", load);
     $("keepPlace")?.addEventListener("change", (e) => keepPlace(e.target.checked));
     $("more")?.addEventListener("click", () => { horizon += 30; draw(); });
     $("morePast")?.addEventListener("click", () => { pastN += 10; draw(); });

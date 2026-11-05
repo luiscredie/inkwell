@@ -1,10 +1,11 @@
 // rph-events: Disney Lorcana events near a place, from the Ravensburger Play Hub (tcg.ravensburgerplay.com),
 // for the Eventos page. Public data, no key (the same API the Play Hub site uses); cached here for 15 minutes.
-//   GET ?lat=-23.55&lng=-46.63&km=100&from=2026-10-27&to=2027-01-31   -> { events: [...], total }
+//   GET ?lat=-23.55&lng=-46.63&km=100&from=2026-10-27&to=2027-01-31   -> { events: [...], total, received, complete, issues, divergences }
 //   GET ?geocode=Campinas                                               -> { lat, lng, label } (Open-Meteo geocoder)
 //   GET ?id=904881                                                      -> one event (to link a community table)
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { categorize, reviewObserved } from "./categories.js";
+import { fetchAll } from "./paginate.js";
 
 const API = "https://api.cloudflare.ravensburgerplay.com/hydraproxy/api/v2";
 const HEADERS = { "Content-Type": "application/json", Referer: "https://tcg.ravensburgerplay.com/" };
@@ -52,26 +53,25 @@ async function events(lat: number, lng: number, km: number, from: string, to: st
   const key = [lat.toFixed(2), lng.toFixed(2), km, from, to].join("|");
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < TTL) return hit.data;
-  const raw: Json[] = [];
-  let total = 0;
-  for (let page = 1; page <= 5; page++) {
+  // every page, each event once; a short or interrupted read is reported (paginate.js), never hidden
+  const read = await fetchAll(async (page: number, size: number) => {
     const q = new URLSearchParams({ game_slug: "disney-lorcana", latitude: String(lat), longitude: String(lng), num_miles: String(Math.round(km / 1.609)),
-      page: String(page), page_size: "100", start_date_after: `${from}T00:00:00Z`, start_date_before: `${to}T23:59:59Z` });
+      page: String(page), page_size: String(size), start_date_after: `${from}T00:00:00Z`, start_date_before: `${to}T23:59:59Z` });
     q.append("display_statuses", "upcoming"); q.append("display_statuses", "inProgress");
-    const r = await fetch(`${API}/events/?${q}`, { headers: HEADERS });
+    const r = await fetch(`${API}/events/?${q}`, { headers: HEADERS, signal: AbortSignal.timeout(10000) });
     if (!r.ok) throw new Error(`play hub ${r.status}`);
-    const d = await r.json();
-    total = d.count ?? d.total ?? 0;
-    raw.push(...(d.results || []));   // the Play Hub's pages can repeat an event (seen 05/11/2026): deduped below
-    if (!d.next_page_number) break;
-  }
-  const t = await templates(), seen = new Set();
-  const uniq = raw.filter((e) => !seen.has(e.id) && seen.add(e.id));
-  const divergences = reviewObserved(uniq, t);   // flagged names, for investigation; categories are not changed
+    return await r.json();
+  });
+  // monitoring: these lines are the ones to watch in the function's logs
+  if (!read.complete) console.warn("rph-events: incomplete", JSON.stringify({ key, count: read.count, received: read.received, issues: read.issues }));
+  else if (read.issues.length) console.info("rph-events: pagination", JSON.stringify({ key, count: read.count, received: read.received, issues: read.issues }));
+  const t = await templates();
+  const divergences = reviewObserved(read.events, t);   // flagged names, for investigation; categories are not changed
   if (divergences.length) console.warn("rph-events: event names that disagree with an observed template", JSON.stringify(divergences));
-  const out = uniq.map((e) => slim(e, t));
-  const data = { divergences, events: out.sort((a, b) => String(a.start).localeCompare(String(b.start))), total };
-  cache.set(key, { at: Date.now(), data });
+  const out = read.events.map((e) => slim(e, t));
+  const data = { divergences, events: out.sort((a, b) => String(a.start).localeCompare(String(b.start))), total: read.count,
+    received: read.received, complete: read.complete, issues: read.issues };
+  cache.set(key, { at: read.complete ? Date.now() : Date.now() - TTL + 60_000, data });   // an incomplete read is kept 1 minute only
   return data;
 }
 

@@ -340,3 +340,19 @@ test('search by name, store, city and address, with the format filter; kept on t
   await expect(page.locator('.ev')).toHaveCount(8);
   expect(await page.evaluate(() => localStorage.getItem('inkwell-events-q'))).toBeNull();
 });
+
+test('an incomplete answer from the Play Hub: the events that came are shown, with a notice and a retry', async ({ page }) => {
+  const calls = await setup(page, { signedIn: false });
+  let n = 0;
+  await page.route('**/functions/v1/rph-events**', (route) => {
+    calls.push({ path: 'fn' }); n++;
+    const body = n === 1 ? { events: EVENTS, total: 4, received: 3, complete: false, issues: [{ kind: 'missing', count: 4, received: 3, missing: 1 }] } : { events: EVENTS, total: 3, received: 3, complete: true, issues: [] };
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+  });
+  await page.goto(url('eventos/'));
+  await expect(page.locator('.ev')).toHaveCount(3);
+  await expect(page.getByTestId('partial')).toContainText('O Play Hub informou 4 eventos, mas só recebemos 3');
+  await page.locator('#retryP').click();
+  await expect(page.getByTestId('partial')).toHaveCount(0);
+  await expect(page.locator('.ev')).toHaveCount(3);
+});
