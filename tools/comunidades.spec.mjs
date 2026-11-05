@@ -27,7 +27,7 @@ const VIEW = {
     manage: [{ uid: ME, name: 'Luís', role: 'owner' }, { uid: '44444444-4444-4444-8444-444444444444', name: 'Bia', role: 'member', adult: true }] },
 };
 
-async function setup(page, { signedIn = true, adult = true } = {}) {
+async function setup(page, { signedIn = true, adult = true, rpcs = {}, fn = null } = {}) {
   const calls = [];
   await page.addInitScript(([me, signed]) => {
     localStorage.setItem('inkwell-lang', 'pt');
@@ -40,6 +40,7 @@ async function setup(page, { signedIn = true, adult = true } = {}) {
     const body = req.postData() ? JSON.parse(req.postData()) : null;
     calls.push({ path, body });
     const json = (v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+    if (rpcs[path]) { const v = rpcs[path](body); return v === undefined ? route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }) : json(v); }
     if (path === 'rpc/communities_list') return json(LIST);
     if (path === 'rpc/community_view') return json(VIEW[body.p_slug] || null);
     if (path === 'rpc/my_profile') return json({ display_name: 'Luís', adult, hidden: false });
@@ -47,6 +48,12 @@ async function setup(page, { signedIn = true, adult = true } = {}) {
     if (['rpc/join_community', 'rpc/post_in_community', 'rpc/moderate_community', 'rpc/report_community_post', 'rpc/update_community', 'rpc/set_community_role', 'rpc/transfer_community'].includes(path)) return route.fulfill({ status: 200, contentType: 'application/json', body: 'null' });
     if (path === 'rpc/my_duels_sync') return json(null);
     return json([]);
+  });
+  if (fn) await page.route('**/functions/v1/rph-events**', (route) => {
+    const q = Object.fromEntries(new URL(route.request().url()).searchParams);
+    calls.push({ path: 'fn', q });
+    const r = fn(q);
+    return r instanceof Error ? route.fulfill({ status: 502, contentType: 'application/json', body: '{"error":"play hub 503"}' }) : route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(r) });
   });
   return calls;
 }
@@ -269,4 +276,168 @@ test('Mesas & Ligas: fill in from a Play Hub link, linked table points to the Pl
   await page.locator('#evR').fill('https://exemplo.com/x');
   await page.locator('#evImp').click();
   await expect(page.locator('#evRh')).toContainText('não parece');
+});
+
+// ---------- store communities (supabase/community_store.sql, rph-events ?store= / ?stores=) ----------
+const soon = (d, h) => { const x = new Date(); x.setDate(x.getDate() + d); x.setHours(h, 0, 0, 0); return x.toISOString(); };
+const SEV = [   // as rph-events answers for store 17617 (tools/fixtures/rph-stores-2026-11-05.json), dates moved to the future
+  { id: 1237664, name: 'Set Championship - Hyperia City', start: soon(5, 14), format: 'Core Constructed', category: 'set_championship', category_source: 'observed', template_name: null, cost_cents: 6000, currency: 'BRL', capacity: 32, registered: 12, address: 'Av Brasil 1456, Campinas', store: { id: 17617, name: 'Muito Colecionaveis' }, url: 'https://tcg.ravensburgerplay.com/events/1237664', description: 'Inscrição no Play Hub.' },
+  { id: 1242965, name: 'Into the Inkdark Prerelease', start: soon(9, 10), format: 'Sealed', category: 'prerelease', category_source: 'observed', template_name: null, cost_cents: 15000, currency: 'BRL', capacity: 16, registered: 3, address: 'Av Brasil 1456, Campinas', store: { id: 17617, name: 'Muito Colecionaveis' }, url: 'https://tcg.ravensburgerplay.com/events/1242965' },
+  { id: 1250001, name: 'Weekly Play (Constructed)', start: soon(2, 19), format: 'Core Constructed', category: 'weekly', category_source: 'api', template_name: 'Weekly Play (Constructed)', cost_cents: 0, currency: 'BRL', capacity: 0, registered: 0, address: 'Av Brasil 1456, Campinas', store: { id: 17617, name: 'Muito Colecionaveis' }, url: 'https://tcg.ravensburgerplay.com/events/1250001' },
+  { id: 1250002, name: 'Evento antigo', start: soon(-3, 10), format: 'Core Constructed', category: 'weekly', category_source: 'api', store: { id: 17617 }, url: 'https://tcg.ravensburgerplay.com/events/1250002' },   // past: left out
+];
+const STORE = { store_id: 17617, name: 'Muito Colecionaveis', city: 'Campinas', address: 'Av Brasil 1456', status: 'approved', verified: true };
+const storeFn = (events = SEV, complete = true) => (q) => (q.stores ? { stores: [{ id: 17617, name: 'Muito Colecionaveis', city: 'Campinas', state: 'SP', address: 'Av Brasil 1456, Campinas' }, { id: 99001, name: 'Muito Colecionaveis', city: 'Recife', state: 'PE', address: 'Rua X, 1' }], total: complete ? 2 : 400, complete }
+  : q.store_info ? (q.store_info === '17617' ? { found: true, store: { id: 17617, name: 'Muito Colecionaveis Comercio de Jogos e Acessorios Ltda', city: 'Campinas', address: 'Av Brasil 1456, Jardim Chapadao' }, events: 23 } : { found: false, store: null, events: 0 })
+  : q.store ? { events, total: events.length, received: events.length, complete: true, issues: [] } : { events: [] });
+
+test('store community, verified: its Play Hub events for a visitor, categories, official link, details by keyboard', async ({ page }) => {
+  const calls = await setup(page, { signedIn: false, rpcs: { 'rpc/community_store': () => STORE }, fn: storeFn() });
+  await page.goto(url('comunidades/?c=loja-aberta'));
+  await expect(page.getByTestId('store-badge')).toHaveText('Loja verificada');
+  await expect(page.getByTestId('store-unverified')).toHaveCount(0);
+  const cards = page.locator('[data-sev]');
+  await expect(cards).toHaveCount(3);                                   // the past one is not shown
+  expect(calls.find((c) => c.path === 'fn').q).toEqual({ store: '17617' });   // by store id, not by the visitor's place
+  await expect(page.locator('[data-sev="1237664"] [data-testid="sev-cat"]')).toHaveText('Set Championship*');
+  await expect(page.locator('[data-sev="1242965"] [data-testid="sev-cat"]')).toHaveText('Pré-release*');
+  await expect(page.locator('[data-sev="1250001"] [data-testid="sev-cat"]')).toHaveText('Weekly Play/Liga');
+  await expect(page.locator('[data-sev="1237664"]')).toContainText('12/32 inscritos');
+  await expect(page.locator('[data-sev="1250001"]')).toContainText('Grátis');
+  await expect(page.locator('[data-sev="1237664"] [data-testid="sev-register"]')).toHaveAttribute('href', 'https://tcg.ravensburgerplay.com/events/1237664');
+  await expect(page.locator('[data-sev="1237664"] [data-testid="sev-register"]')).toHaveAttribute('target', '_blank');
+  const summary = page.locator('[data-sev="1237664"] summary');
+  await summary.focus(); await page.keyboard.press('Enter');
+  await expect(page.locator('[data-sev="1237664"] details')).toHaveAttribute('open', '');
+  await expect(page.locator('[data-sev="1237664"] details')).toContainText('Av Brasil 1456');
+  await page.locator('[data-sev="1237664"] [data-smark="1237664:going"]').click();   // a visitor is asked to sign in; nothing is saved
+  expect(rpcCalls(calls, 'mark_event')).toEqual([]);
+  await expect(page.getByTestId('conversation')).toBeVisible();          // the rest of the community is there
+});
+
+test('store community: Vou/Talvez use the same marks as Eventos (mark_event with the Play Hub id)', async ({ page }) => {
+  const calls = await setup(page, { rpcs: { 'rpc/community_store': () => STORE, 'rpc/my_event_marks': () => [{ rph_id: 1242965, status: 'maybe', registered: true, paid: false, snap: {} }], 'rpc/mark_event': () => undefined }, fn: storeFn() });
+  await page.goto(url('comunidades/?c=loja-aberta'));
+  await expect(page.locator('[data-smark="1242965:maybe"]')).toHaveAttribute('aria-pressed', 'true');   // marked on Eventos, shown here
+  await page.locator('[data-smark="1237664:going"]').click();
+  await expect(page.locator('[data-smark="1237664:going"]')).toHaveAttribute('aria-pressed', 'true');
+  const m = rpcCalls(calls, 'mark_event');
+  expect(m[0]).toMatchObject({ p_rph_id: 1237664, p_status: 'going', p_registered: false, p_paid: false });
+  expect(m[0].p_snap).toMatchObject({ name: 'Set Championship - Hyperia City', url: 'https://tcg.ravensburgerplay.com/events/1237664', category: 'set_championship', category_source: 'observed' });
+  await page.locator('[data-smark="1242965:maybe"]').click();          // again = clear, keeps "registered"
+  await expect.poll(() => rpcCalls(calls, 'mark_event').length).toBe(2);
+  expect(rpcCalls(calls, 'mark_event')[1]).toMatchObject({ p_rph_id: 1242965, p_status: null, p_registered: true });
+});
+
+test('store community, owner: choose the store by name (two with the same name), then it is pending, not verified', async ({ page }) => {
+  let link = null;
+  const calls = await setup(page, { rpcs: {
+    'rpc/community_store': () => link,
+    'rpc/request_community_store': (b) => { link = { store_id: +b.p_store.id, name: b.p_store.name, city: b.p_store.city, address: b.p_store.address, status: 'pending', verified: false }; return { store_id: +b.p_store.id, status: 'pending' }; },
+  }, fn: storeFn() });
+  await page.goto(url('comunidades/?c=loja-do-ze'));
+  await expect(page.getByTestId('store-none')).toContainText('Escolha a loja desta comunidade no Play Hub');
+  await expect(page.getByTestId('store-badge')).toHaveCount(0);
+  await page.locator('#pickStore').click();
+  await page.locator('#stQ').fill('Muito');
+  await page.locator('#stQ').press('Enter');
+  const rows = page.locator('[data-testid="store-results"] [data-pickstore]');
+  await expect(rows).toHaveCount(2);
+  await expect(page.getByTestId('store-results')).toContainText('ID 99001');   // same name, told apart by city and id
+  await page.locator('[data-pickstore="17617"]').click();
+  expect(rpcCalls(calls, 'request_community_store')[0]).toEqual({ p_slug: 'loja-do-ze', p_store: { id: '17617', name: 'Muito Colecionaveis', city: 'Campinas', address: 'Av Brasil 1456, Campinas' } });
+  await expect(page.getByTestId('store-badge')).toHaveText('Vínculo com a loja em análise');
+  await expect(page.getByTestId('store-unverified')).toContainText('ainda não verificou');
+  await expect(page.locator('[data-sev]')).toHaveCount(3);
+});
+
+test('store community: a store already verified elsewhere is refused; the owner can remove the link', async ({ page }) => {
+  let link = { ...STORE, status: 'pending', verified: false };
+  const calls = await setup(page, { rpcs: {
+    'rpc/community_store': () => link,
+    'rpc/request_community_store': () => { throw new Error('unused'); },
+    'rpc/remove_community_store': () => { link = null; return undefined; },
+  }, fn: storeFn() });
+  await page.route('**/rest/v1/rpc/request_community_store', (r) => r.fulfill({ status: 400, contentType: 'application/json', body: '{"message":"store_taken"}' }));
+  await page.goto(url('comunidades/?c=loja-do-ze'));
+  await page.locator('#pickStore').click();
+  await expect(page.getByTestId('store-current')).toContainText('ID 17617');
+  await page.locator('#stQ').fill('Muito'); await page.locator('#stQ').press('Enter');
+  await page.locator('[data-pickstore="99001"]').click();
+  await expect(page.locator('#stMsg')).toHaveText('Esta loja já está verificada para outra comunidade.');
+  await page.locator('#stRm').click(); await page.locator('#stRm').click();   // two taps
+  await expect(page.getByTestId('store-none')).toBeVisible();
+  expect(rpcCalls(calls, 'remove_community_store')).toEqual([{ p_slug: 'loja-do-ze' }]);
+});
+
+test('store community: no events, Play Hub down (retry), incomplete list, refused link', async ({ page }) => {
+  let mode = 'empty', link = STORE;
+  await setup(page, { signedIn: false, rpcs: { 'rpc/community_store': () => link }, fn: (q) => (mode === 'down' ? new Error('x') : mode === 'empty' ? { events: [], total: 0, received: 0, complete: true } : { events: SEV.slice(0, 1), total: 3, received: 1, complete: false }) });
+  await page.goto(url('comunidades/?c=loja-aberta'));
+  await expect(page.getByTestId('store-empty')).toContainText('Nenhum evento futuro desta loja');
+  mode = 'down'; await page.reload();
+  await expect(page.getByTestId('store-error')).toContainText('Não conseguimos falar com o Play Hub');
+  await expect(page.getByTestId('conversation')).toBeVisible();
+  mode = 'partial'; await page.locator('#sevRetry').click();
+  await expect(page.getByTestId('store-partial')).toContainText('informou 3 eventos, mas só recebemos 1');
+  await expect(page.locator('[data-sev]')).toHaveCount(1);
+  link = null; await page.reload();                                      // a refused link isn't shown to visitors
+  await expect(page.getByTestId('store-events')).toHaveCount(0);
+});
+
+test('store community on a phone, in English: fits the screen', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  await setup(page, { signedIn: false, rpcs: { 'rpc/community_store': () => ({ ...STORE, status: 'pending', verified: false }) }, fn: storeFn() });
+  await page.addInitScript(() => localStorage.setItem('inkwell-lang', 'en'));
+  await page.goto(url('comunidades/?c=loja-aberta'));
+  await expect(page.getByTestId('store-badge')).toHaveText('Store link under review');
+  await expect(page.locator('[data-sev="1242965"] [data-testid="sev-cat"]')).toHaveText('Prerelease*');
+  await expect(page.locator('[data-sev="1242965"] [data-testid="sev-register"]')).toContainText('Register on the Play Hub');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+test('admin: each request next to the Play Hub\'s own data; approve with it, or only after an explicit manual check', async ({ page }) => {
+  const calls = await setup(page, { rpcs: {
+    'rpc/my_profile': () => ({ display_name: 'Luís', adult: true, hidden: false, is_admin: true }),
+    'rpc/admin_users': () => [], 'rpc/admin_reports': () => [], 'rpc/admin_communities': () => [], 'rpc/admin_feedback': () => [],
+    'rpc/admin_community_stores': () => [
+      { community_id: 'c-1', slug: 'loja-do-ze', community: 'Loja do Zé', store_id: 17617, name: 'Loja Oficial do Zé', city: 'Campinas', status: 'pending', requested_by: 'Zé', requested_at: '2026-11-05T12:00:00Z', verified_elsewhere: false },   // a forged name
+      { community_id: 'c-2', slug: 'outra', community: 'Outra', store_id: 555, name: 'Loja Y', status: 'pending', requested_at: '2026-11-05T12:00:00Z', verified_elsewhere: false },
+      { community_id: 'c-3', slug: 'terceira', community: 'Terceira', store_id: 777, name: 'Loja Z', status: 'pending', requested_at: '2026-11-05T12:00:00Z', verified_elsewhere: true }],
+    'rpc/decide_community_store': () => undefined,
+  }, fn: storeFn() });
+  await page.goto(url('admin/?tab=feedback'));
+  await page.locator('[data-tab="comms"]').click();
+  const row = (id) => page.locator(`[data-slink="${id}"]`);
+  await expect(row('c-1').getByTestId('ph-check')).toContainText('Play Hub: Muito Colecionaveis Comercio de Jogos e Acessorios Ltda');
+  await expect(row('c-1').getByTestId('ph-differs')).toBeVisible();                     // the forged name is flagged
+  await expect(row('c-2').getByTestId('ph-check')).toContainText('não tem evento no Play Hub');
+  await expect(row('c-2').locator('[data-sdec="approved"]')).toBeDisabled();            // no Play Hub data: not without a manual check
+  await expect(row('c-3').locator('[data-sdec="approved"]')).toBeDisabled();            // already verified elsewhere
+  await expect(row('c-1').locator('[data-sdec="approved"]')).toBeDisabled();            // the store is known, the representation isn't yet
+  await row('c-1').locator('[data-rcheck="c-1"]').check();
+  await expect(row('c-1').locator('[data-sdec="approved"]')).toBeDisabled();            // still needs the evidence
+  await row('c-1').locator('[data-rnote="c-1"]').fill('E-mail do dono pelo endereço oficial');
+  await row('c-1').locator('[data-sdec="approved"]').click();
+  await expect.poll(() => rpcCalls(calls, 'decide_community_store')[0]).toEqual({ p_community: 'c-1', p_decision: 'approved',
+    p_check: { method: 'playhub', store: { id: 17617, name: 'Muito Colecionaveis Comercio de Jogos e Acessorios Ltda', city: 'Campinas', address: 'Av Brasil 1456, Jardim Chapadao' },   // the Play Hub's data, not the request's
+      representation: { confirmed: true, evidence: 'E-mail do dono pelo endereço oficial' } } });
+  await row('c-2').locator('[data-mcheck="c-2"]').check();
+  await expect(row('c-2').locator('[data-sdec="approved"]')).toBeDisabled();            // still needs a note
+  await row('c-2').locator('[data-mnote="c-2"]').fill('Liguei para a loja e conferi o ID');
+  await expect(row('c-2').locator('[data-sdec="approved"]')).toBeDisabled();            // identity checked by hand, representation not yet
+  await row('c-2').locator('[data-rcheck="c-2"]').check();
+  await row('c-2').locator('[data-rnote="c-2"]').fill('Dono confirmou por telefone');
+  await expect(row('c-2').locator('[data-sdec="approved"]')).toBeEnabled();
+  await row('c-2').locator('[data-sdec="approved"]').click();
+  await expect.poll(() => rpcCalls(calls, 'decide_community_store')[1]).toEqual({ p_community: 'c-2', p_decision: 'approved', p_note: 'Liguei para a loja e conferi o ID',
+    p_check: { method: 'manual', confirmed: true, representation: { confirmed: true, evidence: 'Dono confirmou por telefone' } } });
+});
+
+test('store search: when the Play Hub has more stores than we read, the owner is told to type more', async ({ page }) => {
+  await setup(page, { rpcs: { 'rpc/community_store': () => null }, fn: storeFn(SEV, false) });
+  await page.goto(url('comunidades/?c=loja-do-ze'));
+  await page.locator('#pickStore').click();
+  await page.locator('#stQ').fill('Mu'); await page.locator('#stQ').press('Enter');
+  await expect(page.getByTestId('store-partial-search')).toContainText('só parte delas aparece');
 });

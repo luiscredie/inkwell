@@ -1888,3 +1888,14 @@ set, URL relativa, parâmetro ausente quando não há oponente.
 Demais: replay-ux 57, a11y-perf 27, journey-cost 37, practice 36, meta 32,
 shared 23, data-health 26, pwa 33, visual 18/18, i18n 9/9 (698 chaves).
 `test:all` e CI em 23 suítes, sem divergência. Espelho byte a byte.
+
+## Comunidades de loja (MVP em 05/11/2026) — próximos passos, fora do MVP
+
+O MVP liga uma comunidade de loja a uma loja do Play Hub (`store.id`, aprovação por admin
+da Inkwell) e mostra os eventos dela (`supabase/community_store.sql`, `rph-events ?store=`).
+Ficam para depois, sem data:
+
+- discussões por evento;
+- notificações de campeonatos e alertas aos membros;
+- estatísticas para lojas e ferramentas avançadas para organizadores;
+- personalização comercial das páginas, patrocínios, parcerias e monetização.
