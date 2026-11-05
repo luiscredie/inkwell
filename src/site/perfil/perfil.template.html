@@ -164,7 +164,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "My Inkwell": "Meu Inkwell", "Loading…": "Carregando…", "Edit": "Editar", "Share": "Compartilhar", "Copy link": "Copiar link", "Link copied": "Link copiado",
     "Example · fictional profile": "Exemplo · perfil fictício", "This is a mockup to show what a profile looks like. It is not a real person.": "Isto é uma maquete para mostrar como fica um perfil. Não é uma pessoa real.",
     "Showcase": "Vitrine", "owns it": "tem", "favourite": "favorita", "Featured deck": "Deck em destaque", "Public deck": "Deck público", "{n} cards": "{n} cartas",
-    "Record": "Retrospecto", "wins": "vitórias", "losses": "derrotas", "Looking for": "Procura", "Offering": "Oferece", "Nothing here yet.": "Nada aqui ainda.",
+    "Record": "Retrospecto", "Record (games)": "Retrospecto (jogos)", "wins": "vitórias", "losses": "derrotas", "Looking for": "Procura", "Offering": "Oferece", "Nothing here yet.": "Nada aqui ainda.",
     "Report profile": "Denunciar perfil", "Why are you reporting this profile?": "Por que você está denunciando este perfil?", "Send report": "Enviar denúncia", "Cancel": "Cancelar",
     "Report sent. Thank you.": "Denúncia enviada. Obrigado.", "Couldn't send. Try again.": "Não foi possível enviar. Tente de novo.", "Close": "Fechar",
     "Profile not found": "Perfil não encontrado", "It doesn't exist, or its owner keeps it private.": "Ele não existe ou o dono deixou privado.",
@@ -414,7 +414,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
         <div class="mi-col">
           ${friendsBox}
           ${!preview && p.communities?.length ? `<section class="card mi-sec mi-comms" data-testid="profile-communities"><div class="mi-label">${Tx("Communities")}</div><div class="mi-clist">${p.communities.map((c) => `<a href="../comunidades/?c=${encodeURIComponent(c.slug)}"><span class="mi-cav" style="${artStyle(c.avatar)}"></span><span><b>${esc(L(p, c.name))}</b><span class="small muted">${esc(c.city || "")}${c.role === "owner" ? ` · ${Tx("owner")}` : ""}</span></span></a>`).join("")}</div></section>` : ""}
-          ${rec ? `<section class="card mi-sec mi-recsum" data-testid="record"><div class="mi-label">${Tx("Record")}</div><div class="mi-rec" style="margin-top:var(--sp-2)"><span><b>${rec.w || 0}</b> ${Tx("wins")}</span><span><b>${rec.l || 0}</b> ${Tx("losses")}</span>${games ? `<span class="muted">${Math.round(((rec.w || 0) / games) * 100)}%</span>` : ""}</div></section>` : ""}
+          ${rec ? `<section class="card mi-sec mi-recsum" data-testid="record"><div class="mi-label">${Tx("Record (games)")}</div><div class="mi-rec" style="margin-top:var(--sp-2)"><span><b>${rec.w || 0}</b> ${Tx("wins")}</span><span><b>${rec.l || 0}</b> ${Tx("losses")}</span>${games ? `<span class="muted">${Math.round(((rec.w || 0) / games) * 100)}%</span>` : ""}</div></section>` : ""}
           ${p.trade ? `<section class="card mi-sec mi-trade" data-testid="trade"><div class="mi-label">${Tx("Looking for")}</div>${strip(want)}<div class="mi-label" style="margin-top:var(--sp-3)">${Tx("Offering")}</div>${strip(have)}</section>` : ""}
         </div>
       </div>

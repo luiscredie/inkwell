@@ -642,7 +642,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Opponents' names are never shown to others.": "O nome dos adversários nunca aparece para os outros.",
     "won": "venceu", "lost": "perdeu", "with {deck}": "com {deck}", "against {deck}": "contra {deck}",
     "going first": "começando", "going second": "comprando", "Lore Counter": "Contador", "duels.ink": "duels.ink",
-    "{n} turns": "{n} turnos", "Open game": "Abrir jogo", "Comment": "Comentar", "{n} comments": "{n} comentários", "1 comment": "1 comentário",
+    "{n} turns": "{n} turnos", "Incomplete": "Incompleto", "Game {n}": "Jogo {n}", "{n} of {t} games shared": "{n} de {t} jogos compartilhados", "{n} games": "{n} jogos", "Open game": "Abrir jogo", "Comment": "Comentar", "{n} comments": "{n} comentários", "1 comment": "1 comentário",
     "Write a comment": "Escreva um comentário", "Reply": "Responder", "Liked": "Curtiu", "Deleted comment": "Comentário apagado", "Replying to {name}": "Respondendo a {name}", "Cancel reply": "Cancelar resposta", "Write a reply": "Escreva uma resposta", "Send": "Enviar", "Couldn't send. Try again.": "Não foi possível enviar. Tente de novo.",
     "Your timeline is empty. Add friends, and choose who sees your games.": "Sua linha do tempo está vazia. Adicione amigos e escolha quem vê seus jogos.",
     "Show older games": "Ver anteriores", "You": "Você", "A player": "Um jogador", "Someone": "Alguém",
@@ -769,7 +769,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   }
   async function loadPosts(more = false) {
     const ids = [me.id, ...friendIds()];
-    const q = `game_logs?user_id=in.(${ids.join(",")})&visibility=neq.private&select=user_id,game_id,source,played_at,summary,visibility,group_id&order=played_at.desc.nullslast&limit=${PAGE}${more && olderThan ? `&played_at=lt.${enc(olderThan)}` : ""}`;
+    const q = `game_logs?user_id=in.(${ids.join(",")})&visibility=neq.private&select=user_id,game_id,source,played_at,summary,visibility,group_id,mid:log->event->>match_id,mgn:log->event->>match_games&order=played_at.desc.nullslast&limit=${PAGE}${more && olderThan ? `&played_at=lt.${enc(olderThan)}` : ""}`;
     const rows = (await CLOUD.api(q)) || [];
     posts = more ? posts.concat(rows) : rows;
     moreAvailable = rows.length === PAGE;
@@ -1121,14 +1121,20 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     return Tx(r.visibility === "coaches" ? "coaches" : r.visibility);   // a coach-only game shows up here only for its owner
   }
   const inks2 = (s) => `<span class="inks">${String(s || "").split(/[\/,]\s*/).filter(Boolean).slice(0, 2).map((c) => `<i data-ink="${esc(c.trim().toLowerCase())}"></i>`).join("")}</span>`;
-  function postHtml(r) {
-    const s = r.summary || {}, win = s.result === "win", key = `${r.user_id}|${r.game_id}`, cm = notes.get(key) || [];
+  // a duels.ink best-of-3 linked in Jogos (match.json): one post with the match score and its games inside; games of
+  // it not shared here are not counted, and the post says how many of the match's games it shows
+  function postHtml(r, match) {
+    const s = r.summary || {}, key = `${r.user_id}|${r.game_id}`, cm = notes.get(key) || [];
+    const mw = match ? match.filter((g) => g.summary?.result === "win").length : 0, ml = match ? match.length - mw : 0;
+    const win = match ? mw >= 2 : s.result === "win";
     const who = nameOf(r.user_id), first = s.went_first === true ? Tx("went first") : s.went_first === false ? Tx("went second") : "";
     const myDeck = s.my_deck && s.my_deck !== "Physical game" ? s.my_deck : "", opp = s.opp_deck && s.opp_deck !== "Unknown" ? s.opp_deck : "";
     const meta = [ago(r.played_at), s.turns ? Tx("{n} turns", { n: s.turns }) : "", first, Tx(r.source === "duels_ink" ? "duels.ink" : r.source === "lore_counter" ? "Lore Counter" : r.source), audienceTag(r)].filter(Boolean).join(" · ");
     return `<article class="card post" data-key="${esc(key)}">
       <div class="who"><span class="av">${esc(who[0]?.toUpperCase() || "?")}</span><div><b>${esc(who)}</b><div class="small">${esc(meta)}</div></div></div>
-      <div class="res"><span class="word ${win ? "win" : "loss"}">${Tx(win ? "Won" : "Lost")}</span><span class="score">${esc(s.my_lore ?? 0)}–${esc(s.opp_lore ?? 0)}</span></div>
+      ${match ? `<div class="res" data-testid="feed-bo3"><span class="word ${mw >= 2 ? "win" : ml >= 2 ? "loss" : ""}">Bo3 · ${Tx(mw >= 2 ? "Won" : ml >= 2 ? "Lost" : "Incomplete")}</span><span class="score">${mw}–${ml}</span></div>
+        <details class="bo3g"><summary class="small">${esc(Tx(r.mgn && match.length < +r.mgn ? "{n} of {t} games shared" : "{n} games", { n: match.length, t: r.mgn }))}</summary><ul class="small">${match.map((g, i) => `<li>${Tx("Game {n}", { n: i + 1 })}: ${Tx(g.summary?.result === "win" ? "Won" : "Lost")} ${esc(g.summary?.my_lore ?? 0)}–${esc(g.summary?.opp_lore ?? 0)} · <a href="../coach/?player=${enc(g.user_id)}&game=${enc(g.game_id)}">${Tx("Open game")}</a></li>`).join("")}</ul></details>`
+      : `<div class="res"><span class="word ${win ? "win" : "loss"}">${Tx(win ? "Won" : "Lost")}</span><span class="score">${esc(s.my_lore ?? 0)}–${esc(s.opp_lore ?? 0)}</span></div>`}
       ${myDeck || opp ? `<p class="match">${myDeck ? `${inks2(s.my_inks || myDeck)}<b>${esc(myDeck)}</b>` : ""}${opp ? ` ${Tx("against")} ${inks2(s.opp_inks || opp)}<b>${esc(opp)}</b>` : ""}</p>` : ""}
       ${cm.slice(-3).map((n) => { const a = nameOf(n.author) === Tx("A player") ? n.author_name || Tx("Someone") : nameOf(n.author); return `<div class="comment"><span class="av sm">${esc(a[0]?.toUpperCase() || "?")}</span><span class="muted"><b>${esc(a)}</b> <span data-body="${esc(n.id)}"></span></span></div>`; }).join("")}
       <div class="cmtform" data-form="${esc(key)}" hidden><input maxlength="1000" placeholder="${Tx("Write a comment")}" aria-label="${Tx("Write a comment")}"><button type="button" class="btn" data-send="${esc(key)}"><i class="ic i-send"></i>${Tx("Send")}</button></div>
@@ -1138,7 +1144,10 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   function renderFeed() {
     const el = $("feed");
     if (!me || !myProfile) { if (me) el.innerHTML = ""; return; }
-    const items = [...posts.map((g) => ({ at: g.played_at || "", html: postHtml(g) })), ...sposts.map((p) => ({ at: p.at || "", html: spostHtml(p) }))].sort((a, b) => String(b.at).localeCompare(String(a.at)));
+    const bo3 = new Map(); for (const g of posts) if (g.mid) { const k = `${g.user_id}|${g.mid}`; (bo3.get(k) || bo3.set(k, []).get(k)).push(g); }
+    const gamePosts = posts.filter((g) => !g.mid || bo3.get(`${g.user_id}|${g.mid}`)[0] === g)   // newest game stands for the match
+      .map((g) => ({ at: g.played_at || "", html: g.mid ? postHtml(g, bo3.get(`${g.user_id}|${g.mid}`).slice().reverse()) : postHtml(g) }));
+    const items = [...gamePosts, ...sposts.map((p) => ({ at: p.at || "", html: spostHtml(p) }))].sort((a, b) => String(b.at).localeCompare(String(a.at)));
     el.innerHTML = items.length ? items.map((x) => x.html).join("") + (moreAvailable || sMore ? `<div class="older"><button type="button" class="btn" id="older">${Tx("Show older games")}</button></div>` : "")
       : `<div class="empty">\u003Cimg src="../ui/assets/empty/feed.svg" alt=""><b>${Tx("Your timeline is empty")}</b><p>${Tx("Add friends to see their games here. Your games also show up for whoever you choose.")}</p>
           <button type="button" class="btn primary" id="addFriends"><i class="ic i-user-plus"></i>${Tx("Add friends")}</button></div>`;
