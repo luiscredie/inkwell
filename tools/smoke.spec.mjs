@@ -215,3 +215,21 @@ for (const width of [320, 360, 390, 430]) {
     if (process.env.SHOT_DIR) await page.screenshot({ path: `${process.env.SHOT_DIR}/topbar-${width}.png`, clip: { x: 0, y: 0, width, height: 64 } });
   });
 }
+
+// P1: on computers and tablets the coin/name never sits over "Início", and the bar never widens the page
+test('top bar on computers: the brand never overlaps the first link; nothing wider than the screen', async ({ page }) => {
+  await page.addInitScript(() => { localStorage.setItem('inkwell-lang', 'pt'); const exp = Math.floor(Date.now() / 1000) + 3600;
+    localStorage.setItem('inkwell-counter-auth', JSON.stringify({ access_token: 'x.' + btoa(JSON.stringify({ sub: '11111111-1111-4111-8111-111111111111', exp })) + '.y', refresh_token: 'r', expires_at: exp, user: { id: '11111111-1111-4111-8111-111111111111', email: 'a@b.c' } })); });
+  await page.route('**/rest/v1/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+  for (const width of [761, 900, 1024, 1100, 1280, 1440]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto(new URL('feed/', process.env.INKWELL_URL || 'http://localhost:8080/index.html').href);
+    await expect(page.locator('.appbar .sections a').first()).toBeVisible();
+    const r = await page.evaluate(() => { const box = (s) => document.querySelector(s).getBoundingClientRect();
+      return { brand: box('.appbar .brand').right, first: box('.appbar .sections a').left, secs: box('.appbar .sections').right, end: box('.appbar .end').left, coin: box('.appbar .brand img').width, sw: document.documentElement.scrollWidth, vw: innerWidth }; });
+    expect(r.brand, `${width}px`).toBeLessThanOrEqual(r.first);
+    expect(r.secs, `${width}px`).toBeLessThanOrEqual(r.end + 0.5);
+    expect(r.coin).toBeGreaterThanOrEqual(24);   // the coin keeps its size
+    expect(r.sw, `${width}px`).toBeLessThanOrEqual(r.vw);
+  }
+});

@@ -249,6 +249,8 @@ img, svg { display: block; max-width: 100%; }
 .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; font-weight: 800; font-size: 1.1875rem; letter-spacing: -0.02em; }
 .brand img { width: 26px; height: 26px; }
 .brand:hover { color: var(--text); }
+/* the coin and the name never shrink under the first section link (they used to overlap "Início" on tablets) */
+.appbar .brand { flex: none; }
 .sections { display: flex; gap: 2px; }
 .sections a { display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px; border-radius: var(--r-pill); color: var(--text-2); text-decoration: none; font-weight: 600; font-size: var(--fs-body);
   transition: background var(--t-med) var(--ease), color var(--t-med) var(--ease); }
@@ -468,6 +470,8 @@ select { appearance: none; padding-right: 36px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%23aaa3cc' stroke-width='1.8' stroke-linecap='round'%3E%3Cpath d='m1 1.5 5 5 5-5'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 12px center; }
 select.inline { width: auto; min-height: 34px; background-color: transparent; border-color: var(--line-strong); font-weight: 600; font-size: var(--fs-small); color: var(--text); }
+/* the open list of a select: the theme's colours (a transparent select left white text on the system's white list) */
+select option, select optgroup { background-color: var(--surface-1); color: var(--text); }
 .prefix { position: relative; }
 .prefix > span { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-2); font-weight: 600; pointer-events: none; }
 .prefix > input { padding-left: 40px; }
@@ -876,7 +880,14 @@ dialog.iw-zoom-card.has-extra { overflow: auto; }
 dialog.iw-zoom-card figcaption { color: #fff; font-weight: 600; text-align: center; font-size: var(--fs-small); }
 dialog.iw-zoom-card [data-zclose] { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 12px); right: 12px; color: #fff; background: rgba(0,0,0,.4); }
 /* notifications (shell.js) */
-@media (max-width: 430px) { .appbar .brand { font-size: 0; gap: 0; } }   /* phones: the coin is the brand, so the language flag fits */
+@media (max-width: 430px) { .appbar .brand { font-size: 0; gap: 0; } }
+/* tablets and small laptops: the coin alone, and the section links scroll inside the bar instead of pushing it wider */
+@media (min-width: 761px) and (max-width: 1099px) {
+  .appbar .brand { font-size: 0; gap: 0; }
+  .appbar .sections { min-width: 0; overflow-x: auto; scrollbar-width: none; }
+  .appbar .sections::-webkit-scrollbar { display: none; }
+  .appbar .sections a { flex: none; }
+}   /* phones: the coin is the brand, so the language flag fits */
 /* the smallest phones (320–374px) signed in: six buttons and the coin fit when each button is 40px and the gaps
    are 2px (44px buttons need ~354px); taps stay at 40px, above the 24px minimum */
 @media (max-width: 374px) {
