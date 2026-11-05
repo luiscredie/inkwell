@@ -4,7 +4,7 @@
 //   GET ?geocode=Campinas                                               -> { lat, lng, label } (Open-Meteo geocoder)
 //   GET ?id=904881                                                      -> one event (to link a community table)
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { checkObserved, classify } from "./categories.js";
+import { categorize, reviewObserved } from "./categories.js";
 
 const API = "https://api.cloudflare.ravensburgerplay.com/hydraproxy/api/v2";
 const HEADERS = { "Content-Type": "application/json", Referer: "https://tcg.ravensburgerplay.com/" };
@@ -17,10 +17,10 @@ const json = (v: unknown, status = 200) => new Response(JSON.stringify(v), { sta
 const num = (v: string | null, lo: number, hi: number) => { const n = Number(v); return Number.isFinite(n) && n >= lo && n <= hi ? n : null; };
 const day = (v: string | null) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
 
-function slim(e: Json, templates: Record<string, string> = {}, suspended = new Map()) {
+function slim(e: Json, templates: Record<string, string> = {}) {
   const s = e.store || {};
   return {
-    ...classify(e.event_configuration_template, templates, suspended),   // template_id, template_name, category, category_source
+    ...categorize(e, templates),   // template_id, template_name, category, category_source (+ name_divergence)
     id: e.id, name: e.name, start: e.start_datetime, end: e.end_datetime || null,
     format: e.gameplay_format?.name || null, type: e.event_type || e.event_format || null,
     cost_cents: e.cost_in_cents ?? null, currency: e.currency || null,
@@ -62,12 +62,14 @@ async function events(lat: number, lng: number, km: number, from: string, to: st
     if (!r.ok) throw new Error(`play hub ${r.status}`);
     const d = await r.json();
     total = d.count ?? d.total ?? 0;
-    raw.push(...(d.results || []));
+    raw.push(...(d.results || []));   // the Play Hub's pages can repeat an event (seen 05/11/2026): deduped below
     if (!d.next_page_number) break;
   }
-  const t = await templates(), { suspended, divergences } = checkObserved(raw);
-  if (divergences.length) console.warn("rph-events: observed template suspended", JSON.stringify(divergences));
-  const out = raw.map((e) => slim(e, t, suspended));
+  const t = await templates(), seen = new Set();
+  const uniq = raw.filter((e) => !seen.has(e.id) && seen.add(e.id));
+  const divergences = reviewObserved(uniq, t);   // flagged names, for investigation; categories are not changed
+  if (divergences.length) console.warn("rph-events: event names that disagree with an observed template", JSON.stringify(divergences));
+  const out = uniq.map((e) => slim(e, t));
   const data = { divergences, events: out.sort((a, b) => String(a.start).localeCompare(String(b.start))), total };
   cache.set(key, { at: Date.now(), data });
   return data;
@@ -108,7 +110,7 @@ Deno.serve(async (req) => {
       if (!r.ok) throw new Error(`play hub ${r.status}`);
       const e = await r.json();
       if (e?.game?.slug && e.game.slug !== "disney-lorcana") return json(null, 404);
-      const data = slim(e, await templates(), checkObserved([e]).suspended);
+      const data = slim(e, await templates());   // same rule as the list: the category depends on the template only
       cache.set("id|" + id, { at: Date.now(), data });
       return json(data);
     }

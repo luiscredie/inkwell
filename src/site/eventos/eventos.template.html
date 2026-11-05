@@ -213,7 +213,7 @@
     }
     const cur = marks.get(String(e.id)) || { status: null, registered: false, paid: false };
     const next = { ...cur, ...patch };
-    const snap = e.gone ? {} : { name: e.name, start: e.start, end: e.end, store: e.store?.name || null, address: e.address, url: e.url, format: e.format, cost_cents: e.cost_cents, currency: e.currency };
+    const snap = e.gone ? {} : { name: e.name, start: e.start, end: e.end, store: e.store?.name || null, address: e.address, url: e.url, format: e.format, cost_cents: e.cost_cents, currency: e.currency, category: e.category, category_source: e.category_source };   // the type follows a marked event out of range
     try {
       await rpc("mark_event", { p_rph_id: e.id, p_status: next.status, p_registered: !!next.registered, p_paid: !!next.paid, p_snap: snap });
       if (next.status) marks.set(String(e.id), { ...next, rph_id: e.id, snap: e.gone ? cur.snap : snap }); else marks.delete(String(e.id));
