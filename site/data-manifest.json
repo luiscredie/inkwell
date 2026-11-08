@@ -1,6 +1,6 @@
 {
   "manifest_version": 1,
-  "generated_at": "2026-11-08T23:10:41.389108+00:00",
+  "generated_at": "2026-11-08T23:18:12.551288+00:00",
   "min_app_version": "1.4.0",
   "schema": {
     "cards": 3,
@@ -36,7 +36,7 @@
     },
     "validation": {
       "path": "data/validation-report.json",
-      "sha256": "8e67eb315a8cdbccc16df3fc7678c59b359ec0f10df5ce468ece5bf248c5dec8",
+      "sha256": "2407c7047e5913e3359d152e2ca5a0f3a0d87f41bcb9723fef0b4bfee88c0a58",
       "bytes": 31746
     },
     "price_history": {
