@@ -28,7 +28,7 @@ PRICES = ROOT / "site" / "data" / "prices.json"
 HISTORY = ROOT / "site" / "data" / "price-history-tcg.json"   # index of the days kept
 HISTORY_DIR = ROOT / "site" / "data" / "price-history-tcg"
 MIN_TCG = 3000   # fewer priced cards than this means Lorcast answered only in part: keep yesterday's file
-SETS = [str(n) for n in range(1, 15)] + ["P1", "P2", "P3", "P4", "D23", "cp", "DIS", "C2", "CC1", "Q3"]
+SETS = [str(n) for n in range(1, 15)] + ["P1", "P2", "P3", "P4", "D23", "cp", "DIS", "C2", "CC1", "Q3", "PD1", "RPH"]
 
 
 def card_id(set_code: str, number: str) -> str | None:
@@ -36,8 +36,10 @@ def card_id(set_code: str, number: str) -> str | None:
         return f"LOR{set_code}-{number}"
     if set_code in {"P1", "P2", "P3"}:
         return f"DLPC1-{number}-{set_code}"
-    if set_code in {"C2", "DIS", "CC1"}:
+    if set_code in {"C2", "DIS", "CC1", "PD1", "RPH"}:
         return f"DLPC1-{number}-{set_code}"
+    if set_code == "Q3":
+        return f"Q3-{number}"
     if set_code == "D23":   # Lorcast's "D23 Collection" (2024 on) is our D23C; our D23-1..7 are the older D23 Expo promos
         return f"D23C-{number}"
     return None

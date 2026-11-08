@@ -30,6 +30,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src" / "site"
 SITE = ROOT / "site"
 SKIP_TYPES = {"Non-Playable Insert", "Quest Component"}
+NOT_PLAYED = SKIP_TYPES | {"Counter"}   # a marker (Ink Drop) is in Coleção and Trocas, never in a game log
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import build_site_decks  # noqa: E402
@@ -57,7 +58,7 @@ def profile_index(catalog: dict) -> dict:
 def coach_index(catalog: dict) -> dict:
     """Jogos (Coach Review): [id, name, cost, type, ink, lore, inkable, rarity], sorted by id."""
     rows = sorted(([c["card_id"], c["name_en"], c.get("ink_cost"), c.get("card_type"), c.get("ink_color"), c.get("lore"), c.get("inkable"), c.get("rarity")]
-                   for c in catalog["cards"] if c.get("card_type") not in SKIP_TYPES and c.get("name_en")), key=lambda r: r[0])
+                   for c in catalog["cards"] if c.get("card_type") not in NOT_PLAYED and c.get("name_en")), key=lambda r: r[0])
     return {"generated_at": catalog.get("generated_at"), "cards": rows}
 
 

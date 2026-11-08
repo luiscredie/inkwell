@@ -1,16 +1,16 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-08T16:44:31.663133+00:00",
+  "generated_at": "2026-11-08T23:18:12.551288+00:00",
   "status": "pass",
   "summary": {
-    "cards": 3703,
+    "cards": 3767,
     "pt_overlay_cards": 3686,
     "priced_cards": 3588,
     "errors": 0,
-    "warnings": 299,
-    "missing_prices": 115,
+    "warnings": 427,
+    "missing_prices": 179,
     "missing_images": 166,
-    "missing_translations": 17,
+    "missing_translations": 81,
     "orphan_prices_detected": 0,
     "orphan_prices_removed": 0
   },
@@ -1141,6 +1141,262 @@
       "card_id": "D23C-16"
     },
     {
+      "code": "MISSING_PRICE",
+      "card_id": "DLPC1-1-PD1"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "DLPC1-2-PD1"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "DLPC1-9-PD1"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "DLPC1-10-PD1"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "DLPC1-11-PD1"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "DLPC1-12-PD1"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "DLPC1-13-PD1"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "DLPC1-14-PD1"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "DLPC1-17-PD1"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "DLPC1-7-P4"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "DLPC1-8-P4"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "DLPC1-13-P4"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "DLPC1-14-P4"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "DLPC1-15-C2"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "DLPC1-16-C2"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "DLPC1-17-C2"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "DLPC1-1-RPH"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "DLPC1-2-RPH"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "DLPC1-3-RPH"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "DLPC1-4-RPH"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "DLPC1-5-RPH"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "DLPC1-6-RPH"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "DLPC1-7-RPH"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "DLPC1-24B-P2"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "DLPC1-38-P2"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "DLPC1-43-P2"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-1"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-2"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-3"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-4"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-5"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-6"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-7"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-8"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-9"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-10"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-11"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-12"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-13"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-14"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-15"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-16"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-17"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-18"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-19"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-20"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-21"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-22"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-23"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-24"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-25"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-26"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-27"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-28"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-29"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-30"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-31"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-32"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-33"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-34"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-35"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-36"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "Q3-37"
+    },
+    {
+      "code": "MISSING_PRICE",
+      "card_id": "LOR14-M01"
+    },
+    {
       "code": "MISSING_TRANSLATION",
       "card_id": "DLPC1-18-C2"
     },
@@ -1207,6 +1463,262 @@
     {
       "code": "MISSING_TRANSLATION",
       "card_id": "D23C-16"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "DLPC1-1-PD1"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "DLPC1-2-PD1"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "DLPC1-9-PD1"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "DLPC1-10-PD1"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "DLPC1-11-PD1"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "DLPC1-12-PD1"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "DLPC1-13-PD1"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "DLPC1-14-PD1"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "DLPC1-17-PD1"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "DLPC1-7-P4"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "DLPC1-8-P4"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "DLPC1-13-P4"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "DLPC1-14-P4"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "DLPC1-15-C2"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "DLPC1-16-C2"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "DLPC1-17-C2"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "DLPC1-1-RPH"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "DLPC1-2-RPH"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "DLPC1-3-RPH"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "DLPC1-4-RPH"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "DLPC1-5-RPH"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "DLPC1-6-RPH"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "DLPC1-7-RPH"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "DLPC1-24B-P2"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "DLPC1-38-P2"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "DLPC1-43-P2"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-1"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-2"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-3"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-4"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-5"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-6"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-7"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-8"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-9"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-10"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-11"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-12"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-13"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-14"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-15"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-16"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-17"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-18"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-19"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-20"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-21"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-22"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-23"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-24"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-25"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-26"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-27"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-28"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-29"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-30"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-31"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-32"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-33"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-34"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-35"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-36"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "Q3-37"
+    },
+    {
+      "code": "MISSING_TRANSLATION",
+      "card_id": "LOR14-M01"
     },
     {
       "code": "PROVISIONAL_CORRECTION",

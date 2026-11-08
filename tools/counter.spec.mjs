@@ -254,3 +254,26 @@ for (const [w, h] of [[320, 568], [360, 640], [390, 844], [568, 320], [667, 375]
     await ctx.close();
   });
 }
+
+test('tie: from the menu, counts as a game played but no win; Bo3 ends after 3 games', async ({ page }) => {
+  await plain(page, {});
+  await page.goto(BASE);
+  const tie = async () => { await page.click('#menuBtn'); await page.getByRole('button', { name: 'Empate', exact: true }).click(); };
+  const next = async () => { const bx = await page.locator('#h1').boundingBox(); await page.mouse.click(bx.x + bx.width * 0.85, bx.y + bx.height / 2); };
+  await tie();
+  await expect(page.locator('#c1')).toContainText('Jogo empatado');
+  await expect(page.locator('#c2')).toContainText('Jogo empatado');
+  let st = await page.evaluate(() => JSON.parse(localStorage.getItem('inkwell-lorecounter-v3')));
+  expect(st.wins.p1 + st.wins.p2).toBe(0);
+  expect(st.match.games[0].winner).toBe('draw');
+  // undo takes the tie back
+  await page.click('#menuBtn'); await page.getByRole('button', { name: 'Desfazer' }).click();
+  st = await page.evaluate(() => JSON.parse(localStorage.getItem('inkwell-lorecounter-v3')));
+  expect(st.match.games.length).toBe(0); expect(st.match.draws || 0).toBe(0);
+  await tie(); await next();
+  await tie(); await next();
+  await tie();
+  await expect(page.getByRole('heading', { name: /Fim da partida: 0–0–3/ })).toBeVisible();
+  st = await page.evaluate(() => JSON.parse(localStorage.getItem('inkwell-lorecounter-v3')));
+  expect(st.history[0].result).toBe('0-0-3');
+});

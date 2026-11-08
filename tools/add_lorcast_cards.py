@@ -8,7 +8,15 @@ For each card of the Lorcast set whose id (<prefix>-<collector number>) is not i
     catalog (so a promo plays exactly like its normal version); without one, from Lorcast;
   * the picture is downloaded to site/lorcana-card-images/images/ (Lorcast's "large" image, kept as .avif);
   * rarity "P" (promo) unless Lorcast says Enchanted/Epic/Iconic.
-Existing cards are never changed. Run tools/build_site_pages.py afterwards (the pages embed the card index).
+Existing cards are never changed.
+
+    python tools/add_lorcast_cards.py --set PD1 --prefix DLPC1 --defer-images   catalog only; the pictures come later
+    python tools/add_lorcast_cards.py --fill-images                              download every Lorcast picture the
+                                                                                 catalog names but the folder lacks
+(--defer-images is for a machine that can reach api.lorcast.com but not its image host; the workflow
+fill-card-images.yml runs --fill-images on the branch.)
+--number-suffix PD1 turns Lorcast's collector number 11 into 11-PD1, so with --prefix DLPC1 the id is DLPC1-11-PD1
+(the promo ids of the catalog); --only 7,8,13 limits the run to those collector numbers. Run tools/build_site_pages.py afterwards (the pages embed the card index).
 The daily price job (tools/prices_from_lorcast.py) prices them from then on: its SET_PREFIX map must know the prefix.
 """
 from __future__ import annotations
@@ -49,12 +57,21 @@ def safe(name: str) -> str:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--set", required=True, help="Lorcast set code, e.g. D23")
-    ap.add_argument("--prefix", required=True, help="our id prefix, e.g. D23C (ids become D23C-1, D23C-2, ...)")
+    ap.add_argument("--set", help="Lorcast set code, e.g. D23")
+    ap.add_argument("--prefix", help="our id prefix, e.g. D23C (ids become D23C-1, D23C-2, ...)")
     ap.add_argument("--name", help="set name for cards.json (default: Lorcast's)")
     ap.add_argument("--input", type=Path, help="a saved copy of https://api.lorcast.com/v0/sets/<set>/cards")
     ap.add_argument("--no-images", action="store_true")
+    ap.add_argument("--defer-images", action="store_true", help="name the picture but don't download it (see --fill-images)")
+    ap.add_argument("--fill-images", action="store_true", help="only download the missing Lorcast pictures")
+    ap.add_argument("--number-suffix", default="", help="e.g. PD1: collector number 11 becomes 11-PD1")
+    ap.add_argument("--only", default="", help="comma-separated collector numbers to add (default: all)")
     a = ap.parse_args()
+    if a.fill_images:
+        return fill_images()
+    if not a.set or not a.prefix:
+        ap.error("--set and --prefix are required")
+    only = {x.strip() for x in a.only.split(",") if x.strip()}
 
     data = json.loads(CARDS.read_text(encoding="utf-8"))
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8")) if MANIFEST.is_file() else {}
@@ -70,8 +87,10 @@ def main() -> int:
     added = []
     for lc in src:
         num = str(lc.get("collector_number") or "").strip()
-        if not num:
+        if not num or (only and num not in only):
             continue
+        if a.number_suffix:
+            num = f"{num}-{a.number_suffix}"
         cid = f"{a.prefix}-{num}"
         if cid in have:
             continue
@@ -98,6 +117,8 @@ def main() -> int:
             card["abilities"] = [{**ab, "ability_id": re.sub(r"^[^-]+-[^-]+", cid, ab.get("ability_id", ""))} for ab in base.get("abilities") or []]
         if a.no_images or not img_url:   # no picture: the pages show the card without art
             card["image_file"] = ""; card["image_url"] = ""
+        elif a.defer_images:
+            manifest[cid] = {"display_name": name, "image_file": fname, "image_url": img_url, "status": "pending", "source": "lorcast"}
         else:
             IMAGES.mkdir(parents=True, exist_ok=True)
             blob = get(img_url)
@@ -117,6 +138,30 @@ def main() -> int:
     for x in added:
         print("added", *x)
     return 0
+
+
+def fill_images() -> int:
+    """Download the Lorcast pictures that cards.json names but site/lorcana-card-images/images/ doesn't have."""
+    data = json.loads(CARDS.read_text(encoding="utf-8"))
+    manifest = json.loads(MANIFEST.read_text(encoding="utf-8")) if MANIFEST.is_file() else {}
+    IMAGES.mkdir(parents=True, exist_ok=True)
+    got = failed = 0
+    for c in data["cards"]:
+        f, url = c.get("image_file") or "", c.get("image_url") or ""
+        if c.get("image_source") != "lorcast" or not f or not url or (IMAGES / Path(f).name).is_file():
+            continue
+        try:
+            blob = get(url)
+        except Exception as e:   # one bad picture must not stop the rest
+            print("failed", c["card_id"], e); failed += 1; continue
+        (IMAGES / Path(f).name).write_bytes(blob)
+        manifest[c["card_id"]] = {"display_name": c.get("name_en"), "image_file": f, "image_url": url, "status": "downloaded",
+                                  "sha256": hashlib.sha256(blob).hexdigest(), "source": "lorcast"}
+        got += 1
+    if got:
+        MANIFEST.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(f"downloaded {got}, failed {failed}")
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":
