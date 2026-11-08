@@ -24,7 +24,7 @@ import site_html  # noqa: E402
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src" / "site"
 SITE = ROOT / "site"
-SKIP_TYPES = {"Non-Playable Insert", "Quest Component"}
+SKIP_TYPES = {"Non-Playable Insert", "Quest Component", "Counter"}   # Counter: a marker (Ink Drop), collected but never in a deck
 CLOUD = {"url": "https://sorefaetiaebmjploanp.supabase.co", "key": "sb_publishable_RkAWW-ENz70CXA6_QV7aHw_MpfD7Gn2"}
 
 

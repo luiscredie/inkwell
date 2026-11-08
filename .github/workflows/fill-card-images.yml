@@ -1,0 +1,47 @@
+name: Fill missing card pictures (Lorcast)
+
+# Downloads the Lorcast pictures that site/data/cards.json names but the images folder lacks
+# (cards added with tools/add_lorcast_cards.py --defer-images), rebuilds the pages and commits them
+# to the SAME branch. Never pushes to main: the branch reaches main only through a reviewed merge.
+on:
+  push:
+    branches-ignore: [main]
+    paths: [site/data/cards.json]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fill-images-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  fill:
+    if: github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Download the pictures
+        run: python tools/add_lorcast_cards.py --fill-images
+
+      - name: Pages
+        run: |
+          python tools/build_site_pages.py
+          python tools/build_site_decks.py
+          python tools/refresh_data_manifest.py --root site
+
+      - name: Commit to this branch
+        run: |
+          if git diff --quiet && [ -z "$(git ls-files --others --exclude-standard site)" ]; then echo "Nothing new."; exit 0; fi
+          git config user.name "inkwell-catalog[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site
+          git commit -m "Catalog: pictures for the new cards"
+          git push origin HEAD:${GITHUB_REF_NAME}

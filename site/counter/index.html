@@ -452,7 +452,7 @@ table.stats td.n { text-align: right; }
       lang: "Idioma", langName: "English", players: "Jogadores", playersSub: "1 conta só o seu lore", bestOf: "Partida", magic: "Magia animada", magicSub: "Brilhos e tinta subindo da sua borda",
       decks: "Registrar decks", decksSub: "Seu deck no início, o do oponente no fim (2 jogadores)", tour: "Modo torneio", tourSub: "Deck do oponente só ao fim da partida (Regras §5.2)",
       flip: "Virar os painéis do outro lado", history: "Partidas registradas", none: "Nenhuma partida registrada ainda.",
-      wonGame: "Venceu o jogo", tapNext: "Toque para o próximo jogo", iConceded: "Eu concedi", oppConceded: "Oponente concedeu", conceded: "concedeu", winnerIs: "Vencedor do jogo",
+      wonGame: "Venceu o jogo", tapNext: "Toque para o próximo jogo", iConceded: "Eu concedi", oppConceded: "Oponente concedeu", conceded: "concedeu", winnerIs: "Vencedor do jogo", tie: "Empate", tieGame: "Jogo empatado", byTie: "empate",
       byLore: "20 de lore", byConcede: "concessão", won: "venceu", wentFirst: "Quem começou este jogo?", me1: "Eu comecei", opp1: "Oponente começou", skip: "Pular",
       yourDeck: "Seu deck", oppDeck: "Deck do oponente", pick2: "Toque em até 2 tintas", name: "Nome do deck (opcional)", left: "faltam {n}", metaDecks: "Decks do meta", metaNone: "Nenhum deck do meta com essas tintas.", pickOppNow: "Escolher deck do oponente", noOpp: "Sem deck do oponente", oppInkwell: "O oponente usa o Inkwell?", oppInkwellSub: "Se sim, procure pelo nome e escolha um dos decks dele.", no: "Não", findPh: "Nome ou @usuário", typeMore: "Digite pelo menos 2 letras.", noneFound: "Ninguém encontrado. Aparecem perfis públicos e seus amigos.", noDecks: "Nenhum deck visível", pickInks: "Escolher as tintas", friendTag: "amigo", findOff: "A busca não está disponível agora.", back: "Voltar", recent: "Recentes", myDecks: "Meus decks no Inkwell", friendDeck: "Deck de um amigo do Inkwell", back: "Voltar", save: "Salvar", noDeck: "Sem deck",
       matchOver: "Fim da partida", copy: "Copiar histórico", copied: "Copiado.", copyFail: "Selecione e copie o texto abaixo.", winRate: "Vitórias por deck do oponente", games: "Jogos", matches: "Partidas", winPct: "% vitórias",
@@ -464,7 +464,7 @@ table.stats td.n { text-align: right; }
       lang: "Language", langName: "Português", players: "Players", playersSub: "1 counts only your lore", bestOf: "Match", magic: "Animated magic", magicSub: "Sparkles and ink rising from your edge",
       decks: "Track decks", decksSub: "Your deck at the start, the opponent's at the end (2 players)", tour: "Tournament mode", tourSub: "Opponent's deck only when the match ends (Rules §5.2)",
       flip: "Turn the panes on the far side", history: "Recorded matches", none: "No matches recorded yet.",
-      wonGame: "Won the game", tapNext: "Tap for the next game", iConceded: "I conceded", oppConceded: "Opponent conceded", conceded: "conceded", winnerIs: "Game winner",
+      wonGame: "Won the game", tapNext: "Tap for the next game", iConceded: "I conceded", oppConceded: "Opponent conceded", conceded: "conceded", winnerIs: "Game winner", tie: "Tie", tieGame: "Game tied", byTie: "tie",
       byLore: "20 lore", byConcede: "concession", won: "won", wentFirst: "Who went first this game?", me1: "I went first", opp1: "Opponent went first", skip: "Skip",
       yourDeck: "Your deck", oppDeck: "Opponent's deck", pick2: "Tap up to 2 inks", name: "Deck name (optional)", left: "{n} to go", metaDecks: "Meta decks", metaNone: "No meta deck with these inks.", pickOppNow: "Pick the opponent's deck", noOpp: "No opponent deck", oppInkwell: "Does your opponent use Inkwell?", oppInkwellSub: "If so, search their name and pick one of their decks.", no: "No", findPh: "Name or @username", typeMore: "Type at least 2 letters.", noneFound: "Nobody found. Public profiles and your friends show up.", noDecks: "No visible deck", pickInks: "Pick the inks", friendTag: "friend", findOff: "Search isn't available right now.", back: "Back", recent: "Recent", myDecks: "My Inkwell decks", friendDeck: "An Inkwell friend's deck", back: "Back", save: "Save", noDeck: "No deck",
       matchOver: "Match over", copy: "Copy history", copied: "Copied.", copyFail: "Select and copy the text below.", winRate: "Wins by opponent deck", games: "Games", matches: "Matches", winPct: "Win %",
@@ -570,7 +570,7 @@ table.stats td.n { text-align: right; }
       h.classList.toggle("won", s.won === seat);
       $(`w${i}`).textContent = "●".repeat(s.wins[seat]);
       const lastG = s.match?.games?.at(-1);
-      const title = s.won === seat ? t().wonGame : (s.won && lastG?.reason === "concede" && lastG.conceded_by === seat ? `${nm(seat)} ${t().conceded}` : "");
+      const title = s.won === "draw" ? t().tieGame : s.won === seat ? t().wonGame : (s.won && lastG?.reason === "concede" && lastG.conceded_by === seat ? `${nm(seat)} ${t().conceded}` : "");
       $(`c${i}`).innerHTML = s.won && !s.matchDone ? `${esc(title)}<small>${t().tapNext}</small>` : esc(title);
       const m = s.match;
       $(`l${i}`).textContent = s.decks && s.players === 2 ? (seat === "p1" ? (m?.me ? deckText(m.me) : "") : (m?.opp && !s.tour ? deckText(m.opp) : "")) : "";
@@ -682,7 +682,7 @@ table.stats td.n { text-align: right; }
   function undo() {
     const last = s.log.pop(); if (!last) return;
     if (last.award) {
-      s.match.games.pop(); s.wins[last.seat] -= 1; s.won = null; s.matchDone = false;
+      s.match.games.pop(); if (last.seat === "draw") s.match.draws = Math.max(0, (s.match.draws || 0) - 1); else s.wins[last.seat] -= 1; s.won = null; s.matchDone = false;
       if (last.auto) { const tp = s.log.pop(); if (tp) s.lore[tp.seat] = tp.from; }
     } else s.lore[last.seat] = last.from;
     render();
@@ -850,10 +850,12 @@ table.stats td.n { text-align: right; }
     const g = { winner: w, reason, conceded_by: concededBy, lore: { ...s.lore }, first: s.turnMode ? s.turn.first : null, ended: new Date().toISOString(), track, ...(s.turnMode && s.turn.n ? { turns: s.turn.n } : {}) };
     s.turn = { seat: null, at: null, n: 0, first: null };
     s.match.games.push(g);
-    s.wins[w] += 1; s.won = w;
+    if (w === "draw") s.match.draws = (s.match.draws || 0) + 1; else s.wins[w] += 1;
+    s.won = w;
     s.log.push({ award: true, auto: reason === "lore", seat: w });
     clearDeltas();
-    if (s.wins[w] >= winsNeeded()) { s.matchDone = true; clockStop(); render(); setTimeout(finishMatch, 700); return; }
+    // the match ends when someone has the games needed, or when all its games were played (a tie counts as a game played)
+    if ((w !== "draw" && s.wins[w] >= winsNeeded()) || s.match.games.length >= s.bestOf) { s.matchDone = true; clockStop(); render(); setTimeout(finishMatch, 700); return; }
     render();
     if (s.decks && !s.tour && s.players === 2) {
       open(`<h2>${t().wentFirst}</h2><div class="row"><button type="button" class="btn" id="f1">${t().me1}</button><button type="button" class="btn" id="f2">${t().opp1}</button></div><button type="button" class="btn quiet" id="fs">${t().skip}</button>`, () => {
@@ -914,7 +916,7 @@ table.stats td.n { text-align: right; }
   // The match-over card for the newest match in the history; an unknown opponent deck can still be picked here.
   function finishCard() {
     const m = s.history[0]; if (!m) return;
-    open(`<h2>${t().matchOver}: ${esc(m.result.replace("-", "–"))}</h2>${s.decks && (m.players || 2) === 2 ? `<p>${swatch(m.me?.inks)} ${esc(deckText(m.me))} ${t().vs} ${swatch(m.opp?.inks)} ${esc(deckText(m.opp))}</p>` : ""}
+    open(`<h2>${t().matchOver}: ${esc(m.result.replaceAll("-", "–"))}</h2>${s.decks && (m.players || 2) === 2 ? `<p>${swatch(m.me?.inks)} ${esc(deckText(m.me))} ${t().vs} ${swatch(m.opp?.inks)} ${esc(deckText(m.opp))}</p>` : ""}
       ${s.decks && (m.players || 2) === 2 && !m.opp ? `<button type="button" class="btn" id="nOpp">${t().pickOppNow}</button>` : ""}
       <div class="row"><button type="button" class="btn primary" id="nm">${t().newMatch}</button><button type="button" class="btn quiet" id="nc">${t().close}</button></div>${(SYNC || CLOUD) && (m.players || 2) === 2 ? `<p class="sync" id="syncMsg" aria-live="polite"></p>` : ""}`, () => {
       $("nm").onclick = () => { close(); startMatch(); }; $("nc").onclick = close;
@@ -931,7 +933,7 @@ table.stats td.n { text-align: right; }
   function finishMatch() {
     const done = () => {
       const m = s.match;
-      s.history = [{ ...m, id: `lc-${Date.now().toString(36)}`, ended: new Date().toISOString(), result: seats().map((x) => s.wins[x]).join("-"), exported: false }, ...s.history].slice(0, 300);
+      s.history = [{ ...m, id: `lc-${Date.now().toString(36)}`, ended: new Date().toISOString(), result: seats().map((x) => s.wins[x]).join("-") + (m.draws ? `-${m.draws}` : ""), exported: false }, ...s.history].slice(0, 300);
       render();
       finishCard();
     };
@@ -944,8 +946,8 @@ table.stats td.n { text-align: right; }
   function menu() {
     const two = s.players === 2, locked = s.won || s.matchDone;
     const winBtns = two
-      ? `<div class="row"><button type="button" class="btn" id="mW2" ${locked ? "disabled" : ""}>${t().iConceded}</button><button type="button" class="btn" id="mW1" ${locked ? "disabled" : ""}>${t().oppConceded}</button></div>`
-      : s.players > 2 ? `<div class="grp"><span class="cap">${t().winnerIs}</span><div class="row">${seats().map((x) => `<button type="button" class="btn" data-win="${x}" ${locked ? "disabled" : ""}>${swatch(s.color[x])} ${esc(nm(x))}</button>`).join("")}</div></div>` : "";
+      ? `<div class="row"><button type="button" class="btn" id="mW2" ${locked ? "disabled" : ""}>${t().iConceded}</button><button type="button" class="btn" id="mW1" ${locked ? "disabled" : ""}>${t().oppConceded}</button></div><div class="row"><button type="button" class="btn" id="mTie" ${locked ? "disabled" : ""}>${t().tie}</button></div>`
+      : s.players > 2 ? `<div class="grp"><span class="cap">${t().winnerIs}</span><div class="row">${seats().map((x) => `<button type="button" class="btn" data-win="${x}" ${locked ? "disabled" : ""}>${swatch(s.color[x])} ${esc(nm(x))}</button>`).join("")}<button type="button" class="btn" id="mTie" ${locked ? "disabled" : ""}>${t().tie}</button></div></div>` : "";
     const others = seats().filter((x) => x !== "p1");
     open(`${others.map((x) => `<div class="grp"><span class="cap">${t().colors}: ${esc(nm(x))}</span>${inkPicker(`cp${n(x)}`, s.color[x])}</div>`).join("")}
       ${winBtns}
@@ -963,6 +965,7 @@ table.stats td.n { text-align: right; }
         $("mW2").onclick = () => { close(); award("p2", "concede", "p1"); };   // I conceded
       }
       document.querySelectorAll("[data-win]").forEach((b) => b.onclick = () => { close(); award(b.dataset.win, "other"); });
+      $("mTie")?.addEventListener("click", () => { close(); award("draw", "draw"); });
       $("mUndo").onclick = () => { undo(); close(); };
       $("mGame").onclick = () => { if (s.matchDone) startMatch(); else nextGame(); close(); };
       $("mMatch").onclick = () => open(`<h2>${t().confirmNew}</h2><div class="row"><button type="button" class="btn quiet" id="nn">${t().cancel}</button><button type="button" class="btn primary" id="ny">${t().yes}</button></div>`, () => {
@@ -1003,7 +1006,7 @@ table.stats td.n { text-align: right; }
       });
       $("sBest").querySelectorAll("button").forEach((b) => b.onclick = () => {
         s.bestOf = +b.dataset.v; if (s.match) s.match.best_of = s.bestOf;
-        if (!s.won && seats().some((x) => s.wins[x] >= winsNeeded())) { s.matchDone = true; }
+        if (!s.won && (seats().some((x) => s.wins[x] >= winsNeeded()) || (s.match?.games.length || 0) >= s.bestOf)) { s.matchDone = true; }
         render(); settings();
       });
       $("sClock").querySelectorAll("button").forEach((b) => b.onclick = () => { s.clockMin = +b.dataset.v; buzzed = false; if (!s.clockMin) clockStop(); render(); settings(); });
@@ -1038,14 +1041,14 @@ table.stats td.n { text-align: right; }
       ],
       turns: [],
       ...(g.track?.length ? { lore_track: g.track.filter((e) => e[1] === "p1" || e[1] === "p2").map(([tt, seat, lore]) => ({ t: tt, seat, lore: Math.min(99, lore) })) } : {}),
-      result: { winner: g.winner, reason: g.reason === "concede" ? "concede" : g.reason === "lore" ? "lore" : "other", final_lore: { p1: g.lore.p1, p2: g.lore.p2 } },
+      result: { winner: g.winner, reason: g.reason === "concede" ? "concede" : g.reason === "lore" ? "lore" : g.reason === "draw" ? "draw" : "other", final_lore: { p1: g.lore.p1, p2: g.lore.p2 } },
       ...(g.conceded_by ? { notes: `${g.conceded_by === "p1" ? "I" : "Opponent"} conceded` } : {}),
       visibility: "private",
     }));
   }
   function historyText() {
     return s.history.map((m) => `${m.ended.slice(0, 10)}  Bo${m.best_of || 3}  ${(m.players || 2) === 2 ? `${deckText(m.me)} ${t().vs} ${deckText(m.opp)}  ` : `${m.players} ${t().players.toLowerCase()}  `}${m.result}` +
-      m.games.map((g, i) => `\n   ${t().game} ${i + 1}: ${(m.players || 2) === 2 ? (g.winner === "p1" ? t().you : t().opp) : `${t().player} ${n(g.winner)}`} ${t().won} (${g.reason === "concede" ? t().byConcede : g.reason === "lore" ? t().byLore : "–"})${g.first ? ` ${g.first === "p1" ? t().me1 : t().opp1}` : ""}`).join("")).join("\n");
+      m.games.map((g, i) => g.winner === "draw" ? `\n   ${t().game} ${i + 1}: ${t().tie}` : `\n   ${t().game} ${i + 1}: ${(m.players || 2) === 2 ? (g.winner === "p1" ? t().you : t().opp) : `${t().player} ${n(g.winner)}`} ${t().won} (${g.reason === "concede" ? t().byConcede : g.reason === "lore" ? t().byLore : "–"})${g.first ? ` ${g.first === "p1" ? t().me1 : t().opp1}` : ""}`).join("")).join("\n");
   }
   function history() {
     const by = new Map();
