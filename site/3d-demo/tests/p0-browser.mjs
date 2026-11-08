@@ -41,9 +41,20 @@ for(const width of [320,375,390,430,1280]){
     const stage=page.locator('[data-binder-swipe]');
     await stage.focus();
     await page.keyboard.press('ArrowRight');
-    await page.waitForTimeout(30);
+    // Page-turn animation takes 260ms; wait for the rendered stage to settle.
+    await page.waitForTimeout(320);
     assert.equal(await stage.count(),1,'Binder stage missing after navigation');
+    assert.equal(await stage.evaluate(el=>document.activeElement===el),true,'Keyboard focus lost after page turn');
+    const pageLabel=await page.locator('.binder-page').first().getAttribute('aria-label');
+    assert(pageLabel?.includes(mobile?'Página 2':'Página 3'),`Page did not advance: ${pageLabel}`);
+    // Vertical scrolling should not accidentally trigger a page turn.
+    const stableLabel=pageLabel;
+    await stage.dispatchEvent('touchstart',{touches:[{clientX:160,clientY:200}]});
+    await stage.dispatchEvent('touchend',{changedTouches:[{clientX:170,clientY:310}]});
+    assert.equal(await page.locator('.binder-page').first().getAttribute('aria-label'),stableLabel,'Vertical gesture changed page');
     await page.screenshot({path:join(output,`binder-${width}.png`),fullPage:true});
+    // Reduced motion is enabled in every viewport; page should remain usable.
+    assert.equal(await page.locator('.binder-pocket').count(),mobile?9:18,'Binder pockets lost after turn');
     assert.deepEqual(errors,[],'Browser JavaScript errors');
     console.log('PASS',width);
   }catch(e){failures++;console.error('FAIL',width,e.message)}
