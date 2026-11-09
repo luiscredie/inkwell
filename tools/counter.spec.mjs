@@ -277,3 +277,40 @@ test('tie: from the menu, counts as a game played but no win; Bo3 ends after 3 g
   st = await page.evaluate(() => JSON.parse(localStorage.getItem('inkwell-lorecounter-v3')));
   expect(st.history[0].result).toBe('0-0-3');
 });
+
+test('sealed format: any number of inks, no Inkwell decks, opponent by inks only, game logs say sealed', async ({ page }) => {
+  const calls = await setup(page);
+  await page.goto(BASE);
+  await page.click('#menuBtn');
+  await page.getByRole('button', { name: 'Ajustes' }).click();
+  await page.locator('#sFormat [data-v="sealed"]').click();     // no game yet: the match starts again, with the deck question
+  await expect(page.getByRole('button', { name: 'Circle of Life' })).toHaveCount(0);   // Inkwell decks don't fit a sealed pool
+  await expect(page.getByText('Toque nas tintas do deck (quantas quiser)')).toBeVisible();
+  for (const i of ['Amber', 'Ruby', 'Steel']) await page.locator(`#dk [data-ink="${i}"]`).click();
+  await page.getByRole('button', { name: 'Salvar' }).click();
+  // the opponent: straight to the inks (a sealed deck isn't on Inkwell)
+  await expect(page.getByRole('heading', { name: 'Deck do oponente' })).toBeVisible();
+  for (const i of ['Sapphire', 'Emerald', 'Amethyst']) await page.locator(`#dk [data-ink="${i}"]`).click();
+  await page.getByRole('button', { name: 'Salvar' }).click();
+  await page.locator('#sheet').waitFor({ state: 'hidden' });
+  let st = await page.evaluate(() => JSON.parse(localStorage.getItem('inkwell-lorecounter-v3')));
+  expect(st.match.format).toBe('sealed');
+  expect(st.color.p1).toEqual(['Amber', 'Ruby', 'Steel']);
+  expect(st.match.opp.inks).toEqual(['Sapphire', 'Emerald', 'Amethyst']);
+  await expect(page.locator('#k1 > *')).toHaveCount(3);
+  await winGame(page);
+  await page.getByRole('button', { name: 'Pular' }).click();                  // who went first → skip
+  await page.locator('#sheet').waitFor({ state: 'hidden' });
+  { const bx = await page.locator('#h1').boundingBox(); await page.mouse.click(bx.x + bx.width * 0.85, bx.y + bx.height / 2); }
+  await winGame(page);
+  await expect(page.getByRole('heading', { name: /Fim da partida/ })).toBeVisible();
+  await expect.poll(() => calls.filter((c) => c.path.startsWith('game_logs')).length).toBeGreaterThan(0);
+  const sent = calls.filter((c) => c.path.startsWith('game_logs')).flatMap((c) => [].concat(c.body));
+  expect(sent.every((r) => (r.log || r).game_format === 'sealed')).toBe(true);
+  // back to Core: at most 2 inks again
+  await page.getByRole('button', { name: 'Fechar' }).click();
+  await page.click('#menuBtn'); await page.getByRole('button', { name: 'Ajustes' }).click();
+  await page.locator('#sFormat [data-v="core"]').click();
+  st = await page.evaluate(() => JSON.parse(localStorage.getItem('inkwell-lorecounter-v3')));
+  expect(st.color.p1.length).toBeLessThanOrEqual(2);
+});

@@ -14,7 +14,9 @@ begin
   select left(md5(string_agg((e->>'card_id') || ':' || coalesce(e->>'qty', '1'), ',' order by e->>'card_id')), 10) into list_key
     from jsonb_array_elements(case jsonb_typeof(me->'deck'->'list') when 'array' then me->'deck'->'list' else '[]'::jsonb end) e;
   new.summary := jsonb_build_object(
-    'result', case when new.log->'result'->>'winner' = me->>'seat' then 'win' else 'loss' end,
+    'result', case when new.log->'result'->>'winner' = 'draw' then 'draw' when new.log->'result'->>'winner' = me->>'seat' then 'win' else 'loss' end,
+    -- 'sealed' (Lore Counter's Selado: prerelease, draft) is kept apart from Core in the stats
+    'format', case when new.log->>'game_format' = 'sealed' then 'sealed' else 'core' end,
     'my_deck', coalesce(nullif(me->'deck'->>'name', ''), nullif(array_to_string(array(select jsonb_array_elements_text(coalesce(me->'deck'->'inks', '[]'::jsonb))), '/'), ''), 'Physical game'),
     'opp_deck', coalesce(nullif(opp->'deck'->>'archetype', ''), nullif(array_to_string(array(select jsonb_array_elements_text(coalesce(opp->'deck'->'inks', '[]'::jsonb))), '/'), ''), 'Unknown'),
     'went_first', case jsonb_typeof(me->'went_first') when 'boolean' then me->'went_first' else 'null'::jsonb end,
