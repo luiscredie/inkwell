@@ -1074,6 +1074,8 @@ test('Amigos: each friend with profile, shared collection, wishlist cards they h
     lending: [{ user: FA, name: 'Ana', card_id: 'LOR10-17', lend: true, free: 1 }, { user: FA, name: 'Ana', card_id: 'LOR10-10', lend: true, free: 2 }],
     games: [{ user_id: FA, played_at: new Date(Date.now() - 3 * 864e5).toISOString() }],
     open: { caio: { view: true, lend: false, cards: 140 } } });
+  // supabase/my_friends_summary.sql not run yet (PostgREST 404): the page keeps the old per-friend reads (etapa B fallback)
+  await page.route('**/rest/v1/rpc/my_friends_summary', (r) => r.fulfill({ status: 404, contentType: 'application/json', body: '{"code":"PGRST202"}' }));
   await page.goto(url('amigos/'));
   const list = page.getByTestId('fr-list');
   await expect(list.locator('.fr')).toHaveCount(3);
@@ -1126,4 +1128,30 @@ test('Amigos on a phone: in "Mais", and the page fits a 360px screen', async ({ 
   expect(r.sw).toBeLessThanOrEqual(r.vw);
   await expect(page.locator('#iwMoreSheet a[href="../amigos/"]')).toHaveAttribute('aria-current', 'page');
   if (process.env.SHOT_DIR) await page.screenshot({ path: process.env.SHOT_DIR + '/amigos-360.png' });
+});
+
+test('Amigos 2.0 B (#164): one my_friends_summary read replaces the per-friend friend_collection reads, with no 24-friend limit', async ({ page }) => {
+  const many = Array.from({ length: 30 }, (_, i) => ({ id: `77777777-7777-4777-8777-${String(i).padStart(12, '0')}`, name: `Amigo ${i + 1}`, handle: `amigo${i + 1}`, avatar: null }));
+  const asked = await friendsSetup(page, { friends: many, wishlist: {} });
+  const summary = [];
+  await page.route('**/rest/v1/rpc/my_friends_summary', (r) => { summary.push(r.request().method());
+    return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ id: many[29].id, view: true, lend: true, cards: 42 }, { id: many[0].id, view: true, lend: false, cards: 7 }]) }); });
+  await page.goto(url('amigos/'));
+  await expect(page.getByTestId('fr-list').locator('.fr')).toHaveCount(30);
+  await expect(page.locator(`[data-friend="${many[29].id}"]`).getByTestId('fr-coll')).toHaveText('Coleção aberta aos amigos · 42 cartas · empresta');   // the 30th friend, past the old limit
+  await expect(page.locator(`[data-friend="${many[29].id}"]`).getByTestId('fr-open-coll')).toHaveAttribute('href', '../colecao/?amigo=amigo30');
+  await expect(page.locator(`[data-friend="${many[0].id}"]`).getByTestId('fr-coll')).toHaveText('Coleção aberta aos amigos · 7 cartas');
+  await expect(page.locator('[data-testid="fr-coll"]')).toHaveCount(2);
+  expect(summary).toEqual(['POST']);                                                  // after: 1 request
+  expect(asked.filter((a) => a.path === 'rpc/friend_collection')).toHaveLength(0);    // before: 24 requests (one per friend, capped)
+});
+
+test('Amigos 2.0 B: if my_friends_summary fails (not 404), the page still works and does not fall back to 24 reads', async ({ page }) => {
+  const asked = await friendsSetup(page, { friends: [{ id: FA, name: 'Ana', handle: 'ana', avatar: null }], open: { ana: { view: true, cards: 3 } } });
+  await page.route('**/rest/v1/rpc/my_friends_summary', (r) => r.fulfill({ status: 500, contentType: 'application/json', body: '{}' }));
+  await page.goto(url('amigos/'));
+  await expect(page.getByTestId('fr-list').locator('.fr')).toHaveCount(1);
+  await expect(page.getByTestId('fr-coll')).toHaveCount(0);
+  await expect(page.getByTestId('fr-profile')).toHaveAttribute('href', '../perfil/?u=ana');
+  expect(asked.filter((a) => a.path === 'rpc/friend_collection')).toHaveLength(0);
 });
