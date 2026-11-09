@@ -305,6 +305,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Person": "Pessoa", "Name of who you lent to or borrowed from": "Nome de quem recebeu ou emprestou", "Due date (optional)": "Devolver até (opcional)",
     "Note (optional)": "Observação (opcional)", "Cards": "Cartas", "Search a card by name": "Busque uma carta pelo nome", "foil": "foil",
     "Save": "Salvar", "Cancel": "Cancelar", "Saving…": "Salvando…", "Couldn't save. Try again.": "Não foi possível salvar. Tente de novo.",
+    "You sent too many trade proposals today. Try again tomorrow.": "Você enviou muitas propostas de troca hoje. Tente de novo amanhã.",
+    "This proposal is already waiting for your friend's answer.": "Esta proposta já está esperando a resposta do seu amigo.",
     "Add at least one card and the person's name.": "Adicione pelo menos uma carta e o nome da pessoa.",
     "Open loans": "Empréstimos em aberto", "No open loans.": "Nenhum empréstimo em aberto.", "Show returned loans": "Mostrar devolvidos", "Hide returned loans": "Esconder devolvidos",
     "Returned": "Devolvidos", "Lent to {person}": "Emprestado para {person}", "Borrowed from {person}": "Pego emprestado de {person}",
@@ -952,7 +954,11 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       }
       form = null;
       await refresh();
-    } catch { msg.textContent = Tx("Couldn't save. Try again."); $("fSave").disabled = false; $("fSave").removeAttribute("aria-busy"); }
+    } catch (e) {   // supabase/trade_proposal_notice.sql: 20 proposals in 24 h; the same proposal twice while unanswered
+      const why = String(e?.why || "");
+      msg.textContent = Tx(/too_many_trade_proposals/.test(why) ? "You sent too many trade proposals today. Try again tomorrow." : /duplicate_trade_proposal/.test(why) ? "This proposal is already waiting for your friend's answer." : "Couldn't save. Try again.");
+      $("fSave").disabled = false; $("fSave").removeAttribute("aria-busy");
+    }
   }
   async function refresh() { await loadAll(); if (await autoApply()) await loadAll(); render(); }
 
@@ -1456,8 +1462,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       comment_like: ["curtiu seu comentário", "liked your comment"], feedback: ["mandou um feedback", "sent feedback"], rsvp: ["vai na sua mesa", "is going to your table"], event: ["marcou uma mesa", "set up a table"],
       community_invite: ["convidou você para uma comunidade", "invited you to a community"], join_request: ["pediu para entrar", "asked to join"], join_accepted: ["aceitou seu pedido", "accepted your request"],
       event_soon: ["é amanhã ou hoje", "is coming up"], share_accepted: ["aceitou dividir a sua coleção", "joined your shared collection"],
-      loan_request: ["pediu cartas emprestadas", "asked to borrow cards"], loan_offer: ["quer emprestar cartas para você", "offered to lend you cards"] };
-    const noteHref = (n) => n.kind === "feedback" ? "../admin/?tab=feedback" : /^loan_/.test(n.kind) ? "../trades/" : n.kind === "share_accepted" ? "../colecao/" : (n.kind === "event_soon" && n.ref?.rph) || /^event_near/.test(n.kind) ? "../eventos/" : n.ref?.post ? `../feed/#post-${encodeURIComponent(n.ref.post)}` : n.ref?.slug ? `../comunidades/?c=${encodeURIComponent(n.ref.slug)}${["event", "rsvp", "event_soon"].includes(n.kind) ? "#mesas" : ""}` : "../feed/";
+      loan_request: ["pediu cartas emprestadas", "asked to borrow cards"], loan_offer: ["quer emprestar cartas para você", "offered to lend you cards"],
+      trade_proposal: ["propôs uma troca", "proposed a trade"] };
+    const noteHref = (n) => n.kind === "feedback" ? "../admin/?tab=feedback" : /^loan_/.test(n.kind) ? "../trades/" : n.kind === "trade_proposal" ? "../trades/?tab=trades" : n.kind === "share_accepted" ? "../colecao/" : (n.kind === "event_soon" && n.ref?.rph) || /^event_near/.test(n.kind) ? "../eventos/" : n.ref?.post ? `../feed/#post-${encodeURIComponent(n.ref.post)}` : n.ref?.slug ? `../comunidades/?c=${encodeURIComponent(n.ref.slug)}${["event", "rsvp", "event_soon"].includes(n.kind) ? "#mesas" : ""}` : "../feed/";
     // the number on the app icon (installed app): the unread count, cleared when read
     const appBadge = (n) => { try { if (n && navigator.setAppBadge) navigator.setAppBadge(n).catch(() => {}); else if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {}); } catch { /* */ } };
     const showBell = () => { const b = $("iwBell"), c = $("iwBellN"); if (!b || !notes) return; b.hidden = false; const n = notes.filter((x) => x.unread).length; c.hidden = !n; c.textContent = n > 9 ? "9+" : String(n); appBadge(n);

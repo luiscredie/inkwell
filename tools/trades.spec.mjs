@@ -6,6 +6,35 @@ const BASE = new URL('trades/', process.env.INKWELL_URL || 'http://localhost:808
 const ME = '11111111-1111-4111-8111-111111111111';
 const ANA = '22222222-2222-4222-8222-222222222222';
 
+// etapa C4: supabase/trade_proposal_notice.sql refuses a 21st proposal in 24 h and the same unanswered proposal
+test('a refused trade proposal says why (daily limit, or the same proposal already waiting)', async ({ page }) => {
+  await page.addInitScript((me) => {
+    localStorage.setItem('inkwell-lang', 'pt');
+    const exp = Math.floor(Date.now() / 1000) + 3600;
+    localStorage.setItem('inkwell-counter-auth', JSON.stringify({ access_token: 'x.' + btoa(JSON.stringify({ sub: me, exp })) + '.y', refresh_token: 'r', expires_at: exp, user: { id: me, email: 'luis@example.com' } }));
+  }, ME);
+  let why = 'too_many_trade_proposals';
+  await page.route('**/rest/v1/**', (route) => {
+    const req = route.request(), path = new URL(req.url()).pathname.replace(/.*\/rest\/v1\//, '');
+    const json = (v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+    if (path === 'user_trades' && req.method() === 'POST') return route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ code: 'P0001', message: why }) });
+    if (path === 'inkwell_profiles') return json([{ profile: 'luiscredie', updated_at: '2026-10-20T10:00:00Z', collection: {}, wishlist: {} }]);
+    if (path === 'friendships') return json([{ requester: ME, addressee: ANA, status: 'accepted' }]);
+    if (path === 'listings') return json([{ id: 'l1', user_id: ANA, kind: 'trade', card_id: 'LOR10-10', qty: 1, foil: false, price_brl: null, note: '', created_at: '2026-10-28T12:00:00Z' }]);
+    if (path === 'profiles') return json([{ user_id: ANA, display_name: 'Ana Souza' }]);
+    if (path === 'rpc/my_settings') return json({ user_id: ME, auto_collection: false });
+    if (path === 'rpc/my_duels_sync') return json(null);
+    return json([]);
+  });
+  await page.goto(BASE + '?tab=board');
+  await page.locator('[data-listing="l1"]').getByRole('button', { name: 'Propor troca' }).click();
+  await page.locator('#fSave').click();
+  await expect(page.locator('#fMsg')).toHaveText('Você enviou muitas propostas de troca hoje. Tente de novo amanhã.');
+  why = 'duplicate_trade_proposal';
+  await page.locator('#fSave').click();
+  await expect(page.locator('#fMsg')).toHaveText('Esta proposta já está esperando a resposta do seu amigo.');
+});
+
 test('the board shows "tem para troca" posts; a friend can propose a trade with the card already in "I get"', async ({ page }) => {
   await page.addInitScript((me) => {
     localStorage.setItem('inkwell-lang', 'pt');

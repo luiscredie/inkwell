@@ -50,6 +50,8 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "Person": "Pessoa", "Name of who you lent to or borrowed from": "Nome de quem recebeu ou emprestou", "Due date (optional)": "Devolver até (opcional)",
     "Note (optional)": "Observação (opcional)", "Cards": "Cartas", "Search a card by name": "Busque uma carta pelo nome", "foil": "foil",
     "Save": "Salvar", "Cancel": "Cancelar", "Saving…": "Salvando…", "Couldn't save. Try again.": "Não foi possível salvar. Tente de novo.",
+    "You sent too many trade proposals today. Try again tomorrow.": "Você enviou muitas propostas de troca hoje. Tente de novo amanhã.",
+    "This proposal is already waiting for your friend's answer.": "Esta proposta já está esperando a resposta do seu amigo.",
     "Add at least one card and the person's name.": "Adicione pelo menos uma carta e o nome da pessoa.",
     "Open loans": "Empréstimos em aberto", "No open loans.": "Nenhum empréstimo em aberto.", "Show returned loans": "Mostrar devolvidos", "Hide returned loans": "Esconder devolvidos",
     "Returned": "Devolvidos", "Lent to {person}": "Emprestado para {person}", "Borrowed from {person}": "Pego emprestado de {person}",
@@ -697,7 +699,11 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       }
       form = null;
       await refresh();
-    } catch { msg.textContent = Tx("Couldn't save. Try again."); $("fSave").disabled = false; $("fSave").removeAttribute("aria-busy"); }
+    } catch (e) {   // supabase/trade_proposal_notice.sql: 20 proposals in 24 h; the same proposal twice while unanswered
+      const why = String(e?.why || "");
+      msg.textContent = Tx(/too_many_trade_proposals/.test(why) ? "You sent too many trade proposals today. Try again tomorrow." : /duplicate_trade_proposal/.test(why) ? "This proposal is already waiting for your friend's answer." : "Couldn't save. Try again.");
+      $("fSave").disabled = false; $("fSave").removeAttribute("aria-busy");
+    }
   }
   async function refresh() { await loadAll(); if (await autoApply()) await loadAll(); render(); }
 
