@@ -1043,7 +1043,7 @@ test('admin: Feedback tab (from the notice link), text shown as text, mark as ha
 });
 
 // ---------- Amigos (/amigos/) ----------
-async function friendsSetup(page, { friends, shared = [], lending = [], games = [], wishlist = { 'LOR10-17': 1, 'LOR10-10': 1 }, open = {} } = {}) {
+async function friendsSetup(page, { friends, shared = [], lending = [], games = [], wishlist = { 'LOR10-17': 1, 'LOR10-10': 1 }, open = {}, search = null, requests = [], people = [] } = {}) {
   const asked = [];
   await page.addInitScript((me) => {
     localStorage.setItem('inkwell-lang', 'pt');
@@ -1053,9 +1053,13 @@ async function friendsSetup(page, { friends, shared = [], lending = [], games = 
   await page.route('**/rest/v1/**', (route) => {
     const req = route.request(), u = new URL(req.url()), path = u.pathname.replace(/.*\/rest\/v1\//, '');
     const body = req.postData() ? JSON.parse(req.postData()) : null;
-    asked.push({ path, body });
+    asked.push({ path, body, method: req.method(), full: path + decodeURIComponent(u.search) });
     const json = (v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
     if (path === 'rpc/my_friends') return json(friends);
+    if (path === 'rpc/search_all') return search === 'fail' ? route.fulfill({ status: 503, body: '{}' }) : json(search || { people: [], communities: [] });
+    if (path === 'rpc/request_friend') return json({ ok: true });
+    if (path === 'friendships') return req.method() === 'GET' ? json(requests) : route.fulfill({ status: 204, body: '' });
+    if (path === 'profiles') return json(people);
     if (path === 'rpc/shared_collections') return json(shared);
     if (path === 'rpc/friends_lending') return json(lending);
     if (path === 'rpc/friend_collection') return json(open[body.p_handle] || { view: false });
@@ -1105,6 +1109,8 @@ test('Amigos: each friend with profile, shared collection, wishlist cards they h
 test('Amigos: no friends yet — what friends bring and how to add them; signed out asks to sign in', async ({ page, browser }) => {
   await friendsSetup(page, { friends: [] });
   await page.goto(url('amigos/'));
+  await expect(page.getByTestId('fr-tab-discover')).toHaveAttribute('aria-selected', 'true');   // no friends yet: Descobrir first
+  await page.getByTestId('fr-tab-friends').click();
   const e = page.getByTestId('fr-empty');
   await expect(e).toContainText('Você ainda não tem amigos no Inkwell');
   await expect(e.getByRole('link', { name: 'Adicionar e gerenciar amigos' })).toHaveAttribute('href', '../feed/#amigos');
@@ -1113,6 +1119,131 @@ test('Amigos: no friends yet — what friends bring and how to add them; signed 
   await expect(p2.getByRole('button', { name: 'Entrar' }).last()).toBeVisible();
   await ctx.close();
 });
+
+// ---------- Amigos 2.0 (etapa A): Descobrir · Meus amigos · Pedidos ----------
+const FD = '55555555-5555-4555-8555-555555555555', FE = '66666666-6666-4666-8666-666666666666';
+const SEARCH = { people: [
+    { uid: FA, name: 'Ana', handle: 'ana', avatar: 'LOR10-17', city: 'São Paulo', friend: true },
+    { uid: FD, name: 'Davi <b>', handle: 'davi', avatar: null, city: 'Campinas', friend: false },
+    { uid: FE, name: 'Eva', handle: 'eva', avatar: null, city: null, friend: false }],
+  communities: [{ slug: 'loja-sp', name: 'Loja SP', kind: 'store', city: 'São Paulo', avatar: null, mine: true }] };
+
+test('Amigos 2.0: tabs (Meus amigos first, arrows, #hash), Descobrir searches search_all with debounce, city filter, add friend', async ({ page }) => {
+  const asked = await friendsSetup(page, { friends: [{ id: FA, name: 'Ana', handle: 'ana', avatar: null }], search: SEARCH,
+    requests: [{ requester: FE, addressee: ME, created_at: new Date().toISOString() }], people: [{ user_id: FE, display_name: 'Eva' }] });
+  await page.goto(url('amigos/'));
+  const tabs = page.getByRole('tab');
+  await expect(tabs).toHaveText(['Descobrir', 'Meus amigos', 'Pedidos 1']);
+  await expect(page.getByTestId('fr-tab-friends')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByTestId('fr-list').locator('.fr')).toBeVisible();
+  await page.getByTestId('fr-tab-friends').focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.getByTestId('fr-tab-discover')).toBeFocused();
+  await expect(page.locator('#pDiscover')).toBeVisible();
+  await expect(page.locator('#pFriends')).toBeHidden();
+  expect(new URL(page.url()).hash).toBe('#descobrir');
+  const q = page.getByTestId('fr-query');
+  await q.fill('a');
+  await expect(page.getByTestId('fr-results')).toContainText('pelo menos 2 letras');
+  await q.fill('');
+  await q.pressSequentially('@ada', { delay: 20 });
+  const res = page.getByTestId('fr-results');
+  await expect(res.getByTestId('fr-person')).toHaveCount(3);
+  const searches = asked.filter((a) => a.path === 'rpc/search_all');
+  expect(searches.length).toBe(1);                     // debounced: one call for the whole word
+  expect(searches[0].body).toEqual({ p_q: 'ada' });     // "@" is not sent
+  await expect(res.getByTestId('fr-person').nth(1)).toContainText('@davi · Campinas');
+  await expect(res.getByTestId('fr-person').nth(1)).toContainText('Davi <b>');   // text, never HTML
+  await expect(res.getByTestId('fr-person').nth(0)).toContainText('Amigo');
+  await expect(res.getByTestId('fr-person').nth(2).getByRole('button', { name: 'Responder pedido' })).toBeVisible();   // Eva asked me
+  await expect(res.getByTestId('fr-community')).toContainText('Você participa');
+  // only the cities already in the results, and the filter narrows them
+  await expect(page.getByTestId('fr-city').locator('option')).toHaveText(['Todas', 'Campinas', 'São Paulo']);
+  await page.getByTestId('fr-city').selectOption('Campinas');
+  await expect(res.getByTestId('fr-person')).toHaveCount(1);
+  await expect(res.getByTestId('fr-community')).toHaveCount(0);
+  await res.getByRole('button', { name: 'Adicionar Davi <b> como amigo' }).click();
+  await expect(page.locator('#toast')).toContainText('Pedido de amizade enviado');
+  expect(asked.filter((a) => a.path === 'rpc/request_friend').map((a) => a.body)).toEqual([{ p_handle: 'davi' }]);
+  // no e-mail anywhere, and nothing but the existing reads/writes
+  await expect(page.locator('main')).not.toContainText('@example.com');
+  expect([...new Set(asked.map((a) => a.path))].filter((p) => !['rpc/my_friends', 'rpc/shared_collections', 'rpc/friends_lending', 'rpc/friend_collection', 'game_logs', 'inkwell_profiles', 'rpc/search_all', 'rpc/request_friend', 'friendships', 'profiles', 'listings', 'user_loans', 'user_trades'].some((k) => p.startsWith(k)) && !p.startsWith('rpc/my_') && p !== 'rpc/track')).toEqual([]);
+  await page.goto(url('amigos/#pedidos'));
+  await expect(page.getByTestId('fr-tab-requests')).toHaveAttribute('aria-selected', 'true');
+});
+
+test('Amigos 2.0: Pedidos accept, decline and cancel use the same friendships calls as Início; search failure keeps the page usable', async ({ page }) => {
+  const asked = await friendsSetup(page, { friends: [], search: 'fail',
+    requests: [{ requester: FD, addressee: ME, created_at: new Date().toISOString() }, { requester: ME, addressee: FE, created_at: new Date().toISOString() }],
+    people: [{ user_id: FD, display_name: 'Davi' }, { user_id: FE, display_name: 'Eva' }] });
+  await page.goto(url('amigos/#pedidos'));
+  const inc = page.getByTestId('fr-req-in'), out = page.getByTestId('fr-req-out');
+  await expect(inc.getByTestId('fr-req')).toContainText('Davi');
+  await expect(out.getByTestId('fr-req')).toContainText('Eva');
+  await inc.getByRole('button', { name: 'Aceitar pedido de Davi' }).click();
+  await expect(page.locator('#toast')).toContainText('Agora vocês são amigos');
+  const patch = asked.find((a) => a.path === 'friendships' && a.method === 'PATCH');
+  expect(patch.full).toBe(`friendships?requester=eq.${FD}&addressee=eq.${ME}`);
+  expect(patch.body.status).toBe('accepted');
+  await out.getByRole('button', { name: 'Cancelar pedido para Eva' }).click();
+  await expect(page.locator('#toast')).toContainText('Pedido cancelado');
+  expect(asked.find((a) => a.path === 'friendships' && a.method === 'DELETE').full).toBe(`friendships?requester=eq.${ME}&addressee=eq.${FE}`);
+  // no friends: the empty state leads to Descobrir; a failed search shows an error and a retry
+  await page.getByTestId('fr-tab-friends').click();
+  await page.getByTestId('fr-empty').getByRole('button', { name: 'Encontrar jogadores' }).click();
+  await page.getByTestId('fr-query').fill('davi');
+  await expect(page.getByTestId('fr-results')).toContainText('Não foi possível buscar agora');
+  await expect(page.getByRole('button', { name: 'Tentar de novo' })).toBeVisible();
+  await expect(page.getByRole('tab')).toHaveCount(3);
+});
+
+test('Amigos 2.0: search and filters among my friends', async ({ page }) => {
+  await friendsSetup(page, {
+    friends: [{ id: FB, name: 'Bia', handle: null, avatar: null }, { id: FA, name: 'Ana', handle: 'ana', avatar: null }, { id: FC, name: 'Caio', handle: 'caio', avatar: null }],
+    shared: [{ owner: FA, profile: 'principal', collection: { 'LOR10-1': { n: 1 } } }],
+    lending: [{ user: FC, card_id: 'LOR10-17', lend: true, free: 1 }],
+    games: [{ user_id: FB, played_at: new Date(Date.now() - 2 * 864e5).toISOString() }, { user_id: FC, played_at: new Date(Date.now() - 90 * 864e5).toISOString() }] });
+  await page.goto(url('amigos/'));
+  const list = page.getByTestId('fr-list'), visible = list.locator('.fr:visible');
+  await expect(visible).toHaveCount(3);
+  await page.getByRole('button', { name: 'Coleção compartilhada' }).click();
+  await expect(visible).toHaveCount(1); await expect(visible).toHaveAttribute('data-friend', FA);
+  await page.getByRole('button', { name: 'Tem cartas que procuro' }).click();
+  await expect(visible).toHaveCount(1); await expect(visible).toHaveAttribute('data-friend', FC);
+  await page.getByRole('button', { name: 'Atividade recente (30 dias)' }).click();
+  await expect(visible).toHaveCount(1); await expect(visible).toHaveAttribute('data-friend', FB);
+  await expect(page.locator('#frCount')).toHaveText('1 de 3 amigos');
+  await page.getByRole('button', { name: 'Todos' }).click();
+  await page.getByTestId('fr-find').fill('@cai');
+  await expect(visible).toHaveCount(1); await expect(visible).toHaveAttribute('data-friend', FC);
+  await page.getByTestId('fr-find').fill('zzz');
+  await expect(visible).toHaveCount(0);
+  await expect(page.getByTestId('fr-filter-none')).toBeVisible();
+});
+
+for (const w of [320, 375, 390, 430]) {
+  test(`Amigos 2.0 fits ${w}px in every tab (no sideways scroll, 40px+ touch targets)`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: 800 });
+    await friendsSetup(page, { friends: [{ id: FA, name: 'Ana Maria Souza de Oliveira Albuquerque', handle: 'ana_maria_souza_oliveira', avatar: 'LOR10-17' }], search: SEARCH,
+      shared: [{ owner: FA, profile: 'principal', collection: { 'LOR10-1': { n: 1 } } }], lending: [{ user: FA, card_id: 'LOR10-17', lend: true, free: 1 }],
+      requests: [{ requester: FE, addressee: ME, created_at: new Date().toISOString() }], people: [{ user_id: FE, display_name: 'Eva Cristina de Albuquerque Montenegro' }] });
+    await page.goto(url('amigos/'));
+    await expect(page.getByTestId('fr-list').locator('.fr')).toHaveCount(1);
+    const fits = () => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
+    expect(await fits()).toBe(true);
+    await page.getByTestId('fr-tab-discover').click();
+    await page.getByTestId('fr-query').fill('ana');
+    await expect(page.getByTestId('fr-person')).toHaveCount(3);
+    expect(await fits()).toBe(true);
+    const small = await page.locator('#pDiscover .btn:visible, #frTabs .tab').evaluateAll((els) => els.filter((e) => e.getBoundingClientRect().height < 40).length);
+    expect(small).toBe(0);
+    if (process.env.SHOT_DIR) await page.screenshot({ path: `${process.env.SHOT_DIR}/amigos2-discover-${w}.png`, fullPage: true });
+    await page.getByTestId('fr-tab-requests').click();
+    await expect(page.getByTestId('fr-req')).toHaveCount(1);
+    expect(await fits()).toBe(true);
+    if (process.env.SHOT_DIR) await page.screenshot({ path: `${process.env.SHOT_DIR}/amigos2-requests-${w}.png`, fullPage: true });
+  });
+}
 
 test('Amigos on a phone: in "Mais", and the page fits a 360px screen', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 780 });

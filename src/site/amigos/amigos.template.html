@@ -28,11 +28,31 @@
 .fr .acts .btn { min-height: 40px; }
 .fr-top { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-4); }
 @media (max-width: 420px) { .fr .acts .btn { flex: 1 1 calc(50% - var(--sp-2)); justify-content: center; } }
+/* Amigos 2.0: Descobrir · Meus amigos · Pedidos */
+.fr-tools { display: grid; gap: var(--sp-3); margin-bottom: var(--sp-4); }
+.fr-tools input[type="search"] { width: 100%; min-height: var(--tap); font-size: 16px; }
+.fr-tools .chips .chipbtn { min-height: 40px; }
+.fr-row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); }
+.fr-row .t { display: grid; gap: 2px; flex: 1 1 160px; min-width: 0; overflow-wrap: anywhere; }
+.fr-row .av { width: 40px; height: 40px; border-radius: 50%; flex: none; background: var(--surface-3) 50% 20% / 210% auto no-repeat;
+  display: grid; place-items: center; font: 800 1rem var(--display); color: var(--text); }
+.fr-row .acts { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.fr-row .acts .btn { min-height: 40px; }
+.fr-group { display: grid; gap: var(--sp-2); margin-bottom: var(--sp-4); }
+.fr-group h2 { font-size: var(--fs-h3); margin: 0; }
+.fr-list .fr[hidden], .fr-panel[hidden] { display: none !important; }
+@media (max-width: 420px) { .fr-row .acts { width: 100%; } .fr-row .acts .btn { flex: 1 1 auto; justify-content: center; } }
 </style>
 
 <main class="page" id="page">
   <div class="page-head"><div><h1 id="title">Amigos</h1><p class="sub" id="sub"></p></div></div>
-  <div id="app"><div class="skel" style="height:160px;border-radius:20px"></div></div>
+  <div class="tabs fill" role="tablist" id="frTabs" hidden></div>
+  <section class="fr-panel" id="pFriends" role="tabpanel" aria-labelledby="tab-friends">
+    <div class="fr-tools" id="frTools" hidden></div>
+    <div id="app"><div class="skel" style="height:160px;border-radius:20px"></div></div>
+  </section>
+  <section class="fr-panel" id="pDiscover" role="tabpanel" aria-labelledby="tab-discover" hidden></section>
+  <section class="fr-panel" id="pRequests" role="tabpanel" aria-labelledby="tab-requests" hidden></section>
 </main>
 <div class="toast-host"><div class="toast" id="toast" role="status" hidden></div></div>
 
@@ -63,12 +83,195 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const num = (n) => Number(n || 0).toLocaleString(LOC);
   document.title = T("Amigos · Inkwell", "Friends · Inkwell");
   $("title").textContent = T("Amigos", "Friends");
-  $("sub").textContent = T("Perfis, coleções que abriram para você, cartas que podem emprestar e o último jogo compartilhado.", "Profiles, collections opened to you, cards they can lend and their latest shared game.");
+  $("sub").textContent = me ? T("Encontre jogadores, veja o que seus amigos compartilham com você e responda pedidos de amizade.", "Find players, see what your friends share with you and answer friend requests.")
+    : T("Perfis, coleções que abriram para você, cartas que podem emprestar e o último jogo compartilhado.", "Profiles, collections opened to you, cards they can lend and their latest shared game.");
   const manage = `<a class="btn" href="../feed/#amigos"><i class="ic i-user-plus"></i>${T("Adicionar e gerenciar amigos", "Add and manage friends")}</a>`;
   const invite = `<button type="button" class="btn ghost" data-invite><i class="ic i-send"></i>${T("Convidar para o Inkwell", "Invite to Inkwell")}</button>`;
   const wire = () => document.querySelectorAll("[data-invite]").forEach((b) => b.onclick = () => window.INKWELL_INVITE?.(b));
+  const toast = (t) => { const el = $("toast"); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => { el.hidden = true; }, 3500); };
+  const avatarHtml = (face) => { const src = face?.avatar ? art(face.avatar) : "";
+    return `<span class="av" aria-hidden="true" style="${src ? `background-image:url('${src}')` : ""}">${src ? "" : esc((String(face?.name || "?").trim()[0] || "?").toUpperCase())}</span>`; };
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const names = new Map();
+
+  // ---------- Amigos 2.0: Descobrir · Meus amigos · Pedidos (WAI-ARIA tabs: arrows, Home, End; #descobrir, #pedidos) ----------
+  // Every read and write here is one the site already makes, under the same rules:
+  //   rpc/search_all (search_privacy.sql): adults with a public profile, or my friends; never e-mails; city only of
+  //     public profiles; communities that are not hidden. Results are a search, not suggestions: nothing is inferred.
+  //   rpc/request_friend (my_inkwell_2.sql): public adult profiles only, the profile page's "Adicionar amigo".
+  //   friendships rows (friends.sql RLS, hardening.sql limits): the Início "Amigos e privacidade" sheet's accept,
+  //     decline and cancel. Removing friends, groups and privacy stay there.
+  // Future filters (favourite inks, interests) need a field the player chooses to make public: not offered until then.
+  const TABS = [["discover", T("Descobrir", "Discover"), "descobrir"], ["friends", T("Meus amigos", "My friends"), "amigos"], ["requests", T("Pedidos", "Requests"), "pedidos"]];
+  const PANEL = { discover: "pDiscover", friends: "pFriends", requests: "pRequests" };
+  let tab = "friends", autoTab = false, rel = [], relState = "loading", results = null, seq = 0, timer = 0, discoverBuilt = false, fq = "", ff = "all";
+  function select(k, focus = false) {
+    tab = k;
+    for (const [key] of TABS) {
+      const b = $(`tab-${key}`), on = key === k;
+      b.setAttribute("aria-selected", String(on)); b.tabIndex = on ? 0 : -1;
+      $(PANEL[key]).hidden = !on;
+      if (on && focus) b.focus();
+    }
+    const h = TABS.find(([key]) => key === k)[2];
+    try { history.replaceState(null, "", k === "friends" ? location.pathname + location.search : `#${h}`); } catch { /* */ }
+    if (k === "discover") renderDiscover();
+    if (k === "requests") renderRequests();
+  }
+  function initTabs() {
+    const bar = $("frTabs"); bar.hidden = false; bar.setAttribute("aria-label", T("Seções de Amigos", "Friends sections"));
+    bar.innerHTML = TABS.map(([k, l]) => `<button type="button" class="tab" role="tab" id="tab-${k}" aria-controls="${PANEL[k]}" aria-selected="false" tabindex="-1" data-testid="fr-tab-${k}">${l}${k === "requests" ? ' <span class="count" id="frReqN" hidden></span>' : ""}</button>`).join("");
+    bar.addEventListener("click", (e) => { const b = e.target.closest("[role=tab]"); if (b) select(b.id.slice(4)); });
+    bar.addEventListener("keydown", (e) => {
+      const i = TABS.findIndex(([k]) => k === tab), n = TABS.length;
+      const j = e.key === "ArrowRight" ? (i + 1) % n : e.key === "ArrowLeft" ? (i - 1 + n) % n : e.key === "Home" ? 0 : e.key === "End" ? n - 1 : -1;
+      if (j < 0) return; e.preventDefault(); select(TABS[j][0], true);
+    });
+    const fromHash = () => { const h = location.hash.slice(1); return TABS.find(([, , hh]) => hh === h)?.[0] || "friends"; };
+    addEventListener("hashchange", () => select(fromHash()));   // a link to #pedidos while the page is open
+    autoTab = !location.hash;   // no #hash: the first load picks Descobrir for players with no friends yet
+    select(fromHash());
+    loadRequests();   // the count on the Pedidos tab, and who already has a request in Descobrir
+  }
+
+  // ----- Descobrir -----
+  function renderDiscover() {
+    if (discoverBuilt) return; discoverBuilt = true;
+    $("pDiscover").innerHTML = `<div class="fr-tools">
+        <label for="frQuery"><b>${T("Encontre jogadores e comunidades", "Find players and communities")}</b></label>
+        <span class="search"><i class="ic i-search"></i><input id="frQuery" type="search" maxlength="60" autocomplete="off" enterkeyhint="search" placeholder="${T("Nome ou @usuário", "Name or @handle")}" aria-describedby="frQueryHelp" data-testid="fr-query"></span>
+        <p class="small muted" id="frQueryHelp" style="margin:0">${T("Aparecem perfis públicos, seus amigos e comunidades. E-mails nunca aparecem; a cidade só aparece quando o perfil é público.", "Shows public profiles, your friends and communities. E-mails never show; a city shows only on public profiles.")}</p>
+        <label class="fr-row" id="frCityWrap" hidden><span class="small">${T("Cidade", "City")}</span><select id="frCity" class="inline" data-testid="fr-city"></select></label>
+      </div>
+      <div id="frResults" aria-live="polite" data-testid="fr-results"></div>
+      <div class="row" style="flex-wrap:wrap;gap:var(--sp-2);margin-top:var(--sp-4)"><a class="btn ghost" href="../comunidades/"><i class="ic i-users"></i>${T("Explorar comunidades", "Explore communities")}</a>${invite}</div>`;
+    const q = $("frQuery");
+    q.addEventListener("input", () => {
+      clearTimeout(timer); const cur = ++seq, term = q.value.trim().replace(/^@/, "");
+      if (term.length < 2) { results = null; showResults(); return; }
+      $("frResults").innerHTML = `<p class="small muted">${T("Buscando…", "Searching…")}</p>`;
+      timer = setTimeout(async () => {
+        let r = null;
+        try { r = await rpc("search_all", { p_q: term }); } catch { if (cur === seq) { results = { error: true }; showResults(); } return; }
+        if (cur !== seq) return;   // typed more meanwhile: the newer search shows instead
+        results = { people: Array.isArray(r?.people) ? r.people : [], communities: Array.isArray(r?.communities) ? r.communities : [] };
+        fillCities(); showResults();
+      }, 300);
+    });
+    $("frCity").addEventListener("change", showResults);
+    wire(); showResults();
+  }
+  // the cities already in the results (public profiles and communities only): narrows what was found, never a new search
+  function fillCities() {
+    const sel = $("frCity"), prev = sel.value;
+    const cities = [...new Set([...results.people, ...results.communities].map((x) => String(x.city || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, LOC));
+    sel.innerHTML = `<option value="">${T("Todas", "All")}</option>${cities.map((c) => `<option${c === prev ? " selected" : ""}>${esc(c)}</option>`).join("")}`;
+    $("frCityWrap").hidden = !cities.length;
+  }
+  const pending = (uid) => { const f = rel.find((x) => x.requester === uid || x.addressee === uid); return f ? (f.requester === me.id ? "sent" : "received") : null; };
+  function showResults() {
+    const out = $("frResults"); if (!out) return;
+    if (!results) { out.innerHTML = `<p class="small muted">${T("Digite pelo menos 2 letras do nome ou do @usuário.", "Type at least 2 letters of the name or @handle.")}</p>`; return; }
+    if (results.error) {
+      out.innerHTML = `<div class="empty"><img src="../ui/assets/empty/error.svg" alt=""><b>${T("Não foi possível buscar agora", "Search is unavailable right now")}</b><p>${T("Verifique a conexão e tente de novo.", "Check your connection and try again.")}</p><button type="button" class="btn" id="frRetry">${T("Tentar de novo", "Try again")}</button></div>`;
+      $("frRetry").onclick = () => $("frQuery").dispatchEvent(new Event("input"));
+      return;
+    }
+    const city = $("frCity").value, inCity = (x) => !city || String(x.city || "").trim() === city;
+    const people = results.people.filter(inCity), comms = results.communities.filter(inCity);
+    if (!people.length && !comms.length) {
+      out.innerHTML = `<p class="small muted" data-testid="fr-none">${city ? T("Nenhum resultado nesta cidade.", "No results in this city.") : T("Nenhum resultado. Tente outro nome ou convide a pessoa para o Inkwell.", "No results. Try another name or invite them to Inkwell.")}</p>`;
+      return;
+    }
+    const person = (p) => {
+      const nm = p.name || T("Jogador", "Player"), r = p.friend ? "friend" : pending(p.uid), prof = p.handle ? `../perfil/?u=${encodeURIComponent(p.handle)}` : "";
+      const state = r === "friend" ? `<span class="tag">${T("Amigo", "Friend")}</span>`
+        : r === "sent" ? `<span class="tag" data-testid="fr-sent">${T("Pedido enviado", "Request sent")}</span>`
+        : r === "received" ? `<button type="button" class="btn small" data-goreq>${T("Responder pedido", "Answer request")}</button>`
+        : p.handle ? `<button type="button" class="btn small primary" data-ask="${esc(p.handle)}" aria-label="${esc(T(`Adicionar ${nm} como amigo`, `Add ${nm} as a friend`))}"><i class="ic i-user-plus"></i>${T("Adicionar amigo", "Add friend")}</button>` : "";
+      return `<div class="card fr-row" data-testid="fr-person">${avatarHtml(p)}<div class="t"><b>${esc(nm)}</b><span class="small muted">${esc([p.handle ? `@${p.handle}` : T("Perfil privado", "Private profile"), p.city || ""].filter(Boolean).join(" · "))}</span></div>
+        <div class="acts">${prof ? `<a class="btn small" href="${prof}" aria-label="${esc(T(`Ver perfil de ${nm}`, `View ${nm}'s profile`))}"><i class="ic i-eye"></i>${T("Ver perfil", "View profile")}</a>` : ""}${state}</div></div>`;
+    };
+    const comm = (c) => `<div class="card fr-row" data-testid="fr-community">${avatarHtml(c)}<div class="t"><b>${esc(c.name || "")}</b><span class="small muted">${esc([c.city || "", c.mine ? T("Você participa", "You're a member") : ""].filter(Boolean).join(" · "))}</span></div>
+        <div class="acts"><a class="btn small" href="../comunidades/?c=${encodeURIComponent(c.slug || "")}">${T("Ver comunidade", "View community")}</a></div></div>`;
+    out.innerHTML = `${people.length ? `<div class="fr-group"><h2>${T("Pessoas", "People")}</h2>${people.map(person).join("")}</div>` : ""}${comms.length ? `<div class="fr-group"><h2>${T("Comunidades", "Communities")}</h2>${comms.map(comm).join("")}</div>` : ""}`;
+    out.querySelectorAll("[data-ask]").forEach((b) => b.onclick = () => ask(b));
+    out.querySelectorAll("[data-goreq]").forEach((b) => b.onclick = () => select("requests", true));
+  }
+  async function ask(b) {
+    b.disabled = true;
+    try { await rpc("request_friend", { p_handle: b.dataset.ask }); toast(T("Pedido de amizade enviado.", "Friend request sent.")); }
+    catch (e) { b.disabled = false; toast(/too_many/.test(e?.why || "") ? T("Você enviou muitos pedidos hoje. Tente de novo amanhã.", "You sent too many requests today. Try again tomorrow.") : T("Não foi possível enviar o pedido. Tente de novo.", "Couldn't send the request. Try again.")); return; }
+    await loadRequests(); showResults();
+  }
+
+  // ----- Pedidos: the friendships rows only the two people see (RLS) -----
+  async function loadRequests() {
+    try {
+      const rows = await CLOUD.api("friendships?status=eq.pending&select=requester,addressee,created_at&order=created_at.desc");
+      rel = (Array.isArray(rows) ? rows : []).filter((f) => UUID.test(f.requester) && UUID.test(f.addressee)); relState = "ok";
+      const ids = [...new Set(rel.map((f) => (f.requester === me.id ? f.addressee : f.requester)))].filter((id) => !names.has(id));
+      for (let i = 0; i < ids.length; i += 80) for (const p of (await CLOUD.api(`profiles?user_id=in.(${ids.slice(i, i + 80).join(",")})&select=user_id,display_name`).catch(() => [])) || []) names.set(p.user_id, p.display_name);
+    } catch { relState = "error"; }
+    const n = rel.filter((f) => f.addressee === me.id).length, c = $("frReqN");
+    if (c) { c.hidden = !n; c.textContent = n > 9 ? "9+" : String(n); }
+    $("tab-requests")?.setAttribute("aria-label", n ? T(`Pedidos, ${n} recebidos`, `Requests, ${n} received`) : T("Pedidos", "Requests"));
+    if (tab === "requests") renderRequests();
+  }
+  function renderRequests() {
+    const el = $("pRequests");
+    if (relState === "loading") { el.innerHTML = `<div class="skel" style="height:120px;border-radius:20px"></div>`; return; }
+    if (relState === "error") {
+      el.innerHTML = `<div class="empty"><img src="../ui/assets/empty/error.svg" alt=""><b>${T("Não deu para carregar os pedidos", "Couldn't load your requests")}</b><p>${T("Tente de novo em instantes.", "Try again in a moment.")}</p><button type="button" class="btn" id="reqAgain">${T("Tentar de novo", "Try again")}</button></div>`;
+      $("reqAgain").onclick = () => { relState = "loading"; renderRequests(); loadRequests(); };
+      return;
+    }
+    const inc = rel.filter((f) => f.addressee === me.id), sent = rel.filter((f) => f.requester === me.id);
+    const row = (id, sub, acts) => { const nm = names.get(id) || T("Jogador", "Player");
+      return `<div class="card fr-row" data-testid="fr-req">${avatarHtml({ name: nm })}<div class="t"><b>${esc(nm)}</b><span class="small muted">${esc(sub)}</span></div><div class="acts">${acts(nm)}</div></div>`; };
+    el.innerHTML = `<div class="fr-group" data-testid="fr-req-in"><h2>${T("Recebidos", "Received")} <span class="count quiet">${inc.length}</span></h2>
+        ${inc.length ? inc.map((f) => row(f.requester, `${T("Quer ser seu amigo", "Wants to be your friend")} · ${ago(f.created_at)}`, (nm) =>
+          `<button type="button" class="btn small ghost" data-decline="${f.requester}|${f.addressee}" aria-label="${esc(T(`Recusar pedido de ${nm}`, `Decline ${nm}'s request`))}">${T("Recusar", "Decline")}</button><button type="button" class="btn small primary" data-accept="${f.requester}" aria-label="${esc(T(`Aceitar pedido de ${nm}`, `Accept ${nm}'s request`))}">${T("Aceitar", "Accept")}</button>`)).join("")
+          : `<p class="small muted" style="margin:0">${T("Nenhum pedido recebido.", "No requests received.")}</p>`}</div>
+      <div class="fr-group" data-testid="fr-req-out"><h2>${T("Enviados", "Sent")} <span class="count quiet">${sent.length}</span></h2>
+        ${sent.length ? sent.map((f) => row(f.addressee, `${T("Aguardando resposta", "Waiting for an answer")} · ${ago(f.created_at)}`, (nm) =>
+          `<button type="button" class="btn small ghost" data-decline="${f.requester}|${f.addressee}" aria-label="${esc(T(`Cancelar pedido para ${nm}`, `Cancel request to ${nm}`))}">${T("Cancelar", "Cancel")}</button>`)).join("")
+          : `<p class="small muted" style="margin:0">${T("Nenhum pedido enviado. Encontre jogadores em Descobrir.", "No requests sent. Find players in Discover.")}</p>`}</div>
+      <p class="small muted">${T("Para remover amigos, criar grupos e escolher quem vê seus jogos:", "To remove friends, make groups and choose who sees your games:")} <a href="../feed/#amigos">${T("Amigos e privacidade", "Friends and privacy")}</a></p>`;
+    el.querySelectorAll("[data-accept]").forEach((b) => b.onclick = () => act(b, () => CLOUD.api(`friendships?requester=eq.${b.dataset.accept}&addressee=eq.${me.id}`, { method: "PATCH", prefer: "return=minimal", body: { status: "accepted", accepted_at: new Date().toISOString() } }), T("Agora vocês são amigos.", "You're friends now."), true));
+    el.querySelectorAll("[data-decline]").forEach((b) => b.onclick = () => { const [r, a] = b.dataset.decline.split("|");
+      act(b, () => CLOUD.api(`friendships?requester=eq.${r}&addressee=eq.${a}`, { method: "DELETE" }), r === me.id ? T("Pedido cancelado.", "Request cancelled.") : T("Pedido recusado.", "Request declined.")); });
+  }
+  async function act(b, fn, msg, friendsChanged = false) {
+    b.disabled = true;
+    try { await fn(); toast(msg); } catch { b.disabled = false; toast(T("Não foi possível concluir. Tente de novo.", "Couldn't finish that. Try again.")); return; }
+    await loadRequests();
+    if (results) showResults();
+    if (friendsChanged) load();
+  }
+
+  // ----- Meus amigos: search and filters over the cards already on the page (no new reads) -----
+  function renderTools(hasWish) {
+    const el = $("frTools"); el.hidden = false;
+    const F = [["all", T("Todos", "All")], ["coll", T("Coleção compartilhada", "Shared collection")], ...(hasWish ? [["wish", T("Tem cartas que procuro", "Has cards I want")]] : []), ["recent", T("Atividade recente (30 dias)", "Recent activity (30 days)")]];
+    if (!F.some(([k]) => k === ff)) ff = "all";
+    el.innerHTML = `<span class="search"><i class="ic i-search"></i><input type="search" id="frFind" maxlength="60" autocomplete="off" placeholder="${T("Buscar entre meus amigos", "Search my friends")}" aria-label="${T("Buscar entre meus amigos por nome ou @usuário", "Search my friends by name or @handle")}" value="${esc(fq)}" data-testid="fr-find"></span>
+      <div class="chips" role="group" aria-label="${T("Filtrar amigos", "Filter friends")}">${F.map(([k, l]) => `<button type="button" class="chipbtn" data-ff="${k}" aria-pressed="${k === ff}">${l}</button>`).join("")}</div>
+      <p class="small muted" id="frCount" aria-live="polite" style="margin:0"></p>`;
+    $("frFind").addEventListener("input", (e) => { fq = e.target.value; applyFilter(); });
+    el.querySelectorAll("[data-ff]").forEach((b) => b.onclick = () => { ff = b.dataset.ff; el.querySelectorAll("[data-ff]").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); applyFilter(); });
+    applyFilter();
+  }
+  function applyFilter() {
+    const q = fq.trim().replace(/^@/, "").toLocaleLowerCase(LOC), cards = [...document.querySelectorAll("#app .fr[data-friend]")];
+    let n = 0;
+    for (const c of cards) { const ok = (!q || c.dataset.q.includes(q)) && (ff === "all" || c.dataset.has.split(" ").includes(ff)); c.hidden = !ok; if (ok) n++; }
+    $("frCount").textContent = n === cards.length ? (n === 1 ? T("1 amigo", "1 friend") : T(`${n} amigos`, `${n} friends`)) : T(`${n} de ${cards.length} amigos`, `${n} of ${cards.length} friends`);
+    if ($("frNone")) $("frNone").hidden = n > 0;
+  }
 
   async function load() {
+    $("frTools").hidden = true;
     if (!me || !CLOUD) {
       $("app").innerHTML = `<div class="empty"><img src="../ui/assets/empty/signedout.svg" alt=""><b>${T("Entre para ver seus amigos", "Sign in to see your friends")}</b>
         <p>${T("Seus amigos, as coleções que abriram para você e o que podem emprestar ficam aqui.", "Your friends, the collections they opened to you and what they can lend show up here.")}</p>
@@ -84,10 +287,12 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       return;
     }
     friends = friends.filter((f) => f && f.id);
+    if (autoTab) { autoTab = false; if (!friends.length) select("discover"); }
     if (!friends.length) {
       $("app").innerHTML = `<div class="empty" data-testid="fr-empty"><img src="../ui/assets/empty/feed.svg" alt=""><b>${T("Você ainda não tem amigos no Inkwell", "You have no friends on Inkwell yet")}</b>
         <p>${T("Com amigos, você vê os jogos deles no Início, as coleções que abrirem para você e quem pode emprestar as cartas que você procura.", "With friends you see their games on Home, the collections they open to you and who can lend the cards you want.")}</p>
-        <div class="row" style="justify-content:center;gap:var(--sp-2)">${manage}${invite}</div></div>`;
+        <div class="row" style="justify-content:center;gap:var(--sp-2);flex-wrap:wrap"><button type="button" class="btn primary" data-godiscover><i class="ic i-search"></i>${T("Encontrar jogadores", "Find players")}</button>${manage}${invite}</div></div>`;
+      document.querySelector("[data-godiscover]").onclick = () => select("discover", true);
       wire();
       return;
     }
@@ -128,7 +333,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
         ld ? `<span data-testid="fr-lend"><i class="ic i-loan"></i>${esc(T(`Tem ${ld.cards.size} da sua lista de desejos${ld.lends ? " · empresta" : ""}`, `Has ${ld.cards.size} of your wishlist${ld.lends ? " · lends" : ""}`))}</span>` : "",
         at ? `<span data-testid="fr-last"><i class="ic i-games"></i>${esc(T(`Último jogo ${ago(at)}`, `Last game ${ago(at)}`))}</span>` : "",
       ].filter(Boolean).join("");
-      return `<article class="card fr" data-friend="${esc(f.id)}">${avatar}
+      // what the filters of "Meus amigos" look at: only what this card already shows
+      const has = [cs.length || op ? "coll" : "", ld ? "wish" : "", at && Date.now() - Date.parse(at) < 30 * 864e5 ? "recent" : ""].filter(Boolean).join(" ");
+      return `<article class="card fr" data-friend="${esc(f.id)}" data-has="${has}" data-q="${esc(`${name} ${f.handle || ""}`.toLocaleLowerCase(LOC))}">${avatar}
         <div class="t"><b>${esc(name)}</b>${f.handle ? `<span class="small muted">@${esc(f.handle)}</span>` : `<span class="small muted">${T("Perfil privado", "Private profile")}</span>`}
           ${facts ? `<div class="facts">${facts}</div>` : `<div class="facts"><span>${T("Nada compartilhado com você ainda.", "Nothing shared with you yet.")}</span></div>`}</div>
         <div class="acts">${prof ? `<a class="btn small" href="${prof}" data-testid="fr-profile"><i class="ic i-eye"></i>${T("Ver perfil", "View profile")}</a>` : ""}
@@ -138,11 +345,14 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     };
     $("app").innerHTML = `<div class="fr-top">${manage}${invite}</div>
       <div class="fr-list" data-testid="fr-list">${friends.map(card).join("")}</div>
+      <p class="small muted" id="frNone" data-testid="fr-filter-none" hidden>${T("Nenhum amigo com essa busca ou filtro.", "No friends match this search or filter.")}</p>
       ${!want.length ? `<p class="small muted" style="margin-top:var(--sp-4)" data-testid="fr-wish-hint">${T("Dica: com cartas na sua lista de desejos, aparece aqui quem tem cada uma.", "Tip: with cards on your wishlist, this shows who has each one.")}</p>` : ""}`;
     // the shared collection opens in Coleção (the same choice Coleção remembers)
     document.querySelectorAll("[data-coll]").forEach((a) => a.addEventListener("click", () => { try { localStorage.setItem("inkwell-coll-source", a.dataset.coll); } catch { /* */ } }));
     wire();
+    renderTools(!!want.length);
   }
+  if (me && CLOUD) initTabs();
   load();
 })();
 </script>
