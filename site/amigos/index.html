@@ -286,7 +286,8 @@ window.INKWELL_CLOUD = (() => {
 .fr-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
 .fr-tabs .btn[aria-selected="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--text); }
 .fr-search { display: grid; gap: 8px; }
-.fr-search input { width: 100%; min-height: 44px; font-size: 16px; }
+.fr-search input[type="search"] { width: 100%; min-height: 44px; font-size: 16px; }
+#app [data-friend][hidden] { display: none !important; }
 .fr-results { display: grid; gap: var(--sp-2); }
 .fr-result { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); padding: var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-md); }
 .fr-result .summary { flex: 1; min-width: 140px; overflow-wrap: anywhere; }
@@ -383,6 +384,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       if (friends) filterFriendCards(); else q.focus();
     }));
     ["frFriendQuery", "frWithCollection", "frWithWishlist"].forEach((id) => $(id).addEventListener(id === "frFriendQuery" ? "input" : "change", filterFriendCards));
+    $("app").hidden = true;
     wire();
   }
   function filterFriendCards() {
