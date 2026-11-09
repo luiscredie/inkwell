@@ -29,7 +29,22 @@ for(const width of [320,375,390,430,1280]){
       return {left:r.left,right:r.right,filter:getComputedStyle(c).filter};
     }));
     assert(hero.length>=3,'Missing featured cards');
-    if(mobile)assert(hero.every(c=>!c.filter.includes('blur(')),'Blurred featured card');
+    if(mobile){
+      assert(hero.every(c=>!c.filter.includes('blur(')),'Blurred featured card');
+      // Verify that the central featured card is actually visible at its center,
+      // rather than covered by an overlay or another transformed card.
+      const visibility=await page.locator('.hero-stories .fan .card3d').nth(1).evaluate(card=>{
+        const rect=card.getBoundingClientRect();
+        const x=rect.left+rect.width/2,y=rect.top+rect.height/2;
+        const top=document.elementFromPoint(x,y);
+        return {insideViewport:x>=0&&x<innerWidth&&y>=0&&y<innerHeight,
+          unobscured:!!top&&(top===card||card.contains(top)),
+          opacity:getComputedStyle(card).opacity};
+      });
+      assert(visibility.insideViewport,'Central featured card outside viewport');
+      assert(visibility.unobscured,'Central featured card obscured at its center');
+      assert(Number(visibility.opacity)>0.9,'Central featured card is faded');
+    }
     const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth);
     assert(overflow<=2,`Horizontal overflow: ${overflow}px`);
     await page.screenshot({path:join(output,`home-${width}.png`),fullPage:true});
