@@ -282,11 +282,22 @@ window.INKWELL_CLOUD = (() => {
 .fr .acts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: var(--sp-2); }
 .fr .acts .btn { min-height: 40px; }
 .fr-top { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-4); }
+.fr-social { display: grid; gap: var(--sp-3); margin-bottom: var(--sp-4); }
+.fr-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.fr-tabs .btn[aria-selected="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--text); }
+.fr-search { display: grid; gap: 8px; }
+.fr-search input { width: 100%; min-height: 44px; font-size: 16px; }
+.fr-results { display: grid; gap: var(--sp-2); }
+.fr-result { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); padding: var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-md); }
+.fr-result .summary { flex: 1; min-width: 140px; overflow-wrap: anywhere; }
+.fr-filter { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+.fr-social [hidden], #app[hidden] { display: none !important; }
 @media (max-width: 420px) { .fr .acts .btn { flex: 1 1 calc(50% - var(--sp-2)); justify-content: center; } }
 </style>
 
 <main class="page" id="page">
   <div class="page-head"><div><h1 id="title">Amigos</h1><p class="sub" id="sub"></p></div></div>
+  <section id="socialHub" class="fr-social" hidden aria-label="Descoberta de jogadores"></section>
   <div id="app"><div class="skel" style="height:160px;border-radius:20px"></div></div>
 </main>
 <div class="toast-host"><div class="toast" id="toast" role="status" hidden></div></div>
@@ -322,6 +333,71 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const manage = `<a class="btn" href="../feed/#amigos"><i class="ic i-user-plus"></i>${T("Adicionar e gerenciar amigos", "Add and manage friends")}</a>`;
   const invite = `<button type="button" class="btn ghost" data-invite><i class="ic i-send"></i>${T("Convidar para o Inkwell", "Invite to Inkwell")}</button>`;
   const wire = () => document.querySelectorAll("[data-invite]").forEach((b) => b.onclick = () => window.INKWELL_INVITE?.(b));
+
+  // Amigos 2.0 A: discover through the existing privacy-scoped search_all RPC.
+  // Search results are not recommendations: never infer location, interests or consent.
+  function initSocial() {
+    if (!me || !CLOUD) return;
+    const hub = $("socialHub"); hub.hidden = false;
+    hub.innerHTML = `<nav class="fr-tabs" aria-label="${T("Seções de Amigos", "Friends sections")}">
+      <button type="button" class="btn small" data-fr-tab="discover" aria-selected="true">${T("Descobrir", "Discover")}</button>
+      <button type="button" class="btn small" data-fr-tab="friends" aria-selected="false">${T("Meus amigos", "My friends")}</button>
+      <a class="btn small" href="../feed/#amigos"><i class="ic i-user-plus"></i>${T("Pedidos e privacidade", "Requests and privacy")}</a>
+    </nav>
+    <div id="frDiscover" class="card fr-search">
+      <label for="frQuery"><b>${T("Encontre jogadores e comunidades", "Find players and communities")}</b></label>
+      <input id="frQuery" type="search" maxlength="60" autocomplete="off" placeholder="${T("Nome ou @usuário (mínimo 2 letras)", "Name or @handle (at least 2 characters)")}" aria-describedby="frSearchHelp">
+      <p class="small muted" id="frSearchHelp">${T("Mostramos apenas perfis e comunidades que você pode encontrar. Nenhum e-mail é exibido.", "Only profiles and communities you are allowed to discover are shown. Emails are never shown.")}</p>
+      <div id="frResults" class="fr-results" role="status" aria-live="polite">${T("Digite para buscar.", "Type to search.")}</div>
+      <div class="row" style="flex-wrap:wrap;gap:var(--sp-2)">
+        <a class="btn small ghost" href="../comunidades/"><i class="ic i-users"></i>${T("Explorar comunidades", "Explore communities")}</a>
+        <button type="button" class="btn small ghost" data-invite>${T("Convidar alguém", "Invite someone")}</button>
+      </div>
+    </div>
+    <div id="frFriendFilters" class="fr-search" hidden>
+      <label for="frFriendQuery"><b>${T("Encontrar entre meus amigos", "Find among my friends")}</b></label>
+      <input id="frFriendQuery" type="search" maxlength="60" placeholder="${T("Nome ou @usuário", "Name or @handle")}">
+      <div class="fr-filter"><label><input type="checkbox" id="frWithCollection"> ${T("Compartilha coleção", "Shares collection")}</label><label><input type="checkbox" id="frWithWishlist"> ${T("Tem cartas que procuro", "Has cards I want")}</label></div>
+      <p id="frCount" class="small muted" aria-live="polite"></p>
+    </div>`;
+    const q = $("frQuery"), out = $("frResults");
+    let timer, seq = 0;
+    q.addEventListener("input", () => {
+      clearTimeout(timer); const current = ++seq, term = q.value.trim().replace(/^@/, "");
+      if (term.length < 2) { out.textContent = T("Digite pelo menos duas letras.", "Type at least two characters."); return; }
+      out.textContent = T("Buscando…", "Searching…");
+      timer = setTimeout(async () => {
+        let data = null;
+        try { data = await rpc("search_all", { p_q: term }); } catch { if (current === seq) out.textContent = T("Não foi possível buscar agora.", "Search unavailable right now."); return; }
+        if (current !== seq) return;
+        const people = Array.isArray(data?.people) ? data.people : [], communities = Array.isArray(data?.communities) ? data.communities : [];
+        const rows = people.map((p) => `<div class="fr-result"><div class="summary"><b>${esc(p.name || "")}</b><div class="small muted">${esc([p.handle ? "@" + p.handle : "", p.city || "", p.friend ? T("Já é amigo", "Already a friend") : ""].filter(Boolean).join(" · "))}</div></div>${p.handle ? `<a class="btn small" href="../perfil/?u=${encodeURIComponent(p.handle)}">${T("Ver perfil", "View profile")}</a>` : ""}</div>`);
+        const groups = communities.map((c) => `<div class="fr-result"><div class="summary"><b>${esc(c.name || "")}</b><div class="small muted">${esc(c.city || "")}</div></div><a class="btn small" href="../comunidades/?c=${encodeURIComponent(c.slug || "")}">${T("Ver comunidade", "View community")}</a></div>`);
+        out.innerHTML = rows.length || groups.length ? `${rows.length ? `<b>${T("Pessoas", "People")}</b>${rows.join("")}` : ""}${groups.length ? `<b>${T("Comunidades", "Communities")}</b>${groups.join("")}` : ""}` : `<p class="small muted">${T("Nenhum resultado encontrado.", "No results found.")}</p>`;
+      }, 250);
+    });
+    hub.querySelectorAll("[data-fr-tab]").forEach((b) => b.addEventListener("click", () => {
+      const friends = b.dataset.frTab === "friends";
+      hub.querySelectorAll("[data-fr-tab]").forEach((tab) => tab.setAttribute("aria-selected", String(tab === b)));
+      $("frDiscover").hidden = friends; $("frFriendFilters").hidden = !friends; $("app").hidden = !friends;
+      if (friends) filterFriendCards(); else q.focus();
+    }));
+    ["frFriendQuery", "frWithCollection", "frWithWishlist"].forEach((id) => $(id).addEventListener(id === "frFriendQuery" ? "input" : "change", filterFriendCards));
+    wire();
+  }
+  function filterFriendCards() {
+    const list = document.querySelectorAll("#app [data-friend]");
+    const query = ($("frFriendQuery")?.value || "").trim().toLocaleLowerCase(LOC);
+    const byCollection = $("frWithCollection")?.checked, byWishlist = $("frWithWishlist")?.checked;
+    let visible = 0;
+    list.forEach((card) => {
+      const title = (card.querySelector(".t")?.textContent || "").toLocaleLowerCase(LOC);
+      const ok = (!query || title.includes(query)) && (!byCollection || !!card.querySelector('[data-testid="fr-coll"]')) && (!byWishlist || !!card.querySelector('[data-testid="fr-lend"]'));
+      card.hidden = !ok; if (ok) visible++;
+    });
+    if ($("frCount")) $("frCount").textContent = T(`${visible} de ${list.length} amigos`, `${visible} of ${list.length} friends`);
+  }
+  initSocial();
 
   async function load() {
     if (!me || !CLOUD) {
@@ -397,6 +473,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     // the shared collection opens in Coleção (the same choice Coleção remembers)
     document.querySelectorAll("[data-coll]").forEach((a) => a.addEventListener("click", () => { try { localStorage.setItem("inkwell-coll-source", a.dataset.coll); } catch { /* */ } }));
     wire();
+    filterFriendCards();
   }
   load();
 })();
