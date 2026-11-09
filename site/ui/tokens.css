@@ -850,6 +850,15 @@ table .cardcell small { display: block; color: var(--text-2); }
 /* wide screens keep the icons; the counter shows its icon only and links are a little tighter, so "Inkwell" is never cut */
 @media (min-width: 1440px) { .appbar .counter-btn span { display: none; } .sections a { padding: 0 10px; } .appbar-in { gap: var(--sp-3); } }
 @media (min-width: 761px) and (max-width: 899px) { .sections a { padding: 0 6px; font-size: var(--fs-small); } .brand { font-size: 0; gap: 0; } }
+/* #162: keep every tablet navigation link visible without a horizontally scrolling strip.
+   Only the narrow 761–860px desktop-header interval is affected; mobile uses .tabbar. */
+@media (min-width: 761px) and (max-width: 860px) {
+  .appbar-in { gap: 4px; padding-inline: 8px; }
+  .appbar .brand { flex: 0 0 auto; }
+  .appbar .sections { flex: 1 1 auto; min-width: 0; gap: 0; justify-content: space-evenly; overflow: visible; }
+  .appbar .sections a { flex: 0 1 auto; min-width: 0; white-space: nowrap; padding-inline: 3px; font-size: 11px; letter-spacing: -.015em; }
+  .appbar .end { flex: 0 0 auto; gap: 0; }
+}
 html[data-theme="dia"] .tabbar { background: rgba(255,255,255,.97); border-top: 1px solid var(--line); box-shadow: 0 -4px 16px rgba(11,25,44,.06); }
 html[data-theme="dia"] body { background-attachment: scroll; }
 html[data-theme="dia"] input[type=date]::-webkit-calendar-picker-indicator { filter: none; }
