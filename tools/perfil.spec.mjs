@@ -1109,6 +1109,8 @@ test('Amigos: each friend with profile, shared collection, wishlist cards they h
 test('Amigos: no friends yet — what friends bring and how to add them; signed out asks to sign in', async ({ page, browser }) => {
   await friendsSetup(page, { friends: [] });
   await page.goto(url('amigos/'));
+  await expect(page.getByTestId('fr-tab-discover')).toHaveAttribute('aria-selected', 'true');   // no friends yet: Descobrir first
+  await page.getByTestId('fr-tab-friends').click();
   const e = page.getByTestId('fr-empty');
   await expect(e).toContainText('Você ainda não tem amigos no Inkwell');
   await expect(e.getByRole('link', { name: 'Adicionar e gerenciar amigos' })).toHaveAttribute('href', '../feed/#amigos');

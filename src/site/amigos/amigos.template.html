@@ -104,7 +104,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   // Future filters (favourite inks, interests) need a field the player chooses to make public: not offered until then.
   const TABS = [["discover", T("Descobrir", "Discover"), "descobrir"], ["friends", T("Meus amigos", "My friends"), "amigos"], ["requests", T("Pedidos", "Requests"), "pedidos"]];
   const PANEL = { discover: "pDiscover", friends: "pFriends", requests: "pRequests" };
-  let tab = "friends", rel = [], relState = "loading", results = null, seq = 0, timer = 0, discoverBuilt = false, fq = "", ff = "all";
+  let tab = "friends", autoTab = false, rel = [], relState = "loading", results = null, seq = 0, timer = 0, discoverBuilt = false, fq = "", ff = "all";
   function select(k, focus = false) {
     tab = k;
     for (const [key] of TABS) {
@@ -129,6 +129,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     });
     const fromHash = () => { const h = location.hash.slice(1); return TABS.find(([, , hh]) => hh === h)?.[0] || "friends"; };
     addEventListener("hashchange", () => select(fromHash()));   // a link to #pedidos while the page is open
+    autoTab = !location.hash;   // no #hash: the first load picks Descobrir for players with no friends yet
     select(fromHash());
     loadRequests();   // the count on the Pedidos tab, and who already has a request in Descobrir
   }
@@ -286,6 +287,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       return;
     }
     friends = friends.filter((f) => f && f.id);
+    if (autoTab) { autoTab = false; if (!friends.length) select("discover"); }
     if (!friends.length) {
       $("app").innerHTML = `<div class="empty" data-testid="fr-empty"><img src="../ui/assets/empty/feed.svg" alt=""><b>${T("Você ainda não tem amigos no Inkwell", "You have no friends on Inkwell yet")}</b>
         <p>${T("Com amigos, você vê os jogos deles no Início, as coleções que abrirem para você e quem pode emprestar as cartas que você procura.", "With friends you see their games on Home, the collections they open to you and who can lend the cards you want.")}</p>
