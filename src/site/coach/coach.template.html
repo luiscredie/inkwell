@@ -67,7 +67,7 @@ window.INKWELL_NO_STORE_MSG = "Your games appear here after you sign in.";
     "{c} banished": "{c} banido", " ability": " habilidade", "{v} damage to {t} from {c}": "{v} de dano em {t} por {c}",
     "Gained {v} lore": "Ganhou {v} de lore", "Lost {v} lore": "Perdeu {v} de lore", "Moved {c} to {t}": "Moveu {c} para {t}", "Note: {t}": "Nota: {t}",
     // review
-    "All games": "Todos os jogos", "Win": "Vitória", "Loss": "Derrota", "Played by {name}": "Jogado por {name}",
+    "All games": "Todos os jogos", "Format": "Formato", "Sealed": "Selado", "Both formats": "Os dois formatos", "Win": "Vitória", "Loss": "Derrota", "Played by {name}": "Jogado por {name}",
     "Your deck": "Seu deck", "Unknown": "Desconhecido", "vs": "vs",
     "{n} turns": "{n} turnos", "Lore Counter game, under 2 minutes": "Jogo do Contador de lore, menos de 2 minutos",
     "Lore Counter game, about {m} minutes": "Jogo do Contador de lore, cerca de {m} minutos",
@@ -227,7 +227,7 @@ window.INKWELL_NO_STORE_MSG = "Your games appear here after you sign in.";
     const meP = log.players?.find((p) => p.is_me) || log.players?.[0] || {}, opp = log.players?.find((p) => p !== meP) || {};
     const lore = log.result?.final_lore || {};
     const deckName = (d) => d?.name || (d?.inks || []).join("/");
-    return { result: log.result?.winner === "draw" ? "draw" : log.result?.winner === meP.seat ? "win" : "loss", my_deck: deckName(meP.deck) || "Physical game",
+    return { result: log.result?.winner === "draw" ? "draw" : log.result?.winner === meP.seat ? "win" : "loss", format: log.game_format === "sealed" ? "sealed" : "core", my_deck: deckName(meP.deck) || "Physical game",
       opp_deck: opp.deck?.archetype || (opp.deck?.inks || []).join("/") || "Unknown",
       went_first: typeof meP.went_first === "boolean" ? meP.went_first : null,
       my_lore: lore[meP.seat] ?? 0, opp_lore: lore[opp.seat] ?? 0,
@@ -889,7 +889,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const GROUP_KEY = "inkwell-coach-group-by-deck";
   let byDeck = true, closedDecks = new Set();
   try { byDeck = localStorage.getItem(GROUP_KEY) !== "date"; } catch { /* storage off */ }
-  const sv = { source: "all", days: 0, deck: "all", queue: "all", version: "all", perDay: 30, openVer: null };   // stats view filters            // {key, text, open}: survives the re-render that follows a save
+  const sv = { format: "core", source: "all", days: 0, deck: "all", queue: "all", version: "all", perDay: 30, openVer: null };   // stats view filters            // {key, text, open}: survives the re-render that follows a save
 
   // ---------- list ----------
   function summaryOf(g) { return g.doc.summary || {}; }
@@ -1457,8 +1457,12 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   function renderStatsView() {
     const el = $("review");
     const since = sv.days ? Date.now() - sv.days * DAY : 0;
-    const all = [...games.values()].map((g) => ({ key: g.key, s: summaryOf(g), at: g.doc.played_at, src: g.doc.source || g.doc.log?.source, mid: g.doc.match_id || null }));
-    const base = all.filter((r) => (sv.source === "all" || r.src === sv.source) && (!since || Date.parse(r.at) >= since));
+    // Core and Sealed apart: a prerelease deck says nothing about a constructed one. Older games without the field are Core.
+    const fmtOf = (g) => ((g.doc.summary?.format || g.doc.log?.game_format) === "sealed" ? "sealed" : "core");
+    const all = [...games.values()].map((g) => ({ key: g.key, s: summaryOf(g), at: g.doc.played_at, src: g.doc.source || g.doc.log?.source, mid: g.doc.match_id || null, fmt: fmtOf(g) }));
+    const hasSealed = all.some((r) => r.fmt === "sealed");
+    if (!hasSealed) sv.format = "core";
+    const base = all.filter((r) => (sv.format === "all" || r.fmt === sv.format) && (sv.source === "all" || r.src === sv.source) && (!since || Date.parse(r.at) >= since));
     const queues = groupBy(base.filter((r) => r.src === "duels_ink"), (r) => qOf(r.s) || "—").map((q) => q.k);
     if (sv.queue !== "all" && !queues.includes(sv.queue)) sv.queue = "all";
     const inQ = base.filter((r) => sv.queue === "all" || (qOf(r.s) || "—") === sv.queue);
@@ -1487,6 +1491,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     el.innerHTML = `<div class="sv"><button type="button" class="back" id="back">${Tx("Games")}</button>
       <h2>${Tx("Stats")}</h2>
       <div class="sv-filters">
+        ${hasSealed ? `<div class="ctl" role="group" aria-label="${Tx("Format")}">${chip("format", "core", "Core")}${chip("format", "sealed", Tx("Sealed"))}${chip("format", "all", Tx("Both formats"))}</div>` : ""}
         <div class="ctl" role="group" aria-label="${Tx("Source")}">${chip("source", "all", Tx("All games"))}${chip("source", "duels_ink", "duels.ink")}${chip("source", "lore_counter", Tx("Lore Counter"))}</div>
         <div class="ctl" role="group" aria-label="${Tx("Period")}">${chip("days", 0, Tx("All time"))}${chip("days", 90, Tx("Last 90 days"))}${chip("days", 30, Tx("Last 30 days"))}${chip("days", 7, Tx("Last 7 days"))}</div>
         <div class="ctl">
@@ -1644,7 +1649,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       const meP = log.players.find((p) => p.is_me) || log.players[0], opp = log.players.find((p) => p !== meP);
       const lore = log.result?.final_lore || {};
       const deckName = (d) => d?.name || (d?.inks || []).join("/");
-      const summary = { result: log.result?.winner === "draw" ? "draw" : log.result?.winner === meP.seat ? "win" : "loss", my_deck: deckName(meP.deck) || "Physical game",
+      const summary = { result: log.result?.winner === "draw" ? "draw" : log.result?.winner === meP.seat ? "win" : "loss", format: log.game_format === "sealed" ? "sealed" : "core", my_deck: deckName(meP.deck) || "Physical game",
         opp_deck: opp?.deck?.archetype || (opp?.deck?.inks || []).join("/") || "Unknown",
         went_first: typeof meP.went_first === "boolean" ? meP.went_first : null,
         my_lore: lore[meP.seat] ?? 0, opp_lore: lore[opp?.seat] ?? 0,
