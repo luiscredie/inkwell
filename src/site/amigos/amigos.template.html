@@ -304,13 +304,16 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       CLOUD.api("inkwell_profiles?select=profile,wishlist:data->wishlist").catch(() => []),
     ]);
     const want = [...new Set((mine || []).flatMap((p) => Object.keys(p.wishlist && typeof p.wishlist === "object" ? p.wishlist : {})))].slice(0, 400);
-    // a collection a friend opened to all friends (Coleção > Compartilhar): the same light check the profile makes,
-    // for friends with a public address, at most 24
+    // a collection a friend opened to all friends (Coleção > Compartilhar): one read for every friend
+    // (supabase/my_friends_summary.sql, issue #164: id, cards, lend; friends with a public address, no limit).
+    // Until that SQL runs (404), the old light check the profile makes, per friend with a public address, at most 24.
+    // Any other failure just leaves the line out, as before.
+    const perFriend = () => Promise.all(friends.filter((f) => f.handle).slice(0, 24).map((f) => rpc("friend_collection", { p_handle: f.handle, p_full: false }).then((r) => (r ? { ...r, id: f.id } : null), () => null)));
     const [lending, opened] = await Promise.all([
       want.length ? rpc("friends_lending", { p_cards: want }).catch(() => []) : [],
-      Promise.all(friends.filter((f) => f.handle).slice(0, 24).map((f) => rpc("friend_collection", { p_handle: f.handle, p_full: false }).then((r) => [f.id, r], () => [f.id, null]))),
+      rpc("my_friends_summary").then((r) => (Array.isArray(r) ? r : []), (e) => (e?.status === 404 ? perFriend() : [])),
     ]);
-    const open = new Map(opened.filter(([, r]) => r?.view).map(([id, r]) => [id, r]));
+    const open = new Map(opened.filter((r) => r?.view && r.id).map((r) => [r.id, r]));
     const coll = new Map(), last = new Map(), lend = new Map();
     for (const s of Array.isArray(shared) ? shared : []) {
       const n = Object.values(s.collection || {}).reduce((t, e) => t + (+e?.n || 0) + (+e?.f || 0), 0);
