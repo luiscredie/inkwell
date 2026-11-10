@@ -1210,8 +1210,9 @@ test('Amigos 2.0: search and filters among my friends', async ({ page }) => {
   await expect(visible).toHaveCount(3);
   await page.getByRole('button', { name: 'Coleção compartilhada' }).click();
   await expect(visible).toHaveCount(1); await expect(visible).toHaveAttribute('data-friend', FA);
-  await page.getByRole('button', { name: 'Tem cartas que procuro' }).click();
-  await expect(visible).toHaveCount(1); await expect(visible).toHaveAttribute('data-friend', FC);
+  await page.getByRole('button', { name: 'Cartas que procuro' }).click();   // etapa C: grouped by card
+  await expect(page.getByTestId('fr-wish').locator('[data-wfriend]')).toHaveCount(1);
+  await expect(page.getByTestId('fr-wish').locator('[data-wfriend]')).toHaveAttribute('data-wfriend', FC);
   await page.getByRole('button', { name: 'Atividade recente (30 dias)' }).click();
   await expect(visible).toHaveCount(1); await expect(visible).toHaveAttribute('data-friend', FB);
   await expect(page.locator('#frCount')).toHaveText('1 de 3 amigos');
@@ -1221,6 +1222,38 @@ test('Amigos 2.0: search and filters among my friends', async ({ page }) => {
   await page.getByTestId('fr-find').fill('zzz');
   await expect(visible).toHaveCount(0);
   await expect(page.getByTestId('fr-filter-none')).toBeVisible();
+});
+
+test('Amigos C1: Cartas que procuro — Possui (no quantity, no action), Empresta (free copies), Troca (active Mural post only)', async ({ page }) => {
+  const asked = await friendsSetup(page, {
+    friends: [{ id: FA, name: 'Ana', handle: 'ana', avatar: null }, { id: FB, name: 'Bia', handle: null, avatar: null }, { id: FC, name: 'Caio', handle: 'caio', avatar: null }],
+    wishlist: { 'LOR10-17': 1, 'LOR10-10': 1, 'LOR10-1': 1 },
+    lending: [{ user: FA, card_id: 'LOR10-17', lend: true, free: 2 }, { user: FB, card_id: 'LOR10-17', lend: false, free: 3 }, { user: FB, card_id: 'LOR10-10', lend: false, free: 1 }] });
+  const adUrls = [];
+  await page.route('**/rest/v1/listings*', (r) => adUrls.push(decodeURIComponent(r.request().url())) && r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+    { id: 'ad1', user_id: FC, card_id: 'LOR10-10', qty: 1, foil: true, updated_at: '2026-11-01T00:00:00Z' },
+    { id: 'ad2', user_id: FC, card_id: 'LOR10-99', qty: 1, foil: false, updated_at: '2026-11-01T00:00:00Z' }]) }));   // not on my wishlist
+  await page.goto(url('amigos/'));
+  await page.getByRole('button', { name: 'Cartas que procuro' }).click();
+  const wish = page.getByTestId('fr-wish');
+  await expect(page.getByTestId('fr-list')).toBeHidden();
+  await expect(wish.locator('.fr-wcard')).toHaveCount(2);
+  const c17 = wish.locator('[data-wcard="LOR10-17"]'), c10 = wish.locator('[data-wcard="LOR10-10"]');
+  await expect(c17.locator(`[data-wfriend="${FA}"]`).getByTestId('fr-badge-lend')).toHaveText('Empresta · 2 livres');
+  await expect(c17.locator(`[data-wfriend="${FB}"]`).getByTestId('fr-badge-own')).toHaveText('Possui');
+  await expect(c17.locator(`[data-wfriend="${FB}"]`)).not.toContainText('3');            // owning: never a quantity
+  await expect(c17.locator(`[data-wfriend="${FB}"]`).locator('a, button')).toHaveCount(0);   // and never an action
+  await expect(c10.locator(`[data-wfriend="${FC}"]`).getByTestId('fr-badge-trade')).toHaveText('Troca · 1 foil');
+  await expect(c10.locator(`[data-wfriend="${FC}"]`).getByTestId('fr-trade')).toHaveAttribute('href', '../trades/?tab=trades&anuncio=ad1');
+  await expect(wish).not.toContainText('LOR10-99');
+  const mine = adUrls.filter((u) => u.includes('kind=eq.trade'));   // the shell reads the board for its own badge
+  expect(mine).toHaveLength(1);
+  expect(mine[0]).toContain(`user_id=in.(${FA},${FB},${FC})`);
+  expect(asked.some((a) => a.path.startsWith('trade_cards') || a.path.includes('trade_binder'))).toBe(false);   // never the private Fichário
+  await page.getByTestId('fr-find').fill('caio');
+  await expect(wish.locator('.fr-wcard:visible')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Todos' }).click();
+  await expect(page.getByTestId('fr-list')).toBeVisible();
 });
 
 for (const w of [320, 375, 390, 430]) {

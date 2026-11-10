@@ -295,7 +295,14 @@ window.INKWELL_CLOUD = (() => {
 .fr-row .acts .btn { min-height: 40px; }
 .fr-group { display: grid; gap: var(--sp-2); margin-bottom: var(--sp-4); }
 .fr-group h2 { font-size: var(--fs-h3); margin: 0; }
-.fr-list .fr[hidden], .fr-panel[hidden] { display: none !important; }
+.fr-list .fr[hidden], .fr-panel[hidden], .fr-wcard[hidden], #frListWrap[hidden], #frWish[hidden] { display: none !important; }
+/* Etapa C: Cartas que procuro — one card, the friends who have it, and what each one allows */
+.fr-wish { display: grid; gap: var(--sp-3); }
+.fr-wcard { display: grid; gap: var(--sp-2); }
+.fr-wcard .thumb { width: 44px; height: 61px; border-radius: 6px; flex: none; background: var(--surface-3) center / cover no-repeat; }
+.fr-who { display: grid; gap: var(--sp-2); margin: 0; padding: 0; list-style: none; }
+.fr-who > li { border-top: 1px solid var(--line); padding-top: var(--sp-2); }
+.fr-who .badges { display: flex; flex-wrap: wrap; gap: 4px; }
 @media (max-width: 420px) { .fr-row .acts { width: 100%; } .fr-row .acts .btn { flex: 1 1 auto; justify-content: center; } }
 </style>
 
@@ -508,7 +515,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   // ----- Meus amigos: search and filters over the cards already on the page (no new reads) -----
   function renderTools(hasWish) {
     const el = $("frTools"); el.hidden = false;
-    const F = [["all", T("Todos", "All")], ["coll", T("Coleção compartilhada", "Shared collection")], ...(hasWish ? [["wish", T("Tem cartas que procuro", "Has cards I want")]] : []), ["recent", T("Atividade recente (30 dias)", "Recent activity (30 days)")]];
+    const F = [["all", T("Todos", "All")], ["coll", T("Coleção compartilhada", "Shared collection")], ...(hasWish ? [["wish", T("Cartas que procuro", "Cards I want")]] : []), ["recent", T("Atividade recente (30 dias)", "Recent activity (30 days)")]];
     if (!F.some(([k]) => k === ff)) ff = "all";
     el.innerHTML = `<span class="search"><i class="ic i-search"></i><input type="search" id="frFind" maxlength="60" autocomplete="off" placeholder="${T("Buscar entre meus amigos", "Search my friends")}" aria-label="${T("Buscar entre meus amigos por nome ou @usuário", "Search my friends by name or @handle")}" value="${esc(fq)}" data-testid="fr-find"></span>
       <div class="chips" role="group" aria-label="${T("Filtrar amigos", "Filter friends")}">${F.map(([k, l]) => `<button type="button" class="chipbtn" data-ff="${k}" aria-pressed="${k === ff}">${l}</button>`).join("")}</div>
@@ -519,11 +526,51 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   }
   function applyFilter() {
     const q = fq.trim().replace(/^@/, "").toLocaleLowerCase(LOC), cards = [...document.querySelectorAll("#app .fr[data-friend]")];
+    const wish = ff === "wish" && $("frWish");
+    if ($("frListWrap")) $("frListWrap").hidden = !!wish;
+    if ($("frWish")) $("frWish").hidden = !wish;
+    if (wish) {   // grouped by card: search looks at the card's and the friends' names
+      const ws = [...document.querySelectorAll("#frWish .fr-wcard")]; let k = 0;
+      for (const c of ws) { const ok = !q || c.dataset.q.includes(q); c.hidden = !ok; if (ok) k++; }
+      $("frCount").textContent = k === 1 ? T("1 carta da sua lista com amigos", "1 card from your wishlist with friends") : T(`${k} cartas da sua lista com amigos`, `${k} cards from your wishlist with friends`);
+      if ($("frWishNone")) $("frWishNone").hidden = k > 0;
+      return;
+    }
     let n = 0;
     for (const c of cards) { const ok = (!q || c.dataset.q.includes(q)) && (ff === "all" || c.dataset.has.split(" ").includes(ff)); c.hidden = !ok; if (ok) n++; }
     $("frCount").textContent = n === cards.length ? (n === 1 ? T("1 amigo", "1 friend") : T(`${n} amigos`, `${n} friends`)) : T(`${n} de ${cards.length} amigos`, `${n} of ${cards.length} friends`);
     if ($("frNone")) $("frNone").hidden = n > 0;
   }
+
+  // ----- Etapa C: Cartas que procuro. Owning is not lending or trading: three labels, each with its own consent -----
+  //   Possui   friends_lending row without lend: the friend opened the collection to friends. No quantity, no action.
+  //   Empresta friends_lending row with lend: the friend marked "empresta"; free = owned − already lent (> 0).
+  //   Troca    an active Mural post "Troco" of that card (public to signed-in players), with its quantity.
+  const NAME = new Map((CARD_INDEX?.cards || []).map((c) => [c[0], c[1]]));
+  function wishView(friends, lending, ads) {
+    const byId = new Map(friends.map((f) => [f.id, f])), cards = new Map();
+    const slot = (cid, fid) => { if (!byId.has(fid)) return null; if (!cards.has(cid)) cards.set(cid, new Map()); const m = cards.get(cid);
+      if (!m.has(fid)) m.set(fid, { own: false, free: 0, ad: null }); return m.get(fid); };
+    for (const l of Array.isArray(lending) ? lending : []) { const x = slot(l.card_id, l.user); if (!x) continue; x.own = true; if (l.lend && +l.free > 0) x.free = Math.max(x.free, +l.free); }
+    for (const a of Array.isArray(ads) ? ads : []) { const x = slot(a.card_id, a.user_id); if (x && !x.ad) x.ad = a; }
+    const rank = (x) => (x.free ? 0 : x.ad ? 1 : 2);
+    const list = [...cards].map(([cid, m]) => [cid, [...m].sort((a, b) => rank(a[1]) - rank(b[1]) || String(byId.get(a[0]).name || "").localeCompare(String(byId.get(b[0]).name || "")))])
+      .sort((a, b) => rank(a[1][0][1]) - rank(b[1][0][1]) || String(NAME.get(a[0]) || a[0]).localeCompare(String(NAME.get(b[0]) || b[0])));
+    const who = (cid, fid, x) => { const f = byId.get(fid), nm = f.name || T("Amigo", "Friend");
+      const badges = [x.free ? `<span class="tag" data-testid="fr-badge-lend">${esc(T(`Empresta · ${x.free} ${x.free === 1 ? "livre" : "livres"}`, `Lends · ${x.free} free`))}</span>` : "",
+        x.ad ? `<span class="tag" data-testid="fr-badge-trade">${esc(T(`Troca · ${x.ad.qty}${x.ad.foil ? " foil" : ""}`, `Trades · ${x.ad.qty}${x.ad.foil ? " foil" : ""}`))}</span>` : "",
+        !x.free && !x.ad ? `<span class="tag" data-testid="fr-badge-own">${T("Possui", "Owns")}</span>` : ""].join("");
+      const acts = [x.free ? lendAction(cid, fid, x.free, nm) : "",
+        x.ad ? `<a class="btn small" href="../trades/?tab=trades&anuncio=${encodeURIComponent(x.ad.id)}" data-testid="fr-trade" aria-label="${esc(T(`Propor troca a ${nm}`, `Propose a trade to ${nm}`))}"><i class="ic i-trades"></i>${T("Propor troca", "Propose a trade")}</a>` : ""].join("");
+      return `<li class="fr-row" data-wfriend="${esc(fid)}"><div class="t"><b>${esc(nm)}</b><span class="badges">${badges}</span></div>${acts ? `<div class="acts">${acts}</div>` : ""}</li>`; };
+    return `<div id="frWish" class="fr-wish" data-testid="fr-wish" hidden>${list.map(([cid, fs]) => { const nm = NAME.get(cid) || cid, src = art(cid);
+        return `<section class="card fr-wcard" data-wcard="${esc(cid)}" data-q="${esc([nm, ...fs.map(([fid]) => byId.get(fid).name || "")].join(" ").toLocaleLowerCase(LOC))}">
+          <div class="fr-row"><span class="thumb" aria-hidden="true" style="${src ? `background-image:url('${src}')` : ""}"></span><div class="t"><b>${esc(nm)}</b><span class="small muted">${esc(cid)}</span></div></div>
+          <ul class="fr-who" aria-label="${esc(T(`Amigos com ${nm}`, `Friends with ${nm}`))}">${fs.map(([fid, x]) => who(cid, fid, x)).join("")}</ul></section>`; }).join("")}
+      <p class="small muted" id="frWishNone" data-testid="fr-wish-none" hidden>${list.length ? T("Nenhuma carta com essa busca.", "No cards match this search.") : T("Nenhum amigo tem cartas da sua lista de desejos agora.", "No friend has cards from your wishlist right now.")}</p></div>`;
+  }
+  // "Pedir emprestado" arrives with etapa C2; until then a friend who lends shows the label only
+  const lendAction = () => "";
 
   async function load() {
     $("frTools").hidden = true;
@@ -564,9 +611,16 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     // Until that SQL runs (404), the old light check the profile makes, per friend with a public address, at most 24.
     // Any other failure just leaves the line out, as before.
     const perFriend = () => Promise.all(friends.filter((f) => f.handle).slice(0, 24).map((f) => rpc("friend_collection", { p_handle: f.handle, p_full: false }).then((r) => (r ? { ...r, id: f.id } : null), () => null)));
-    const [lending, opened] = await Promise.all([
+    // Etapa C: "Troca" comes only from active Mural posts (listings kind 'trade', already readable by every signed-in
+    // player); the private Fichário de trocas is never read. Only my friends' posts, only cards on my wishlist.
+    const wantSet = new Set(want);
+    const tradeAds = async () => { const out = [];
+      for (let i = 0; want.length && i < ids.length; i += 80) out.push(...((await CLOUD.api(`listings?kind=eq.trade&user_id=in.(${ids.slice(i, i + 80).join(",")})&select=id,user_id,card_id,qty,foil,updated_at&order=updated_at.desc&limit=1000`).catch(() => [])) || []));
+      return out.filter((l) => l && wantSet.has(l.card_id)); };
+    const [lending, opened, ads] = await Promise.all([
       want.length ? rpc("friends_lending", { p_cards: want }).catch(() => []) : [],
       rpc("my_friends_summary").then((r) => (Array.isArray(r) ? r : []), (e) => (e?.status === 404 ? perFriend() : [])),
+      tradeAds().catch(() => []),
     ]);
     const open = new Map(opened.filter((r) => r?.view && r.id).map((r) => [r.id, r]));
     const coll = new Map(), last = new Map(), lend = new Map();
@@ -602,8 +656,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
           ${ld ? `<a class="btn small ghost" href="../precos/"><i class="ic i-loan"></i>${T("Minha lista de desejos", "My wishlist")}</a>` : ""}</div></article>`;
     };
     $("app").innerHTML = `<div class="fr-top">${manage}${invite}</div>
-      <div class="fr-list" data-testid="fr-list">${friends.map(card).join("")}</div>
-      <p class="small muted" id="frNone" data-testid="fr-filter-none" hidden>${T("Nenhum amigo com essa busca ou filtro.", "No friends match this search or filter.")}</p>
+      <div id="frListWrap"><div class="fr-list" data-testid="fr-list">${friends.map(card).join("")}</div>
+      <p class="small muted" id="frNone" data-testid="fr-filter-none" hidden>${T("Nenhum amigo com essa busca ou filtro.", "No friends match this search or filter.")}</p></div>
+      ${want.length ? wishView(friends, lending, ads) : ""}
       ${!want.length ? `<p class="small muted" style="margin-top:var(--sp-4)" data-testid="fr-wish-hint">${T("Dica: com cartas na sua lista de desejos, aparece aqui quem tem cada uma.", "Tip: with cards on your wishlist, this shows who has each one.")}</p>` : ""}`;
     // the shared collection opens in Coleção (the same choice Coleção remembers)
     document.querySelectorAll("[data-coll]").forEach((a) => a.addEventListener("click", () => { try { localStorage.setItem("inkwell-coll-source", a.dataset.coll); } catch { /* */ } }));
