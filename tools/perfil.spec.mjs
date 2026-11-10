@@ -1256,6 +1256,35 @@ test('Amigos C1: Cartas que procuro — Possui (no quantity, no action), Emprest
   await expect(page.getByTestId('fr-list')).toBeVisible();
 });
 
+test('Amigos C2: Pedir emprestado — only with consent and free copies, quantity capped, one open request per card', async ({ page }) => {
+  await friendsSetup(page, {
+    friends: [{ id: FA, name: 'Ana', handle: 'ana', avatar: null }, { id: FB, name: 'Bia', handle: null, avatar: null }],
+    wishlist: { 'LOR10-17': 1, 'LOR10-10': 1 },
+    lending: [{ user: FA, card_id: 'LOR10-17', lend: true, free: 2 }, { user: FB, card_id: 'LOR10-10', lend: true, free: 1 }, { user: FB, card_id: 'LOR10-17', lend: false, free: 5 }] });
+  const posts = [];
+  await page.route('**/rest/v1/user_loans*', (r) => {
+    if (r.request().method() === 'POST') { posts.push(JSON.parse(r.request().postData())); return r.fulfill({ status: 201, body: '' }); }
+    return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ lender: FB, items: [{ card_id: 'LOR10-10', qty: 1, foil: false }], status: 'requested' }]) });
+  });
+  await page.goto(url('amigos/'));
+  await page.getByRole('button', { name: 'Cartas que procuro' }).click();
+  const wish = page.getByTestId('fr-wish');
+  await expect(wish.locator(`[data-wcard="LOR10-10"] [data-wfriend="${FB}"]`).getByTestId('fr-loan-state')).toHaveText('Pedido enviado');   // already asked: no second button
+  await expect(wish.locator(`[data-wcard="LOR10-17"] [data-wfriend="${FB}"]`).getByTestId('fr-borrow')).toHaveCount(0);   // Possui: no action
+  await expect(wish.getByTestId('fr-borrow')).toHaveCount(1);
+  await wish.getByTestId('fr-borrow').click();
+  const sheet = page.locator('#frBorrow');
+  await expect(sheet).toBeVisible();
+  await expect(sheet.locator('#frBQty option')).toHaveText(['1', '2']);   // at most the free copies
+  await sheet.locator('#frBQty').selectOption('2');
+  await sheet.locator('#frBNote').fill('Para a liga de quinta');
+  await sheet.getByTestId('fr-borrow-send').click();
+  await expect(sheet).toBeHidden();
+  await expect(page.locator('#toast')).toContainText('Pedido enviado');
+  expect(posts).toEqual([{ lender: FA, borrower: ME, created_by: ME, items: [{ card_id: 'LOR10-17', qty: 2, foil: false }], note: 'Para a liga de quinta' }]);
+  await expect(wish.locator(`[data-wcard="LOR10-17"] [data-wfriend="${FA}"]`).getByTestId('fr-loan-state')).toHaveText('Pedido enviado');
+});
+
 for (const w of [320, 375, 390, 430]) {
   test(`Amigos 2.0 fits ${w}px in every tab (no sideways scroll, 40px+ touch targets)`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: 800 });

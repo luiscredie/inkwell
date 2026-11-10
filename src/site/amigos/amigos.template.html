@@ -314,8 +314,40 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
           <ul class="fr-who" aria-label="${esc(T(`Amigos com ${nm}`, `Friends with ${nm}`))}">${fs.map(([fid, x]) => who(cid, fid, x)).join("")}</ul></section>`; }).join("")}
       <p class="small muted" id="frWishNone" data-testid="fr-wish-none" hidden>${list.length ? T("Nenhuma carta com essa busca.", "No cards match this search.") : T("Nenhum amigo tem cartas da sua lista de desejos agora.", "No friend has cards from your wishlist right now.")}</p></div>`;
   }
-  // "Pedir emprestado" arrives with etapa C2; until then a friend who lends shows the label only
-  const lendAction = () => "";
+  // ----- Etapa C2: "Pedir emprestado" — the loan request Decks already sends (user_loans: friends only by RLS, the
+  // friend is notified, at most 40 requests a day). Only when the friend lends and has free copies; an open request
+  // or loan of that card with that friend shows its status instead of a second button.
+  const loanState = new Map();   // "friend|card" -> requested | accepted | delivered
+  const LOAN_TXT = { requested: T("Pedido enviado", "Request sent"), accepted: T("Empréstimo aceito", "Loan accepted"), delivered: T("Emprestada para você", "Lent to you") };
+  const lendAction = (cid, fid, free, nm) => { const st = loanState.get(`${fid}|${cid}`);
+    return st ? `<span class="tag" data-testid="fr-loan-state">${LOAN_TXT[st] || LOAN_TXT.requested}</span>`
+      : `<button type="button" class="btn small primary" data-borrow="${esc(fid)}" data-bcard="${esc(cid)}" data-bfree="${free}" data-bname="${esc(nm)}" data-testid="fr-borrow" aria-label="${esc(T(`Pedir ${NAME.get(cid) || cid} emprestada a ${nm}`, `Ask ${nm} to lend ${NAME.get(cid) || cid}`))}"><i class="ic i-loan"></i>${T("Pedir emprestado", "Ask to borrow")}</button>`; };
+  function borrowSheet(b) {
+    let d = $("frBorrow");
+    if (!d) { d = document.createElement("dialog"); d.className = "sheet"; d.id = "frBorrow"; d.setAttribute("aria-labelledby", "frBorrowT"); document.body.append(d); }
+    const cid = b.dataset.bcard, fid = b.dataset.borrow, free = Math.min(99, Math.max(1, +b.dataset.bfree || 1)), nm = b.dataset.bname;
+    d.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="frBorrowT">${T("Pedir emprestado", "Ask to borrow")}</h2>
+        <button type="button" class="btn ghost icon" data-close aria-label="${T("Fechar", "Close")}"><i class="ic i-close"></i></button></div>
+      <div class="sheet-body stack">
+        <p style="margin:0"><b>${esc(NAME.get(cid) || cid)}</b> · ${esc(T(`com ${nm}`, `from ${nm}`))} · ${esc(T(`${free} ${free === 1 ? "livre" : "livres"}`, `${free} free`))}</p>
+        <label class="field">${T("Quantidade", "Quantity")}<select id="frBQty">${Array.from({ length: free }, (_, i) => `<option>${i + 1}</option>`).join("")}</select></label>
+        <label class="field">${T("Mensagem (opcional)", "Message (optional)")}<textarea id="frBNote" maxlength="500" rows="2"></textarea></label>
+        <p class="small muted" style="margin:0">${esc(T(`${nm} recebe o pedido e precisa aceitar. Você acompanha em Trocas.`, `${nm} gets the request and needs to accept. Follow it in Trades.`))}</p>
+        <p class="small" id="frBMsg" role="alert"></p>
+        <div class="row" style="justify-content:flex-end;gap:var(--sp-2)"><button type="button" class="btn ghost" data-close>${T("Cancelar", "Cancel")}</button><button type="button" class="btn primary" id="frBSend" data-testid="fr-borrow-send">${T("Enviar pedido", "Send request")}</button></div></div>`;
+    d.querySelectorAll("[data-close]").forEach((x) => x.onclick = () => d.close());
+    $("frBSend").onclick = async () => {
+      const s = $("frBSend"); s.disabled = true;
+      try {
+        await CLOUD.api("user_loans", { method: "POST", prefer: "return=minimal", body: { lender: fid, borrower: me.id, created_by: me.id,
+          items: [{ card_id: cid, qty: Math.min(free, Math.max(1, +$("frBQty").value || 1)), foil: false }], note: $("frBNote").value.trim().slice(0, 500) } });
+      } catch (e) { s.disabled = false; $("frBMsg").textContent = /too_many/.test(String(e?.why || "")) ? T("Você fez muitos pedidos hoje. Tente amanhã.", "Too many requests today. Try tomorrow.") : T("Não foi possível enviar. Tente de novo.", "Couldn't send. Try again."); return; }
+      loanState.set(`${fid}|${cid}`, "requested"); d.close();
+      b.outerHTML = `<span class="tag" data-testid="fr-loan-state">${LOAN_TXT.requested}</span>`;
+      toast(T("Pedido enviado. Acompanhe em Trocas.", "Request sent. Follow it in Trades."));
+    };
+    d.showModal(); $("frBQty").focus();
+  }
 
   async function load() {
     $("frTools").hidden = true;
@@ -362,11 +394,14 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     const tradeAds = async () => { const out = [];
       for (let i = 0; want.length && i < ids.length; i += 80) out.push(...((await CLOUD.api(`listings?kind=eq.trade&user_id=in.(${ids.slice(i, i + 80).join(",")})&select=id,user_id,card_id,qty,foil,updated_at&order=updated_at.desc&limit=1000`).catch(() => [])) || []));
       return out.filter((l) => l && wantSet.has(l.card_id)); };
-    const [lending, opened, ads] = await Promise.all([
+    const [lending, opened, ads, myLoans] = await Promise.all([
       want.length ? rpc("friends_lending", { p_cards: want }).catch(() => []) : [],
       rpc("my_friends_summary").then((r) => (Array.isArray(r) ? r : []), (e) => (e?.status === 404 ? perFriend() : [])),
       tradeAds().catch(() => []),
+      want.length ? CLOUD.api(`user_loans?select=lender,items,status&borrower=eq.${me.id}&status=in.(requested,accepted,delivered)&limit=500`).catch(() => []) : [],
     ]);
+    loanState.clear();
+    for (const l of Array.isArray(myLoans) ? myLoans : []) for (const it of Array.isArray(l.items) ? l.items : []) if (it?.card_id) loanState.set(`${l.lender}|${it.card_id}`, l.status);
     const open = new Map(opened.filter((r) => r?.view && r.id).map((r) => [r.id, r]));
     const coll = new Map(), last = new Map(), lend = new Map();
     for (const s of Array.isArray(shared) ? shared : []) {
@@ -408,6 +443,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     // the shared collection opens in Coleção (the same choice Coleção remembers)
     document.querySelectorAll("[data-coll]").forEach((a) => a.addEventListener("click", () => { try { localStorage.setItem("inkwell-coll-source", a.dataset.coll); } catch { /* */ } }));
     wire();
+    document.querySelectorAll("[data-borrow]").forEach((b) => b.onclick = () => borrowSheet(b));
     renderTools(!!want.length);
   }
   if (me && CLOUD) initTabs();
