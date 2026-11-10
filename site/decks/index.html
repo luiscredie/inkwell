@@ -512,7 +512,12 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "You have every card for this deck.": "Você tem todas as cartas deste deck.", "Copies lent to friends still count as yours.": "Cópias emprestadas a amigos contam como suas.",
     "Lends": "Empresta", "Trades": "Troca", "Has it": "Possui", "{who} offers it in trade": "{who} oferece em troca", "{n} on the board": "{n} no Mural", "Profile of {who}": "Perfil de {who}",
     "{who} lends": "{who} empresta", "{n} free": "{n} livres", "{n} free_1": "1 livre", "Ask to borrow": "Pedir emprestado", "{who} has it": "{who} tem", "{n} in their collection · they decide": "{n} na coleção · a pessoa decide se empresta", "Show on my public profile": "Mostrar no meu perfil público", "public": "público", "People who aren't your friends see it on your profile and in the Lore Counter, when your profile is public. Friends already see all your decks.": "Quem não é seu amigo vê no seu perfil e no Lore Counter, quando seu perfil é público. Amigos já veem todos os seus decks.", "Asked": "Pedido enviado", "For the deck {d}": "Para o deck {d}", "Request sent. You'll see the answer in Trades.": "Pedido enviado. A resposta aparece em Trocas.", "Too many requests today. Try tomorrow.": "Muitos pedidos hoje. Tente amanhã.", "{who} sells on the board": "{who} vende no Mural", "{v} each": "{v} cada", "See listing": "Ver anúncio",
-    "None of your friends has it": "Ninguém dos seus amigos tem", "Post what's missing on the board": "Anunciar o que falta no Mural", "Looking to buy": "Procuro para comprar", "Looking to borrow": "Procuro emprestado",
+    "None of your friends has it": "Ninguém dos seus amigos tem",
+    "Who helps most": "Quem mais ajuda", "Friends who lend or trade cards this deck is missing, most cards first. Owning a card is not offering it.": "Amigos que emprestam ou trocam cartas que faltam neste deck, quem ajuda com mais cartas primeiro. Possuir uma carta não é oferecê-la.",
+    "Helps with {n} cards": "Ajuda com {n} cartas", "Helps with {n} cards_1": "Ajuda com 1 carta", "{n} copies available": "{n} cópias disponíveis", "{n} copies available_1": "1 cópia disponível",
+    "Has {n} cards of the deck · they decide": "Possui {n} cartas do deck · decide se empresta", "Has {n} cards of the deck · they decide_1": "Possui 1 carta do deck · decide se empresta",
+    "Exact printing · {id}": "Edição exata · {id}", "Other printing · {id}": "Outra edição · {id}", "Lends {n}": "Empresta {n}", "Trades {n}": "Troca {n}", "Trades {n} foil": "Troca {n} foil",
+    "View profile": "Ver perfil", "No friend lends or trades these cards yet.": "Nenhum amigo empresta ou troca estas cartas ainda.", "Same card to play; a different printing to collect": "Mesma carta para jogar; edição diferente para colecionar", "Post what's missing on the board": "Anunciar o que falta no Mural", "Looking to buy": "Procuro para comprar", "Looking to borrow": "Procuro emprestado",
     "Posted {n} cards on the board": "{n} cartas anunciadas no Mural", "Already on the board": "Já está no Mural",
     "Last games": "Últimos jogos", "See all in Games": "Ver todos em Jogos", "Going first": "Começando", "Going second": "Comprando",
     "vs {d}": "vs {d}", "went first": "começou jogando", "went second": "começou comprando", "Win": "Vitória", "Loss": "Derrota",
@@ -1598,8 +1603,54 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const sub = [!havePrices() ? "" : BR ? Tx("{v} estimated (MYP Cards, else TCGplayer)", { v: money(m.missingValue) }) : Tx("{v} at {s}", { v: money(m.missingValue), s: priceSrc }), fromFriends ? Tx("{n} can come from friends", { n: fromFriends }) : ""].filter(Boolean).join(" · ");
     return `<div class="notice" data-testid="missing-summary"><i class="ic i-info"></i><span class="t"><b>${esc(head[0])}</b>${esc(sub)}</span></div>
       ${priceNote()}
+      ${whoHelps(m)}
       <div class="row" style="gap:var(--sp-2);margin:var(--sp-3) 0"><span class="small muted">${Tx("Post what's missing on the board")}</span><button type="button" class="btn small" data-post="buy">${Tx("Looking to buy")}</button><button type="button" class="btn small" data-post="borrow">${Tx("Looking to borrow")}</button></div>
       <div class="stack">${cards}</div>`;
+  }
+  // ---------- C5.5: Quem mais ajuda — the missing cards grouped by friend ----------
+  // Only what is already on this tab: friends_lending (Possui / Empresta, free copies), collections shared with me
+  // (Possui), the friends' Mural posts "Empresto" and "Troco". The score counts only explicit offers — Empresta and
+  // Troca — never the size of a collection: cards helped first, then copies available (each capped at what is missing).
+  // Possui adds no quantity and no action. Every line names the printing (exact or another one, same card to play).
+  function helpers(m) {
+    const by = new Map(), get = (u) => by.get(u) || by.set(u, { user: u, rows: [], cards: 0, copies: 0, owns: 0 }).get(u);
+    for (const { c, n } of m.missing) {
+      const per = new Map(), slot = (u) => per.get(u) || per.set(u, { lend: null, post: null, trade: null, owns: null }).get(u);
+      for (const x of friendsLend(c)) if (friends.has(x.user)) { const sl = slot(x.user); if (x.lend === false) sl.owns = x; else sl.lend = x; }
+      const { lend, trade } = offersFor(c);
+      for (const l of lend) { const sl = slot(l.user_id); if (!sl.post || l.qty > sl.post.qty) sl.post = l; }
+      for (const l of trade) { const sl = slot(l.user_id); if (!sl.trade || l.qty > sl.trade.qty) sl.trade = l; }
+      for (const [u, sl] of per) {
+        const avail = Math.min(n, (sl.lend ? sl.lend.free : 0) + (sl.post ? +sl.post.qty || 0 : 0) + (sl.trade ? +sl.trade.qty || 0 : 0)), h = get(u);
+        h.rows.push({ c, n, ...sl, avail });
+        if (avail > 0) { h.cards++; h.copies += avail; } else h.owns++;
+      }
+    }
+    return [...by.values()].filter((h) => h.rows.length)
+      .sort((a, b) => b.cards - a.cards || b.copies - a.copies || b.owns - a.owns || String(friendName(a.user)).localeCompare(String(friendName(b.user))));
+  }
+  const friendName = (u) => faces?.get(u)?.name || names.get(u) || "—";
+  function whoHelps(m) {
+    const hs = helpers(m); if (!hs.length) return "";
+    const ed = (c, id) => id === c.id ? `<span class="tag" data-testid="help-exact">${esc(Tx("Exact printing · {id}", { id }))}</span>`
+      : `<span class="tag" data-testid="help-other" title="${esc(Tx("Same card to play; a different printing to collect"))}">${esc(Tx("Other printing · {id}", { id }))}</span>`;
+    const row = (h, r) => { const [a, b] = split(r.c.name), q = encodeURIComponent(a), out = [];
+      if (r.lend) { const k = `${h.user}|${r.lend.card_id}`;
+        out.push(`<div class="list-row flat two" style="min-height:48px" data-testid="help-lend">${friendTag("lend")}<span class="t"><span>${ed(r.c, r.lend.card_id)}</span><span class="meta">${esc(Tx("Lends {n}", { n: r.lend.free }))}</span></span>${lendAsked.has(k) ? `<a class="btn small ghost" href="../trades/?tab=loans">${Tx("Asked")}</a>` : `<button type="button" class="btn small" data-hborrow="${esc(h.user)}" data-bcard="${esc(r.lend.card_id)}" data-bq="${Math.min(r.n, r.lend.free)}">${Tx("Ask to borrow")}</button>`}</div>`); }
+      if (r.post) out.push(`<div class="list-row flat two" style="min-height:48px" data-testid="help-post">${friendTag("lend")}<span class="t"><span>${ed(r.c, r.post.card_id)}</span><span class="meta">${esc(Tx("Lends {n}", { n: r.post.qty }))}</span></span><a class="btn small" href="../trades/?tab=board&q=${q}">${Tx("See listing")}</a></div>`);
+      if (r.trade) out.push(`<div class="list-row flat two" style="min-height:48px" data-testid="help-trade">${friendTag("trade")}<span class="t"><span>${ed(r.c, r.trade.card_id)}</span><span class="meta">${esc(Tx(r.trade.foil ? "Trades {n} foil" : "Trades {n}", { n: r.trade.qty }))}</span></span><a class="btn small" href="../trades/?tab=trades&anuncio=${encodeURIComponent(r.trade.id)}">${Tx("See listing")}</a></div>`);
+      if (!out.length && r.owns) out.push(`<div class="list-row flat two" style="min-height:44px" data-testid="help-owns">${friendTag("has")}<span class="t"><span>${ed(r.c, r.owns.card_id)}</span></span></div>`);
+      return `<div class="help-card" data-hcard="${esc(r.c.id)}"><div class="small" style="font-weight:600;margin-top:var(--sp-2)">${esc(a)}${b ? ` · ${esc(b)}` : ""} <span class="muted">· ${esc(Tx("missing {n}", { n: r.n }))}</span></div>${out.join("")}</div>`; };
+    const card = (h, i) => { const nm = friendName(h.user), handle = faces?.get(h.user)?.handle;
+      const sum = [h.cards ? Tx("Helps with {n} cards", { n: h.cards }) : "", h.copies ? Tx("{n} copies available", { n: h.copies }) : "", h.owns ? Tx("Has {n} cards of the deck · they decide", { n: h.owns }) : ""].filter(Boolean).join(" · ");
+      const rows = [...h.rows].sort((x, y) => y.avail - x.avail);
+      return `<details class="card help" data-helper="${esc(h.user)}" data-testid="helper"${i === 0 && h.cards ? " open" : ""}><summary class="row" style="flex-wrap:nowrap;gap:var(--sp-3);min-height:var(--tap);cursor:pointer">${friendFace(h.user, nm)}<span class="grow" style="min-width:0"><b>${esc(nm)}</b><span class="small muted" style="display:block" data-testid="helper-sum">${esc(sum)}</span></span></summary>
+        <div class="list tight divided">${rows.map((r) => row(h, r)).join("")}</div>
+        ${handle ? `<div class="row" style="justify-content:flex-end;margin-top:var(--sp-2)"><a class="btn small ghost" href="../perfil/?u=${encodeURIComponent(handle)}">${Tx("View profile")}</a></div>` : ""}</details>`; };
+    return `<section class="stack" style="margin:var(--sp-3) 0" data-testid="who-helps" aria-labelledby="whoHelpsT"><div><h3 id="whoHelpsT" style="margin:0">${Tx("Who helps most")}</h3>
+        <p class="small muted" style="margin:2px 0 0">${Tx("Friends who lend or trade cards this deck is missing, most cards first. Owning a card is not offering it.")}</p></div>
+      ${hs.some((h) => h.cards) ? "" : `<p class="small muted" style="margin:0">${Tx("No friend lends or trades these cards yet.")}</p>`}
+      ${hs.map(card).join("")}</section>`;
   }
   // Possui (in a collection open to me, they decide) · Empresta (they said they lend) · Troca (an offer on the board)
   const friendTag = (k) => `<span class="tag ${k === "lend" ? "win" : k === "trade" ? "info" : ""} ftag" data-tag="${k}">${Tx(k === "lend" ? "Lends" : k === "trade" ? "Trades" : "Has it")}</span>`;
@@ -1673,7 +1724,10 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     }
     if (tab === "gala") wireGala();
     if (tab === "missing") { document.querySelectorAll("[data-post]").forEach((b) => b.onclick = () => postMissing(d, b.dataset.post));
-      document.querySelectorAll("[data-borrow]").forEach((b) => b.onclick = () => askBorrow(d, b)); loadLending(d, m); }
+      document.querySelectorAll("[data-borrow]").forEach((b) => b.onclick = () => askBorrow(d, b));
+      // C5.5 "Quem mais ajuda": the same request, for the friend's exact printing
+      document.querySelectorAll("[data-hborrow]").forEach((b) => b.onclick = () => askBorrow(d, { dataset: { borrow: b.dataset.hborrow, bcard: b.dataset.bcard, bq: b.dataset.bq }, set disabled(v) { b.disabled = v; } }));
+      loadLending(d, m); }
     if (tab === "plan") wirePlan();
   }
 

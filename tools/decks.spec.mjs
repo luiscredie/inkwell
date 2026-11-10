@@ -964,3 +964,47 @@ test('Faltando: friends who can help, as Possui / Empresta / Troca, with face an
   await expect(trades).toContainText('2 no Mural');
   if (process.env.SHOT_DIR) await card.screenshot({ path: process.env.SHOT_DIR + '/faltando-amigos.png' });
 });
+
+// C5.5: "Quem mais ajuda" — the missing cards grouped by friend, explicit offers first
+test('Quem mais ajuda: friends ranked by cards they lend or trade (not by collection size); exact printing named; Possui has no quantity or action', async ({ page }) => {
+  const CAIO = '44444444-4444-4444-8444-444444444444', AD = 'aaaaaaaa-0000-4000-8000-000000000009';
+  await setup(page);
+  const db = fixtures();
+  db.profiles[0].collection['LOR10-17'] = { n: 0, f: 0 }; db.profiles[0].collection['LOR10-10'] = { n: 0, f: 0 };
+  await page.route('**/rest/v1/inkwell_profiles*', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(db.profiles) }));
+  await page.route('**/rest/v1/friendships*', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([...db.friendships, { requester: CAIO, addressee: ME, status: 'accepted' }]) }));
+  await page.route('**/rest/v1/listings*', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([...db.listings,
+    { id: AD, user_id: CAIO, kind: 'trade', card_id: 'LOR10-10', qty: 1, foil: true, price_brl: null }]) }));
+  await page.route('**/rest/v1/rpc/my_friends', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ id: FRIEND, name: 'Ana Souza', handle: 'ana' }, { id: CAIO, name: 'Caio', handle: null }]) }));
+  await page.route('**/rest/v1/rpc/friends_lending', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+    { user: FRIEND, name: 'Ana Souza', card_id: 'LOR10-1', free: 3, lend: true },
+    { user: FRIEND, name: 'Ana Souza', card_id: 'LOR10-17', free: 9, lend: false },    // Possui: a big collection does not rank her up
+    { user: CAIO, name: 'Caio', card_id: 'LOR10-241', free: 1, lend: true },           // another printing of LOR10-17
+    { user: CAIO, name: 'Caio', card_id: 'LOR10-10', free: 4, lend: true }]) }));
+  const posts = [];
+  await page.route('**/rest/v1/user_loans', (r) => { posts.push(JSON.parse(r.request().postData())); return r.fulfill({ status: 201, body: '' }); });
+  await page.goto(BASE + '?deck=deck-a&tab=missing');
+  const box = page.getByTestId('who-helps'), helpers = box.getByTestId('helper');
+  await expect(helpers).toHaveCount(2);
+  await expect(helpers.nth(0)).toHaveAttribute('data-helper', CAIO);   // 2 cards, 5 copies
+  await expect(helpers.nth(1)).toHaveAttribute('data-helper', FRIEND); // 1 card, 2 copies (+ Possui, which does not count)
+  await expect(helpers.nth(0).getByTestId('helper-sum')).toHaveText('Ajuda com 2 cartas · 5 cópias disponíveis');
+  await expect(helpers.nth(1).getByTestId('helper-sum')).toHaveText('Ajuda com 1 carta · 2 cópias disponíveis · Possui 1 carta do deck · decide se empresta');
+  const caio17 = helpers.nth(0).locator('[data-hcard="LOR10-17"]');
+  await expect(caio17.getByTestId('help-other')).toHaveText('Outra edição · LOR10-241');
+  await expect(helpers.nth(0).locator('[data-hcard="LOR10-10"] [data-testid="help-trade"]')).toContainText('Troca 1 foil');
+  await expect(helpers.nth(0).locator('[data-hcard="LOR10-10"] [data-testid="help-trade"] a')).toHaveAttribute('href', `../trades/?tab=trades&anuncio=${AD}`);
+  await helpers.nth(1).locator('summary').click();
+  const ana17 = helpers.nth(1).locator('[data-hcard="LOR10-17"]');
+  await expect(ana17.getByTestId('help-owns')).toBeVisible();
+  await expect(ana17).not.toContainText('9');                     // Possui: no quantity
+  await expect(ana17.locator('a, button')).toHaveCount(0);        // and no action
+  await expect(helpers.nth(1).getByRole('link', { name: 'Ver perfil' })).toHaveAttribute('href', '../perfil/?u=ana');
+  await expect(box).not.toContainText('Bruno');                    // a seller who is not a friend is not a helper
+  await caio17.locator('[data-hborrow]').click();
+  await expect.poll(() => posts.length).toBe(1);
+  expect(posts[0]).toMatchObject({ lender: CAIO, borrower: ME, items: [{ card_id: 'LOR10-241', qty: 1, foil: false }] });   // the friend's printing
+  await expect(page.getByTestId('who-helps').getByTestId('helper').nth(0).locator('[data-hcard="LOR10-17"]')).toContainText('Pedido enviado');
+  await page.setViewportSize({ width: 320, height: 800 });
+  expect(await page.getByTestId('who-helps').evaluate((el) => [...el.querySelectorAll('*')].every((e) => e.getBoundingClientRect().right <= innerWidth + 0.5))).toBe(true);   // phone: the section fits 320px
+});
