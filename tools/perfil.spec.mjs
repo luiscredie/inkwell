@@ -1080,8 +1080,7 @@ test('Amigos: each friend with profile, shared collection, wishlist cards they h
     lending: [{ user: FA, name: 'Ana', card_id: 'LOR10-17', lend: true, free: 1 }, { user: FA, name: 'Ana', card_id: 'LOR10-10', lend: true, free: 2 }],
     games: [{ user_id: FA, played_at: new Date(Date.now() - 3 * 864e5).toISOString() }],
     open: { caio: { view: true, lend: false, cards: 140 } } });
-  // supabase/my_friends_summary.sql not run yet (PostgREST 404): the page keeps the old per-friend reads (etapa B fallback)
-  await page.route('**/rest/v1/rpc/my_friends_summary', (r) => r.fulfill({ status: 404, contentType: 'application/json', body: '{"code":"PGRST202"}' }));
+  await page.route('**/rest/v1/rpc/my_friends_summary', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ id: FC, view: true, lend: false, cards: 140 }]) }));
   await page.goto(url('amigos/'));
   const list = page.getByTestId('fr-list');
   await expect(list.locator('.fr')).toHaveCount(3);
@@ -1105,7 +1104,7 @@ test('Amigos: each friend with profile, shared collection, wishlist cards they h
   await expect(bia).toContainText('Nada compartilhado com você ainda.');
   await expect(bia.getByTestId('fr-profile')).toHaveCount(0);
   // only the reads the other pages make; the private friend is never looked up by address
-  expect([...new Set(asked.filter((a) => a.path === 'rpc/friend_collection').map((a) => a.body.p_handle))].sort()).toEqual(['ana', 'caio']);
+  expect(asked.filter((a) => a.path === 'rpc/friend_collection')).toHaveLength(0);   // C5.2: one my_friends_summary, no per-friend reads
   expect(asked.find((a) => a.path === 'rpc/friends_lending').body.p_cards.sort()).toEqual(['LOR10-10', 'LOR10-17']);
   expect(asked.find((a) => a.path === 'game_logs')).toBeTruthy();
 });
@@ -1341,12 +1340,16 @@ test('Amigos 2.0 B (#164): one my_friends_summary read replaces the per-friend f
   expect(asked.filter((a) => a.path === 'rpc/friend_collection')).toHaveLength(0);    // before: 24 requests (one per friend, capped)
 });
 
-test('Amigos 2.0 B: if my_friends_summary fails (not 404), the page still works and does not fall back to 24 reads', async ({ page }) => {
-  const asked = await friendsSetup(page, { friends: [{ id: FA, name: 'Ana', handle: 'ana', avatar: null }], open: { ana: { view: true, cards: 3 } } });
-  await page.route('**/rest/v1/rpc/my_friends_summary', (r) => r.fulfill({ status: 500, contentType: 'application/json', body: '{}' }));
-  await page.goto(url('amigos/'));
-  await expect(page.getByTestId('fr-list').locator('.fr')).toHaveCount(1);
-  await expect(page.getByTestId('fr-coll')).toHaveCount(0);
+test('Amigos 2.0 B / C5.2: if my_friends_summary fails (404 or 500), the page still works and never falls back to per-friend reads', async ({ page }) => {
+  const all = [];
+  for (const status of [500, 404]) {
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+    all.push(await friendsSetup(page, { friends: [{ id: FA, name: 'Ana', handle: 'ana', avatar: null }], open: { ana: { view: true, cards: 3 } } }));
+    await page.route('**/rest/v1/rpc/my_friends_summary', (r) => r.fulfill({ status, contentType: 'application/json', body: '{}' }));
+    await page.goto(url('amigos/'));
+    await expect(page.getByTestId('fr-list').locator('.fr')).toHaveCount(1);
+    await expect(page.getByTestId('fr-coll')).toHaveCount(0);
+  }
   await expect(page.getByTestId('fr-profile')).toHaveAttribute('href', '../perfil/?u=ana');
-  expect(asked.filter((a) => a.path === 'rpc/friend_collection')).toHaveLength(0);
+  expect(all.flat().filter((a) => a.path === 'rpc/friend_collection')).toHaveLength(0);
 });
