@@ -26,23 +26,43 @@ function feed(){let slides=[[0,1,2],[12,13,14],[15,16,17]];return `<section clas
 function visibleCards(){return CARDS.map((_,i)=>i).filter(i=>(setFilter==='Todos'||CARDS[i].set===setFilter)&&CARDS[i].name.toLocaleLowerCase('pt-BR').includes(filter.toLocaleLowerCase('pt-BR')))}
 function changeCollectionView(view){if(view!=='grade'&&view!=='fichario')return;collectionView=view;binderPage=0;binderOpen=view==='fichario';render();if(view==='fichario')requestAnimationFrame(()=>{const stage=document.querySelector('.binder-stage');stage?.classList.add('binder-entered')})}
 function mobileBinder(){return window.matchMedia('(max-width:850px)').matches}
-function binderPageSize(){return mobileBinder()?6:12}
+function binderPageSize(){return mobileBinder()?9:18}
 function binderPageCount(){return Math.max(1,Math.ceil(visibleCards().length/binderPageSize()))}
 
-function openBinder(){if(binderOpen)return;let cover=document.querySelector('.binder-cover');if(!cover){binderOpen=true;render();return}cover.classList.add('is-opening');if(window.matchMedia('(prefers-reduced-motion:reduce)').matches){binderOpen=true;updateTiles();return}window.setTimeout(()=>{if(screen==='Coleção'&&collectionView==='fichario'){binderOpen=true;updateTiles()}},750)}
+function openBinder(){if(binderOpen)return;let cover=document.querySelector('.binder-cover');if(!cover){binderOpen=true;render();return}cover.classList.add('is-opening');if(window.matchMedia('(prefers-reduced-motion:reduce)').matches){binderOpen=true;updateTiles();return}window.setTimeout(()=>{if(screen==='Coleção'&&collectionView==='fichario'){binderOpen=true;updateTiles()}},280)}
 function closeBinder(){binderOpen=false;binderPage=0;updateTiles()}
-function binderGestureStart(e){binderTouchX=e.touches?e.touches[0].clientX:e.clientX}
-function binderGestureEnd(e){if(binderTouchX===null)return;const x=e.changedTouches?e.changedTouches[0].clientX:e.clientX;const delta=x-binderTouchX;binderTouchX=null;if(Math.abs(delta)>65&&binderOpen)changeBinderPage(delta<0?1:-1)}
+let binderTouchY=null,binderGestureAt=0;
+function binderGestureStart(e){
+  if(!binderOpen||binderTurning)return;
+  const touch=e.touches?e.touches[0]:e;
+  binderTouchX=touch.clientX;binderTouchY=touch.clientY;binderGestureAt=Date.now();
+}
+function binderGestureEnd(e){
+  if(binderTouchX===null)return;
+  const touch=e.changedTouches?e.changedTouches[0]:e;
+  const dx=touch.clientX-binderTouchX,dy=touch.clientY-binderTouchY;
+  binderTouchX=null;binderTouchY=null;
+  // Ignore vertical scrolling and ordinary taps. A fast, intentional horizontal flick turns a page.
+  if(!binderOpen||binderTurning||Math.abs(dx)<48||Math.abs(dx)<Math.abs(dy)*1.35)return;
+  if(Date.now()-binderGestureAt>1200&&Math.abs(dx)<100)return;
+  changeBinderPage(dx<0?1:-1);
+}
+function binderKeyDown(e){
+  if(!binderOpen||e.altKey||e.ctrlKey||e.metaKey||e.target.closest('button,input,select,textarea'))return;
+  if(e.key==='ArrowRight'||e.key==='ArrowLeft'){
+    e.preventDefault();changeBinderPage(e.key==='ArrowRight'?1:-1);
+  }
+}
 
-function changeBinderPage(delta){if(!binderOpen||binderTurning)return;const count=binderPageCount();const target=Math.max(0,Math.min(count-1,binderPage+delta));if(target===binderPage)return;const book=document.querySelector('.binder-book');if(window.matchMedia('(prefers-reduced-motion:reduce)').matches||!book){binderPage=target;updateTiles();return}binderTurning=true;book.classList.add(delta>0?'is-turning-next':'is-turning-prev');window.setTimeout(()=>{binderPage=target;binderTurning=false;if(screen==='Coleção'&&collectionView==='fichario')updateTiles()},690)}
+function changeBinderPage(delta){if(!binderOpen||binderTurning)return;const count=binderPageCount();const target=Math.max(0,Math.min(count-1,binderPage+delta));if(target===binderPage)return;const book=document.querySelector('.binder-book');if(window.matchMedia('(prefers-reduced-motion:reduce)').matches||!book){binderPage=target;updateTiles();return}binderTurning=true;book.classList.add(delta>0?'is-turning-next':'is-turning-prev');window.setTimeout(()=>{binderPage=target;binderTurning=false;if(screen==='Coleção'&&collectionView==='fichario')updateTiles()},260)}
 
 function binderView(ids){
   const mobile=mobileBinder(),size=binderPageSize(),pages=Math.max(1,Math.ceil(ids.length/size));
   binderPage=Math.max(0,Math.min(binderPage,pages-1));
   const view=ids.slice(binderPage*size,(binderPage+1)*size);
-  const page=(side,subset,num)=>`<div class="binder-page ${side} binder-leaf" aria-label="Página ${num} do fichário"><h3>✦ Arquivo Inkwell · ${num} ✦</h3><div class="binder-slots">${Array.from({length:6},(_,j)=>subset[j]===undefined?'<div class="binder-pocket empty" aria-hidden="true"><span>✧</span></div>':`<div class="binder-pocket">${card(subset[j])}</div>`).join('')}</div></div>`;
-  const spreads=mobile?page('right',view,binderPage+1):page('left',view.slice(0,6),binderPage*2+1)+page('right',view.slice(6,12),binderPage*2+2);
-  return `<div class="binder-stage" aria-label="Fichário interativo de cartas" data-binder-swipe ontouchstart="binderGestureStart(event)" ontouchend="binderGestureEnd(event)"><span class="binder-shortcut">Coleção · Demo interativa</span><div class="binder-book ${binderOpen?'':'is-closed'}">${spreads}</div>${binderOpen?'':`<div class="binder-cover"><div class="crest">✒</div><h2>Meu acervo</h2><p>${ids.length} cartas para explorar</p><button class="btn gold" onclick="openBinder()">✦ Abrir meu fichário</button></div>`}<div class="binder-label"><p aria-live="polite">${binderOpen?`✦ Página ${binderPage+1} de ${pages} · Cartas ${Math.min(binderPage*size+1,ids.length)}–${Math.min((binderPage+1)*size,ids.length)} de ${ids.length}`:'✦ Abra o fichário para ver suas cartas'}</p><div class="binder-controls">${binderOpen?`<button class="btn small" onclick="closeBinder()" aria-label="Fechar o fichário">Fechar</button><button class="btn small" onclick="changeBinderPage(-1)" ${binderPage===0?'disabled':''} aria-label="Página anterior">← Anterior</button><button class="btn small" onclick="changeBinderPage(1)" ${binderPage===pages-1?'disabled':''} aria-label="Próxima página">Próxima →</button>`:''}</div></div></div>`;
+  const page=(side,subset,num)=>`<div class="binder-page ${side} binder-leaf" aria-label="Página ${num} do fichário"><h3>✦ Arquivo Inkwell · ${num} ✦</h3><div class="binder-slots">${Array.from({length:9},(_,j)=>subset[j]===undefined?'<div class="binder-pocket empty" aria-hidden="true"><span>✧</span></div>':`<div class="binder-pocket">${card(subset[j])}</div>`).join('')}</div></div>`;
+  const spreads=mobile?page('right',view,binderPage+1):page('left',view.slice(0,9),binderPage*2+1)+page('right',view.slice(9,18),binderPage*2+2);
+  return `<div class="binder-stage" aria-label="Fichário interativo de cartas" data-binder-swipe tabindex="0" role="region" aria-roledescription="fichário" aria-keyshortcuts="ArrowLeft ArrowRight" onkeydown="binderKeyDown(event)" ontouchstart="binderGestureStart(event)" ontouchend="binderGestureEnd(event)" ontouchcancel="binderTouchX=null;binderTouchY=null"><span class="binder-shortcut">Coleção · Demo interativa</span><div class="binder-book ${binderOpen?'':'is-closed'}">${spreads}</div>${binderOpen?'':`<div class="binder-cover"><div class="crest">✒</div><h2>Meu acervo</h2><p>${ids.length} cartas para explorar</p><button class="btn gold" onclick="openBinder()">✦ Abrir meu fichário</button></div>`}<div class="binder-label"><p aria-live="polite">${binderOpen?`✦ Página ${binderPage+1} de ${pages} · Cartas ${Math.min(binderPage*size+1,ids.length)}–${Math.min((binderPage+1)*size,ids.length)} de ${ids.length}`:'✦ Abra o fichário para ver suas cartas'}</p><div class="binder-controls">${binderOpen?`<button class="btn small" onclick="closeBinder()" aria-label="Fechar o fichário">Fechar</button><button class="btn small" onclick="changeBinderPage(-1)" ${binderPage===0?'disabled':''} aria-label="Página anterior">← Anterior</button><button class="btn small" onclick="changeBinderPage(1)" ${binderPage===pages-1?'disabled':''} aria-label="Próxima página">Próxima →</button>`:''}</div></div></div>`;
 }
 function collection(){let ids=visibleCards();return `<section class="glass hero" style="min-height:245px;grid-template-columns:1fr 42%"><div><div class="eyebrow">✦ Meu fichário</div><h1 class="serif" style="font-size:clamp(35px,3vw,54px)">Minha coleção</h1><p class="sub">Uma galeria com cartas do acervo Inkwell, filtros e efeitos de profundidade.</p><div class="hero-buttons"><button class="btn gold" onclick="toast('Cadastro de cartas: simulação')">＋ Adicionar cartas</button><button class="btn" onclick="toast('Exportação: simulação')">↓ Exportar</button></div></div><div class="fan" style="height:200px">${[3,4,5].map(i=>card(i)).join('')}</div></section><div class="stats">${[['1.248','Cartas · exemplo'],['78%','Coleção · exemplo'],[wishlist.size,'Desejadas na sessão'],['14','Expansões']].map(a=>`<div class="glass stat"><strong>${a[0]}</strong><span>${a[1]}</span></div>`).join('')}</div><section class="glass panel"><div class="toolrow"><input id="filter" placeholder="⌕ Buscar na coleção..." value="${esc(filter)}" oninput="filter=this.value;updateTiles()"><select onchange="setFilter=this.value;updateTiles()"><option value="Todos">Todos os sets</option>${[...new Set(CARDS.map(c=>c.set))].sort((a,b)=>Number(a)-Number(b)).map(set=>`<option value="${set}" ${setFilter===String(set)?'selected':''}>Set ${set}</option>`).join('')}</select><div class="collection-switch" role="group" aria-label="Visualização da coleção"><button class="btn small" onclick="changeCollectionView('grade')" aria-pressed="${collectionView==='grade'}">▦ Grade</button><button class="btn small" onclick="changeCollectionView('fichario')" aria-pressed="${collectionView==='fichario'}">▤ Fichário interativo</button></div></div><div id="tiles">${collectionView==='fichario'?binderView(ids):cardTiles(ids)}</div></section>`}
 function updateTiles(){const tiles=document.getElementById('tiles');if(!tiles)return;let ids=visibleCards();tiles.innerHTML=ids.length?(collectionView==='fichario'?binderView(ids):cardTiles(ids)):'<p class="sub">Nenhuma carta encontrada.</p>';activate()}
