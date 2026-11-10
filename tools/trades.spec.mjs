@@ -65,3 +65,33 @@ test('the board shows "tem para troca" posts; a friend can propose a trade with 
   await expect(page.locator('#tradeForm')).toBeVisible();
   await expect(page.locator('#tradeForm [data-items="gt"]')).toContainText('Gurgi');
 });
+
+// etapa C3: Amigos › Cartas que procuro links to ?tab=trades&anuncio=<id>
+test('?anuncio=<id>: a friend\'s "Troco" post opens the trade form with the friend and card; a stranger\'s does not', async ({ page }) => {
+  const AD = 'aaaaaaaa-0000-4000-8000-000000000001', OTHER = 'aaaaaaaa-0000-4000-8000-000000000002', BEA = '33333333-3333-4333-8333-333333333333';
+  await page.addInitScript((me) => {
+    localStorage.setItem('inkwell-lang', 'pt');
+    const exp = Math.floor(Date.now() / 1000) + 3600;
+    localStorage.setItem('inkwell-counter-auth', JSON.stringify({ access_token: 'x.' + btoa(JSON.stringify({ sub: me, exp })) + '.y', refresh_token: 'r', expires_at: exp, user: { id: me, email: 'luis@example.com' } }));
+  }, ME);
+  await page.route('**/rest/v1/**', (route) => {
+    const path = new URL(route.request().url()).pathname.replace(/.*\/rest\/v1\//, '');
+    const json = (v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+    if (path === 'inkwell_profiles') return json([{ profile: 'luiscredie', updated_at: '2026-10-20T10:00:00Z', collection: {}, wishlist: { 'LOR10-10': 1 } }]);
+    if (path === 'friendships') return json([{ requester: ME, addressee: ANA, status: 'accepted' }]);
+    if (path === 'listings') return json([{ id: AD, user_id: ANA, kind: 'trade', card_id: 'LOR10-10', qty: 1, foil: true, price_brl: null, note: '', created_at: '2026-10-28T12:00:00Z' },
+      { id: OTHER, user_id: BEA, kind: 'trade', card_id: 'LOR10-10', qty: 1, foil: false, price_brl: null, note: '', created_at: '2026-10-28T12:00:00Z' }]);
+    if (path === 'profiles') return json([{ user_id: ANA, display_name: 'Ana Souza' }, { user_id: BEA, display_name: 'Bea' }]);
+    if (path === 'rpc/my_settings') return json({ user_id: ME, auto_collection: false });
+    if (path === 'rpc/my_duels_sync') return json(null);
+    return json([]);
+  });
+  await page.goto(BASE + `?tab=trades&anuncio=${AD}`);
+  await expect(page.locator('#tradeForm')).toBeVisible();
+  await expect(page.locator('#fFriend')).toHaveValue(ANA);
+  await expect(page.locator('#tradeForm [data-items="gt"]')).toContainText('Gurgi');
+  expect(new URL(page.url()).searchParams.get('anuncio')).toBeNull();   // a reload does not reopen it
+  await page.goto(BASE + `?tab=trades&anuncio=${OTHER}`);                 // not my friend: just the tab
+  await expect(page.locator('#newTrade')).toBeVisible();
+  await expect(page.locator('#tradeForm')).toHaveCount(0);
+});

@@ -449,10 +449,15 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   let tab = "loans", showReturned = false, form = null;   // form: {kind, ...draft}
   let boardKind = "all", boardQ = "";
   try { tab = sessionStorage.getItem("inkwell-trades-tab") || "loans"; } catch { /* */ }
-  {   // links from other pages: ?tab=board&q=<card name>
+  // links from other pages: ?tab=board&q=<card name>; ?tab=trades&anuncio=<listing id> (Amigos › Cartas que procuro,
+  // etapa C3): a friend's active "Troco" post on the Mural opens the trade form with that friend and card, exactly
+  // like the board's own "Propor troca"; anything else (not a friend, gone, not a "Troco" post) just opens the tab.
+  let pendingAd = null;
+  {
     const qp = new URLSearchParams(location.search);
     if (["loans", "trades", "board"].includes(qp.get("tab"))) tab = qp.get("tab");
     if (qp.get("q")) boardQ = qp.get("q").slice(0, 80);
+    if (/^[0-9a-f-]{36}$/i.test(qp.get("anuncio") || "")) pendingAd = qp.get("anuncio").toLowerCase();
   }
   if (!["loans", "trades", "board"].includes(tab)) tab = "loans";   // the old Coleção tab became the "Só emprestadas" filter of Coleção
 
@@ -960,7 +965,13 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       $("fSave").disabled = false; $("fSave").removeAttribute("aria-busy");
     }
   }
-  async function refresh() { await loadAll(); if (await autoApply()) await loadAll(); render(); }
+  function openAd(id) {
+    const l = listings.find((x) => x.id === id);
+    try { const u = new URL(location.href); u.searchParams.delete("anuncio"); history.replaceState(null, "", u); } catch { /* */ }
+    if (!l || l.kind !== "trade" || l.user_id === me.id || !friends.includes(l.user_id)) return;
+    tab = "trades"; form = { ...newTradeForm(), withSite: true, friend: l.user_id, got: [{ card_id: l.card_id, qty: l.qty, foil: !!l.foil }] };
+  }
+  async function refresh() { await loadAll(); if (await autoApply()) await loadAll(); if (pendingAd) { openAd(pendingAd); pendingAd = null; } render(); }
 
   // ---------- boot ----------
   document.title = `${Tx("Loans and trades")} · Inkwell`;
