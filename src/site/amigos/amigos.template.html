@@ -377,10 +377,13 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     }
     const ids = friends.map((f) => f.id);
     // one read each, in parallel; any of them missing just leaves its line out
-    const [shared, games, mine] = await Promise.all([
+    const [shared, games, mine, openLoans, openTrades] = await Promise.all([
       rpc("shared_collections").catch(() => []),
       CLOUD.api(`game_logs?user_id=in.(${ids.join(",")})&visibility=neq.private&select=user_id,played_at&order=played_at.desc.nullslast&limit=${Math.min(1000, ids.length * 20)}`).catch(() => []),
       CLOUD.api("inkwell_profiles?select=profile,wishlist:data->wishlist").catch(() => []),
+      // C5.3: loans and trades still open with each friend (RLS: only rows I am part of); managed in Trocas
+      CLOUD.api(`user_loans?select=lender,borrower,status&or=(lender.eq.${me.id},borrower.eq.${me.id})&status=in.(requested,accepted,delivered)&limit=500`).catch(() => []),
+      CLOUD.api(`user_trades?select=proposer,partner,status&or=(proposer.eq.${me.id},partner.eq.${me.id})&status=in.(proposed,accepted)&limit=500`).catch(() => []),
     ]);
     const want = [...new Set((mine || []).flatMap((p) => Object.keys(p.wishlist && typeof p.wishlist === "object" ? p.wishlist : {})))].slice(0, 400);
     // a collection a friend opened to all friends (Coleção > Compartilhar): one read for every friend
@@ -413,6 +416,17 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     for (const l of Array.isArray(lending) ? lending : []) {
       const x = lend.get(l.user) || { cards: new Set(), lends: false }; x.cards.add(l.card_id); x.lends ||= !!l.lend; lend.set(l.user, x);
     }
+    const going = new Map(), addGoing = (fid, k, st) => { if (!fid || fid === me.id) return; const g = going.get(fid) || { loans: [], trades: [] }; g[k].push(st); going.set(fid, g); };
+    for (const l of Array.isArray(openLoans) ? openLoans : []) addGoing(l.lender === me.id ? l.borrower : l.lender, "loans", l.status);
+    for (const t of Array.isArray(openTrades) ? openTrades : []) addGoing(t.proposer === me.id ? t.partner : t.proposer, "trades", t.status);
+    const ONE = { loans: { requested: T("Empréstimo pedido", "Loan requested"), accepted: T("Empréstimo aceito", "Loan accepted"), delivered: T("Empréstimo em andamento", "Loan in progress") },
+      trades: { proposed: T("Troca proposta", "Trade proposed"), accepted: T("Troca aceita", "Trade accepted") } };
+    const goingHtml = (fid) => { const g = going.get(fid); if (!g) return "";
+      const part = (k, tab) => { const a = g[k]; if (!a.length) return "";
+        const txt = a.length === 1 ? ONE[k][a[0]] || "" : k === "loans" ? T(`${a.length} empréstimos em andamento`, `${a.length} loans in progress`) : T(`${a.length} trocas em andamento`, `${a.length} trades in progress`);
+        return txt ? `<a href="../trades/?tab=${tab}" data-testid="fr-going-${tab}">${esc(txt)}</a>` : ""; };
+      const links = [part("loans", "loans"), part("trades", "trades")].filter(Boolean).join(" · ");
+      return links ? `<span data-testid="fr-going"><i class="ic i-trades"></i>${links}</span>` : ""; };
     const order = (f) => last.get(f.id) || "";
     friends.sort((a, b) => String(order(b)).localeCompare(String(order(a))) || String(a.name || "").localeCompare(String(b.name || "")));
     const card = (f) => {
@@ -424,6 +438,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
         cs.length ? `<span data-testid="fr-coll"><i class="ic i-cards"></i>${esc(T(`Coleção aberta para você · ${num(cs.reduce((t, c) => t + c.n, 0))} cartas`, `Collection open to you · ${num(cs.reduce((t, c) => t + c.n, 0))} cards`))}</span>` : "",
         ld ? `<span data-testid="fr-lend"><i class="ic i-loan"></i>${esc(T(`Tem ${ld.cards.size} da sua lista de desejos${ld.lends ? " · empresta" : ""}`, `Has ${ld.cards.size} of your wishlist${ld.lends ? " · lends" : ""}`))}</span>` : "",
         at ? `<span data-testid="fr-last"><i class="ic i-games"></i>${esc(T(`Último jogo ${ago(at)}`, `Last game ${ago(at)}`))}</span>` : "",
+        goingHtml(f.id),
       ].filter(Boolean).join("");
       // what the filters of "Meus amigos" look at: only what this card already shows
       const has = [cs.length || op ? "coll" : "", ld ? "wish" : "", at && Date.now() - Date.parse(at) < 30 * 864e5 ? "recent" : ""].filter(Boolean).join(" ");
