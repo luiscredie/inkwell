@@ -547,26 +547,39 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   //   Empresta friends_lending row with lend: the friend marked "empresta"; free = owned − already lent (> 0).
   //   Troca    an active Mural post "Troco" of that card (public to signed-in players), with its quantity.
   const NAME = new Map((CARD_INDEX?.cards || []).map((c) => [c[0], c[1]]));
-  function wishView(friends, lending, ads) {
-    const byId = new Map(friends.map((f) => [f.id, f])), cards = new Map();
-    const slot = (cid, fid) => { if (!byId.has(fid)) return null; if (!cards.has(cid)) cards.set(cid, new Map()); const m = cards.get(cid);
-      if (!m.has(fid)) m.set(fid, { own: false, free: 0, ad: null }); return m.get(fid); };
+  // C5.4: another set's printing (or the Enchanted one) is the same card to play — Decks' printings() rule, the same
+  // name key — but not the same to collect: each friend line names the printing that friend has ("Edição exata" or
+  // "Outra edição · LOR3-17"), and a loan always asks for that printing. Foil only when a Mural post says so.
+  const nameKey = (n) => String(n || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s*\(.*?\)\s*/g, " ").replace(/[^a-z0-9]+/g, " ").trim();
+  const KEY = new Map((CARD_INDEX?.cards || []).map((c) => [c[0], nameKey(c[1])]));
+  const BYKEY = new Map(); for (const [id, k] of KEY) (BYKEY.get(k) || BYKEY.set(k, []).get(k)).push(id);
+  const keyOf = (id) => KEY.get(id) || id;
+  // what to ask about: the wished printings first, then their other printings, never more than 400 in all
+  const askIds = (want) => [...new Set([...want, ...want.flatMap((id) => BYKEY.get(keyOf(id)) || [])])].slice(0, 400);
+  function wishView(friends, lending, ads, want) {
+    const byId = new Map(friends.map((f) => [f.id, f])), wanted = new Set(want), groups = new Map();
+    for (const id of want) { const k = keyOf(id); if (!groups.has(k)) groups.set(k, { wished: [], rows: new Map() }); groups.get(k).wished.push(id); }
+    const slot = (cid, fid) => { const g = byId.has(fid) && groups.get(keyOf(cid)); if (!g) return null; const k = `${fid}|${cid}`;
+      if (!g.rows.has(k)) g.rows.set(k, { fid, cid, exact: wanted.has(cid), own: false, free: 0, ad: null }); return g.rows.get(k); };
     for (const l of Array.isArray(lending) ? lending : []) { const x = slot(l.card_id, l.user); if (!x) continue; x.own = true; if (l.lend && +l.free > 0) x.free = Math.max(x.free, +l.free); }
     for (const a of Array.isArray(ads) ? ads : []) { const x = slot(a.card_id, a.user_id); if (x && !x.ad) x.ad = a; }
-    const rank = (x) => (x.free ? 0 : x.ad ? 1 : 2);
-    const list = [...cards].map(([cid, m]) => [cid, [...m].sort((a, b) => rank(a[1]) - rank(b[1]) || String(byId.get(a[0]).name || "").localeCompare(String(byId.get(b[0]).name || "")))])
-      .sort((a, b) => rank(a[1][0][1]) - rank(b[1][0][1]) || String(NAME.get(a[0]) || a[0]).localeCompare(String(NAME.get(b[0]) || b[0])));
-    const who = (cid, fid, x) => { const f = byId.get(fid), nm = f.name || T("Amigo", "Friend");
-      const badges = [x.free ? `<span class="tag" data-testid="fr-badge-lend">${esc(T(`Empresta · ${x.free} ${x.free === 1 ? "livre" : "livres"}`, `Lends · ${x.free} free`))}</span>` : "",
+    const rank = (x) => (x.free ? 0 : x.ad ? 2 : 4) + (x.exact ? 0 : 1);
+    const fname = (x) => String(byId.get(x.fid).name || "");
+    const list = [...groups.values()].filter((g) => g.rows.size).map((g) => ({ ...g, rows: [...g.rows.values()].sort((a, b) => rank(a) - rank(b) || fname(a).localeCompare(fname(b)) || a.cid.localeCompare(b.cid)) }))
+      .sort((a, b) => rank(a.rows[0]) - rank(b.rows[0]) || String(NAME.get(a.wished[0]) || "").localeCompare(String(NAME.get(b.wished[0]) || "")));
+    const who = (x) => { const nm = byId.get(x.fid).name || T("Amigo", "Friend");
+      const ed = x.exact ? `<span class="tag" data-testid="fr-ed-exact">${esc(T(`Edição exata · ${x.cid}`, `Exact printing · ${x.cid}`))}</span>`
+        : `<span class="tag" data-testid="fr-ed-other" title="${esc(T("Mesma carta para jogar; edição diferente para colecionar", "Same card to play; a different printing to collect"))}">${esc(T(`Outra edição · ${x.cid}`, `Other printing · ${x.cid}`))}</span>`;
+      const badges = [ed, x.free ? `<span class="tag" data-testid="fr-badge-lend">${esc(T(`Empresta · ${x.free} ${x.free === 1 ? "livre" : "livres"}`, `Lends · ${x.free} free`))}</span>` : "",
         x.ad ? `<span class="tag" data-testid="fr-badge-trade">${esc(T(`Troca · ${x.ad.qty}${x.ad.foil ? " foil" : ""}`, `Trades · ${x.ad.qty}${x.ad.foil ? " foil" : ""}`))}</span>` : "",
         !x.free && !x.ad ? `<span class="tag" data-testid="fr-badge-own">${T("Possui", "Owns")}</span>` : ""].join("");
-      const acts = [x.free ? lendAction(cid, fid, x.free, nm) : "",
+      const acts = [x.free ? lendAction(x.cid, x.fid, x.free, nm) : "",
         x.ad ? `<a class="btn small" href="../trades/?tab=trades&anuncio=${encodeURIComponent(x.ad.id)}" data-testid="fr-trade" aria-label="${esc(T(`Propor troca a ${nm}`, `Propose a trade to ${nm}`))}"><i class="ic i-trades"></i>${T("Propor troca", "Propose a trade")}</a>` : ""].join("");
-      return `<li class="fr-row" data-wfriend="${esc(fid)}"><div class="t"><b>${esc(nm)}</b><span class="badges">${badges}</span></div>${acts ? `<div class="acts">${acts}</div>` : ""}</li>`; };
-    return `<div id="frWish" class="fr-wish" data-testid="fr-wish" hidden>${list.map(([cid, fs]) => { const nm = NAME.get(cid) || cid, src = art(cid);
-        return `<section class="card fr-wcard" data-wcard="${esc(cid)}" data-q="${esc([nm, ...fs.map(([fid]) => byId.get(fid).name || "")].join(" ").toLocaleLowerCase(LOC))}">
-          <div class="fr-row"><span class="thumb" aria-hidden="true" style="${src ? `background-image:url('${src}')` : ""}"></span><div class="t"><b>${esc(nm)}</b><span class="small muted">${esc(cid)}</span></div></div>
-          <ul class="fr-who" aria-label="${esc(T(`Amigos com ${nm}`, `Friends with ${nm}`))}">${fs.map(([fid, x]) => who(cid, fid, x)).join("")}</ul></section>`; }).join("")}
+      return `<li class="fr-row" data-wfriend="${esc(x.fid)}" data-wprint="${esc(x.cid)}"><div class="t"><b>${esc(nm)}</b><span class="badges">${badges}</span></div>${acts ? `<div class="acts">${acts}</div>` : ""}</li>`; };
+    return `<div id="frWish" class="fr-wish" data-testid="fr-wish" hidden>${list.map((g) => { const w = g.wished[0], nm = NAME.get(w) || w, src = art(w);
+        return `<section class="card fr-wcard" data-wcard="${esc(w)}" data-q="${esc([nm, ...g.rows.map(fname)].join(" ").toLocaleLowerCase(LOC))}">
+          <div class="fr-row"><span class="thumb" aria-hidden="true" style="${src ? `background-image:url('${src}')` : ""}"></span><div class="t"><b>${esc(nm)}</b><span class="small muted">${esc(T(`Na sua lista: ${g.wished.join(", ")}`, `On your wishlist: ${g.wished.join(", ")}`))}</span></div></div>
+          <ul class="fr-who" aria-label="${esc(T(`Amigos com ${nm}`, `Friends with ${nm}`))}">${g.rows.map(who).join("")}</ul></section>`; }).join("")}
       <p class="small muted" id="frWishNone" data-testid="fr-wish-none" hidden>${list.length ? T("Nenhuma carta com essa busca.", "No cards match this search.") : T("Nenhum amigo tem cartas da sua lista de desejos agora.", "No friend has cards from your wishlist right now.")}</p></div>`;
   }
   // ----- Etapa C2: "Pedir emprestado" — the loan request Decks already sends (user_loans: friends only by RLS, the
@@ -584,7 +597,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     d.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="frBorrowT">${T("Pedir emprestado", "Ask to borrow")}</h2>
         <button type="button" class="btn ghost icon" data-close aria-label="${T("Fechar", "Close")}"><i class="ic i-close"></i></button></div>
       <div class="sheet-body stack">
-        <p style="margin:0"><b>${esc(NAME.get(cid) || cid)}</b> · ${esc(T(`com ${nm}`, `from ${nm}`))} · ${esc(T(`${free} ${free === 1 ? "livre" : "livres"}`, `${free} free`))}</p>
+        <p style="margin:0"><b>${esc(NAME.get(cid) || cid)}</b> · <span data-testid="fr-borrow-print">${esc(T(`edição ${cid}`, `printing ${cid}`))}</span> · ${esc(T(`com ${nm}`, `from ${nm}`))} · ${esc(T(`${free} ${free === 1 ? "livre" : "livres"}`, `${free} free`))}</p>
         <label class="field">${T("Quantidade", "Quantity")}<select id="frBQty">${Array.from({ length: free }, (_, i) => `<option>${i + 1}</option>`).join("")}</select></label>
         <label class="field">${T("Mensagem (opcional)", "Message (optional)")}<textarea id="frBNote" maxlength="500" rows="2"></textarea></label>
         <p class="small muted" style="margin:0">${esc(T(`${nm} recebe o pedido e precisa aceitar. Você acompanha em Trocas.`, `${nm} gets the request and needs to accept. Follow it in Trades.`))}</p>
@@ -637,7 +650,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       CLOUD.api(`game_logs?user_id=in.(${ids.join(",")})&visibility=neq.private&select=user_id,played_at&order=played_at.desc.nullslast&limit=${Math.min(1000, ids.length * 20)}`).catch(() => []),
       CLOUD.api("inkwell_profiles?select=profile,wishlist:data->wishlist").catch(() => []),
     ]);
-    const want = [...new Set((mine || []).flatMap((p) => Object.keys(p.wishlist && typeof p.wishlist === "object" ? p.wishlist : {})))].slice(0, 400);
+    const wished = [...new Set((mine || []).flatMap((p) => Object.keys(p.wishlist && typeof p.wishlist === "object" ? p.wishlist : {})))].slice(0, 400);
+    const want = askIds(wished);   // C5.4: what to ask about — the wished printings first, then the others (≤ 400)
     // a collection a friend opened to all friends (Coleção > Compartilhar): one read for every friend
     // (supabase/my_friends_summary.sql, issue #164: id, cards, lend; friends with a public address, no limit).
     // A failure just leaves the line out (C5.2: the old per-friend friend_collection reads are gone; Coleção still uses it).
@@ -664,7 +678,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     }
     for (const g of games || []) if (!last.has(g.user_id) && g.played_at) last.set(g.user_id, g.played_at);
     for (const l of Array.isArray(lending) ? lending : []) {
-      const x = lend.get(l.user) || { cards: new Set(), lends: false }; x.cards.add(l.card_id); x.lends ||= !!l.lend; lend.set(l.user, x);
+      const x = lend.get(l.user) || { cards: new Set(), lends: false }; x.cards.add(keyOf(l.card_id)); x.lends ||= !!l.lend; lend.set(l.user, x);
     }
     const order = (f) => last.get(f.id) || "";
     friends.sort((a, b) => String(order(b)).localeCompare(String(order(a))) || String(a.name || "").localeCompare(String(b.name || "")));
@@ -691,7 +705,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     $("app").innerHTML = `<div class="fr-top">${manage}${invite}</div>
       <div id="frListWrap"><div class="fr-list" data-testid="fr-list">${friends.map(card).join("")}</div>
       <p class="small muted" id="frNone" data-testid="fr-filter-none" hidden>${T("Nenhum amigo com essa busca ou filtro.", "No friends match this search or filter.")}</p></div>
-      ${want.length ? wishView(friends, lending, ads) : ""}
+      ${want.length ? wishView(friends, lending, ads, wished) : ""}
       ${!want.length ? `<p class="small muted" style="margin-top:var(--sp-4)" data-testid="fr-wish-hint">${T("Dica: com cartas na sua lista de desejos, aparece aqui quem tem cada uma.", "Tip: with cards on your wishlist, this shows who has each one.")}</p>` : ""}`;
     // the shared collection opens in Coleção (the same choice Coleção remembers)
     document.querySelectorAll("[data-coll]").forEach((a) => a.addEventListener("click", () => { try { localStorage.setItem("inkwell-coll-source", a.dataset.coll); } catch { /* */ } }));
