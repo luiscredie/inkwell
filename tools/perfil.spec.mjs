@@ -1328,6 +1328,27 @@ test('Amigos C2: Pedir emprestado — only with consent and free copies, quantit
   await expect(wish.locator(`[data-wcard="LOR10-17"] [data-wfriend="${FA}"]`).getByTestId('fr-loan-state')).toHaveText('Pedido enviado');
 });
 
+test('Amigos C5.3: loans and trades still open with each friend, with links to the matching Trocas tab', async ({ page }) => {
+  await friendsSetup(page, { friends: [{ id: FA, name: 'Ana', handle: 'ana', avatar: null }, { id: FB, name: 'Bia', handle: null, avatar: null }, { id: FC, name: 'Caio', handle: 'caio', avatar: null }] });
+  const urls = [];
+  await page.route('**/rest/v1/user_loans*', (r) => { urls.push(decodeURIComponent(r.request().url()));
+    return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ lender: FA, borrower: ME, status: 'requested' }, { lender: ME, borrower: FB, status: 'delivered' }, { lender: ME, borrower: FB, status: 'accepted' }]) }); });
+  await page.route('**/rest/v1/user_trades*', (r) => { urls.push(decodeURIComponent(r.request().url()));
+    return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ proposer: FA, partner: ME, status: 'proposed' }]) }); });
+  await page.goto(url('amigos/'));
+  const ana = page.locator(`[data-friend="${FA}"]`), bia = page.locator(`[data-friend="${FB}"]`);
+  await expect(ana.getByTestId('fr-going-loans')).toHaveText('Empréstimo pedido');
+  await expect(ana.getByTestId('fr-going-loans')).toHaveAttribute('href', '../trades/?tab=loans');
+  await expect(ana.getByTestId('fr-going-trades')).toHaveText('Troca proposta');
+  await expect(ana.getByTestId('fr-going-trades')).toHaveAttribute('href', '../trades/?tab=trades');
+  await expect(bia.getByTestId('fr-going-loans')).toHaveText('2 empréstimos em andamento');
+  await expect(bia.getByTestId('fr-going-trades')).toHaveCount(0);
+  await expect(page.locator(`[data-friend="${FC}"]`).getByTestId('fr-going')).toHaveCount(0);
+  const reads = urls.filter((u) => u.includes('or=('));
+  expect(reads.some((u) => u.includes('user_loans') && u.includes(`or=(lender.eq.${ME},borrower.eq.${ME})`) && u.includes('status=in.(requested,accepted,delivered)'))).toBe(true);
+  expect(reads.some((u) => u.includes('user_trades') && u.includes(`or=(proposer.eq.${ME},partner.eq.${ME})`) && u.includes('status=in.(proposed,accepted)'))).toBe(true);
+});
+
 for (const w of [320, 375, 390, 430]) {
   test(`Amigos 2.0 fits ${w}px in every tab (no sideways scroll, 40px+ touch targets)`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: 800 });
