@@ -368,7 +368,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       return `<span class="tag match" data-testid="relation">${Tx("Friends")}</span><span id="friendColl" hidden></span>`;
     }
     if (p.relation === "asked") return `<span class="tag info" data-testid="relation">${Tx("Request sent")}</span>`;
-    if (p.relation === "asks_you") return `<a class="btn primary" href="../feed/#amigos" data-testid="relation">${Tx("Answer the friend request")}</a>`;
+    if (p.relation === "asks_you") return `<a class="btn primary" href="../amigos/#pedidos" data-testid="relation">${Tx("Answer the friend request")}</a>`;
     return `<button type="button" class="btn primary" id="addFriend" data-testid="relation"><i class="ic i-user-plus"></i>${Tx("Add friend")}</button>`;
   }
   // The cover: the background card if chosen (a Location is turned sideways and shown whole), else the avatar's art.

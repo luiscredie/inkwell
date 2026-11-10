@@ -763,6 +763,8 @@ test('notices: a count on the avatar and the list in the menu; Início marks mes
   await page.locator('#iwAcct').click();
   const menu = page.locator('.menu');
   await expect(menu).toContainText('Pedido de amizade');
+  await expect(menu.getByRole('menuitem', { name: /Pedido de amizade/ })).toHaveAttribute('href', '../amigos/#pedidos');   // C5.1
+  await expect(menu.getByRole('menuitem', { name: 'Amigos e privacidade' })).toHaveAttribute('href', '../feed/#amigos');   // privacy stays
   await expect(menu).toContainText('Recados para aprovar');
   await expect(menu).toContainText('Mensagens nas comunidades');
   await page.goto(url('feed/'));

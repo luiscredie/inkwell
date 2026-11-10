@@ -484,7 +484,7 @@ window.INKWELL_CLOUD = (() => {
     if (!news || !(news.requests + news.recados + news.posts + (news.wants || 0))) return "";
     const item = (href, ic, text, n) => (n ? `<a class="menu-item" role="menuitem" href="${href}"><i class="ic i-${ic}"></i>${text}<span class="trail"><span class="count">${n}</span></span></a>` : "");
     return `<div class="menu-sep"></div><div class="menu-label">${T("Novidades", "New for you")}</div>
-      ${item("../feed/#amigos", "user-plus", news.requests === 1 ? T("Pedido de amizade", "Friend request") : T("Pedidos de amizade", "Friend requests"), news.requests)}
+      ${item("../amigos/#pedidos", "user-plus", news.requests === 1 ? T("Pedido de amizade", "Friend request") : T("Pedidos de amizade", "Friend requests"), news.requests)}
       ${item("../perfil/?editar=1&recados=1", "comment", news.recados === 1 ? T("Recado para aprovar", "Recado to approve") : T("Recados para aprovar", "Recados to approve"), news.recados)}
       ${item("../feed/", "board", T("Mensagens nas comunidades", "Community messages"), news.posts)}
       ${item("../trades/?tab=board", "trades", news.wants === 1 ? T("Carta que você quer no mural", "A card you want on the board") : T("Cartas que você quer no mural", "Cards you want on the board"), news.wants || 0)}`;
