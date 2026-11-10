@@ -1103,7 +1103,7 @@ test('Amigos: each friend with profile, shared collection, wishlist cards they h
   await expect(bia.getByTestId('fr-profile')).toHaveCount(0);
   // only the reads the other pages make; the private friend is never looked up by address
   expect(asked.filter((a) => a.path === 'rpc/friend_collection')).toHaveLength(0);   // C5.2: one my_friends_summary, no per-friend reads
-  expect(asked.find((a) => a.path === 'rpc/friends_lending').body.p_cards.sort()).toEqual(['LOR10-10', 'LOR10-17']);
+  expect(asked.find((a) => a.path === 'rpc/friends_lending').body.p_cards).toEqual(['LOR10-17', 'LOR10-10', 'LOR10-241']);   // C5.4: wished first, then other printings
   expect(asked.find((a) => a.path === 'game_logs')).toBeTruthy();
 });
 
@@ -1196,6 +1196,48 @@ test('Amigos 2.0: Pedidos accept, decline and cancel use the same friendships ca
   await expect(page.getByTestId('fr-results')).toContainText('Não foi possível buscar agora');
   await expect(page.getByRole('button', { name: 'Tentar de novo' })).toBeVisible();
   await expect(page.getByRole('tab')).toHaveCount(3);
+});
+
+test('Amigos C5.4: other printings count to play, the exact printing is named, a loan asks for the friend\'s printing; 400 cap keeps the wished ones', async ({ page }) => {
+  const asked = await friendsSetup(page, {
+    friends: [{ id: FA, name: 'Ana', handle: 'ana', avatar: null }, { id: FB, name: 'Bia', handle: null, avatar: null }, { id: FC, name: 'Caio', handle: 'caio', avatar: null }],
+    wishlist: { 'LOR2-39': 1 },   // Elsa - Gloves Off; also D100-19 and LOR9-48
+    lending: [{ user: FA, card_id: 'D100-19', lend: true, free: 1 }, { user: FB, card_id: 'LOR2-39', lend: false, free: 2 }] });
+  await page.route('**/rest/v1/listings*', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(
+    r.request().url().includes('kind=eq.trade') ? [{ id: 'ad9', user_id: FC, card_id: 'LOR9-48', qty: 1, foil: true, updated_at: '2026-11-01T00:00:00Z' }] : []) }));
+  const posts = [];
+  await page.route('**/rest/v1/user_loans*', (r) => r.request().method() === 'POST' ? (posts.push(JSON.parse(r.request().postData())), r.fulfill({ status: 201, body: '' })) : r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+  await page.goto(url('amigos/'));
+  await page.getByRole('button', { name: 'Cartas que procuro' }).click();
+  expect(asked.find((a) => a.path === 'rpc/friends_lending').body.p_cards).toEqual(['LOR2-39', 'D100-19', 'LOR9-48']);
+  const g = page.getByTestId('fr-wish').locator('[data-wcard="LOR2-39"]');
+  await expect(page.getByTestId('fr-wish').locator('.fr-wcard')).toHaveCount(1);   // one group for the card, all printings
+  await expect(g).toContainText('Na sua lista: LOR2-39');
+  const ana = g.locator(`[data-wfriend="${FA}"]`), bia = g.locator(`[data-wfriend="${FB}"]`), caio = g.locator(`[data-wfriend="${FC}"]`);
+  await expect(ana.getByTestId('fr-ed-other')).toHaveText('Outra edição · D100-19');
+  await expect(bia.getByTestId('fr-ed-exact')).toHaveText('Edição exata · LOR2-39');
+  await expect(bia.getByTestId('fr-badge-own')).toHaveText('Possui');
+  await expect(bia.locator('.badges')).toHaveText('Edição exata · LOR2-39Possui');   // owning: no quantity, no action
+  await expect(bia.locator('a, button')).toHaveCount(0);
+  await expect(caio.getByTestId('fr-ed-other')).toHaveText('Outra edição · LOR9-48');
+  await expect(caio.getByTestId('fr-badge-trade')).toHaveText('Troca · 1 foil');   // foil only from the Mural post
+  await expect(g.locator('[data-testid="fr-badge-lend"]')).not.toContainText('foil');
+  await ana.getByTestId('fr-borrow').click();
+  await expect(page.locator('#frBorrow')).toContainText('D100-19');
+  await page.getByTestId('fr-borrow-send').click();
+  await expect(page.locator('#frBorrow')).toBeHidden();
+  expect(posts[0].items).toEqual([{ card_id: 'D100-19', qty: 1, foil: false }]);   // the friend's printing, never swapped
+});
+
+test('Amigos C5.4: with 400 wished cards, the query keeps exactly those 400 (no other printings push them out)', async ({ page }) => {
+  const many = {}; for (let i = 1; i <= 400; i++) many[`X${i}-1`] = 1; many['LOR10-17'] = 1; delete many['X400-1'];
+  const asked = await friendsSetup(page, { friends: [{ id: FA, name: 'Ana', handle: 'ana', avatar: null }], wishlist: many });
+  await page.goto(url('amigos/'));
+  await expect(page.getByTestId('fr-list').locator('.fr')).toHaveCount(1);
+  const p = asked.find((a) => a.path === 'rpc/friends_lending').body.p_cards;
+  expect(p).toHaveLength(400);
+  expect(p).toContain('LOR10-17');
+  expect(p).not.toContain('LOR10-241');
 });
 
 test('Amigos 2.0: search and filters among my friends', async ({ page }) => {
