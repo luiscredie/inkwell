@@ -164,11 +164,13 @@ test('Mesas & Ligas: the owner sets up a table, members say Vou', async ({ page 
   await page.goto(url('comunidades/?c=liga-campinas'));
   await expect(page.locator('[data-testid="events"]')).toContainText('Nenhuma mesa marcada ainda.');
   await page.locator('#evNew').click();
-  await page.locator('#evT').fill('Liga de quinta');
-  await page.locator('#evW').fill('2030-01-03T19:00');
-  await page.locator('#evP').fill('Loja do Zé');
-  await page.locator('#evC').fill('16');
-  await page.locator('#evD').fill('Inscrição: https://exemplo.com/liga?x=1&y=2. Regras em www.lorcana.com <script> Play Hub: https://tcg.ravensburgerplay.com/events/123');
+  // fill, then check every field before saving (a late redraw of the sheet must not save a half-empty form)
+  const form = { '#evT': 'Liga de quinta', '#evW': '2030-01-03T19:00', '#evP': 'Loja do Zé', '#evC': '16',
+    '#evD': 'Inscrição: https://exemplo.com/liga?x=1&y=2. Regras em www.lorcana.com <script> Play Hub: https://tcg.ravensburgerplay.com/events/123' };
+  await expect(async () => {
+    for (const [sel, v] of Object.entries(form)) if (await page.locator(sel).inputValue() !== v) await page.locator(sel).fill(v);
+    for (const [sel, v] of Object.entries(form)) await expect(page.locator(sel)).toHaveValue(v, { timeout: 500 });
+  }).toPass({ timeout: 10000 });
   await page.locator('#evSave').click();
   await expect(page.locator('[data-ev="e1"]')).toContainText('Liga de quinta');
   const links = page.locator('[data-ev="e1"] p a');
