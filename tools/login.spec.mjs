@@ -178,7 +178,7 @@ test('after the code, a passkey can be created; next time "Entrar com passkey" s
   await expect.poll(() => got.map((g) => g.path).slice(2)).toEqual(['passkeys/authentication/options', 'passkeys/authentication/verify']);
   expect(got[3].body.challenge_id).toBe('auth1');
   expect(got[3].body.credential.response.signature).toBeTruthy();
-  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('inkwell-counter-auth') || 'null')?.refresh_token)).toBe('r2');
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('inkwell-counter-auth') || 'null')?.refresh_token).catch(() => null)).toBe('r2');   // the page may be navigating
   expect(calls.otp).toBe(1);                                                    // no second e-mail
 });
 

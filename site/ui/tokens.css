@@ -265,6 +265,7 @@ img, svg { display: block; max-width: 100%; }
 .av-btn { position: relative; }
 .av-btn .iw-badge { position: absolute; top: -2px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px; font-size: 11px; box-shadow: 0 0 0 2px var(--bar, var(--bg)); }
 .av-btn .iw-badge[hidden] { display: none; }
+@media (max-width: 360px) { .av-btn .iw-badge { right: -2px; } }   /* the avatar sits at the screen edge: keep the count inside it */
 
 .tabbar { display: none; }
 /* between phone and wide desktop the bar's links and buttons need less room, or the page scrolls sideways */

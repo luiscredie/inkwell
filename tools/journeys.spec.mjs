@@ -115,11 +115,11 @@ for (const [label, viewport, touch] of [['phone', { width: 390, height: 844 }, t
       expect(Object.values(db.rows[0].data.decks[0].cards).reduce((a, b) => a + b, 0)).toBe(60);
       expect(db.verify).toEqual([7, CODE.length]);   // 7 digits refused by the server, then the 8 (only lengths are kept here)
       // reload, back/forward, logout and login again: the deck is still there
-      await page.goto(at('decks/'));
+      await page.goto(at('decks/')).catch(() => page.goto(at('decks/')));   // WebKit sometimes reports an internal error on this navigation: once more
       await expect(page.locator('.deck-row', { hasText: 'Meu deck de teste' })).toBeVisible();
       await shot(page, '5-deck-saved');
       await page.goBack(); await page.goForward();
-      await expect(page.locator('.deck-row', { hasText: 'Meu deck de teste' })).toBeVisible();
+      await expect(page.locator('.deck-row', { hasText: 'Meu deck de teste' })).toBeVisible({ timeout: 10000 });   // WebKit restores from back/forward more slowly
       await page.evaluate(() => localStorage.removeItem('inkwell-counter-auth'));   // logout (this browser)
       await page.reload();
       await expect(page.locator('.deck-row')).toHaveCount(0);

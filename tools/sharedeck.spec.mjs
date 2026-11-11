@@ -224,9 +224,9 @@ test('links and history: another deck in the address, no deck, back, reload', as
   await page.getByTestId('sd-by').getByRole('link', { name: 'Ver perfil' }).click();
   await expect(page.getByTestId('profile')).toBeVisible();
   await expect(sd(page)).toHaveCount(0);
-  await page.goBack();
+  await page.goBack({ waitUntil: 'commit' });   // the checks below wait for the content; WebKit can stall on "load"
   await expect(page.getByTestId('sd-name')).toHaveText('OUTRO-DECK-MARCADOR');
-  await page.goBack();
+  await page.goBack({ waitUntil: 'commit' });   // the checks below wait for the content; WebKit can stall on "load"
   // what matters: the page shows what the address says. Chromium goes back to #deck-deck-ov; WebKit under Playwright
   // keeps no history entry for that same-page change (the address stays #deck-d-outro) — either way they must match.
   if (browserName === 'chromium') await expect(page).toHaveURL(/#deck-deck-ov$/);
