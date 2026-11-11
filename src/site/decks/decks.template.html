@@ -1366,6 +1366,8 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
   const inventory = () => { const inv = {}, col = coll(); for (const id in col) { const c = BY.get(id); if (!c) continue; inv[c.key] = (inv[c.key] || 0) + (+col[id].n || 0) + (+col[id].f || 0); } return inv; };
   const pDecks = () => decks().map((d) => ({ id: d.id, targetCopies: targetOf(d), priority: prioOf(d), needs: Object.fromEntries(deckList(d)) }));
   const portfolio = () => computeDeckPortfolioPlan(inventory(), pDecks(), { budget: 200000 });
+  // which printing: the one these decks list for the card, else the cheapest; shown as its set code and number (LOR10-84)
+  const printIn = (k, deckIds) => { for (const id of deckIds || []) { const d = decks().find((x) => x.id === id); for (const cid of Object.keys(d?.cards || {})) if (BY.get(cid)?.key === k) return BY.get(cid); } return cardOfKey(k); };
   const cardOfKey = (k) => (BYNAME.get(k) || []).reduce((best, c) => (best == null || (priceOf(c) ?? 9e9) < (priceOf(best) ?? 9e9) ? c : best), null);
   const deckName = (id) => decks().find((d) => d.id === id)?.name || "—";
   function buyList(P, onlyDeck) {   // copies still missing in the plan, per card
@@ -1380,7 +1382,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     return `<a class="notice" href="?view=plan" id="planNotice" style="margin-bottom:var(--sp-3);text-decoration:none;color:inherit" data-testid="plan-notice"><i class="ic i-sparkle"></i><span class="t"><b>${esc(Tx("Deck advisor"))}</b>${esc(Tx("With your collection you can build {b} of the {n} deck copies you asked for at the same time.", { b: P.decksBuildable, n: P.decksRequested }))}</span><i class="ic i-chevron-right"></i></a>`;
   }
   const buyRow = (r) => { const [a, b] = split(r.c.name), p = priceOf(r.c);
-    return `<div class="list-row flat">${thumb(r.c, "xs")}<span class="t"><span>${esc(a)}${b ? ` · ${esc(b)}` : ""}</span><span class="meta">${esc([Tx("buy {n}", { n: r.n }), r.decks.map(deckName).join(", ")].join(" · "))}</span></span>
+    return `<div class="list-row flat">${thumb(r.c, "xs")}<span class="t"><span>${esc(a)}${b ? ` · ${esc(b)}` : ""}</span><span class="meta">${esc([r.c.id, Tx("buy {n}", { n: r.n }), r.decks.map(deckName).join(", ")].join(" · "))}</span></span>
       <span class="trail"><span style="display:grid;justify-items:end"><span class="money" data-testid="buy-unit">${p != null ? esc(money(p)) : "–"}</span>${p != null && r.n > 1 ? `<span class="micro muted" data-testid="buy-subtotal">${esc(Tx("{n}× = {v}", { n: r.n, v: money(p * r.n) }))}</span>` : ""}</span><a class="btn ghost small" href="${esc(ligaUrl(r.c))}" target="_blank" rel="noopener" aria-label="Liga Lorcana · ${esc(a)}"><i class="ic i-external"></i></a></span></div>`; };
   function renderPlan() {
     const back = `<a class="back" href="./" id="back">${Tx("Decks")}</a>`;
@@ -1403,7 +1405,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
       <div class="stats-row three" data-testid="plan-stats"><div class="stat"><b>${P.decksBuildable}<small>/${P.decksRequested}</small></b><span>${Tx("Built together")}</span></div>
         <div class="stat"><b>${P.missingUnits}</b><span>${Tx("Copies missing")}</span></div><div class="stat"><b class="money">${moneySplit(cost)}</b><span>${Tx("To buy")}</span></div></div>
       <p class="small faint" style="margin:var(--sp-2) 0 var(--sp-4)" title="${esc(Tx("Optimized = best exact plan. Recommended = a good plan found within limits."))}">${Tx(P.optimal ? "Optimized plan" : "Recommended plan")} · ${esc(Tx("With your collection you can build {b} of the {n} deck copies you asked for at the same time.", { b: P.decksBuildable, n: P.decksRequested }))}</p>
-      ${nb ? `<div class="notice" data-testid="next-best"><i class="ic i-info"></i><span class="t"><b>${esc(Tx("Easiest next: {deck} · {n} cards missing.", { deck: deckName(nb.deckId), n: nb.missing }))}</b>${esc((P.purchasesToUnlockNext || []).slice(0, 6).map((x) => `${x.buy}× ${cardOfKey(x.card)?.name || x.card}`).join(" · "))}</span></div>` : ""}
+      ${nb ? `<div class="notice" data-testid="next-best"><i class="ic i-info"></i><span class="t"><b>${esc(Tx("Easiest next: {deck} · {n} cards missing.", { deck: deckName(nb.deckId), n: nb.missing }))}</b>${esc((P.purchasesToUnlockNext || []).slice(0, 6).map((x) => { const c = printIn(x.card, [nb.deckId]); return `${x.buy}× ${c?.name || x.card}${c ? ` (${c.id})` : ""}`; }).join(" · "))}</span></div>` : ""}
       <div class="group-head" style="margin-top:var(--sp-5)"><h3>${Tx("Your decks in the plan")}</h3></div>
       <div class="card" style="padding:var(--sp-1) var(--sp-4)"><div class="list tight divided" id="planDecks">${decks().map(deckRow).join("")}</div></div>
       <div class="group-head"><h3>${Tx("To build everything at once")}</h3>${buy.length ? `<span class="small muted">${esc(Tx("Total"))} <b class="money">${esc(money(cost))}</b></span>` : ""}</div>
@@ -1411,7 +1413,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
         : `<div class="notice ok"><i class="ic i-check"></i><span class="t"><b>${Tx("Every deck can be built at the same time.")}</b>${Tx("Your decks don't share more cards than you have.")}</span></div>`}
       ${conflicts.length ? `<div class="group-head"><h3>${Tx("Contested cards")}</h3><span class="small muted">${conflicts.length}</span></div>
         <div class="card" style="padding:var(--sp-1) var(--sp-4)"><div class="list tight divided" data-testid="conflicts">${conflicts.map(({ sc, impact }) => { const c = cardOfKey(sc.card); const [a, b] = split(c?.name || sc.card);
-          return `<div class="list-row flat">${c ? thumb(c, "xs") : ""}<span class="t"><span>${esc(a)}${b ? ` · ${esc(b)}` : ""}</span><span class="meta">${esc(Tx("you have {h} · decks ask for {d}", { h: sc.have, d: sc.demanded }))} · ${esc(sc.decks.map(deckName).join(", "))}</span><span class="meta">${esc(impact)}</span></span></div>`; }).join("")}</div></div>` : ""}`;
+          return `<div class="list-row flat">${c ? thumb(c, "xs") : ""}<span class="t"><span>${esc(a)}${b ? ` · ${esc(b)}` : ""}</span><span class="meta">${c ? `${esc(c.id)} · ` : ""}${esc(Tx("you have {h} · decks ask for {d}", { h: sc.have, d: sc.demanded }))} · ${esc(sc.decks.map(deckName).join(", "))}</span><span class="meta">${esc(impact)}</span></span></div>`; }).join("")}</div></div>` : ""}`;
     $("back").onclick = (e) => { e.preventDefault(); go(null); };
     wirePlan();
   }
@@ -1430,7 +1432,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
         <p class="small faint" style="margin:0 0 var(--sp-2)">${Tx("Faltando looks at this deck alone. Here, cards taken by decks with higher priority count as in use.")}</p>
         <div class="list tight divided" data-testid="plan-buy">${mine.map(buyRow).join("")}</div></section>` : ""}
       ${shared.length ? `<section class="card"><div class="hd"><h3>${Tx("Shares cards with")}</h3></div><div class="list tight divided" data-testid="plan-shared">${shared.map((sc) => { const c = cardOfKey(sc.card), [a] = split(c?.name || sc.card);
-          return `<div class="list-row flat"><span class="t"><span>${esc(a)}</span><span class="meta">${esc(Tx("you have {h} · decks ask for {d}", { h: sc.have, d: sc.demanded }))} · ${esc(sc.decks.filter((x) => x !== d.id).map(deckName).join(", "))}</span></span></div>`; }).join("")}</div></section>` : ""}
+          return `<div class="list-row flat"><span class="t"><span>${esc(a)}</span><span class="meta">${c ? `${esc(c.id)} · ` : ""}${esc(Tx("you have {h} · decks ask for {d}", { h: sc.have, d: sc.demanded }))} · ${esc(sc.decks.filter((x) => x !== d.id).map(deckName).join(", "))}</span></span></div>`; }).join("")}</div></section>` : ""}
       <a class="btn" href="?view=plan" id="toPlan"><i class="ic i-sparkle"></i>${Tx("See the plan for all decks")}</a></div>`;
   }
   function wirePlan() {
