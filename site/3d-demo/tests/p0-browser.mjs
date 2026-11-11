@@ -67,6 +67,16 @@ for(const width of [320,375,390,430,1280]){
     await stage.dispatchEvent('touchstart',{touches:[{clientX:160,clientY:200}]});
     await stage.dispatchEvent('touchend',{changedTouches:[{clientX:170,clientY:310}]});
     assert.equal(await page.locator('.binder-page').first().getAttribute('aria-label'),stableLabel,'Vertical gesture changed page');
+    // A horizontal swipe must not also activate the card under the pointer.
+    await page.evaluate(()=>{
+      binderGestureStart({clientX:230,clientY:150});
+      binderGestureEnd({clientX:140,clientY:153});
+      binderCardClick(0); // Simulate trailing synthesized click.
+    });
+    assert.equal(await page.locator('#overlay.open').count(),0,'Swipe accidentally opened a card');
+    await page.evaluate(()=>{binderDragClickUntil=0;binderCardClick(0)});
+    assert.equal(await page.locator('#overlay.open').count(),1,'Normal card tap was blocked');
+    await page.evaluate(()=>closeModal());
     await page.screenshot({path:join(output,`binder-${width}.png`),fullPage:true});
     // Reduced motion is enabled in every viewport; page should remain usable.
     assert.equal(await page.locator('.binder-pocket').count(),mobile?9:18,'Binder pockets lost after turn');
