@@ -872,7 +872,9 @@ details.bo3 > summary .t { flex: 1; min-width: 0; display: grid; gap: 2px; }
 details.bo3 > summary .trail { display: grid; justify-items: end; }
 details.bo3 > summary .score { font-weight: 800; font-variant-numeric: tabular-nums; }
 details.bo3 > summary .win { color: var(--win); } details.bo3 > summary .loss { color: var(--loss); }
-details.bo3[open] > .game { margin-left: var(--sp-3); }
+details.bo3[open] > .game { margin: 0 var(--sp-2) var(--sp-1) var(--sp-3); width: calc(100% - var(--sp-3) - var(--sp-2)); }   /* indented inside the match box, never wider than the list */
+details.bo3[open] > .game:last-child { margin-bottom: var(--sp-2); }
+#games > *, .deckgrp > * { min-width: 0; }
 .deckgrp > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-2); padding: var(--sp-3) 2px var(--sp-1); }
 .deckgrp > summary::-webkit-details-marker { display: none; }
 .deckgrp > summary .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--display); font-weight: 700; font-size: var(--fs-h3); }

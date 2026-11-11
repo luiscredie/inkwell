@@ -318,6 +318,8 @@ test('match.json links my best-of-3: one entry with the score, games inside, opp
   await expect(m.locator('summary')).toContainText('Zé');   // the opponent, for me
   await m.locator('summary').click();
   await expect(m.locator('.game')).toHaveCount(3);
+  // the games inside the open match stay inside the list column (no sideways scroll, nothing cut off)
+  expect(await page.evaluate(() => { const l = document.querySelector('.wrap > .list'); return l.scrollWidth - l.clientWidth; })).toBeLessThanOrEqual(0);
   await expect(page.locator('details.bo3 .game[data-k="duels-g9"]')).toHaveCount(0);   // the game outside the match stays on its own
   await expect(page.locator('.game[data-k="duels-g9"]')).toHaveCount(1);
   await expect(page.locator('#jgSub')).toContainText('4 jogos · 1 confrontos Bo3 (1 vencidos de 1 terminados)');
