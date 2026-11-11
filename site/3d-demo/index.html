@@ -15,7 +15,7 @@ let screen='Feed',slide=0,filter='',setFilter='Todos',selectedDeck=0,liked=new S
 let collectionView='fichario',binderPage=0,binderOpen=false,binderTurning=false,binderTouchX=null,spotlightFoil=true,spotlightBack=false,lastModalFocus=null;
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const demoPlaceholder='data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420"><defs><linearGradient id="a" x2="1" y2="1"><stop stop-color="#57336e"/><stop offset="1" stop-color="#181024"/></linearGradient></defs><rect width="300" height="420" rx="18" fill="url(#a)"/><rect x="14" y="14" width="272" height="392" rx="12" fill="none" stroke="#e8b987" stroke-opacity=".6" stroke-width="3"/><text x="150" y="203" text-anchor="middle" fill="#f9d7a9" font-size="75">✦</text><text x="150" y="248" text-anchor="middle" fill="#f5d9ff" font-family="sans-serif" font-size="17">Imagem indisponível</text><text x="150" y="280" text-anchor="middle" fill="#c2a9cb" font-family="sans-serif" font-size="12">Acervo Inkwell</text></svg>');
-function card(i,cls=''){let c=CARDS[i],src='../lorcana-card-images/images/'+encodeURIComponent(c.filename);return `<div class="card3d ${cls}" data-id="${i}" role="button" tabindex="0" aria-label="Abrir carta ${esc(c.name)}" onclick="openCard(${i})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openCard(${i})}"><div class="cardface"><img alt="${esc(c.name)}" loading="${screen==='Feed'?'eager':'lazy'}" decoding="async" src="${src}" onerror="this.onerror=null;this.dataset.imageState='missing';this.src=demoPlaceholder"></div></div>`}
+function card(i,cls=''){let c=CARDS[i],src='../lorcana-card-images/images/'+encodeURIComponent(c.filename);return `<div class="card3d ${cls}" data-id="${i}" role="button" tabindex="0" aria-label="Abrir carta ${esc(c.name)}" onclick="binderCardClick(${i})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openCard(${i})}"><div class="cardface"><img alt="${esc(c.name)}" loading="${screen==='Feed'?'eager':'lazy'}" decoding="async" src="${src}" onerror="this.onerror=null;this.dataset.imageState='missing';this.src=demoPlaceholder"></div></div>`}
 function loadRealImages(){/* The card images are served locally by the same Pages build; native img.onerror supplies a neutral fallback. */}
 function nav(){document.getElementById('nav').innerHTML=names.map((n,i)=>`<button class="navbtn ${screen===n?'active':''}" onclick="navigate('${n}')"><span class="navico"><img src="${ICONS[i]}" alt=""></span><span><strong>${n}</strong><small>${descriptions[i]}</small></span></button>`).join('')}
 function navigate(n){screen=n;filter='';document.getElementById('q').value='';render();window.scrollTo({top:0,behavior:'smooth'})}
@@ -31,7 +31,13 @@ function binderPageCount(){return Math.max(1,Math.ceil(visibleCards().length/bin
 
 function openBinder(){if(binderOpen)return;let cover=document.querySelector('.binder-cover');if(!cover){binderOpen=true;render();return}cover.classList.add('is-opening');if(window.matchMedia('(prefers-reduced-motion:reduce)').matches){binderOpen=true;updateTiles();return}window.setTimeout(()=>{if(screen==='Coleção'&&collectionView==='fichario'){binderOpen=true;updateTiles()}},280)}
 function closeBinder(){binderOpen=false;binderPage=0;updateTiles()}
-let binderTouchY=null,binderGestureAt=0;
+let binderTouchY=null,binderGestureAt=0,binderDragClickUntil=0;
+// A swipe can synthesize a click on the card under the finger/pointer.
+// Ignore only that trailing click, not deliberate subsequent taps.
+function binderCardClick(i){
+  if(Date.now()<binderDragClickUntil)return;
+  openCard(i);
+}
 function binderGestureStart(e){
   if(!binderOpen||binderTurning)return;
   const touch=e.touches?e.touches[0]:e;
@@ -45,6 +51,7 @@ function binderGestureEnd(e){
   // Ignore vertical scrolling and ordinary taps. A fast, intentional horizontal flick turns a page.
   if(!binderOpen||binderTurning||Math.abs(dx)<48||Math.abs(dx)<Math.abs(dy)*1.35)return;
   if(Date.now()-binderGestureAt>1200&&Math.abs(dx)<100)return;
+  binderDragClickUntil=Date.now()+350;
   changeBinderPage(dx<0?1:-1);
 }
 // Mouse and pen drag support for desktop; touch uses native touch events above.
