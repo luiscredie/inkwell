@@ -189,6 +189,10 @@ test('advisor: shared cards, buying plan, priority and copies', async ({ page })
   await expect(page.locator('[data-testid="plan-stats"]')).toContainText('1/2');
   await expect(page.locator('[data-testid="buy-list"]')).toContainText('Gurgi');
   await expect(page.locator('[data-testid="conflicts"]')).toContainText('você tem 4 · os decks pedem 8');
+  // each card names its printing (set code and number)
+  await expect(page.locator('[data-testid="next-best"]')).toContainText(/\d+× .+ \(LOR10-\d+\)/);
+  await expect(page.locator('[data-testid="buy-list"] .meta').first()).toContainText(/^LOR10-\d+ · /);
+  await expect(page.locator('[data-testid="conflicts"] .meta').first()).toContainText(/^LOR10-\d+ · /);
   await page.locator('[data-prio="deck-a"]').click();
   await expect(page.locator('[data-prio="deck-a"]')).toHaveAttribute('aria-pressed', 'true');
   await expect.poll(() => saves(calls).length).toBe(1);
