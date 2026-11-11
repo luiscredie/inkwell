@@ -791,7 +791,11 @@ test('Meu Inkwell › Avisos: this device, and new events near my saved place (r
   await box.locator('#ntOn').uncheck();
   await expect.poll(() => sent.length).toBe(2);
   expect(sent[1][1]).toMatchObject({ p_km: 10, p_notify: false });
-  await box.locator('#ntDel').click();
+  // two taps: arm, then confirm — wait for the armed label so a redraw after the last save cannot eat the first tap
+  await expect(async () => {
+    if (await box.locator('#ntDel').getAttribute('data-armed') !== '1') await box.locator('#ntDel').click();
+    await expect(box.locator('#ntDel')).toHaveAttribute('data-armed', '1', { timeout: 500 });
+  }).toPass({ timeout: 5000 });
   await box.locator('#ntDel').click();
   await expect.poll(() => sent.at(-1)).toEqual(['delete']);
   await expect(box.locator('[data-testid="nt-near"]')).toContainText('Desligado');
