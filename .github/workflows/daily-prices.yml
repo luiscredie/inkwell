@@ -46,7 +46,8 @@ jobs:
         run: |
           if git fetch --depth=1 origin "$BRANCH" 2>/dev/null; then
             mkdir -p site/data/price-history-tcg
-            for f in $(git ls-tree --name-only FETCH_HEAD site/data/price-history-tcg/); do
+            # recursive listing: full paths of the day files, never the directory itself
+            git ls-tree -r --name-only FETCH_HEAD -- site/data/price-history-tcg/ | grep -E '/[0-9]{4}-[0-9]{2}-[0-9]{2}\.json$' | while read -r f; do
               [ -e "$f" ] || { git show "FETCH_HEAD:$f" > "$f"; echo "kept $f"; }
             done
           fi
@@ -104,5 +105,7 @@ jobs:
         env:
           SHA: ${{ steps.commit.outputs.sha }}
         run: |
-          gh pr merge "$BRANCH" --merge --match-head-commit "$SHA" --delete-branch
+          # GitHub applies the main ruleset to this merge: it is refused unless the 4 required checks passed on $SHA
+          gh pr merge "$BRANCH" --merge --match-head-commit "$SHA"
           gh workflow run deploy-pages.yml --ref main   # a merge made with the GITHUB_TOKEN fires no push workflows
+          git push origin --delete "$BRANCH" || true    # tidy up; the next day starts again from main
