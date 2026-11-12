@@ -79,6 +79,17 @@ for(const width of [320,375,390,430,1280]){
       if(captured[1]!==-71)throw Error('Pointer capture not released');
       if(binderPointerId!==null)throw Error('Pointer state not cleared');
     });
+    // Cancelled drag must clear state and release capture without turning a page.
+    await page.evaluate(()=>{
+      const stage=document.querySelector('[data-binder-swipe]');
+      const released=[];
+      const target={setPointerCapture(){},hasPointerCapture:()=>true,releasePointerCapture:id=>released.push(id)};
+      binderPointerStart({pointerId:72,pointerType:'mouse',button:0,clientX:230,clientY:150,target:stage,currentTarget:target});
+      const before=binderPage;
+      binderPointerCancel({pointerId:72,currentTarget:target});
+      if(released[0]!==72||binderPointerId!==null||binderTouchX!==null||binderPage!==before)
+        throw Error('Cancelled pointer drag did not clean up safely');
+    });
     // A horizontal swipe must not also activate the card under the pointer.
     await page.evaluate(()=>{
       binderGestureStart({clientX:230,clientY:150});
