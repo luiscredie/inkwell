@@ -3,6 +3,9 @@ on:
   push:
     branches: [ main ]
   pull_request:
+  # PRs opened by the automatic workflows (GITHUB_TOKEN) do not fire pull_request: those workflows start this one
+  # on their branch, so the same required checks (js, python, smoke, journeys-webkit) report on the PR's head commit
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
