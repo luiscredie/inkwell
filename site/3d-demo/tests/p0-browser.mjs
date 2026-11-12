@@ -67,6 +67,18 @@ for(const width of [320,375,390,430,1280]){
     await stage.dispatchEvent('touchstart',{touches:[{clientX:160,clientY:200}]});
     await stage.dispatchEvent('touchend',{changedTouches:[{clientX:170,clientY:310}]});
     assert.equal(await page.locator('.binder-page').first().getAttribute('aria-label'),stableLabel,'Vertical gesture changed page');
+    // Desktop mouse/pen drags should capture the pointer so release outside the stage is handled.
+    await page.evaluate(()=>{
+      const stage=document.querySelector('[data-binder-swipe]');
+      const captured=[];
+      const event={pointerId:71,pointerType:'mouse',button:0,clientX:230,clientY:150,
+        target:stage,currentTarget:{setPointerCapture:id=>captured.push(id),hasPointerCapture:()=>true,releasePointerCapture:id=>captured.push(-id)}};
+      binderPointerStart(event);
+      if(captured[0]!==71)throw Error('Pointer capture missing');
+      binderPointerEnd({...event,clientX:140,clientY:150});
+      if(captured[1]!==-71)throw Error('Pointer capture not released');
+      if(binderPointerId!==null)throw Error('Pointer state not cleared');
+    });
     // A horizontal swipe must not also activate the card under the pointer.
     await page.evaluate(()=>{
       binderGestureStart({clientX:230,clientY:150});
