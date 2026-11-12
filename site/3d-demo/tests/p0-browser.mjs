@@ -71,9 +71,13 @@ for(const width of [320,375,390,430,1280]){
     await page.evaluate(()=>{
       binderGestureStart({clientX:230,clientY:150});
       binderGestureEnd({clientX:140,clientY:153});
-      binderCardClick(0); // Simulate trailing synthesized click.
+      binderCardClick(0,{currentTarget:document.querySelector('.binder-pocket .card3d')}); // Simulate trailing synthesized click.
     });
     assert.equal(await page.locator('#overlay.open').count(),0,'Swipe accidentally opened a card');
+    // Guard must not block an unrelated card outside the binder.
+    await page.evaluate(()=>binderCardClick(0,{currentTarget:document.querySelector('.hero-stories .card3d')}));
+    assert.equal(await page.locator('#overlay.open').count(),1,'Swipe guard blocked a card outside binder');
+    await page.evaluate(()=>closeModal());
     await page.evaluate(()=>{binderDragClickUntil=0;binderCardClick(0)});
     assert.equal(await page.locator('#overlay.open').count(),1,'Normal card tap was blocked');
     await page.evaluate(()=>closeModal());
