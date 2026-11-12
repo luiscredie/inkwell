@@ -5,6 +5,7 @@ name: Add missing cards (Lorcast)
 # the branch auto/add-cards-<SET> and one PR per set (a new run for the same set updates it). Its pull_request
 # checks wait for "Approve workflows to run" (PR opened by the GITHUB_TOKEN); a person approves them, reviews and
 # merges, and that merge runs the release checks on main and deploys, as for any PR. Existing cards are never changed.
+# With the "Inkwell bot" app configured, the PR is opened by it and its checks run without approval (merge stays manual).
 # Requires Settings > Actions > General: "Allow GitHub Actions to create and approve pull requests".
 #   gh workflow run add-cards.yml -f set=D23 -f prefix=D23C -f name="D23 Collection"
 on:
@@ -32,10 +33,23 @@ jobs:
   add:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      HAS_APP: ${{ secrets.INKWELL_APP_PRIVATE_KEY != '' && vars.INKWELL_APP_ID != '' }}
     steps:
+      # Inkwell bot (GitHub App): with it, the PR's pull_request checks run without "Approve workflows to run" and the
+      # merge it asks for fires the release checks and the deploy on main. Without it, the GITHUB_TOKEN is used.
+      - name: App token
+        id: app
+        if: env.HAS_APP == 'true'
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.INKWELL_APP_ID }}
+          private-key: ${{ secrets.INKWELL_APP_PRIVATE_KEY }}
+
       - uses: actions/checkout@v5
         with:
           ref: main
+          token: ${{ steps.app.outputs.token || github.token }}
 
       - uses: actions/setup-python@v7
         with:
@@ -80,7 +94,7 @@ jobs:
       - name: Open or update the pull request
         if: steps.commit.outputs.changed == 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app.outputs.token || github.token }}
           SET: ${{ inputs.set }}
           BRANCH: ${{ steps.commit.outputs.branch }}
         run: |

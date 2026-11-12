@@ -5,8 +5,10 @@ name: Daily TCGplayer prices
 # de pull_request (checks disparados por workflow_dispatch nao contam). Por isso este workflow so prepara o PR:
 #   1. parte da main e traz os dias de historico de um PR automatico ainda aberto (nenhuma data se perde);
 #   2. grava numa unica branch, auto/daily-prices, e abre ou atualiza um unico PR.
-# Um PR aberto pelo GITHUB_TOKEN tem os checks de pull_request em espera ("Approve workflows to run");
-# depois de aprovados e verdes, o merge publica (release checks + deploy, como qualquer PR).
+#   3. com o app "Inkwell bot" configurado (vars.INKWELL_APP_ID + secrets.INKWELL_APP_PRIVATE_KEY), o PR e aberto
+#      pelo app: os checks de pull_request rodam sozinhos e o auto-merge faz o merge quando os 4 passam; o merge
+#      dispara os release checks e o deploy da main. Nada de bypass: a ruleset decide o merge.
+# Sem o app, o PR e aberto pelo GITHUB_TOKEN e os checks esperam "Approve workflows to run" + merge manual.
 on:
   schedule:
     - cron: "23 10 * * *"   # 07:23 em Sao Paulo
@@ -28,11 +30,22 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      GH_TOKEN: ${{ github.token }}
+      HAS_APP: ${{ secrets.INKWELL_APP_PRIVATE_KEY != '' && vars.INKWELL_APP_ID != '' }}
     steps:
+      # Inkwell bot (GitHub App): with it, the PR's pull_request checks run without "Approve workflows to run" and the
+      # merge it asks for fires the release checks and the deploy on main. Without it, the GITHUB_TOKEN is used.
+      - name: App token
+        id: app
+        if: env.HAS_APP == 'true'
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.INKWELL_APP_ID }}
+          private-key: ${{ secrets.INKWELL_APP_PRIVATE_KEY }}
+
       - uses: actions/checkout@v5
         with:
           ref: main
+          token: ${{ steps.app.outputs.token || github.token }}
 
       - uses: actions/setup-python@v7
         with:
@@ -73,10 +86,17 @@ jobs:
 
       - name: Open or update the pull request
         if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token || github.token }}
         run: |
           pr=$(gh pr list --head "$BRANCH" --base main --state open --json number --jq '.[0].number // empty')
           if [ -z "$pr" ]; then
             gh pr create --base main --head "$BRANCH" --title "Preços diários (automático)" \
-              --body "Preços do TCGplayer via Lorcast e um dia a mais no histórico. Atualizado pelo workflow *Daily TCGplayer prices*. Aprovar os workflows, esperar os checks e fazer merge." \
+              --body "Preços do TCGplayer via Lorcast e um dia a mais no histórico. Atualizado pelo workflow *Daily TCGplayer prices*; com o app Inkwell bot, mesclado sozinho quando os checks obrigatórios passam." \
               || { echo "::error::Could not open the PR. Enable Settings > Actions > General > 'Allow GitHub Actions to create and approve pull requests'."; exit 1; }
+          fi
+          if [ "$HAS_APP" = "true" ]; then
+            gh pr merge "$BRANCH" --auto --merge   # GitHub merges when the ruleset is satisfied (4 checks green)
+          else
+            echo "::notice::No Inkwell bot app: approve the workflows on the PR and merge it."
           fi
