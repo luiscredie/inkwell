@@ -1,15 +1,12 @@
 name: Daily TCGplayer prices
 
 # Todo dia: precos do TCGplayer (API do Lorcast) convertidos pela cotacao do dolar do dia, mais um dia no
-# historico (data/price-history-tcg/). A main e protegida (so por PR, com js, python, smoke e journeys-webkit
-# verdes, sem bypass), entao este workflow:
+# historico (data/price-history-tcg/). A main so aceita PR com js, python, smoke e journeys-webkit verdes vindos
+# de pull_request (checks disparados por workflow_dispatch nao contam). Por isso este workflow so prepara o PR:
 #   1. parte da main e traz os dias de historico de um PR automatico ainda aberto (nenhuma data se perde);
-#   2. grava numa unica branch, auto/daily-prices, e abre ou atualiza um unico PR;
-#   3. dispara os checks obrigatorios nessa branch (eventos do GITHUB_TOKEN nao disparam pull_request, mas
-#      workflow_dispatch sim) e espera o resultado;
-#   4. com tudo verde, faz o merge do PR (as regras da main valem igual) e dispara o deploy.
-# Se um check falhar, o PR fica aberto e o job falha; no dia seguinte o PR e refeito com os dois dias.
-# Requer em Settings > Actions > General: "Allow GitHub Actions to create and approve pull requests".
+#   2. grava numa unica branch, auto/daily-prices, e abre ou atualiza um unico PR.
+# Um PR aberto pelo GITHUB_TOKEN tem os checks de pull_request em espera ("Approve workflows to run");
+# depois de aprovados e verdes, o merge publica (release checks + deploy, como qualquer PR).
 on:
   schedule:
     - cron: "23 10 * * *"   # 07:23 em Sao Paulo
@@ -18,7 +15,6 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  actions: write
 
 concurrency:
   group: daily-prices
@@ -30,7 +26,7 @@ env:
 jobs:
   prices:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 20
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -74,7 +70,6 @@ jobs:
           git commit -m "Daily prices $(TZ=America/Sao_Paulo date +%F) (TCGplayer via Lorcast)"
           git push --force origin "$BRANCH"   # one branch, rebuilt from main every day (history carried above)
           echo "changed=true" >> "$GITHUB_OUTPUT"
-          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Open or update the pull request
         if: steps.commit.outputs.changed == 'true'
@@ -82,30 +77,6 @@ jobs:
           pr=$(gh pr list --head "$BRANCH" --base main --state open --json number --jq '.[0].number // empty')
           if [ -z "$pr" ]; then
             gh pr create --base main --head "$BRANCH" --title "Preços diários (automático)" \
-              --body "Preços do TCGplayer via Lorcast e um dia a mais no histórico. Aberto e mesclado pelo workflow *Daily TCGplayer prices* quando os checks obrigatórios passam." \
+              --body "Preços do TCGplayer via Lorcast e um dia a mais no histórico. Atualizado pelo workflow *Daily TCGplayer prices*. Aprovar os workflows, esperar os checks e fazer merge." \
               || { echo "::error::Could not open the PR. Enable Settings > Actions > General > 'Allow GitHub Actions to create and approve pull requests'."; exit 1; }
           fi
-
-      - name: Required checks on the branch
-        if: steps.commit.outputs.changed == 'true'
-        env:
-          SHA: ${{ steps.commit.outputs.sha }}
-        run: |
-          gh workflow run validate.yml --ref "$BRANCH"
-          id=""
-          for i in $(seq 1 30); do
-            id=$(gh run list --workflow validate.yml --branch "$BRANCH" --event workflow_dispatch --limit 10 --json databaseId,headSha --jq "[.[] | select(.headSha == \"$SHA\")][0].databaseId // empty")
-            [ -n "$id" ] && break; sleep 10
-          done
-          [ -n "$id" ] || { echo "::error::The checks did not start."; exit 1; }
-          gh run watch "$id" --exit-status --interval 30
-
-      - name: Merge and deploy
-        if: steps.commit.outputs.changed == 'true'
-        env:
-          SHA: ${{ steps.commit.outputs.sha }}
-        run: |
-          # GitHub applies the main ruleset to this merge: it is refused unless the 4 required checks passed on $SHA
-          gh pr merge "$BRANCH" --merge --match-head-commit "$SHA"
-          gh workflow run deploy-pages.yml --ref main   # a merge made with the GITHUB_TOKEN fires no push workflows
-          git push origin --delete "$BRANCH" || true    # tidy up; the next day starts again from main

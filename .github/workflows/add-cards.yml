@@ -2,9 +2,9 @@ name: Add missing cards (Lorcast)
 
 # Adds the printings of one Lorcast set that the catalog doesn't have yet (site/data/cards.json + pictures),
 # rebuilds the pages and validates. main is protected (PR only, required checks, no bypass): the result goes to
-# the branch auto/add-cards-<SET> and one PR per set (a new run for the same set updates it). The required checks
-# are started on that branch (GITHUB_TOKEN events do not fire pull_request). A person reviews and merges; that
-# merge runs the release checks on main and deploys, as for any PR. Existing cards are never changed.
+# the branch auto/add-cards-<SET> and one PR per set (a new run for the same set updates it). Its pull_request
+# checks wait for "Approve workflows to run" (PR opened by the GITHUB_TOKEN); a person approves them, reviews and
+# merges, and that merge runs the release checks on main and deploys, as for any PR. Existing cards are never changed.
 # Requires Settings > Actions > General: "Allow GitHub Actions to create and approve pull requests".
 #   gh workflow run add-cards.yml -f set=D23 -f prefix=D23C -f name="D23 Collection"
 on:
@@ -23,7 +23,6 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  actions: write
 
 concurrency:
   group: catalog
@@ -78,7 +77,7 @@ jobs:
           echo "changed=true" >> "$GITHUB_OUTPUT"
           echo "branch=$branch" >> "$GITHUB_OUTPUT"
 
-      - name: Open or update the pull request and start the required checks
+      - name: Open or update the pull request
         if: steps.commit.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -91,4 +90,3 @@ jobs:
               --body "Cartas novas do set $SET, imagens, preços e páginas regeneradas pelo workflow *Add missing cards*. Revisar e fazer merge quando os checks obrigatórios passarem." \
               || { echo "::error::Could not open the PR. Enable Settings > Actions > General > 'Allow GitHub Actions to create and approve pull requests'."; exit 1; }
           fi
-          gh workflow run validate.yml --ref "$BRANCH"
