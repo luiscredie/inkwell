@@ -62,11 +62,16 @@ function binderPointerStart(e){
   if(!binderOpen||binderTurning)return;
   binderPointerId=e.pointerId;
   binderGestureStart(e);
+  // Keep receiving pointerup even when the drag leaves the binder bounds.
+  if(e.currentTarget?.setPointerCapture){
+    try{e.currentTarget.setPointerCapture(e.pointerId)}catch(_){/* synthetic event */}
+  }
 }
 function binderPointerEnd(e){
   if(binderPointerId!==e.pointerId)return;
   binderPointerId=null;
   binderGestureEnd(e);
+  if(e.currentTarget?.hasPointerCapture?.(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId);
 }
 function binderPointerCancel(){binderPointerId=null;binderTouchX=null;binderTouchY=null}
 function binderKeyDown(e){
