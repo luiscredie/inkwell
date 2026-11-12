@@ -73,7 +73,15 @@ function binderPointerEnd(e){
   binderGestureEnd(e);
   if(e.currentTarget?.hasPointerCapture?.(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId);
 }
-function binderPointerCancel(){binderPointerId=null;binderTouchX=null;binderTouchY=null}
+function binderPointerCancel(e){
+  // Cancellation (e.g. OS gesture) must never turn a page or leave capture held.
+  if(binderPointerId===null || (e && e.pointerId!==binderPointerId))return;
+  const id=binderPointerId;
+  binderPointerId=null;binderTouchX=null;binderTouchY=null;
+  if(e?.currentTarget?.hasPointerCapture?.(id)){
+    try{e.currentTarget.releasePointerCapture(id)}catch(_){/* pointer already released */}
+  }
+}
 function binderKeyDown(e){
   if(!binderOpen||e.altKey||e.ctrlKey||e.metaKey||e.target.closest('button,input,select,textarea'))return;
   if(e.key==='ArrowRight'||e.key==='ArrowLeft'){
