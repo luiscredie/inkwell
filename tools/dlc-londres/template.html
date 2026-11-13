@@ -283,7 +283,7 @@ function renderD2(){
       else nd=`<span class="nd">${needTxt(x.need,rem)}</span>`;}
     return `<span class="d2p" style="--tc:var(${TEAMS[x.p.team].c})"><b>${esc(x.p.name)}</b><span class="nd">${x.pts} pts</span>${nd}${lv}</span>`};
   const grp=(k,t,g)=>g.length?`<div class="d2g ${k}"><h3>${t}<span class="c">${g.length}</span></h3><div class="d2l">${g.map(chip).join("")}</div></div>`:"";
-  $("d2Title").textContent=rem>0?`Corrida pro Dia 2 · faltam ${rem} rodada${rem>1?"s":""}`:"Dia 2 · suíço do dia 1 encerrado";
+  $("d2Title").textContent=rem>0?`Corrida pro Dia 2 · ${rem>1?`faltam ${rem} rodadas`:"falta 1 rodada"}`:"Dia 2 · suíço do dia 1 encerrado";
   $("d2").innerHTML=grp("ok","Já garantidos",groups.ok)+grp("race","Na briga",groups.race)+grp("out",rem>0?"Sem chance":"Fora",groups.out)+
    `<p class="d2note">Conta com os pontos oficiais após a R${LAST}${LIVE?`; o resultado da R${LIVE} aparece ao lado, mas só entra quando a rodada termina`:""}. Corte usado: <b>${CUT} pontos</b> em ${SWISS} rodadas (6 vitórias), o mesmo da DLC Ghent. O Play Hub não publica o corte de Londres, então trate como estimativa.</p>`;
 }
