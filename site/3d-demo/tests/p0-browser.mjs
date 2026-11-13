@@ -67,6 +67,20 @@ for(const width of [320,375,390,430,1280]){
     await stage.dispatchEvent('touchstart',{touches:[{clientX:160,clientY:200}]});
     await stage.dispatchEvent('touchend',{changedTouches:[{clientX:170,clientY:310}]});
     assert.equal(await page.locator('.binder-page').first().getAttribute('aria-label'),stableLabel,'Vertical gesture changed page');
+    // A horizontal swipe must not also activate the card under the pointer.
+    await page.evaluate(()=>{
+      binderGestureStart({clientX:230,clientY:150});
+      binderGestureEnd({clientX:140,clientY:153});
+      binderCardClick(0,{currentTarget:document.querySelector('.binder-pocket .card3d')}); // Simulate trailing synthesized click.
+    });
+    assert.equal(await page.locator('#overlay.open').count(),0,'Swipe accidentally opened a card');
+    // Guard must not block an unrelated card outside the binder.
+    await page.evaluate(()=>binderCardClick(0,{currentTarget:document.querySelector('.hero-stories .card3d')}));
+    assert.equal(await page.locator('#overlay.open').count(),1,'Swipe guard blocked a card outside binder');
+    await page.evaluate(()=>closeModal());
+    await page.evaluate(()=>{binderDragClickUntil=0;binderCardClick(0)});
+    assert.equal(await page.locator('#overlay.open').count(),1,'Normal card tap was blocked');
+    await page.evaluate(()=>closeModal());
     await page.screenshot({path:join(output,`binder-${width}.png`),fullPage:true});
     // Reduced motion is enabled in every viewport; page should remain usable.
     assert.equal(await page.locator('.binder-pocket').count(),mobile?9:18,'Binder pockets lost after turn');
