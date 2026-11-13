@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://raw.githubusercontent.com; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#121216">
+<link rel="icon" href="../../ink/icon-192.png">
+<title>Análise dos Brasileiros · DLC Londres</title>
+<meta property="og:title" content="Análise dos brasileiros · DLC Londres">
+<meta property="og:description" content="Força da tabela, vitórias esperadas pelo matchup, placares em games e partidas decisivas de cada brasileiro no DLC London Main Event 1.">
+<meta property="og:image" content="https://luiscredie.github.io/inkwell/dlc-londres/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: resumo do grupo; ranking por jogador (expansível com partida a partida); times; método */
+:root{
+  --bg:#f3f2ef; --panel:#fff; --line:#dedbd3; --fg:#17161a; --muted:#6a6772;
+  --gold:#a8790f; --gold-bg:#fbf1d6; --win:#1f8a4c; --loss:#b8433a; --draw:#7b7686;
+  --win-bg:#dcefe3; --loss-bg:#f6dedb; --mid-bg:#eeece6;
+  --t-tz:#5b5bd6; --t-pimp:#d6408f; --t-neko:#2f9a5c; --t-rl:#9a6b1f; --t-inkrj:#1a9aa0; --t-br:#7b7a80;
+  --display:"Archivo",system-ui,sans-serif; --body:"IBM Plex Sans",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
+  color-scheme:light; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#121216; --panel:#1b1b21; --line:#2c2c35; --fg:#ecebf0; --muted:#9592a0;
+  --gold:#e3b341; --gold-bg:#2e2615; --win:#4cc282; --loss:#ef7167; --draw:#a6a1b3;
+  --win-bg:#173324; --loss-bg:#3a1d1b; --mid-bg:#24242b;
+  --t-tz:#8c8cf5; --t-pimp:#f07bb8; --t-neko:#5fcf8c; --t-rl:#d6a254; --t-inkrj:#4fc9cf; --t-br:#a9a8ae; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121216; --panel:#1b1b21; --line:#2c2c35; --fg:#ecebf0; --muted:#9592a0;
+  --gold:#e3b341; --gold-bg:#2e2615; --win:#4cc282; --loss:#ef7167; --draw:#a6a1b3;
+  --win-bg:#173324; --loss-bg:#3a1d1b; --mid-bg:#24242b;
+  --t-tz:#8c8cf5; --t-pimp:#f07bb8; --t-neko:#5fcf8c; --t-rl:#d6a254; --t-inkrj:#4fc9cf; --t-br:#a9a8ae; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 var(--body);font-variant-numeric:tabular-nums}
+.wrap{max-width:980px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px;display:grid;gap:20px}
+a{color:var(--fg)}
+.back{font-size:13px;color:var(--muted)}
+h1{font:800 clamp(24px,5.5vw,34px)/1.1 var(--display);margin:6px 0 4px;text-wrap:balance}
+header p{margin:0;color:var(--muted);font-size:14px}
+h2{font:700 13px/1 var(--display);text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 0 4px}
+.hint{font-size:13px;color:var(--muted);margin:0 0 12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:640px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;min-width:0}
+.kpi .l{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.kpi .v{font:700 24px/1.1 var(--display);margin-top:4px}
+.kpi .s{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.deck{display:inline-flex;align-items:center;gap:3px}
+.deck i{flex:none;width:10px;height:10px;border-radius:2px;transform:rotate(45deg);display:inline-block}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:12px}
+.seg button{font:600 13px var(--body);background:var(--panel);color:var(--fg);border:0;padding:8px 12px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+button:focus-visible,.pr:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.good{color:var(--win)} .bad{color:var(--loss)}
+.rows{display:grid;gap:6px}
+.pr{border:1px solid var(--line);border-left:4px solid var(--tc);border-radius:10px;background:var(--bg);padding:10px 12px;cursor:pointer}
+.pr .top{display:grid;grid-template-columns:minmax(0,1fr) 92px 92px;gap:10px;align-items:center}
+@media (max-width:560px){.pr .top{grid-template-columns:minmax(0,1fr) 74px 74px}}
+.pr .nm b{font-weight:600}
+.pr .nm .s{font-size:12.5px;color:var(--muted)}
+.met{text-align:right}
+.met .v{font:700 17px var(--display)}
+.met .l{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.bar{position:relative;height:6px;background:var(--line);border-radius:3px;margin-top:4px;overflow:hidden}
+.bar i{position:absolute;top:0;bottom:0;border-radius:3px}
+.bar .mid{position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--muted)}
+.det{display:none;margin-top:10px;border-top:1px solid var(--line);padding-top:10px}
+.pr[aria-expanded="true"] .det{display:block}
+.facts{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--muted);margin-bottom:8px}
+.facts b{color:var(--fg);font-weight:600}
+.mt{width:100%;border-collapse:collapse;font-size:12.5px}
+.mt td{padding:5px 4px;border-top:1px solid var(--line);vertical-align:middle}
+.mt td.r{color:var(--muted);width:30px}
+.mt td.o{overflow-wrap:anywhere}
+.mt td.n{text-align:right;white-space:nowrap;color:var(--muted)}
+.res{display:inline-block;min-width:22px;text-align:center;font:700 12px var(--display);border-radius:5px;padding:2px 4px}
+.res.W{background:var(--win-bg);color:var(--win)} .res.L{background:var(--loss-bg);color:var(--loss)} .res.D{background:var(--mid-bg);color:var(--draw)}
+.flag{font-size:11px;color:var(--gold);font-weight:600;white-space:nowrap}
+.tm{display:grid;gap:6px}
+.tr{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:14px;align-items:center;border-left:4px solid var(--tc);padding:6px 10px;background:var(--bg);border-radius:8px;font-size:13.5px}
+.tr .s{color:var(--muted);font-size:12px}
+.notes{font-size:13px;color:var(--muted);display:grid;gap:8px}
+.notes p{margin:0;max-width:72ch}
+.ago{font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <a class="back" href="../">← Brasileiros no DLC Londres</a>
+  <h1>Análise dos brasileiros</h1>
+  <p id="sub"></p>
+</header>
+
+<section class="kpis" id="kpis"></section>
+
+<section class="card">
+  <h2>Jogador por jogador</h2>
+  <p class="hint"><b>Vs. esperado:</b> vitórias a mais (ou a menos) do que os matchups de deck previam. <b>Tabela:</b> dificuldade dos adversários enfrentados, em percentil do evento (100 = a chave mais dura). Toque para ver partida a partida.</p>
+  <div class="seg" role="group" aria-label="Ordenar por" id="sortSeg">
+    <button type="button" data-s="pos" aria-pressed="true">Posição</button>
+    <button type="button" data-s="xp" aria-pressed="false">Vs. esperado</button>
+    <button type="button" data-s="sos" aria-pressed="false">Tabela mais dura</button>
+  </div>
+  <div class="rows" id="rows"></div>
+</section>
+
+<section class="card">
+  <h2>Por time</h2>
+  <p class="hint">Partidas somadas dos jogadores de cada time (byes fora).</p>
+  <div class="tm" id="teams"></div>
+</section>
+
+<section class="card">
+  <h2>Contra quais decks</h2>
+  <p class="hint" id="vsHint"></p>
+  <div class="tm" id="vsdecks"></div>
+</section>
+
+<section class="card notes">
+  <h2>Como foi calculado</h2>
+  <p><b>Vitórias esperadas pelo matchup:</b> para cada partida, a taxa de vitória da dupla de tintas do brasileiro contra a dupla do adversário, medida em todas as partidas do evento. Para matchups com poucas partidas, o número é puxado para 50% (peso de 10 partidas). Espelhos e decks sem registro valem 50%. Somando as partidas, sai quantas vitórias o deck "deveria" ter dado; a diferença para as vitórias reais é o <b>vs. esperado</b>. Empate vale meia vitória.</p>
+  <p><b>Força da tabela:</b> média do aproveitamento final dos adversários (pontos conquistados ÷ pontos possíveis no fechamento do dia). O percentil compara com todos os jogadores do evento: 80 significa uma chave mais dura que a de 80% do campo. Byes não entram.</p>
+  <p><b>Vida ou morte:</b> partidas em que, com a pontuação de antes da rodada, uma derrota tirava a chance matemática dos 18 pontos (corte estimado, o mesmo da DLC Ghent).</p>
+  <p><b>Limites:</b> são 8 partidas por jogador, então a variância é grande e uma ou duas partidas mudam tudo. O Play Hub não tem lista de cartas (só as tintas), nem quem começou cada game ou mulligans. Os números descrevem o que aconteceu; não medem habilidade.</p>
+  <p>Dados oficiais do Play Hub, atualizados a cada 5 minutos. <span id="upd"></span></p>
+</section>
+</div>
+<script>
+let DATA = __DATA__;
+const DATA_URL = "https://raw.githubusercontent.com/luiscredie/inkwell/dlc-data/dlc-londres.json";
+const INKS={amber:["Âmbar","#e9a920"],amethyst:["Ametista","#8a3f9e"],emerald:["Esmeralda","#2a9a4a"],ruby:["Rubi","#d3283f"],sapphire:["Safira","#1a8fd0"],steel:["Aço","#8f9aa6"]};
+const TEAMS={TZ:{c:"--t-tz",n:"TZ · Tuzzy"},pimp:{c:"--t-pimp",n:"pimp"},NekoDan:{c:"--t-neko",n:"NekoDan"},RL:{c:"--t-rl",n:"RL"},INKRJ:{c:"--t-inkrj",n:"INKRJ"},BR:{c:"--t-br",n:"Sem time"}};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pct=x=>Math.round(x*100)+"%";
+const num=(x,d=1)=>x.toFixed(d).replace(".",",");
+const sg=x=>{const r=Math.round(x*10)/10;return (r>0?"+":r<0?"−":"±")+num(Math.abs(r))};
+const deckHTML=k=>!k||k==="none"?`<span class="small">sem deck</span>`:`<span class="deck">${k.split("+").map(i=>`<i style="background:${INKS[i][1]}" title="${INKS[i][0]}"></i>`).join("")}</span>`;
+const deckName=k=>k.split("+").map(i=>INKS[i][0]).join(" / ");
+const open=new Set();let sortBy="pos";
+function players(){return DATA.players.filter(p=>p.ana&&p.ana.rows.length).map(p=>{const a=p.ana, R=a.rows.filter(x=>!x.bye), c=p.rounds[DATA.last_round]||{};
+  const W=R.filter(x=>x.res==="W").length,L=R.filter(x=>x.res==="L").length,D=R.filter(x=>x.res==="D").length, M=a.rows.filter(x=>x.must);
+  return {p,a,R,W,L,D,xp:a.act-a.exp,rank:c.rank||1e9,rec:c.rec,pts:c.pts,must:[M.filter(x=>x.res==="W").length,M.filter(x=>x.res!=="W").length]}})}
+function rowHTML(x,i){const {p,a}=x, isO=open.has(p.username);
+  const xpw=Math.min(50,Math.abs(x.xp)/3*50), xpBar=`<div class="bar"><span class="mid"></span><i style="${x.xp>=0?`left:50%;width:${xpw}%;background:var(--win)`:`right:50%;width:${xpw}%;background:var(--loss)`}"></i></div>`;
+  const sp=a.sos_pct==null?null:Math.round(a.sos_pct*100);
+  const g=a.games, by=a.rows.filter(r=>r.bye).length;
+  const vs={};x.R.forEach(r=>{const k=r.deck||"none";(vs[k]=vs[k]||[0,0,0])[r.res==="W"?0:r.res==="L"?1:2]++});
+  const vsTxt=Object.entries(vs).sort((A,B)=>(B[1][0]+B[1][1]+B[1][2])-(A[1][0]+A[1][1]+A[1][2])).map(([k,v])=>`${deckHTML(k)} ${v[0]}-${v[1]}${v[2]?"-"+v[2]:""}`).join(" · ");
+  const rows=a.rows.map(r=>r.bye?`<tr><td class="r">R${r.r}</td><td><span class="res W">V</span></td><td class="o" colspan="2">bye</td><td class="n"></td></tr>`:
+    `<tr><td class="r">R${r.r}</td><td><span class="res ${r.res}">${{W:"V",L:"D",D:"E"}[r.res]}</span>${r.g?` <span class="small">${r.g[0]}-${r.g[1]}</span>`:""}</td>
+     <td class="o">${esc(r.opp)} ${deckHTML(r.deck)}${r.must?` <span class="flag" title="Uma derrota tirava a chance dos 18 pontos">vida ou morte</span>`:""}<div class="small">fechou ${r.opp_final||"—"}${r.opp_apr!=null?` · ${pct(r.opp_apr)} de aproveitamento`:""}</div></td>
+     <td class="n" title="Chance de vitória pelo matchup de deck">${pct(r.p)}</td></tr>`).join("");
+  return `<div class="pr" style="--tc:var(${TEAMS[p.team].c})" data-u="${esc(p.username)}" tabindex="0" role="button" aria-expanded="${isO}">
+   <div class="top"><div class="nm"><b>${esc(p.name)}</b> ${p.inks?deckHTML([...p.inks].sort().join("+")):""}<div class="s">${x.rec||""} · ${x.pts??"–"} pts · #${x.rank<1e9?x.rank:"–"}${p.status==="DROPPED"?" · drop":""}</div></div>
+   <div class="met"><div class="v ${x.xp>=0.5?"good":x.xp<=-0.5?"bad":""}">${sg(x.xp)}</div><div class="l">vs. esperado</div>${xpBar}</div>
+   <div class="met"><div class="v">${sp==null?"–":sp}</div><div class="l">tabela</div><div class="bar"><i style="left:0;width:${sp||0}%;background:var(--gold)"></i></div></div></div>
+   <div class="det"><div class="facts"><span>Vitórias <b>${num(a.act,a.act%1?1:0)}</b> · esperadas pelo deck <b>${num(a.exp)}</b></span>
+     <span>Games: <b>${g.w20}</b> vitórias 2-0 · <b>${g.w21}</b> 2-1 · <b>${g.l12}</b> derrotas 1-2 · <b>${g.l02}</b> 0-2${g.d?` · <b>${g.d}</b> empates`:""}${by?` · ${by} bye`:""}</span>
+     ${x.must[0]+x.must[1]?`<span>Vida ou morte: <b>${x.must[0]}-${x.must[1]}</b></span>`:""}
+     ${a.sos!=null?`<span>Adversários: <b>${pct(a.sos)}</b> de aproveitamento médio</span>`:""}</div>
+     <div class="facts"><span>Por deck adversário: ${vsTxt}</span></div>
+     <table class="mt"><tbody>${rows}</tbody></table></div></div>`}
+function render(){
+  const P=players(), last=DATA.last_round;
+  $("sub").textContent=`DLC London · Main Event 1 · ${P.length} brasileiros · partidas concluídas até a R${last}`;
+  const all=P.flatMap(x=>x.R), W=all.filter(r=>r.res==="W").length, L=all.filter(r=>r.res==="L").length, D=all.filter(r=>r.res==="D").length, n=W+L+D;
+  const exp=all.reduce((s,r)=>s+r.p,0), act=W+D/2;
+  const g=P.reduce((s,x)=>{for(const k in x.a.games)s[k]=(s[k]||0)+x.a.games[k];return s},{});
+  const M=P.flatMap(x=>x.a.rows.filter(r=>r.must&&!r.bye)), mw=M.filter(r=>r.res==="W").length;
+  const sos=P.filter(x=>x.a.sos_pct!=null), sosAvg=sos.reduce((s,x)=>s+x.a.sos_pct,0)/sos.length;
+  $("kpis").innerHTML=`<div class="kpi"><div class="l">Campanha do grupo</div><div class="v">${pct(act/n)}</div><div class="s">${W}-${L}${D?"-"+D:""} em ${n} partidas · média do evento 50%</div></div>
+   <div class="kpi"><div class="l">Vs. esperado pelo deck</div><div class="v ${act-exp>=1?"good":act-exp<=-1?"bad":""}">${sg(act-exp)}</div><div class="s">${num(act,act%1?1:0)} vitórias; os matchups previam ${num(exp)}</div></div>
+   <div class="kpi"><div class="l">Partidas apertadas</div><div class="v">${g.w21}-${g.l12}</div><div class="s">decididas no 3º game (vitórias-derrotas); 2-0: ${g.w20}-${g.l02}</div></div>
+   <div class="kpi"><div class="l">Vida ou morte</div><div class="v">${mw}-${M.length-mw}</div><div class="s">partidas em que perder tirava a chance dos 18 pts</div></div>`;
+  const S=[...P].sort(sortBy==="xp"?(a,b)=>b.xp-a.xp:sortBy==="sos"?(a,b)=>(b.a.sos_pct??-1)-(a.a.sos_pct??-1):(a,b)=>a.rank-b.rank);
+  $("rows").innerHTML=S.map(rowHTML).join("");
+  const T={};P.forEach(x=>{const t=T[x.p.team]=T[x.p.team]||{n:0,W:0,L:0,D:0,exp:0,sos:[]};t.n++;t.W+=x.W;t.L+=x.L;t.D+=x.D;t.exp+=x.R.reduce((s,r)=>s+r.p,0);if(x.a.sos_pct!=null)t.sos.push(x.a.sos_pct)});
+  $("teams").innerHTML=Object.entries(T).sort((a,b)=>(b[1].W+b[1].D/2)/(b[1].W+b[1].L+b[1].D)-(a[1].W+a[1].D/2)/(a[1].W+a[1].L+a[1].D)).map(([k,t])=>{const m=t.W+t.L+t.D, a=t.W+t.D/2;
+    return `<div class="tr" style="--tc:var(${TEAMS[k].c})"><div><b>${esc(TEAMS[k].n)}</b> <span class="s">${t.n} jogador${t.n>1?"es":""}</span></div><div>${t.W}-${t.L}${t.D?"-"+t.D:""}</div><div><b>${pct(a/m)}</b></div><div class="${a-t.exp>=1?"good":a-t.exp<=-1?"bad":""}" title="vs. esperado pelo deck">${sg(a-t.exp)}</div></div>`}).join("");
+  const V={};all.forEach(r=>{const k=r.deck||"none";const v=V[k]=V[k]||{W:0,L:0,D:0,exp:0};v[r.res]++;v.exp+=r.p});
+  $("vsHint").textContent=`Todas as partidas dos brasileiros, agrupadas pelo deck do adversário. À direita, vitórias a mais ou a menos do que os matchups previam.`;
+  $("vsdecks").innerHTML=Object.entries(V).sort((a,b)=>(b[1].W+b[1].L+b[1].D)-(a[1].W+a[1].L+a[1].D)).map(([k,v])=>{const m=v.W+v.L+v.D,a=v.W+v.D/2;
+    return `<div class="tr" style="--tc:var(--line)"><div>${deckHTML(k)} ${k==="none"?"":esc(deckName(k))}</div><div>${v.W}-${v.L}${v.D?"-"+v.D:""}</div><div><b>${pct(a/m)}</b></div><div class="${a-v.exp>=1?"good":a-v.exp<=-1?"bad":""}">${sg(a-v.exp)}</div></div>`}).join("");
+  const f=new Date(DATA.fetched_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});$("upd").textContent=`Dados de ${f}.`;
+}
+$("sortSeg").onclick=e=>{const b=e.target.closest("button");if(!b)return;sortBy=b.dataset.s;document.querySelectorAll("#sortSeg button").forEach(x=>x.setAttribute("aria-pressed",x===b));render()};
+const tog=el=>{const u=el.dataset.u;open.has(u)?open.delete(u):open.add(u);el.setAttribute("aria-expanded",open.has(u))};
+$("rows").onclick=e=>{const el=e.target.closest(".pr");if(el)tog(el)};
+$("rows").onkeydown=e=>{if(e.key!=="Enter"&&e.key!==" ")return;const el=e.target.closest(".pr");if(el){e.preventDefault();tog(el)}};
+async function refresh(){try{const r=await fetch(DATA_URL+"?t="+Date.now(),{cache:"no-store"});if(!r.ok)return;const d=await r.json();
+  if(d&&d.players&&d.players.some(p=>p.ana)&&Date.parse(d.fetched_at)>Date.parse(DATA.fetched_at)){DATA=d;render()}}catch(e){}}
+render();refresh();setInterval(()=>{if(!document.hidden)refresh()},60000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh()});
+</script>
+</body>
+</html>
