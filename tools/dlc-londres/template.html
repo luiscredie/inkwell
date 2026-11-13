@@ -11,6 +11,19 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>Brasileiros no DLC Londres · Inkwell</title>
 <meta name="description" content="Campanhas, posições e decks oficiais dos brasileiros no DLC London Main Event 1.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="pt_BR">
+<meta property="og:site_name" content="Inkwell">
+<meta property="og:title" content="Brasileiros no DLC Londres · ao vivo">
+<meta property="og:description" content="Campanha, posição, decks e corrida pro Dia 2 dos brasileiros no DLC London Main Event 1, com dados oficiais do Play Hub.">
+<meta property="og:url" content="https://luiscredie.github.io/inkwell/dlc-londres/">
+<meta property="og:image" content="https://luiscredie.github.io/inkwell/dlc-londres/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Brasileiros no DLC Londres, acompanhamento ao vivo">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Brasileiros no DLC Londres · ao vivo">
+<meta name="twitter:image" content="https://luiscredie.github.io/inkwell/dlc-londres/og.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
@@ -134,6 +147,24 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .notes p{margin:0;max-width:70ch}
 .notes a{color:var(--fg)}
 code{font-family:var(--mono);font-size:12.5px}
+.d2{display:grid;gap:12px}
+.d2g{display:grid;gap:6px}
+.d2g h3{margin:0;font:700 12px/1 var(--display);letter-spacing:.05em;text-transform:uppercase;display:flex;gap:8px;align-items:center}
+.d2g h3 .c{font:700 12px var(--mono);color:var(--muted)}
+.d2g.ok h3{color:var(--win)} .d2g.race h3{color:var(--gold)} .d2g.out h3{color:var(--muted)}
+.d2l{display:flex;flex-wrap:wrap;gap:6px}
+.d2p{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 6px;max-width:100%;border:1px solid var(--line);border-left:3px solid var(--tc);border-radius:8px;padding:5px 8px;font-size:13px;background:var(--bg)}
+.d2p b{font-weight:600}
+.d2p .nd{color:var(--muted);font-size:12px;white-space:nowrap}
+.d2p .nd.k{color:var(--loss)} .d2p .nd.g{color:var(--win)}
+.d2p .st{white-space:nowrap;font-size:10px;padding:1px 5px;border-radius:4px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.d2note{font-size:12.5px;color:var(--muted);margin:0}
+.spark{width:100%;height:auto;display:block;overflow:visible}
+.spark .ln{fill:none;stroke:var(--tc);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
+.spark .gd{stroke:var(--line);stroke-width:1}
+.spark text{font:600 10.5px var(--mono);fill:var(--muted)}
+.spark .pt{fill:var(--panel);stroke:var(--tc);stroke-width:2}
+.spark .cut{stroke:var(--gold);stroke-dasharray:3 3;stroke-width:1}
 </style>
 </head>
 <body>
@@ -152,6 +183,8 @@ code{font-family:var(--mono);font-size:12.5px}
 
 <section class="kpis" id="kpis"></section>
 <section class="card" id="liveCard" hidden><h2 id="liveTitle"></h2><div class="liveBox" id="liveBox"></div></section>
+
+<section class="card" id="d2Card"><h2 id="d2Title">Corrida pro Dia 2</h2><div class="d2" id="d2"></div></section>
 
 <section class="two">
   <div class="card"><h2 id="distTitle">Campanhas</h2><div class="dist" id="dist"></div></div>
@@ -231,9 +264,40 @@ function resTag(v){if(!v)return `<span class="st P">—</span>`;
   if(v.result==="L")return `<span class="st L">Perdeu${v.score?" "+v.score.split("-").reverse().join("-"):""}</span>`;
   if(v.result==="D")return `<span class="st D">Empate</span>`;
   return `<span class="st P">Em jogo</span>`}
+// Corte do Dia 2: o Play Hub não publica o critério deste evento; 18 pontos foi o corte da DLC Ghent.
+const CUT=18, SWISS=8;
+function renderD2(){
+  const rem=SWISS-LAST, groups={ok:[],race:[],out:[]};
+  DATA.players.forEach(p=>{const c=p.rounds[LAST]; if(!c)return; const pts=c.pts;
+    if(pts>=CUT)groups.ok.push({p,pts});
+    else if(p.status==="DROPPED"||pts+3*rem<CUT)groups.out.push({p,pts});
+    else groups.race.push({p,pts,need:Math.ceil((CUT-pts)/3)});});
+  Object.values(groups).forEach(g=>g.sort((a,b)=>b.pts-a.pts||a.p.rounds[LAST].rank-b.p.rounds[LAST].rank));
+  const chip=x=>{const lv=LIVE&&x.p.live?resTag(x.p.live):"";
+    const needTxt=(n,r)=>n===r?`precisa vencer ${r===1?"a última":`as ${r}`}`:`precisa de ${n} vitória${n>1?"s":""} em ${r}`;
+    let nd="";
+    if(x.need!=null){const res=LIVE&&x.p.live&&x.p.live.result;
+      if(res){const pl=x.pts+(res==="W"?3:res==="D"?1:0), rl=rem-1;
+        nd=pl>=CUT?`<span class="nd g">garante se confirmado</span>`:pl+3*rl<CUT?`<span class="nd k">sem chance se confirmado</span>`:`<span class="nd">${needTxt(Math.ceil((CUT-pl)/3),rl)}</span>`;}
+      else nd=`<span class="nd">${needTxt(x.need,rem)}</span>`;}
+    return `<span class="d2p" style="--tc:var(${TEAMS[x.p.team].c})"><b>${esc(x.p.name)}</b><span class="nd">${x.pts} pts</span>${nd}${lv}</span>`};
+  const grp=(k,t,g)=>g.length?`<div class="d2g ${k}"><h3>${t}<span class="c">${g.length}</span></h3><div class="d2l">${g.map(chip).join("")}</div></div>`:"";
+  $("d2Title").textContent=rem>0?`Corrida pro Dia 2 · faltam ${rem} rodada${rem>1?"s":""}`:"Dia 2 · suíço do dia 1 encerrado";
+  $("d2").innerHTML=grp("ok","Já garantidos",groups.ok)+grp("race","Na briga",groups.race)+grp("out",rem>0?"Sem chance":"Fora",groups.out)+
+   `<p class="d2note">Conta com os pontos oficiais após a R${LAST}${LIVE?`; o resultado da R${LIVE} aparece ao lado, mas só entra quando a rodada termina`:""}. Corte usado: <b>${CUT} pontos</b> em ${SWISS} rodadas (6 vitórias), o mesmo da DLC Ghent. O Play Hub não publica o corte de Londres, então trate como estimativa.</p>`;
+}
+function sparkHTML(p){
+  const pts=[];for(let i=1;i<=LAST;i++)if(p.rounds[i])pts.push([i,p.rounds[i].rank]);
+  if(pts.length<2)return "";
+  const W=320,H=74,px=26,py=12,ks=pts.map(x=>x[1]);let lo=Math.min(...ks),hi=Math.max(...ks);if(hi-lo<20){lo=Math.max(1,lo-10);hi=hi+10}
+  const X=i=>px+(i-1)*(W-2*px)/Math.max(1,SWISS-1), Y=v=>py+(v-lo)/(hi-lo)*(H-2*py);
+  const d=pts.map((q,j)=>`${j?"L":"M"}${X(q[0]).toFixed(1)},${Y(q[1]).toFixed(1)}`).join("");
+  const lab=pts.map((q,j)=>`<circle class="pt" cx="${X(q[0])}" cy="${Y(q[1])}" r="3"/>`+((j===0||j===pts.length-1||q[1]===lo)?`<text x="${X(q[0])}" y="${Y(q[1])+(Y(q[1])<H/2?-6:14)}" text-anchor="middle">#${fmtN(q[1])}</text>`:"")).join("");
+  const ax=Array.from({length:SWISS},(_,i)=>`<text x="${X(i+1)}" y="${H+10}" text-anchor="middle" opacity=".7">R${i+1}</text>`).join("");
+  return `<div><div class="foot" style="margin-bottom:4px">Posição geral rodada a rodada (mais alto = melhor)</div><svg class="spark" viewBox="0 0 ${W} ${H+14}" role="img" aria-label="Posição: ${pts.map(q=>"R"+q[0]+" #"+q[1]).join(", ")}"><line class="gd" x1="${px}" x2="${W-px}" y1="${H-py}" y2="${H-py}"/><path class="ln" d="${d}"/>${lab}${ax}</svg></div>`}
 function detHTML(p){const H=p.history||{};const ks=Object.keys(H).map(Number).sort((a,b)=>a-b);
-  if(!ks.length)return `<div class="det"><div class="foot">Sem partidas registradas.</div></div>`;
-  return `<div class="det">${ks.map(k=>{const v=H[k];const oi=v.opp_inks?v.opp_inks.map(i=>INKS[i]?`<i style="background:${INKS[i][1]}" title="${INKS[i][0]}"></i>`:"").join(""):"";
+  if(!ks.length)return `<div class="det">${sparkHTML(p)}<div class="foot">Sem partidas registradas.</div></div>`;
+  return `<div class="det">${sparkHTML(p)}${ks.map(k=>{const v=H[k];const oi=v.opp_inks?v.opp_inks.map(i=>INKS[i]?`<i style="background:${INKS[i][1]}" title="${INKS[i][0]}"></i>`:"").join(""):"";
     return `<div class="hr${k===LIVE?" now":""}"><span class="rn">R${k}</span>${resTag(v)}<span class="opp">${v.opp?`vs <b>${esc(v.opp)}</b>${v.opp_rec?` (${v.opp_rec})`:""} ${oi}`:"bye"}${v.table!=null?` · mesa ${v.table}`:""}</span></div>`}).join("")}
     <div class="foot">Campanha do adversário antes da rodada. Placar em games, do ponto de vista do brasileiro.</div></div>`}
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
@@ -303,6 +367,7 @@ function render(){
   $("teams").innerHTML=Object.keys(TEAMS).map(t=>{const m=P.filter(p=>p.team===t);const u=m.filter(undefeated).length;const b=m.sort((a,c)=>r(a).rank-r(c).rank)[0];
     return `<div class="team">${tagHTML(t)}<span>${m.length} jogador${m.length>1?"es":""}${u?` · <b style="color:var(--gold)">${u} invicto${u>1?"s":""}</b>`:""}</span><span class="meta">melhor #${fmtN(r(b).rank)}</span></div>`}).join("");
   const sel=$("rec");sel.innerHTML=`<option value="all">Todas as campanhas</option>`+recKeys.map(k=>`<option value="${k}">${k} (${recs[k]})</option>`).join("");sel.value=st.rec;
+  renderD2();
   renderList();
 }
 
