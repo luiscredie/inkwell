@@ -5,6 +5,7 @@ Uso:  python tools/dlc-londres/build.py              (regera a página com os da
 Busca o evento, os standings de cada rodada concluída e as partidas (para as tintas do deck),
 casa os jogadores pelo username do Play Hub e grava os dados dentro da página (página estática).
 """
+from collections import Counter
 import json, sys, time, urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
@@ -64,6 +65,15 @@ def collect():
     later = [r for ph in ev["tournament_phases"][1:] for r in ph["rounds"] if r["status"] in ("COMPLETE", "IN_PROGRESS")]
     done = [r for r in rounds if r["status"] == "COMPLETE"]
     live_r = next((r for r in rounds if r["status"] == "IN_PROGRESS"), None)
+    # O Play Hub às vezes mantém a rodada "IN_PROGRESS" depois que todas as partidas terminaram.
+    # Se todas estão COMPLETE e os standings dela já saíram, a rodada conta como concluída.
+    if live_r:
+        ms = pages(f"tournament-rounds/{live_r['id']}/matches/paginated/")
+        if ms and all(m.get("status") == "COMPLETE" for m in ms):
+            st = pages(f"tournament-rounds/{live_r['id']}/standings/paginated/")
+            if st and all(x["round_number"] == live_r["round_number"] for x in st):
+                done.append(live_r)
+                live_r = None
     names = {u for _, _, u in PLAYERS}
     standings, inks, live, hist = {}, {u: set() for u in names}, {}, {u: {} for u in names}
     for r in done:
@@ -155,20 +165,23 @@ def collect():
             inks=list(next(iter(deck))) if len(deck) == 1 else None,
             live=live.get(user),
             history=hist[user],
+            d2=x["player"]["id"] in d2,
         ))
     if missing:
         sys.exit(f"não localizados: {missing}")
     return dict(fetched_at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), last_round=last,
                 live_round=live_r["round_number"] if live_r else None, event_status=ev.get("display_status"),
                 total=ev.get("starting_player_count") or len(standings[last]), players=players,
-                decks=decks, mu=mu, day2_started=bool(later))
+                decks=decks, mu=mu, day2_started=bool(later),
+                pts_hist=dict(Counter(x["match_points"] for x in standings[last].values()
+                                      if x["user_event_status"].get("registration_status") != "DROPPED")))
 
 
 def main():
     data = collect()
     if len(sys.argv) > 2 and sys.argv[1] == "--json":
         Path(sys.argv[2]).write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
-        print(f"R{data['last_round']} concluída · R{data['live_round']} em andamento · {sys.argv[2]}")
+        print(f"R{data['last_round']} concluída · {'R' + str(data['live_round']) + ' em andamento' if data['live_round'] else 'nenhuma rodada em andamento'} · {sys.argv[2]}")
         return
     html = (HERE / "template.html").read_text(encoding="utf-8").replace("__DATA__", json.dumps(data, ensure_ascii=False))
     OUT.parent.mkdir(parents=True, exist_ok=True)
@@ -179,7 +192,7 @@ def main():
     page3 = OUT.parent / "decks" / "index.html"
     page3.parent.mkdir(parents=True, exist_ok=True)
     page3.write_text((HERE / "decks.html").read_text(encoding="utf-8").replace("__DATA__", json.dumps(data, ensure_ascii=False)), encoding="utf-8")
-    print(f"R{data['last_round']} concluída, R{data['live_round']} em andamento · {len(data['players'])} jogadores · {OUT}")
+    print(f"R{data['last_round']} concluída, {'R' + str(data['live_round']) + ' em andamento' if data['live_round'] else 'nenhuma rodada em andamento'} · {len(data['players'])} jogadores · {OUT}")
 
 
 if __name__ == "__main__":
