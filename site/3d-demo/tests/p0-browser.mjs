@@ -79,6 +79,9 @@ for(const width of [320,375,390,430,1280]){
       if(captured[1]!==-71)throw Error('Pointer capture not released');
       if(binderPointerId!==null)throw Error('Pointer state not cleared');
     });
+    // The actual DOM handler must forward the PointerEvent to cleanup.
+    assert.equal(await stage.getAttribute('onpointercancel'),'binderPointerCancel(event)',
+      'DOM pointercancel handler does not forward event');
     // Cancelled drag must clear state and release capture without turning a page.
     await page.evaluate(()=>{
       const stage=document.querySelector('[data-binder-swipe]');
