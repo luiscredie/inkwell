@@ -27,7 +27,7 @@ PLAYERS = [
     ("TZ", "Meneghesso", "[TZ] Meneghesso"), ("TZ", "Renan Reis", "[TZ] Renan Reis"),
     ("pimp", "Rômulo Rocha", "| pimp | Rômulo Rocha"), ("TZ", "Rufino", "[TZ]Rufino"),
     ("pimp", "Lucas Paglia", "| pimp | Lucas Paglia"), ("pimp", "Caio Giovanni", "| pimp | Caio Giovanni"),
-    ("TZ", "Gab Soares", "[TZ] Gab Soares"),
+    ("TZ", "Gab Soares", "[TZ] Gab Soares"), ("BR", "Vanessa Barral", "Vanessa Barral"),
 ]
 
 
