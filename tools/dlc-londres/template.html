@@ -268,9 +268,10 @@ function resTag(v){if(!v)return `<span class="st P">—</span>`;
 // Corte do Dia 2: o Play Hub não publica o critério deste evento; 18 pontos foi o corte da DLC Ghent.
 const CUT=18, SWISS=8;
 function renderD2(){
-  const rem=SWISS-LAST, groups={ok:[],race:[],out:[]};
+  const rem=SWISS-LAST, groups={ok:[],race:[],out:[]}, real=!!DATA.day2_started;
   DATA.players.forEach(p=>{const c=p.rounds[LAST]; if(!c)return; const pts=c.pts;
-    if(pts>=CUT)groups.ok.push({p,pts});
+    if(real){(p.d2?groups.ok:groups.out).push({p,pts});return}
+    if(pts>=CUT&&p.status!=="DROPPED")groups.ok.push({p,pts});
     else if(p.status==="DROPPED"||pts+3*rem<CUT)groups.out.push({p,pts});
     else groups.race.push({p,pts,need:Math.ceil((CUT-pts)/3)});});
   Object.values(groups).forEach(g=>g.sort((a,b)=>b.pts-a.pts||a.p.rounds[LAST].rank-b.p.rounds[LAST].rank));
@@ -281,11 +282,23 @@ function renderD2(){
       if(res){const pl=x.pts+(res==="W"?3:res==="D"?1:0), rl=rem-1;
         nd=pl>=CUT?`<span class="nd g">garante se confirmado</span>`:pl+3*rl<CUT?`<span class="nd k">sem chance se confirmado</span>`:`<span class="nd">${needTxt(Math.ceil((CUT-pl)/3),rl)}</span>`;}
       else nd=`<span class="nd">${needTxt(x.need,rem)}</span>`;}
-    return `<span class="d2p" style="--tc:var(${TEAMS[x.p.team].c})"><b>${esc(x.p.name)}</b><span class="nd">${x.pts} pts</span>${nd}${lv}</span>`};
+    const c=x.p.rounds[LAST], extra=rem>0?"":`<span class="nd">${esc(c.rec)} · #${c.rank}</span>`;
+    return `<span class="d2p" style="--tc:var(${TEAMS[x.p.team].c})"><b>${esc(x.p.name)}</b><span class="nd">${x.pts} pts</span>${extra}${nd}${lv}</span>`};
   const grp=(k,t,g)=>g.length?`<div class="d2g ${k}"><h3>${t}<span class="c">${g.length}</span></h3><div class="d2l">${g.map(chip).join("")}</div></div>`:"";
-  $("d2Title").textContent=rem>0?`Corrida pro Dia 2 · ${rem>1?`faltam ${rem} rodadas`:"falta 1 rodada"}`:"Dia 2 · suíço do dia 1 encerrado";
-  $("d2").innerHTML=grp("ok","Já garantidos",groups.ok)+grp("race","Na briga",groups.race)+grp("out",rem>0?"Sem chance":"Fora",groups.out)+
-   `<p class="d2note">Conta com os pontos oficiais após a R${LAST}${LIVE?`; o resultado da R${LIVE} aparece ao lado, mas só entra quando a rodada termina`:""}. Corte usado: <b>${CUT} pontos</b> em ${SWISS} rodadas (6 vitórias), o mesmo da DLC Ghent. O Play Hub não publica o corte de Londres, então trate como estimativa.</p>`;
+  const H=DATA.pts_hist||{}, nCut=Object.entries(H).reduce((a,[k,v])=>a+(+k>=CUT?v:0),0);
+  if(rem>0){
+    $("d2Title").textContent=`Corrida pro Dia 2 · ${rem>1?`faltam ${rem} rodadas`:"falta 1 rodada"}`;
+    $("d2").innerHTML=grp("ok","Já garantidos",groups.ok)+grp("race","Na briga",groups.race)+grp("out","Sem chance",groups.out)+
+     `<p class="d2note">Conta com os pontos oficiais após a R${LAST}${LIVE?`; o resultado da R${LIVE} aparece ao lado, mas só entra quando a rodada termina`:""}. Corte usado: <b>${CUT} pontos</b> em ${SWISS} rodadas (6 vitórias), o mesmo da DLC Ghent. O Play Hub não publica o corte de Londres, então trate como estimativa.</p>`;
+  }else if(real){
+    $("d2Title").textContent="Dia 2 · quem avançou";
+    $("d2").innerHTML=grp("ok","No Dia 2",groups.ok)+grp("out","Não avançaram",groups.out)+
+     `<p class="d2note">Lista oficial: quem aparece nos emparelhamentos do Dia 2 no Play Hub. Pontos, campanha e posição são o fechamento das ${SWISS} rodadas do dia 1.</p>`;
+  }else{
+    $("d2Title").textContent="Dia 1 encerrado · corte do Dia 2";
+    $("d2").innerHTML=grp("ok",`Com ${CUT}+ pontos`,groups.ok)+grp("out",`Abaixo de ${CUT} pontos`,groups.out)+
+     `<p class="d2note">Fechamento oficial das ${SWISS} rodadas do dia 1${nCut?`: <b>${nCut.toLocaleString("pt-BR")}</b> jogadores no evento terminaram com ${CUT}+ pontos`:""}. O corte de ${CUT} pontos é estimativa (foi o da DLC Ghent); a lista oficial de quem avançou aparece aqui quando o Play Hub publicar os emparelhamentos do Dia 2.</p>`;
+  }
 }
 function sparkHTML(p){
   const pts=[];for(let i=1;i<=LAST;i++)if(p.rounds[i])pts.push([i,p.rounds[i].rank]);
