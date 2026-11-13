@@ -5,7 +5,7 @@ Uso:  python tools/dlc-londres/build.py              (regera a página com os da
 Busca o evento, os standings de cada rodada concluída e as partidas (para as tintas do deck),
 casa os jogadores pelo username do Play Hub e grava os dados dentro da página (página estática).
 """
-import json, sys, urllib.request
+import json, sys, time, urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -31,10 +31,16 @@ PLAYERS = [
 ]
 
 
-def get(path):
+def get(path, tries=4):
     req = urllib.request.Request(f"{API}/{path}", headers={"Referer": "https://tcg.ravensburgerplay.com/", "User-Agent": "Inkwell"})
-    with urllib.request.urlopen(req, timeout=60) as r:
-        return json.load(r)
+    for i in range(tries):
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                return json.load(r)
+        except Exception:  # resposta cortada, timeout ou erro do servidor: tenta de novo
+            if i == tries - 1:
+                raise
+            time.sleep(3 * (i + 1))
 
 
 def pages(path):
