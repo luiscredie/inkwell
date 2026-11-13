@@ -1,0 +1,53 @@
+name: DLC Londres — dados ao vivo
+
+# A cada 20 minutos coleta no Play Hub os standings e as partidas dos brasileiros no DLC London: Main Event 1
+# e grava dlc-londres.json no branch dlc-data (um unico commit, sobrescrito). A pagina site/dlc-londres/ le esse
+# arquivo pelo raw.githubusercontent.com. Nao toca na main: sem PR, sem checks, sem deploy do site.
+# Para parar: desative este workflow em Actions (ou apague o arquivo). Ele se desliga sozinho depois de 16/11/2026.
+on:
+  schedule:
+    - cron: "*/20 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dlc-londres
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Janela do evento
+        id: window
+        run: |
+          if [ "$(date -u +%Y%m%d)" -gt 20261116 ]; then echo "run=false" >> "$GITHUB_OUTPUT"; echo "Evento encerrado: nada a fazer."; else echo "run=true" >> "$GITHUB_OUTPUT"; fi
+
+      - uses: actions/checkout@v5
+        if: steps.window.outputs.run == 'true'
+        with:
+          sparse-checkout: tools/dlc-londres
+
+      - uses: actions/setup-python@v7
+        if: steps.window.outputs.run == 'true'
+        with:
+          python-version: '3.12'
+
+      - name: Coletar no Play Hub
+        if: steps.window.outputs.run == 'true'
+        run: python tools/dlc-londres/build.py --json "$RUNNER_TEMP/dlc-londres.json"
+
+      - name: Publicar no branch dlc-data
+        if: steps.window.outputs.run == 'true'
+        run: |
+          mkdir "$RUNNER_TEMP/out" && cd "$RUNNER_TEMP/out"
+          cp "$RUNNER_TEMP/dlc-londres.json" .
+          git init -q -b dlc-data
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git add dlc-londres.json
+          git commit -q -m "DLC Londres: dados de $(date -u +%H:%M) UTC"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" dlc-data

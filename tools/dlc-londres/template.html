@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://raw.githubusercontent.com; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#121216">
@@ -103,6 +103,17 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .ink{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:500;color:var(--fg);white-space:nowrap}
 .ink i{width:11px;height:11px;border-radius:50%;transform:rotate(45deg);border-radius:2px;display:inline-block}
 .inks2{display:inline-flex;gap:8px;flex-wrap:wrap}
+.live{margin-top:6px;font-size:12.5px;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;padding-top:6px;border-top:1px dashed var(--line)}
+.live .st{font-weight:700;font-size:11px;letter-spacing:.04em;text-transform:uppercase;padding:2px 6px;border-radius:4px}
+.st.W{background:var(--win);color:var(--bg)} .st.L{background:var(--loss);color:var(--bg)} .st.D{background:var(--draw);color:var(--bg)} .st.P{border:1px solid var(--muted);color:var(--muted)}
+.live .opp{color:var(--muted);overflow-wrap:anywhere}
+.live .opp b{color:var(--fg);font-weight:600}
+.live i{width:9px;height:9px;border-radius:2px;transform:rotate(45deg);display:inline-block;margin:0 1px}
+.liveBox{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+.liveBox .n{font:700 22px var(--display)}
+.liveBox .w{color:var(--win)} .liveBox .l{color:var(--loss)} .liveBox .pend{color:var(--muted)}
+.refresh{font:600 13px var(--body);border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:999px;padding:4px 12px;cursor:pointer}
+.refresh[disabled]{opacity:.6;cursor:progress}
 .empty{padding:24px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:10px}
 .notes{font-size:13.5px;color:var(--muted);display:grid;gap:6px}
 .notes p{margin:0;max-width:70ch}
@@ -120,10 +131,12 @@ code{font-family:var(--mono);font-size:12.5px}
     <span class="pill"><span class="dot"></span>Resultados confirmados até a <b id="lastR"></b></span>
     <span class="pill" id="liveP"><span class="dot live"></span><span id="liveR"></span></span>
     <span class="pill" id="upd"></span>
+    <button type="button" class="refresh" id="refresh">Atualizar</button>
   </div>
 </header>
 
 <section class="kpis" id="kpis"></section>
+<section class="card" id="liveCard" hidden><h2 id="liveTitle"></h2><div class="liveBox" id="liveBox"></div></section>
 
 <section class="two">
   <div class="card"><h2 id="distTitle">Campanhas</h2><div class="dist" id="dist"></div></div>
@@ -146,6 +159,7 @@ code{font-family:var(--mono);font-size:12.5px}
         <option value="name">Nome (A–Z)</option>
       </select>
       <select id="deck" aria-label="Filtrar por deck"></select>
+      <select id="liveF" aria-label="Filtrar pela rodada em andamento"></select>
       <span class="count" id="count"></span>
     </div>
   </div>
@@ -159,19 +173,22 @@ code{font-family:var(--mono);font-size:12.5px}
   <p><b>Deck (cores):</b> tintas registradas no Play Hub para cada partida (<code>deck_descriptor_label</code>). Conferido em todas as rodadas jogadas: cada jogador usou o mesmo deck em todas elas. Lucas Paglia não tem deck registrado.</p>
   <p><b>Lucas Paglia</b> consta como <code>DROPPED</code> após a rodada 1 e permanece na lista.</p>
   <p>Fonte: standings oficiais de cada rodada concluída (API pública do Play Hub, endpoint <code>tournament-rounds/{id}/standings</code>), conferidos jogador a jogador pelo username. <a href="https://tcg.ravensburgerplay.com/events/1254364" target="_blank" rel="noopener">Abrir evento no Play Hub</a>.</p>
-  <p>Os números são atualizados a cada nova publicação desta página. O horário acima mostra quando os dados foram coletados.</p>
+  <p>Os dados são coletados do Play Hub a cada 20 minutos e esta página busca a versão mais nova sozinha (e no botão Atualizar). O horário acima mostra a coleta. Resultados da rodada em andamento aparecem jogador a jogador assim que são reportados no Play Hub; posição e campanha oficiais só mudam quando a rodada termina.</p>
 </section>
 </div>
 
 <script>
-const DATA = __DATA__;
+let DATA = __DATA__;
+const DATA_URL = "https://raw.githubusercontent.com/luiscredie/inkwell/dlc-data/dlc-londres.json";
 const TEAMS = {TZ:{c:"--t-tz",n:"TZ · Tuzzy"},pimp:{c:"--t-pimp",n:"pimp"},NekoDan:{c:"--t-neko",n:"NekoDan"},RL:{c:"--t-rl",n:"RL"},INKRJ:{c:"--t-inkrj",n:"INKRJ"},BR:{c:"--t-br",n:"BR"}};
 const INKS={amber:["Âmbar","#e9a920"],amethyst:["Ametista","#8a3f9e"],emerald:["Esmeralda","#2a9a4a"],ruby:["Rubi","#d3283f"],sapphire:["Safira","#1a8fd0"],steel:["Aço","#8f9aa6"]};
 const deckKey=p=>p.inks&&p.inks.length?p.inks.join("+"):"none";
 const deckName=k=>k==="none"?"Não registrado":k.split("+").map(i=>INKS[i][0]).join(" / ");
 const inkHTML=p=>p.inks&&p.inks.length?`<span class="inks2">${p.inks.map(i=>`<span class="ink"><i style="background:${INKS[i][1]}"></i>${INKS[i][0]}</span>`).join("")}</span>`:`<span class="ink">Deck não registrado</span>`;
-const TOTAL = DATA.total, LAST = DATA.last_round, LIVE = DATA.live_round;
-const st = {round:LAST, team:"all", rec:"all", deck:"all", q:"", sort:"asc"};
+let TOTAL, LAST, LIVE;
+function setGlobals(){TOTAL=DATA.total;LAST=DATA.last_round;LIVE=DATA.live_round}
+setGlobals();
+const st = {round:LAST, team:"all", rec:"all", deck:"all", live:"all", q:"", sort:"asc"};
 try{const s=JSON.parse(localStorage.getItem("dlc-br")||"{}"); if(s.sort) st.sort=s.sort;}catch(e){}
 const $ = id => document.getElementById(id);
 const fmtN = n => n.toLocaleString("pt-BR");
@@ -188,12 +205,32 @@ function pathHTML(p){let out="";let prev={w:0,l:0,d:0};
     out+=`<span class="${c}" title="R${i}: ${c==="W"?"vitória":c==="L"?"derrota":c==="D"?"empate":"sem partida"}"></span>`; prev={w,l,d};}
   return `<div class="path" aria-hidden="true">${out}</div>`}
 
+function liveHTML(p){
+  if(!LIVE||st.round!==LAST||!p.live)return "";
+  const v=p.live; let s;
+  if(v.result==="W")s=`<span class="st W">Venceu${v.score?" "+v.score:""}</span>`;
+  else if(v.result==="L")s=`<span class="st L">Perdeu${v.score?" "+v.score.split("-").reverse().join("-"):""}</span>`;
+  else if(v.result==="D")s=`<span class="st D">Empate</span>`;
+  else s=`<span class="st P">Em jogo</span>`;
+  const oi=v.opp_inks?v.opp_inks.map(i=>INKS[i]?`<i style="background:${INKS[i][1]}" title="${INKS[i][0]}"></i>`:"").join(""):"";
+  return `<div class="live"><b>R${LIVE}</b>${s}<span class="opp">${v.table!=null?`Mesa ${v.table} · `:""}${v.opp?`vs <b>${esc(v.opp)}</b>${v.opp_rec?` (${v.opp_rec})`:""} ${oi}`:"bye"}</span></div>`}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+let lastTry=null, failed=false;
+function showUpd(){const f=x=>new Date(x).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+  $("upd").innerHTML=`Dados de <b>${f(DATA.fetched_at)}</b>${failed?" · sem conexão com a fonte":""}`;}
+async function refresh(manual){
+  const btn=$("refresh"); btn.disabled=true; btn.textContent="Atualizando…";
+  try{const r=await fetch(DATA_URL+"?t="+Date.now(),{cache:"no-store"}); if(!r.ok)throw new Error(r.status);
+    const d=await r.json(); failed=false;
+    if(d&&d.players&&d.players.length&&Date.parse(d.fetched_at)>Date.parse(DATA.fetched_at)){
+      const wasLast=st.round===LAST; DATA=d; setGlobals(); if(wasLast||st.round>LAST)st.round=LAST; renderStatic(); render();}
+  }catch(e){failed=true}
+  showUpd(); btn.disabled=false; btn.textContent="Atualizar";}
 function renderStatic(){
-  const d=new Date(DATA.fetched_at);
-  $("upd").innerHTML=`Coletado em <b>${d.toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</b>`;
+  showUpd();
   $("tot").textContent=fmtN(TOTAL);
   $("lastR").textContent=`Rodada ${LAST}`;
-  if(LIVE){$("liveR").textContent=`Rodada ${LIVE} em andamento`}else{$("liveP").hidden=true}
+  $("liveP").hidden=!LIVE; if(LIVE)$("liveR").textContent=`Rodada ${LIVE} em andamento`;
   $("rounds").innerHTML=Array.from({length:LAST},(_,i)=>i+1).map(k=>`<button type="button" data-r="${k}" aria-pressed="${k===st.round}">R${k}</button>`).join("");
   $("rounds").onclick=e=>{const b=e.target.closest("button");if(!b)return;st.round=+b.dataset.r;st.rec="all";render()};
   $("teamChips").innerHTML=`<button type="button" class="chip" data-t="all">Todas</button>`+Object.keys(TEAMS).map(t=>`<button type="button" class="chip" data-t="${t}">${t}</button>`).join("");
@@ -204,6 +241,7 @@ function renderStatic(){
   const dkeys=Object.keys(dk).sort((a,b)=>(a==="none")-(b==="none")||dk[b]-dk[a]||deckName(a).localeCompare(deckName(b)));
   $("deck").innerHTML=`<option value="all">Todos os decks</option>`+dkeys.map(k=>`<option value="${k}">${deckName(k)} (${dk[k]})</option>`).join("");
   $("deck").onchange=e=>{st.deck=e.target.value;renderList()};
+  $("liveF").onchange=e=>{st.live=e.target.value;renderList()};
   const dmax=Math.max(...Object.values(dk));
   $("decks").innerHTML=dkeys.map(k=>{const ps=DATA.players.filter(p=>deckKey(p)===k);const sw=k==="none"?"var(--muted)":`linear-gradient(90deg,${k.split("+").map(i=>INKS[i][1]).join(",")})`;
     return `<div class="bar" style="grid-template-columns:minmax(120px,170px) 1fr 28px"><span class="ink">${k==="none"?"":k.split("+").map(i=>`<i style="background:${INKS[i][1]}"></i>`).join("")} ${deckName(k)}</span><div class="track"><div class="fill" style="width:${dk[k]/dmax*100}%;background:${sw}"></div></div><span class="n">${dk[k]}</span></div>`}).join("");
@@ -220,6 +258,13 @@ function render(){
   const recs={};P.forEach(p=>{const k=r(p).rec;recs[k]=(recs[k]||0)+1});
   const recKeys=Object.keys(recs).sort((a,b)=>{const pa=a.split("-").map(Number),pb=b.split("-").map(Number);return (pb[0]*3+pb[2])-(pa[0]*3+pa[2])||pa[1]-pb[1]});
   const top512=P.filter(p=>r(p).rank<=512).length;
+  const lv=DATA.players.filter(p=>p.live), showLive=LIVE&&R===LAST&&lv.length;
+  $("liveCard").hidden=!showLive;
+  $("liveF").hidden=!showLive; if(!showLive)st.live="all";
+  if(showLive){const c=k=>lv.filter(p=>p.live.result===k).length, pend=lv.filter(p=>!p.live.result).length;
+    $("liveTitle").textContent=`Rodada ${LIVE} ao vivo · parcial`;
+    $("liveBox").innerHTML=`<span><span class="n w">${c("W")}</span> vitórias</span><span><span class="n l">${c("L")}</span> derrotas</span>${c("D")?`<span><span class="n">${c("D")}</span> empates</span>`:""}<span><span class="n pend">${pend}</span> em jogo</span><span class="count">Resultados reportados no Play Hub. A classificação só muda quando a rodada termina.</span>`;
+    $("liveF").innerHTML=`<option value="all">Rodada ${LIVE}: todos</option><option value="P">Em jogo</option><option value="W">Venceram</option><option value="L">Perderam</option>`;$("liveF").value=st.live;}
   $("kpis").innerHTML=`
    <div class="kpi gold"><div class="l">Invictos</div><div class="v">${unb.length}</div><div class="s">${unb.map(p=>p.name).join(", ")||"nenhum"}</div></div>
    <div class="kpi"><div class="l">Melhor brasileiro</div><div class="v">#${fmtN(r(best).rank)}</div><div class="s">${best.name} · ${r(best).rec}</div></div>
@@ -238,7 +283,7 @@ function render(){
 function renderList(){
   const R=st.round, q=norm(st.q.trim());
   const brPos=new Map([...DATA.players].sort((a,b)=>r(a).rank-r(b).rank).map((p,i)=>[p.username,i+1]));
-  let L=DATA.players.filter(p=>(st.team==="all"||p.team===st.team)&&(st.rec==="all"||r(p).rec===st.rec)&&(st.deck==="all"||deckKey(p)===st.deck)&&(!q||norm(p.name+" "+p.username+" "+p.legal).includes(q)));
+  let L=DATA.players.filter(p=>(st.team==="all"||p.team===st.team)&&(st.rec==="all"||r(p).rec===st.rec)&&(st.deck==="all"||deckKey(p)===st.deck)&&(st.live==="all"||(p.live&&(st.live==="P"?!p.live.result:p.live.result===st.live)))&&(!q||norm(p.name+" "+p.username+" "+p.legal).includes(q)));
   L.sort(st.sort==="name"?(a,b)=>a.name.localeCompare(b.name,"pt-BR"):st.sort==="desc"?(a,b)=>r(b).rank-r(a).rank:(a,b)=>r(a).rank-r(b).rank);
   $("count").textContent=`${L.length} de 23`;
   $("list").innerHTML=L.length?L.map(p=>{const cur=r(p),prev=R>1?p.rounds[R-1]:null;
@@ -247,12 +292,16 @@ function renderList(){
     return `<article class="p${u?" unb":""}" style="--tc:var(${TEAMS[p.team].c})">
       <div class="br" title="Posição entre os brasileiros">${brPos.get(p.username)}</div>
       <div class="who"><div class="nm">${tagHTML(p.team)} ${p.name}${u?' <span class="badge g">Invicto</span>':""}${p.status==="DROPPED"?' <span class="badge x">Drop</span>':""}</div>
-        <div class="sub">${p.username}</div><div style="margin-top:3px">${inkHTML(p)}</div>${pathHTML(p)}</div>
+        <div class="sub">${p.username}</div><div style="margin-top:3px">${inkHTML(p)}</div>${pathHTML(p)}${liveHTML(p)}</div>
       <div class="res"><div class="rec3" aria-label="Campanha ${cur.rec}">${recHTML(cur.rec)}</div>
         <div class="rank">#<b>${fmtN(cur.rank)}</b> / ${fmtN(TOTAL)} ${tr}</div><div class="rank">${cur.pts} pts</div></div>
     </article>`}).join(""):`<div class="empty">Nenhum jogador com esses filtros.</div>`;
 }
 renderStatic();render();
+$("refresh").onclick=()=>refresh(true);
+refresh(false);
+setInterval(()=>{if(!document.hidden)refresh(false)},5*60*1000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh(false)});
 </script>
 
 </body>
