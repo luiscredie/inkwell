@@ -125,6 +125,9 @@ def main():
     html = (HERE / "template.html").read_text(encoding="utf-8").replace("__DATA__", json.dumps(data, ensure_ascii=False))
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(html, encoding="utf-8")
+    page2 = OUT.parent / "confrontos" / "index.html"
+    page2.parent.mkdir(parents=True, exist_ok=True)
+    page2.write_text((HERE / "confrontos.html").read_text(encoding="utf-8").replace("__DATA__", json.dumps(data, ensure_ascii=False)), encoding="utf-8")
     print(f"R{data['last_round']} concluída, R{data['live_round']} em andamento · {len(data['players'])} jogadores · {OUT}")
 
 

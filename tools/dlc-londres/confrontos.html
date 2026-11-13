@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://raw.githubusercontent.com; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#121216">
+<link rel="icon" href="../../ink/icon-192.png">
+<title>Confrontos dos Brasileiros · DLC Londres</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: resumo no topo; tabela por deck adversário; matriz deck BR x deck adversário; cartões por jogador */
+:root{
+  --bg:#f3f2ef; --panel:#fff; --line:#dedbd3; --fg:#17161a; --muted:#6a6772;
+  --gold:#a8790f; --gold-bg:#fbf1d6; --win:#1f8a4c; --loss:#b8433a; --draw:#7b7686;
+  --win-bg:#dcefe3; --loss-bg:#f6dedb; --mid-bg:#eeece6;
+  --display:"Archivo",system-ui,sans-serif; --body:"IBM Plex Sans",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
+  color-scheme:light; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#121216; --panel:#1b1b21; --line:#2c2c35; --fg:#ecebf0; --muted:#9592a0;
+  --gold:#e3b341; --gold-bg:#2e2615; --win:#4cc282; --loss:#ef7167; --draw:#a6a1b3;
+  --win-bg:#173324; --loss-bg:#3a1d1b; --mid-bg:#24242b; color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 var(--body);font-variant-numeric:tabular-nums}
+.wrap{max-width:980px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px;display:grid;gap:20px}
+a{color:var(--fg)}
+.back{font-size:13px;color:var(--muted)}
+h1{font:800 clamp(24px,5.5vw,34px)/1.1 var(--display);margin:6px 0 4px;text-wrap:balance}
+header p{margin:0;color:var(--muted);font-size:14px}
+h2{font:700 13px/1 var(--display);text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 0 4px}
+.hint{font-size:13px;color:var(--muted);margin:0 0 12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:640px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px}
+.kpi .l{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.kpi .v{font:700 24px/1.1 var(--display);margin-top:4px}
+.kpi .v .deck{white-space:normal;flex-wrap:wrap}
+.kpi .s{font-size:12.5px;color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+select{font:inherit;font-size:16px;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.deck{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;font-weight:500}
+.deck i{flex:none;width:10px;height:10px;border-radius:2px;transform:rotate(45deg);display:inline-block;margin-right:1px}
+.ou{display:grid;gap:8px}
+.or{display:grid;grid-template-columns:minmax(0,1.3fr) 54px minmax(0,1fr) 46px;gap:10px;align-items:center;font-size:14px}
+.or .rec{font-family:var(--mono);font-size:13px;text-align:right}
+.or .pct{text-align:right;font-weight:700}
+.track{height:10px;background:var(--line);border-radius:5px;overflow:hidden;position:relative}
+.track .fill{height:100%;border-radius:5px}
+.track::after{content:"";position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--muted);opacity:.6}
+.small{font-size:11px;color:var(--muted);font-weight:500}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.mx{border-collapse:separate;border-spacing:3px;font-size:12.5px}
+.mx th{font-weight:600;color:var(--muted);text-align:left;padding:4px;white-space:nowrap}
+.mx thead th{vertical-align:bottom}
+.mx td{min-width:58px;text-align:center;border-radius:6px;padding:6px 4px;background:var(--mid-bg);font-family:var(--mono)}
+.mx td.g{background:var(--win-bg)} .mx td.b{background:var(--loss-bg)} .mx td.e{background:transparent;color:var(--line)}
+.mx td small{display:block;font-family:var(--body);font-size:10.5px;color:var(--muted)}
+.players{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+.pc{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;display:grid;gap:8px;min-width:0}
+.pc .top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.pc .nm{font-weight:600}
+.pc .tm{font:700 10px var(--display);color:var(--muted);letter-spacing:.05em}
+.pc .rc{font-family:var(--mono)}
+.bw{display:grid;grid-template-columns:auto 1fr;gap:4px 8px;font-size:13px;align-items:center}
+.tag{font:700 10px var(--body);letter-spacing:.05em;text-transform:uppercase;padding:2px 6px;border-radius:4px;white-space:nowrap}
+.tag.g{background:var(--win);color:var(--bg)} .tag.b{background:var(--loss);color:var(--bg)}
+.ml{display:grid;gap:3px;font-size:12.5px;color:var(--muted);border-top:1px dashed var(--line);padding-top:6px}
+.ml div{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.r{font-weight:700;font-size:11px;padding:1px 5px;border-radius:3px;color:var(--bg)}
+.r.W{background:var(--win)} .r.L{background:var(--loss)} .r.D{background:var(--draw)}
+.notes{font-size:13px;color:var(--muted);display:grid;gap:6px}
+.notes p{margin:0;max-width:70ch}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <a class="back" href="../">← Brasileiros no DLC Londres</a>
+  <h1>Confrontos dos Brasileiros</h1>
+  <p id="sub"></p>
+</header>
+
+<div class="row">
+  <select id="fTeam" aria-label="Equipe"></select>
+  <select id="fDeck" aria-label="Deck brasileiro"></select>
+</div>
+
+<section class="kpis" id="kpis"></section>
+
+<section class="card">
+  <h2>Contra cada deck adversário</h2>
+  <p class="hint">Todas as partidas dos brasileiros somadas. Barra: % de vitórias (empate vale meia); a linha marca 50%.</p>
+  <div class="ou" id="byOpp"></div>
+</section>
+
+<section class="card">
+  <h2>Deck brasileiro × deck adversário</h2>
+  <p class="hint">Vitórias-derrotas de cada deck brasileiro contra cada deck que enfrentou. Verde: mais vitórias; vermelho: mais derrotas.</p>
+  <div class="scroll"><table class="mx" id="mx"></table></div>
+</section>
+
+<section>
+  <h2 style="margin-bottom:10px">Por jogador</h2>
+  <div class="players" id="players"></div>
+</section>
+
+<section class="card notes">
+  <h2>Como ler</h2>
+  <p>Só partidas de brasileiros, já encerradas (byes e partidas em andamento ficam de fora). Empate conta como meia vitória no %.</p>
+  <p>Games: soma dos games ganhos e perdidos nas partidas (melhor de 3).</p>
+  <p>A amostra é pequena: cada jogador faz no máximo 8 partidas na fase suíça. "Melhor" e "pior" confronto indicam o que aconteceu neste evento, não uma tendência.</p>
+  <p id="src"></p>
+</section>
+</div>
+
+<script>
+let DATA = __DATA__;
+const DATA_URL = "https://raw.githubusercontent.com/luiscredie/inkwell/dlc-data/dlc-londres.json";
+const INKS={amber:["Âmbar","#e9a920"],amethyst:["Ametista","#8a3f9e"],emerald:["Esmeralda","#2a9a4a"],ruby:["Rubi","#d3283f"],sapphire:["Safira","#1a8fd0"],steel:["Aço","#8f9aa6"]};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const key=a=>a&&a.length?[...a].sort().join("+"):null;
+const name=k=>k&&k!=="none"?k.split("+").map(i=>INKS[i]?INKS[i][0]:i).join(" / "):"Sem deck registrado";
+const deckHTML=k=>`<span class="deck">${k&&k!=="none"?k.split("+").map(i=>`<i style="background:${INKS[i]?INKS[i][1]:"#999"}"></i>`).join(""):""}${name(k)}</span>`;
+const pct=s=>s.n?(s.w+s.d/2)/s.n:0;
+const fmtP=x=>Math.round(x*100)+"%";
+const st={team:"all",deck:"all"};
+
+function matches(){const out=[];
+  for(const p of DATA.players){if(st.team!=="all"&&p.team!==st.team)continue;const mk=key(p.inks);if(st.deck!=="all"&&mk!==st.deck)continue;
+    for(const [r,v] of Object.entries(p.history||{})){if(!v.result||!v.opp)continue;
+      const sc=v.score?v.score.split("-").map(Number):null;let gw=0,gl=0;
+      if(sc){if(v.result==="W"){gw=sc[0];gl=sc[1]}else if(v.result==="L"){gw=sc[1];gl=sc[0]}}
+      out.push({p,round:+r,me:mk||"none",opp:key(v.opp_inks)||"none",oppName:v.opp,res:v.result,gw,gl,score:v.score});}}
+  return out}
+function agg(list){const s={n:0,w:0,l:0,d:0,gw:0,gl:0};for(const m of list){s.n++;s[m.res==="W"?"w":m.res==="L"?"l":"d"]++;s.gw+=m.gw;s.gl+=m.gl}return s}
+const group=(list,f)=>list.reduce((a,m)=>{const k=f(m);(a[k]=a[k]||[]).push(m);return a},{});
+const rec=s=>`${s.w}-${s.l}${s.d?"-"+s.d:""}`;
+
+function renderFilters(){
+  const teams=[...new Set(DATA.players.map(p=>p.team))];
+  $("fTeam").innerHTML=`<option value="all">Todas as equipes</option>`+teams.map(t=>`<option>${t}</option>`).join("");
+  const decks=[...new Set(DATA.players.map(p=>key(p.inks)).filter(Boolean))];
+  $("fDeck").innerHTML=`<option value="all">Todos os decks brasileiros</option>`+decks.map(k=>`<option value="${k}">${name(k)}</option>`).join("");
+  $("fTeam").value=st.team;$("fDeck").value=st.deck;
+  $("fTeam").onchange=e=>{st.team=e.target.value;render()};$("fDeck").onchange=e=>{st.deck=e.target.value;render()};
+}
+
+function render(){
+  const M=matches(), S=agg(M);
+  const t=new Date(DATA.fetched_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+  $("sub").textContent=`DLC London · Main Event 1 · partidas encerradas até ${t}${DATA.live_round?` (rodada ${DATA.live_round} em andamento)`:""}`;
+  $("src").innerHTML=`Fonte: partidas oficiais do <a href="https://tcg.ravensburgerplay.com/events/1254364" target="_blank" rel="noopener">Play Hub</a> (tintas registradas por jogador). Dados de ${t}; a página procura dados novos a cada minuto.`;
+  const byO=group(M,m=>m.opp), rows=Object.entries(byO).map(([k,l])=>[k,agg(l)]).sort((a,b)=>b[1].n-a[1].n||pct(b[1])-pct(a[1]));
+  const withN=rows.filter(r=>r[1].n>=3&&r[0]!=="none"), best=[...withN].sort((a,b)=>pct(b[1])-pct(a[1])||b[1].n-a[1].n)[0], worst=[...withN].sort((a,b)=>pct(a[1])-pct(b[1])||b[1].n-a[1].n)[0];
+  $("kpis").innerHTML=`
+    <div class="kpi"><div class="l">Partidas</div><div class="v">${S.n}</div><div class="s">${rec(S)} (V-D${S.d?"-E":""})</div></div>
+    <div class="kpi"><div class="l">Vitórias</div><div class="v">${S.n?fmtP(pct(S)):"—"}</div><div class="s">games ${S.gw}-${S.gl} (${S.gw+S.gl?fmtP(S.gw/(S.gw+S.gl)):"—"})</div></div>
+    <div class="kpi"><div class="l">Melhor confronto</div><div class="v" style="font-size:16px">${best?deckHTML(best[0]):"—"}</div><div class="s">${best?`${rec(best[1])} · ${fmtP(pct(best[1]))}`:"mín. 3 partidas"}</div></div>
+    <div class="kpi"><div class="l">Pior confronto</div><div class="v" style="font-size:16px">${worst?deckHTML(worst[0]):"—"}</div><div class="s">${worst?`${rec(worst[1])} · ${fmtP(pct(worst[1]))}`:"mín. 3 partidas"}</div></div>`;
+  $("byOpp").innerHTML=rows.length?rows.map(([k,s])=>{const p=pct(s);const c=p>.5?"var(--win)":p<.5?"var(--loss)":"var(--draw)";
+    return `<div class="or">${deckHTML(k)}<span class="rec">${rec(s)}</span><div class="track" title="${fmtP(p)}"><div class="fill" style="width:${Math.max(p*100,2)}%;background:${c}"></div></div><span class="pct" style="color:${c}">${fmtP(p)}</span></div>`+(s.n<3?`<div class="small" style="margin-top:-6px">${s.n} partida${s.n>1?"s":""}: amostra pequena</div>`:"")}).join(""):`<p class="hint">Nenhuma partida com esse filtro.</p>`;
+  // matriz
+  const mine=Object.entries(group(M,m=>m.me)).sort((a,b)=>b[1].length-a[1].length).map(x=>x[0]);
+  const opps=rows.map(r=>r[0]);
+  $("mx").innerHTML=mine.length?`<thead><tr><th>Deck BR ↓ · adversário →</th>${opps.map(k=>`<th>${deckHTML(k)}</th>`).join("")}<th>Total</th></tr></thead><tbody>`+
+    mine.map(mk=>{const l=M.filter(m=>m.me===mk);const tot=agg(l);
+      return `<tr><th>${deckHTML(mk)}</th>${opps.map(ok=>{const s=agg(l.filter(m=>m.opp===ok));if(!s.n)return `<td class="e">·</td>`;const p=pct(s);return `<td class="${p>.5?"g":p<.5?"b":""}">${rec(s)}<small>${fmtP(p)}</small></td>`}).join("")}<td>${rec(tot)}<small>${fmtP(pct(tot))}</small></td></tr>`}).join("")+"</tbody>":"";
+  // jogadores
+  const byP=group(M,m=>m.p.username);
+  const ps=DATA.players.filter(p=>(st.team==="all"||p.team===st.team)&&(st.deck==="all"||key(p.inks)===st.deck))
+    .map(p=>({p,l:byP[p.username]||[]})).sort((a,b)=>pct(agg(b.l))-pct(agg(a.l))||b.l.length-a.l.length);
+  $("players").innerHTML=ps.map(({p,l})=>{const s=agg(l);const g=Object.entries(group(l,m=>m.opp)).map(([k,x])=>[k,agg(x)]);
+    const sorted=[...g].sort((a,b)=>pct(b[1])-pct(a[1])||b[1].n-a[1].n);
+    const good=sorted.filter(x=>x[0]!=="none"&&pct(x[1])>.5), bad=[...sorted].reverse().filter(x=>x[0]!=="none"&&pct(x[1])<.5);
+    return `<article class="pc"><div class="top"><div><div class="tm">${esc(p.team)}</div><div class="nm">${esc(p.name)}</div></div><div class="rc">${l.length?rec(s):"—"}</div></div>
+      <div>${deckHTML(key(p.inks))}</div>
+      ${l.length?`<div class="bw"><span class="tag g">Melhor</span><span>${good.length?good.slice(0,2).map(x=>`${deckHTML(x[0])} ${rec(x[1])}`).join(" · "):"nenhuma vitória ainda"}</span>
+      <span class="tag b">Pior</span><span>${bad.length?bad.slice(0,2).map(x=>`${deckHTML(x[0])} ${rec(x[1])}`).join(" · "):"nenhuma derrota"}</span></div>
+      <div class="ml">${l.sort((a,b)=>a.round-b.round).map(m=>`<div><b>R${m.round}</b><span class="r ${m.res}">${m.res==="W"?"V":m.res==="L"?"D":"E"}${m.score?" "+(m.res==="L"?m.score.split("-").reverse().join("-"):m.score):""}</span>${deckHTML(m.opp)}</div>`).join("")}</div>`:`<div class="small">${p.status==="DROPPED"?"Saiu do torneio":"Sem partidas encerradas"}</div>`}
+    </article>`}).join("");
+}
+async function refresh(){try{const r=await fetch(DATA_URL+"?t="+Date.now(),{cache:"no-store"});if(!r.ok)return;const d=await r.json();
+  if(d&&d.players&&Date.parse(d.fetched_at)>Date.parse(DATA.fetched_at)){DATA=d;render()}}catch(e){}}
+renderFilters();render();refresh();
+setInterval(()=>{if(!document.hidden)refresh()},60*1000);
+</script>
+</body>
+</html>
