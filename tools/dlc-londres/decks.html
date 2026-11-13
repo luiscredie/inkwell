@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://raw.githubusercontent.com; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#121216">
+<link rel="icon" href="../../ink/icon-192.png">
+<title>Batalha de Decks · DLC Londres</title>
+<meta property="og:title" content="Batalha de decks · DLC Londres">
+<meta property="og:description" content="Quantos começaram, quantos seguem vivos e o aproveitamento de cada dupla de tintas no DLC London Main Event 1.">
+<meta property="og:image" content="https://luiscredie.github.io/inkwell/dlc-londres/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: resumo; ranking de duplas (cartões-linha); matriz de confrontos entre as duplas mais jogadas */
+:root{
+  --bg:#f3f2ef; --panel:#fff; --line:#dedbd3; --fg:#17161a; --muted:#6a6772;
+  --gold:#a8790f; --gold-bg:#fbf1d6; --win:#1f8a4c; --loss:#b8433a; --draw:#7b7686;
+  --win-bg:#dcefe3; --loss-bg:#f6dedb; --mid-bg:#eeece6;
+  --display:"Archivo",system-ui,sans-serif; --body:"IBM Plex Sans",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
+  color-scheme:light; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#121216; --panel:#1b1b21; --line:#2c2c35; --fg:#ecebf0; --muted:#9592a0;
+  --gold:#e3b341; --gold-bg:#2e2615; --win:#4cc282; --loss:#ef7167; --draw:#a6a1b3;
+  --win-bg:#173324; --loss-bg:#3a1d1b; --mid-bg:#24242b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121216; --panel:#1b1b21; --line:#2c2c35; --fg:#ecebf0; --muted:#9592a0;
+  --gold:#e3b341; --gold-bg:#2e2615; --win:#4cc282; --loss:#ef7167; --draw:#a6a1b3;
+  --win-bg:#173324; --loss-bg:#3a1d1b; --mid-bg:#24242b; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 var(--body);font-variant-numeric:tabular-nums}
+.wrap{max-width:980px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px;display:grid;gap:20px}
+a{color:var(--fg)}
+.back{font-size:13px;color:var(--muted)}
+h1{font:800 clamp(24px,5.5vw,34px)/1.1 var(--display);margin:6px 0 4px;text-wrap:balance}
+header p{margin:0;color:var(--muted);font-size:14px}
+h2{font:700 13px/1 var(--display);text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 0 4px}
+.hint{font-size:13px;color:var(--muted);margin:0 0 12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:640px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;min-width:0}
+.kpi .l{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.kpi .v{font:700 24px/1.1 var(--display);margin-top:4px}
+.kpi .s{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.deck{display:inline-flex;align-items:center;gap:5px;font-weight:600}
+.deck i{flex:none;width:11px;height:11px;border-radius:2px;transform:rotate(45deg);display:inline-block}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:12px}
+.seg button{font:600 13px var(--body);background:var(--panel);color:var(--fg);border:0;padding:8px 12px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.rows{display:grid;gap:6px}
+.dr{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg)}
+.dr .pos{font:800 16px var(--display);color:var(--muted);text-align:center}
+.dr .nm{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center}
+.dr .sub{font-size:12.5px;color:var(--muted);margin-top:3px}
+.dr .br{font-size:12px;margin-top:4px;color:var(--fg)}
+.dr .br b{font-weight:600}
+.dr .wr{text-align:right}
+.dr .wr .v{font:700 20px var(--display)}
+.dr .wr .s{font-size:12px;color:var(--muted)}
+.meter{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--line);margin-top:6px}
+.meter .a{background:var(--fg);opacity:.75}
+.meter .d2{background:var(--gold)}
+.good{color:var(--win)} .bad{color:var(--loss)}
+.small{font-size:12px;color:var(--muted)}
+.mx{overflow-x:auto}
+table{border-collapse:collapse;font-size:12.5px;min-width:100%}
+th,td{border:1px solid var(--line);padding:6px;text-align:center;white-space:nowrap}
+th{font-weight:600;background:var(--panel)}
+th.rowh{text-align:left;position:sticky;left:0;z-index:1}
+td.w{background:var(--win-bg)} td.l{background:var(--loss-bg)} td.m{background:var(--mid-bg)} td.x{color:var(--muted)}
+td b{display:block;font-size:13px}
+td span{color:var(--muted);font-size:11px}
+.notes{font-size:13px;color:var(--muted);display:grid;gap:6px}
+.notes p{margin:0;max-width:70ch}
+.ago{font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <a class="back" href="../">← Brasileiros no DLC Londres</a>
+  <h1>Batalha de decks</h1>
+  <p>Todos os <span id="tot"></span> jogadores do Main Event 1, agrupados pela dupla de tintas registrada no Play Hub. <span class="ago" id="upd"></span></p>
+</header>
+
+<section class="kpis" id="kpis"></section>
+
+<section class="card">
+  <h2>Ranking das duplas</h2>
+  <p class="hint" id="rankHint"></p>
+  <div class="seg" role="group" aria-label="Ordenar por" id="sortSeg">
+    <button type="button" data-s="players" aria-pressed="true">Mais jogadas</button>
+    <button type="button" data-s="wr" aria-pressed="false">Aproveitamento</button>
+    <button type="button" data-s="surv" aria-pressed="false">Sobrevivência</button>
+  </div>
+  <div class="rows" id="rows"></div>
+</section>
+
+<section class="card">
+  <h2>Quem vence quem</h2>
+  <p class="hint">Aproveitamento da dupla da linha contra a dupla da coluna, nas 8 duplas mais jogadas. Verde ≥ 55%, vermelho ≤ 45%. Menos de 10 partidas fica em cinza.</p>
+  <div class="mx" id="mx"></div>
+</section>
+
+<section class="card notes">
+  <h2>Como ler</h2>
+  <p><b>Começaram:</b> jogadores que apareceram em alguma partida com essa dupla. <b>Seguem:</b> não deram drop. <b id="d2lbl">Dia 2:</b> <span id="d2txt"></span></p>
+  <p><b>Aproveitamento:</b> (vitórias + metade dos empates) ÷ partidas, só rodadas concluídas, sem byes. Espelhos (mesma dupla dos dois lados) contam uma vitória e uma derrota para a dupla, o que puxa o número para 50%.</p>
+  <p><b>Sem deck registrado:</b> jogadores que nunca tiveram tintas no Play Hub, na prática quem não apareceu para jogar. Ficam fora do ranking.</p>
+  <p>Dados: partidas oficiais do Play Hub, atualizados a cada 5 minutos junto com a página dos brasileiros.</p>
+</section>
+</div>
+
+<script>
+let DATA = __DATA__;
+const DATA_URL = "https://raw.githubusercontent.com/luiscredie/inkwell/dlc-data/dlc-londres.json";
+const INKS={amber:["Âmbar","#e9a920"],amethyst:["Ametista","#8a3f9e"],emerald:["Esmeralda","#2a9a4a"],ruby:["Rubi","#d3283f"],sapphire:["Safira","#1a8fd0"],steel:["Aço","#8f9aa6"]};
+const $=id=>document.getElementById(id);
+const fmt=n=>n.toLocaleString("pt-BR");
+const pct=x=>(x*100).toFixed(1).replace(".",",")+"%";
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const deckHTML=k=>`<span class="deck">${k.split("+").map(i=>`<i style="background:${INKS[i][1]}"></i>`).join("")} ${k.split("+").map(i=>INKS[i][0]).join(" / ")}</span>`;
+const shortHTML=k=>`<span class="deck">${k.split("+").map(i=>`<i style="background:${INKS[i][1]}" title="${INKS[i][0]}"></i>`).join("")}</span>`;
+let sortBy="players";
+function list(){
+  const D=DATA.decks||{};
+  return Object.entries(D).filter(([k])=>k!=="none").map(([k,v])=>{const n=v.w+v.l+v.d;return {k,...v,n,wr:n?(v.w+v.d/2)/n:null,surv:v.players?(DATA.day2_started?v.d2:v.active)/v.players:0}});
+}
+function render(){
+  const L=list(), D=DATA.decks||{}, d2=DATA.day2_started;
+  const started=L.reduce((a,x)=>a+x.players,0), active=L.reduce((a,x)=>a+x.active,0), inD2=L.reduce((a,x)=>a+x.d2,0);
+  $("tot").textContent=fmt(DATA.total);
+  const big=L.filter(x=>x.n>=100), best=[...big].sort((a,b)=>b.wr-a.wr)[0], worst=[...big].sort((a,b)=>a.wr-b.wr)[0], top=[...L].sort((a,b)=>b.players-a.players)[0];
+  $("kpis").innerHTML=`
+    <div class="kpi"><div class="l">Mais jogada</div><div class="v">${top?pct(top.players/started):"—"}</div><div class="s">${top?`${deckHTML(top.k)} · ${fmt(top.players)} jogadores`:""}</div></div>
+    <div class="kpi"><div class="l">Melhor aproveitamento</div><div class="v ${best?"good":""}">${best?pct(best.wr):"—"}</div><div class="s">${best?deckHTML(best.k):""} · mín. 100 partidas</div></div>
+    <div class="kpi"><div class="l">Pior aproveitamento</div><div class="v ${worst?"bad":""}">${worst?pct(worst.wr):"—"}</div><div class="s">${worst?deckHTML(worst.k):""}</div></div>
+    <div class="kpi"><div class="l">${d2?"No Dia 2":"Seguem no evento"}</div><div class="v">${fmt(d2?inD2:active)}</div><div class="s">de ${fmt(started)} que jogaram · após R${DATA.last_round}</div></div>`;
+  $("rankHint").textContent=`${L.length} duplas · resultados até a R${DATA.last_round}. A barra mostra quantos ${d2?"chegaram ao Dia 2 (dourado)":"seguem sem drop"}.`;
+  const br={};(DATA.players||[]).forEach(p=>{if(p.inks&&p.inks.length){const k=[...p.inks].sort().join("+");(br[k]=br[k]||[]).push(p)}});
+  const S=[...L].sort(sortBy==="wr"?(a,b)=>(b.n>=30)-(a.n>=30)||b.wr-a.wr:sortBy==="surv"?(a,b)=>(b.players>=10)-(a.players>=10)||b.surv-a.surv:(a,b)=>b.players-a.players);
+  $("rows").innerHTML=S.map((x,i)=>{const bp=br[x.k]||[];
+    const cls=x.wr==null?"":x.wr>=.55?"good":x.wr<=.45?"bad":"";
+    const keep=d2?x.d2:x.active;
+    return `<div class="dr"><div class="pos">${i+1}</div><div><div class="nm">${deckHTML(x.k)}</div>
+      <div class="sub">${fmt(x.players)} começaram (${pct(x.players/started)}) · ${fmt(keep)} ${d2?"no Dia 2":"seguem"} (${pct(x.surv)}) · ${x.w}V ${x.l}D${x.d?` ${x.d}E`:""}</div>
+      <div class="meter" aria-hidden="true"><span class="${d2?"d2":"a"}" style="width:${x.surv*100}%"></span></div>
+      ${bp.length?`<div class="br">🇧🇷 ${bp.map(p=>`<b>${esc(p.name)}</b>`).join(", ")}</div>`:""}</div>
+      <div class="wr"><div class="v ${cls}">${x.wr==null?"—":pct(x.wr)}</div><div class="s">${fmt(x.n)} partidas${x.n&&x.n<30?" · amostra pequena":""}</div></div></div>`}).join("");
+  const T=[...L].sort((a,b)=>b.players-a.players).slice(0,8).map(x=>x.k), M=DATA.mu||{};
+  $("mx").innerHTML=`<table><thead><tr><th class="rowh">vs →</th>${T.map(k=>`<th>${shortHTML(k)}</th>`).join("")}</tr></thead><tbody>${T.map(a=>`<tr><th class="rowh">${shortHTML(a)}</th>${T.map(b=>{
+      if(a===b)return `<td class="x">espelho</td>`;const v=M[a+"|"+b];if(!v)return `<td class="x">—</td>`;const n=v[0]+v[1]+v[2], w=(v[0]+v[2]/2)/n;
+      const c=n<10?"m":w>=.55?"w":w<=.45?"l":"";return `<td class="${c}" title="${v[0]}V ${v[1]}D ${v[2]}E"><b>${pct(w)}</b><span>${n}</span></td>`}).join("")}</tr>`).join("")}</tbody></table>`;
+  $("d2txt").textContent=d2?"jogadores que aparecem nas partidas da fase 2.":"ainda não começou; quando começar, esta coluna passa a contar quem chegou ao Dia 2.";
+  const f=new Date(DATA.fetched_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});$("upd").textContent=`Dados de ${f}.`;
+}
+$("sortSeg").onclick=e=>{const b=e.target.closest("button");if(!b)return;sortBy=b.dataset.s;document.querySelectorAll("#sortSeg button").forEach(x=>x.setAttribute("aria-pressed",x===b));render()};
+async function refresh(){try{const r=await fetch(DATA_URL+"?t="+Date.now(),{cache:"no-store"});if(!r.ok)return;const d=await r.json();
+  if(d&&d.decks&&Date.parse(d.fetched_at)>Date.parse(DATA.fetched_at)){DATA=d;render()}}catch(e){}}
+render();refresh();setInterval(()=>{if(!document.hidden)refresh()},60000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh()});
+</script>
+</body>
+</html>

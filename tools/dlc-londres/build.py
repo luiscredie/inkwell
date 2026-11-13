@@ -61,6 +61,7 @@ def inks_of(status):
 def collect():
     ev = get(f"events/{EVENT}/")
     rounds = [r for ph in ev["tournament_phases"][:1] for r in ph["rounds"]]
+    later = [r for ph in ev["tournament_phases"][1:] for r in ph["rounds"] if r["status"] in ("COMPLETE", "IN_PROGRESS")]
     done = [r for r in rounds if r["status"] == "COMPLETE"]
     live_r = next((r for r in rounds if r["status"] == "IN_PROGRESS"), None)
     names = {u for _, _, u in PLAYERS}
@@ -70,8 +71,48 @@ def collect():
         assert all(x["round_number"] == r["round_number"] for x in rows)
         standings[r["round_number"]] = {x["user_event_status"]["best_identifier"]: x for x in rows}
     last = max(standings)
+    # Batalha de decks: todos os jogadores do evento, agrupados pelas tintas registradas
+    deck_of, dropped, d2 = {}, set(), set()
+    agg, mu = {}, {}
+    cache = {}
+    def matches(r):
+        if r["id"] not in cache:
+            cache[r["id"]] = pages(f"tournament-rounds/{r['id']}/matches/paginated/")
+        return cache[r["id"]]
+    for x in standings[last].values():
+        if x["user_event_status"].get("registration_status") == "DROPPED":
+            dropped.add(x["player"]["id"])
+    for r in [x for x in rounds if x["status"] in ("COMPLETE", "IN_PROGRESS")] + later:
+        phase2 = r in later
+        for m in matches(r):
+            rel = m["player_match_relationships"]
+            keys = []
+            for pm in rel:
+                pid = (pm.get("player") or {}).get("id")
+                k = "+".join(sorted(inks_of(pm["user_event_status"]))) or "none"
+                if pid is not None:
+                    deck_of.setdefault(pid, k)
+                    if phase2:
+                        d2.add(pid)
+                keys.append((pid, k))
+            if phase2 or r["status"] != "COMPLETE" or m.get("status") != "COMPLETE" or m.get("match_is_bye") or len(keys) != 2:
+                continue
+            draw = m.get("match_is_intentional_draw") or m.get("match_is_unintentional_draw") or m.get("winning_player") is None
+            for (pid, k), (oid, ok) in (keys, keys[::-1]):
+                res = 2 if draw else 0 if m.get("winning_player") == pid else 1
+                agg.setdefault(k, [0, 0, 0])[res] += 1
+                if k != "none" and ok != "none" and k != ok:
+                    mu.setdefault(f"{k}|{ok}", [0, 0, 0])[res] += 1
+    decks = {}
+    for pid, k in deck_of.items():
+        d = decks.setdefault(k, dict(players=0, active=0, d2=0, w=0, l=0, d=0))
+        d["players"] += 1
+        d["active"] += pid not in dropped
+        d["d2"] += pid in d2
+    for k, (w, l, dr) in agg.items():
+        decks.setdefault(k, dict(players=0, active=0, d2=0, w=0, l=0, d=0)).update(w=w, l=l, d=dr)
     for r in [x for x in rounds if x["status"] in ("COMPLETE", "IN_PROGRESS")]:
-        for m in pages(f"tournament-rounds/{r['id']}/matches/paginated/"):
+        for m in matches(r):
             rel = m["player_match_relationships"]
             for pm in rel:
                 s = pm["user_event_status"]
@@ -119,7 +160,8 @@ def collect():
         sys.exit(f"não localizados: {missing}")
     return dict(fetched_at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), last_round=last,
                 live_round=live_r["round_number"] if live_r else None, event_status=ev.get("display_status"),
-                total=ev.get("starting_player_count") or len(standings[last]), players=players)
+                total=ev.get("starting_player_count") or len(standings[last]), players=players,
+                decks=decks, mu=mu, day2_started=bool(later))
 
 
 def main():
@@ -134,6 +176,9 @@ def main():
     page2 = OUT.parent / "confrontos" / "index.html"
     page2.parent.mkdir(parents=True, exist_ok=True)
     page2.write_text((HERE / "confrontos.html").read_text(encoding="utf-8").replace("__DATA__", json.dumps(data, ensure_ascii=False)), encoding="utf-8")
+    page3 = OUT.parent / "decks" / "index.html"
+    page3.parent.mkdir(parents=True, exist_ok=True)
+    page3.write_text((HERE / "decks.html").read_text(encoding="utf-8").replace("__DATA__", json.dumps(data, ensure_ascii=False)), encoding="utf-8")
     print(f"R{data['last_round']} concluída, R{data['live_round']} em andamento · {len(data['players'])} jogadores · {OUT}")
 
 
