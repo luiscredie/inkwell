@@ -59,6 +59,97 @@ def inks_of(status):
     return tuple(sym["symbol_key"] for p in lab.get("parts", []) for sym in p.get("symbols", []))
 
 
+CUT, SWISS, PRIOR = 18, 8, 10
+
+
+def analyze(done, matches, standings, last, deck_of, mu, names):
+    """Análise do desempenho dos brasileiros, só com rodadas concluídas da fase 1.
+
+    - força da tabela: aproveitamento final (pontos / pontos possíveis) dos adversários enfrentados,
+      com o percentil entre todos os jogadores do evento;
+    - vitórias esperadas pelo matchup: para cada partida, a taxa de vitória da dupla de tintas do
+      jogador contra a do adversário no evento inteiro, puxada para 50% com peso de PRIOR partidas;
+    - placares em games, campanha por deck adversário, partidas de vida ou morte para o corte.
+    """
+    final = {x["player"]["id"]: x for x in standings[last].values()}
+
+    def rec(x):
+        w, l, d = (int(v) for v in x["match_record"].split("-"))
+        return w, l, d
+
+    def apr(pid):
+        x = final.get(pid)
+        if not x:
+            return None
+        w, l, d = rec(x)
+        n = w + l + d
+        return (3 * w + d) / (3 * n) if n else None
+
+    def prob(k, ok):
+        if k == "none" or ok == "none" or k == ok:
+            return 0.5
+        w, l, d = mu.get(f"{k}|{ok}", [0, 0, 0])
+        return (w + d / 2 + PRIOR * 0.5) / (w + l + d + PRIOR)
+
+    opps, mine = {}, {}
+    for r in sorted(done, key=lambda r: r["round_number"]):
+        rn = r["round_number"]
+        for m in matches(r):
+            rel = m["player_match_relationships"]
+            ids = [(pm.get("player") or {}).get("id") for pm in rel]
+            if not m.get("match_is_bye") and len(rel) == 2 and None not in ids:
+                opps.setdefault(ids[0], []).append(ids[1])
+                opps.setdefault(ids[1], []).append(ids[0])
+            for i, pm in enumerate(rel):
+                u = pm["user_event_status"]["best_identifier"]
+                if u in names:
+                    mine.setdefault(u, []).append((rn, m, ids[i], ids[1 - i] if len(ids) == 2 else None,
+                                                  rel[1 - i] if len(rel) == 2 else None))
+    sos = {}
+    for pid, os_ in opps.items():
+        v = [a for a in (apr(o) for o in os_) if a is not None]
+        if v:
+            sos[pid] = sum(v) / len(v)
+    allsos = sorted(sos.values())
+
+    out = {}
+    for u, lst in mine.items():
+        rows, games = [], dict(w20=0, w21=0, l12=0, l02=0, d=0)
+        for rn, m, me, op, opm in sorted(lst, key=lambda t: t[0]):
+            prev = standings.get(rn - 1, {}).get(u)
+            before = prev["match_points"] if prev else 0
+            left = SWISS - rn + 1
+            must = before + 3 * (left - 1) < CUT <= before + 3 * left
+            bye = bool(m.get("match_is_bye")) or op is None
+            if bye:
+                rows.append(dict(r=rn, bye=True, res="W", p=1.0, before=before, must=must))
+                continue
+            draw = m.get("match_is_intentional_draw") or m.get("match_is_unintentional_draw") or m.get("winning_player") is None
+            res = "D" if draw else "W" if m.get("winning_player") == me else "L"
+            gw, gl = m.get("games_won_by_winner"), m.get("games_won_by_loser") or 0
+            if res == "W":
+                games["w20" if gl == 0 else "w21"] += 1
+            elif res == "L":
+                games["l02" if gl == 0 else "l12"] += 1
+            else:
+                games["d"] += 1
+            k, ok = deck_of.get(me, "none"), deck_of.get(op, "none")
+            fx = final.get(op)
+            rows.append(dict(r=rn, res=res, g=None if gw is None else ([gw, gl] if res == "W" else [gl, gw]),
+                             opp=opm["user_event_status"]["best_identifier"], deck=ok,
+                             opp_final=fx["match_record"] if fx else None, opp_apr=apr(op),
+                             p=round(prob(k, ok), 3), before=before, must=must))
+        me_pid = standings[last][u]["player"]["id"] if u in standings[last] else None
+        s = sos.get(me_pid)
+        out[u] = dict(
+            sos=None if s is None else round(s, 4),
+            sos_pct=None if s is None else round(sum(1 for v in allsos if v < s) / len(allsos), 3),
+            exp=round(sum(x["p"] for x in rows), 2),
+            act=sum(1 if x["res"] == "W" else 0.5 if x["res"] == "D" else 0 for x in rows),
+            games=games, rows=rows)
+    return out
+
+
 def collect():
     ev = get(f"events/{EVENT}/")
     rounds = [r for ph in ev["tournament_phases"][:1] for r in ph["rounds"]]
@@ -151,6 +242,7 @@ def collect():
                     hist[u][r["round_number"]] = entry
                     if live_r and r["id"] == live_r["id"]:
                         live[u] = entry
+    ana = analyze(done, matches, standings, last, deck_of, mu, names)
     players, missing = [], []
     for team, name, user in PLAYERS:
         if user not in standings[last]:
@@ -166,6 +258,7 @@ def collect():
             live=live.get(user),
             history=hist[user],
             d2=x["player"]["id"] in d2,
+            ana=ana.get(user),
         ))
     if missing:
         sys.exit(f"não localizados: {missing}")
@@ -189,6 +282,9 @@ def main():
     page2 = OUT.parent / "confrontos" / "index.html"
     page2.parent.mkdir(parents=True, exist_ok=True)
     page2.write_text((HERE / "confrontos.html").read_text(encoding="utf-8").replace("__DATA__", json.dumps(data, ensure_ascii=False)), encoding="utf-8")
+    page4 = OUT.parent / "analise" / "index.html"
+    page4.parent.mkdir(parents=True, exist_ok=True)
+    page4.write_text((HERE / "analise.html").read_text(encoding="utf-8").replace("__DATA__", json.dumps(data, ensure_ascii=False)), encoding="utf-8")
     page3 = OUT.parent / "decks" / "index.html"
     page3.parent.mkdir(parents=True, exist_ok=True)
     page3.write_text((HERE / "decks.html").read_text(encoding="utf-8").replace("__DATA__", json.dumps(data, ensure_ascii=False)), encoding="utf-8")
