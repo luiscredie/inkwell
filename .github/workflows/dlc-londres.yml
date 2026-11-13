@@ -1,12 +1,12 @@
 name: DLC Londres — dados ao vivo
 
-# A cada 20 minutos coleta no Play Hub os standings e as partidas dos brasileiros no DLC London: Main Event 1
+# A cada 5 minutos coleta no Play Hub os standings e as partidas dos brasileiros no DLC London: Main Event 1
 # e grava dlc-londres.json no branch dlc-data (um unico commit, sobrescrito). A pagina site/dlc-londres/ le esse
 # arquivo pelo raw.githubusercontent.com. Nao toca na main: sem PR, sem checks, sem deploy do site.
 # Para parar: desative este workflow em Actions (ou apague o arquivo). Ele se desliga sozinho depois de 16/11/2026.
 on:
   schedule:
-    - cron: "*/20 * * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 permissions:

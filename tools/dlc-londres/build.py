@@ -1,7 +1,7 @@
 """Gera site/dlc-londres/index.html com os standings oficiais do Play Hub (DLC London: Main Event 1).
 
 Uso:  python tools/dlc-londres/build.py              (regera a página com os dados embutidos)
-      python tools/dlc-londres/build.py --json X.json  (só os dados: usado pela Action a cada 20 min)
+      python tools/dlc-londres/build.py --json X.json  (só os dados: usado pela Action a cada 5 min)
 Busca o evento, os standings de cada rodada concluída e as partidas (para as tintas do deck),
 casa os jogadores pelo username do Play Hub e grava os dados dentro da página (página estática).
 """
@@ -58,7 +58,7 @@ def collect():
     done = [r for r in rounds if r["status"] == "COMPLETE"]
     live_r = next((r for r in rounds if r["status"] == "IN_PROGRESS"), None)
     names = {u for _, _, u in PLAYERS}
-    standings, inks, live = {}, {u: set() for u in names}, {}
+    standings, inks, live, hist = {}, {u: set() for u in names}, {}, {u: {} for u in names}
     for r in done:
         rows = pages(f"tournament-rounds/{r['id']}/standings/paginated/")
         assert all(x["round_number"] == r["round_number"] for x in rows)
@@ -74,13 +74,13 @@ def collect():
                     continue
                 if inks_of(s):
                     inks[u].add(inks_of(s))
-                if live_r and r["id"] == live_r["id"]:
+                if True:  # histórico de todas as rodadas jogadas
                     opp = next((o for o in rel if o is not pm), None)
                     me_id = (pm.get("player") or {}).get("id")
                     entry = dict(table=m.get("table_number"), status=m.get("status"), opp=None, opp_rec=None, opp_inks=None, result=None, score=None)
                     if opp:
                         ou = opp["user_event_status"]["best_identifier"]
-                        prev = standings[last].get(ou)
+                        prev = standings.get(r["round_number"] - 1, {}).get(ou)
                         entry.update(opp=ou, opp_rec=prev["match_record"] if prev else None, opp_inks=list(inks_of(opp["user_event_status"])) or None)
                     if m.get("match_is_bye"):
                         entry.update(result="W", status="COMPLETE", opp=None)
@@ -91,7 +91,9 @@ def collect():
                             entry["result"] = "W" if m.get("winning_player") == me_id else "L"
                         if m.get("games_won_by_winner") is not None:
                             entry["score"] = f'{m["games_won_by_winner"]}-{m.get("games_won_by_loser") or 0}'
-                    live[u] = entry
+                    hist[u][r["round_number"]] = entry
+                    if live_r and r["id"] == live_r["id"]:
+                        live[u] = entry
     players, missing = [], []
     for team, name, user in PLAYERS:
         if user not in standings[last]:
@@ -105,6 +107,7 @@ def collect():
             status=x["user_event_status"]["registration_status"],
             inks=list(next(iter(deck))) if len(deck) == 1 else None,
             live=live.get(user),
+            history=hist[user],
         ))
     if missing:
         sys.exit(f"não localizados: {missing}")
