@@ -150,7 +150,7 @@ def analyze(done, matches, standings, last, deck_of, mu, names):
     return out
 
 
-def top_cut(ev, last, standings, live_r, matches, deck_of, names):
+def top_cut(ev, last, standings, live_r, matches, deck_of, names, mu):
     """Corrida pelo top 8 (16 primeiros do suíço + brasileiros no Dia 2) e chave do top cut (fase 3)."""
     st = standings[last]
     rows = sorted(st.values(), key=lambda x: x["rank"])
@@ -180,6 +180,16 @@ def top_cut(ev, last, standings, live_r, matches, deck_of, names):
     top = [row(x) for x in rows[:16]] + [row(x) for x in rows[16:] if x["user_event_status"]["best_identifier"] in br
                                          and x["player"]["id"] in live]
     race = dict(round=last, rows=top)
+
+    # Raio-X do top 8: mesmas métricas da análise dos brasileiros, em todas as rodadas suíças concluídas.
+    swiss = [r for ph in ev["tournament_phases"][:2] for r in ph["rounds"] if r["status"] == "COMPLETE"]
+    swiss = [r for r in swiss if r["round_number"] <= last]
+    top8 = {x["user_event_status"]["best_identifier"] for x in rows[:8]}
+    st_sw = {k: v for k, v in standings.items() if k <= last}
+    xr = analyze(swiss, matches, st_sw, last, deck_of, mu, top8)
+    race["xray"] = [dict(rank=x["rank"], name=x["user_event_status"]["best_identifier"], rec=x["match_record"],
+                         pts=x["match_points"], deck=deck_of.get(x["player"]["id"], "none"),
+                         ana=xr.get(x["user_event_status"]["best_identifier"])) for x in rows[:8]]
 
     ph = ev["tournament_phases"][2] if len(ev["tournament_phases"]) > 2 else None
     bracket = None
@@ -311,7 +321,7 @@ def collect():
             cut8 = dict(pts8=top[7]["match_points"], pts9=top[8]["match_points"], n=len(top))
     race, bracket = None, None
     if last > SWISS:
-        race, bracket = top_cut(ev, last, standings, live_r, matches, deck_of, names)
+        race, bracket = top_cut(ev, last, standings, live_r, matches, deck_of, names, mu)
     players, missing = [], []
     for team, name, user in PLAYERS:
         x = latest(user)

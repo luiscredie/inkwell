@@ -80,6 +80,17 @@ h2{font:700 13px/1 var(--display);text-transform:uppercase;letter-spacing:.09em;
 .sl.b{background:color-mix(in srgb,var(--gold) 14%,transparent)}
 .sl .sc{font:700 13px var(--display)}
 .m .tag2{position:absolute;top:-9px;right:8px;font-size:10px;font-weight:700;background:var(--panel);padding:0 4px;color:var(--muted)}
+.xr{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px}
+.xc{border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:10px 12px;font-size:12.5px;color:var(--muted)}
+.xc .hd{display:flex;gap:8px;align-items:baseline;color:var(--fg);font-size:14px;margin-bottom:6px}
+.xc .hd .sd{font:700 13px var(--display);color:var(--gold)}
+.xc .hd b{overflow-wrap:anywhere}
+.xc .mx{display:flex;gap:16px;margin:4px 0 6px}
+.xc .mx div{display:grid}
+.xc .mx .v{font:700 18px var(--display);color:var(--fg)}
+.xc .mx .v.good{color:var(--win)} .xc .mx .v.bad{color:var(--loss)}
+.xc .mx .l{font-size:10px;text-transform:uppercase;letter-spacing:.06em}
+.xc p{margin:3px 0 0}
 .notes{font-size:13px;color:var(--muted)}
 .notes p{margin:6px 0 0;max-width:72ch}
 </style>
@@ -96,6 +107,11 @@ h2{font:700 13px/1 var(--display);text-transform:uppercase;letter-spacing:.09em;
   <h2 id="bkTitle">Chave do top 8</h2>
   <p class="hint" id="bkHint"></p>
   <div class="bx"><div class="br3" id="bracket"></div></div>
+</section>
+<section class="card" id="xrCard" hidden>
+  <h2>Raio-X do top 8</h2>
+  <p class="hint"><b>Vs. esperado:</b> vitórias a mais (ou a menos) do que os matchups de deck previam (taxas medidas no dia 1). <b>Tabela:</b> dificuldade dos adversários, em percentil do evento (100 = a chave mais dura). Todas as rodadas suíças concluídas.</p>
+  <div class="xr" id="xray"></div>
 </section>
 <section class="card">
   <h2 id="tbTitle">Classificação</h2>
@@ -157,6 +173,23 @@ function renderTable(){
     const lv=x.live?(x.live.res?`<span class="res ${x.live.res}">${{W:"V",L:"D",D:"E"}[x.live.res]}</span>`:`<span class="res P">em jogo</span>`):"";
     return gap+`<tr class="${x.rank<=8?"in":""}${x.rank===9?" cut":""}${x.br?" br":""}"><td class="k">${x.rank}</td><td class="nm">${esc(x.name)} ${deckHTML(x.deck)}${x.br?` <span class="flag">BR</span>`:""}</td><td class="n">${x.rec}</td><td class="n"><b>${x.pts}</b></td><td class="n">${lv}</td></tr>`}).join("");
 }
+const num=(x,d=1)=>x.toFixed(d).replace(".",",");
+const sg=x=>{const r=Math.round(x*10)/10;return (r>0?"+":r<0?"−":"±")+num(Math.abs(r))};
+function renderXray(){
+  const X=DATA.race&&DATA.race.xray;
+  $("xrCard").hidden=!X||!X.length; if(!X)return;
+  $("xray").innerHTML=X.map(x=>{const a=x.ana; if(!a)return "";
+    const xp=a.act-a.exp, sp=a.sos_pct==null?"–":Math.round(a.sos_pct*100), g=a.games;
+    const vs={};a.rows.filter(r=>!r.bye).forEach(r=>{const k=r.deck||"none";(vs[k]=vs[k]||[0,0,0])[r.res==="W"?0:r.res==="L"?1:2]++});
+    const vt=Object.entries(vs).sort((A,B)=>(B[1][0]+B[1][1]+B[1][2])-(A[1][0]+A[1][1]+A[1][2])).slice(0,4).map(([k,v])=>`${deckHTML(k)||"sem deck"} ${v[0]}-${v[1]}${v[2]?"-"+v[2]:""}`).join(" · ");
+    const losses=a.rows.filter(r=>r.res==="L").map(r=>`R${r.r} ${esc(r.opp)}`).join(", ");
+    return `<div class="xc"><div class="hd"><span class="sd">${x.rank}</span><b>${esc(x.name)}</b> ${deckHTML(x.deck)}</div>
+      <div class="mx"><div><span class="v">${esc(x.rec)}</span><span class="l">${x.pts} pts</span></div>
+      <div><span class="v ${xp>=0.5?"good":xp<=-0.5?"bad":""}">${sg(xp)}</span><span class="l">vs. esperado</span></div>
+      <div><span class="v">${sp}</span><span class="l">tabela</span></div></div>
+      <p>Games: ${g.w20} vitórias 2-0 · ${g.w21} 2-1 · ${g.l12} derrotas 1-2 · ${g.l02} 0-2${g.d?` · ${g.d} empates`:""}</p>
+      <p>Contra: ${vt}</p>${losses?`<p>Derrotas: ${losses}</p>`:""}</div>`}).join("");
+}
 function render(){
   const R=DATA.race, TOT=DATA.swiss_total||15, c8=DATA.cut8;
   $("sub").textContent=`DLC London · Main Event 1 · ${R?`Dia 2, após a R${R.round} de ${TOT}`:"Dia 2"}${DATA.live_round?` · R${DATA.live_round} em jogo`:""}`;
@@ -166,7 +199,7 @@ function render(){
     k("Líder",esc(lead.rec),`${esc(lead.name)} · ${lead.pts} pts`)+
     (br.length?br.map(x=>k(esc(nick(x)),`#${x.rank}`,`${x.rec} · ${x.pts} pts${c8?` · ${Math.max(0,c8.pts8-x.pts)} atrás do 8º`:""}`)).join(""):k("Brasileiros","0","nenhum no Dia 2"))
     :"";
-  renderBracket();renderTable();
+  renderBracket();renderXray();renderTable();
   $("upd").textContent=`Dados de ${new Date(DATA.fetched_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}.`;
 }
 async function refresh(){try{const r=await fetch(DATA_URL+"?t="+Date.now(),{cache:"no-store"});if(!r.ok)return;const d=await r.json();

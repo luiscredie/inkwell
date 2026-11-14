@@ -310,6 +310,8 @@ function renderDay2(){
   const TOT=DATA.swiss_total||15, rem=TOT-LAST, inn=DATA.players.filter(p=>p.d2), out=DATA.players.filter(p=>!p.d2);
   inn.sort((a,b)=>r(a,LAST).rank-r(b,LAST).rank);
   const c8=DATA.cut8;
+  // Ninguém mais alcança o 8º: encerra a participação brasileira e aponta para a cobertura do top 8.
+  if(LAST>SWISS&&c8&&inn.every(p=>r(p,LAST).pts+3*rem<c8.pts8||(rem===0&&r(p,LAST).rank>8))) return renderClosed(inn,out,rem);
   const chip=p=>{const c=r(p,LAST), d2=LAST>SWISS;
     const gap=c8&&d2?(c.pts>=c8.pts8?`<span class="nd g">${c.rank<=8?"no top 8 agora":"empatado com o 8º"}</span>`:`<span class="nd">${c8.pts8-c.pts} pts atrás do 8º</span>`):"";
     return `<span class="d2p" style="--tc:var(${TEAMS[p.team].c})"><b>${esc(p.name)}</b><span class="nd">${c.pts} pts</span><span class="nd">${esc(c.rec)} · #${c.rank}${d2&&c8?` de ${c8.n}`:""}</span>${gap}${LIVE&&p.live?resTag(p.live):""}</span>`};
@@ -317,6 +319,17 @@ function renderDay2(){
   $("d2").innerHTML=(inn.length?`<div class="d2g ok"><h3>No Dia 2<span class="c">${inn.length}</span></h3><div class="d2l">${inn.map(chip).join("")}</div></div>`:"")+
     (c8&&LAST>SWISS?`<p class="d2note">Linha do top 8 agora: o 8º colocado tem <b>${c8.pts8} pts</b> (o 9º, ${c8.pts9}). Os 8 primeiros após a R${TOT} vão ao top cut.</p>`:"")+
     `<p class="d2note">${out.length} brasileiros pararam no dia 1; a campanha deles segue na lista abaixo com a posição final da R${SWISS}.${LAST<=SWISS?` Os pontos do Dia 2 aparecem quando a R${SWISS+1} terminar.`:""}</p>`;
+}
+function renderClosed(inn,out,rem){
+  const TOT=DATA.swiss_total||15, all=[...DATA.players].sort((a,b)=>r(a,LAST).rank-r(b,LAST).rank);
+  const ana=DATA.players.filter(p=>p.ana).flatMap(p=>p.ana.rows.filter(x=>!x.bye));
+  const W=ana.filter(x=>x.res==="W").length,L=ana.filter(x=>x.res==="L").length,D=ana.filter(x=>x.res==="D").length;
+  const chip=p=>{const c=r(p,LAST), lv=LIVE&&p.live?resTag(p.live):"";
+    return `<span class="d2p" style="--tc:var(${TEAMS[p.team].c})"><b>${esc(p.name)}</b><span class="nd">${esc(c.rec)} · ${c.pts} pts · #${c.rank}</span>${rem>0||LIVE?`<span class="nd">${LIVE&&LIVE<=TOT?`joga a R${LIVE}`:""}</span>`:`<span class="nd g">final</span>`}${lv}</span>`};
+  $("d2Title").textContent="Participação brasileira encerrada";
+  $("d2").innerHTML=`<div class="d2g ok"><h3>No Dia 2<span class="c">${inn.length}</span></h3><div class="d2l">${inn.map(chip).join("")}</div></div>`+
+    `<p class="d2note">${DATA.players.length} brasileiros no DLC London Main Event 1. ${inn.length===1?`Só ${esc(inn[0].name)} passou`:`${inn.length} passaram`} do corte de 18 pontos para o Dia 2${inn.length?`, e ${inn.length===1?"ficou":"ficaram"} fora do top 8`:""}. No dia 1 o grupo fez ${W}-${L}${D?"-"+D:""} (${Math.round((W+D/2)/(W+L+D)*100)}% de aproveitamento). Melhor colocação: ${esc(all[0].name)}, #${r(all[0],LAST).rank}.</p>`+
+    `<p class="d2note"><a href="top8/" style="color:var(--fg);font-weight:600">A cobertura segue no Top 8 ao vivo →</a> classificação, chave eliminatória e raio-X dos 8 finalistas.</p>`;
 }
 function sparkHTML(p){
   const pts=[];for(let i=1;i<=LAST;i++)if(p.rounds[i])pts.push([i,p.rounds[i].rank]);
