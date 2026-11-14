@@ -287,3 +287,66 @@ test('scanner: each card in the list has its language; the one chosen stays for 
   await page.locator('[data-testid="scan-review"]').getByRole('button', { name: 'Adicionar 1 carta à coleção' }).click();
   await expect.poll(() => calls.filter((c) => /rpc\/(apply_collection_delta|collection_change)$/.test(c.path)).flatMap((c) => c.body.p_delta)).toEqual([{ card_id: 'LOR14-1', qty: 1, foil: false, lang: 'ja' }]);
 });
+
+// ---------- etapa 3: the Mural (supabase/card_langs_board.sql) ----------
+const TRADES = new URL('trades/', process.env.INKWELL_URL || 'http://localhost:8080/index.html').href;
+const ANA = '22222222-2222-4222-8222-222222222222';
+async function board(page, { noColumn = false } = {}) {
+  const calls = [];
+  await page.addInitScript((me) => {
+    localStorage.setItem('inkwell-lang', 'pt');
+    const exp = Math.floor(Date.now() / 1000) + 3600;
+    localStorage.setItem('inkwell-counter-auth', JSON.stringify({ access_token: 'x.' + btoa(JSON.stringify({ sub: me, exp })) + '.y', refresh_token: 'r', expires_at: exp, user: { id: me, email: 'luis@example.com' } }));
+  }, ME);
+  await page.route('**/rest/v1/**', (route) => {
+    const req = route.request(), path = new URL(req.url()).pathname.replace(/.*\/rest\/v1\//, ''), body = req.postData() ? JSON.parse(req.postData()) : null;
+    calls.push({ path, method: req.method(), body });
+    const json = (v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+    if (path === 'listings' && req.method() === 'POST') {
+      if (noColumn && JSON.stringify(body).includes('"lang"')) return route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ code: 'PGRST204', message: "Could not find the 'lang' column of 'listings' in the schema cache" }) });
+      return route.fulfill({ status: 201, body: '' });
+    }
+    if (path === 'user_trades' && req.method() === 'POST') return route.fulfill({ status: 201, body: '' });
+    if (path === 'inkwell_profiles') return json([{ profile: 'luiscredie', updated_at: '2026-11-14T10:00:00Z', collection: { [MUSHU]: { n: 2, f: 0 } }, wishlist: {} }]);
+    if (path === 'friendships') return json([{ requester: ME, addressee: ANA, status: 'accepted' }]);
+    if (path === 'listings') return json([
+      { id: 'l1', user_id: ANA, kind: 'trade', card_id: MICKEY, qty: 1, foil: false, price_brl: null, note: '', lang: 'ja', created_at: '2026-11-13T12:00:00Z' },
+      { id: 'l2', user_id: ANA, kind: 'sell', card_id: MUSHU, qty: 1, foil: false, price_brl: 3, note: '', lang: null, created_at: '2026-11-12T12:00:00Z' }]);
+    if (path === 'profiles') return json([{ user_id: ANA, display_name: 'Ana Souza' }]);
+    if (path === 'rpc/my_settings') return json({ user_id: ME, auto_collection: false });
+    if (path === 'rpc/my_duels_sync') return json(null);
+    return json([]);
+  });
+  return calls;
+}
+
+test('Mural: the language on a post, a filter by language, and a trade proposed from it keeps the language', async ({ page }) => {
+  const calls = await board(page);
+  await page.goto(TRADES + '?tab=board');
+  await expect(page.locator('[data-listing="l1"] [data-testid="post-lang-tag"]')).toHaveText('JA');
+  await expect(page.locator('[data-listing="l2"] [data-testid="post-lang-tag"]')).toHaveCount(0);
+  await page.locator('#boardLang').selectOption('ja');
+  await expect(page.locator('[data-listing]')).toHaveCount(1);
+  await page.locator('[data-listing="l1"]').getByRole('button', { name: 'Propor troca' }).click();
+  await expect(page.locator('[data-ilang^="gt:"]')).toHaveValue('ja');
+  await page.locator('#fSave').click();
+  await expect.poll(() => calls.filter((c) => c.path === 'user_trades' && c.method === 'POST').map((c) => c.body.got)).toEqual([[{ card_id: MICKEY, qty: 1, foil: false, lang: 'ja' }]]);
+});
+
+test('Mural: a new post with its language; before the column exists it is posted without it', async ({ page }) => {
+  for (const noColumn of [false, true]) {
+    const calls = await board(page, { noColumn });
+    await page.goto(TRADES + '?tab=board');
+    await page.getByRole('button', { name: 'Novo anúncio' }).click();
+    await page.locator('[data-post="buy"]').click();
+    await expect(page.locator('[data-plang=""]')).toHaveText('Qualquer idioma');
+    await page.locator('[data-plang="it"]').click();
+    await page.locator('[data-search="bd"]').fill('mushu majestic');
+    await page.locator('[data-sugg="bd"] [role="option"]').first().click();
+    await page.locator('#fSave').click();
+    const posts = () => calls.filter((c) => c.path === 'listings' && c.method === 'POST').map((c) => c.body[0]);
+    if (!noColumn) await expect.poll(posts).toEqual([expect.objectContaining({ kind: 'buy', card_id: MUSHU, lang: 'it' })]);
+    else { await expect.poll(() => posts().length).toBe(2); expect(posts()[1].lang).toBeUndefined(); }
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+  }
+});
