@@ -14,6 +14,7 @@ Three markers are filled in at build time, so shared code lives in one place:
   /*@PICKER_JS@*/   src/site/cardpicker.js   showcase card picker (search, filters, finish, zoom)
   /*@AIPROMPT_JS@*/ src/site/aiprompt.js     Jogos: a game as a prompt for the player's own AI
   /*@COLLIMPORT_JS@*/ src/site/collimport.js Coleção: import a collection exported by another app
+  /*@CARDLANG_JS@*/ src/site/cardlang.js     Coleção: the printing language of each copy (supabase/card_langs.sql)
   /*@CARD_INDEX@*/  compact card index from site/data/cards.json (re-run after a catalog update)
   /*@APP_STATIC:name@*/  a pure static method copied verbatim from the Inkwell app (legacy/site/index.html — the retired app, kept as source, not published), so both give the same answer
 The Decks page has its own builder (tools/build_site_decks.py), which this script also runs.
@@ -108,10 +109,11 @@ def render(name: str, catalog: dict) -> str:
     html = html.replace("/*@PICKER_JS@*/", (SRC / "cardpicker.js").read_text(encoding="utf-8"))
     html = html.replace("/*@AIPROMPT_JS@*/", (SRC / "aiprompt.js").read_text(encoding="utf-8"))
     html = html.replace("/*@COLLIMPORT_JS@*/", (SRC / "collimport.js").read_text(encoding="utf-8"))
+    html = html.replace("/*@CARDLANG_JS@*/", (SRC / "cardlang.js").read_text(encoding="utf-8"))
     html = html.replace("/*@DECKVIEW_JS@*/", (SRC / "deckview.js").read_text(encoding="utf-8"))
     if PAGES[name]:
         html = html.replace("/*@CARD_INDEX@*/", json.dumps(PAGES[name](catalog), ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/"))
-    for marker in ("/*@CLOUD_JS@*/", "/*@SHELL_JS@*/", "/*@PICKER_JS@*/", "/*@AIPROMPT_JS@*/", "/*@COLLIMPORT_JS@*/", "/*@DECKVIEW_JS@*/", "/*@CARD_INDEX@*/"):
+    for marker in ("/*@CLOUD_JS@*/", "/*@SHELL_JS@*/", "/*@PICKER_JS@*/", "/*@AIPROMPT_JS@*/", "/*@COLLIMPORT_JS@*/", "/*@CARDLANG_JS@*/", "/*@DECKVIEW_JS@*/", "/*@CARD_INDEX@*/"):
         if marker in html:
             raise SystemExit(f"{name}: marker {marker} left unfilled")
     return site_html.hide_img_from_preloader(html)

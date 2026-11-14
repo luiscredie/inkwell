@@ -630,7 +630,15 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       const [kind, id] = (apply ? b.dataset.capply : b.dataset.cskip).split(":");
       now(b, async () => {
         try { await applyTrade(kind, id, apply); }
-        catch (e) { if (e?.message === "no-profile") b.closest("[data-cprompt]").querySelector(".cp-text").textContent = Tx("No Inkwell collection to update."); throw e; }
+        catch (e) {
+          const cp = b.closest("[data-cprompt]")?.querySelector(".cp-text");
+          if (e?.message === "no-profile" && cp) cp.textContent = Tx("No Inkwell collection to update.");
+          // supabase/card_langs.sql: a card you gave has copies in two or more languages and the trade doesn't say which
+          else if (cp && /lang_required|lang_short/.test(String(e?.why || e?.message))) cp.textContent = lang === "pt"
+            ? "Uma carta que você deu tem cópias em mais de um idioma. Tire-a pela Coleção, escolhendo o idioma, e depois toque em “Agora não” aqui."
+            : "A card you gave has copies in more than one language. Take it out in Collection, choosing the language, then tap “Not now” here.";
+          throw e;
+        }
       });
     };
     app.querySelectorAll("[data-capply]").forEach((b) => b.onclick = () => decide(b, true));
