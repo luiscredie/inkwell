@@ -79,3 +79,24 @@ test('Liga Lorcana CSV: Edicao (Sigla), Card (EN), Quantidade, Extras = Foil, Ca
   assert.deepEqual(ids(r), ['LOR10-10:4/1', 'LOR9-53:2/0']);
   assert.equal(r.rejects.length, 1);
 });
+
+// ---------- the printing language (supabase/card_langs.sql) ----------
+const langs = (r) => total(r.rows).map((x) => `${x.id}:${x.lang || '-'}:${x.n}/${x.f}`).sort();
+test('language: a column (TCGplayer "Language", Liga "Idioma"), words in Portuguese or English, unknown ones left out', () => {
+  const tcg = 'Quantity,Name,Set,Card Number,Printing,Language\n2,Gurgi - Apple Lover,Whispers in the Well,10,Normal,Japanese\n1,Gurgi - Apple Lover,Whispers in the Well,10,Normal,English\n1,Gurgi - Apple Lover,Whispers in the Well,10,Normal,Korean\n';
+  const r = parse(tcg, 'tcg.csv', cards, sets);
+  assert.equal(r.langs, true);
+  assert.deepEqual(langs(r), ['LOR10-10:-:1/0', 'LOR10-10:en:1/0', 'LOR10-10:ja:2/0']);
+  const liga = 'Edicao (PTBR),Edicao (EN),Edicao (Sigla),Card (PT),Card (EN),Quantidade,Qualidade (M NM SP MP HP D),Idioma (BR EN DE ES FR IT JP KO RU TW),Raridade,Cor (C D O E Y F R G L M P W),Extras,Card #,Comentario,# Cards na Edicao\n'
+    + ',Whispers in the Well,LOR10,,Gurgi - Apple Lover,1,NM,JP,C,,Foil,10,,\n,Whispers in the Well,LOR10,,Gurgi - Apple Lover,3,NM,IT,C,,,10,,\n';
+  assert.deepEqual(langs(parse(liga, 'liga.csv', cards, sets)), ['LOR10-10:it:3/0', 'LOR10-10:ja:0/1']);
+  assert.equal(parse('Set Number,Card Number,Variant,Count,Name\n10,10,Normal,1,Gurgi - Apple Lover\n', 'd.csv', cards, sets).langs, false, 'no language column: langs false');
+});
+
+test('language: a plain list with headings; Inkwell JSON with its split', () => {
+  const r = parse('2 Gurgi - Apple Lover\nItaliano:\n1 Gurgi - Apple Lover\nJP\n1 Gurgi - Apple Lover (foil)', 'colado.txt', cards, sets);
+  assert.deepEqual(langs(r), ['LOR10-10:-:2/0', 'LOR10-10:it:1/0', 'LOR10-10:ja:0/1']);
+  assert.equal(r.rejects.length, 0, 'the headings are not cards');
+  const j = parse(JSON.stringify({ collection: { 'LOR10-10': { n: 3, f: 1, l: { en: { n: 1, f: 1 }, it: { n: 1 } } } } }), 'x.json', cards, sets);
+  assert.deepEqual(langs(j), ['LOR10-10:-:1/0', 'LOR10-10:en:1/1', 'LOR10-10:it:1/0']);
+});

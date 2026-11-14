@@ -202,3 +202,88 @@ test('undo the last marking after a reload', async ({ page }) => {
   await page.locator('[data-testid="lang-undo"]').click();
   await expect.poll(() => rpc(calls, 'undo_lang_op')).toEqual([{ p_op: op }]);
 });
+
+// ---------- etapa 2: filter and tag, scanner per card, import and export ----------
+test('filter by card language, and the tag on cards with copies in another language', async ({ page }) => {
+  await setup(page, { collection: { [MUSHU]: { n: 2, f: 0, l: { it: { n: 1 } } }, [MICKEY]: { n: 1, f: 0, l: { en: { n: 1 } } } }, prefs: { card_lang_prompt: 'done' } });
+  await page.goto(BASE);
+  await expect(page.locator(`[data-card="${MUSHU}"] [data-testid="lang-tag"]`)).toHaveText('IT');
+  await expect(page.locator(`[data-card="${MICKEY}"] [data-testid="lang-tag"]`)).toHaveCount(0);   // English is the default: no tag
+  await page.locator('#openFilters').click();
+  await page.locator('[data-testid="filter-langs"] [data-k="it"]').click();
+  await page.locator('#fApply').click();
+  await expect(page.locator('#count')).toHaveText('1 cartas');
+  await expect(page.locator(`[data-card="${MUSHU}"]`)).toBeVisible();
+  await page.getByRole('button', { name: /Remover filtro IT/ }).click();
+  await page.locator('#openFilters').click();
+  await page.locator('[data-testid="filter-langs"] [data-k="none"]').click();
+  await page.locator('#fApply').click();
+  await expect(page.locator('#count')).toHaveText('1 cartas');   // only Mushu has a copy with no language
+  await expect(page.locator(`[data-card="${MICKEY}"]`)).toHaveCount(0);
+});
+
+test('import: a file with a language column, compared language by language; lines without one get the language chosen', async ({ page }) => {
+  const { calls } = await setup(page, { collection: { [MUSHU]: { n: 2, f: 0, l: { it: { n: 1 } } }, [MICKEY]: { n: 1, f: 0 } }, prefs: { card_lang_prompt: 'done' } });
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Importar' }).click();
+  await page.locator('#impFile').setInputFiles({ name: 'tcg.csv', mimeType: 'text/csv', buffer: Buffer.from('Name,Quantity,Language\nMushu - Majestic Dragon,2,Italian\nMickey Mouse - Brave Little Tailor,2,\n') });
+  await expect(page.locator('[data-testid="imp-langs"]')).toHaveText('Idiomas no arquivo: IT 2 · 2 sem idioma');
+  await expect(page.locator('[data-testid="imp-lang"] [data-ilang=""]')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('[data-testid="imp-lang"] [data-ilang="ja"]').click();
+  await page.getByRole('button', { name: 'Adicionar 2 cartas à coleção' }).click();   // 1 more IT Mushu (has 1), 1 more Mickey (has 1 with no language)
+  await expect.poll(() => deltas(calls)).toEqual([{ card_id: MUSHU, qty: 1, foil: false, lang: 'it' }, { card_id: MICKEY, qty: 1, foil: false, lang: 'ja' }]);
+});
+
+test('import: a plain list with language headings; a file with no languages keeps comparing totals, in the default language', async ({ page }) => {
+  const { calls } = await setup(page, { collection: { [MUSHU]: { n: 1, f: 0 } }, prefs: { card_lang_prompt: 'done', card_lang: 'en' } });
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Importar' }).click();
+  await page.locator('#impText').fill('Japonês\n1 Mickey Mouse - Brave Little Tailor\nItaliano:\n2 Mushu - Majestic Dragon');
+  await page.getByRole('button', { name: 'Ler a lista' }).click();
+  await expect(page.locator('[data-testid="imp-langs"]')).toHaveText('Idiomas no arquivo: IT 2 · JA 1');
+  await page.getByRole('button', { name: 'Adicionar 3 cartas à coleção' }).click();
+  await expect.poll(() => deltas(calls)).toEqual([{ card_id: MICKEY, qty: 1, foil: false, lang: 'ja' }, { card_id: MUSHU, qty: 2, foil: false, lang: 'it' }]);
+  await page.getByRole('button', { name: 'Importar' }).click();
+  await page.locator('#impText').fill('4 Mushu - Majestic Dragon');
+  await page.getByRole('button', { name: 'Ler a lista' }).click();
+  await expect(page.locator('[data-testid="imp-lang"] [data-ilang="en"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: /^Adicionar 1 cartas? à coleção$/ }).click();   // has 3 in all now: 1 more
+  await expect.poll(() => deltas(calls).length).toBe(3);
+  expect(deltas(calls)[2]).toEqual({ card_id: MUSHU, qty: 1, foil: false, lang: 'en' });
+});
+
+test('export: the Inkwell CSV has one line per card and language, and reads back', async ({ page }) => {
+  await setup(page, { collection: { [MUSHU]: { n: 3, f: 1, l: { it: { n: 1 }, en: { n: 1, f: 1 } } } }, prefs: { card_lang_prompt: 'done' } });
+  await page.goto(BASE);
+  await page.locator('[data-testid="export"]').click();
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('[data-testid="export-go"]').click()]);
+  const text = await (await import('node:fs')).promises.readFile(await dl.path(), 'utf8');
+  const lines = text.slice(1).trim().split('\r\n').map((l) => l.split(';'));
+  expect(lines[0].slice(7, 10)).toEqual(['language', 'normal', 'foil']);
+  expect(lines.slice(1).map((l) => [l[0], l[7], l[8], l[9]])).toEqual([[MUSHU, 'EN', '1', '1'], [MUSHU, 'IT', '1', '0'], [MUSHU, '', '1', '0']]);
+  const back = await page.evaluate((t) => { const r = window.INKWELL_COLL_IMPORT.parse(t, 'x.csv', [{ id: 'LOR7-137', name: 'Mushu - Majestic Dragon', set: 'LOR7', num: '137' }], []); return r.rows.map((x) => [x.id, x.lang, x.n, x.f]); }, text);
+  expect(back).toEqual([[MUSHU, 'en', 1, 1], [MUSHU, 'it', 1, 0], [MUSHU, null, 1, 0]]);
+});
+
+const IMG = (f) => `../lorcana-card-images/images/${f}`;
+test('scanner: each card in the list has its language; the one chosen stays for the next cards', async ({ page }) => {
+  const { calls } = await setup(page, { prefs: { card_lang_prompt: 'done' } });
+  await page.addInitScript((src) => {
+    navigator.mediaDevices.getUserMedia = async () => {
+      const c = document.createElement('canvas'); c.width = 720; c.height = 1280;
+      const ctx = c.getContext('2d'), img = new Image(); img.src = src;
+      setInterval(() => { ctx.fillStyle = '#4a3426'; ctx.fillRect(0, 0, c.width, c.height); const g = window.__inkwellScanGuide?.();
+        if (g && img.complete && img.naturalWidth) { const w = g.w * 0.68, h = g.h * 0.68; ctx.drawImage(img, g.x + g.w * 0.02 - (w - g.w) / 2, g.y - g.h * 0.015 - (h - g.h) / 2, w, h); } }, 60);
+      return c.captureStream(15);
+    };
+  }, IMG('Fru_Fru_-_VIP_Guest__LOR14-1.jpg'));
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Escanear' }).click();
+  await expect(page.locator('[data-testid="scan-last"]')).toContainText('Fru Fru', { timeout: 15000 });
+  await page.getByRole('button', { name: 'Concluir' }).click();
+  const item = page.locator('[data-testid="scan-review"] [data-rev]').first();
+  await expect(item.locator('[data-rlang]')).toHaveValue('en');
+  await item.locator('[data-rlang]').selectOption('ja');
+  await page.locator('[data-testid="scan-review"]').getByRole('button', { name: 'Adicionar 1 carta à coleção' }).click();
+  await expect.poll(() => calls.filter((c) => /rpc\/(apply_collection_delta|collection_change)$/.test(c.path)).flatMap((c) => c.body.p_delta)).toEqual([{ card_id: 'LOR14-1', qty: 1, foil: false, lang: 'ja' }]);
+});
