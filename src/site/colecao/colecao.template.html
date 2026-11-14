@@ -103,6 +103,21 @@ body.coll-ro .qty button, body.coll-ro .mv, body.coll-ro [data-bq], body.coll-no
 .demo-feats span { color: var(--text-2); font-size: var(--fs-small); }
 .demo-feats span b { color: var(--text); font-size: var(--fs-body, 1rem); }
 .imp-list span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* idioma das cartas */
+.lang-box { gap: var(--sp-2); margin-top: var(--sp-3); padding: var(--sp-3); }
+.lang-box .ic { width: 16px; height: 16px; vertical-align: -3px; }
+.lang-chips { gap: 6px; }
+.lang-chips .chipbtn { min-height: 40px; }
+.lang-chips .lang-nm { font-weight: 400; }
+@media (max-width: 480px) { .lang-chips .lang-nm { display: none; } .lang-chips .chipbtn[aria-pressed="true"] .lang-nm { display: inline; } }
+.lang-add { display: grid; gap: 6px; }
+.lang-row { min-height: 48px; border-top: 1px solid var(--line); flex-wrap: wrap; gap: var(--sp-2); }
+.lang-prog { margin: 0 0 var(--sp-4); padding: var(--sp-3) var(--sp-4); }
+.lang-pct { font-weight: 700; color: var(--accent); margin-left: 6px; }
+.lang-bar { height: 6px; border-radius: var(--r-pill); background: var(--field); margin-top: var(--sp-2); overflow: hidden; }
+.lang-bar span { display: block; height: 100%; background: var(--accent); }
+.lang-ask { margin: 0 0 var(--sp-4); }
+.lang-ask .actions { flex-wrap: wrap; }
 </style>
 
 <main class="page" id="page">
@@ -115,8 +130,10 @@ body.coll-ro .qty button, body.coll-ro .mv, body.coll-ro [data-bq], body.coll-no
 <dialog class="sheet wide" id="impSheet" aria-labelledby="impT"></dialog>
 <dialog class="sheet wide" id="shareSheet" aria-labelledby="shT"></dialog>
 <dialog class="sheet wide" id="tradeSheet" aria-labelledby="tfT"></dialog>
+<dialog class="sheet wide" id="langSheet" aria-labelledby="lgT"></dialog>
 <div class="toast-host"><div class="toast" id="toast" role="status" hidden></div></div>
 
+<script>/*@CARDLANG_JS@*/</script>
 <script>
 const CARD_INDEX = /*@CARD_INDEX@*/;
 (() => {
@@ -273,7 +290,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     if (ids.length) for (const r of (await CLOUD.api(`profiles?user_id=in.(${ids.join(",")})&select=user_id,display_name`).catch(() => [])) || []) names.set(r.user_id, r.display_name);
     const add = (items, who, due, friend) => { for (const e of items || []) {
       const m = e.foil ? lentF : lentN; m.set(e.card_id, (m.get(e.card_id) || 0) + (+e.qty || 0));
-      (lentWho.get(e.card_id) || lentWho.set(e.card_id, []).get(e.card_id)).push({ who, qty: +e.qty || 0, foil: !!e.foil, due, friend });
+      (lentWho.get(e.card_id) || lentWho.set(e.card_id, []).get(e.card_id)).push({ who, qty: +e.qty || 0, foil: !!e.foil, lang: e.lang || null, due, friend });
     } };
     for (const x of l || []) if (x.direction === "lent") add(x.items, x.person, x.due_on, false);
     for (const x of mineToFriends) add(x.items, names.get(x.borrower) || Tx("a friend"), x.due_on, true);
@@ -315,6 +332,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     source = key; try { key ? localStorage.setItem(SRC_KEY, key) : localStorage.removeItem(SRC_KEY); } catch { /* */ }
     const own = profiles.find((x) => x.profile === key); if (own) profileName = own.profile;
     applySource(); shown = 120; renderAll();
+    loadLangState().then((st) => { if (st && prof()?.profile === key) renderAll(); });
   }
 
   // ---------- filtering ----------
@@ -403,7 +421,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     const rows = filtered(), n = activeCount();
     const keep = document.activeElement?.id, caret = document.activeElement?.selectionStart;
     const empty = !Object.values(coll()).some((e) => (+e.n || 0) + (+e.f || 0) > 0);
-    app.innerHTML = `${stats()}
+    app.innerHTML = `${stats()}${langBanner()}
       <div class="toolbar" role="search">
         <span class="search"><i class="ic i-search"></i><input type="search" id="q" value="${esc(v.q)}" placeholder="${Tx("Search cards")}" aria-label="${Tx("Search cards")}"></span>
         <button type="button" class="btn icon filter-btn" id="openFilters" aria-label="${esc(Tx("Filters") + (n ? ", " + Tx("{n} active", { n }) : ""))}"><i class="ic i-filter"></i>${n ? `<span class="count">${n}</span>` : ""}</button>
@@ -424,6 +442,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   }
   const again = () => { shown = 120; save(); render(); };
   function wire() {
+    langWire();
     $("q").addEventListener("input", (e) => { v.q = e.target.value; again(); });
     $("sort").onchange = (e) => { v.sort = e.target.value; again(); };
     $("openFilters").onclick = openFilters;
@@ -487,6 +506,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     let undeckArmed = null;   // "Desmontar" asks twice
     let mv = null;   // {k, to, qty}: the "how many?" step before moving between Fichário and Casa
     let act = null;  // {kind: "loan" | "sale", ...}: Emprestar / Vender, drawn by actPanel() below
+    // the card's languages: add = language for "+", pend = a "+" waiting for a language, rm = a "−" asking which one,
+    // edit = the split being edited ({ lang: { n, f } })
+    const lg = { add: null, pend: null, rm: null, edit: null, saved: null };   // saved: the last split saved here (undo in the sheet)
     const draw = () => {
       const o = owned(id), pn = priceOf(id), pf = priceOf(id, true), [a, b] = split(c.name);
       const value = (pn ?? 0) * o.n + (pf ?? 0) * o.f, noPrice = (pn == null ? o.n : 0) + (pf == null ? o.f : 0), lw = lentWho.get(id) || [];
@@ -520,6 +542,29 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
           <div class="row" style="gap:var(--sp-2)"><button type="button" class="btn" id="mvCancel" style="flex:1">${Tx("Cancel")}</button>
             <button type="button" class="btn primary" id="mvOk" style="flex:2">${esc(mv.to === "trade" ? P(`Mover ${mv.qty} para Trocas`, `Move ${mv.qty} to Trades`) : Tx(mv.to === "home" ? "Move {n} to Home" : "Move {n} to the Binder", { n: mv.qty }))}</button></div></div>`;
       };
+      const langBox = () => {
+        if (!CL) return "";
+        const e = coll()[id] || { n: 0, f: 0 }, sp = CL.split(e), st = lstate(), edit = !!st && !readOnly();
+        if (!st && !Object.keys(sp.l).length) return "";
+        const tot = sp.n + sp.f, dl = st ? defLang() : "en", add = lg.add || (askLang() ? null : lastLang || dl), sum = CL.summary(e, lang, dl);
+        let h = `<div class="card inset stack lang-box" data-testid="card-langs">
+          <div class="row between" style="gap:var(--sp-2)"><b><i class="ic i-globe"></i> ${esc(P("Idioma da carta", "Card language"))}</b>${edit && tot && !lg.edit ? `<button type="button" class="btn ghost small" data-lg-edit data-testid="lang-edit">${esc(sp.known.n + sp.known.f ? P("Editar idiomas", "Edit languages") : P("Dividir por idioma", "Split by language"))}</button>` : ""}</div>
+          <div class="small" data-testid="lang-summary">${esc(!tot ? P("Nenhuma cópia ainda.", "No copies yet.") : sum || (tot === 1 ? P(`Sem idioma · aparece como ${langName(dl)}`, `No language · shown as ${langName(dl)}`) : P(`Todas sem idioma · aparecem como ${langName(dl)}`, `None has a language · shown as ${langName(dl)}`)))}</div>`;
+        if (edit && !lg.edit) h += `<div class="lang-add"><span class="small muted">${esc(P("Novas cópias (botão +) entram em:", "New copies (the + button) go in as:"))}</span>${langChips("data-lg-add", add)}</div>`;
+        if (lg.pend) h += `<p class="small bad" role="alert" style="margin:0" data-testid="lang-pick">${esc(P("Escolha acima o idioma da nova cópia.", "Choose the new copy's language above."))}</p>`;
+        if (lg.rm) h += `<div class="notice ask wrap" data-testid="lang-rm"><span class="t"><b>${esc(P(`Tirar uma ${lg.rm.k === "f" ? "foil" : "normal"} de qual idioma?`, `Take out one ${lg.rm.k === "f" ? "foil" : "normal"} in which language?`))}</b>
+            <div class="chips lang-chips">${lg.rm.choice.map((x) => `<button type="button" class="chipbtn" data-lg-rm="${x.lang}"><b>${x.lang.toUpperCase()}</b> <span class="lang-nm">${esc(langName(x.lang))}</span> <span class="muted">${x.count}</span></button>`).join("")}</div></span>
+            <button type="button" class="btn ghost small" data-lg-rmx>${Tx("Cancel")}</button></div>`;
+        if (lg.saved) h += `<div class="notice ok" data-testid="lang-saved"><i class="ic i-check"></i><span class="t">${esc(P("Idiomas salvos.", "Languages saved."))}</span><button type="button" class="btn ghost small" data-lg-undo><i class="ic i-undo"></i>${Tx("Undo")}</button></div>`;
+        if (lg.edit) {
+          const ks = ["n", "f"].filter((k) => sp[k] > 0), used = (k) => LANGS.reduce((t, x) => t + ((lg.edit[x] || {})[k] || 0), 0);
+          h += `<div class="lang-edit" data-testid="lang-editor">${LANGS.map((x) => `<div class="row between lang-row"><span><b>${x.toUpperCase()}</b> <span class="small muted">${esc(langName(x))}</span></span>
+              <span class="row" style="gap:var(--sp-2);flex-wrap:nowrap">${ks.map((k) => { const q = (lg.edit[x] || {})[k] || 0; return `<span class="small muted">${k === "f" ? "foil" : "normal"}</span><span class="qty"><button type="button" data-le="${x}:${k}:-1" aria-label="${esc(P(`Uma ${k === "f" ? "foil" : "normal"} ${x.toUpperCase()} a menos`, `One less ${k === "f" ? "foil" : "normal"} ${x.toUpperCase()}`))}" ${q <= 0 ? "disabled" : ""}>−</button><output>${q}</output><button type="button" data-le="${x}:${k}:1" aria-label="${esc(P(`Uma ${k === "f" ? "foil" : "normal"} ${x.toUpperCase()} a mais`, `One more ${k === "f" ? "foil" : "normal"} ${x.toUpperCase()}`))}" ${used(k) >= sp[k] ? "disabled" : ""}>+</button></span>`; }).join("")}</span></div>`).join("")}
+            <p class="small muted" style="margin:var(--sp-2) 0" data-testid="lang-left">${esc(P("Sem idioma:", "No language:"))} ${esc(ks.map((k) => `${sp[k] - used(k)} ${k === "f" ? "foil" : "normal"}`).join(" · "))}</p>
+            <div class="row" style="gap:var(--sp-2)"><button type="button" class="btn" data-lg-cancel style="flex:1">${Tx("Cancel")}</button><button type="button" class="btn primary" data-lg-save style="flex:2">${esc(P("Salvar idiomas", "Save languages"))}</button></div></div>`;
+        }
+        return h + "</div>";
+      };
       const row = (k, label, n, ln) => `<div class="row between" style="min-height:60px${k === "f" ? ";border-top:1px solid var(--line)" : ""}"><div><b>${label}</b><div class="small muted">${esc([Tx("{n} free", { n: Math.max(0, n - ln) }), ln ? Tx("{n} lent", { n: ln }) : ""].filter(Boolean).join(" · "))}</div></div>
         <div class="qty lg"><button type="button" data-d="${k}:-1" aria-label="${esc(Tx("Remove one {k}", { k: Tx(k === "f" ? "foil" : "normal") }))}" ${n <= 0 ? "disabled" : ""}>−</button><output data-n="${k}">${n}</output><button type="button" data-d="${k}:1" aria-label="${esc(Tx("Add one {k}", { k: Tx(k === "f" ? "foil" : "normal") }))}">+</button></div></div>`;
       sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><div><h2 id="cT">${esc(a)}${b ? ` · ${esc(b)}` : ""}</h2><div class="sub">${esc(setName(c.set))} · nº ${esc(c.num)}</div></div><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
@@ -533,11 +578,50 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
           ${brLine(id)}
           ${act ? `<div id="actBox" data-testid="act-${act.kind}"></div>` : `${homeReady ? (mv ? moveBox() : stocks) : `<div class="card inset stack" style="gap:0;padding:var(--sp-2) var(--sp-3)">${row("n", Tx("Normal"), o.n, lentN.get(id) || 0)}${row("f", Tx("Foil"), o.f, lentF.get(id) || 0)}</div>`}
           ${avail(id).n + avail(id).f ? `<div class="row act-btns"><button type="button" class="btn" id="aLoan"><i class="ic i-loan"></i>${Tx("Lend")}</button><button type="button" class="btn" id="aSale"><i class="ic i-trades"></i>${Tx("Sell")}</button></div>` : ""}`}
-          ${lw.length ? `<h3 style="margin:var(--sp-5) 0 var(--sp-2)">${Tx("Lent")}</h3>${lw.map((x) => `<div class="list-row on-field"><span class="av sm">${esc((x.who || "?")[0].toUpperCase())}</span><span class="t"><span>${esc(x.who)}</span><span class="meta">${esc([`${x.qty} ${Tx(x.foil ? "foil" : "normal")}`, x.due ? Tx("until {d}", { d: new Date(x.due + "T12:00:00").toLocaleDateString(LOC, { day: "numeric", month: "short" }) }) : ""].filter(Boolean).join(" · "))}</span></span><a class="btn ghost small" href="../trades/">${Tx("See")}</a></div>`).join("")}` : ""}
+          ${act || mv ? "" : langBox()}
+          ${lw.length ? `<h3 style="margin:var(--sp-5) 0 var(--sp-2)">${Tx("Lent")}</h3>${lw.map((x) => `<div class="list-row on-field"><span class="av sm">${esc((x.who || "?")[0].toUpperCase())}</span><span class="t"><span>${esc(x.who)}</span><span class="meta">${esc([`${x.qty} ${Tx(x.foil ? "foil" : "normal")}${x.lang ? ` · ${x.lang.toUpperCase()}` : ""}`, x.due ? Tx("until {d}", { d: new Date(x.due + "T12:00:00").toLocaleDateString(LOC, { day: "numeric", month: "short" }) }) : ""].filter(Boolean).join(" · "))}</span></span><a class="btn ghost small" href="../trades/">${Tx("See")}</a></div>`).join("")}` : ""}
           <p class="small faint" style="margin:var(--sp-3) 0 0">${Tx("Changes save right away. You can undo from the notice at the bottom.")}</p></div>
         <div class="sheet-foot"><a class="btn" href="../trades/?tab=board&q=${encodeURIComponent(a)}"><i class="ic i-board"></i>${Tx("Post on the board")}</a></div>`;
       sh.querySelectorAll("[data-close]").forEach((x) => x.onclick = () => sh.close());
-      sh.querySelectorAll("[data-d]").forEach((x) => x.onclick = () => { const [k, d, place] = x.dataset.d.split(":"); change(id, k, +d, false, place || "binder"); draw(); sh.querySelector(`[data-d="${x.dataset.d}"]`)?.focus(); });
+      sh.querySelectorAll("[data-d]").forEach((x) => x.onclick = () => {
+        const [k, d, place] = x.dataset.d.split(":"), pl = place || "binder";
+        if (+d > 0 && lstate() && !readOnly()) {
+          const add = lg.add || (askLang() ? null : lastLang || defLang());
+          if (!add) { lg.pend = { k, place: pl }; lg.rm = null; draw(); sh.querySelector("[data-lg-add]")?.focus(); return; }
+          lastLang = add; change(id, k, 1, false, pl, add);
+        } else if (+d < 0 && CL?.removeChoice(coll()[id], k)) {
+          lg.rm = { k, place: pl, choice: CL.removeChoice(coll()[id], k) }; lg.pend = null; draw(); sh.querySelector("[data-lg-rm]")?.focus(); return;
+        } else change(id, k, +d, false, pl);
+        lg.rm = null; lg.pend = null; draw(); sh.querySelector(`[data-d="${x.dataset.d}"]`)?.focus();
+      });
+      sh.querySelectorAll("[data-lg-add]").forEach((x) => x.onclick = () => {
+        const val = x.dataset.lgAdd; lg.add = val; lastLang = val;
+        if (lg.pend) { const pe = lg.pend; lg.pend = null; change(id, pe.k, 1, false, pe.place, val); }
+        draw(); sh.querySelector(`[data-lg-add="${val}"]`)?.focus();
+      });
+      sh.querySelectorAll("[data-lg-rm]").forEach((x) => x.onclick = () => { const r = lg.rm; lg.rm = null; change(id, r.k, -1, false, r.place, x.dataset.lgRm); draw(); });
+      sh.querySelector("[data-lg-rmx]")?.addEventListener("click", () => { lg.rm = null; draw(); });
+      sh.querySelector("[data-lg-edit]")?.addEventListener("click", () => { lg.edit = JSON.parse(JSON.stringify(CL.split(coll()[id]).l)); lg.rm = lg.pend = lg.saved = null; draw(); sh.querySelector("[data-le]")?.focus(); });
+      sh.querySelectorAll("[data-le]").forEach((x) => x.onclick = () => {
+        const [l2, k, d] = x.dataset.le.split(":"), e = lg.edit[l2] = { ...(lg.edit[l2] || {}) }; e[k] = Math.max(0, (e[k] || 0) + +d);
+        draw(); (sh.querySelector(`[data-le="${x.dataset.le}"]:not([disabled])`) || sh.querySelector("[data-lg-save]"))?.focus();
+      });
+      sh.querySelector("[data-lg-cancel]")?.addEventListener("click", () => { lg.edit = null; draw(); });
+      sh.querySelector("[data-lg-undo]")?.addEventListener("click", async () => { const op = lg.saved; lg.saved = null; await undoLangOp(op, prof()); draw(); });
+      sh.querySelector("[data-lg-save]")?.addEventListener("click", async (ev) => {
+        ev.currentTarget.disabled = true;
+        clearTimeout(pendingTimer); if (!(await flush(true))) { draw(); return; }   // the quantities first, then the split
+        const p = prof(), op = newOpId();
+        try {
+          const r = await rpc("set_card_langs", { p_owner: ownerOf(p), p_profile: pnameOf(p), p_card_id: id, p_langs: lg.edit, p_op: op });
+          if (r?.entry) p.collection[id] = r.entry;
+          const st = lstate(); if (st && r?.revision != null) st.revision = r.revision;
+          lg.edit = null; lg.saved = op; draw(); sh.querySelector("[data-lg-undo]")?.focus();
+        } catch (e) {
+          toast(/too_many/.test(String(e?.why || e?.message)) ? P("A carta mudou: são menos cópias agora. Confira e salve de novo.", "The card changed: fewer copies now. Check and save again.") : Tx("Couldn't save. Try again."), null, true);
+          await reloadColl(p).catch(() => {}); draw();
+        }
+      });
       sh.querySelectorAll("[data-undeck]").forEach((x) => x.onclick = async () => {
         const deck = x.dataset.undeck; if (undeckArmed !== deck) { undeckArmed = deck; draw(); return; }
         undeckArmed = null; x.disabled = true;
@@ -561,7 +645,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       $("mvCancel")?.addEventListener("click", () => { const back = `[data-mv="${mv.key}"]`; mv = null; draw(); sh.querySelector(back)?.focus(); });
       $("mvOk")?.addEventListener("click", () => { const { k, to, from: fr, qty, key } = mv; mv = null; move(id, k, qty, to, false, fr); draw(); sh.querySelector(`[data-mv="${key}"]:not([disabled])`)?.focus(); });
     };
-    draw(); redrawSheet = () => { if (sh.open) { mv = null; act = null; draw(); } };
+    draw(); redrawSheet = () => { if (sh.open) { mv = null; act = null; lg.pend = lg.rm = null; draw(); } };
     openSheet(sh, from);
     sh.addEventListener("close", () => { redrawSheet = null; renderAll(); }, { once: true });
   }
@@ -572,18 +656,30 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const avail = (id) => { const w = where(id); return { n: w.binder.n + w.home.n, f: w.binder.f + w.home.f }; };   // what can leave (not lent)
   const unitPrice = (id, k) => { const v = priceOf(id, k === "f"); return v == null ? "" : (Math.round(v * 100) / 100).toFixed(2); };
   const num = (v) => { const x = parseFloat(String(v).replace(",", ".")); return Number.isFinite(x) ? x : 0; };
+  // which language a lent or sold copy is: [] when the card has no languages, else the choices ("" = sem idioma)
+  const langOpts = (id, k) => {
+    if (!CL || !lstate()) return [];
+    const sp = CL.split(coll()[id]), o = LANGS.filter((x) => (sp.l[x]?.[k] || 0) > 0).map((x) => ({ lang: x, max: sp.l[x][k] }));
+    if (!o.length) return [];
+    if (sp.unknown[k] > 0) o.unshift({ lang: "", max: sp.unknown[k] });
+    return o;
+  };
+  const fitLang = (it) => { const o = langOpts(it.id, it.k); if (!o.length) { it.lang = null; return o; } if (!o.some((x) => x.lang === it.lang)) it.lang = o[0].lang; return o; };
+  const maxOf = (it) => { const o = fitLang(it), m = avail(it.id)[it.k]; return o.length ? Math.min(m, o.find((x) => x.lang === it.lang).max) : m; };
   function actPanel(sh, a, close) {
     const box = $("actBox"), sale = a.kind === "sale";
     const sum = () => Math.round(a.items.reduce((t, it) => t + num(it.price) * it.qty, 0) * 100) / 100;
     const total = () => (a.total == null || a.total === "" ? sum() : num(a.total));
     const draw = () => {
       const item = (it, i) => {
-        const c = BY.get(it.id), [nm, ver] = split(c?.name || it.id), av = avail(it.id), both = av.n > 0 && av.f > 0, max = av[it.k];
+        const c = BY.get(it.id), [nm, ver] = split(c?.name || it.id), av = avail(it.id), both = av.n > 0 && av.f > 0, lo = fitLang(it), max = maxOf(it);
+        if (it.qty > max) it.qty = Math.max(1, max);
         return `<div class="act-item" data-i="${i}">
           <div class="row between" style="gap:var(--sp-2)"><div style="min-width:0"><b>${esc(nm)}</b>${ver ? ` <span class="small muted">${esc(ver)}</span>` : ""}<div class="small muted">${esc(setName(c?.set))} · nº ${esc(c?.num || "")}${!both ? " · " + Tx(it.k === "f" ? "foil" : "normal") : ""}</div></div>
             ${a.items.length > 1 ? `<button type="button" class="btn ghost icon small" data-rm="${i}" aria-label="${esc(Tx("Remove {c}", { c: nm }))}"><i class="ic i-close"></i></button>` : ""}</div>
           <div class="row" style="gap:var(--sp-2);flex-wrap:wrap;margin-top:6px">
             ${both ? `<div class="seg" role="group" aria-label="${Tx("Finish")}">${["n", "f"].map((k) => `<button type="button" ${k === "f" ? 'class="is-foil" ' : ""}data-fin="${i}:${k}" aria-pressed="${it.k === k}">${Tx(k === "f" ? "Foil" : "Normal")}</button>`).join("")}</div>` : ""}
+            ${lo.length > 1 ? `<div class="seg" role="group" aria-label="${esc(P("Idioma", "Language"))}" data-testid="act-lang">${lo.map((x) => `<button type="button" data-alng="${i}:${x.lang}" aria-pressed="${it.lang === x.lang}">${esc(x.lang ? x.lang.toUpperCase() : P("sem idioma", "no language"))} <span class="muted">${x.max}</span></button>`).join("")}</div>` : lo.length === 1 && lo[0].lang ? `<span class="tag" data-testid="act-lang">${lo[0].lang.toUpperCase()}</span>` : ""}
             <div class="qty"><button type="button" data-q="${i}:-1" aria-label="${Tx("One less")}" ${it.qty <= 1 ? "disabled" : ""}>−</button><output data-qn="${i}">${it.qty}</output><button type="button" data-q="${i}:1" aria-label="${Tx("One more")}" ${it.qty >= max ? "disabled" : ""}>+</button></div>
             ${sale ? `<label class="field inline-field">${Tx("Each")}<span class="prefix"><span>R$</span><input type="text" inputmode="decimal" data-price="${i}" value="${esc(it.price)}" aria-label="${esc(Tx("Price of {c}", { c: nm }))}"></span></label>` : ""}
           </div></div>`;
@@ -631,8 +727,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       $("aTotal")?.addEventListener("input", (e) => { a.total = e.target.value; upd(); });
       $("aQ")?.addEventListener("input", (e) => { a.q = e.target.value; $("aRes").innerHTML = ""; const keep = e.target.selectionStart; draw(); const q = $("aQ"); q.focus(); q.setSelectionRange(keep, keep); });
       on("[data-price]", "input", (e) => { a.items[+e.target.dataset.price].price = e.target.value; if (a.total == null) $("aTotal").value = sum().toFixed(2); upd(); });
-      on("[data-q]", "click", (e) => { const [i, d] = e.currentTarget.dataset.q.split(":"), it = a.items[+i]; it.qty = Math.max(1, Math.min(avail(it.id)[it.k], it.qty + +d)); draw(); });
-      on("[data-fin]", "click", (e) => { const [i, k] = e.currentTarget.dataset.fin.split(":"), it = a.items[+i]; it.k = k; it.qty = Math.min(it.qty, avail(it.id)[k]) || 1; it.price = unitPrice(it.id, k); draw(); });
+      on("[data-q]", "click", (e) => { const [i, d] = e.currentTarget.dataset.q.split(":"), it = a.items[+i]; it.qty = Math.max(1, Math.min(maxOf(it), it.qty + +d)); draw(); });
+      on("[data-fin]", "click", (e) => { const [i, k] = e.currentTarget.dataset.fin.split(":"), it = a.items[+i]; it.k = k; it.lang = undefined; it.qty = Math.min(it.qty, maxOf(it)) || 1; it.price = unitPrice(it.id, k); draw(); });
+      on("[data-alng]", "click", (e) => { const [i, l2] = e.currentTarget.dataset.alng.split(":"), it = a.items[+i]; it.lang = l2; it.qty = Math.min(it.qty, maxOf(it)) || 1; draw(); });
       on("[data-rm]", "click", (e) => { a.items.splice(+e.currentTarget.dataset.rm, 1); draw(); });
       on("[data-add]", "click", (e) => {
         const id = e.currentTarget.dataset.add, av = avail(id), k = av.n ? "n" : "f", have = a.items.find((x) => x.id === id && x.k === k);
@@ -648,10 +745,10 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       $("aOk").disabled = true;
       try {
         if (need > 0) { bump(it.id, it.k, 0, -need, true); clearTimeout(pendingTimer); if (!(await flush(true))) throw new Error("move"); }
-        const item = { card_id: it.id, qty: it.qty, foil: it.k === "f" };
+        const item = { card_id: it.id, qty: it.qty, foil: it.k === "f", ...(it.lang ? { lang: it.lang } : {}) };   // the copy lent keeps its language
         await CLOUD.api("loans", { method: "POST", prefer: "return=minimal", body: { direction: "lent", person, items: [item], due_on: a.due || null, note: a.note.trim().slice(0, 500) } });
         const m = it.k === "f" ? lentF : lentN; m.set(it.id, (m.get(it.id) || 0) + it.qty);
-        (lentWho.get(it.id) || lentWho.set(it.id, []).get(it.id)).push({ who: person, qty: it.qty, foil: it.k === "f", due: a.due || null, friend: false });
+        (lentWho.get(it.id) || lentWho.set(it.id, []).get(it.id)).push({ who: person, qty: it.qty, foil: it.k === "f", lang: it.lang || null, due: a.due || null, friend: false });
         toast(Tx("Loan saved")); close();
       } catch { $("aOk").disabled = false; fail(Tx("Couldn't save. Try again.")); }
     }
@@ -659,13 +756,13 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       const t = total();
       if (!a.items.length) return fail(Tx("Add at least one card."));
       if (!(t >= 0) || String(a.total ?? "0").trim() === "") return fail(Tx("Write the total of the sale."));
-      for (const it of a.items) if (avail(it.id)[it.k] < it.qty) return fail(Tx("You don't have that many to sell."));
+      for (const it of a.items) if (maxOf(it) < it.qty) return fail(Tx("You don't have that many to sell."));
       $("aOk").disabled = true;
       try {
-        for (const it of a.items) { const w = where(it.id), fromBinder = Math.min(it.qty, w.binder[it.k]); bump(it.id, it.k, -it.qty, -(it.qty - fromBinder), true); }
+        for (const it of a.items) { fitLang(it); const w = where(it.id), fromBinder = Math.min(it.qty, w.binder[it.k]); bump(it.id, it.k, -it.qty, -(it.qty - fromBinder), true, 0, it.lang || null); }
         clearTimeout(pendingTimer);
         if (!(await flush(true))) throw new Error("collection");
-        const gave = a.items.map((it) => ({ card_id: it.id, qty: it.qty, foil: it.k === "f", price: Math.round(num(it.price) * 100) / 100 }));
+        const gave = a.items.map((it) => ({ card_id: it.id, qty: it.qty, foil: it.k === "f", ...(it.lang ? { lang: it.lang } : {}), price: Math.round(num(it.price) * 100) / 100 }));
         const d = Math.round((sum() - t) * 100) / 100;
         const note = [Tx(a.items.length > 1 || a.combo ? "Combo sale" : "Sale"), d > 0 ? Tx("discount {v}", { v: money(d) }) : d < 0 ? Tx("extra {v}", { v: money(-d) }) : ""].filter(Boolean).join(" · ");
         await CLOUD.api("trades", { method: "POST", prefer: "return=minimal", body: { person: (a.buyer.trim() || Tx("Sale")).slice(0, 60), traded_on: a.date || today(), gave, got: [], cash_brl: -Math.round(t * 100) / 100, note, collection: "applied" } });
@@ -675,10 +772,11 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     draw();
   }
   // place: where the copies are added or removed ("binder" or "home"). Lent copies are changed in Trocas.
-  function change(id, kind, delta, quiet, place = "binder") {
+  // lng: the language of the copies added or removed (null: "sem idioma", or for a removal "whichever is certain")
+  function change(id, kind, delta, quiet, place = "binder", lng = null) {
     const w = where(id), pl = ["home", "trade"].includes(place) ? place : "binder";
     if (delta < 0 && w[pl][kind] + delta < 0) return;
-    bump(id, kind, delta, pl === "home" ? delta : 0, quiet, pl === "trade" ? delta : 0);
+    bump(id, kind, delta, pl === "home" ? delta : 0, quiet, pl === "trade" ? delta : 0, lng);
   }
   // Move copies between the binder, home and the trade binder: what you own stays the same.
   function move(id, kind, qty, to, quiet, from) {
@@ -687,12 +785,14 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     const d = (pl) => (to === pl ? qty : from === pl ? -qty : 0);
     bump(id, kind, 0, d("home"), quiet, d("trade"));
   }
-  function bump(id, kind, dTotal, dHome, quiet, dTrade = 0) {
+  function bump(id, kind, dTotal, dHome, quiet, dTrade = 0, lng = null) {
     if (readOnly()) { toast(P("Esta coleção é só para ver.", "This collection is view only."), null, true); return; }
     const p = prof(); if (!p) { toast(Tx("Couldn't save. Try again."), null, true); if ($("scan").open) scanSay(Tx("Couldn't save. Try again."), true); return; }
     if (dTotal) {
-      const e = p.collection[id] = { n: 0, f: 0, ...(p.collection[id] || {}) };
-      e[kind] = Math.max(0, (+e[kind] || 0) + dTotal);
+      // the same rule as the server (supabase/card_langs.sql): a removal that could take either of two languages asks first
+      let next;
+      try { next = langApply(p.collection[id], kind, dTotal, lng); } catch { toast(langAskText(), null, true); return; }
+      p.collection[id] = next;
       if (dTotal > 0) ADDED.set(`${p.profile}|${id}`, Date.now());
     }
     if (dHome) {
@@ -703,7 +803,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       const tk = `${p.profile}|${id}`, t = TRADE.get(tk) || { n: 0, f: 0 };
       t[kind] = Math.max(0, t[kind] + dTrade); TRADE.set(tk, t);
     }
-    const key = `${id}:${kind}`, cur = pending.get(key) || { t: 0, h: 0, x: 0 };
+    const key = `${id}:${kind}:${dTotal ? lng || "" : ""}`, cur = pending.get(key) || { t: 0, h: 0, x: 0 };
     pending.set(key, { t: cur.t + dTotal, h: cur.h + dHome, x: cur.x + dTrade });
     clearTimeout(pendingTimer);
     pendingTimer = setTimeout(() => flush(quiet), 600);
@@ -711,10 +811,10 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   let queue = Promise.resolve(), burst = [];
   function flush(quiet) {
     const p = prof(); if (!p || !pending.size) return Promise.resolve(true);
-    const items = [...pending].filter(([, d]) => d.t || d.h || d.x).map(([k, d]) => { const [card_id, kind] = k.split(":"); return { card_id, foil: kind === "f", t: d.t, h: d.h, x: d.x || 0 }; });
+    const items = [...pending].filter(([, d]) => d.t || d.h || d.x).map(([k, d]) => { const [card_id, kind, lg] = k.split(":"); return { card_id, foil: kind === "f", lang: lg || null, t: d.t, h: d.h, x: d.x || 0 }; });
     pending = new Map();
     if (!items.length) return Promise.resolve(true);
-    const delta = items.filter((x) => x.t).map((x) => ({ card_id: x.card_id, qty: x.t, foil: x.foil }));
+    const delta = items.filter((x) => x.t).map((x) => ({ card_id: x.card_id, qty: x.t, foil: x.foil, ...(x.lang ? { lang: x.lang } : {}) }));
     const home = items.filter((x) => x.h).map((x) => ({ card_id: x.card_id, qty: x.h, foil: x.foil }));
     const trade = items.filter((x) => x.x).map((x) => ({ card_id: x.card_id, qty: x.x, foil: x.foil }));
     const call = () => trade.length
@@ -729,15 +829,18 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
         if (quiet) return;
         burst = ($("toast").hidden ? [] : burst).concat(items);   // "Desfazer" undoes every change since the notice appeared
         const undoAll = burst;
-        toast(Tx((home.length || trade.length) && !delta.length ? "Moved" : "Collection updated"), () => { burst = []; for (const d of undoAll) bump(d.card_id, d.foil ? "f" : "n", -d.t, -d.h, true, -(d.x || 0)); clearTimeout(pendingTimer); flush(true); renderAll(); });
+        toast(Tx((home.length || trade.length) && !delta.length ? "Moved" : "Collection updated"), () => { burst = []; for (const d of undoAll) bump(d.card_id, d.foil ? "f" : "n", -d.t, -d.h, true, -(d.x || 0), d.lang); clearTimeout(pendingTimer); flush(true); renderAll(); });
       })
       .then(() => true)
-      .catch(() => {
+      .catch((err) => {
         for (const d of items) {
           const k = d.foil ? "f" : "n", e = p.collection[d.card_id], h = HOME.get(`${p.profile}|${d.card_id}`), t = TRADE.get(`${p.profile}|${d.card_id}`);
-          if (e) e[k] = Math.max(0, e[k] - d.t); if (h) h[k] = Math.max(0, h[k] - d.h); if (t) t[k] = Math.max(0, t[k] - d.x);
+          if (e && d.t) { try { p.collection[d.card_id] = langApply(e, k, -d.t, d.lang); } catch { e[k] = Math.max(0, e[k] - d.t); } }
+          if (h) h[k] = Math.max(0, h[k] - d.h); if (t) t[k] = Math.max(0, t[k] - d.x);
         }
-        toast(Tx("Couldn't save. Try again."), null, true); if ($("scan").open) scanSay(Tx("Couldn't save. Try again."), true); renderAll(); redrawSheet?.();
+        const why = String(err?.why || err?.message || ""), msg = /lang_required|lang_short/.test(why) ? langAskText() : Tx("Couldn't save. Try again.");
+        toast(msg, null, true); if ($("scan").open) scanSay(msg, true); renderAll(); redrawSheet?.();
+        if (/lang_/.test(why)) reloadColl().then(() => { renderAll(); redrawSheet?.(); }).catch(() => {});
         return false;
       }));
   }
@@ -755,6 +858,186 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     sh.querySelector("button:not([data-close]), input, a")?.focus();
     sh.addEventListener("close", () => from?.focus?.(), { once: true });
     sh.onclick = (e) => { if (e.target === sh) sh.close(); };
+  }
+
+  // ---------- idioma das cartas (supabase/card_langs.sql, src/site/cardlang.js) ----------
+  // Each copy may say its printing language; copies from before have none ("sem idioma") and show as the default.
+  // Until card_langs.sql runs, collection_lang_state fails and the page shows none of this.
+  const CL = window.INKWELL_CARD_LANG;
+  const LANGS = CL ? CL.LANGS : [];
+  const LS = new Map();   // collection key -> { revision, prefs, last }
+  let lastLang = null;    // the language last chosen to add, this visit
+  const ownerOf = (p) => (p?.shared ? p.owner : null), pnameOf = (p) => (p?.shared ? p.pname : p?.profile);
+  const lstate = () => LS.get(prof()?.profile) || null;
+  const defLang = () => lstate()?.prefs?.card_lang || "en";
+  const askLang = () => !!lstate()?.prefs?.card_lang_ask;
+  const addLangNow = () => (lstate() ? lastLang || defLang() : null);   // scanner, binder check: no question there
+  const langName = (lg) => (CL ? CL.name(lg, lang) : lg);
+  const langApply = (e, k, q, lg) => {
+    if (CL) return CL.apply(e || { n: 0, f: 0 }, k, q, lg || null);
+    const o = { n: 0, f: 0, ...(e || {}) }; o[k] = Math.max(0, (+o[k] || 0) + q); return o;
+  };
+  const langAskText = () => P("Esta carta tem cópias em mais de um idioma: abra a carta e escolha de qual idioma tirar.", "This card has copies in more than one language: open the card and choose which one to take out.");
+  const langErr = (e) => { const w = String(e?.why || e?.message || "");
+    return /collection_changed/.test(w) ? P("A coleção mudou enquanto você conferia (talvez em outro aparelho). Conferimos de novo: veja abaixo.", "The collection changed while you were checking (maybe on another device). We checked again: see below.")
+      : /lang_conflict/.test(w) ? P("Alguma carta não tem mais tantas cópias sem idioma. Conferimos de novo: veja abaixo.", "A card no longer has that many copies with no language. We checked again: see below.")
+      : /undo_expired/.test(w) ? P("Passou de um dia: essa classificação não pode mais ser desfeita.", "Over a day ago: this can no longer be undone.")
+      : Tx("Couldn't save. Try again."); };
+  const newOpId = () => { if (crypto.randomUUID) return crypto.randomUUID();
+    const b = crypto.getRandomValues(new Uint8Array(16)); b[6] = (b[6] & 15) | 64; b[8] = (b[8] & 63) | 128;
+    const h = [...b].map((x) => x.toString(16).padStart(2, "0")).join(""); return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`; };
+  const rpc = (fn, body) => CLOUD.api(`rpc/${fn}`, { method: "POST", body });
+  async function loadLangState(p = prof(), force = false) {
+    if (!CL || !p || p.friend || (p.shared && !p.canEdit)) return null;
+    if (!force && LS.has(p.profile)) return LS.get(p.profile);
+    try {
+      const [st, last] = await Promise.all([rpc("collection_lang_state", { p_owner: ownerOf(p), p_profile: pnameOf(p) }),
+        rpc("last_lang_op", { p_owner: ownerOf(p), p_profile: pnameOf(p) }).catch(() => null)]);
+      if (!st || typeof st !== "object" || Array.isArray(st) || st.revision == null) return null;   // not card_langs.sql's answer
+      const s = { revision: st.revision, prefs: st.prefs && typeof st.prefs === "object" && !Array.isArray(st.prefs) ? st.prefs : {}, last: last && last.op_id ? last : null };
+      LS.set(p.profile, s); return s;
+    } catch { return null; }
+  }
+  async function setLangPrefs(patch, p = prof()) {
+    const r = await rpc("set_collection_prefs", { p_owner: ownerOf(p), p_profile: pnameOf(p), p_prefs: patch });
+    const s = LS.get(p.profile); if (s && r) { s.prefs = r.prefs || {}; s.revision = r.revision ?? s.revision; }
+    return r;
+  }
+  // the collection as the server has it now (after a language operation, or when a check found it changed)
+  async function reloadColl(p = prof()) {
+    if (!p || p.friend) return;
+    if (p.shared) {
+      const sc = await rpc("shared_collections", {}), x = (Array.isArray(sc) ? sc : []).find((y) => y.owner === p.owner && y.profile === p.pname);
+      if (x?.collection && typeof x.collection === "object") p.collection = x.collection;
+    } else {
+      const r = await CLOUD.collections("profile,updated_at,collection:data->collection"), x = (r || []).find((y) => y.profile === p.profile);
+      if (x) p.collection = x.collection && typeof x.collection === "object" ? x.collection : {};
+    }
+  }
+  async function undoLangOp(op, p = prof()) {
+    try {
+      await rpc("undo_lang_op", { p_op: op });
+      const s = LS.get(p.profile); if (s?.last?.op_id === op) s.last = null;
+      await Promise.all([reloadColl(p), loadLangState(p, true)]);
+      toast(P("Classificação desfeita.", "Undone.")); renderAll(); redrawSheet?.();
+    } catch (e) { toast(/collection_changed/.test(String(e?.why || e?.message)) ? P("A coleção mudou depois disso: não dá para desfazer. Corrija carta por carta.", "The collection changed since: it can't be undone. Fix it card by card.") : langErr(e), null, true); }
+  }
+  const langChips = (attr, on, opts = LANGS) => `<div class="chips lang-chips" role="group">${opts.map((lg) => `<button type="button" class="chipbtn" ${attr}="${lg}" aria-pressed="${on === lg}" title="${esc(langName(lg))}"><b>${lg.toUpperCase()}</b> <span class="lang-nm">${esc(langName(lg))}</span></button>`).join("")}</div>`;
+
+  // the question about old copies (once), then a progress box while some are still to mark
+  function langBanner() {
+    const s = lstate(); if (!s || readOnly() || friendView) return "";
+    const pg = CL.progress(coll()); if (!pg.copies || !pg.unknown) return "";
+    const N = (x) => x.toLocaleString(LOC);
+    if (!s.prefs.card_lang_prompt) return `<div class="notice ask wrap lang-ask" data-testid="lang-ask"><i class="ic i-globe"></i><span class="t"><b>${esc(P(`Você tem ${N(pg.unknown)} ${pg.unknown === 1 ? "cópia" : "cópias"} sem idioma. Como quer marcar?`, `You have ${N(pg.unknown)} ${pg.unknown === 1 ? "copy" : "copies"} with no language. How do you want to mark them?`))}</b>
+        <span class="small muted">${esc(P("Agora o Inkwell guarda o idioma de cada carta (inglês, italiano, japonês…). As quantidades não mudam.", "Inkwell now keeps each card's language (English, Italian, Japanese…). Quantities don't change."))}</span></span>
+      <span class="actions"><button type="button" class="btn small" data-lgo="all">${esc(P("Marcar todas como…", "Mark all as…"))}</button><button type="button" class="btn small" data-lgo="list">${esc(P("Colar listas por idioma", "Paste lists by language"))}</button><button type="button" class="btn ghost small" data-lgo="later">${esc(P("Decidir depois", "Decide later"))}</button></span></div>`;
+    if (!pg.known && s.prefs.card_lang_prompt === "later") return "";
+    return `<div class="card lang-prog" data-testid="lang-progress"><div class="row between" style="gap:var(--sp-3)"><div><b>${esc(P("Idiomas da coleção", "Card languages"))}</b> <span class="lang-pct">${pg.pct}%</span>
+        <div class="small muted">${esc(P(`${N(pg.known)} de ${N(pg.copies)} cópias · ${N(pg.unknown)} ainda sem idioma`, `${N(pg.known)} of ${N(pg.copies)} copies · ${N(pg.unknown)} still with no language`))}</div></div>
+      <button type="button" class="btn small" data-lgo="open">${esc(P("Classificar", "Mark"))}</button></div><div class="lang-bar" aria-hidden="true"><span style="width:${pg.pct}%"></span></div></div>`;
+  }
+  function langWire() {
+    document.querySelectorAll("[data-lgo]").forEach((b) => b.onclick = async () => {
+      const go = b.dataset.lgo;
+      if (go !== "later") return openLangs(b, go === "open" ? "home" : go);
+      b.disabled = true;
+      try { await setLangPrefs({ card_lang_prompt: "later" }); renderAll(); } catch { b.disabled = false; toast(Tx("Couldn't save. Try again."), null, true); }
+    });
+  }
+
+  // ---------- the languages sheet: default language, "ask every time", mark old copies, undo ----------
+  function openLangs(from, start = "home") {
+    const sh = $("langSheet"), p = prof();
+    let step = start, text = "", plan = null, rest = "", restLang = defLang(), allLang = defLang(), rev = null, msg = "", busy = false;
+    const N = (x) => x.toLocaleString(LOC);
+    const cardName = (id) => { const c = BY.get(id); return c ? `${c.name} · ${setName(c.set)} nº ${c.num}` : id; };
+    const why = { no_lang: P("sem idioma acima da linha", "no language heading above"), no_match: P("carta não encontrada", "card not found"), no_qty: P("sem quantidade", "no quantity"), not_owned: P("você não tem esta carta", "you don't have this card") };
+    async function check() {   // the state first, then the collection: a change in between is caught by the revision
+      busy = true; draw();
+      try {
+        const s = await loadLangState(p, true); rev = s?.revision ?? null;
+        await reloadColl(p);
+        plan = CL.plan(text, p.collection, CARDS, SETS, window.INKWELL_COLL_IMPORT.parse);
+        step = "check";
+      } catch { msg = Tx("Couldn't save. Try again."); }
+      busy = false; draw();
+    }
+    async function save(items, restL) {
+      busy = true; msg = ""; draw();
+      const op = newOpId();
+      try {
+        if (rev == null) { const s = await loadLangState(p, true); rev = s?.revision ?? null; }
+        const r = await rpc("mark_unknown_langs", { p_owner: ownerOf(p), p_profile: pnameOf(p), p_items: items, p_rest: restL || null, p_expected_revision: rev, p_op: op });
+        const s = LS.get(p.profile); if (s) { s.revision = r?.revision ?? s.revision; s.last = { op_id: op, copies: r?.copies || 0, created_at: new Date().toISOString() }; }
+        await setLangPrefs({ card_lang_prompt: "done" }, p).catch(() => {});
+        await reloadColl(p).catch(() => {});
+        sh.close(); renderAll();
+        toast(P(`${N(r?.copies || 0)} ${(r?.copies || 0) === 1 ? "cópia marcada" : "cópias marcadas"}.`, `${N(r?.copies || 0)} ${(r?.copies || 0) === 1 ? "copy" : "copies"} marked.`), () => undoLangOp(op, p));
+      } catch (e) {
+        busy = false; msg = langErr(e);
+        if (/collection_changed|lang_conflict/.test(String(e?.why || e?.message))) { if (step === "check") return check(); const s = await loadLangState(p, true).catch(() => null); rev = s?.revision ?? null; await reloadColl(p).catch(() => {}); }
+        draw();
+      }
+    }
+    function draw() {
+      const s = LS.get(p.profile) || { prefs: {} }, pg = CL.progress(p.collection), dl = s.prefs.card_lang || "en";
+      let body = "", foot = "";
+      if (step === "home") {
+        body = `<div class="form-block"><h3>${esc(P("Idioma padrão das suas cartas", "Your cards' default language"))}</h3>
+            <p class="small muted" style="margin:0">${esc(P("Novas cópias entram neste idioma. Cópias sem idioma aparecem como ele.", "New copies come in this language. Copies with no language show as it."))}</p>${langChips("data-ldef", dl)}</div>
+          <div class="form-block" style="gap:0"><label class="switch"><span>${esc(P("Perguntar o idioma sempre que adicionar", "Ask the language every time I add"))}<small>${esc(P("Para quem tem cartas em vários idiomas.", "For collections in several languages."))}</small></span><input type="checkbox" role="switch" id="lAsk" ${s.prefs.card_lang_ask ? "checked" : ""}></label></div>
+          <div class="form-block"><h3>${esc(P("Cartas já cadastradas", "Cards already in the collection"))}</h3>
+            <p class="small" style="margin:0" data-testid="lang-sheet-progress">${esc(P(`${N(pg.known)} de ${N(pg.copies)} cópias com idioma (${pg.pct}%) · ${N(pg.unknown)} sem idioma`, `${N(pg.known)} of ${N(pg.copies)} copies with a language (${pg.pct}%) · ${N(pg.unknown)} with none`))}</p>
+            ${pg.unknown ? `<div class="row" style="gap:var(--sp-2);flex-wrap:wrap"><button type="button" class="btn" id="lAll">${esc(P(`Marcar todas as ${N(pg.unknown)} sem idioma`, `Mark all ${N(pg.unknown)} with no language`))}</button><button type="button" class="btn" id="lList">${esc(P("Colar listas por idioma", "Paste lists by language"))}</button></div>` : ""}
+            ${s.last ? `<button type="button" class="btn ghost" id="lUndo" data-testid="lang-undo"><i class="ic i-undo"></i>${esc(P(`Desfazer a última classificação (${N(s.last.copies)} cópias, ${new Date(s.last.created_at).toLocaleString(LOC, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })})`, `Undo the last marking (${N(s.last.copies)} copies, ${new Date(s.last.created_at).toLocaleString(LOC, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })})`))}</button>` : ""}</div>`;
+        foot = `<button type="button" class="btn primary" data-close>${esc(P("Pronto", "Done"))}</button>`;
+      } else if (step === "all") {
+        body = `<div class="form-block"><h3>${esc(P(`Marcar as ${N(pg.unknown)} cópias sem idioma como:`, `Mark the ${N(pg.unknown)} copies with no language as:`))}</h3>${langChips("data-lall", allLang)}
+          <p class="small muted" style="margin:0">${esc(P("Só as cópias sem idioma mudam. As quantidades não mudam, e dá para desfazer por um dia.", "Only copies with no language change. Quantities stay; you can undo for a day."))}</p></div>`;
+        foot = `<button type="button" class="btn ghost" id="lBack">${Tx("Back")}</button><button type="button" class="btn primary" id="lAllGo" ${busy || !pg.unknown ? "disabled" : ""}>${esc(P(`Marcar ${N(pg.unknown)} como ${langName(allLang)}`, `Mark ${N(pg.unknown)} as ${langName(allLang)}`))}</button>`;
+      } else if (step === "list") {
+        body = `<div class="form-block"><h3>${esc(P("Uma lista por idioma", "One list per language"))}</h3>
+          <p class="small muted" style="margin:0">${esc(P("Como a lista de deck: o nome do idioma numa linha, depois uma carta por linha, com a quantidade antes. “(foil)” no fim para foil. Só marca o idioma: nada entra nem sai da coleção.", "Like a deck list: the language on a line, then one card per line, quantity first. “(foil)” at the end for foil. It only marks the language: nothing is added or taken out."))}</p>
+          <textarea id="lText" rows="12" spellcheck="false" style="width:100%;font-family:var(--font-mono, monospace)" placeholder="${esc(P("Inglês\n2 Mushu - Majestic Dragon\n1 Elsa - Spirit of Winter (foil)\n\nItaliano\n1 Mushu - Majestic Dragon\n\nJaponês\n1 Mickey Mouse - Brave Little Tailor", "English\n2 Mushu - Majestic Dragon\n1 Elsa - Spirit of Winter (foil)\n\nItalian\n1 Mushu - Majestic Dragon\n\nJapanese\n1 Mickey Mouse - Brave Little Tailor"))}" aria-label="${esc(P("Listas por idioma", "Lists by language"))}">${esc(text)}</textarea>
+          <p class="small muted" style="margin:0">${esc(P("Idiomas aceitos: Inglês, Francês, Alemão, Italiano, Japonês, Chinês (ou EN, FR, DE, IT, JA/JP, ZH).", "Languages: English, French, German, Italian, Japanese, Chinese (or EN, FR, DE, IT, JA/JP, ZH)."))}</p></div>`;
+        foot = `<button type="button" class="btn ghost" id="lBack">${Tx("Back")}</button><button type="button" class="btn primary" id="lCheck" ${busy ? "disabled" : ""}>${esc(P("Conferir", "Check"))}</button>`;
+      } else {
+        const pl = plan || { items: [], marked: 0, problems: [], conflicts: [] }, left = Math.max(0, pg.unknown - pl.marked);
+        const byLang = LANGS.map((lg) => [lg, pl.items.filter((x) => x.lang === lg).reduce((t, x) => t + x.qty, 0)]).filter(([, q]) => q);
+        body = `<div class="form-block"><h3>${esc(P("Confira antes de salvar", "Check before saving"))}</h3>
+            <p style="margin:0" data-testid="lang-plan-sum"><b>${esc(P(`${N(pl.marked)} ${pl.marked === 1 ? "cópia vai ser marcada" : "cópias vão ser marcadas"}`, `${N(pl.marked)} ${pl.marked === 1 ? "copy will be marked" : "copies will be marked"}`))}</b>${byLang.length ? ": " + esc(byLang.map(([lg, q]) => `${lg.toUpperCase()} ${q}`).join(" · ")) : ""}</p>
+            ${pl.conflicts.length ? `<div class="notice err" data-testid="lang-conflicts" role="alert"><i class="ic i-alert"></i><span class="t"><b>${esc(P(`${pl.conflicts.length === 1 ? "1 carta pede" : `${pl.conflicts.length} cartas pedem`} mais cópias do que você tem sem idioma. Corrija antes de salvar: nada é dividido sozinho.`, `${pl.conflicts.length === 1 ? "1 card asks" : `${pl.conflicts.length} cards ask`} for more copies than you have with no language. Fix it before saving: nothing is split by itself.`))}</b>
+              ${pl.conflicts.map((c) => `<span class="small" style="display:block">${esc(cardName(c.card_id))} ${c.k === "f" ? "(foil)" : "(normal)"}: ${esc(P(`você tem ${c.have} sem idioma, a lista pede`, `you have ${c.have} with no language, the list asks`))} ${esc(c.asks.map((a) => `${a.lang.toUpperCase()} ${a.qty}`).join(" + "))}</span>`).join("")}</span></div>` : ""}
+            ${pl.problems.length ? `<div class="notice warn" data-testid="lang-problems"><i class="ic i-alert"></i><span class="t"><b>${esc(P(`${pl.problems.length === 1 ? "1 linha fica" : `${pl.problems.length} linhas ficam`} de fora`, `${pl.problems.length === 1 ? "1 line is" : `${pl.problems.length} lines are`} left out`))}</b>
+              ${pl.problems.slice(0, 30).map((x) => `<span class="small" style="display:block">${esc(x.raw)} — ${esc(why[x.reason] || x.reason)}</span>`).join("")}${pl.problems.length > 30 ? `<span class="small muted">${esc(P(`e mais ${pl.problems.length - 30}`, `and ${pl.problems.length - 30} more`))}</span>` : ""}</span></div>` : ""}
+            <div class="imp-list small" data-testid="lang-plan-list">${pl.items.slice(0, 200).map((x) => `<div><span>${esc(cardName(x.card_id))}</span><span class="muted">${x.foil ? "foil" : "normal"}</span><b>${x.qty}× ${x.lang.toUpperCase()}</b></div>`).join("")}${pl.items.length > 200 ? `<div class="muted">${esc(P(`e mais ${pl.items.length - 200}`, `and ${pl.items.length - 200} more`))}</div>` : ""}</div></div>
+          ${left ? `<div class="form-block"><h3>${esc(P(`E as outras ${N(left)} cópias sem idioma?`, `And the other ${N(left)} copies with no language?`))}</h3>
+            <label class="check"><input type="radio" name="lRest" value="" ${rest ? "" : "checked"}> <span>${esc(P("Deixar sem idioma", "Leave them with no language"))}</span></label>
+            <label class="check"><input type="radio" name="lRest" value="lang" ${rest ? "checked" : ""}> <span>${esc(P("Marcar como:", "Mark them as:"))}</span></label>${rest ? langChips("data-lrest", restLang) : ""}</div>` : ""}`;
+        const total = pl.marked + (rest && left ? left : 0);
+        foot = `<button type="button" class="btn ghost" id="lBack">${esc(P("Voltar e corrigir", "Back and fix"))}</button><button type="button" class="btn primary" id="lSave" ${busy || pl.conflicts.length || !total ? "disabled" : ""}>${esc(pl.conflicts.length ? P("Corrija os conflitos", "Fix the conflicts") : P(`Salvar (${N(total)} cópias)`, `Save (${N(total)} copies)`))}</button>`;
+      }
+      sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="lgT">${esc(P("Idioma das cartas", "Card languages"))}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
+        <div class="sheet-body">${body}${msg ? `<p class="small bad" role="alert" style="margin:var(--sp-2) 0 0" data-testid="lang-msg">${esc(msg)}</p>` : ""}</div><div class="sheet-foot">${foot}</div>`;
+      sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = () => sh.close());
+      sh.querySelectorAll("[data-ldef]").forEach((b) => b.onclick = async () => { try { await setLangPrefs({ card_lang: b.dataset.ldef }, p); lastLang = null; allLang = restLang = b.dataset.ldef; } catch { msg = Tx("Couldn't save. Try again."); } draw(); renderAll(); });
+      $("lAsk")?.addEventListener("change", async (e) => { try { await setLangPrefs({ card_lang_ask: e.target.checked }, p); } catch { msg = Tx("Couldn't save. Try again."); } draw(); });
+      $("lAll")?.addEventListener("click", () => { step = "all"; msg = ""; draw(); });
+      $("lList")?.addEventListener("click", () => { step = "list"; msg = ""; draw(); $("lText")?.focus(); });
+      $("lUndo")?.addEventListener("click", async () => { const op = (LS.get(p.profile) || {}).last?.op_id; if (op) { await undoLangOp(op, p); draw(); } });
+      sh.querySelectorAll("[data-lall]").forEach((b) => b.onclick = () => { allLang = b.dataset.lall; draw(); });
+      sh.querySelectorAll("[data-lrest]").forEach((b) => b.onclick = () => { restLang = b.dataset.lrest; draw(); });
+      sh.querySelectorAll("[name=lRest]").forEach((r) => r.onchange = () => { rest = r.value; draw(); });
+      $("lText")?.addEventListener("input", (e) => { text = e.target.value; });
+      $("lBack")?.addEventListener("click", () => { step = step === "check" ? "list" : "home"; msg = ""; draw(); });
+      $("lCheck")?.addEventListener("click", () => { text = $("lText").value; msg = ""; check(); });
+      $("lAllGo")?.addEventListener("click", () => save([], allLang));
+      $("lSave")?.addEventListener("click", () => save(plan.items, rest ? restLang : null));
+    }
+    loadLangState(p).then(() => { draw(); });
+    draw(); openSheet(sh, from);
+    sh.addEventListener("close", () => renderAll(), { once: true });
   }
 
   // ---------- conferir fichário: Core first, then Infinity; ink, cost, name (Luis's binder order) ----------
@@ -851,7 +1134,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     $("bSet").onchange = (e) => { bd.set = e.target.value; bsave(); renderBinder(); $("bSet")?.focus(); };
     $("bOwned").onchange = (e) => { bd.owned = e.target.checked; bsave(); renderBinder(); $("bOwned")?.focus(); };
     $("bRows")?.addEventListener("click", (e) => { const o = e.target.closest("[data-bopen]"); if (o) return openCard(o.dataset.bopen, o); });
-    $("bRows")?.addEventListener("click", (e) => { const b = e.target.closest("[data-bq]"); if (!b) return; const [id, k, d, place] = b.dataset.bq.split(":"); change(id, k, +d, false, place || "binder"); renderBinder(); document.querySelector(`[data-bq="${CSS.escape(b.dataset.bq)}"]`)?.focus(); });
+    $("bRows")?.addEventListener("click", (e) => { const b = e.target.closest("[data-bq]"); if (!b) return; const [id, k, d, place] = b.dataset.bq.split(":");
+      if (+d < 0 && CL?.removeChoice(coll()[id], k)) { toast(langAskText(), null, true); openCard(id, b); return; }
+      change(id, k, +d, false, place || "binder", +d > 0 ? addLangNow() : null); renderBinder(); document.querySelector(`[data-bq="${CSS.escape(b.dataset.bq)}"]`)?.focus(); });
   }
   function renderAll() {
     if (me && binderOn()) return renderBinder();
@@ -868,10 +1153,11 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       const all = [...profiles, ...shared];
       $("headActions").innerHTML = `${all.length > 1 ? `<select class="inline" id="collSrc" data-testid="coll-source" aria-label="${esc(P("Coleção", "Collection"))}">${all.map((x) => `<option value="${esc(x.profile)}" ${x === cur ? "selected" : ""}>${esc(collName(x))}</option>`).join("")}</select>` : ""}
         <button type="button" class="btn" id="openShare" data-testid="share"><i class="ic i-users"></i>${esc(P("Compartilhar", "Share"))}</button>
-        <button type="button" class="btn" id="openBinder"><i class="ic i-cards"></i>${Tx(homeReady ? "Check stock" : "Check my binder")}</button><button type="button" class="btn" id="openExport" data-testid="export"><i class="ic i-export"></i>${esc(P("Exportar", "Export"))}</button>${readOnly() ? "" : `<button type="button" class="btn" id="openImport" data-testid="import"><i class="ic i-import"></i>${Tx("Import")}</button><button type="button" class="btn primary" id="openScan"><i class="ic i-camera"></i>${Tx("Scan")}</button>`}`;
+        <button type="button" class="btn" id="openBinder"><i class="ic i-cards"></i>${Tx(homeReady ? "Check stock" : "Check my binder")}</button><button type="button" class="btn" id="openExport" data-testid="export"><i class="ic i-export"></i>${esc(P("Exportar", "Export"))}</button>${lstate() && !readOnly() ? `<button type="button" class="btn" id="openLangs" data-testid="langs"><i class="ic i-globe"></i>${esc(P("Idiomas", "Languages"))}</button>` : ""}${readOnly() ? "" : `<button type="button" class="btn" id="openImport" data-testid="import"><i class="ic i-import"></i>${Tx("Import")}</button><button type="button" class="btn primary" id="openScan"><i class="ic i-camera"></i>${Tx("Scan")}</button>`}`;
       $("collSrc")?.addEventListener("change", (e) => useSource(e.target.value));
       $("openShare").onclick = () => openShare($("openShare"));
       $("openExport").onclick = () => openExport($("openExport"));
+      $("openLangs")?.addEventListener("click", () => openLangs($("openLangs"), "home"));
       $("openBinder").onclick = () => setBinder(true); $("openScan")?.addEventListener("click", () => openScanner($("openScan"))); $("openImport")?.addEventListener("click", () => openImport($("openImport"))); }
     render();
   }
@@ -1444,7 +1730,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       scan.added = []; scan.last = null; $("scan").close();
     };
     $("revAdd").onclick = () => {
-      for (const x of reviewGroups()) change(x.id, x.foil ? "f" : "n", x.n, true, homeReady ? scanPlace() : "binder");
+      for (const x of reviewGroups()) change(x.id, x.foil ? "f" : "n", x.n, true, homeReady ? scanPlace() : "binder", addLangNow());
       scan.saved = scan.added.length; scan.added = []; scan.last = null;
       clearTimeout(pendingTimer); $("scan").close();
     };
@@ -1544,7 +1830,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     v.owned = true; return true;
   };
   const go = () => (friendHandle ? Promise.all([loadAll(), loadFriend()]).then(([, ok]) => { if (ok) { applySource(); renderAll(); } })
-    : loadAll().then(() => { renderAll(); if (invite) offerInvite(invite); })).catch(() => {
+    : loadAll().then(() => { renderAll(); if (invite) offerInvite(invite); loadLangState().then((st) => { if (st) renderAll(); }); })).catch(() => {
     $("app").innerHTML = `<div class="empty"><img src="../ui/assets/empty/error.svg" alt=""><b>${Tx("Couldn't load your collection.")}</b><p>${Tx("Check your connection and try again.")}</p><button type="button" class="btn" id="retry"><i class="ic i-refresh"></i>${Tx("Try again")}</button></div>`;
     $("retry").onclick = go;
   });
