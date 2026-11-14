@@ -152,7 +152,9 @@ def analyze(done, matches, standings, last, deck_of, mu, names):
 
 def collect():
     ev = get(f"events/{EVENT}/")
-    rounds = [r for ph in ev["tournament_phases"][:1] for r in ph["rounds"]]
+    rounds1 = [r for ph in ev["tournament_phases"][:1] for r in ph["rounds"]]
+    # Dia 1 (fase 1) + Dia 2 (fase 2, suíço). O top cut (fase 3) ainda não é tratado aqui.
+    rounds = [r for ph in ev["tournament_phases"][:2] for r in ph["rounds"]]
     later = [r for ph in ev["tournament_phases"][1:] for r in ph["rounds"] if r["status"] in ("COMPLETE", "IN_PROGRESS")]
     done = [r for r in rounds if r["status"] == "COMPLETE"]
     live_r = next((r for r in rounds if r["status"] == "IN_PROGRESS"), None)
@@ -172,6 +174,10 @@ def collect():
         assert all(x["round_number"] == r["round_number"] for x in rows)
         standings[r["round_number"]] = {x["user_event_status"]["best_identifier"]: x for x in rows}
     last = max(standings)
+    last1 = max(k for k in standings if k <= SWISS)
+    def latest(u):
+        k = max((k for k, v in standings.items() if u in v), default=None)
+        return None if k is None else standings[k][u]
     # Batalha de decks: todos os jogadores do evento, agrupados pelas tintas registradas
     deck_of, dropped, d2 = {}, set(), set()
     agg, mu = {}, {}
@@ -180,10 +186,10 @@ def collect():
         if r["id"] not in cache:
             cache[r["id"]] = pages(f"tournament-rounds/{r['id']}/matches/paginated/")
         return cache[r["id"]]
-    for x in standings[last].values():
+    for x in standings[last1].values():
         if x["user_event_status"].get("registration_status") == "DROPPED":
             dropped.add(x["player"]["id"])
-    for r in [x for x in rounds if x["status"] in ("COMPLETE", "IN_PROGRESS")] + later:
+    for r in [x for x in rounds1 if x["status"] in ("COMPLETE", "IN_PROGRESS")] + later:
         phase2 = r in later
         for m in matches(r):
             rel = m["player_match_relationships"]
@@ -242,13 +248,20 @@ def collect():
                     hist[u][r["round_number"]] = entry
                     if live_r and r["id"] == live_r["id"]:
                         live[u] = entry
-    ana = analyze(done, matches, standings, last, deck_of, mu, names)
+    done1 = [r for r in done if r in rounds1]
+    st1 = {k: v for k, v in standings.items() if k <= SWISS}
+    ana = analyze(done1, matches, st1, last1, deck_of, mu, names)
+    cut8 = None
+    if last > SWISS:
+        top = sorted(standings[last].values(), key=lambda x: x["rank"])
+        if len(top) >= 9:
+            cut8 = dict(pts8=top[7]["match_points"], pts9=top[8]["match_points"], n=len(top))
     players, missing = [], []
     for team, name, user in PLAYERS:
-        if user not in standings[last]:
+        x = latest(user)
+        if x is None:
             missing.append(name)
             continue
-        x = standings[last][user]
         deck = inks[user]
         players.append(dict(
             team=team, name=name, username=user, legal=x["player"]["best_identifier"], pid=x["player"]["id"],
@@ -265,8 +278,8 @@ def collect():
     return dict(fetched_at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), last_round=last,
                 live_round=live_r["round_number"] if live_r else None, event_status=ev.get("display_status"),
                 total=ev.get("starting_player_count") or len(standings[last]), players=players,
-                decks=decks, mu=mu, day2_started=bool(later),
-                pts_hist=dict(Counter(x["match_points"] for x in standings[last].values()
+                decks=decks, mu=mu, day2_started=bool(later), swiss1=SWISS, swiss_total=SWISS + 7, cut8=cut8,
+                pts_hist=dict(Counter(x["match_points"] for x in standings[last1].values()
                                       if x["user_event_status"].get("registration_status") != "DROPPED")))
 
 

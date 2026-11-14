@@ -111,7 +111,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .badge{font:700 10.5px var(--body);letter-spacing:.05em;text-transform:uppercase;padding:2px 6px;border-radius:4px;border:1px solid currentColor}
 .badge.g{color:var(--gold)} .badge.x{color:var(--loss)}
 .path{display:flex;gap:3px;margin-top:4px}
-.path span{width:16px;height:6px;border-radius:2px;background:var(--line)}
+.path span{width:16px;max-width:calc((100% - 42px)/15);height:6px;border-radius:2px;background:var(--line)}
 .path .W{background:var(--win)} .path .L{background:var(--loss)} .path .D{background:var(--draw)}
 .ink{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:500;color:var(--fg);white-space:nowrap}
 .ink i{width:11px;height:11px;border-radius:50%;transform:rotate(45deg);border-radius:2px;display:inline-block}
@@ -243,13 +243,15 @@ try{const s=JSON.parse(localStorage.getItem("dlc-br")||"{}"); if(s.sort) st.sort
 const $ = id => document.getElementById(id);
 const fmtN = n => n.toLocaleString("pt-BR");
 const norm = s => s.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase();
-const r = (p,k=st.round) => p.rounds[k];
+// Quem não foi ao Dia 2 fica com a última classificação que teve (R8).
+const r = (p,k=st.round) => {for(let i=k;i>0;i--)if(p.rounds[i])return p.rounds[i]};
+const NR = () => Math.max(SWISS, LAST);
 const undefeated = p => r(p).rec.split("-")[1]==="0";
 const tagHTML = t => `<span class="tag" style="background:var(${TEAMS[t].c})">${t}</span>`;
 
 function recHTML(rec){const [w,l,d]=rec.split("-");return `<span class="w">${w}</span>-<span class="l">${l}</span>-<span class="d">${d}</span>`}
 function pathHTML(p){let out="";let prev={w:0,l:0,d:0};
-  for(let i=1;i<=8;i++){ if(i>st.round||!p.rounds[i]){out+="<span></span>";continue}
+  for(let i=1;i<=NR();i++){ if(i>st.round||!p.rounds[i]){out+="<span></span>";continue}
     const [w,l,d]=p.rounds[i].rec.split("-").map(Number); let c="";
     if(w>prev.w)c="W";else if(l>prev.l)c="L";else if(d>prev.d)c="D";
     out+=`<span class="${c}" title="R${i}: ${c==="W"?"vitória":c==="L"?"derrota":c==="D"?"empate":"sem partida"}"></span>`; prev={w,l,d};}
@@ -270,6 +272,7 @@ function resTag(v){if(!v)return `<span class="st P">—</span>`;
 const CUT=18, SWISS=8;
 function renderD2(){
   const rem=SWISS-LAST, groups={ok:[],race:[],out:[]}, real=!!DATA.day2_started;
+  if(real&&LAST>=SWISS)return renderDay2();
   DATA.players.forEach(p=>{const c=p.rounds[LAST]; if(!c)return; const pts=c.pts;
     if(real){(p.d2?groups.ok:groups.out).push({p,pts});return}
     if(pts>=CUT&&p.status!=="DROPPED")groups.ok.push({p,pts});
@@ -301,14 +304,27 @@ function renderD2(){
      `<p class="d2note">Fechamento oficial das ${SWISS} rodadas do dia 1${nCut?`: <b>${nCut.toLocaleString("pt-BR")}</b> jogadores no evento terminaram com ${CUT}+ pontos`:""}. O corte de ${CUT} pontos é estimativa (foi o da DLC Ghent); a lista oficial de quem avançou aparece aqui quando o Play Hub publicar os emparelhamentos do Dia 2.</p>`;
   }
 }
+// Dia 2: 7 rodadas suíças entre quem passou do corte; os 8 primeiros vão ao top cut.
+function renderDay2(){
+  const TOT=DATA.swiss_total||15, rem=TOT-LAST, inn=DATA.players.filter(p=>p.d2), out=DATA.players.filter(p=>!p.d2);
+  inn.sort((a,b)=>r(a,LAST).rank-r(b,LAST).rank);
+  const c8=DATA.cut8;
+  const chip=p=>{const c=r(p,LAST), d2=LAST>SWISS;
+    const gap=c8&&d2?(c.pts>=c8.pts8?`<span class="nd g">${c.rank<=8?"no top 8 agora":"empatado com o 8º"}</span>`:`<span class="nd">${c8.pts8-c.pts} pts atrás do 8º</span>`):"";
+    return `<span class="d2p" style="--tc:var(${TEAMS[p.team].c})"><b>${esc(p.name)}</b><span class="nd">${c.pts} pts</span><span class="nd">${esc(c.rec)} · #${c.rank}${d2&&c8?` de ${c8.n}`:""}</span>${gap}${LIVE&&p.live?resTag(p.live):""}</span>`};
+  $("d2Title").textContent=LAST<=SWISS?"Dia 2 · começou":rem>0?`Dia 2 · ${rem>1?`faltam ${rem} rodadas`:"falta 1 rodada"} pro top 8`:"Dia 2 · suíço encerrado";
+  $("d2").innerHTML=(inn.length?`<div class="d2g ok"><h3>No Dia 2<span class="c">${inn.length}</span></h3><div class="d2l">${inn.map(chip).join("")}</div></div>`:"")+
+    (c8&&LAST>SWISS?`<p class="d2note">Linha do top 8 agora: o 8º colocado tem <b>${c8.pts8} pts</b> (o 9º, ${c8.pts9}). Os 8 primeiros após a R${TOT} vão ao top cut.</p>`:"")+
+    `<p class="d2note">${out.length} brasileiros pararam no dia 1; a campanha deles segue na lista abaixo com a posição final da R${SWISS}.${LAST<=SWISS?` Os pontos do Dia 2 aparecem quando a R${SWISS+1} terminar.`:""}</p>`;
+}
 function sparkHTML(p){
   const pts=[];for(let i=1;i<=LAST;i++)if(p.rounds[i])pts.push([i,p.rounds[i].rank]);
   if(pts.length<2)return "";
   const W=320,H=74,px=26,py=12,ks=pts.map(x=>x[1]);let lo=Math.min(...ks),hi=Math.max(...ks);if(hi-lo<20){lo=Math.max(1,lo-10);hi=hi+10}
-  const X=i=>px+(i-1)*(W-2*px)/Math.max(1,SWISS-1), Y=v=>py+(v-lo)/(hi-lo)*(H-2*py);
+  const X=i=>px+(i-1)*(W-2*px)/Math.max(1,NR()-1), Y=v=>py+(v-lo)/(hi-lo)*(H-2*py);
   const d=pts.map((q,j)=>`${j?"L":"M"}${X(q[0]).toFixed(1)},${Y(q[1]).toFixed(1)}`).join("");
   const lab=pts.map((q,j)=>`<circle class="pt" cx="${X(q[0])}" cy="${Y(q[1])}" r="3"/>`+((j===0||j===pts.length-1||q[1]===lo)?`<text x="${X(q[0])}" y="${Y(q[1])+(Y(q[1])<H/2?-6:14)}" text-anchor="middle">#${fmtN(q[1])}</text>`:"")).join("");
-  const ax=Array.from({length:SWISS},(_,i)=>`<text x="${X(i+1)}" y="${H+10}" text-anchor="middle" opacity=".7">R${i+1}</text>`).join("");
+  const ax=Array.from({length:NR()},(_,i)=>`<text x="${X(i+1)}" y="${H+10}" text-anchor="middle" opacity=".7">R${i+1}</text>`).join("");
   return `<div><div class="foot" style="margin-bottom:4px">Posição geral rodada a rodada (mais alto = melhor)</div><svg class="spark" viewBox="0 0 ${W} ${H+14}" role="img" aria-label="Posição: ${pts.map(q=>"R"+q[0]+" #"+q[1]).join(", ")}"><line class="gd" x1="${px}" x2="${W-px}" y1="${H-py}" y2="${H-py}"/><path class="ln" d="${d}"/>${lab}${ax}</svg></div>`}
 function detHTML(p){const H=p.history||{};const ks=Object.keys(H).map(Number).sort((a,b)=>a-b);
   if(!ks.length)return `<div class="det">${sparkHTML(p)}<div class="foot">Sem partidas registradas.</div></div>`;
