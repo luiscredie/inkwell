@@ -150,6 +150,59 @@ def analyze(done, matches, standings, last, deck_of, mu, names):
     return out
 
 
+def top_cut(ev, last, standings, live_r, matches, deck_of, names):
+    """Corrida pelo top 8 (16 primeiros do suíço + brasileiros no Dia 2) e chave do top cut (fase 3)."""
+    st = standings[last]
+    rows = sorted(st.values(), key=lambda x: x["rank"])
+    br = {u for u in names}
+    live = {}
+    if live_r and live_r in [r for ph in ev["tournament_phases"][:2] for r in ph["rounds"]]:
+        for m in matches(live_r):
+            rel = m["player_match_relationships"]
+            ids = [(pm.get("player") or {}).get("id") for pm in rel]
+            for i, pid in enumerate(ids):
+                res = None
+                if m.get("status") == "COMPLETE":
+                    if m.get("match_is_bye") or len(rel) == 1:
+                        res = "W"
+                    elif m.get("winning_player") is None:
+                        res = "D"
+                    else:
+                        res = "W" if m["winning_player"] == pid else "L"
+                live[pid] = dict(res=res, opp=rel[1 - i]["user_event_status"]["best_identifier"] if len(rel) == 2 else None,
+                                 table=m.get("table_number"))
+
+    def row(x):
+        pid = x["player"]["id"]
+        u = x["user_event_status"]["best_identifier"]
+        return dict(rank=x["rank"], name=u, rec=x["match_record"], pts=x["match_points"],
+                    deck=deck_of.get(pid, "none"), br=u in br, live=live.get(pid))
+    top = [row(x) for x in rows[:16]] + [row(x) for x in rows[16:] if x["user_event_status"]["best_identifier"] in br
+                                         and x["player"]["id"] in live]
+    race = dict(round=last, rows=top)
+
+    ph = ev["tournament_phases"][2] if len(ev["tournament_phases"]) > 2 else None
+    bracket = None
+    if ph and ph.get("rounds"):
+        seed_of = {x["player"]["id"]: x["rank"] for x in standings[max(k for k in standings if k <= SWISS + 7)].values()}
+        bracket = []
+        for r in ph["rounds"]:
+            ms = []
+            if r["status"] in ("COMPLETE", "IN_PROGRESS"):
+                for m in matches(r):
+                    rel = m["player_match_relationships"]
+                    ps = []
+                    for pm in rel:
+                        pid = (pm.get("player") or {}).get("id")
+                        ps.append(dict(name=pm["user_event_status"]["best_identifier"], seed=seed_of.get(pid),
+                                       deck=deck_of.get(pid, "none"), win=m.get("status") == "COMPLETE" and m.get("winning_player") == pid,
+                                       br=pm["user_event_status"]["best_identifier"] in br))
+                    ms.append(dict(players=ps, status=m.get("status"), table=m.get("table_number"),
+                                   score=None if m.get("games_won_by_winner") is None else [m["games_won_by_winner"], m.get("games_won_by_loser") or 0]))
+            bracket.append(dict(round=r["round_number"], status=r["status"], matches=ms))
+    return race, bracket
+
+
 def collect():
     ev = get(f"events/{EVENT}/")
     rounds1 = [r for ph in ev["tournament_phases"][:1] for r in ph["rounds"]]
@@ -256,6 +309,9 @@ def collect():
         top = sorted(standings[last].values(), key=lambda x: x["rank"])
         if len(top) >= 9:
             cut8 = dict(pts8=top[7]["match_points"], pts9=top[8]["match_points"], n=len(top))
+    race, bracket = None, None
+    if last > SWISS:
+        race, bracket = top_cut(ev, last, standings, live_r, matches, deck_of, names)
     players, missing = [], []
     for team, name, user in PLAYERS:
         x = latest(user)
@@ -279,6 +335,7 @@ def collect():
                 live_round=live_r["round_number"] if live_r else None, event_status=ev.get("display_status"),
                 total=ev.get("starting_player_count") or len(standings[last]), players=players,
                 decks=decks, mu=mu, day2_started=bool(later), swiss1=SWISS, swiss_total=SWISS + 7, cut8=cut8,
+                race=race, bracket=bracket,
                 pts_hist=dict(Counter(x["match_points"] for x in standings[last1].values()
                                       if x["user_event_status"].get("registration_status") != "DROPPED")))
 
@@ -295,6 +352,9 @@ def main():
     page2 = OUT.parent / "confrontos" / "index.html"
     page2.parent.mkdir(parents=True, exist_ok=True)
     page2.write_text((HERE / "confrontos.html").read_text(encoding="utf-8").replace("__DATA__", json.dumps(data, ensure_ascii=False)), encoding="utf-8")
+    page5 = OUT.parent / "top8" / "index.html"
+    page5.parent.mkdir(parents=True, exist_ok=True)
+    page5.write_text((HERE / "top8.html").read_text(encoding="utf-8").replace("__DATA__", json.dumps(data, ensure_ascii=False)), encoding="utf-8")
     page4 = OUT.parent / "analise" / "index.html"
     page4.parent.mkdir(parents=True, exist_ok=True)
     page4.write_text((HERE / "analise.html").read_text(encoding="utf-8").replace("__DATA__", json.dumps(data, ensure_ascii=False)), encoding="utf-8")
