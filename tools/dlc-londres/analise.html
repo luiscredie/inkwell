@@ -143,7 +143,7 @@ const sg=x=>{const r=Math.round(x*10)/10;return (r>0?"+":r<0?"−":"±")+num(Mat
 const deckHTML=k=>!k||k==="none"?`<span class="small">sem deck</span>`:`<span class="deck">${k.split("+").map(i=>`<i style="background:${INKS[i][1]}" title="${INKS[i][0]}"></i>`).join("")}</span>`;
 const deckName=k=>k.split("+").map(i=>INKS[i][0]).join(" / ");
 const open=new Set();let sortBy="pos";
-function players(){return DATA.players.filter(p=>p.ana&&p.ana.rows.length).map(p=>{const a=p.ana, R=a.rows.filter(x=>!x.bye), c=p.rounds[DATA.last_round]||{};
+function players(){return DATA.players.filter(p=>p.ana&&p.ana.rows.length).map(p=>{const a=p.ana, R=a.rows.filter(x=>!x.bye), c=p.rounds[Math.min(DATA.last_round,DATA.swiss1||8)]||{};
   const W=R.filter(x=>x.res==="W").length,L=R.filter(x=>x.res==="L").length,D=R.filter(x=>x.res==="D").length, M=a.rows.filter(x=>x.must);
   return {p,a,R,W,L,D,xp:a.act-a.exp,rank:c.rank||1e9,rec:c.rec,pts:c.pts,must:[M.filter(x=>x.res==="W").length,M.filter(x=>x.res!=="W").length]}})}
 function rowHTML(x,i){const {p,a}=x, isO=open.has(p.username);
@@ -167,7 +167,7 @@ function rowHTML(x,i){const {p,a}=x, isO=open.has(p.username);
      <div class="facts"><span>Por deck adversário: ${vsTxt}</span></div>
      <table class="mt"><tbody>${rows}</tbody></table></div></div>`}
 function render(){
-  const P=players(), last=DATA.last_round;
+  const P=players(), last=Math.min(DATA.last_round,DATA.swiss1||8);
   $("sub").textContent=`DLC London · Main Event 1 · ${P.length} brasileiros · partidas concluídas até a R${last}`;
   const all=P.flatMap(x=>x.R), W=all.filter(r=>r.res==="W").length, L=all.filter(r=>r.res==="L").length, D=all.filter(r=>r.res==="D").length, n=W+L+D;
   const exp=all.reduce((s,r)=>s+r.p,0), act=W+D/2;
