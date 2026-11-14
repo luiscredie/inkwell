@@ -11,7 +11,10 @@
 <meta name="theme-color" content="#0b192c">
 <link rel="icon" href="../ink/icon-192.png">
 <link rel="apple-touch-icon" href="../ink/icon-192.png">
-<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}.tag.lang-tag { background: var(--surface-2); color: var(--text); font-weight: 700; letter-spacing: .02em; }
+.lang-sel { min-height: 40px; border-radius: var(--r-md); border: 1px solid var(--line-strong); background: var(--field); color: var(--text); padding: 0 6px; font: inherit; max-width: 100%; }
+.lang-sel.small { min-height: 32px; font-size: var(--fs-small); }
+</style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="../ui/tokens.css"><script>try{document.documentElement.dataset.theme=localStorage.getItem("inkwell-theme")==="noite"?"noite":"dia"}catch(e){document.documentElement.dataset.theme="dia"}</script>
 </head>
 <body>
@@ -447,7 +450,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const ACTIVE = new Set(["requested", "accepted", "delivered"]);
   let wishIds = new Set();   // my wishlist (Preços), so the board marks what I want
   let tab = "loans", showReturned = false, form = null;   // form: {kind, ...draft}
-  let boardKind = "all", boardQ = "";
+  let boardKind = "all", boardQ = "", boardLang = "";
   try { tab = sessionStorage.getItem("inkwell-trades-tab") || "loans"; } catch { /* */ }
   // links from other pages: ?tab=board&q=<card name>; ?tab=trades&anuncio=<listing id> (Amigos › Cartas que procuro,
   // etapa C3): a friend's active "Troco" post on the Mural opens the trade form with that friend and card, exactly
@@ -502,7 +505,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       <div class="picker"><input type="search" data-search="${key}" placeholder="${Tx("Search a card by name")}" autocomplete="off" aria-label="${esc(label)}"><div class="sugg" data-sugg="${key}" role="listbox" hidden></div></div>
       <div class="list" data-items="${key}">${items.map((e, i) => `<div class="list-row on-field" style="grid-template-columns:auto minmax(0,1fr) auto auto">${thumb(e.card_id, "xs", e.foil)}<span class="t"><span>${esc(cardLabel(e.card_id))}</span>
           <span class="meta">${esc([e.foil ? Tx("foil") : "", priceOf(e.card_id, e.foil) != null ? brl(priceOf(e.card_id, e.foil)) : ""].filter(Boolean).join(" · "))}</span>${own && st.has ? `<span class="meta" data-stock="${key}:${i}">${esc(stockLine(st, e.card_id))}</span>` : ""}
-          <label class="check small" style="min-height:28px"><input type="checkbox" data-foil="${key}:${i}" ${e.foil ? "checked" : ""}><span class="foil-word">${Tx("foil")}</span></label></span>
+          <span class="row" style="gap:var(--sp-2);flex-wrap:wrap"><label class="check small" style="min-height:28px"><input type="checkbox" data-foil="${key}:${i}" ${e.foil ? "checked" : ""}><span class="foil-word">${Tx("foil")}</span></label>
+          <select class="lang-sel small" data-ilang="${key}:${i}" aria-label="${esc(PL(`Idioma de ${cardLabel(e.card_id)}`, `Language of ${cardLabel(e.card_id)}`))}"><option value="">${esc(PL("Idioma: não informado", "Language: not said"))}</option>${LANGS.map((l) => `<option value="${l}" ${e.lang === l ? "selected" : ""}>${l.toUpperCase()} · ${esc(langName(l))}</option>`).join("")}</select></span></span>
         <span class="qty"><button type="button" data-dec="${key}:${i}" aria-label="−1">−</button><output>${e.qty}</output><button type="button" data-inc="${key}:${i}" aria-label="+1" ${own && st.has && e.qty + inForm(items, e.card_id, e.foil, i) >= freeOf(st, e.card_id, e.foil) ? "disabled" : ""}>+</button></span>
         <button type="button" class="btn ghost icon small" data-rm="${key}:${i}" aria-label="${esc(Tx("Remove {c}", { c: cardLabel(e.card_id) }))}"><i class="ic i-close"></i></button></div>`).join("")}</div></div>`;
   }
@@ -535,6 +539,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       e.qty = Math.min(99, e.qty + 1); onChange(key); });
     root.querySelectorAll(`[data-dec^="${key}:"]`).forEach((b) => b.onclick = () => { const e = items[idx(b.dataset.dec)]; if (e.qty > 1) e.qty -= 1; else items.splice(idx(b.dataset.dec), 1); onChange(key); });
     root.querySelectorAll(`[data-rm^="${key}:"]`).forEach((b) => b.onclick = () => { items.splice(idx(b.dataset.rm), 1); onChange(key); });
+    root.querySelectorAll(`[data-ilang^="${key}:"]`).forEach((b) => b.onchange = () => { const e = items[idx(b.dataset.ilang)]; if (b.value) e.lang = b.value; else delete e.lang; });
     root.querySelectorAll(`[data-foil^="${key}:"]`).forEach((b) => b.onchange = () => {
       const i = idx(b.dataset.foil), e = items[i];
       if (limited) { const cap = freeOf(st, e.card_id, b.checked) - inForm(items, e.card_id, b.checked, i); if (cap <= 0) { b.checked = !b.checked; return; } e.qty = Math.min(e.qty, cap); }
@@ -542,7 +547,12 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   }
   const people = () => [...new Set([...loans.map((l) => l.person), ...trades.map((t) => t.person)])].sort((a, b) => a.localeCompare(b));
   const peopleList = () => `<datalist id="people">${people().map((p) => `<option value="${esc(p)}">`).join("")}</datalist>`;
-  const cleanItems = (items) => items.filter((e) => CARDS.has(e.card_id) && e.qty > 0).map((e) => ({ card_id: e.card_id, qty: e.qty, foil: !!e.foil }));
+  // the printing language of a card (supabase/card_langs.sql): en fr de it ja zh, or none said
+  const LANGS = ["en", "fr", "de", "it", "ja", "zh"];
+  const LANG_NAME = { en: ["Inglês", "English"], fr: ["Francês", "French"], de: ["Alemão", "German"], it: ["Italiano", "Italian"], ja: ["Japonês", "Japanese"], zh: ["Chinês", "Chinese"] };
+  const langName = (l) => (LANG_NAME[l] || [l, l])[lang === "pt" ? 0 : 1];
+  const PL = (pt, en) => (lang === "pt" ? pt : en);
+  const cleanItems = (items) => items.filter((e) => CARDS.has(e.card_id) && e.qty > 0).map((e) => ({ card_id: e.card_id, qty: e.qty, foil: !!e.foil, ...(LANGS.includes(e.lang) ? { lang: e.lang } : {}) }));
   const friendSelect = (f) => `<label class="field">${Tx("Friend")}<select id="fFriend"><option value="">–</option>${friends.map((id) => [id, nameOf(id)]).sort((a, b) => a[1].localeCompare(b[1])).map(([id, n]) => `<option value="${id}" ${f.friend === id ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></label>`;
   const withSeg = (site) => `<div class="seg block" role="group" aria-label="${Tx("With")}"><button type="button" data-with="site" aria-pressed="${!!site}">${Tx("A friend on the site")}</button><button type="button" data-with="off" aria-pressed="${!site}">${Tx("Someone not on the site")}</button></div>`;
   const avatar = (name, sm = true) => `<span class="av${sm ? " sm" : ""}">${initial(name)}</span>`;
@@ -633,7 +643,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     if (apply) {
       const prof = profiles.find((p) => p.profile === profileName) || profiles[0];
       if (!prof) throw new Error("no-profile");
-      const delta = [...v.gave.map((e) => ({ card_id: e.card_id, qty: -e.qty, foil: !!e.foil })), ...v.got.map((e) => ({ card_id: e.card_id, qty: e.qty, foil: !!e.foil }))];
+      const lg = (e) => (LANGS.includes(e.lang) ? { lang: e.lang } : {});
+      const delta = [...v.gave.map((e) => ({ card_id: e.card_id, qty: -e.qty, foil: !!e.foil, ...lg(e) })), ...v.got.map((e) => ({ card_id: e.card_id, qty: e.qty, foil: !!e.foil, ...lg(e) }))];
       if (delta.length) await CLOUD.api("rpc/apply_collection_delta", { method: "POST", prefer: "return=minimal", body: { p_profile: prof.profile, p_delta: delta } });
     }
     const flag = apply ? "applied" : "skipped";
@@ -715,7 +726,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     };
     const rows = listings.filter((l) => l.user_id !== me.id && CARDS.has(l.card_id)
         && (boardKind === "all" || (boardKind === "want" ? l.kind === "borrow" || l.kind === "buy" : OFFERS.includes(l.kind)))
-        && (!words.length || words.every((w) => norm(`${cardLabel(l.card_id)} ${l.card_id} ${nameOf(l.user_id)}`).includes(w))))
+        && (!words.length || words.every((w) => norm(`${cardLabel(l.card_id)} ${l.card_id} ${nameOf(l.user_id)}`).includes(w)))
+        && (!boardLang || l.lang === boardLang))
       .map((l) => ({ l, m: matchOf(l) })).sort((a, b) => (b.m ? 1 : 0) - (a.m ? 1 : 0) || String(b.l.created_at).localeCompare(String(a.l.created_at)));
     const action = (l) => {
       if (friends.includes(l.user_id)) {
@@ -726,13 +738,14 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     };
     const line = (l, m, own) => `<div class="list-row" data-listing="${l.id}" data-kind="${l.kind}">${thumb(l.card_id, "sm", l.foil)}
       <span class="t"><span>${esc(cardLabel(l.card_id))}</span>
-        <span class="meta">${own ? `${Tx(KIND[l.kind][0])} · ${l.qty}×${l.foil ? ` ${Tx("foil")}` : ""}` : `${esc(nameOf(l.user_id))} ${Tx(KIND[l.kind][1])} · ${l.qty}×${l.foil ? ` ${Tx("foil")}` : ""} · ${esc(fmtDate(l.created_at))}`}</span>
+        <span class="meta">${own ? `${Tx(KIND[l.kind][0])} · ${l.qty}×${l.foil ? ` ${Tx("foil")}` : ""}` : `${esc(nameOf(l.user_id))} ${Tx(KIND[l.kind][1])} · ${l.qty}×${l.foil ? ` ${Tx("foil")}` : ""} · ${esc(fmtDate(l.created_at))}`}${l.lang ? ` · <span class="tag lang-tag" data-testid="post-lang-tag" title="${esc(langName(l.lang))}">${l.lang.toUpperCase()}</span>` : ""}</span>
         ${l.note ? `<span class="meta">${esc(l.note)}</span>` : ""}
         ${m ? `<span class="meta" style="margin-top:4px"><span class="tag match">${esc(m)}</span></span>` : ""}
         ${!own && !friends.includes(l.user_id) ? `<span class="meta" style="margin-top:4px">${Tx("To lend or trade with someone, you need to be friends on the site.")}</span>` : ""}</span>
       <span class="trail">${l.price_brl != null ? `<b class="money">${esc(brl(+l.price_brl))}</b>` : ""}${own ? `<button type="button" class="btn ghost small" data-dellist="${l.id}">${Tx("Remove")}</button>` : action(l)}</span></div>`;
-    return `<div class="row between" style="margin-bottom:var(--sp-4)"><div class="seg" role="group" aria-label="${Tx("Kind")}">${[["all", "All"], ["want", "Looking for"], ["offer", "Offering"]].map(([k, l]) => `<button type="button" data-bkind="${k}" aria-pressed="${boardKind === k}">${Tx(l)}</button>`).join("")}</div>
-        <span class="search" style="max-width:280px;flex:1"><i class="ic i-search"></i><input type="search" id="boardQ" value="${esc(boardQ)}" placeholder="${Tx("Search a card by name")}" aria-label="${Tx("Search the board")}"></span></div>
+    return `<div class="row between" style="margin-bottom:var(--sp-4);flex-wrap:wrap;gap:var(--sp-3)"><div class="seg" role="group" aria-label="${Tx("Kind")}">${[["all", "All"], ["want", "Looking for"], ["offer", "Offering"]].map(([k, l]) => `<button type="button" data-bkind="${k}" aria-pressed="${boardKind === k}">${Tx(l)}</button>`).join("")}</div>
+        <span class="row" style="gap:var(--sp-2);flex:1 1 300px;justify-content:flex-end;flex-wrap:wrap"><select class="lang-sel" id="boardLang" style="flex:0 1 auto;max-width:100%" aria-label="${esc(PL("Idioma da carta", "Card language"))}"><option value="">${esc(PL("Todos os idiomas", "All languages"))}</option>${LANGS.map((l) => `<option value="${l}" ${boardLang === l ? "selected" : ""}>${l.toUpperCase()} · ${esc(langName(l))}</option>`).join("")}</select>
+        <span class="search" style="max-width:280px;flex:1 1 160px;min-width:0"><i class="ic i-search"></i><input type="search" id="boardQ" value="${esc(boardQ)}" placeholder="${Tx("Search a card by name")}" aria-label="${Tx("Search the board")}"></span></span></div>
       ${rows.length ? `<div class="list">${rows.map(({ l, m }) => line(l, m, false)).join("")}</div>` : `<div class="empty plain"><b>${Tx("Nothing on the board matches.")}</b></div>`}
       <div class="section-title"><h2>${Tx("My posts")}</h2><span class="small">${mine.length}</span></div>
       ${mine.length ? `<div class="list">${mine.map((l) => line(l, "", true)).join("")}</div>` : `<div class="empty plain"><p>${Tx("No posts yet.")}</p></div>`}`;
@@ -741,7 +754,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   // ---------- forms (a sheet on a phone, a dialog on a computer) ----------
   const newTradeForm = () => ({ kind: "trade", withSite: friends.length > 0, person: "", traded_on: today(), note: "", gave: [], got: [], cashMode: "none", cash: "" });
   const newLoanForm = () => ({ kind: "loan", withSite: friends.length > 0, direction: "lent", person: "", due_on: "", deliver_on: "", note: "", items: [] });
-  const newPostForm = () => ({ kind: "post", post: "lend", items: [], price: "", note: "" });
+  const newPostForm = () => ({ kind: "post", post: "lend", items: [], price: "", note: "", plang: "" });
   function formHtml() {
     const f = form, site = f.withSite;
     if (f.kind === "loan") return { title: Tx("New loan"), wide: false, note: site ? Tx("{name} gets the request and needs to accept.", { name: f.friend ? nameOf(f.friend).split(" ")[0] : Tx("Your friend") }) : "", save: Tx(site ? "Send request" : "Save"),
@@ -773,6 +786,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const own = OFFERS.includes(f.post);
     return { title: Tx("New post"), wide: false, note: "", save: Tx("Post"),
       body: `<div class="form-block"><div class="chips" role="group" aria-label="${Tx("Kind")}">${Object.entries(KIND).map(([k, [l]]) => `<button type="button" class="chipbtn" data-post="${k}" aria-pressed="${f.post === k}">${Tx(l)}</button>`).join("")}</div></div>
+        <div class="form-block" data-testid="post-lang"><h3 style="margin:0">${esc(PL("Idioma da carta", "Card language"))}</h3><div class="chips" role="group" aria-label="${esc(PL("Idioma da carta", "Card language"))}">${["", ...LANGS].map((l) => `<button type="button" class="chipbtn" data-plang="${l}" aria-pressed="${(f.plang || "") === l}">${l ? `<b>${l.toUpperCase()}</b> ${esc(langName(l))}` : esc(own ? PL("Não informar", "Don't say") : PL("Qualquer idioma", "Any language"))}</button>`).join("")}</div></div>
         <div class="form-block">${pickerHtml("bd", f.items, Tx("Cards"), own)}
           <div class="grid2">${f.post === "buy" || f.post === "sell" ? `<label class="field">${Tx("Price per card (optional)")}<span class="prefix"><span>R$</span><input type="number" id="fPrice" min="0" step="0.01" inputmode="decimal" value="${esc(f.price || "")}"></span></label>` : ""}
           <label class="field">${Tx("Note (optional)")}<input type="text" id="fNote" maxlength="200" value="${esc(f.note || "")}"></label></div></div>` };
@@ -808,6 +822,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     } else if (form.kind === "post") {
       wirePicker(sh, "bd", form.items, changed, OFFERS.includes(form.post));
       sh.querySelectorAll("[data-post]").forEach((b) => b.onclick = () => { keep(); form.post = b.dataset.post; renderSheet(); });
+      sh.querySelectorAll("[data-plang]").forEach((b) => b.onclick = () => { keep(); form.plang = b.dataset.plang; renderSheet(); sh.querySelector(`[data-plang="${b.dataset.plang}"]`)?.focus(); });
     } else {
       wirePicker(sh, "gv", form.gave, changed, true); wirePicker(sh, "gt", form.got, changed);
       sh.querySelectorAll("[data-cash]").forEach((b) => b.onclick = () => { keep(); form.cashMode = b.dataset.cash; renderSheet(); });
@@ -906,12 +921,13 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     });
     app.querySelectorAll("[data-bkind]").forEach((b) => b.onclick = () => { boardKind = b.dataset.bkind; render(); });
     $("boardQ")?.addEventListener("input", (e) => { boardQ = e.target.value; render(); const i = $("boardQ"); i.focus(); i.setSelectionRange(i.value.length, i.value.length); });
+    $("boardLang")?.addEventListener("change", (e) => { boardLang = e.target.value; render(); $("boardLang")?.focus(); });
     app.querySelectorAll("[data-dellist]").forEach((b) => b.onclick = () => confirmThen(b, "Confirm delete", () => CLOUD.api(`listings?id=eq.${b.dataset.dellist}`, { method: "DELETE" })));
     app.querySelectorAll("[data-addfriend]").forEach((b) => b.onclick = () => now(b, () => CLOUD.api("friendships", { method: "POST", prefer: "return=minimal", body: { addressee: b.dataset.addfriend } })));
     app.querySelectorAll("[data-bact]").forEach((b) => b.onclick = () => {
       const [act, id] = b.dataset.bact.split(":"), l = listings.find((x) => x.id === id);
       if (!l) return;
-      const item = { card_id: l.card_id, qty: l.qty, foil: !!l.foil };
+      const item = { card_id: l.card_id, qty: l.qty, foil: !!l.foil, ...(l.lang ? { lang: l.lang } : {}) };
       if (act === "ask" || act === "offer") { tab = "loans"; form = { ...newLoanForm(), withSite: true, friend: l.user_id, direction: act === "ask" ? "borrowed" : "lent", items: [item] }; }
       else {
         const cash = l.price_brl != null ? String(+l.price_brl * l.qty) : "";
@@ -950,7 +966,10 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         if (!items.length) { msg.textContent = Tx("Add at least one card."); return; }
         const price = (f.post === "buy" || f.post === "sell") && f.price !== "" && +f.price >= 0 ? Math.round(+f.price * 100) / 100 : null;
         busy();
-        await CLOUD.api("listings", { method: "POST", prefer: "return=minimal", body: items.map((e) => ({ kind: f.post, card_id: e.card_id, qty: e.qty, foil: e.foil, price_brl: price, note: (f.note || "").slice(0, 200) })) });
+        const rowsOf = (withLang) => items.map((e) => ({ kind: f.post, card_id: e.card_id, qty: e.qty, foil: e.foil, price_brl: price, note: (f.note || "").slice(0, 200), ...(withLang && f.plang ? { lang: f.plang } : {}) }));
+        // before supabase/card_langs_board.sql runs the column doesn't exist: the post goes without its language
+        await CLOUD.api("listings", { method: "POST", prefer: "return=minimal", body: rowsOf(true) })
+          .catch((e) => (f.plang && /lang/.test(String(e?.why || e?.message || "")) ? CLOUD.api("listings", { method: "POST", prefer: "return=minimal", body: rowsOf(false) }) : Promise.reject(e)));
       } else if (f.withSite) {
         const gave = cleanItems(f.gave), got = cleanItems(f.got);
         if (!f.friend) { msg.textContent = Tx("Choose a friend."); return; }
@@ -977,7 +996,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const l = listings.find((x) => x.id === id);
     try { const u = new URL(location.href); u.searchParams.delete("anuncio"); history.replaceState(null, "", u); } catch { /* */ }
     if (!l || l.kind !== "trade" || l.user_id === me.id || !friends.includes(l.user_id)) return;
-    tab = "trades"; form = { ...newTradeForm(), withSite: true, friend: l.user_id, got: [{ card_id: l.card_id, qty: l.qty, foil: !!l.foil }] };
+    tab = "trades"; form = { ...newTradeForm(), withSite: true, friend: l.user_id, got: [{ card_id: l.card_id, qty: l.qty, foil: !!l.foil, ...(l.lang ? { lang: l.lang } : {}) }] };
   }
   async function refresh() { await loadAll(); if (await autoApply()) await loadAll(); if (pendingAd) { openAd(pendingAd); pendingAd = null; } render(); }
 
