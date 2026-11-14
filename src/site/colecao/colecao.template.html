@@ -118,6 +118,8 @@ body.coll-ro .qty button, body.coll-ro .mv, body.coll-ro [data-bq], body.coll-no
 .lang-bar span { display: block; height: 100%; background: var(--accent); }
 .lang-ask { margin: 0 0 var(--sp-4); }
 .lang-ask .actions { flex-wrap: wrap; }
+.tag.lang-tag { background: var(--surface-2); color: var(--text); font-weight: 700; letter-spacing: .02em; }
+.lang-sel { min-height: 40px; border-radius: var(--r-md); border: 1px solid var(--line-strong); background: var(--field); color: var(--text); padding: 0 6px; font: inherit; }
 </style>
 
 <main class="page" id="page">
@@ -227,8 +229,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const me = CLOUD?.user();
   let profiles = [], ADDED = new Map(), profileName = null, lentN = new Map(), lentF = new Map(), lentWho = new Map();
   const VIEW_KEY = "inkwell-coll-view-v2";
-  let v = { q: "", inks: [], sets: [], rar: [], cost: [], owned: true, foil: false, lent: false, sort: "value", view: "grid", place: "all" };
+  let v = { q: "", inks: [], sets: [], rar: [], cost: [], langs: [], owned: true, foil: false, lent: false, sort: "value", view: "grid", place: "all" };
   try { v = { ...v, ...JSON.parse(localStorage.getItem(VIEW_KEY) || "{}") }; } catch { /* */ }
+  if (!Array.isArray(v.langs)) v.langs = [];
   let shown = 120;
   const save = () => { try { localStorage.setItem(VIEW_KEY, JSON.stringify(v)); } catch { /* */ } };
   // Collections: your own (one or more), the ones shared with you (couples, families: "share:<owner>:<name>")
@@ -336,13 +339,18 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   }
 
   // ---------- filtering ----------
-  const activeCount = () => v.inks.length + v.sets.length + v.rar.length + v.cost.length + (v.foil ? 1 : 0) + (v.lent ? 1 : 0) + (v.owned ? 0 : 0);
+  const activeCount = () => v.inks.length + v.sets.length + v.rar.length + v.cost.length + (langsOn() ? v.langs.length : 0) + (v.foil ? 1 : 0) + (v.lent ? 1 : 0) + (v.owned ? 0 : 0);
+  // the card's languages in this collection: a copy of any chosen language ("none": a copy with no language)
+  const langsOn = () => !!(window.INKWELL_CARD_LANG && LS.get(prof()?.profile));
+  const langHit = (id, want) => { const s = window.INKWELL_CARD_LANG.split(coll()[id]);
+    return want.some((x) => (x === "none" ? s.unknown.n + s.unknown.f > 0 : (s.l[x]?.n || 0) + (s.l[x]?.f || 0) > 0)); };
   function filtered(f = v) {
     const words = norm(f.q).split(" ").filter(Boolean), c = coll();
     const tot = (x) => { const q = inPlace(x.id, f.place); return q.n + q.f; };
     const rows = CARDS.filter((x) => (!f.sets.length || f.sets.includes(x.set)) && (!f.inks.length || inksOf(x).some((i) => f.inks.includes(i)))
       && (!f.rar.length || f.rar.includes(x.rarity)) && (!f.cost.length || f.cost.includes(Math.min(8, +x.cost || 0)))
-      && (!f.owned || tot(x) > 0) && (!f.foil || inPlace(x.id, f.place).f > 0) && (!f.lent || lentOf(x.id) > 0) && (!words.length || words.every((w) => x.k.includes(w))));
+      && (!f.owned || tot(x) > 0) && (!f.foil || inPlace(x.id, f.place).f > 0) && (!f.lent || lentOf(x.id) > 0) && (!words.length || words.every((w) => x.k.includes(w)))
+      && (!f.langs?.length || !langsOn() || langHit(x.id, f.langs)));
     const val = (x) => topPrice(x.id, inPlace(x.id, f.place)).v || 0;   // one copy's price, not the sum of the copies
     const bySet = (a, b) => (setOrder.get(a.set) ?? 999) - (setOrder.get(b.set) ?? 999) || numOf(a) - numOf(b) || a.id.localeCompare(b.id);
     const unit = (x) => priceOf(x.id) || 0, pn = prof()?.profile, when = (x) => ADDED.get(`${pn}|${x.id}`) || 0;
@@ -363,11 +371,19 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       <a class="stat" href="../precos/?tab=value" data-testid="to-prices" style="text-decoration:none;color:inherit"><b class="money">${PRJ ? moneySplit(value) : "—"}</b><span>${esc(P("Valor estimado", "Estimated value"))} ›</span>${value ? `<small class="micro muted" data-testid="value-src" style="display:block" title="${esc(BR ? P("Preço no Brasil: menor anúncio na MYP Cards para cópias normais; TCGplayer convertido para foil e cartas sem anúncio lá", "Price in Brazil: lowest MYP Cards listing for normal copies; TCGplayer converted for foils and cards not listed there") : P("Preço do TCGplayer convertido para reais, atualizado todo dia", "TCGplayer price converted to reais, updated daily"))}">${esc(share >= 100 ? "MYP Cards" : share > 0 ? P(`${share}% MYP · resto TCG`, `${share}% MYP · rest TCG`) : priceSrc)}</small>` : ""}</a>
       <div class="stat"><b>${lent.toLocaleString(LOC)}</b><span>${Tx("Lent out")}</span></div></div>${PRJ && unpriced ? `<p class="micro muted" style="margin:var(--sp-1) 0 0" data-testid="value-unpriced">${esc(unpriced === 1 ? P("+ 1 carta sem preço (fora do valor estimado)", "+ 1 card with no price (not in the estimated value)") : P(`+ ${unpriced.toLocaleString(LOC)} cartas sem preço (fora do valor estimado)`, `+ ${unpriced.toLocaleString(LOC)} cards with no price (not in the estimated value)`))}</p>` : ""}${PRJ && estimated ? `<p class="micro muted" style="margin:var(--sp-1) 0 0" data-testid="value-estimated" title="${esc(estNote())}">${esc(estimated === 1 ? P("Inclui 1 foil com preço estimado (sem cotação foil; usamos o preço normal)", "Includes 1 foil at an estimated price (no foil price; the normal price is used)") : P(`Inclui ${estimated.toLocaleString(LOC)} foil com preço estimado (sem cotação foil; usamos o preço normal)`, `Includes ${estimated.toLocaleString(LOC)} foils at an estimated price (no foil price; the normal price is used)`))}</p>` : ""}`;
   }
+  // "JA", "IT", "+2": the languages of a card's copies other than the collection's default (src/site/cardlang.js)
+  function langTags(id, inline) {
+    if (!langsOn() || !coll()[id]) return "";
+    const s = window.INKWELL_CARD_LANG.split(coll()[id]), dl = defLang(), ls = LANGS.filter((x) => x !== dl && (s.l[x]?.n || 0) + (s.l[x]?.f || 0) > 0);
+    if (!ls.length) return "";
+    const shown = ls.slice(0, 2).map((x) => x.toUpperCase()).join(" ") + (ls.length > 2 ? ` +${ls.length - 2}` : "");
+    return inline ? ` · <span class="tag lang-tag" data-testid="lang-tag">${esc(shown)}</span>` : `<span class="tag lang-tag" data-testid="lang-tag" title="${esc(ls.map(langName).join(", "))}">${esc(shown)}</span>`;
+  }
   const qtyText = (o, ln, hm = 0) => [o.n ? Tx("{n} normal", { n: o.n }) : "", o.f ? Tx("{n} foil", { n: o.f }) : "", hm ? Tx("{n} at home", { n: hm }) : "", ln ? Tx("{n} lent", { n: ln }) : ""].filter(Boolean).join(" · ");
   function gridCard(c) {
     const o = inPlace(c.id), t = o.n + o.f, ln = lentOf(c.id), tp = topPrice(c.id, o), p = tp.v, [a, b] = split(c.name);
     return `<button type="button" class="ccard ${t ? "" : "none"}" data-card="${esc(c.id)}">${thumb(c, "", o.f > 0)}
-        ${t ? `<span class="pill">×${t}</span>` : ""}<span class="flags">${o.f ? `<span class="tag foil">foil</span>` : ""}${ln ? `<span class="tag info">${esc(Tx("{n} lent", { n: ln }))}</span>` : ""}</span></span>
+        ${t ? `<span class="pill">×${t}</span>` : ""}<span class="flags">${o.f ? `<span class="tag foil">foil</span>` : ""}${langTags(c.id)}${ln ? `<span class="tag info">${esc(Tx("{n} lent", { n: ln }))}</span>` : ""}</span></span>
       <span class="nm">${esc(a)}${b ? `<small>${esc(b)}</small>` : ""}</span>
       <span class="meta"><span>${v.sort === "recent" && ADDED.get(`${prof()?.profile}|${c.id}`) ? esc(new Date(ADDED.get(`${prof()?.profile}|${c.id}`)).toLocaleDateString(LOC, { day: "numeric", month: "short" })) : esc(lang === "pt" ? "nº " : "#") + esc(c.num)}</span><b data-testid="unit-price">${p != null ? esc(money(p)) + (tp.foil ? ` <small class="micro">foil</small>${foilEst(c.id) ? estTag() : ""}` : "") : "–"}</b></span></button>`;
   }
@@ -378,7 +394,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     const pn = priceOf(c.id), pf = priceOf(c.id, true), copies = (q?.n || 0) + (q?.f || 0);
     const sub = copies > 1 && (pn != null || !q.n) && (pf != null || !q.f) ? (pn ?? 0) * (q.n || 0) + (pf ?? 0) * (q.f || 0) : null;   // no subtotal with a copy that has no price
     return `<button type="button" class="list-row" data-card="${esc(c.id)}">${thumb(c, "sm", o.f > 0)}</span>
-      <span class="t"><span>${esc(split(c.name).join(" · ").replace(/ · $/, ""))}</span><span class="meta">${esc(setName(c.set))} · nº ${esc(c.num)}${addedText(c)}</span>${o.n + o.f || ln ? `<span class="meta">${esc(qtyText(o, ln, ((h) => h.n + h.f)(homeOf(c.id))))}</span>` : ""}</span>
+      <span class="t"><span>${esc(split(c.name).join(" · ").replace(/ · $/, ""))}</span><span class="meta">${esc(setName(c.set))} · nº ${esc(c.num)}${addedText(c)}${langTags(c.id, true)}</span>${o.n + o.f || ln ? `<span class="meta">${esc(qtyText(o, ln, ((h) => h.n + h.f)(homeOf(c.id))))}</span>` : ""}</span>
       <span class="trail"><span style="display:grid;justify-items:end"><span class="money" data-testid="unit-price">${p != null ? esc(money(p)) + (tp.foil ? ` <small class="micro">foil</small>${foilEst(c.id) ? estTag() : ""}` : "") : "–"}</span>${sub != null ? `<span class="micro muted" data-testid="row-subtotal">${esc(P(`${copies} cópias: ${money(sub)}`, `${copies} copies: ${money(sub)}`))}</span>` : ""}</span>${ln ? `<span class="tag info">${Tx("lent")}</span>` : ""}</span></button>`;
   }
   function placeSeg() {
@@ -392,6 +408,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     for (const s of v.sets) out.push([`set:${s}`, esc(setName(s)), setName(s)]);
     for (const r of v.rar) out.push([`rar:${r}`, esc(rarName(r)), rarName(r)]);
     for (const c of v.cost) out.push([`cost:${c}`, `${Tx("Cost")} ${c === 8 ? "8+" : c}`, `${Tx("Cost")} ${c}`]);
+    if (langsOn()) for (const l2 of v.langs) { const t = l2 === "none" ? P("Sem idioma", "No language") : `${l2.toUpperCase()} · ${langName(l2)}`; out.push([`lang:${l2}`, esc(t), t]); }
     if (v.foil) out.push(["foil", Tx("Only foil"), Tx("Only foil")]);
     if (v.lent) out.push(["lent", Tx("Only lent out"), Tx("Only lent out")]);
     return out.map(([k, html, label]) => `<button type="button" class="chipbtn x" data-unchip="${esc(k)}" aria-label="${esc(Tx("Remove filter {f}", { f: label }))}">${html}</button>`).join("");
@@ -450,7 +467,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     document.querySelectorAll("[data-place]").forEach((b) => b.onclick = () => { v.place = b.dataset.place; again(); });
     document.querySelectorAll("[data-unchip]").forEach((b) => b.onclick = () => {
       const [k, val] = b.dataset.unchip.split(":");
-      if (k === "ink") v.inks = v.inks.filter((x) => x !== val); else if (k === "set") v.sets = v.sets.filter((x) => x !== val);
+      if (k === "ink") v.inks = v.inks.filter((x) => x !== val); else if (k === "lang") v.langs = v.langs.filter((x) => x !== val); else if (k === "set") v.sets = v.sets.filter((x) => x !== val);
       else if (k === "rar") v.rar = v.rar.filter((x) => x !== val); else if (k === "cost") v.cost = v.cost.filter((x) => String(x) !== val);
       else if (k === "foil") v.foil = false; else if (k === "lent") v.lent = false;
       again();
@@ -458,7 +475,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     $("more")?.addEventListener("click", () => { shown += 120; render(); });
     $("openTradeFill")?.addEventListener("click", () => openTradeFill($("openTradeFill")));
     $("openTradePost")?.addEventListener("click", () => openTradePost($("openTradePost")));
-    $("clearAll")?.addEventListener("click", () => { v = { ...v, q: "", inks: [], sets: [], rar: [], cost: [], foil: false, lent: false }; again(); });
+    $("clearAll")?.addEventListener("click", () => { v = { ...v, q: "", inks: [], sets: [], rar: [], cost: [], langs: [], foil: false, lent: false }; again(); });
     $("allCards")?.addEventListener("click", () => { v.owned = false; again(); });
     $("grid")?.addEventListener("click", (e) => { const b = e.target.closest("[data-card]"); if (b) openCard(b.dataset.card, b); });
   }
@@ -475,6 +492,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
           <div class="form-block"><h3>${Tx("Set")}</h3><div class="chips">${SETS.filter((s) => CARDS.some((c) => c.set === s.code)).map((s) => chip("sets", s.code, esc(setName(s.code)), f.sets.includes(s.code))).join("")}</div></div>
           <div class="form-block"><h3>${Tx("Rarity")}</h3><div class="chips">${RAR.map(([k, l]) => chip("rar", k, Tx(l), f.rar.includes(k))).join("")}</div></div>
           <div class="form-block"><h3>${Tx("Cost")}</h3><div class="seg block" role="group" aria-label="${Tx("Cost")}">${[1, 2, 3, 4, 5, 6, 7, 8].map((c) => `<button type="button" data-g="cost" data-k="${c}" aria-pressed="${f.cost.includes(c)}">${c === 8 ? "8+" : c}</button>`).join("")}</div></div>
+          ${langsOn() ? `<div class="form-block" data-testid="filter-langs"><h3>${esc(P("Idioma da carta", "Card language"))}</h3><div class="chips lang-chips">${[...LANGS, "none"].map((x) => chip("langs", x, x === "none" ? esc(P("Sem idioma", "No language")) : `<b>${x.toUpperCase()}</b> <span class="lang-nm">${esc(langName(x))}</span>`, f.langs.includes(x))).join("")}</div></div>` : ""}
           <div class="form-block" style="gap:0">
             <label class="switch"><span>${Tx("Only cards I own")}</span><input type="checkbox" role="switch" data-sw="owned" ${f.owned ? "checked" : ""}></label>
             <label class="switch"><span>${Tx("Only foil")}</span><input type="checkbox" role="switch" data-sw="foil" ${f.foil ? "checked" : ""}></label>
@@ -487,7 +505,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
         f[g] = f[g].includes(k) ? f[g].filter((x) => x !== k) : [...f[g], k]; draw(); sh.querySelector(`[data-g="${g}"][data-k="${b.dataset.k}"]`)?.focus();
       });
       sh.querySelectorAll("[data-sw]").forEach((x) => x.onchange = () => { f[x.dataset.sw] = x.checked; draw(); sh.querySelector(`[data-sw="${x.dataset.sw}"]`)?.focus(); });
-      $("fClear").onclick = () => { Object.assign(f, { inks: [], sets: [], rar: [], cost: [], foil: false, lent: false }); draw(); };
+      $("fClear").onclick = () => { Object.assign(f, { inks: [], sets: [], rar: [], cost: [], langs: [], foil: false, lent: false }); draw(); };
       $("fApply").onclick = () => { v = f; sh.close(); again(); };
     };
     draw();
@@ -1416,12 +1434,16 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   function collectionCsv(ids) {
     const sep = lang === "pt" ? ";" : ",", dec = (v) => (v == null ? "" : (Math.round(v * 100) / 100).toFixed(2).replace(".", lang === "pt" ? "," : "."));
     const cell = (v) => { const t = String(v ?? ""); return t.includes(sep) || /["\n\r]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
-    const head = ["card_id", "name", "set", "set_name", "number", "rarity", "ink", "normal", "foil", "binder", "home", ...(tradeReady ? ["trades"] : []), ...(deckedReady ? ["decks"] : []), "lent", "price_normal_brl", "price_foil_brl", "value_brl", "price_source"];
-    const rows = ids.map((id) => {
-      const c = BY.get(id), w = where(id), pn = priceOf(id), pf = priceOf(id, true);
-      return [id, c?.name || "", c?.set || "", c ? setName(c.set) : "", c?.num || "", c ? rarName(c.rarity) : "", c ? inksOf(c).join("/") : "", w.all.n, w.all.f,
-        w.binder.n + w.binder.f, w.home.n + w.home.f, ...(tradeReady ? [w.trade.n + w.trade.f] : []), ...(deckedReady ? [w.decks.n + w.decks.f] : []), w.lent.n + w.lent.f,
-        dec(pn), dec(pf), dec((pn == null || !w.all.n) && (pf == null || !w.all.f) ? null : (pn ?? 0) * w.all.n + (pf ?? 0) * w.all.f), srcOf(id, false) + (pf != null && foilEst(id) ? " · " + P("foil estimado pelo preço normal", "foil estimated from the normal price") : "")];
+    // with languages (supabase/card_langs.sql): one line per card and language, the copies with none last; where the
+    // copies are (binder, home…) is on the card's first line only, since those places don't keep the language
+    const lon = langsOn();
+    const head = ["card_id", "name", "set", "set_name", "number", "rarity", "ink", ...(lon ? ["language"] : []), "normal", "foil", "binder", "home", ...(tradeReady ? ["trades"] : []), ...(deckedReady ? ["decks"] : []), "lent", "price_normal_brl", "price_foil_brl", "value_brl", "price_source"];
+    const rows = ids.flatMap((id) => {
+      const c = BY.get(id), w = where(id), pn = priceOf(id), pf = priceOf(id, true), sp = lon ? CL.split(coll()[id]) : null;
+      const parts = lon ? [...LANGS.filter((l2) => (sp.l[l2]?.n || 0) + (sp.l[l2]?.f || 0)).map((l2) => [l2, sp.l[l2].n || 0, sp.l[l2].f || 0]), ...(sp.unknown.n + sp.unknown.f ? [["", sp.unknown.n, sp.unknown.f]] : [])] : [[null, w.all.n, w.all.f]];
+      return parts.map(([l2, n, f], i) => [id, c?.name || "", c?.set || "", c ? setName(c.set) : "", c?.num || "", c ? rarName(c.rarity) : "", c ? inksOf(c).join("/") : "", ...(lon ? [l2 ? l2.toUpperCase() : ""] : []), n, f,
+        ...(i ? ["", "", ...(tradeReady ? [""] : []), ...(deckedReady ? [""] : []), ""] : [w.binder.n + w.binder.f, w.home.n + w.home.f, ...(tradeReady ? [w.trade.n + w.trade.f] : []), ...(deckedReady ? [w.decks.n + w.decks.f] : []), w.lent.n + w.lent.f]),
+        dec(pn), dec(pf), dec((pn == null || !n) && (pf == null || !f) ? null : (pn ?? 0) * n + (pf ?? 0) * f), srcOf(id, false) + (pf != null && foilEst(id) ? " · " + P("foil estimado pelo preço normal", "foil estimated from the normal price") : "")]);
     });
     return "\ufeff" + [head, ...rows].map((r) => r.map(cell).join(sep)).join("\r\n") + "\r\n";   // BOM: Excel reads the accents right
   }
@@ -1434,7 +1456,13 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     for (const id of ids) {
       const c = BY.get(id), o = owned(id); if (!c) continue;
       const s = SETS.find((x) => x.code === c.set);
-      for (const [k, extra] of [["n", ""], ["f", "Foil"]]) if (o[k] > 0) rows.push(["", s?.name_en || "", c.set, "", c.name, o[k], "NM", "EN", c.rarity || "", "", extra, c.num, "", ""].map(cell).join(","));
+      const LIGA = { en: "EN", fr: "FR", de: "DE", it: "IT", ja: "JP", zh: "" }, sp = langsOn() ? CL.split(coll()[id]) : null, dl = langsOn() ? defLang() : "en";
+      for (const [k, extra] of [["n", ""], ["f", "Foil"]]) {
+        if (!(o[k] > 0)) continue;
+        // the language split is of every copy; "o" may be one place only (binder…): then all go as the default language
+        const parts = sp && o[k] === sp[k] ? [...LANGS.filter((l2) => sp.l[l2]?.[k]).map((l2) => [l2, sp.l[l2][k]]), ...(sp.unknown[k] ? [[dl, sp.unknown[k]]] : [])] : [[dl, o[k]]];
+        for (const [l2, q] of parts) rows.push(["", s?.name_en || "", c.set, "", c.name, q, "NM", LIGA[l2] ?? "EN", c.rarity || "", "", extra, c.num, "", ""].map(cell).join(","));
+      }
     }
     return [head, ...rows].join("\r\n") + "\r\n";
   }
@@ -1479,7 +1507,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const FORMAT_NAME = { ligalorcana: "Liga Lorcana", dreamborn: "Dreamborn", tcgplayer: "TCGplayer", "inkwell-csv": "Inkwell", "inkwell-json": "Inkwell", json: "JSON", table: "Planilha", list: "Lista" };
   function openImport(from) {
     window.INKWELL_TRACK?.("import_open");
-    const sh = $("impSheet"); let res = null, mode = "max", fileName = "";
+    const sh = $("impSheet"); let res = null, mode = "max", fileName = "", impLang = undefined;   // impLang: the language of lines that don't say one ("" = sem idioma)
     const close = () => sh.close();
     function step1(msg) {
       sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="impT">${Tx("Import collection")}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
@@ -1500,29 +1528,39 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     }
     function step2() {
       const tot = window.INKWELL_COLL_IMPORT.total(res.rows), n = tot.reduce((a, x) => a + x.n, 0), f = tot.reduce((a, x) => a + x.f, 0);
-      const coll = prof()?.collection || {};
-      const delta = (x, k) => mode === "sum" ? x[k] : Math.max(0, x[k] - (+coll[x.id]?.[k] || 0));
+      const coll = prof()?.collection || {}, lon = langsOn(), withLang = lon && res.langs;
+      if (impLang === undefined) impLang = lon ? (withLang ? "" : addLangNow()) : "";
+      // "keep the larger number": a file that says languages is compared language by language (its lines without one
+      // with the copies that have none); a file that doesn't, with the card's total, as before
+      const have = (x, k) => { if (!withLang) return +coll[x.id]?.[k] || 0; const sp = CL.split(coll[x.id]); return x.lang ? sp.l[x.lang]?.[k] || 0 : sp.unknown[k]; };
+      const delta = (x, k) => mode === "sum" ? x[k] : Math.max(0, x[k] - have(x, k));
+      const noLang = tot.filter((x) => !x.lang).reduce((a, x) => a + x.n + x.f, 0);
+      const byLang = lon ? LANGS.map((l2) => [l2, tot.filter((x) => x.lang === l2).reduce((a, x) => a + x.n + x.f, 0)]).filter(([, q]) => q) : [];
       const adds = tot.reduce((a, x) => a + delta(x, "n") + delta(x, "f"), 0);
       const by = new Map(CARDS.map((c) => [c.id, c]));
       sh.innerHTML = `<div class="grab"></div><div class="sheet-head"><h2 id="impT">${Tx("Check before importing")}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
         <div class="sheet-body stack" style="gap:var(--sp-3)">
           <p style="margin:0" data-testid="imp-summary"><span class="tag info">${esc(Tx("Recognised: {f}", { f: FORMAT_NAME[res.format] || res.format }))}</span> ${esc(Tx("{c} different cards · {n} normal · {f} foil", { c: tot.length, n, f }))}${fileName ? ` <span class="small muted">· ${esc(fileName)}</span>` : ""}</p>
           ${res.rejects.length ? `<details class="small" data-testid="imp-rejects"><summary>${esc(res.rejects.length === 1 ? Tx("1 line was not recognised") : Tx("{n} lines were not recognised", { n: res.rejects.length }))}</summary><ul style="margin:6px 0 0;padding-left:18px">${res.rejects.slice(0, 50).map((r) => `<li>${r.line ? esc(Tx("line {n}", { n: r.line })) + ": " : ""}${esc(r.raw)}</li>`).join("")}${res.rejects.length > 50 ? `<li>…</li>` : ""}</ul></details>` : ""}
+          ${byLang.length ? `<p class="small" style="margin:0" data-testid="imp-langs">${esc(P("Idiomas no arquivo:", "Languages in the file:"))} ${esc(byLang.map(([l2, q]) => `${l2.toUpperCase()} ${q}`).join(" · "))}${noLang ? esc(P(` · ${noLang} sem idioma`, ` · ${noLang} with none`)) : ""}</p>` : ""}
+          ${lon && noLang ? `<div class="stack" style="gap:6px" data-testid="imp-lang"><span class="small" style="font-weight:700">${esc(withLang ? P(`Idioma das ${noLang} cópias que o arquivo não diz`, `Language of the ${noLang} copies the file doesn't say`) : P("Idioma das cartas importadas", "Language of the imported cards"))}</span>
+            <div class="chips lang-chips">${[...LANGS, ""].map((l2) => `<button type="button" class="chipbtn" data-ilang="${l2}" aria-pressed="${impLang === l2}">${l2 ? `<b>${l2.toUpperCase()}</b> <span class="lang-nm">${esc(langName(l2))}</span>` : esc(P("Sem idioma", "No language"))}</button>`).join("")}</div></div>` : ""}
           <fieldset class="stack" style="gap:6px;border:0;padding:0;margin:0"><legend class="small" style="font-weight:700;margin-bottom:4px">${Tx("How to add")}</legend>
             <label class="check"><input type="radio" name="impMode" value="max" ${mode === "max" ? "checked" : ""}> <span>${Tx("Keep the larger number")}<small class="muted" style="display:block">${Tx("Safe to import the same file again: nothing is counted twice.")}</small></span></label>
             <label class="check"><input type="radio" name="impMode" value="sum" ${mode === "sum" ? "checked" : ""}> <span>${Tx("Add to what I have")}<small class="muted" style="display:block">${Tx("For new cards you just got.")}</small></span></label></fieldset>
-          <div class="imp-list small" data-testid="imp-list">${tot.slice(0, 200).map((x) => { const c = by.get(x.id); return `<div><span>${esc(c?.name || x.id)}</span><span class="muted">${esc(c ? setName(c.set) : "")}</span><b>${x.n ? `${x.n}` : ""}${x.n && x.f ? " + " : ""}${x.f ? `${x.f} foil` : ""}</b></div>`; }).join("")}${tot.length > 200 ? `<div class="muted">… ${esc(Tx("and {n} more", { n: tot.length - 200 }))}</div>` : ""}</div>
+          <div class="imp-list small" data-testid="imp-list">${tot.slice(0, 200).map((x) => { const c = by.get(x.id); return `<div><span>${esc(c?.name || x.id)}</span><span class="muted">${esc(c ? setName(c.set) : "")}</span><b>${x.n ? `${x.n}` : ""}${x.n && x.f ? " + " : ""}${x.f ? `${x.f} foil` : ""}${x.lang ? ` · ${x.lang.toUpperCase()}` : ""}</b></div>`; }).join("")}${tot.length > 200 ? `<div class="muted">… ${esc(Tx("and {n} more", { n: tot.length - 200 }))}</div>` : ""}</div>
           <p class="small" id="impMsg" role="alert" style="margin:0"></p></div>
         <div class="sheet-foot"><button type="button" class="btn ghost" id="impBack">${Tx("Back")}</button><button type="button" class="btn primary" id="impGo" ${adds ? "" : "disabled"}>${esc(adds ? Tx("Add {n} cards to the collection", { n: adds }) : Tx("You already have all of them"))}</button></div>`;
       sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = close);
       sh.querySelectorAll("[name=impMode]").forEach((r) => r.onchange = () => { mode = r.value; step2(); });
+      sh.querySelectorAll("[data-ilang]").forEach((b) => b.onclick = () => { impLang = b.dataset.ilang; step2(); sh.querySelector(`[data-ilang="${b.dataset.ilang}"]`)?.focus(); });
       $("impBack").onclick = () => step1();
       $("impGo").onclick = () => apply(tot, delta);
     }
     async function apply(tot, delta) {
       const p = prof(); if (!p) { $("impMsg").textContent = Tx("Couldn't save. Try again."); return; }
       const items = [];
-      for (const x of tot) for (const k of ["n", "f"]) { const q = delta(x, k); if (q > 0) items.push({ card_id: x.id, qty: q, foil: k === "f" }); }
+      for (const x of tot) for (const k of ["n", "f"]) { const q = delta(x, k), lg = x.lang || (langsOn() && impLang) || null; if (q > 0) items.push({ card_id: x.id, qty: q, foil: k === "f", ...(lg ? { lang: lg } : {}) }); }
       const b = $("impGo"); b.disabled = true;
       let done = 0;
       try {
@@ -1530,7 +1568,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
           const part = items.slice(i, i + 400);
           await (p.shared ? CLOUD.api("rpc/shared_collection_change", { method: "POST", prefer: "return=minimal", body: { p_owner: p.owner, p_profile: p.pname, p_delta: part, p_home: [] } })
             : CLOUD.api("rpc/apply_collection_delta", { method: "POST", prefer: "return=minimal", body: { p_profile: p.profile, p_delta: part } }));
-          for (const d of part) { const e = p.collection[d.card_id] = { n: 0, f: 0, ...(p.collection[d.card_id] || {}) }; const k = d.foil ? "f" : "n"; e[k] = (+e[k] || 0) + d.qty; ADDED.set(`${p.profile}|${d.card_id}`, Date.now()); done += d.qty; }
+          for (const d of part) { p.collection[d.card_id] = langApply(p.collection[d.card_id], d.foil ? "f" : "n", d.qty, d.lang); ADDED.set(`${p.profile}|${d.card_id}`, Date.now()); done += d.qty; }
           b.textContent = Tx("Saving… {n}", { n: done });
         }
         close(); renderAll(); toast(Tx("Collection updated: {n} cards added", { n: done }));
@@ -1689,7 +1727,8 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   }
   function addScanned(id) {
     const c = BY.get(id); if (!c) return;
-    scan.added.push({ id, foil: scan.foil }); scan.last = { id, foil: scan.foil }; scan.wait = true; scan.seen = null; scan.seenN = 0;
+    const lg = scan.lang || addLangNow();   // the language of the last card in the list (default: the collection's)
+    scan.added.push({ id, foil: scan.foil, lang: lg }); scan.last = { id, foil: scan.foil }; scan.wait = true; scan.seen = null; scan.seenN = 0;
     navigator.vibrate?.(40);
     drawLast();
     scanSay(Tx("In the list: {c}", { c: split(c.name)[0] }) + " · " + Tx("Remove the card and show the next one."));
@@ -1697,8 +1736,8 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   }
   // Nothing reaches the collection until the list is confirmed here.
   function reviewGroups() {
-    const m = new Map(); for (const a of scan.added) { const k = `${a.id}:${a.foil ? 1 : 0}`; m.set(k, (m.get(k) || 0) + 1); }
-    return [...m].map(([k, n]) => { const [id, f] = k.split(":"); return { id, foil: f === "1", n }; });
+    const m = new Map(); for (const a of scan.added) { const k = `${a.id}:${a.foil ? 1 : 0}:${a.lang || ""}`; m.set(k, (m.get(k) || 0) + 1); }
+    return [...m].map(([k, n]) => { const [id, f, lg] = k.split(":"); return { id, foil: f === "1", lang: lg || null, n }; });
   }
   const scanPlace = () => { let x = "binder"; try { x = localStorage.getItem("inkwell-scan-place") || "binder"; } catch { /* */ } return x === "home" || (x === "trade" && tradeReady) ? x : "binder"; };
   function showReview() {
@@ -1707,21 +1746,30 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     if (!box) { box = document.createElement("div"); box.className = "review"; box.id = "scanReview"; box.setAttribute("data-testid", "scan-review"); stage.appendChild(box); }
     const g = reviewGroups(), total = scan.added.length;
     box.innerHTML = `<header><button type="button" class="btn icon" id="revBack" aria-label="${Tx("Keep scanning")}"><i class="ic i-chevron-left"></i></button><h2>${Tx("Check before adding")}</h2></header>
-      <div class="items">${g.length ? g.map((x) => { const c = BY.get(x.id); return c ? `<div class="item" data-rev="${esc(x.id)}:${x.foil ? 1 : 0}">${thumb(c, "xs", x.foil)}</span>
+      <div class="items">${g.length ? g.map((x) => { const c = BY.get(x.id); return c ? `<div class="item" data-rev="${esc(x.id)}:${x.foil ? 1 : 0}${x.lang ? `:${x.lang}` : ""}">${thumb(c, "xs", x.foil)}</span>
         <span class="t"><b>${esc(split(c.name).join(" · ").replace(/ · $/, ""))}</b><span class="small muted">${esc([setName(c.set), "nº " + c.num, Tx(x.foil ? "foil" : "normal")].join(" · "))}</span></span>
+        ${langsOn() ? `<select class="lang-sel" data-rlang aria-label="${esc(P(`Idioma de ${split(c.name)[0]}`, `Language of ${split(c.name)[0]}`))}">${LANGS.map((l2) => `<option value="${l2}" ${x.lang === l2 ? "selected" : ""}>${l2.toUpperCase()}</option>`).join("")}</select>` : ""}
         <div class="qty"><button type="button" data-rq="-1" aria-label="${Tx("Remove one")}">−</button><output>${x.n}</output><button type="button" data-rq="1" aria-label="${Tx("Add one")}">+</button></div></div>` : ""; }).join("")
         : `<p class="muted" style="text-align:center">${Tx("The list is empty.")}</p>`}</div>
       <footer>${homeReady ? `<div class="seg" role="group" aria-label="${Tx("Add to")}" data-testid="scan-place" style="justify-self:center"><span class="small muted" style="align-self:center;padding:0 6px">${Tx("Add to")}</span>${[["binder", "Binder"], ["home", "Home"], ...(tradeReady ? [["trade", "Trades"]] : [])].map(([k, l]) => `<button type="button" data-splace="${k}" aria-pressed="${scanPlace() === k}">${Tx(l)}</button>`).join("")}</div>` : ""}
+        ${langsOn() && g.length > 1 ? `<label class="row small" style="justify-content:center;gap:var(--sp-2)" data-testid="scan-lang-all">${esc(P("Idioma de todas:", "Language of all:"))} <select class="lang-sel" id="revLangAll"><option value="">—</option>${LANGS.map((l2) => `<option value="${l2}">${l2.toUpperCase()} · ${esc(langName(l2))}</option>`).join("")}</select></label>` : ""}
         <p class="small muted" style="margin:0;text-align:center">${Tx("Nothing will be saved until you confirm.")}</p>
         <button type="button" class="btn primary" id="revAdd" ${total ? "" : "disabled"}>${Tx("Add {n} cards to the collection", { n: total })}</button>
         <div class="row between"><button type="button" class="btn" id="revMore"><i class="ic i-camera"></i>${Tx("Keep scanning")}</button><button type="button" class="btn ghost" id="revDrop">${Tx("Discard the list")}</button></div></footer>`;
     const back = () => { scan.review = false; box.remove(); scan.wait = false; drawLast(); scanSay(Tx("Point the camera at one card inside the frame.")); };
     $("revBack").onclick = back; $("revMore").onclick = back;
     box.querySelectorAll("[data-splace]").forEach((b) => b.onclick = () => { try { localStorage.setItem("inkwell-scan-place", b.dataset.splace); } catch { /* */ } showReview(); });
+    const same = (a, id, foil, lg) => a.id === id && a.foil === foil && (a.lang || "") === lg;
+    box.querySelectorAll("[data-rlang]").forEach((sel) => sel.onchange = () => {
+      const [id, f, lg = ""] = sel.closest("[data-rev]").dataset.rev.split(":");
+      for (const a of scan.added) if (same(a, id, f === "1", lg)) a.lang = sel.value;
+      scan.lang = sel.value; showReview(); box.querySelector(`[data-rev="${CSS.escape(`${id}:${f}:${sel.value}`)}"] [data-rlang]`)?.focus();
+    });
+    $("revLangAll")?.addEventListener("change", (e) => { if (!e.target.value) return; for (const a of scan.added) a.lang = e.target.value; scan.lang = e.target.value; showReview(); });
     box.querySelectorAll("[data-rq]").forEach((b) => b.onclick = () => {
-      const [id, f] = b.closest("[data-rev]").dataset.rev.split(":"), foil = f === "1";
-      if (b.dataset.rq === "1") scan.added.push({ id, foil });
-      else { const i = scan.added.map((a) => a.id === id && a.foil === foil).lastIndexOf(true); if (i >= 0) scan.added.splice(i, 1); }
+      const [id, f, lg = ""] = b.closest("[data-rev]").dataset.rev.split(":"), foil = f === "1";
+      if (b.dataset.rq === "1") scan.added.push({ id, foil, lang: lg || null });
+      else { const i = scan.added.map((a) => same(a, id, foil, lg)).lastIndexOf(true); if (i >= 0) scan.added.splice(i, 1); }
       scan.last = scan.added[scan.added.length - 1] || null; showReview();
     });
     $("revDrop").onclick = (e) => {
@@ -1730,7 +1778,8 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       scan.added = []; scan.last = null; $("scan").close();
     };
     $("revAdd").onclick = () => {
-      for (const x of reviewGroups()) change(x.id, x.foil ? "f" : "n", x.n, true, homeReady ? scanPlace() : "binder", addLangNow());
+      for (const x of reviewGroups()) change(x.id, x.foil ? "f" : "n", x.n, true, homeReady ? scanPlace() : "binder", x.lang || addLangNow());
+      if (scan.lang) lastLang = scan.lang;
       scan.saved = scan.added.length; scan.added = []; scan.last = null;
       clearTimeout(pendingTimer); $("scan").close();
     };

@@ -1,6 +1,7 @@
 /* Inkwell — "Importar coleção": reads a collection exported by another app without asking which one.
  *
- *   INKWELL_COLL_IMPORT.parse(text, fileName, cards, sets) -> { format, rows: [{ id, n, f, line }], rejects: [{ line, raw, reason }] }
+ *   INKWELL_COLL_IMPORT.parse(text, fileName, cards, sets) -> { format, rows: [{ id, n, f, lang, line }], rejects: [{ line, raw, reason }], langs }
+ *     lang: the printing language when the file says it (en fr de it ja zh), else null; langs: true when any line has one
  *     cards  [{ id, name, set, num }]    (the page's card index)
  *     sets   [{ code, name_en, name_pt }]
  *
@@ -11,7 +12,9 @@
  *   - any spreadsheet whose header names the columns, in English or Portuguese: quantity (count, qty, quantidade…),
  *     set (number, code or name), card number, name, finish (foil, variant, printing, acabamento, extras…).
  *     TCGplayer's export fits this. Comma, semicolon (Excel in Portuguese) or tab.
- *   - a plain list, one card per line: "4 Elsa - Spirit of Winter", "4x Elsa…", "Elsa… x4", optionally "(foil)".
+ *   - a plain list, one card per line: "4 Elsa - Spirit of Winter", "4x Elsa…", "Elsa… x4", optionally "(foil)";
+ *     a line with only a language ("Italiano", "Japanese", "JP"…) sets the language of the lines below it.
+ *   A language column (language, idioma, lang; Liga Lorcana's "Idioma (BR EN …)") or Inkwell's split ("l") is read too.
  * Each line is matched by id, then set + number, then name (set kept if given). Lines it can't place come back
  * in rejects with the reason, so the page can show them. Nothing here touches the network. */
 (function (root) {
@@ -26,7 +29,13 @@
     num: ["card number", "number", "collector number", "card no", "no", "#", "numero", "num", "n do card", "nr"],
     name: ["name", "card name", "card", "nome", "carta", "simple name", "product name", "product"],
     finish: ["variant", "finish", "printing", "foil type", "acabamento", "extras", "extra", "tipo", "versao", "condition foil"],
+    lang: ["language", "lang", "idioma", "lingua", "card language", "idioma da carta"],
   };
+  // a printing language as Inkwell keeps it (en fr de it ja zh), or null (empty, or a language Lorcana isn't printed in)
+  const LANG_WORDS = { en: ["en", "eng", "english", "ingles", "ing", "us", "uk"], fr: ["fr", "fra", "french", "frances", "francais"], de: ["de", "ger", "deu", "german", "deutsch", "alemao", "ale"],
+    it: ["it", "ita", "italian", "italiano"], ja: ["ja", "jp", "jap", "jpn", "japanese", "japones"], zh: ["zh", "cn", "chn", "zh cn", "chinese", "chines", "simplified chinese", "chinese simplified", "chines simplificado"] };
+  const LANG_OF = new Map(Object.entries(LANG_WORDS).flatMap(([l, ws]) => ws.map((w) => [w, l])));
+  const langOf = (v) => LANG_OF.get(norm(v)) || null;
   const isFoil = (v) => /foil|brilh|holo|^(yes|sim|true|1|x)$/i.test(String(v ?? "").trim()) && !/non.?foil|^normal$/i.test(String(v ?? "").trim());
 
   function splitLine(line, sep) {
@@ -83,34 +92,41 @@
   function parse(text, fileName, cards, sets) {
     const ix = index(cards || [], sets);
     const rows = [], rejects = [];
-    const add = (c, n, f, line) => { if (n || f) rows.push({ id: c.id, n, f, line }); };
+    const add = (c, n, f, line, lang = null) => { if (n || f) rows.push({ id: c.id, n, f, lang: lang || null, line }); };
+    const out = (format) => ({ format, rows, rejects, langs: rows.some((r) => r.lang) });
     const src = String(text ?? "").replace(/^﻿/, "");
     // JSON: Inkwell's export ({collection:{id:{n,f}}}, or the data export's inkwell[].data.collection)
     if (/\.json$/i.test(fileName || "") || /^\s*[{[]/.test(src)) {
       let j; try { j = JSON.parse(src); } catch { return { format: "json", rows, rejects: [{ line: 0, raw: fileName || "", reason: "bad_json" }] }; }
       const coll = j?.collection || j?.inkwell?.[0]?.data?.collection || (Array.isArray(j) ? null : j);
-      if (Array.isArray(j)) {   // [{card_id|id|name, qty|count, foil}]
+      if (Array.isArray(j)) {   // [{card_id|id|name, qty|count, foil, language}]
         j.forEach((x, i) => { const c = find(ix, { id: x.card_id || x.id, set: x.set || x.set_code, num: x.number || x.card_number, name: x.name });
           if (!c) { rejects.push({ line: i + 1, raw: String(x.name || x.card_id || x.id || "").slice(0, 60), reason: "no_match" }); return; }
-          const q = int(x.qty ?? x.count ?? x.quantity ?? 1); add(c, isFoil(x.foil ?? x.finish ?? x.variant) ? 0 : q, isFoil(x.foil ?? x.finish ?? x.variant) ? q : 0, i + 1); });
-        return { format: "json", rows, rejects };
+          const q = int(x.qty ?? x.count ?? x.quantity ?? 1); add(c, isFoil(x.foil ?? x.finish ?? x.variant) ? 0 : q, isFoil(x.foil ?? x.finish ?? x.variant) ? q : 0, i + 1, langOf(x.language ?? x.lang)); });
+        return out("json");
       }
       for (const [id, e] of Object.entries(coll || {})) {
         const c = ix.byId.get(id.toLowerCase());
         if (!c) { rejects.push({ line: 0, raw: id.slice(0, 60), reason: "unknown_id" }); continue; }
-        add(c, int(e?.n), int(e?.f), 0);
+        // Inkwell's split by language (supabase/card_langs.sql): a row per language, then what has none
+        let n = int(e?.n), f = int(e?.f);
+        for (const [lg, x] of Object.entries(e?.l && typeof e.l === "object" ? e.l : {})) {
+          const l2 = langOf(lg); if (!l2) continue;
+          const ln = Math.min(n, int(x?.n)), lf = Math.min(f, int(x?.f)); add(c, ln, lf, 0, l2); n -= ln; f -= lf;
+        }
+        add(c, n, f, 0);
       }
-      return { format: "inkwell-json", rows, rejects };
+      return out("inkwell-json");
     }
     const lines = src.split(/\r?\n/).map((l) => l.replace(/\s+$/, "")).filter((l) => l.trim());
     if (!lines.length) return { format: "empty", rows, rejects };
     const sep = sepOf(lines[0]);
     const head = sep ? splitLine(lines[0], sep).map((h) => norm(h)) : [];
     const col = (names) => { for (const nm of names) { const i = head.indexOf(norm(nm)); if (i >= 0) return i; } return -1; };
-    let iId = col(COLS.id), iQty = col(COLS.qty), iN = col(COLS.normal), iF = col(COLS.foilQty), iSet = col(COLS.set), iNum = col(COLS.num), iName = col(COLS.name), iFin = col(COLS.finish);
+    let iId = col(COLS.id), iQty = col(COLS.qty), iN = col(COLS.normal), iF = col(COLS.foilQty), iSet = col(COLS.set), iNum = col(COLS.num), iName = col(COLS.name), iFin = col(COLS.finish), iLang = col(COLS.lang);
     // Liga Lorcana: "Card #" reads as "card" once the # goes, so its columns are named one by one
     const liga = head.includes("edicao sigla") && head.includes("card en");
-    if (liga) { iId = -1; iN = -1; iF = -1; iSet = head.indexOf("edicao sigla"); iName = head.indexOf("card en"); iNum = head.lastIndexOf("card"); iQty = head.indexOf("quantidade"); iFin = head.indexOf("extras"); }
+    if (liga) { iId = -1; iN = -1; iF = -1; iSet = head.indexOf("edicao sigla"); iName = head.indexOf("card en"); iNum = head.lastIndexOf("card"); iQty = head.indexOf("quantidade"); iFin = head.indexOf("extras"); iLang = head.findIndex((h) => h.startsWith("idioma")); }
     const tabular = sep && (iId >= 0 || iName >= 0 || (iSet >= 0 && iNum >= 0));
     if (tabular) {
       const format = liga ? "ligalorcana" : iId >= 0 && iN >= 0 ? "inkwell-csv" : head.includes("set number") && head.includes("card number") ? "dreamborn" : head.includes("simple name") || head.includes("product id") ? "tcgplayer" : "table";
@@ -118,16 +134,19 @@
         const p = splitLine(lines[i], sep); if (p.every((x) => !x)) continue;
         const c = find(ix, { id: iId >= 0 ? p[iId] : null, set: iSet >= 0 ? p[iSet] : null, num: iNum >= 0 ? p[iNum] : null, name: iName >= 0 ? p[iName] : null });
         if (!c) { rejects.push({ line: i + 1, raw: [iSet >= 0 ? p[iSet] : "", iNum >= 0 ? p[iNum] : "", iName >= 0 ? p[iName] : (iId >= 0 ? p[iId] : "")].filter(Boolean).join(" · ").slice(0, 80) || lines[i].slice(0, 80), reason: "no_match" }); continue; }
-        if (iN >= 0 || (iF >= 0 && iQty < 0 && !isFoil(p[iF]))) { add(c, int(iN >= 0 ? p[iN] : 0), int(iF >= 0 ? p[iF] : 0), i + 1); continue; }   // separate normal/foil counts
+        const lg = iLang >= 0 ? langOf(p[iLang]) : null;
+        if (iN >= 0 || (iF >= 0 && iQty < 0 && !isFoil(p[iF]))) { add(c, int(iN >= 0 ? p[iN] : 0), int(iF >= 0 ? p[iF] : 0), i + 1, lg); continue; }   // separate normal/foil counts
         const q = iQty >= 0 ? int(p[iQty]) : 1;
         if (!q) { rejects.push({ line: i + 1, raw: lines[i].slice(0, 80), reason: "no_qty" }); continue; }
         const foil = (iFin >= 0 && isFoil(p[iFin])) || (iF >= 0 && isFoil(p[iF]));
-        add(c, foil ? 0 : q, foil ? q : 0, i + 1);
+        add(c, foil ? 0 : q, foil ? q : 0, i + 1, lg);
       }
-      return { format, rows, rejects };
+      return out(format);
     }
-    // a plain list: "4 Name", "4x Name", "Name x4", "Name" (1)
+    // a plain list: "4 Name", "4x Name", "Name x4", "Name" (1); a language on its own line applies to the lines below
+    let listLang = null;
     lines.forEach((l, i) => {
+      const h = langOf(l.replace(/[:：\-–—=]+\s*$/, "")); if (h && !/\d/.test(l)) { listLang = h; return; }
       if (/^\s*(\/\/|#)/.test(l) || /^\s*(deck|sideboard|main|total)\b/i.test(l)) return;   // comments and section titles
       let s = l.trim(), q = 1, foil = /\((?:cold )?foil\)|\bfoil\b|\*f\*/i.test(s);
       s = s.replace(/\((?:cold )?foil\)|\*f\*/ig, "").replace(/\bfoil\b/ig, "").trim();
@@ -137,17 +156,17 @@
       if (sn) { set = sn[1]; num = sn[2]; s = s.slice(0, sn.index).trim(); }
       const c = find(ix, { name: s, set, num });
       if (!c) { rejects.push({ line: i + 1, raw: l.slice(0, 80), reason: "no_match" }); return; }
-      add(c, foil ? 0 : q, foil ? q : 0, i + 1);
+      add(c, foil ? 0 : q, foil ? q : 0, i + 1, listLang);
     });
-    return { format: "list", rows, rejects };
+    return out("list");
   }
-  // several lines for the same card -> one total per card
+  // several lines for the same card (and language) -> one total per card and language
   function total(rows) {
     const m = new Map();
-    for (const r of rows) { const e = m.get(r.id) || { id: r.id, n: 0, f: 0 }; e.n += r.n; e.f += r.f; m.set(r.id, e); }
+    for (const r of rows) { const key = `${r.id}|${r.lang || ""}`, e = m.get(key) || { id: r.id, lang: r.lang || null, n: 0, f: 0 }; e.n += r.n; e.f += r.f; m.set(key, e); }
     return [...m.values()];
   }
-  const api = { parse, total, norm };
+  const api = { parse, total, norm, langOf };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.INKWELL_COLL_IMPORT = api;
 })(typeof window !== "undefined" ? window : globalThis);
