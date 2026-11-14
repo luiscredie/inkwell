@@ -82,6 +82,9 @@ for(const width of [320,375,390,430,1280]){
     // The actual DOM handler must forward the PointerEvent to cleanup.
     assert.equal(await stage.getAttribute('onpointercancel'),'binderPointerCancel(event)',
       'DOM pointercancel handler does not forward event');
+    // Browser may release pointer capture without pointerup (e.g. interrupted drag).
+    assert.equal(await stage.getAttribute('onlostpointercapture'),'binderPointerCancel(event)',
+      'Lost pointer capture is not wired to gesture cleanup');
     // Cancelled drag must clear state and release capture without turning a page.
     await page.evaluate(()=>{
       const stage=document.querySelector('[data-binder-swipe]');
@@ -92,6 +95,15 @@ for(const width of [320,375,390,430,1280]){
       binderPointerCancel({pointerId:72,currentTarget:target});
       if(released[0]!==72||binderPointerId!==null||binderTouchX!==null||binderPage!==before)
         throw Error('Cancelled pointer drag did not clean up safely');
+    });
+    await page.evaluate(()=>{
+      const stage=document.querySelector('[data-binder-swipe]');
+      const target={setPointerCapture(){},hasPointerCapture:()=>false};
+      binderPointerStart({pointerId:73,pointerType:'mouse',button:0,clientX:230,clientY:150,target:stage,currentTarget:target});
+      const before=binderPage;
+      stage.dispatchEvent(new PointerEvent('lostpointercapture',{pointerId:73,bubbles:true}));
+      if(binderPointerId!==null||binderTouchX!==null||binderPage!==before)
+        throw Error('Lost pointer capture left stale binder drag state');
     });
     // A horizontal swipe must not also activate the card under the pointer.
     await page.evaluate(()=>{
