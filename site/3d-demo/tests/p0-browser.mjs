@@ -56,8 +56,8 @@ for(const width of [320,375,390,430,1280]){
     const stage=page.locator('[data-binder-swipe]');
     await stage.focus();
     await page.keyboard.press('ArrowRight');
-    // Page-turn animation takes 260ms; wait for the rendered stage to settle.
-    await page.waitForTimeout(320);
+    // Allow the shortened 160ms turn to settle, with a small scheduling margin.
+    await page.waitForTimeout(210);
     assert.equal(await stage.count(),1,'Binder stage missing after navigation');
     assert.equal(await stage.evaluate(el=>document.activeElement===el),true,'Keyboard focus lost after page turn');
     const pageLabel=await page.locator('.binder-page').first().getAttribute('aria-label');
