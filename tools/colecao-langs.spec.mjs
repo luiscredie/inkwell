@@ -350,3 +350,55 @@ test('Mural: a new post with its language; before the column exists it is posted
     await page.unrouteAll({ behavior: 'ignoreErrors' });
   }
 });
+
+// the review screen as on a phone: the card's name and details readable, the language a small select under them
+// (a select is 100% wide by default: on 15/11/2026 it squeezed the card's text to nothing)
+for (const w of [320, 390]) test(`scanner review layout at ${w} px: name visible, language under it, "Idioma de todas" on one line`, async ({ page }) => {
+  await setup(page, { prefs: { card_lang_prompt: 'done' } });   // scanned at the default size, checked at w px
+  await page.addInitScript(([a, b]) => {
+    window.__fakeSrc = a; window.__fakeNext = b;
+    navigator.mediaDevices.getUserMedia = async () => {
+      const c = document.createElement('canvas'); c.width = 720; c.height = 1280;
+      const ctx = c.getContext('2d'), imgs = {};
+      const img = (src) => imgs[src] || (imgs[src] = Object.assign(new Image(), { src }));
+      setInterval(() => { ctx.fillStyle = '#4a3426'; ctx.fillRect(0, 0, c.width, c.height); const g = window.__inkwellScanGuide?.(), im = img(window.__fakeSrc), k = window.__fakeSrc === a ? 0.68 : 1.03;
+        if (g && im.complete && im.naturalWidth) { const w2 = g.w * k, h = g.h * k; ctx.drawImage(im, g.x + g.w * 0.02 - (w2 - g.w) / 2, g.y - g.h * 0.015 - (h - g.h) / 2, w2, h); } }, 60);
+      return c.captureStream(15);
+    };
+  }, [IMG('Fru_Fru_-_VIP_Guest__LOR14-1.jpg'), IMG('Rapunzel_-_Tower_Defender__LOR13-80.jpg')]);
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Escanear' }).click();
+  await expect(page.locator('[data-testid="scan-last"]')).toContainText('Fru Fru', { timeout: 15000 });
+  await page.evaluate(() => { window.__fakeSrc = window.__fakeNext; });
+  await expect(page.locator('[data-testid="scan-last"]')).toContainText('Rapunzel', { timeout: 15000 });
+  await page.getByRole('button', { name: 'Concluir' }).click();
+  await page.setViewportSize({ width: w, height: 780 });
+  const items = page.locator('[data-testid="scan-review"] [data-rev]');
+  await expect(items).toHaveCount(2);
+  for (const i of [0, 1]) {
+    const it = items.nth(i), t = await it.locator('.t').boundingBox(), name = await it.locator('.t b').boundingBox(), sel = await it.locator('[data-rlang]').boundingBox();
+    expect(t.width).toBeGreaterThan(w < 360 ? 100 : 150);   // broke at ~25 px
+    expect(name.height).toBeGreaterThan(10);
+    expect(sel.width).toBeLessThanOrEqual(80);
+    expect(sel.y).toBeGreaterThan(name.y + name.height - 1);   // under the name, not beside it
+    const meta = await it.locator('.t .small').first().boundingBox();
+    expect(meta.height).toBeLessThan(50);   // "Wilds Unknown · nº 38 · normal": one or two lines, not a word per line
+  }
+  const all = await page.locator('[data-testid="scan-lang-all"]').boundingBox(), allSel = await page.locator('#revLangAll').boundingBox();
+  expect(all.height).toBeLessThan(50);
+  expect(allSel.width).toBeLessThanOrEqual(80);
+  await page.screenshot({ path: `docs/evidencias/idioma-cartas/${w}-11-scanner-conferencia.png` });
+});
+
+test('trade form at 320 px: the card name readable, foil and language on their own line', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 1100 });
+  await board(page);
+  await page.goto(TRADES + '?tab=board');
+  await page.locator('[data-listing="l1"]').getByRole('button', { name: 'Propor troca' }).click();
+  const row = page.locator('[data-items="gt"] .pick-row').first();
+  const t = await row.locator('.t').boundingBox(), sel = await row.locator('[data-ilang]').boundingBox(), name = await row.locator('.t > span').first().boundingBox();
+  expect(t.width).toBeGreaterThan(150);
+  expect(sel.width).toBeLessThanOrEqual(80);
+  expect(sel.y).toBeGreaterThan(name.y + name.height - 1);
+  await expect(row.locator('.t > span').first()).toHaveText('Mickey Mouse · Brave Little Tailor');
+});

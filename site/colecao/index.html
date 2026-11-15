@@ -340,6 +340,10 @@ window.INKWELL_CLOUD = (() => {
 #scan .review .item .t b { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; line-height: 1.25; }
 #scan .review .item .qty { flex: none; }
 #scan .review .item .t .small { display: block; }
+/* the card's language: a line under its name, a select as wide as its text (a select is 100% wide by default) */
+#scan .review .item .lang-line { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: var(--fs-small); }
+#scan .review select.lang-mini { width: auto; flex: none; min-height: 34px; padding: 0 26px 0 10px; background-position: right 8px center; }
+#scan .review .lang-all { display: flex; align-items: center; justify-content: center; gap: var(--sp-2); white-space: nowrap; }
 #scan .review footer { display: grid; gap: 8px; padding: 12px 12px calc(env(safe-area-inset-bottom, 0px) + 12px); border-top: 1px solid var(--line); }
 .imp-list { display: grid; gap: 2px; max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: var(--r-md); padding: 6px 10px; }
 .imp-list > div { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: baseline; padding: 3px 0; border-bottom: 1px solid var(--line); }
@@ -374,7 +378,7 @@ body.coll-ro .qty button, body.coll-ro .mv, body.coll-ro [data-bq], body.coll-no
 .lang-ask { margin: 0 0 var(--sp-4); }
 .lang-ask .actions { flex-wrap: wrap; }
 .tag.lang-tag { background: var(--surface-2); color: var(--text); font-weight: 700; letter-spacing: .02em; }
-.lang-sel { min-height: 40px; border-radius: var(--r-md); border: 1px solid var(--line-strong); background: var(--field); color: var(--text); padding: 0 6px; font: inherit; }
+.lang-sel { width: auto; min-height: 40px; border-radius: var(--r-md); border: 1px solid var(--line-strong); background-color: var(--field); color: var(--text); padding: 0 28px 0 8px; background-position: right 8px center; font: inherit; }
 </style>
 
 <main class="page" id="page">
@@ -2166,12 +2170,12 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const g = reviewGroups(), total = scan.added.length;
     box.innerHTML = `<header><button type="button" class="btn icon" id="revBack" aria-label="${Tx("Keep scanning")}"><i class="ic i-chevron-left"></i></button><h2>${Tx("Check before adding")}</h2></header>
       <div class="items">${g.length ? g.map((x) => { const c = BY.get(x.id); return c ? `<div class="item" data-rev="${esc(x.id)}:${x.foil ? 1 : 0}${x.lang ? `:${x.lang}` : ""}">${thumb(c, "xs", x.foil)}</span>
-        <span class="t"><b>${esc(split(c.name).join(" · ").replace(/ · $/, ""))}</b><span class="small muted">${esc([setName(c.set), "nº " + c.num, Tx(x.foil ? "foil" : "normal")].join(" · "))}</span></span>
-        ${langsOn() ? `<select class="lang-sel" data-rlang aria-label="${esc(P(`Idioma de ${split(c.name)[0]}`, `Language of ${split(c.name)[0]}`))}">${LANGS.map((l2) => `<option value="${l2}" ${x.lang === l2 ? "selected" : ""}>${l2.toUpperCase()}</option>`).join("")}</select>` : ""}
+        <span class="t"><b>${esc(split(c.name).join(" · ").replace(/ · $/, ""))}</b><span class="small muted">${esc([setName(c.set), "nº " + c.num, Tx(x.foil ? "foil" : "normal")].join(" · "))}</span>
+        ${langsOn() ? `<span class="lang-line"><span class="muted">${esc(P("Idioma", "Language"))}</span><select class="inline lang-mini" data-rlang aria-label="${esc(P(`Idioma de ${split(c.name)[0]}`, `Language of ${split(c.name)[0]}`))}">${LANGS.map((l2) => `<option value="${l2}" ${x.lang === l2 ? "selected" : ""}>${l2.toUpperCase()}</option>`).join("")}</select></span>` : ""}</span>
         <div class="qty"><button type="button" data-rq="-1" aria-label="${Tx("Remove one")}">−</button><output>${x.n}</output><button type="button" data-rq="1" aria-label="${Tx("Add one")}">+</button></div></div>` : ""; }).join("")
         : `<p class="muted" style="text-align:center">${Tx("The list is empty.")}</p>`}</div>
       <footer>${homeReady ? `<div class="seg" role="group" aria-label="${Tx("Add to")}" data-testid="scan-place" style="justify-self:center"><span class="small muted" style="align-self:center;padding:0 6px">${Tx("Add to")}</span>${[["binder", "Binder"], ["home", "Home"], ...(tradeReady ? [["trade", "Trades"]] : [])].map(([k, l]) => `<button type="button" data-splace="${k}" aria-pressed="${scanPlace() === k}">${Tx(l)}</button>`).join("")}</div>` : ""}
-        ${langsOn() && g.length > 1 ? `<label class="row small" style="justify-content:center;gap:var(--sp-2)" data-testid="scan-lang-all">${esc(P("Idioma de todas:", "Language of all:"))} <select class="lang-sel" id="revLangAll"><option value="">—</option>${LANGS.map((l2) => `<option value="${l2}">${l2.toUpperCase()} · ${esc(langName(l2))}</option>`).join("")}</select></label>` : ""}
+        ${langsOn() && g.length > 1 ? `<label class="lang-all small" data-testid="scan-lang-all">${esc(P("Idioma de todas:", "Language of all:"))} <select class="inline lang-mini" id="revLangAll"><option value="">—</option>${LANGS.map((l2) => `<option value="${l2}" label="${l2.toUpperCase()}" title="${esc(langName(l2))}">${l2.toUpperCase()}</option>`).join("")}</select></label>` : ""}
         <p class="small muted" style="margin:0;text-align:center">${Tx("Nothing will be saved until you confirm.")}</p>
         <button type="button" class="btn primary" id="revAdd" ${total ? "" : "disabled"}>${Tx("Add {n} cards to the collection", { n: total })}</button>
         <div class="row between"><button type="button" class="btn" id="revMore"><i class="ic i-camera"></i>${Tx("Keep scanning")}</button><button type="button" class="btn ghost" id="revDrop">${Tx("Discard the list")}</button></div></footer>`;
