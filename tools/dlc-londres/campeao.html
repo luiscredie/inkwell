@@ -92,12 +92,21 @@ h2{font:700 13px/1 var(--display);text-transform:uppercase;letter-spacing:.09em;
 .nav a{display:block;border:1px solid var(--line);border-radius:10px;padding:12px;text-decoration:none;background:var(--bg)}
 .nav a b{display:block;font-weight:600}
 .nav a span{font-size:12.5px;color:var(--muted)}
+.dl{list-style:none;margin:0;padding:0;columns:2 260px;column-gap:24px;font-size:14px}
+.dl li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:6px;padding:6px 0;border-top:1px solid var(--line);break-inside:avoid}
+.dl li b{font:700 14px var(--display);color:var(--gold)}
+.dl li em{font-style:normal;color:var(--muted)}
 .foot{font-size:12.5px;color:var(--muted)}
 </style>
 </head>
 <body>
 <div class="wrap">
 <section class="hero" id="hero"></section>
+<section class="card">
+  <h2>A lista campeã</h2>
+  <p class="hint">60 cartas, 20 diferentes. Lista divulgada no post oficial do vencedor (Kurt Spiess, London Challenge); transcrita da imagem, na ordem publicada.</p>
+  <ul class="dl"><li><b>2</b><span>Belle <em>– Snowfield Strategist</em></span></li><li><b>3</b><span>Besties, Assemble!</span></li><li><b>3</b><span>Eilonwy <em>– Princess of Llyr</em></span></li><li><b>4</b><span>Elisa Maza <em>– Hardworking Detective</em></span></li><li><b>3</b><span>Fangmeyer <em>– Icy Officer</em></span></li><li><b>3</b><span>Gaston <em>– Superior Archer</em></span></li><li><b>2</b><span>Grandmother Willow <em>– Ancient Advisor</em></span></li><li><b>2</b><span>Hamm <em>– Piggy Bank</em></span></li><li><b>4</b><span>Higgins <em>– Undercover Officer</em></span></li><li><b>4</b><span>Judy Hopps <em>– Always Vigilant</em></span></li><li><b>4</b><span>Judy Hopps <em>– Day Camp Instructor</em></span></li><li><b>2</b><span>Judy Hopps <em>– Helpful Officer</em></span></li><li><b>3</b><span>Judy Hopps <em>– Lead Detective</em></span></li><li><b>2</b><span>Judy Hopps <em>– On the Case</em></span></li><li><b>4</b><span>Judy Hopps <em>– Uncovering Clues</em></span></li><li><b>2</b><span>Mickey Mouse <em>– Expedition Leader</em></span></li><li><b>2</b><span>Mowgli <em>– Man Cub</em></span></li><li><b>4</b><span>Nick Wilde <em>– Providing Backup</em></span></li><li><b>4</b><span>Nick Wilde <em>– Toy Drive Officer</em></span></li><li><b>3</b><span>The Horseman Strikes!</span></li></ul>
+</section>
 <section class="card">
   <h2>O caminho no top 8</h2>
   <p class="hint">Eliminatórias em melhor de 5. Número ao lado do nome = posição no suíço.</p>
@@ -143,7 +152,7 @@ function render(){
   const inks=champ.deck.split("+"); document.querySelector(".hero").style.setProperty("--ink1",INKS[inks[0]][1]); document.querySelector(".hero").style.setProperty("--ink2",INKS[inks[1]||inks[0]][1]);
   const tc=B.flatMap(r=>r.matches.filter(m=>m.players.some(p=>p.name===name))), gw=tc.reduce((s,m)=>s+(m.players.find(p=>p.name===name).win?m.score[0]:m.score[1]),0), gl=tc.reduce((s,m)=>s+(m.players.find(p=>p.name===name).win?m.score[1]:m.score[0]),0);
   const runner=F.players.find(p=>!p.win);
-  $("hero").innerHTML=`<p class="eyebrow">Campeão · DLC London · Main Event 1</p><h1>${esc(name)}</h1>
+  $("hero").innerHTML=`<p class="eyebrow">Campeão · DLC London · Main Event 1</p><h1>${esc(name)}</h1>${name==="KurtSpice"?`<p class="sub" style="margin-bottom:6px">Kurt Spiess</p>`:""}
     <p class="sub">${DATA.total.toLocaleString("pt-BR")} jogadores · ${DATA.swiss_total} rodadas suíças · top 8 em melhor de 5 · final: ${F.score[0]}-${F.score[1]} sobre ${esc(runner.name)}</p>
     <p class="dk">${deckHTML(champ.deck)} ${esc(deckName(champ.deck))}</p>
     <div class="stats">
