@@ -6,8 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#121216">
-<link rel="icon" href="../ink/icon-192.png">
-<link rel="apple-touch-icon" href="../ink/icon-192.png">
+<link rel="icon" href="../../ink/icon-192.png">
+<link rel="apple-touch-icon" href="../../ink/icon-192.png">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>Brasileiros no DLC Londres · Inkwell</title>
 <meta name="description" content="Campanhas, posições e decks oficiais dos brasileiros no DLC London Main Event 1.">
@@ -16,7 +16,7 @@
 <meta property="og:site_name" content="Inkwell">
 <meta property="og:title" content="Brasileiros no DLC Londres · ao vivo">
 <meta property="og:description" content="Campanha, posição, decks e corrida pro Dia 2 dos brasileiros no DLC London Main Event 1, com dados oficiais do Play Hub.">
-<meta property="og:url" content="https://luiscredie.github.io/inkwell/dlc-londres/">
+<meta property="og:url" content="https://luiscredie.github.io/inkwell/dlc-londres/brasileiros/">
 <meta property="og:image" content="https://luiscredie.github.io/inkwell/dlc-londres/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -170,6 +170,7 @@ code{font-family:var(--mono);font-size:12.5px}
 <body>
 <div class="wrap">
 <header>
+  <a href="../" style="display:inline-block;margin-bottom:8px;color:var(--muted);text-decoration:none;font-size:13px">← DLC Londres · campeão</a>
   <div class="inks" aria-hidden="true"><i style="background:#f2b01e"></i><i style="background:#8a3f9e"></i><i style="background:#2a8a3e"></i><i style="background:#d33a2c"></i><i style="background:#1f6fb5"></i><i style="background:#9aa3ad"></i></div>
   <h1>Brasileiros no DLC Londres</h1>
   <p>DLC London · Main Event 1 · Fanfinity · <span id="tot"></span> jogadores · Core Constructed · 8 rodadas suíças</p>
@@ -177,10 +178,10 @@ code{font-family:var(--mono);font-size:12.5px}
     <span class="pill"><span class="dot"></span>Resultados confirmados até a <b id="lastR"></b></span>
     <span class="pill" id="liveP"><span class="dot live"></span><span id="liveR"></span></span>
     <span class="pill" id="upd"></span>
-    <a class="pill" href="confrontos/" style="text-decoration:none;color:var(--fg);font-weight:600">Confrontos por deck →</a>
-    <a class="pill" href="decks/" style="text-decoration:none;color:var(--fg);font-weight:600">Batalha de decks →</a>
-    <a class="pill" href="top8/" style="text-decoration:none;color:var(--fg);font-weight:600">Top 8 ao vivo →</a>
-    <a class="pill" href="analise/" style="text-decoration:none;color:var(--fg);font-weight:600">Análise dos jogadores →</a>
+    <a class="pill" href="../confrontos/" style="text-decoration:none;color:var(--fg);font-weight:600">Confrontos por deck →</a>
+    <a class="pill" href="../decks/" style="text-decoration:none;color:var(--fg);font-weight:600">Batalha de decks →</a>
+    <a class="pill" href="../top8/" style="text-decoration:none;color:var(--fg);font-weight:600">Top 8 e chave →</a>
+    <a class="pill" href="../analise/" style="text-decoration:none;color:var(--fg);font-weight:600">Análise dos jogadores →</a>
   </div>
 </header>
 
@@ -329,7 +330,7 @@ function renderClosed(inn,out,rem){
   $("d2Title").textContent="Participação brasileira encerrada";
   $("d2").innerHTML=`<div class="d2g ok"><h3>No Dia 2<span class="c">${inn.length}</span></h3><div class="d2l">${inn.map(chip).join("")}</div></div>`+
     `<p class="d2note">${DATA.players.length} brasileiros no DLC London Main Event 1. ${inn.length===1?`Só ${esc(inn[0].name)} passou`:`${inn.length} passaram`} do corte de 18 pontos para o Dia 2${inn.length?`, e ${inn.length===1?"ficou":"ficaram"} fora do top 8`:""}. No dia 1 o grupo fez ${W}-${L}${D?"-"+D:""} (${Math.round((W+D/2)/(W+L+D)*100)}% de aproveitamento). Melhor colocação: ${esc(all[0].name)}, #${r(all[0],LAST).rank}.</p>`+
-    `<p class="d2note"><a href="top8/" style="color:var(--fg);font-weight:600">A cobertura segue no Top 8 ao vivo →</a> classificação, chave eliminatória e raio-X dos 8 finalistas.</p>`;
+    `<p class="d2note"><a href="../top8/" style="color:var(--fg);font-weight:600">A cobertura segue no Top 8 e chave →</a> classificação, chave eliminatória e raio-X dos 8 finalistas.</p>`;
 }
 function sparkHTML(p){
   const pts=[];for(let i=1;i<=LAST;i++)if(p.rounds[i])pts.push([i,p.rounds[i].rank]);
