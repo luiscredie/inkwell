@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://raw.githubusercontent.com; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#121216">
+<link rel="icon" href="../ink/icon-192.png">
+<link rel="apple-touch-icon" href="../ink/icon-192.png">
+<title>Campeão do DLC Londres</title>
+<meta property="og:title" content="KurtSpice é o campeão do DLC London Main Event 1">
+<meta property="og:description" content="Âmbar/Safira, 12-2-1 no suíço e três vitórias por 3-2 no top 8. A campanha completa do campeão entre 1.633 jogadores.">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Página do campeão: destaque; caminho no top 8; campanha no suíço; o deck no evento; links para as demais páginas */
+:root{
+  --bg:#f3f2ef; --panel:#fff; --line:#dedbd3; --fg:#17161a; --muted:#6a6772;
+  --gold:#a8790f; --gold-bg:#fbf1d6; --win:#1f8a4c; --loss:#b8433a; --draw:#7b7686;
+  --win-bg:#dcefe3; --loss-bg:#f6dedb; --mid-bg:#eeece6;
+  --t-tz:#5b5bd6; --t-pimp:#d6408f; --t-neko:#2f9a5c; --t-rl:#9a6b1f; --t-inkrj:#1a9aa0; --t-br:#7b7a80;
+  --display:"Archivo",system-ui,sans-serif; --body:"IBM Plex Sans",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
+  color-scheme:light; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#121216; --panel:#1b1b21; --line:#2c2c35; --fg:#ecebf0; --muted:#9592a0;
+  --gold:#e3b341; --gold-bg:#2e2615; --win:#4cc282; --loss:#ef7167; --draw:#a6a1b3;
+  --win-bg:#173324; --loss-bg:#3a1d1b; --mid-bg:#24242b;
+  --t-tz:#8c8cf5; --t-pimp:#f07bb8; --t-neko:#5fcf8c; --t-rl:#d6a254; --t-inkrj:#4fc9cf; --t-br:#a9a8ae; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121216; --panel:#1b1b21; --line:#2c2c35; --fg:#ecebf0; --muted:#9592a0;
+  --gold:#e3b341; --gold-bg:#2e2615; --win:#4cc282; --loss:#ef7167; --draw:#a6a1b3;
+  --win-bg:#173324; --loss-bg:#3a1d1b; --mid-bg:#24242b;
+  --t-tz:#8c8cf5; --t-pimp:#f07bb8; --t-neko:#5fcf8c; --t-rl:#d6a254; --t-inkrj:#4fc9cf; --t-br:#a9a8ae; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 var(--body);font-variant-numeric:tabular-nums}
+.wrap{max-width:980px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px;display:grid;gap:20px}
+a{color:var(--fg)}
+.back{font-size:13px;color:var(--muted)}
+h1{font:800 clamp(24px,5.5vw,34px)/1.1 var(--display);margin:6px 0 4px;text-wrap:balance}
+header p{margin:0;color:var(--muted);font-size:14px}
+h2{font:700 13px/1 var(--display);text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 0 4px}
+.hint{font-size:13px;color:var(--muted);margin:0 0 12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:640px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;min-width:0}
+.kpi .l{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.kpi .v{font:700 24px/1.1 var(--display);margin-top:4px}
+.kpi .s{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.deck{display:inline-flex;align-items:center;gap:3px;vertical-align:middle}
+.deck i{flex:none;width:9px;height:9px;border-radius:2px;transform:rotate(45deg);display:inline-block}
+.hero{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px 18px;position:relative;overflow:hidden}
+.hero::before{content:"";position:absolute;inset:0 0 auto 0;height:5px;background:linear-gradient(90deg,var(--ink1),var(--ink2))}
+.eyebrow{font:600 12px var(--body);letter-spacing:.09em;text-transform:uppercase;color:var(--gold)}
+.hero h1{font:800 clamp(36px,9vw,58px)/1 var(--display);margin:8px 0 6px;overflow-wrap:anywhere}
+.hero .sub{color:var(--muted);font-size:14.5px;margin:0}
+.dk{display:inline-flex;align-items:center;gap:8px;font:600 14px var(--body);margin:10px 0 0}
+.dk .deck i{width:12px;height:12px}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:18px}
+@media (max-width:640px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.st{border-top:1px solid var(--line);padding-top:8px}
+.st .v{font:700 24px/1.1 var(--display)}
+.st .l{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.st .s{font-size:12.5px;color:var(--muted)}
+.good{color:var(--win)}
+.path{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:640px){.path{grid-template-columns:1fr}}
+.pm{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--bg)}
+.pm.fin{border-color:var(--gold);background:var(--gold-bg)}
+.pm .ph{font:600 11px var(--body);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.pm .sc{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;margin-top:8px;align-items:center;font-size:14px}
+.pm .sc b{font-weight:700}
+.pm .sc .n{font:700 20px var(--display);text-align:right}
+.pm .sc .lo{color:var(--muted)}
+.pm .sd{font:700 11px var(--display);color:var(--muted);margin-right:4px}
+.pm p{margin:8px 0 0;font-size:12.5px;color:var(--muted)}
+.strip{display:grid;grid-template-columns:repeat(15,minmax(0,1fr));gap:3px;margin-bottom:12px}
+.strip span{height:26px;border-radius:5px;display:grid;place-items:center;font:700 10.5px var(--display)}
+.strip .W{background:var(--win-bg);color:var(--win)} .strip .L{background:var(--loss-bg);color:var(--loss)} .strip .D{background:var(--mid-bg);color:var(--draw)}
+.mt{width:100%;border-collapse:collapse;font-size:13px}
+.mt td{padding:6px 4px;border-top:1px solid var(--line);vertical-align:middle}
+.mt td.r{color:var(--muted);width:34px}
+.mt td.o{overflow-wrap:anywhere}
+.mt td.n{text-align:right;white-space:nowrap;color:var(--muted)}
+.res{display:inline-block;min-width:22px;text-align:center;font:700 12px var(--display);border-radius:5px;padding:2px 4px}
+.res.W{background:var(--win-bg);color:var(--win)} .res.L{background:var(--loss-bg);color:var(--loss)} .res.D{background:var(--mid-bg);color:var(--draw)}
+.small{font-size:12px;color:var(--muted)}
+.dg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:640px){.dg{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.nav{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.nav a{display:block;border:1px solid var(--line);border-radius:10px;padding:12px;text-decoration:none;background:var(--bg)}
+.nav a b{display:block;font-weight:600}
+.nav a span{font-size:12.5px;color:var(--muted)}
+.foot{font-size:12.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<section class="hero" id="hero"></section>
+<section class="card">
+  <h2>O caminho no top 8</h2>
+  <p class="hint">Eliminatórias em melhor de 5. Número ao lado do nome = posição no suíço.</p>
+  <div class="path" id="path"></div>
+</section>
+<section class="card">
+  <h2>Campanha no suíço</h2>
+  <p class="hint" id="swHint"></p>
+  <div class="strip" id="strip"></div>
+  <table class="mt"><tbody id="rows"></tbody></table>
+</section>
+<section class="card">
+  <h2 id="dkTitle">O deck no evento</h2>
+  <p class="hint" id="dkHint"></p>
+  <div class="dg" id="dk"></div>
+</section>
+<section class="card">
+  <h2>Mais do DLC Londres</h2>
+  <div class="nav">
+    <a href="top8/"><b>Top 8 e chave →</b><span>Chave completa, classificação final do suíço e raio-X dos 8 finalistas</span></a>
+    <a href="brasileiros/"><b>Brasileiros no DLC Londres →</b><span>Os 24 brasileiros, rodada a rodada</span></a>
+    <a href="analise/"><b>Análise dos brasileiros →</b><span>Vs. esperado pelo deck, força da tabela e games</span></a>
+    <a href="decks/"><b>Batalha de decks →</b><span>Aproveitamento de cada dupla de tintas e matriz de matchups</span></a>
+    <a href="confrontos/"><b>Confrontos por deck →</b><span>Partidas dos brasileiros por deck adversário</span></a>
+  </div>
+</section>
+<p class="foot" id="foot"></p>
+</div>
+<script>
+const DATA = __DATA__;
+const INKS={amber:["Âmbar","#e9a920"],amethyst:["Ametista","#8a3f9e"],emerald:["Esmeralda","#2a9a4a"],ruby:["Rubi","#d3283f"],sapphire:["Safira","#1a8fd0"],steel:["Aço","#8f9aa6"]};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const deckHTML=k=>!k||k==="none"?"":`<span class="deck">${k.split("+").map(i=>`<i style="background:${INKS[i][1]}" title="${INKS[i][0]}"></i>`).join("")}</span>`;
+const deckName=k=>!k||k==="none"?"sem deck":k.split("+").map(i=>INKS[i][0]).join("/");
+const num=(x,d=1)=>x.toFixed(d).replace(".",",");
+const pct=x=>Math.round(x*100)+"%";
+const B=DATA.bracket||[], F=B.length?B[B.length-1].matches[0]:null;
+const champ=F&&F.players.find(p=>p.win);
+function render(){
+  if(!champ){$("hero").innerHTML=`<p class="eyebrow">DLC London · Main Event 1</p><h1>Final em andamento</h1>`;return}
+  const name=champ.name, X=(DATA.race.xray||[]).find(x=>x.name===name)||{}, a=X.ana, sw=(DATA.race.rows||[]).find(x=>x.name===name)||X;
+  const inks=champ.deck.split("+"); document.querySelector(".hero").style.setProperty("--ink1",INKS[inks[0]][1]); document.querySelector(".hero").style.setProperty("--ink2",INKS[inks[1]||inks[0]][1]);
+  const tc=B.flatMap(r=>r.matches.filter(m=>m.players.some(p=>p.name===name))), gw=tc.reduce((s,m)=>s+(m.players.find(p=>p.name===name).win?m.score[0]:m.score[1]),0), gl=tc.reduce((s,m)=>s+(m.players.find(p=>p.name===name).win?m.score[1]:m.score[0]),0);
+  const runner=F.players.find(p=>!p.win);
+  $("hero").innerHTML=`<p class="eyebrow">Campeão · DLC London · Main Event 1</p><h1>${esc(name)}</h1>
+    <p class="sub">${DATA.total.toLocaleString("pt-BR")} jogadores · ${DATA.swiss_total} rodadas suíças · top 8 em melhor de 5 · final: ${F.score[0]}-${F.score[1]} sobre ${esc(runner.name)}</p>
+    <p class="dk">${deckHTML(champ.deck)} ${esc(deckName(champ.deck))}</p>
+    <div class="stats">
+      <div class="st"><div class="l">Suíço</div><div class="v">${esc(sw.rec)}</div><div class="s">${sw.rank}º lugar · ${sw.pts} pts</div></div>
+      <div class="st"><div class="l">Top 8</div><div class="v">${tc.length}-0</div><div class="s">${gw}-${gl} em games</div></div>
+      ${a?`<div class="st"><div class="l">Vs. esperado</div><div class="v good">+${num(a.act-a.exp)}</div><div class="s">${num(a.act,a.act%1?1:0)} vitórias; o deck previa ${num(a.exp)}</div></div>
+      <div class="st"><div class="l">Tabela</div><div class="v">${Math.round(a.sos_pct*100)}</div><div class="s">adversários com ${pct(a.sos)} de aproveitamento</div></div>`:""}
+    </div>`;
+  const ph=["Quartas","Semifinal","Final"];
+  $("path").innerHTML=tc.map((m,i)=>{const me=m.players.find(p=>p.name===name), op=m.players.find(p=>p.name!==name);
+    const note=i===tc.length-1&&a&&a.rows.find(r=>r.opp===op.name)?(r=>`Revanche: no suíço (R${r.r}) os dois ${r.res==="D"?"empataram":r.res==="W"?`terminaram com vitória de ${esc(name)}`:`terminaram com vitória de ${esc(op.name)}`}${r.g?` (${r.g[0]}-${r.g[1]})`:""}.`)(a.rows.find(r=>r.opp===op.name)):"";
+    return `<div class="pm${i===tc.length-1?" fin":""}"><div class="ph">${ph[i]||"Rodada "+(i+1)}</div><div class="sc">
+      <span><span class="sd">${me.seed}</span><b>${esc(name)}</b> ${deckHTML(me.deck)}</span><span class="n">${m.score[0]}</span>
+      <span class="lo"><span class="sd">${op.seed}</span>${esc(op.name)} ${deckHTML(op.deck)}</span><span class="n lo">${m.score[1]}</span></div>${note?`<p>${note}</p>`:""}</div>`}).join("");
+  if(a){
+    const g=a.games;
+    $("swHint").textContent=`${sw.rec} em ${a.rows.length} rodadas. Games: ${g.w20} vitórias por 2-0, ${g.w21} por 2-1, ${g.l12} derrota por 1-2, ${g.l02} por 0-2${g.d?`, ${g.d} empate`:""}. À direita, como o adversário terminou o suíço.`;
+    $("strip").innerHTML=a.rows.map(r=>`<span class="${r.res}" title="R${r.r}">${{W:"V",L:"D",D:"E"}[r.res]}</span>`).join("");
+    $("rows").innerHTML=a.rows.map(r=>r.bye?`<tr><td class="r">R${r.r}</td><td><span class="res W">V</span></td><td class="o">bye</td><td class="n"></td></tr>`:
+      `<tr><td class="r">R${r.r}</td><td><span class="res ${r.res}">${{W:"V",L:"D",D:"E"}[r.res]}</span>${r.g?` <span class="small">${r.g[0]}-${r.g[1]}</span>`:""}</td><td class="o">${esc(r.opp)} ${deckHTML(r.deck)}</td><td class="n">${r.opp_final||""}</td></tr>`).join("");
+  }
+  const D=DATA.decks[champ.deck];
+  if(D){const tot=Object.values(DATA.decks).reduce((s,x)=>s+x.players,0), n=D.w+D.l+D.d, t8=(DATA.race.xray||[]).filter(x=>x.deck===champ.deck);
+    $("dkTitle").textContent=`${deckName(champ.deck)} no evento`;
+    $("dkHint").textContent=`Partidas do dia 1, de todos os jogadores com esse deck registrado no Play Hub.`;
+    const k=(l,v,s)=>`<div class="st"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
+    $("dk").innerHTML=k("Jogadores",D.players,`${pct(D.players/tot)} do evento`)+k("Aproveitamento",pct((D.w+D.d/2)/n),`${D.w}-${D.l}-${D.d} no dia 1`)+k("No Dia 2",D.d2,`${pct(D.d2/D.players)} de quem jogou com ele`)+k("No top 8",t8.length,t8.map(x=>esc(x.name)).join(" e "));}
+  $("foot").textContent=`Dados oficiais do Play Hub (evento 1254364), encerrado em ${new Date(DATA.fetched_at).toLocaleDateString("pt-BR")}.`;
+}
+render();
+</script>
+</body>
+</html>

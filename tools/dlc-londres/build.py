@@ -13,7 +13,7 @@ from pathlib import Path
 API = "https://api.cloudflare.ravensburgerplay.com/hydraproxy/api/v2"
 EVENT = 1254364
 HERE = Path(__file__).resolve().parent
-OUT = HERE.parents[1] / "site" / "dlc-londres" / "index.html"
+OUT = HERE.parents[1] / "site" / "dlc-londres" / "brasileiros" / "index.html"
 
 # (equipe, nome exibido, username no Play Hub)
 PLAYERS = [
@@ -359,16 +359,18 @@ def main():
     html = (HERE / "template.html").read_text(encoding="utf-8").replace("__DATA__", json.dumps(data, ensure_ascii=False))
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(html, encoding="utf-8")
-    page2 = OUT.parent / "confrontos" / "index.html"
+    page2 = OUT.parent.parent / "confrontos" / "index.html"
     page2.parent.mkdir(parents=True, exist_ok=True)
     page2.write_text((HERE / "confrontos.html").read_text(encoding="utf-8").replace("__DATA__", json.dumps(data, ensure_ascii=False)), encoding="utf-8")
-    page5 = OUT.parent / "top8" / "index.html"
+    home = OUT.parent.parent / "index.html"
+    home.write_text((HERE / "campeao.html").read_text(encoding="utf-8").replace("__DATA__", json.dumps(data, ensure_ascii=False)), encoding="utf-8")
+    page5 = OUT.parent.parent / "top8" / "index.html"
     page5.parent.mkdir(parents=True, exist_ok=True)
     page5.write_text((HERE / "top8.html").read_text(encoding="utf-8").replace("__DATA__", json.dumps(data, ensure_ascii=False)), encoding="utf-8")
-    page4 = OUT.parent / "analise" / "index.html"
+    page4 = OUT.parent.parent / "analise" / "index.html"
     page4.parent.mkdir(parents=True, exist_ok=True)
     page4.write_text((HERE / "analise.html").read_text(encoding="utf-8").replace("__DATA__", json.dumps(data, ensure_ascii=False)), encoding="utf-8")
-    page3 = OUT.parent / "decks" / "index.html"
+    page3 = OUT.parent.parent / "decks" / "index.html"
     page3.parent.mkdir(parents=True, exist_ok=True)
     page3.write_text((HERE / "decks.html").read_text(encoding="utf-8").replace("__DATA__", json.dumps(data, ensure_ascii=False)), encoding="utf-8")
     print(f"R{data['last_round']} concluída, {'R' + str(data['live_round']) + ' em andamento' if data['live_round'] else 'nenhuma rodada em andamento'} · {len(data['players'])} jogadores · {OUT}")
