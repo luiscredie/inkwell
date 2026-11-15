@@ -1054,3 +1054,33 @@ test('Faltando: the missing copies as a deck list, to copy or download', async (
   const text = await (await import('node:fs')).promises.readFile(await dl.path(), 'utf8');
   expect(text).toBe(copied);
 });
+
+test('deck list: Todos / Virtual / Físico, next to the format filter', async ({ page }) => {
+  const twin = { id: 'deck-b', name: 'Twin', format: 'core', colors: ['Amber'], cards: Object.fromEntries(IDS.slice(1).map((id) => [id, 4])), created_at: '2026-10-02' };
+  await setup(page, { extraDecks: [twin] });
+  await page.route('**/rest/v1/collection_decked**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+    { profile: 'luiscredie', deck_id: 'deck-b', deck_name: 'Twin', card_id: IDS[1], n: 4, f: 0 }]) }));
+  await page.goto(BASE);
+  const kind = page.locator('[data-testid="kind-filter"]');
+  await expect(kind.getByRole('button')).toHaveText(['Todos', 'Virtual', 'Físico']);
+  await expect(page.locator('[data-deck]')).toHaveCount(2);
+  await kind.getByRole('button', { name: 'Físico' }).click();
+  await expect(page.locator('[data-deck]')).toHaveCount(1);
+  await expect(page.locator('[data-deck="deck-b"]')).toBeVisible();
+  await kind.getByRole('button', { name: 'Virtual' }).click();
+  await expect(page.locator('[data-deck]')).toHaveCount(1);
+  await expect(page.locator('[data-deck="deck-a"]')).toBeVisible();
+  await page.reload();   // the choice is remembered, like the format
+  await expect(page.locator('[data-testid="kind-filter"] [aria-pressed="true"]')).toHaveText('Virtual');
+  await page.locator('[data-fmt="infinity"]').click();
+  await expect(page.locator('[data-testid="deck-list"]')).toHaveCount(0);
+  await expect(page.getByText('Nenhum deck com estes filtros.')).toBeVisible();
+});
+
+test('deck list: no Virtual / Físico filter before deck_built.sql (collection_decked unreadable)', async ({ page }) => {
+  await setup(page);
+  await page.route('**/rest/v1/collection_decked**', (r) => r.fulfill({ status: 404, contentType: 'application/json', body: '{"code":"42P01"}' }));
+  await page.goto(BASE);
+  await expect(page.locator('[data-deck="deck-a"]')).toBeVisible();
+  await expect(page.locator('[data-testid="kind-filter"]')).toHaveCount(0);
+});
