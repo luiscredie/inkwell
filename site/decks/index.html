@@ -543,7 +543,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Foil: only on printings that exist only in foil. A deck does not record the finish of each copy.": "Foil: só nas impressões que existem apenas em foil. O deck não guarda o acabamento de cada cópia.",
     "You own {a} of {b} cards of this deck · only you see this.": "Você possui {a} de {b} cartas deste deck · só você vê isto.",
     "The deck has many different cards: {n} images.": "O deck tem muitas cartas diferentes: {n} imagens.", "Image of the deck {d}": "Imagem do deck {d}", "Download": "Baixar", "Share": "Compartilhar", "Couldn't create the image. Try again.": "Não deu para criar a imagem. Tente de novo.",
-    "Rename and format": "Nome, formato e tintas", "Copy list": "Copiar lista", "List copied": "Lista copiada", "Open in the deck builder": "Abrir no montador antigo",
+    "Rename and format": "Nome, formato e tintas", "Copy list": "Copiar lista",
+    "Missing cards list": "Lista do que falta", "Same format as the deck list: paste it in a store, the board or another app.": "No formato da lista de deck: cole numa loja, no Mural ou em outro app.",
+    "Download .txt": "Baixar .txt", "Missing list copied": "Lista do que falta copiada", "missing": "faltando", "List copied": "Lista copiada", "Open in the deck builder": "Abrir no montador antigo",
     "Planner and advisor": "Consultor e plano de compras", "Delete deck": "Apagar deck", "Tap again to delete": "Toque de novo para apagar", "Deck deleted": "Deck apagado",
     "Back to decks": "Voltar para Decks",
     "Deck advisor": "Consultor de decks", "Advisor": "Consultor", "Can you build your decks with your collection?": "Você consegue montar seus decks com sua coleção?", "Plan": "Plano",
@@ -1608,6 +1610,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     return `<div class="notice" data-testid="missing-summary"><i class="ic i-info"></i><span class="t"><b>${esc(head[0])}</b>${esc(sub)}</span></div>
       ${priceNote()}
       ${whoHelps(m)}
+      <div class="card inset miss-export" data-testid="miss-export" style="margin:var(--sp-3) 0;padding:var(--sp-3)"><div class="row between" style="gap:var(--sp-2);flex-wrap:wrap">
+        <span class="t" style="min-width:0"><b>${Tx("Missing cards list")}</b><span class="small muted" style="display:block">${Tx("Same format as the deck list: paste it in a store, the board or another app.")}</span></span>
+        <span class="row" style="gap:var(--sp-2)"><button type="button" class="btn small" id="missCopy" data-testid="miss-copy"><i class="ic i-list"></i>${Tx("Copy list")}</button><button type="button" class="btn small" id="missTxt" data-testid="miss-download"><i class="ic i-export"></i>${Tx("Download .txt")}</button></span></div></div>
       <div class="row" style="gap:var(--sp-2);margin:var(--sp-3) 0"><span class="small muted">${Tx("Post what's missing on the board")}</span><button type="button" class="btn small" data-post="buy">${Tx("Looking to buy")}</button><button type="button" class="btn small" data-post="borrow">${Tx("Looking to borrow")}</button></div>
       <div class="stack">${cards}</div>`;
   }
@@ -1734,6 +1739,15 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     }
     if (tab === "gala") wireGala();
     if (tab === "missing") { document.querySelectorAll("[data-post]").forEach((b) => b.onclick = () => postMissing(d, b.dataset.post));
+      // the missing copies as a deck list ("2 Name (LOR1-1)", as Copiar lista): Importar reads it back
+      const missText = () => DV.listText(m.missing.map(({ c, n }) => ({ c, q: n }))) + "\n";
+      $("missCopy")?.addEventListener("click", () => { const fail = () => toast(Tx("Couldn't copy. Try again."), null, true);
+        try { navigator.clipboard.writeText(missText()).then(() => toast(Tx("Missing list copied")), fail); } catch { fail(); } });
+      $("missTxt")?.addEventListener("click", () => {
+        const a = document.createElement("a"), url = URL.createObjectURL(new Blob([missText()], { type: "text/plain;charset=utf-8" }));
+        const slug = String(d.name || "deck").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase() || "deck";
+        a.href = url; a.download = `${slug}-${Tx("missing")}.txt`; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+      });
       document.querySelectorAll("[data-borrow]").forEach((b) => b.onclick = () => askBorrow(d, b));
       // C5.5 "Quem mais ajuda": the same request, for the friend's exact printing
       document.querySelectorAll("[data-hborrow]").forEach((b) => b.onclick = () => askBorrow(d, { dataset: { borrow: b.dataset.hborrow, bcard: b.dataset.bcard, bq: b.dataset.bq }, set disabled(v) { b.disabled = v; } }));

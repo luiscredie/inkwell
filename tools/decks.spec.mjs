@@ -1038,3 +1038,19 @@ test('Quem mais ajuda: friends ranked by cards they lend or trade (not by collec
   await page.setViewportSize({ width: 320, height: 800 });
   expect(await page.getByTestId('who-helps').evaluate((el) => [...el.querySelectorAll('*')].every((e) => e.getBoundingClientRect().right <= innerWidth + 0.5))).toBe(true);   // phone: the section fits 320px
 });
+
+test('Faltando: the missing copies as a deck list, to copy or download', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(BASE).origin });
+  await setup(page);
+  await page.goto(BASE + '?deck=deck-a&tab=missing');
+  const box = page.locator('[data-testid="miss-export"]');
+  await expect(box).toContainText('Lista do que falta');
+  await box.getByRole('button', { name: 'Copiar lista' }).click();
+  await expect(page.locator('#toast')).toContainText('Lista do que falta copiada');
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  expect(copied).toMatch(/^2 Baloo - .+ \(LOR10-1\)\n$/);
+  const [dl] = await Promise.all([page.waitForEvent('download'), box.getByRole('button', { name: 'Baixar .txt' }).click()]);
+  expect(dl.suggestedFilename()).toBe('amber-test-faltando.txt');
+  const text = await (await import('node:fs')).promises.readFile(await dl.path(), 'utf8');
+  expect(text).toBe(copied);
+});
