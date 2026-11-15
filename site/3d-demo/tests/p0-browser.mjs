@@ -120,7 +120,7 @@ for(const width of [320,375,390,430,1280]){
     await feedCard.evaluate(el=>el.click());
     assert.equal(await page.locator('#overlay.open').count(),1,'Swipe guard blocked a real Feed card click');
     await page.evaluate(()=>{closeModal();navigate('Coleção')});
-    await page.getByRole('button',{name:/Abrir meu fichário/}).click();
+    // binderOpen is preserved across navigation; do not assume the cover reappears.
     await page.locator('.binder-book:not(.is-closed)').waitFor();
     await page.evaluate(()=>{binderDragClickUntil=0;binderCardClick(0)});
     assert.equal(await page.locator('#overlay.open').count(),1,'Normal card tap was blocked');
