@@ -112,10 +112,16 @@ for(const width of [320,375,390,430,1280]){
       binderCardClick(0,{currentTarget:document.querySelector('.binder-pocket .card3d')}); // Simulate trailing synthesized click.
     });
     assert.equal(await page.locator('#overlay.open').count(),0,'Swipe accidentally opened a card');
-    // Guard must not block an unrelated card outside the binder.
-    await page.evaluate(()=>binderCardClick(0,{currentTarget:document.querySelector('.hero-stories .card3d')}));
-    assert.equal(await page.locator('#overlay.open').count(),1,'Swipe guard blocked a card outside binder');
-    await page.evaluate(()=>closeModal());
+    // Switch to Feed while the guard is still active, and dispatch a real DOM click.
+    // Previously this assertion passed with a null currentTarget because Feed was not rendered.
+    await page.evaluate(()=>navigate('Feed'));
+    const feedCard=page.locator('.hero-stories .card3d').first();
+    await feedCard.waitFor();
+    await feedCard.evaluate(el=>el.click());
+    assert.equal(await page.locator('#overlay.open').count(),1,'Swipe guard blocked a real Feed card click');
+    await page.evaluate(()=>{closeModal();navigate('Coleção')});
+    // binderOpen is preserved across navigation; do not assume the cover reappears.
+    await page.locator('.binder-book:not(.is-closed)').waitFor();
     await page.evaluate(()=>{binderDragClickUntil=0;binderCardClick(0)});
     assert.equal(await page.locator('#overlay.open').count(),1,'Normal card tap was blocked');
     await page.evaluate(()=>closeModal());
