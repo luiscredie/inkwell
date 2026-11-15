@@ -691,7 +691,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const me = CLOUD?.user();
   let profiles = [], profileName = null, games = [], listings = [], friends = new Set(), names = new Map(), gamesOk = true;
   const VIEW_KEY = "inkwell-decks-view-v1";
-  let view = { fmt: "all", sort: "recent", meta: "all" };
+  let view = { fmt: "all", kind: "all", sort: "recent", meta: "all" };   // kind: all | virtual | physical
   try { view = { ...view, ...JSON.parse(localStorage.getItem(VIEW_KEY) || "{}") }; } catch { /* */ }
   const saveView = () => { try { localStorage.setItem(VIEW_KEY, JSON.stringify(view)); } catch { /* */ } };
   const prof = () => profiles.find((p) => p.profile === profileName) || profiles[0] || null;
@@ -1021,7 +1021,12 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const all = decks().map((d) => ({ d, m: measure(d) }));
     const metas = [...new Set(all.map(({ d }) => metaOf(d)).filter(Boolean))].sort((a, b) => setNo(b) - setNo(a));
     if (view.meta !== "all" && !metas.includes(view.meta)) view.meta = "all";
-    const shown = all.filter(({ d }) => (view.fmt === "all" || (d.format || "core") === view.fmt) && (view.meta === "all" || metaOf(d) === view.meta));
+    // Físico: the deck's cards are set aside in a collection (yours or one shared with you); Virtual: they are not.
+    // Only once collection_decked can be read (supabase/deck_built.sql): before that every deck is virtual.
+    const kinds = STOCK.ready, physical = (d) => STOCK.decked.some((r) => r.deck_id === d.id) || sharedColls.some((sc) => (sc.decked || []).some((r) => r.deck_id === d.id));
+    if (!kinds || !["all", "virtual", "physical"].includes(view.kind)) view.kind = "all";
+    const shown = all.filter(({ d }) => (view.fmt === "all" || (d.format || "core") === view.fmt) && (view.meta === "all" || metaOf(d) === view.meta)
+      && (view.kind === "all" || (view.kind === "physical") === physical(d)));
     const when = ({ d, m }) => m.last || d.updated_at || d.created_at || "";
     shown.sort(view.sort === "name" ? (a, b) => a.d.name.localeCompare(b.d.name) : view.sort === "wins" ? (a, b) => (b.m.wr ?? -1) - (a.m.wr ?? -1) || b.m.games.length - a.m.games.length
       : (a, b) => String(when(b)).localeCompare(String(when(a))));
@@ -1041,14 +1046,16 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         <span class="trail"><b class="num">${m.wr != null ? m.wr + "%" : "—"}</b><span class="micro muted">${esc(m.games.length ? Tx(m.games.length === 1 ? "{n} game" : "{n} games", { n: m.games.length }) : Tx("no games"))}</span>${status}</span></a>`;
     };
     $("app").innerHTML = `${head}
-      <div class="row between" style="margin-bottom:var(--sp-3)"><div class="seg" role="group" aria-label="${Tx("Format")}">${[["all", "All"], ["core", "Core"], ["infinity", "Infinity"]].map(([k, l]) => `<button type="button" data-fmt="${k}" aria-pressed="${view.fmt === k}">${Tx(l)}</button>`).join("")}</div>
+      <div class="row between" style="margin-bottom:var(--sp-3);flex-wrap:wrap;gap:var(--sp-2)"><span class="row" style="gap:var(--sp-2);flex-wrap:wrap"><div class="seg" role="group" aria-label="${Tx("Format")}">${[["all", "All"], ["core", "Core"], ["infinity", "Infinity"]].map(([k, l]) => `<button type="button" data-fmt="${k}" aria-pressed="${view.fmt === k}">${Tx(l)}</button>`).join("")}</div>
+      ${kinds ? `<div class="seg" role="group" aria-label="${Tx("Deck type")}" data-testid="kind-filter">${[["all", "All"], ["virtual", "Virtual"], ["physical", "Physical"]].map(([k, l]) => `<button type="button" data-dkind="${k}" aria-pressed="${view.kind === k}">${Tx(l)}</button>`).join("")}</div>` : ""}</span>
       ${metas.length > 1 ? `<label class="small svmeta">${Tx("Meta")} <select class="inline" id="metaF" data-testid="meta-filter"><option value="all">${Tx("All")}</option>${metas.map((x) => `<option value="${esc(x)}" ${view.meta === x ? "selected" : ""}>${esc(metaLabel(x))}</option>`).join("")}</select></label>` : ""}
       <select class="inline" id="sort" aria-label="${Tx("Sort")}">${[["recent", "Recently played"], ["wins", "Win rate"], ["name", "Name"]].map(([k, l]) => `<option value="${k}" ${view.sort === k ? "selected" : ""}>${Tx(l)}</option>`).join("")}</select></div>
       ${planNotice()}${pendingNotice()}
-      ${shown.length ? `<div class="list" id="deckList" data-testid="deck-list">${shown.map(row).join("")}</div>` : emptyBox("search", Tx(view.meta !== "all" ? "No decks with these filters." : "No decks in this format."), "")}
+      ${shown.length ? `<div class="list" id="deckList" data-testid="deck-list">${shown.map(row).join("")}</div>` : emptyBox("search", Tx(view.meta !== "all" || view.kind !== "all" ? "No decks with these filters." : "No decks in this format."), "")}
       <div style="margin-top:var(--sp-4)">${priceNote()}</div>`;
     wireHead();
     document.querySelectorAll("[data-fmt]").forEach((b) => b.onclick = () => { view.fmt = b.dataset.fmt; saveView(); render(); });
+    document.querySelectorAll("[data-dkind]").forEach((b) => b.onclick = () => { view.kind = b.dataset.dkind; saveView(); render(); document.querySelector(`[data-dkind="${view.kind}"]`)?.focus(); });
     $("sort").onchange = (e) => { view.sort = e.target.value; saveView(); render(); };
     $("metaF")?.addEventListener("change", (e) => { view.meta = e.target.value; saveView(); render(); });
     $("deckList")?.addEventListener("click", (e) => { const a = e.target.closest("[data-deck]"); if (!a || e.metaKey || e.ctrlKey) return; e.preventDefault(); go(a.dataset.deck, "list"); });
