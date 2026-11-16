@@ -682,6 +682,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
       return;
     }
     if (!["list", "analysis", "missing", "games", "plan", "gala"].includes(tab)) tab = "list";
+    try { localStorage.setItem("inkwell-last-deck", d.id); } catch { /* */ }   // Início > Continuar picks up this deck
     const m = measure(d), inks = deckInks(d, m);
     const keep = document.activeElement?.id, caret = document.activeElement?.selectionStart;
     const when = d.updated_at ? Tx("updated {d}", { d: dateFmt(d.updated_at) }) : d.created_at ? Tx("created {d}", { d: dateFmt(d.created_at) }) : "";
