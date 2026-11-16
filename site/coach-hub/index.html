@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://sorefaetiaebmjploanp.supabase.co; img-src 'self' data:; object-src 'none'; base-uri 'self'">
+<title>Conselho Coach · Inkwell</title>
+<link rel="stylesheet" href="../ui/tokens.css">
+<style>
+:root{color-scheme:dark;--bg:#0b192c;--card:#152841;--line:#344861;--txt:#eff2f9;--muted:#adbed0;--gold:#e8c66a;--good:#75d4b5;--bad:#f3a4a6}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.5 system-ui,sans-serif}
+header,main,footer{max-width:1120px;margin:auto;padding:20px}header{display:flex;align-items:center;gap:20px;justify-content:space-between;flex-wrap:wrap}
+a{color:var(--gold)}h1,h2,h3,p{margin:0 0 10px}h1{font-size:clamp(25px,4vw,38px)}h2{font-size:21px}h3{font-size:16px}
+small,.muted{color:var(--muted)}.eyebrow{color:var(--gold);font-size:12px;letter-spacing:2px;text-transform:uppercase}
+nav{display:flex;gap:15px;flex-wrap:wrap}.panel{background:var(--card);border:1px solid var(--line);padding:20px;border-radius:14px;margin:0 0 18px}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}.metric{padding:18px;background:var(--card);border:1px solid var(--line);border-radius:12px}
+.metric strong{display:block;font-size:30px;font-variant-numeric:tabular-nums}.metric span{color:var(--muted);font-size:13px}
+.toolbar{display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin-bottom:16px}label{display:flex;flex-direction:column;gap:5px;color:var(--muted);font-size:13px}
+select,button{background:#243c59;color:var(--txt);border:1px solid #506581;border-radius:8px;padding:10px 12px;font:inherit}button{cursor:pointer}button:hover{border-color:var(--gold)}button:disabled{opacity:.5;cursor:default}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}.bars{display:grid;gap:12px}.bar-row{display:grid;grid-template-columns:minmax(100px,1fr) 2fr 60px;align-items:center;gap:12px}
+.track{height:12px;background:#3a4f69;border-radius:20px;overflow:hidden}.fill{height:100%;background:var(--gold)}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--muted);font-size:12px}td:last-child,th:last-child{text-align:right}
+.scroll{overflow:auto}.coach{padding:12px 0;border-bottom:1px solid var(--line)}.coach:last-child{border:0}.coach b{color:var(--gold)}.pill{font-size:12px;border:1px solid var(--line);padding:4px 8px;border-radius:50px}
+.error{color:var(--bad)}.good{color:var(--good)}.empty{padding:35px 0;text-align:center}.hidden{display:none!important}
+@media(max-width:760px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.two{grid-template-columns:1fr}header,main,footer{padding:14px}.metric strong{font-size:26px}.bar-row{grid-template-columns:100px 1fr 45px}}
+</style>
+</head>
+<body>
+<header><div><div class="eyebrow">INKWELL · DADOS DE TREINO</div><h1>Conselho Coach</h1><p class="muted">Seis perspectivas. Um objetivo: decisões melhores.</p></div><nav><a href="../coach/">Coach Review</a><a href="../decks/">Meus decks</a><a href="../feed/">Inkwell</a></nav></header>
+<main>
+<div id="status" class="panel" role="status">Verificando sua sessão Inkwell…</div>
+<section id="dashboard" class="hidden">
+<div class="toolbar">
+<label>Período<select id="period"><option value="0">Todo o histórico disponível</option><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="180">Últimos 180 dias</option></select></label>
+<label>Deck<select id="deck"><option value="">Todos os decks</option></select></label>
+<label>Posição<select id="seat"><option value="">Primeiro e segundo</option><option value="first">Primeiro (OTP)</option><option value="second">Segundo (OTD)</option></select></label>
+<button id="reload">Atualizar dados</button>
+</div>
+<div class="grid"><div class="metric"><strong id="games">—</strong><span>Jogos analisados</span></div><div class="metric"><strong id="wins">—</strong><span>Vitórias–derrotas</span></div><div class="metric"><strong id="rate">—</strong><span>Aproveitamento</span></div><div class="metric"><strong id="second">—</strong><span>Win rate OTD</span></div></div>
+<div class="two">
+<section class="panel"><h2>Primeiro × segundo</h2><div id="positions" class="bars"></div></section>
+<section class="panel"><h2>Evolução por mês</h2><div id="months" class="bars"></div></section>
+</div>
+<div class="two">
+<section class="panel"><h2>Matchups registrados</h2><p class="muted">Classificação que consta nos registros; decks desconhecidos permanecem como desconhecidos.</p><div class="scroll"><table><thead><tr><th>Adversário</th><th>Jogos</th><th>Vitórias</th><th>Win rate</th></tr></thead><tbody id="matchups"></tbody></table></div></section>
+<section class="panel"><h2>Parecer do Conselho</h2><div id="council"></div></section>
+</div>
+<section class="panel"><h2>Partidas recentes</h2><p class="muted">Abra o jogo no Coach Review para reconstruir turnos, mulligans e escolhas. A estatística sozinha não prova erro de decisão.</p><div class="scroll"><table><thead><tr><th>Data</th><th>Seu deck</th><th>Oponente</th><th>Posição</th><th>Resultado</th><th>Ação</th></tr></thead><tbody id="recent"></tbody></table></div></section>
+<section class="panel"><h2>Limites e metodologia</h2><p id="limits"></p><p class="muted">Fonte: partidas já sincronizadas em game_logs, com acesso restrito ao usuário autenticado. Não é feita consulta direta do navegador à API Duels.ink, nem exposição do token existente. Não atribuímos notas ou erros de mulligan sem revisar as ações.</p></section>
+</section>
+</main><footer><small>Experimento independente do Inkwell live. Nenhum dado de partida é enviado a serviços externos pelo painel.</small></footer>
+<script>
+(()=>{
+"use strict";
+const URL="https://sorefaetiaebmjploanp.supabase.co",KEY="sb_publishable_RkAWW-ENz70CXA6_QV7aHw_MpfD7Gn2",STORE="inkwell-counter-auth";
+const $=id=>document.getElementById(id), esc=s=>String(s??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+let rows=[],userId="";
+function status(message,error=false){$("status").classList.remove("hidden");$("status").classList.toggle("error",error);$("status").textContent=message}
+function readSession(){try{return JSON.parse(localStorage.getItem(STORE)||"null")}catch{return null}}
+function claims(jwt){try{return JSON.parse(atob(jwt.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")))}catch{return {}}}
+async function auth(){
+ let s=readSession();if(!s?.access_token||!s?.refresh_token)throw Error("Entre com sua conta no Inkwell (Coach Review) para acessar seus jogos.");
+ if((s.expires_at||0)<Date.now()/1000+60){
+  const r=await fetch(URL+"/auth/v1/token?grant_type=refresh_token",{method:"POST",headers:{"apikey":KEY,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:s.refresh_token})});
+  if(!r.ok)throw Error("Sua sessão expirou. Entre novamente pelo Coach Review.");
+  const data=await r.json(); const now=readSession();
+  if(now?.refresh_token!==s.refresh_token){s=now}else{
+   const fresh={...s,...data,expires_at:Math.floor(Date.now()/1000)+(data.expires_in||3600)};
+   localStorage.setItem(STORE,JSON.stringify(fresh));s=fresh;
+  }
+ }
+ const id=claims(s.access_token).sub;
+ if(!id)throw Error("Não foi possível validar o usuário. Entre novamente.");
+ return {id,token:s.access_token};
+}
+async function api(path,token){
+ const r=await fetch(URL+"/rest/v1/"+path,{headers:{"apikey":KEY,"Authorization":"Bearer "+token,"Accept":"application/json"}});
+ if(!r.ok)throw Error("Falha ao ler jogos ("+r.status+"). Confira a sincronização em Coach Review.");
+ return r.json();
+}
+function str(x){return x==null?"":String(x)}
+function sVal(s,k){return s&&typeof s==="object"?s[k]:undefined}
+function normalized(r){
+ const s=r.summary||{}; const raw=str(sVal(s,"result")||r.result).toLowerCase();
+ let result=raw==="win"||raw==="victory"?"win":raw==="loss"||raw==="lose"?"loss":null;
+ if(!result)return null;
+ const f=sVal(s,"went_first");
+ const seat=typeof f==="boolean"?(f?"first":"second"):null;
+ const myDeck=str(sVal(s,"my_deck")||sVal(s,"my_inks")||"Não identificado");
+ const opp=str(sVal(s,"opp_deck")||sVal(s,"opp_inks")||"Não identificado");
+ return {id:r.game_id,date:r.played_at,result,seat,myDeck,opp,source:r.source};
+}
+function rate(list){const known=list.filter(x=>x.result==="win"||x.result==="loss");return known.length?100*known.filter(x=>x.result==="win").length/known.length:null}
+function fmt(p){return p===null?"—":p.toFixed(1).replace(".",",")+"%"}
+function bar(label,list){const pct=rate(list);return '<div class="bar-row"><span>'+esc(label)+'</span><div class="track"><div class="fill" style="width:'+(pct??0)+'%"></div></div><small>'+fmt(pct)+' ('+list.length+')</small></div>'}
+function td(v){return "<td>"+esc(v)+"</td>"}
+function current(){
+ const days=Number($("period").value), d=$("deck").value,seat=$("seat").value,cut=days?Date.now()-days*86400000:0;
+ return rows.filter(r=>(!days||new Date(r.date).getTime()>=cut)&&(!d||r.myDeck===d)&&(!seat||r.seat===seat));
+}
+function render(){
+ const a=current(),w=a.filter(x=>x.result==="win").length,l=a.length-w;
+ $("games").textContent=a.length;$("wins").textContent=w+"–"+l;$("rate").textContent=fmt(rate(a));
+ const first=a.filter(x=>x.seat==="first"),second=a.filter(x=>x.seat==="second");
+ $("second").textContent=fmt(rate(second));
+ $("positions").innerHTML=bar("Primeiro",first)+bar("Segundo",second)+bar("Sem registro",a.filter(x=>!x.seat));
+ const months=new Map();a.forEach(x=>{if(!x.date)return;const k=x.date.slice(0,7);months.set(k,[...(months.get(k)||[]),x])});
+ $("months").innerHTML=[...months].sort((x,y)=>y[0].localeCompare(x[0])).slice(0,9).map(([k,v])=>bar(k,v)).join("")||'<p class="muted">Sem jogos com data.</p>';
+ const groups=new Map();a.forEach(x=>groups.set(x.opp,[...(groups.get(x.opp)||[]),x]));
+ $("matchups").innerHTML=[...groups].sort((x,y)=>y[1].length-x[1].length).slice(0,25).map(([name,v])=>'<tr>'+td(name)+td(v.length)+td(v.filter(x=>x.result==="win").length)+td(fmt(rate(v)))+'</tr>').join("")||'<tr><td colspan="4">Sem partidas neste filtro.</td></tr>';
+ const count=a.length,possible=second.length>=5&&first.length>=5,delta=possible?(rate(first)-rate(second)):null;
+ const opinions=[
+ ["Multicampeão","Prioridade: estudar os matchups com ao menos 5 jogos antes de alterar a lista do deck."],
+ ["Campeão professor","Para cada derrota, escolha um turno e compare duas linhas legais antes de julgar a partida."],
+ ["Designer Lorcana","Avalie eficiência de tinta, geração de lore e disputas de mesa nos replays, sem inferir a partir do resultado."],
+ ["Designer de TCGs","Separe perda de tempo, vantagem de cartas e inevitabilidade para identificar a função de cada matchup."],
+ ["Mentalidade vencedora","Treine processos repetíveis: plano de mão inicial, revisão pós-jogo e execução consistente sob pressão."],
+ ["Pôquer e estatística",possible?"Diferença observada OTP–OTD: "+fmt(delta)+ " pontos percentuais. Amostra limitada; não comprova causalidade.":"Registre mais jogos com primeiro e segundo assento antes de concluir se existe desvantagem real."]
+ ];
+ $("council").innerHTML=opinions.map(([role,insight])=>'<div class="coach"><b>'+esc(role)+'</b><div>'+esc(insight)+'</div></div>').join("");
+ $("recent").innerHTML=a.slice().sort((x,y)=>str(y.date).localeCompare(str(x.date))).slice(0,40).map(x=>'<tr>'+td(x.date?new Date(x.date).toLocaleDateString("pt-BR"):"—")+td(x.myDeck)+td(x.opp)+td(x.seat==="first"?"OTP":x.seat==="second"?"OTD":"—")+td(x.result==="win"?"Vitória":"Derrota")+'<td><a href="../coach/">Revisar</a></td></tr>').join("")||'<tr><td colspan="6">Sem jogos.</td></tr>';
+ $("limits").textContent="Amostra filtrada: "+count+" partidas. "+rows.length+" partidas pessoais com resultado identificável carregadas do banco. Datas ou assentos ausentes não foram presumidos. Matchups seguem os rótulos salvos nos logs; estratégias semelhantes podem estar agrupadas de forma diferente. A consulta é paginada, mas só cobre os registros já sincronizados pelo Inkwell.";
+}
+async function load(){
+ status("Carregando jogos sincronizados…");$("reload").disabled=true;
+ try{
+  const session=await auth();userId=session.id;
+  const all=[];for(let offset=0;offset<200000;offset+=500){
+   const q="game_logs?user_id=eq."+encodeURIComponent(userId)+"&select=game_id,source,played_at,summary&order=played_at.desc.nullslast&limit=500&offset="+offset;
+   const page=await api(q,session.token); all.push(...page);if(page.length<500)break;
+  }
+  rows=all.map(normalized).filter(Boolean);
+  const currentDeck=$("deck").value;const names=[...new Set(rows.map(x=>x.myDeck))].sort();
+  $("deck").innerHTML='<option value="">Todos os decks</option>'+names.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join("");
+  $("deck").value=names.includes(currentDeck)?currentDeck:"";
+  $("dashboard").classList.remove("hidden");$("status").classList.add("hidden");render();
+ }catch(e){status(e.message||"Erro ao carregar",true);$("dashboard").classList.add("hidden")}
+ finally{$("reload").disabled=false}
+}
+["period","deck","seat"].forEach(id=>$(id).addEventListener("change",render));$("reload").addEventListener("click",load);load();
+})();
+</script>
+</body></html>
