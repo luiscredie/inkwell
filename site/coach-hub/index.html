@@ -42,7 +42,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 <section class="panel"><h2>Evolução por mês</h2><div id="months" class="bars"></div></section>
 </div>
 <div class="two">
-<section class="panel"><h2>Matchups registrados</h2><p class="muted">Classificação que consta nos registros; decks desconhecidos permanecem como desconhecidos.</p><div class="scroll"><table><thead><tr><th>Adversário</th><th>Jogos</th><th>Vitórias</th><th>Win rate</th></tr></thead><tbody id="matchups"></tbody></table></div></section>
+<section class="panel"><h2>Cores dos oponentes</h2><p class="muted">O campo opp_deck normalmente identifica as cores, não o arquétipo. Detetives, Princesas e Mickey precisam de classificação pelas cartas jogadas para gerar matchups reais.</p><div class="scroll"><table><thead><tr><th>Adversário</th><th>Jogos</th><th>Vitórias</th><th>Win rate</th></tr></thead><tbody id="matchups"></tbody></table></div></section>
 <section class="panel"><h2>Parecer do Conselho</h2><div id="council"></div></section>
 </div>
 <section class="panel"><h2>Partidas recentes</h2><p class="muted">Abra o jogo no Coach Review para reconstruir turnos, mulligans e escolhas. A estatística sozinha não prova erro de decisão.</p><div class="scroll"><table><thead><tr><th>Data</th><th>Seu deck</th><th>Oponente</th><th>Posição</th><th>Resultado</th><th>Ação</th></tr></thead><tbody id="recent"></tbody></table></div></section>
@@ -110,7 +110,7 @@ function render(){
  $("matchups").innerHTML=[...groups].sort((x,y)=>y[1].length-x[1].length).slice(0,25).map(([name,v])=>'<tr>'+td(name)+td(v.length)+td(v.filter(x=>x.result==="win").length)+td(fmt(rate(v)))+'</tr>').join("")||'<tr><td colspan="4">Sem partidas neste filtro.</td></tr>';
  const count=a.length,possible=second.length>=5&&first.length>=5,delta=possible?(rate(first)-rate(second)):null;
  const opinions=[
- ["Multicampeão","Prioridade: estudar os matchups com ao menos 5 jogos antes de alterar a lista do deck."],
+ ["Multicampeão","Prioridade: separar os arquétipos dentro das combinações de cores antes de alterar a lista do deck."],
  ["Campeão professor","Para cada derrota, escolha um turno e compare duas linhas legais antes de julgar a partida."],
  ["Designer Lorcana","Avalie eficiência de tinta, geração de lore e disputas de mesa nos replays, sem inferir a partir do resultado."],
  ["Designer de TCGs","Separe perda de tempo, vantagem de cartas e inevitabilidade para identificar a função de cada matchup."],
@@ -119,7 +119,7 @@ function render(){
  ];
  $("council").innerHTML=opinions.map(([role,insight])=>'<div class="coach"><b>'+esc(role)+'</b><div>'+esc(insight)+'</div></div>').join("");
  $("recent").innerHTML=a.slice().sort((x,y)=>str(y.date).localeCompare(str(x.date))).slice(0,40).map(x=>'<tr>'+td(x.date?new Date(x.date).toLocaleDateString("pt-BR"):"—")+td(x.myDeck)+td(x.opp)+td(x.seat==="first"?"OTP":x.seat==="second"?"OTD":"—")+td(x.result==="win"?"Vitória":x.result==="loss"?"Derrota":"Empate")+'<td><a href="../coach/">Revisar</a></td></tr>').join("")||'<tr><td colspan="6">Sem jogos.</td></tr>';
- $("limits").textContent="Amostra filtrada: "+count+" partidas. "+rows.length+" partidas pessoais com resultado identificável carregadas do banco. Empates são preservados e excluídos do denominador do win rate. Datas ou assentos ausentes não foram presumidos. Matchups seguem os rótulos salvos nos logs; estratégias semelhantes podem estar agrupadas de forma diferente. A consulta é paginada, mas só cobre os registros já sincronizados pelo Inkwell.";
+ $("limits").textContent="Amostra filtrada: "+count+" partidas. "+rows.length+" partidas pessoais com resultado identificável carregadas do banco. Empates são preservados e excluídos do denominador do win rate. Datas ou assentos ausentes não foram presumidos. Esta visão agrupa cores do oponente, não arquétipos; estratégias com as mesmas cores são misturadas. A consulta é paginada, mas só cobre os registros já sincronizados pelo Inkwell.";
 }
 async function load(){
  status("Carregando jogos sincronizados…");$("reload").disabled=true;
