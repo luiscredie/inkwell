@@ -82,7 +82,7 @@ function str(x){return x==null?"":String(x)}
 function sVal(s,k){return s&&typeof s==="object"?s[k]:undefined}
 function normalized(r){
  const s=r.summary||{}; const raw=str(sVal(s,"result")||r.result).toLowerCase();
- let result=raw==="win"||raw==="victory"?"win":raw==="loss"||raw==="lose"?"loss":null;
+ let result=raw==="win"||raw==="victory"?"win":raw==="loss"||raw==="lose"?"loss":raw==="draw"?"draw":null;
  if(!result)return null;
  const f=sVal(s,"went_first");
  const seat=typeof f==="boolean"?(f?"first":"second"):null;
@@ -99,8 +99,8 @@ function current(){
  return rows.filter(r=>(!days||new Date(r.date).getTime()>=cut)&&(!d||r.myDeck===d)&&(!seat||r.seat===seat));
 }
 function render(){
- const a=current(),w=a.filter(x=>x.result==="win").length,l=a.length-w;
- $("games").textContent=a.length;$("wins").textContent=w+"–"+l;$("rate").textContent=fmt(rate(a));
+ const a=current(),w=a.filter(x=>x.result==="win").length,l=a.filter(x=>x.result==="loss").length,draws=a.filter(x=>x.result==="draw").length;
+ $("games").textContent=a.length;$("wins").textContent=w+"–"+l+(draws?" ("+draws+" empate"+(draws>1?"s":"")+")":"");$("rate").textContent=fmt(rate(a));
  const first=a.filter(x=>x.seat==="first"),second=a.filter(x=>x.seat==="second");
  $("second").textContent=fmt(rate(second));
  $("positions").innerHTML=bar("Primeiro",first)+bar("Segundo",second)+bar("Sem registro",a.filter(x=>!x.seat));
@@ -118,8 +118,8 @@ function render(){
  ["Pôquer e estatística",possible?"Diferença observada OTP–OTD: "+fmt(delta)+ " pontos percentuais. Amostra limitada; não comprova causalidade.":"Registre mais jogos com primeiro e segundo assento antes de concluir se existe desvantagem real."]
  ];
  $("council").innerHTML=opinions.map(([role,insight])=>'<div class="coach"><b>'+esc(role)+'</b><div>'+esc(insight)+'</div></div>').join("");
- $("recent").innerHTML=a.slice().sort((x,y)=>str(y.date).localeCompare(str(x.date))).slice(0,40).map(x=>'<tr>'+td(x.date?new Date(x.date).toLocaleDateString("pt-BR"):"—")+td(x.myDeck)+td(x.opp)+td(x.seat==="first"?"OTP":x.seat==="second"?"OTD":"—")+td(x.result==="win"?"Vitória":"Derrota")+'<td><a href="../coach/">Revisar</a></td></tr>').join("")||'<tr><td colspan="6">Sem jogos.</td></tr>';
- $("limits").textContent="Amostra filtrada: "+count+" partidas. "+rows.length+" partidas pessoais com resultado identificável carregadas do banco. Datas ou assentos ausentes não foram presumidos. Matchups seguem os rótulos salvos nos logs; estratégias semelhantes podem estar agrupadas de forma diferente. A consulta é paginada, mas só cobre os registros já sincronizados pelo Inkwell.";
+ $("recent").innerHTML=a.slice().sort((x,y)=>str(y.date).localeCompare(str(x.date))).slice(0,40).map(x=>'<tr>'+td(x.date?new Date(x.date).toLocaleDateString("pt-BR"):"—")+td(x.myDeck)+td(x.opp)+td(x.seat==="first"?"OTP":x.seat==="second"?"OTD":"—")+td(x.result==="win"?"Vitória":x.result==="loss"?"Derrota":"Empate")+'<td><a href="../coach/">Revisar</a></td></tr>').join("")||'<tr><td colspan="6">Sem jogos.</td></tr>';
+ $("limits").textContent="Amostra filtrada: "+count+" partidas. "+rows.length+" partidas pessoais com resultado identificável carregadas do banco. Empates são preservados e excluídos do denominador do win rate. Datas ou assentos ausentes não foram presumidos. Matchups seguem os rótulos salvos nos logs; estratégias semelhantes podem estar agrupadas de forma diferente. A consulta é paginada, mas só cobre os registros já sincronizados pelo Inkwell.";
 }
 async function load(){
  status("Carregando jogos sincronizados…");$("reload").disabled=true;
