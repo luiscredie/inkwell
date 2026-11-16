@@ -61,13 +61,17 @@ function claims(jwt){try{return JSON.parse(atob(jwt.split(".")[1].replace(/-/g,"
 async function auth(){
  let s=readSession();if(!s?.access_token||!s?.refresh_token)throw Error("Entre com sua conta no Inkwell (Coach Review) para acessar seus jogos.");
  if((s.expires_at||0)<Date.now()/1000+60){
-  const r=await fetch(URL+"/auth/v1/token?grant_type=refresh_token",{method:"POST",headers:{"apikey":KEY,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:s.refresh_token})});
-  if(!r.ok)throw Error("Sua sessão expirou. Entre novamente pelo Coach Review.");
-  const data=await r.json(); const now=readSession();
-  if(now?.refresh_token!==s.refresh_token){s=now}else{
-   const fresh={...s,...data,expires_at:Math.floor(Date.now()/1000)+(data.expires_in||3600)};
-   localStorage.setItem(STORE,JSON.stringify(fresh));s=fresh;
-  }
+  const refresh=async()=>{
+   const latest=readSession();if(!latest?.refresh_token)throw Error("Entre novamente pelo Coach Review.");
+   if((latest.expires_at||0)>Date.now()/1000+60)return latest;
+   const r=await fetch(URL+"/auth/v1/token?grant_type=refresh_token",{method:"POST",headers:{"apikey":KEY,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:latest.refresh_token})});
+   if(!r.ok)throw Error("Sua sessão expirou. Entre novamente pelo Coach Review.");
+   const data=await r.json(), now=readSession();
+   if(now?.refresh_token!==latest.refresh_token)return now;
+   const fresh={...latest,...data,expires_at:Math.floor(Date.now()/1000)+(data.expires_in||3600)};
+   localStorage.setItem(STORE,JSON.stringify(fresh));return fresh;
+  };
+  s=navigator.locks?.request ? await navigator.locks.request("inkwell-auth-refresh",refresh) : await refresh();
  }
  const id=claims(s.access_token).sub;
  if(!id)throw Error("Não foi possível validar o usuário. Entre novamente.");
@@ -108,7 +112,7 @@ function render(){
  $("months").innerHTML=[...months].sort((x,y)=>y[0].localeCompare(x[0])).slice(0,9).map(([k,v])=>bar(k,v)).join("")||'<p class="muted">Sem jogos com data.</p>';
  const groups=new Map();a.forEach(x=>groups.set(x.opp,[...(groups.get(x.opp)||[]),x]));
  $("matchups").innerHTML=[...groups].sort((x,y)=>y[1].length-x[1].length).slice(0,25).map(([name,v])=>'<tr>'+td(name)+td(v.length)+td(v.filter(x=>x.result==="win").length)+td(fmt(rate(v)))+'</tr>').join("")||'<tr><td colspan="4">Sem partidas neste filtro.</td></tr>';
- const count=a.length,possible=second.length>=5&&first.length>=5,delta=possible?(rate(first)-rate(second)):null;
+ const count=a.length,possible=second.filter(x=>x.result!=="draw").length>=5&&first.filter(x=>x.result!=="draw").length>=5,delta=possible?(rate(first)-rate(second)):null;
  const opinions=[
  ["Multicampeão","Prioridade: separar os arquétipos dentro das combinações de cores antes de alterar a lista do deck."],
  ["Campeão professor","Para cada derrota, escolha um turno e compare duas linhas legais antes de julgar a partida."],
@@ -118,7 +122,7 @@ function render(){
  ["Pôquer e estatística",possible?"Diferença observada OTP–OTD: "+fmt(delta)+ " pontos percentuais. Amostra limitada; não comprova causalidade.":"Registre mais jogos com primeiro e segundo assento antes de concluir se existe desvantagem real."]
  ];
  $("council").innerHTML=opinions.map(([role,insight])=>'<div class="coach"><b>'+esc(role)+'</b><div>'+esc(insight)+'</div></div>').join("");
- $("recent").innerHTML=a.slice().sort((x,y)=>str(y.date).localeCompare(str(x.date))).slice(0,40).map(x=>'<tr>'+td(x.date?new Date(x.date).toLocaleDateString("pt-BR"):"—")+td(x.myDeck)+td(x.opp)+td(x.seat==="first"?"OTP":x.seat==="second"?"OTD":"—")+td(x.result==="win"?"Vitória":x.result==="loss"?"Derrota":"Empate")+'<td><a href="../coach/">Revisar</a></td></tr>').join("")||'<tr><td colspan="6">Sem jogos.</td></tr>';
+ $("recent").innerHTML=a.slice().sort((x,y)=>str(y.date).localeCompare(str(x.date))).slice(0,40).map(x=>'<tr>'+td(x.date?new Date(x.date).toLocaleDateString("pt-BR"):"—")+td(x.myDeck)+td(x.opp)+td(x.seat==="first"?"OTP":x.seat==="second"?"OTD":"—")+td(x.result==="win"?"Vitória":x.result==="loss"?"Derrota":"Empate")+'<td><a href="../coach/?game='+encodeURIComponent(x.id)+'">Revisar</a></td></tr>').join("")||'<tr><td colspan="6">Sem jogos.</td></tr>';
  $("limits").textContent="Amostra filtrada: "+count+" partidas. "+rows.length+" partidas pessoais com resultado identificável carregadas do banco. Empates são preservados e excluídos do denominador do win rate. Datas ou assentos ausentes não foram presumidos. Esta visão agrupa cores do oponente, não arquétipos; estratégias com as mesmas cores são misturadas. A consulta é paginada, mas só cobre os registros já sincronizados pelo Inkwell.";
 }
 async function load(){
