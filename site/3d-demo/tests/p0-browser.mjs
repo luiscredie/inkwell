@@ -67,6 +67,12 @@ for(const width of [320,375,390,430,1280]){
     await stage.dispatchEvent('touchstart',{touches:[{clientX:160,clientY:200}]});
     await stage.dispatchEvent('touchend',{changedTouches:[{clientX:170,clientY:310}]});
     assert.equal(await page.locator('.binder-page').first().getAttribute('aria-label'),stableLabel,'Vertical gesture changed page');
+    // Interrupted touch must clear its start point and never advance the binder.
+    await stage.dispatchEvent('touchstart',{touches:[{clientX:230,clientY:150}]});
+    await stage.dispatchEvent('touchcancel',{changedTouches:[{clientX:140,clientY:150}]});
+    await stage.dispatchEvent('touchend',{changedTouches:[{clientX:140,clientY:150}]});
+    assert.equal(await page.locator('.binder-page').first().getAttribute('aria-label'),stableLabel,'Cancelled touch changed page');
+    assert.equal(await page.evaluate(()=>binderTouchX===null&&binderTouchY===null&&binderGestureAt===0),true,'Cancelled touch left gesture state');
     // Desktop mouse/pen drags should capture the pointer so release outside the stage is handled.
     await page.evaluate(()=>{
       const stage=document.querySelector('[data-binder-swipe]');
