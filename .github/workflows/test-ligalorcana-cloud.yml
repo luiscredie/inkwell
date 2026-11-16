@@ -71,3 +71,23 @@ jobs:
           asyncio.run(main())
           PY
           python /tmp/probe_liga.py
+
+  probe-windows:
+    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'experiment/ligalorcana-actions-20261116'
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - name: Test HTTPS document from Windows runner (no retries)
+        shell: pwsh
+        run: |
+          $url = 'https://www.ligalorcana.com.br/?view=cards%2Fsearch&card=edid%3D9%20ed%3DLOR14'
+          try {
+            $res = Invoke-WebRequest -Uri $url -TimeoutSec 30 -MaximumRedirection 3 -UseBasicParsing
+            Write-Host "WINDOWS_STATUS: $($res.StatusCode)"
+            Write-Host "WINDOWS_LENGTH: $($res.Content.Length)"
+          } catch {
+            $r = $_.Exception.Response
+            if ($null -ne $r) { Write-Host "WINDOWS_STATUS: $([int]$r.StatusCode)" }
+            Write-Host "WINDOWS_ACCESS_ERROR: $($_.Exception.Message)"
+            exit 1
+          }
