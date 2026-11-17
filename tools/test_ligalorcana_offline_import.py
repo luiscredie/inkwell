@@ -26,6 +26,12 @@ DETAIL = {"_fonte": URL, "_capturado_em": CAPTURE, "cards_editions": [{
 
 
 class PriceTests(unittest.TestCase):
+    def test_name_normalizer_preserves_alt_art_and_decodes_entities(self):
+        self.assertEqual(mod.text_name("Mickey Mouse - Friendly Face (Alternate Art)"),
+                         mod.text_name("Mickey Mouse - Friendly Face (Alternate Art)(18)"))
+        self.assertEqual(mod.text_name("Abigail & Amelia - Gossiping Geese"),
+                         mod.text_name("Abigail &amp; Amelia - Gossiping Geese (143)"))
+
     def test_real_lor14_162(self):
         self.assertEqual({"status": "ok", "min_centavos": 460, "med_centavos": 554, "max_centavos": 1000},
                          mod.finish(DETAIL["cards_editions"][0]["price"]["0"]))
