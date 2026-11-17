@@ -394,6 +394,35 @@ test('#145 P0-B admin metrics: before the SQL runs, a clear message (the rest of
   await expect(page.locator('[data-testid="kpi-visits"]')).toContainText('40');
 });
 
+test('admin Tarefas (R02): task events by group, visits and times, rates only when valid', async ({ page }) => {
+  await setup(page, { mine: { display_name: 'Luís' }, admin: true });
+  const at = (name, visits, count) => ({ name, visits, count, signed: 0 });
+  const asked = [];
+  await page.route('**/rest/v1/rpc/admin_task_metrics', (r) => asked.push(r.request().postDataJSON()) && r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ generated_at: '2026-11-17T10:00:00Z', since: '2026-11-04T03:00:00Z', days: 14,
+    events: [at('home_keep_deck', 6, 7), at('scan_open', 10, 12), at('scan_saved', 8, 9), at('scan_fixed', 2, 2), at('import_open', 0, 0), at('import_done', 0, 0), at('game_added', 3, 3)] }) }));
+  await page.goto(url('admin/'));
+  const t = page.getByTestId('tasks');
+  await expect(t.getByRole('heading', { name: 'Tarefas' })).toBeVisible();
+  await expect(t.locator('[data-task="home_keep_deck"] td')).toHaveText([/Tocou em Continuar meu deck/, '6', '7']);
+  await expect(t.locator('[data-task="scan_fixed"] td')).toHaveText([/Corrigiu o scanner/, '2', '2']);
+  await expect(t.locator('[data-task="loan_saved"] td')).toHaveText([/Registrou um empréstimo/, '—', '—']);   // not in the answer: unknown, not zero
+  await expect(t.getByTestId('rate-scan_fixed')).toContainText('25%');
+  await expect(t.getByTestId('rate-scan_fixed')).toContainText('2/8');
+  await expect(t.getByTestId('rate-scan_saved')).toContainText('80%');
+  await expect(t.getByTestId('rate-import_done')).toContainText('—');   // base zero: no rate
+  await expect(t).toContainText('Tempo por tarefa não é medido');
+  if (process.env.TASKS_EVIDENCE) for (const w of [390, 1280]) { await page.setViewportSize({ width: w, height: 900 }); await t.screenshot({ path: `docs/evidencias/admin-tarefas/${w}.png` }); }
+  expect(asked).toEqual([{ p_days: 14 }]);
+});
+test('admin Tarefas: before supabase/metrics_tasks.sql runs, a clear message and the rest of the Painel works', async ({ page }) => {
+  await setup(page, { mine: { display_name: 'Luís' }, admin: true });
+  await page.route('**/rest/v1/rpc/admin_task_metrics', (r) => r.fulfill({ status: 404, contentType: 'application/json', body: '{"code":"PGRST202","message":"Could not find the function public.admin_task_metrics"}' }));
+  await page.goto(url('admin/'));
+  await expect(page.getByTestId('tasks-error')).toContainText('metrics_tasks.sql');
+  await expect(page.getByTestId('metrics')).toBeVisible();
+  await expect(page.locator('[data-testid="kpi-visits"]')).toContainText('40');
+});
+
 test('admin Painel: an empty answer shows a message instead of loading forever', async ({ page }) => {
   const calls = await setup(page, { mine: { display_name: 'Luís' }, admin: true });
   await page.route('**/rest/v1/rpc/admin_stats', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));
