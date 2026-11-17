@@ -69,7 +69,9 @@ window.INKWELL_NO_STORE_MSG = "Your games appear here after you sign in.";
     "Gained {v} lore": "Ganhou {v} de lore", "Lost {v} lore": "Perdeu {v} de lore", "Moved {c} to {t}": "Moveu {c} para {t}", "Note: {t}": "Nota: {t}",
     // review
     "All games": "Todos os jogos", "Format": "Formato", "Sealed": "Selado", "Both formats": "Os dois formatos", "Win": "Vitória", "Loss": "Derrota", "Played by {name}": "Jogado por {name}",
-    "Your deck": "Seu deck", "Unknown": "Desconhecido", "Inks not given": "Tintas não informadas", "vs": "vs",
+    "Your deck": "Seu deck", "Unknown": "Desconhecido", "Inks not given": "Tintas não informadas", "Opponent's inks given in {a} of {b} games.": "Tintas do oponente informadas em {a} de {b} jogos.", "Your inks given in {a} of {b} games.": "Suas tintas informadas em {a} de {b} jogos.",
+    "The rest count in the totals and show as “Inks not given”.": "Os demais contam nos totais e aparecem como “Tintas não informadas”.", "Both inks given in {a} of {b} games.": "As duas tintas informadas em {a} de {b} jogos.",
+    "Rows and columns “Inks not given” hold the rest; they are not a matchup.": "Linhas e colunas “Tintas não informadas” guardam o resto; não são um confronto.", "vs": "vs",
     "{n} turns": "{n} turnos", "Lore Counter game, under 2 minutes": "Jogo do Contador de lore, menos de 2 minutos",
     "Lore Counter game, about {m} minutes": "Jogo do Contador de lore, cerca de {m} minutos",
     "Lore Counter game, final lore and result only": "Jogo do Contador de lore, só lore final e resultado",
@@ -592,6 +594,8 @@ window.INKWELL_NO_STORE_MSG = "Your games appear here after you sign in.";
 
 /* account, view, coaches */
 .acct { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-2); }
+tr.noinks > td:first-child, tr.noinks > th, th.noinks { font-style: italic; color: var(--text-2); }
+table.mt tr.noinks > td { border-top: 1px dashed var(--line-strong); }
 /* Pacote 2: the games and "Novo jogo" come first; duels.ink and coaches are settings, closed, at the end */
 .jg-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--sp-2); }
 .jg-actions[hidden] { display: none; }
@@ -1359,6 +1363,13 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const noInks = (k) => !k || k === "Unknown" || k === "Physical game";
   const deckLabel = (k) => (noInks(k) ? Tx("Inks not given") : k);
   const dotsOf = (k) => (noInks(k) ? "" : inkDots(k));
+  // Conselho (#243): games without inks stay in every total, but an analysis by ink combination says how much it covers,
+  // and the "Tintas não informadas" line comes last, set apart, so it never reads as one more archetype.
+  const unknownLast = (list) => [...list.filter((x) => !noInks(x.k)), ...list.filter((x) => noInks(x.k))];
+  const coverage = (rows, side, id) => {
+    const known = rows.filter((r) => side === "opp" ? !noInks(r.s.opp_inks || r.s.opp_deck) : !noInks(inksKey(r.s.my_inks) || inksKey(r.s.my_deck))).length;
+    return `<p class="small muted cov" data-testid="${id}" style="margin:var(--sp-2) 0 0">${esc(Tx(side === "opp" ? "Opponent's inks given in {a} of {b} games." : "Your inks given in {a} of {b} games.", { a: known, b: rows.length }))}${known < rows.length ? " " + esc(Tx("The rest count in the totals and show as “Inks not given”.")) : ""}</p>`;
+  };
   // duels.ink best-of-3 matches: only games linked by their match id (a match.json from duels.ink, linkMatch).
   // Nothing is guessed from queues, numbers or times; a match counts once it has a winner (2 games won).
   function matchesOf(rows) {
@@ -1424,8 +1435,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   }
   function matrixHtml(rows) {
     const mineK = (r) => inksKey(r.s.my_inks) || inksKey(r.s.my_deck) || NO_INKS, oppK = (r) => r.s.opp_inks || r.s.opp_deck || NO_INKS;
-    const mine = groupBy(rows, mineK).slice(0, 6), opp = groupBy(rows, oppK).slice(0, 8);
+    const mine = unknownLast(groupBy(rows, mineK).slice(0, 6)), opp = unknownLast(groupBy(rows, oppK).slice(0, 8));
     if (!mine.length || opp.length < 2) return "";
+    const both = rows.filter((r) => !noInks(mineK(r)) && !noInks(oppK(r))).length;
     const cell = new Map();
     for (const r of rows) { const a = mineK(r); const k = `${a}|${oppK(r)}`; const c = cell.get(k) || { n: 0, w: 0 }; c.n += 1; c.w += r.s.result === "win" ? 1 : 0; cell.set(k, c); }
     const td = (a, b) => {
@@ -1435,8 +1447,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       return `<td class="${c.n < 3 ? "few" : ""}" style="background:color-mix(in srgb, ${tone} ${c.n < 3 ? 6 : strength}%, transparent)" title="${esc(`${deckLabel(a)} vs ${deckLabel(b)}`)}: ${hint(c.n, c.w)}"><b>${Math.round(100 * wr)}%</b><small>${c.n}</small></td>`;
     };
     return `<div class="sv-card"><h3>${Tx("Matchup matrix")}</h3><span class="muted small">${Tx("Your colors (rows) against the opponent's colors (columns). Small number: games.")}</span>
-      <div class="mx-wrap"><table class="mx"><tr><th>${Tx("You / Opp")}</th>${opp.map((o) => `<th>${noInks(o.k) ? `<span class="nm">${esc(Tx("Inks not given"))}</span>` : `${inkDots(o.k)}<span class="sr">${esc(o.k)}</span>`}</th>`).join("")}</tr>
-      ${mine.map((m) => `<tr><th>${dotsOf(m.k)}<span class="nm">${esc(deckLabel(m.k))}</span></th>${opp.map((o) => td(m.k, o.k)).join("")}</tr>`).join("")}</table></div></div>`;
+      <p class="small cov" data-testid="cov-matrix" style="margin:var(--sp-2) 0 0"><b>${esc(Tx("Both inks given in {a} of {b} games.", { a: both, b: rows.length }))}</b>${both < rows.length ? ` <span class="muted">${esc(Tx("Rows and columns “Inks not given” hold the rest; they are not a matchup."))}</span>` : ""}</p>
+      <div class="mx-wrap"><table class="mx"><tr><th>${Tx("You / Opp")}</th>${opp.map((o) => `<th${noInks(o.k) ? ' class="noinks"' : ""}>${noInks(o.k) ? `<span class="nm">${esc(Tx("Inks not given"))}</span>` : `${inkDots(o.k)}<span class="sr">${esc(o.k)}</span>`}</th>`).join("")}</tr>
+      ${mine.map((m) => `<tr${noInks(m.k) ? ' class="noinks"' : ""}><th>${dotsOf(m.k)}<span class="nm">${esc(deckLabel(m.k))}</span></th>${opp.map((o) => td(m.k, o.k)).join("")}</tr>`).join("")}</table></div></div>`;
   }
   // Deck versions: each distinct list of the chosen deck, oldest = version 1.
   function versionsOf(rows) {
@@ -1494,7 +1507,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     if (sv.version !== "all" && !vs.some((v) => v.k === sv.version)) sv.version = "all";
     const rows = deckRows.filter((r) => sv.version === "all" || r.s.list_key === sv.version);
     const T = tally(rows.map((r) => r.s)), M = matchesOf(rows), mw = M.filter((m) => m.result === "win").length, st = streaks(rows);
-    const mine = groupBy(rows, (r) => r.s.my_deck), opp = groupBy(rows, (r) => r.s.opp_deck);
+    const mine = unknownLast(groupBy(rows, (r) => r.s.my_deck)), opp = unknownLast(groupBy(rows, (r) => r.s.opp_deck));
     const cost = opp.filter((o) => o.t.n >= 8 && o.t.n - 2 * o.t.w > 0).sort((a, b) => (b.t.n - 2 * b.t.w) - (a.t.n - 2 * a.t.w)).slice(0, 3);
     // MMR: duels.ink keeps one per queue. The chosen queue, or the one with the most rated games.
     const rated = rows.filter((r) => r.s.mmr_before != null && r.s.mmr_delta != null);
@@ -1502,7 +1515,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     const mmr = rated.filter((r) => (qOf(r.s) || "—") === mq).sort(byAt).map((r) => ({ at: r.at, v: r.s.mmr_before + r.s.mmr_delta }));
     const chip = (group, v, l) => `<button type="button" class="chipbtn" data-sv="${group}" data-v="${esc(v)}" aria-pressed="${String(sv[group]) === String(v)}">${esc(l)}</button>`;
     const sel = (id, label, cur, opts) => `<label class="small svsel">${label} <select id="${id}">${opts.map(([v, l]) => `<option value="${esc(v)}" ${v === cur ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></label>`;
-    const row = (x, isOpp) => `<tr class="${x.t.n < 5 ? "few" : ""}" ${isOpp ? `data-opp="${esc(x.k)}" tabindex="0" aria-label="${esc(Tx("Show games against {deck}", { deck: deckLabel(x.k) }))}"` : ""}>
+    const row = (x, isOpp) => `<tr class="${x.t.n < 5 ? "few" : ""}${noInks(x.k) ? " noinks" : ""}" ${isOpp ? `data-opp="${esc(x.k)}" tabindex="0" aria-label="${esc(Tx("Show games against {deck}", { deck: deckLabel(x.k) }))}"` : ""}>
       <td>${dotsOf(x.k)}${esc(deckLabel(x.k))}</td><td class="n">${x.t.n}</td>
       <td class="n">${pct(x.t.w, x.t.n)}<span class="wbar" aria-hidden="true"><i style="width:${x.t.n ? (100 * x.t.w / x.t.n).toFixed(0) : 0}%"></i></span></td>
       <td class="n">${pct(x.t.fw, x.t.fn)} <span class="muted small">(${x.t.fn})</span></td><td class="n">${pct(x.t.dw, x.t.dn)} <span class="muted small">(${x.t.dn})</span></td></tr>`;
@@ -1551,9 +1564,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       <div class="legend small muted sv-leg"><span><i style="background:var(--win)"></i>${Tx("Wins")}</span><span><i style="background:var(--loss)"></i>${Tx("Losses")}</span></div>
       ${cost.length ? `<div class="cost ccost"><b>${Tx("Matchups costing you the most")}</b> <span class="muted small">${Tx("(8+ games; games lost beyond an even split)")}</span><ul>${cost.map((o) => `<li>${esc(Tx("vs {deck}: {w}–{l}, {p} won, {d} games below even", { deck: o.k, w: o.t.w, l: o.t.n - o.t.w, p: pct(o.t.w, o.t.n), d: o.t.n - 2 * o.t.w }))}</li>`).join("")}</ul></div>` : ""}
       <div class="sv-card"><h3>${Tx("Against each deck")}</h3><span class="muted small">${Tx("Tap a row to see those games. Faded rows: under 5 games.")}</span>
-        <table class="mt">${head(Tx("Opponent's inks"))}${opp.map((x) => row(x, true)).join("")}</table></div>
+        <table class="mt">${head(Tx("Opponent's inks"))}${opp.map((x) => row(x, true)).join("")}</table>${coverage(rows, "opp", "cov-opp")}</div>
       ${matrixHtml(rows)}
-      ${sv.deck === "all" && mine.length > 1 ? `<div class="sv-card"><h3>${Tx("Your decks")}</h3><table class="mt">${head(Tx("Your inks"))}${mine.map((x) => row(x, false)).join("")}</table></div>` : ""}
+      ${sv.deck === "all" && mine.length > 1 ? `<div class="sv-card"><h3>${Tx("Your decks")}</h3><table class="mt">${head(Tx("Your inks"))}${mine.map((x) => row(x, false)).join("")}</table>${coverage(rows, "mine", "cov-mine")}</div>` : ""}
       ${versionsHtml(vs)}
       <div class="sv-card"><h3>${Tx("Trend")}</h3>${trendSvg(rows) || `<p class="muted small">${Tx("Needs games in at least two months.")}</p>`}</div>`}
     </div>`;

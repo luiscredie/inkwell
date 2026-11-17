@@ -453,5 +453,12 @@ test('R24 stats: a game without inks counts in the totals and shows as "Tintas n
   await expect(page.locator('table.mx')).toContainText('Tintas não informadas');   // in the matrix too, mine and theirs
   await expect(page.locator('table.mx th .nm', { hasText: 'Tintas não informadas' })).toHaveCount(2);
   await expect(page.locator('#review')).not.toContainText('Physical game');
+  // Conselho (#243): the coverage of each analysis by inks is said, and the unknown line comes last, set apart
+  await expect(page.getByTestId('cov-opp')).toHaveText('Tintas do oponente informadas em 4 de 5 jogos. Os demais contam nos totais e aparecem como “Tintas não informadas”.');
+  await expect(page.getByTestId('cov-matrix')).toContainText('As duas tintas informadas em 4 de 5 jogos.');
+  await expect(page.getByTestId('cov-matrix')).toContainText('não são um confronto');
+  await expect(page.locator('table.mt').first().locator('tr').last()).toHaveClass(/noinks/);
+  await expect(page.locator('table.mx tr').last()).toHaveClass(/noinks/);
+  await expect(page.locator('table.mx tr').first().locator('th').last()).toHaveClass(/noinks/);
   if (process.env.JOGOS_EVIDENCE) await page.screenshot({ path: 'docs/evidencias/jogos/390-estatisticas-sem-tintas.png', fullPage: true });
 });
