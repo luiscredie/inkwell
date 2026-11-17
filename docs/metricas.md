@@ -41,28 +41,6 @@ Outros eventos auxiliares continuam (`deck_result`, `deck_save`, `deck_paste`, `
 É um evento do navegador, como os outros desta lista: não é contagem do banco. Não leva quantidade, nome ou dado pessoal.
 Usa o `public.track` como está (nome `[a-z_]`, até 30 letras), sem mudança no esquema. Não entra nos 9 eventos do relatório P0.
 
-### Tarefas (16/11/2026)
-
-Eventos para medir as tarefas do roadmap 2027. Todos são `action`, enviados só depois de a gravação dar certo (quando há gravação),
-uma vez por visita à página, pelo `public.track` como está. Nenhum leva carta, deck, quantidade, pessoa ou evento.
-Não entram nos 9 eventos do relatório P0; ver "Como ler" abaixo.
-
-| Evento | Página | Quando |
-|---|---|---|
-| `scan_saved` | `cards` | confirmou a lista do scanner ("Adicionar") |
-| `scan_fixed` | `cards` | na conferência do scanner, tirou uma carta da lista antes de salvar |
-| `scan_asked` | `cards` | o scanner não soube qual edição era e perguntou |
-| `import_done` | `cards` | uma importação de coleção terminou de gravar |
-| `loan_requested` | `decks` | pediu uma carta emprestada a um amigo, em Decks › Faltando |
-| `loan_saved` | `trades` | registrou um empréstimo em Trocas |
-| `event_marked` | `events` | marcou um evento (vou, talvez, fui…); desmarcar não conta |
-| `game_added` | `coach` | adicionou ao menos um jogo colando ou enviando o registro |
-
-**Como ler.** Cada evento conta uma vez por página aberta, então os números são **visitas em que a tarefa aconteceu**, não quantidade de
-cartas, jogos ou pedidos. "Taxa de correção do scanner" = visitas com `scan_fixed` ÷ visitas com `scan_saved`. "Importações concluídas" =
-visitas com `import_done` ÷ visitas com `import_open`. Tempo por tarefa **não** é medido: exigiria guardar instantes por pessoa, o que
-esta instrumentação evita de propósito.
-
 ## Definições
 
 - **Visita / sessão**: uma aba do navegador (código aleatório que some ao fechar a aba). **Não é número de pessoas**: uma pessoa gera
@@ -103,3 +81,25 @@ exportação com os dias, exclusão da conta apaga os dias, retenção de 90 dia
 `anon`/`authenticated`, deduplicação, limite por minuto, e que uma função migrada e alterada depois não é sobrescrita.
 `tools/fixtures/prod_shape.2026-11-04.sql` é uma cópia isolada do formato de produção (colunas, definições com as quebras de linha
 originais e permissões, lidas só por consulta em 04/11/2026; sem dados): a migração foi rodada nela duas vezes, com os mesmos resultados.
+
+## Tarefas (16/11/2026)
+
+Eventos para medir as tarefas do roadmap 2027. Todos são `action`, enviados só depois de a gravação dar certo (quando há gravação),
+uma vez por visita à página, pelo `public.track` como está. Nenhum leva carta, deck, quantidade, pessoa ou evento.
+Não entram nos 9 eventos do relatório P0; ver "Como ler" abaixo.
+
+| Evento | Página | Quando |
+|---|---|---|
+| `scan_saved` | `cards` | confirmou a lista do scanner ("Adicionar") |
+| `scan_fixed` | `cards` | na conferência do scanner, tirou uma carta da lista antes de salvar |
+| `scan_asked` | `cards` | o scanner não soube qual edição era e perguntou |
+| `import_done` | `cards` | uma importação de coleção terminou de gravar |
+| `loan_requested` | `decks` | pediu uma carta emprestada a um amigo, em Decks › Faltando |
+| `loan_saved` | `trades` | registrou um empréstimo em Trocas |
+| `event_marked` | `events` | marcou um evento (vou, talvez, fui…); desmarcar não conta |
+| `game_added` | `coach` | adicionou ao menos um jogo colando ou enviando o registro |
+
+**Como ler.** Cada evento conta uma vez por página aberta, então os números são **visitas em que a tarefa aconteceu**, não quantidade de
+cartas, jogos ou pedidos. "Taxa de correção do scanner" = visitas com `scan_fixed` ÷ visitas com `scan_saved`. "Importações concluídas" =
+visitas com `import_done` ÷ visitas com `import_open`. Tempo por tarefa **não** é medido: exigiria guardar instantes por pessoa, o que
+esta instrumentação evita de propósito.
