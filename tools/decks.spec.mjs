@@ -1104,8 +1104,8 @@ async function completion(page) {
 }
 test('Faltando: Como completar adds up, cards grouped friends → board → buy, extras after the cards, opened on the tabs', async ({ page }) => {
   await completion(page);
-  const tabs = await page.locator('.tabs[role=tablist]').boundingBox();
-  expect(tabs.y).toBeLessThan(140);                                              // a link with ?tab=missing lands on the tabs
+  // a link with ?tab=missing lands on the tabs (the page scrolls on the next frame after drawing)
+  await expect.poll(() => page.locator('.tabs[role=tablist]').evaluate((e) => Math.round(e.getBoundingClientRect().top))).toBeLessThan(140);
   await expect(page.getByTestId('missing-summary')).toContainText('10 cartas faltando');
   await expect(page.getByTestId('missing-summary')).not.toContainText('podem vir de amigos');
   const plan = page.getByTestId('completion-plan');
