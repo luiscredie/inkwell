@@ -1703,6 +1703,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     try { r = await addLogs(logs, (done, total) => { st.textContent = Tx("Adding games: {a} of {b}…", { a: done, b: total }); }); }
     catch (e) { st.textContent = Tx(e?.code === "invalid_argument" ? "A game was too large or malformed to store." : "Couldn't add all the games. Try again: games already added are skipped."); return; }
     $("pasteLog").value = "";
+    if (r.added) window.INKWELL_TRACK?.("game_added");
     st.textContent = Tx(r.added === 1 ? "{n} game added" : "{n} games added", { n: r.added }) + (r.skipped ? Tx(", {n} already here", { n: r.skipped }) : "") + ".";
     if (r.lastKey) openGame(r.lastKey);
   }

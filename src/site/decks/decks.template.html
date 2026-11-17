@@ -703,6 +703,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
       return;
     }
     if (!["list", "analysis", "missing", "games", "plan", "gala"].includes(tab)) tab = "list";
+    try { if (me?.id) localStorage.setItem(`inkwell-last-deck:${me.id}`, d.id); localStorage.removeItem("inkwell-last-deck"); } catch { /* */ }   // Início > Continuar picks up this deck (per account)
     const m = measure(d), inks = deckInks(d, m);
     const keep = document.activeElement?.id, caret = document.activeElement?.selectionStart;
     const when = d.updated_at ? Tx("updated {d}", { d: dateFmt(d.updated_at) }) : d.created_at ? Tx("created {d}", { d: dateFmt(d.created_at) }) : "";
@@ -1353,7 +1354,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     b.disabled = true;
     try {
       await CLOUD.api("user_loans", { method: "POST", prefer: "return=minimal", body: { lender: b.dataset.borrow, borrower: me.id, created_by: me.id, items: [{ card_id: b.dataset.bcard, qty: Math.min(+x.free, Math.max(1, +b.dataset.bq || 1)), foil: false }], note: Tx("For the deck {d}", { d: d.name }).slice(0, 500) } });
-      lendAsked.add(k); toast(Tx("Request sent. You'll see the answer in Trades.")); render();
+      lendAsked.add(k); toast(Tx("Request sent. You'll see the answer in Trades.")); window.INKWELL_TRACK?.("loan_requested"); render();
     } catch (e) { b.disabled = false; toast(/too_many/.test(String(e?.why || "")) ? Tx("Too many requests today. Try tomorrow.") : Tx("Couldn't save. Try again."), null, true); }
   }
   async function postMissing(d, kindName) {

@@ -4,9 +4,9 @@ name: DLC Londres — dados ao vivo
 # e grava dlc-londres.json no branch dlc-data (um unico commit, sobrescrito). A pagina site/dlc-londres/ le esse
 # arquivo pelo raw.githubusercontent.com. Nao toca na main: sem PR, sem checks, sem deploy do site.
 # Para parar: desative este workflow em Actions (ou apague o arquivo). Ele se desliga sozinho depois de 16/11/2026.
+# 16/11/2026: evento encerrado. O agendamento foi retirado (rodava 288 vezes por dia sem nada a fazer);
+# fica so o disparo manual, para reprocessar se for preciso.
 on:
-  schedule:
-    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 permissions:
