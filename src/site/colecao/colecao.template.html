@@ -1607,7 +1607,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
           for (const d of part) { p.collection[d.card_id] = langApply(p.collection[d.card_id], d.foil ? "f" : "n", d.qty, d.lang); ADDED.set(`${p.profile}|${d.card_id}`, Date.now()); done += d.qty; }
           b.textContent = Tx("Saving… {n}", { n: done });
         }
-        close(); renderAll(); toast(Tx("Collection updated: {n} cards added", { n: done }));
+        close(); renderAll(); toast(Tx("Collection updated: {n} cards added", { n: done })); window.INKWELL_TRACK?.("import_done");
       } catch {
         renderAll();
         $("impMsg").textContent = done ? Tx("Stopped after {n} cards. Import again with “Keep the larger number” to finish without counting twice.", { n: done }) : Tx("Couldn't save. Try again.");
@@ -1805,7 +1805,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     box.querySelectorAll("[data-rq]").forEach((b) => b.onclick = () => {
       const [id, f, lg = ""] = b.closest("[data-rev]").dataset.rev.split(":"), foil = f === "1";
       if (b.dataset.rq === "1") scan.added.push({ id, foil, lang: lg || null });
-      else { const i = scan.added.map((a) => same(a, id, foil, lg)).lastIndexOf(true); if (i >= 0) scan.added.splice(i, 1); }
+      else { const i = scan.added.map((a) => same(a, id, foil, lg)).lastIndexOf(true); if (i >= 0) scan.added.splice(i, 1); window.INKWELL_TRACK?.("scan_fixed"); }   // took a scanned card off the list before saving
       scan.last = scan.added[scan.added.length - 1] || null; showReview();
     });
     $("revDrop").onclick = (e) => {
@@ -1817,12 +1817,13 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       for (const x of reviewGroups()) change(x.id, x.foil ? "f" : "n", x.n, true, homeReady ? scanPlace() : "binder", x.lang || addLangNow());
       if (scan.lang) lastLang = scan.lang;
       scan.saved = scan.added.length; scan.added = []; scan.last = null;
+      window.INKWELL_TRACK?.("scan_saved");
       clearTimeout(pendingTimer); $("scan").close();
     };
     $("revAdd").focus();
   }
   function askWhich(group) {
-    scan.askOpen = true; $("scanGuide")?.classList.add("ask");
+    scan.askOpen = true; $("scanGuide")?.classList.add("ask"); window.INKWELL_TRACK?.("scan_asked");
     scanSay(Tx("Not sure which printing this is. Which one?"));
     const box = $("scanPick");
     box.innerHTML = `<div class="pick" data-testid="scan-pick">${group.slice(0, 6).map((id) => { const c = BY.get(id); return c ? `<button type="button" data-pick="${esc(id)}">${thumb(c, "", false)}</span><span>${esc(setName(c.set))} · nº ${esc(c.num)}</span></button>` : ""; }).join("")}

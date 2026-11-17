@@ -99,7 +99,10 @@ test('deck detail: list, analysis, missing with friends and board, games', async
 
   await page.getByRole('tab', { name: /Faltando/ }).click();
   await expect(page.locator('[data-testid="missing-summary"]')).toContainText('2 cartas faltando');
-  await expect(page.locator('[data-testid="missing-summary"]')).toContainText('1 pode vir de amigos');
+  // Pacote 2 + Conselho: copies actually offered — Ana lends 1 of the 2, Bruno sells the other on the board, nothing to buy
+  await expect(page.getByTestId('plan-lend')).toContainText('Até 1 emprestada por amigo');
+  await expect(page.getByTestId('plan-board')).toContainText('Até 1 no Mural');
+  await expect(page.getByTestId('plan-buy')).toHaveCount(0);
   const miss = page.locator('[data-miss="LOR10-1"]');
   await expect(miss).toContainText('Ana Souza empresta');
   await expect(miss).toContainText('Bruno Lima vende no Mural');
@@ -1083,4 +1086,80 @@ test('deck list: no Virtual / Físico filter before deck_built.sql (collection_d
   await page.goto(BASE);
   await expect(page.locator('[data-deck="deck-a"]')).toBeVisible();
   await expect(page.locator('[data-testid="kind-filter"]')).toHaveCount(0);
+});
+
+// Pacote 2: the Faltando tab says how to complete the deck, in order: friends who lend, the board, then buying.
+async function completion(page, { partial = false } = {}) {
+  const CAIO = '44444444-4444-4444-8444-444444444444';
+  await setup(page);
+  const db = fixtures();
+  db.profiles[0].collection['LOR10-17'] = { n: 0, f: 0 }; db.profiles[0].collection['LOR10-10'] = { n: 0, f: 0 };
+  await page.route('**/rest/v1/inkwell_profiles*', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(db.profiles) }));
+  await page.route('**/rest/v1/friendships*', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([...db.friendships, { requester: CAIO, addressee: ME, status: 'accepted' }]) }));
+  await page.route('**/rest/v1/rpc/my_friends', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ id: FRIEND, name: 'Ana Souza', handle: 'ana' }, { id: CAIO, name: 'Caio', handle: null }]) }));
+  await page.route('**/rest/v1/rpc/friends_lending', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+    { user: FRIEND, name: 'Ana Souza', card_id: 'LOR10-1', free: 3, lend: true },
+    { user: CAIO, name: 'Caio', card_id: 'LOR10-10', free: partial ? 1 : 4, lend: true }]) }));
+  if (partial) await page.route('**/rest/v1/listings*', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([...db.listings,
+    { id: 'l9', user_id: SELLER, kind: 'sell', card_id: 'LOR10-10', qty: 1, foil: false, price_brl: 1 }]) }));
+  await page.setViewportSize({ width: 390, height: 760 });
+  await page.goto(BASE + '?deck=deck-a&tab=missing');
+  await expect(page.getByTestId('missing-summary')).toBeVisible();
+}
+test('Faltando: Como completar adds up, cards grouped friends → board → buy, extras after the cards, opened on the tabs', async ({ page }) => {
+  await completion(page);
+  // a link with ?tab=missing lands on the tabs (the page scrolls on the next frame after drawing)
+  await expect.poll(() => page.locator('.tabs[role=tablist]').evaluate((e) => Math.round(e.getBoundingClientRect().top))).toBeLessThan(140);
+  await expect(page.getByTestId('missing-summary')).toContainText('10 cartas faltando');
+  await expect(page.getByTestId('missing-summary')).not.toContainText('podem vir de amigos');
+  await expect(page.getByTestId('missing-summary')).toContainText(/Comprando tudo: cerca de R\$\s[\d.,]+ pelo preço de mercado/);   // not mistaken for what is left to buy
+  const plan = page.getByTestId('completion-plan');
+  await expect(plan).toContainText('Como completar');
+  // Baloo: 2 missing, Ana offers 3 free → 2; Gurgi: 4 missing, Caio offers 4 free → 4; Ariel: nobody → 4 to buy
+  await expect(plan.getByTestId('plan-lend')).toContainText('Até 6 emprestadas por amigos');
+  await expect(plan.getByTestId('plan-lend')).toContainText('2 cartas diferentes · cópias livres que ofereceram; cada amigo decide');
+  await expect(plan.getByTestId('plan-buy')).toContainText('4 para comprar');      // 6 + 4 = 10
+  await expect(plan.getByTestId('plan-buy')).toContainText(/cerca de R\$\s[\d.,]+ pelo preço de mercado/);
+  await expect(plan.getByTestId('plan-board')).toHaveCount(0);
+  await expect(plan.getByTestId('plan-trade')).toHaveCount(0);
+  await expect(plan.getByTestId('plan-note')).toHaveText('“Até”: o que foi oferecido hoje, sem reserva. As linhas somam o que falta.');
+  await expect(page.locator('#tabBody')).not.toContainText('de graça');            // a trade is not free
+  await expect(plan.getByTestId('plan-lend').getByRole('link')).toHaveAttribute('href', '#who-helps-anchor');
+  await expect(plan.getByTestId('plan-buy').getByRole('link', { name: 'Ver lojas' })).toHaveAttribute('href', '#miss-buy');
+  for (const b of await plan.locator('.btn').all()) expect((await b.boundingBox()).height).toBeGreaterThanOrEqual(44);
+  const order = await page.locator('[data-miss]').evaluateAll((els) => els.map((e) => e.dataset.where));
+  expect(order).toEqual([...order].sort((x, y) => ['friends', 'board', 'buy'].indexOf(x) - ['friends', 'board', 'buy'].indexOf(y)));
+  expect(order[0]).toBe('friends');
+  await expect(page.getByTestId('miss-group-friends')).toContainText('Amigos ofereceram');
+  await expect(page.getByTestId('miss-group-friends')).toContainText('Empréstimo não tem custo; troca pede cartas suas em troca.');
+  await expect(page.getByTestId('miss-group-buy')).toContainText('Para comprar');
+  // copy/download and posting on the board come after the cards; the price note is not repeated in the tab
+  expect(await page.evaluate(() => !!(document.querySelector('[data-miss]:last-of-type').compareDocumentPosition(document.querySelector('[data-testid="miss-export"]')) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
+  await expect(page.locator('#tabBody [data-testid="price-note"]')).toHaveCount(0);
+  // a friend's name is never cut
+  expect(await page.locator('.miss [data-testid="friend-has"] .fwho').evaluateAll((els) => els.every((e) => e.scrollWidth <= e.clientWidth + 1))).toBe(true);
+  await plan.getByTestId('plan-buy').getByRole('link').click();
+  await expect.poll(() => page.getByTestId('miss-group-buy').evaluate((e) => Math.round(e.getBoundingClientRect().top))).toBeLessThan(140);
+  for (const w of [320, 390, 768, 860, 1280]) {
+    await page.setViewportSize({ width: w, height: w < 700 ? 760 : 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+    if (process.env.DECKS_EVIDENCE) { await page.evaluate(() => { const t = document.querySelector('.tabs[role=tablist]'); scrollTo({ top: t.getBoundingClientRect().top + scrollY - document.querySelector('.appbar').offsetHeight - 8, behavior: 'instant' }); }); await page.waitForTimeout(100); await page.screenshot({ path: `docs/evidencias/central/depois-${w}.png` }); }
+  }
+});
+
+test('Faltando: only copies actually offered count — a friend with 1 free of 4 covers 1; the board 1; the rest is to buy', async ({ page }) => {
+  await completion(page, { partial: true });
+  const plan = page.getByTestId('completion-plan');
+  // Gurgi: 4 missing → Caio offers 1 free, someone sells 1 on the board, 2 to buy. Baloo: 2 lent. Ariel: 4 to buy.
+  await expect(plan.getByTestId('plan-lend')).toContainText('Até 3 emprestadas por amigos');
+  await expect(plan.getByTestId('plan-board')).toContainText('Até 1 no Mural');
+  await expect(plan.getByTestId('plan-board')).toContainText('à venda, pelo preço do anúncio');
+  await expect(plan.getByTestId('plan-buy')).toContainText('6 para comprar');      // 3 + 1 + 6 = 10, the heading
+  await expect(page.getByTestId('missing-summary')).toContainText('10 cartas faltando');
+  const gurgi = page.locator('[data-miss="LOR10-10"]');
+  await expect(gurgi).toHaveAttribute('data-where', 'friends');
+  await expect(gurgi.getByTestId('miss-split')).toHaveText('até 1 emprestada · até 1 no Mural · 2 para comprar');
+  // a friend who only has the card (did not offer) adds nothing
+  const sums = await plan.locator('[data-testid^="plan-"] b').allInnerTexts();
+  expect(sums.map((t) => +t.match(/\d+/)[0]).reduce((a, b) => a + b, 0)).toBe(10);
 });
