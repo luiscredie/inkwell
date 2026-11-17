@@ -99,7 +99,8 @@ test('deck detail: list, analysis, missing with friends and board, games', async
 
   await page.getByRole('tab', { name: /Faltando/ }).click();
   await expect(page.locator('[data-testid="missing-summary"]')).toContainText('2 cartas faltando');
-  await expect(page.locator('[data-testid="missing-summary"]')).toContainText('1 pode vir de amigos');
+  await expect(page.getByTestId('plan-friends')).toContainText('2 com amigos');   // Pacote 2: the plan replaced "1 pode vir de amigos"; 2 of the 2 missing
+  await expect(page.getByTestId('plan-friends')).toContainText('1 carta · pedir emprestado ou trocar');
   const miss = page.locator('[data-miss="LOR10-1"]');
   await expect(miss).toContainText('Ana Souza empresta');
   await expect(miss).toContainText('Bruno Lima vende no Mural');
@@ -1083,4 +1084,54 @@ test('deck list: no Virtual / Físico filter before deck_built.sql (collection_d
   await page.goto(BASE);
   await expect(page.locator('[data-deck="deck-a"]')).toBeVisible();
   await expect(page.locator('[data-testid="kind-filter"]')).toHaveCount(0);
+});
+
+// Pacote 2: the Faltando tab says how to complete the deck, in order: friends who lend, the board, then buying.
+async function completion(page) {
+  const CAIO = '44444444-4444-4444-8444-444444444444';
+  await setup(page);
+  const db = fixtures();
+  db.profiles[0].collection['LOR10-17'] = { n: 0, f: 0 }; db.profiles[0].collection['LOR10-10'] = { n: 0, f: 0 };
+  await page.route('**/rest/v1/inkwell_profiles*', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(db.profiles) }));
+  await page.route('**/rest/v1/friendships*', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([...db.friendships, { requester: CAIO, addressee: ME, status: 'accepted' }]) }));
+  await page.route('**/rest/v1/rpc/my_friends', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ id: FRIEND, name: 'Ana Souza', handle: 'ana' }, { id: CAIO, name: 'Caio', handle: null }]) }));
+  await page.route('**/rest/v1/rpc/friends_lending', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+    { user: FRIEND, name: 'Ana Souza', card_id: 'LOR10-1', free: 3, lend: true },
+    { user: CAIO, name: 'Caio', card_id: 'LOR10-10', free: 4, lend: true }]) }));
+  await page.setViewportSize({ width: 390, height: 760 });
+  await page.goto(BASE + '?deck=deck-a&tab=missing');
+  await expect(page.getByTestId('missing-summary')).toBeVisible();
+}
+test('Faltando: Como completar adds up, cards grouped friends → board → buy, extras after the cards, opened on the tabs', async ({ page }) => {
+  await completion(page);
+  const tabs = await page.locator('.tabs[role=tablist]').boundingBox();
+  expect(tabs.y).toBeLessThan(140);                                              // a link with ?tab=missing lands on the tabs
+  await expect(page.getByTestId('missing-summary')).toContainText('10 cartas faltando');
+  await expect(page.getByTestId('missing-summary')).not.toContainText('podem vir de amigos');
+  const plan = page.getByTestId('completion-plan');
+  await expect(plan).toContainText('Como completar');
+  await expect(plan.getByTestId('plan-friends')).toContainText('6 com amigos');
+  await expect(plan.getByTestId('plan-friends')).toContainText('2 cartas diferentes · pedir emprestado ou trocar');
+  await expect(plan.getByTestId('plan-buy')).toContainText('4 para comprar');      // 6 + 4 = 10
+  await expect(plan.getByTestId('plan-board')).toHaveCount(0);                     // nothing only on the board here
+  await expect(plan.getByTestId('plan-friends').getByRole('link')).toHaveAttribute('href', '#who-helps-anchor');
+  await expect(plan.getByTestId('plan-buy').getByRole('link', { name: 'Ver lojas' })).toHaveAttribute('href', '#miss-buy');
+  for (const b of await plan.locator('.btn').all()) expect((await b.boundingBox()).height).toBeGreaterThanOrEqual(44);
+  const order = await page.locator('[data-miss]').evaluateAll((els) => els.map((e) => e.dataset.where));
+  expect(order).toEqual([...order].sort((x, y) => ['friends', 'board', 'buy'].indexOf(x) - ['friends', 'board', 'buy'].indexOf(y)));
+  expect(order[0]).toBe('friends');
+  await expect(page.getByTestId('miss-group-friends')).toContainText('Com amigos');
+  await expect(page.getByTestId('miss-group-buy')).toContainText('Para comprar');
+  // copy/download and posting on the board come after the cards; the price note is not repeated in the tab
+  expect(await page.evaluate(() => !!(document.querySelector('[data-miss]:last-of-type').compareDocumentPosition(document.querySelector('[data-testid="miss-export"]')) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
+  await expect(page.locator('#tabBody [data-testid="price-note"]')).toHaveCount(0);
+  // a friend's name is never cut
+  expect(await page.locator('.miss [data-testid="friend-has"] .fwho').evaluateAll((els) => els.every((e) => e.scrollWidth <= e.clientWidth + 1))).toBe(true);
+  await plan.getByTestId('plan-buy').getByRole('link').click();
+  await expect.poll(() => page.getByTestId('miss-group-buy').evaluate((e) => Math.round(e.getBoundingClientRect().top))).toBeLessThan(140);
+  for (const w of [320, 390, 768, 860, 1280]) {
+    await page.setViewportSize({ width: w, height: w < 700 ? 760 : 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+    if (process.env.DECKS_EVIDENCE) { await page.evaluate(() => { const t = document.querySelector('.tabs[role=tablist]'); scrollTo({ top: t.getBoundingClientRect().top + scrollY - document.querySelector('.appbar').offsetHeight - 8, behavior: 'instant' }); }); await page.waitForTimeout(100); await page.screenshot({ path: `docs/evidencias/central/depois-${w}.png` }); }
+  }
 });
