@@ -7,14 +7,14 @@ const BASE = new URL('counter/', process.env.INKWELL_URL || 'http://localhost:80
 const ME = '11111111-1111-4111-8111-111111111111';
 const RODRIGO = '22222222-2222-4222-8222-222222222222';
 
-async function setup(page, { tour = false, findFails = false } = {}) {
+async function setup(page, { tour = false, findFails = false, decks = true, bestOf = 3 } = {}) {
   const calls = [];
-  await page.addInitScript(([me, tour]) => {
+  await page.addInitScript(([me, tour, decks, bestOf]) => {
     if (sessionStorage.getItem('t')) return; sessionStorage.setItem('t', '1');
     const exp = Math.floor(Date.now() / 1000) + 3600;
     localStorage.setItem('inkwell-counter-auth', JSON.stringify({ access_token: 'x.' + btoa(JSON.stringify({ sub: me, exp })) + '.y', refresh_token: 'r', expires_at: exp, user: { id: me } }));
-    localStorage.setItem('inkwell-lorecounter-v3', JSON.stringify({ lang: 'pt', players: 2, decks: true, tour, bestOf: 3 }));
-  }, [ME, tour]);
+    localStorage.setItem('inkwell-lorecounter-v3', JSON.stringify({ lang: 'pt', players: 2, decks, tour, bestOf }));
+  }, [ME, tour, decks, bestOf]);
   await page.route('**/rest/v1/**', async (route) => {
     const req = route.request(), path = new URL(req.url()).pathname.replace(/.*\/rest\/v1\//, '');
     const body = req.postData() ? JSON.parse(req.postData()) : null;
@@ -119,7 +119,7 @@ test('opponent deck skipped: asked again at the end, and can still be set from t
   await winGame(page);
   await expect(page.getByRole('heading', { name: 'O oponente usa o Inkwell?' })).toBeVisible();   // end of match, still unknown
   await page.getByRole('button', { name: 'Pular' }).click();
-  await page.getByRole('button', { name: 'Escolher deck do oponente' }).click();
+  await page.getByRole('button', { name: 'Informar tintas (opcional)' }).click();
   await page.getByRole('button', { name: 'Não' }).click();
   await page.locator('#dk [data-ink="Ruby"]').click();
   await page.getByRole('button', { name: 'Salvar' }).click();
@@ -313,4 +313,36 @@ test('sealed format: any number of inks, no Inkwell decks, opponent by inks only
   await page.locator('#sFormat [data-v="core"]').click();
   st = await page.evaluate(() => JSON.parse(localStorage.getItem('inkwell-lorecounter-v3')));
   expect(st.color.p1.length).toBeLessThanOrEqual(2);
+});
+
+// R24: by default the counter starts counting at once, with no inks; they can be added after the match.
+test('R24: no inks asked by default; the game goes out without inks and the inks can be added after the match', async ({ page }) => {
+  const calls = await setup(page, { decks: false, bestOf: 1 });
+  await page.goto(BASE);
+  await expect(page.locator('#sheet')).toBeHidden();                       // no form before counting
+  await winGame(page);
+  const later = page.getByTestId('add-inks');
+  await expect(later).toHaveText('Informar tintas (opcional)');
+  await expect.poll(() => calls.filter((c) => c.path.startsWith('game_logs')).length).toBeGreaterThan(0);
+  const first = calls.find((c) => c.path.startsWith('game_logs')).body;
+  const log = (Array.isArray(first) ? first[0] : first).log || (Array.isArray(first) ? first[0] : first);
+  expect(JSON.stringify(log)).not.toMatch(/"inks":\["/);                   // nothing invented from the screen colours
+  await later.click();
+  await page.getByRole('button', { name: 'Circle of Life' }).click();      // my deck
+  await page.getByRole('button', { name: 'Não' }).click();                 // opponent not on Inkwell: just the inks
+  await page.locator('#dk [data-ink="Ruby"]').click();
+  await page.getByRole('button', { name: 'Salvar' }).click();
+  await expect.poll(() => calls.filter((c) => c.path.startsWith('game_logs') && JSON.stringify(c.body).includes('Ruby') && JSON.stringify(c.body).includes('Amber')).length).toBeGreaterThan(0);
+  const st = await page.evaluate(() => JSON.parse(localStorage.getItem('inkwell-lorecounter-v3')));
+  expect(st.history[0].me.inks).toEqual(['Amber', 'Emerald']);
+  expect(st.history[0].opp.inks).toEqual(['Ruby']);
+});
+
+test('R24: the setting that asks for the inks at the start is named for what it does', async ({ page }) => {
+  await setup(page, { decks: false });
+  await page.goto(BASE);
+  await page.click('#menuBtn');
+  await page.getByRole('button', { name: 'Ajustes' }).click();
+  await expect(page.getByText('Pedir as tintas ao começar')).toBeVisible();
+  await expect(page.getByText('Desligado, o contador começa direto e você informa as tintas depois, se quiser', { exact: false })).toBeVisible();
 });
