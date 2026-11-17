@@ -895,12 +895,13 @@ dialog.iw-zoom-card [data-zclose] { position: fixed; top: calc(env(safe-area-ins
 @media (max-width: 374px) {
   .appbar-in { padding-left: var(--sp-3); padding-right: var(--sp-1); gap: var(--sp-1); }
   .appbar .end { gap: 2px; }
-  .appbar .end > .btn.icon, .appbar .counter-btn, .appbar .av-btn { width: 40px; height: 40px; min-width: 40px; }
+  .appbar:not(.signed) .end > .btn.icon, .appbar:not(.signed) .counter-btn, .appbar:not(.signed) .av-btn { width: 40px; height: 40px; min-width: 40px; }   /* visitors still have theme, flag and Entrar */
 }
 .flag-btn svg { display: block; border-radius: 3px; box-shadow: 0 0 0 1px rgba(255,255,255,.35); }
 .bell-btn { position: relative; }
 .bell-btn .count { position: absolute; top: 2px; right: 0; min-width: 18px; height: 18px; padding: 0 5px; font-size: 11px; }
 .menu.notif { width: min(360px, calc(100vw - 24px)); max-height: min(70vh, 520px); overflow: auto; }
+.menu.acct-menu { max-height: calc(100dvh - var(--bar-h) - 96px); overflow: auto; overscroll-behavior: contain; }   /* the account menu scrolls on short phones, above the bottom bar */
 .menu.notif .menu-item { align-items: flex-start; white-space: normal; line-height: 1.35; }
 .menu.notif .menu-item.unread { background: var(--accent-soft); }
 .menu.notif .push-row { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; justify-content: space-between; border-top: 1px solid var(--line); margin-top: var(--sp-2); padding: var(--sp-3) var(--sp-2) var(--sp-1); }
