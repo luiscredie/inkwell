@@ -64,6 +64,8 @@ jobs:
         run: node tools/sim-readiness-contract.test.mjs
       - name: Decks page uses the app's deck-portfolio optimizer
         run: node tools/decks-plan-contract.test.mjs
+      - name: Task metrics contract (events sent, named and documented)
+        run: node --test tools/task-metrics-contract.test.mjs
   python:
     runs-on: ubuntu-latest
     steps:
