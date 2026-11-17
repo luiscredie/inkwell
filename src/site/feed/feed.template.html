@@ -67,6 +67,14 @@ button.fy-tile { border: 0; font: inherit; text-align: left; width: 100%; cursor
   .page.split.home3 > #left { position: sticky; top: calc(var(--bar-h) + var(--sp-4)); align-self: start; }
 }
 @media (max-width: 760px) { .page.split.home3 > #left, .page.split.home3 > #aside { display: none; } .page.split.home3 { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; grid-template-areas: "head" "main"; } }
+#keep { display: none; }
+@media (max-width: 760px) { #keep:not(:empty) { display: block; margin-bottom: var(--sp-4); } .home3:has(#keep:not(:empty)) .page-head p { display: none; } }   /* "o que seus amigos andam fazendo" no longer describes the top of the phone screen */
+#keep h2 { margin: 0 0 var(--sp-3); font-size: var(--fs-h2); }
+#keep .fy-row { grid-template-columns: minmax(0, 1fr); }
+#keep .fy-tile { min-height: 56px; }
+#keep .fy-tile b { overflow-wrap: anywhere; }
+.home-retry { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
+.home-retry .btn { min-height: 44px; }   /* easy to hit with a thumb */
 body.out .page.split.home3 { display: block; }
 .home-left { display: grid; gap: var(--sp-3); align-content: start; }
 .me-card { padding: var(--sp-4); border-radius: var(--r-lg); background: var(--surface-1); border: 1px solid var(--line); box-shadow: var(--e1); display: grid; gap: var(--sp-3); }
@@ -199,6 +207,7 @@ body.out .page.split { display: block; }
   <aside id="left" class="home-left" aria-label="Meu Inkwell" hidden></aside>
   <div class="page-head"><div><h1 id="title">Início</h1><p class="sub" id="sub"></p></div></div>
   <div class="home-main">
+    <div id="keep" data-testid="home-continue"></div>
     <div id="forYou" data-testid="for-you"></div>
     <div id="composer" data-testid="composer"></div>
     <button type="button" class="list-row" id="openFriends" hidden></button>
@@ -283,6 +292,12 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "Couldn't load the timeline.": "Não foi possível carregar a linha do tempo.", "Check your connection and try again.": "Confira a internet e tente de novo.", "Try again": "Tentar de novo",
     "Won": "Venceu", "Lost": "Perdeu", "against": "contra", "went first": "começou jogando", "went second": "começou comprando", "Confirm removal": "Confirmar remoção", "Confirm delete": "Confirmar exclusão",
     "My Inkwell": "Meu Inkwell", "Private profile": "Perfil privado", "Cards": "Cartas", "Decks": "Decks", "Friends  ": "Amigos",
+    "Continue": "Continuar", "Get started": "Comece por aqui", "Continue my deck": "Continuar meu deck", "{n} cards · see what's missing": "{n} cartas · ver o que falta",
+    "My collection": "Minha coleção", "{n} cards · scan more": "{n} cartas · escanear mais", "1 card · scan more": "1 carta · escanear mais", "Next event": "Próximo evento",
+    "Add my collection": "Cadastrar minha coleção", "Scan your cards or import a list.": "Escaneie suas cartas ou importe uma lista.",
+    "Import a deck": "Importar um deck", "Paste a list and see what you're missing.": "Cole uma lista e veja o que falta.",
+    "Find a tournament": "Procurar campeonato", "Official events and tables near you.": "Eventos oficiais e mesas perto de você.",
+    "Couldn't load this part of your home.": "Não deu para carregar esta parte do seu Início.", "Couldn't load your decks and collection.": "Não deu para carregar seus decks e sua coleção.",
     "See my profile": "Ver meu perfil", "Shortcuts": "Atalhos", "Deck builder": "Construtor de decks", "Scan cards": "Escanear cartas", "Lore counter": "Contador de lore",
     "Trades and loans ": "Trocas e empréstimos", "Prices and wishlist": "Preços e lista de desejos", "Games and stats": "Jogos e estatísticas",
     "A kind, safe space": "Espaço gentil e seguro", "Communities and recados are for members 18+. Be kind at the table and online; report what isn't.": "Comunidades e recados são para membros 18+. Gentileza na mesa e aqui; denuncie o que não for.",
@@ -885,8 +900,41 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   // ---------- left column: me at a glance (real data only) and shortcuts ----------
   let homeData = null;
   // one request for my collection and decks per opening, shared by the card on the left and the post composer
-  let colsP = null;
-  const myCols = () => (colsP ||= CLOUD.collections("profile,collection:data->collection,decks:data->decks").catch(() => []));
+  let colsP = null, colsFailed = false;
+  const myCols = () => (colsP ||= CLOUD.collections("profile,collection:data->collection,decks:data->decks").catch(() => { colsFailed = true; return []; }));
+  // ---------- phones: "Continue" ----------
+  // Up to 760px the left and right columns are hidden (shortcuts, my numbers, events), so the phone home had nothing to
+  // pick up from. This block shows at most three things, each one tap from where the person left off; nothing is
+  // shown for what the account doesn't have. A brand-new account gets three first steps instead. Real data only.
+  async function renderKeep() {
+    const el = $("keep"); if (!el || !me) return;
+    const [cols, marks] = await Promise.all([myCols(), rpcS("my_event_marks").catch(() => [])]);
+    if (colsFailed) {   // say so and offer to ask again: the block must not just vanish
+      el.innerHTML = `<section aria-labelledby="hKeep"><h2 id="hKeep">${Tx("Continue")}</h2><div class="panel home-retry" role="alert" data-testid="keep-error"><span>${Tx("Couldn't load your decks and collection.")}</span><button type="button" class="btn small" id="keepRetry">${Tx("Try again")}</button></div></section>`;
+      $("keepRetry").onclick = (e) => { e.currentTarget.disabled = true; colsP = null; colsFailed = false; renderKeep(); };
+      return;
+    }
+    const col = (cols || []).find((c) => c.profile === "principal") || (cols || [])[0] || {};
+    let cards = 0; for (const v of Object.values(col.collection || {})) cards += (+v?.n || 0) + (+v?.f || 0);
+    const decks = (cols || []).flatMap((c) => (Array.isArray(c.decks) ? c.decks : [])).filter((d) => d?.id && d.cards && Object.keys(d.cards).length);
+    // per account (Conselho, #235): two accounts on one device never pick up each other's last deck; the old shared key is ignored
+    let last = null; try { last = localStorage.getItem(`inkwell-last-deck:${me.id}`); } catch { /* */ }
+    const deck = decks.find((d) => d.id === last) || decks[decks.length - 1];
+    const size = (d) => Object.values(d.cards).reduce((s, q) => s + (+q || 0), 0);
+    const ev = (Array.isArray(marks) ? marks : []).find((m) => m?.snap?.start && Date.parse(m.snap.start) > Date.now() - 6 * 3600e3);
+    const tile = (href, ic, title, sub, id) => `<a class="fy-tile" href="${href}" data-testid="${id}"><i class="ic i-${ic}"></i><span><b>${esc(title)}</b><span class="small muted" style="display:block">${esc(sub)}</span></span><i class="ic i-chevron-right"></i></a>`;
+    const tiles = [];
+    if (deck) tiles.push(tile(`../decks/?deck=${enc(deck.id)}&tab=missing`, "decks", deck.name || Tx("Continue my deck"), Tx("{n} cards · see what's missing", { n: size(deck) }), "keep-deck"));
+    if (cards) tiles.push(tile("../colecao/", "camera", Tx("My collection"), cards === 1 ? Tx("1 card · scan more") : Tx("{n} cards · scan more", { n: cards.toLocaleString(LOC) }), "keep-collection"));
+    if (ev) tiles.push(tile("../eventos/", "calendar", ev.snap.name || Tx("Next event"), [evWhen(ev.snap.start), ev.snap.store].filter(Boolean).join(" · "), "keep-event"));
+    const first = !deck && !cards;
+    if (first) tiles.push(
+      tile("../colecao/", "camera", Tx("Add my collection"), Tx("Scan your cards or import a list."), "first-collection"),
+      tile("../decks/", "decks", Tx("Import a deck"), Tx("Paste a list and see what you're missing."), "first-deck"),
+      ...(ev ? [] : [tile("../eventos/", "calendar", Tx("Find a tournament"), Tx("Official events and tables near you."), "first-event")]));
+    el.innerHTML = tiles.length ? `<section aria-labelledby="hKeep"><h2 id="hKeep">${Tx(first ? "Get started" : "Continue")}</h2><div class="fy-row">${tiles.join("")}</div></section>` : "";
+    el.onclick = (e) => { const t = e.target.closest?.("[data-testid]")?.dataset.testid; if (/^(keep|first)-(deck|collection|event)$/.test(t || "")) window.INKWELL_TRACK?.("home_" + t.replace("-", "_")); };   // docs/metricas.md
+  }
   async function renderLeft() {
     const el = $("left"); if (!el || !me) return;
     const [p, cols] = await Promise.all([
@@ -932,9 +980,14 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   }
   // ---------- "Para você": what is waiting, and what your communities are saying (supabase/my_account.sql my_home) ----------
   async function renderForYou() {
-    let h = null; try { h = await CLOUD.shared("rpc/my_home"); } catch { h = null; }
+    let h = null, failed = false; try { h = await CLOUD.shared("rpc/my_home"); } catch { h = null; failed = true; }
     const box = $("forYou"); if (!box) return;
     homeData = h; renderComms(h);
+    if (failed) {
+      box.innerHTML = `<section class="panel home-retry" role="alert" data-testid="home-error"><span>${Tx("Couldn't load this part of your home.")}</span><button type="button" class="btn small" id="homeRetry">${Tx("Try again")}</button></section>`;
+      $("homeRetry").onclick = () => go();
+      return;
+    }
     if (!h) { box.innerHTML = ""; return; }
     const IDX = new Map(((typeof CARD_INDEX !== "undefined" && CARD_INDEX?.cards) || []).map((c) => [c[0], c]));
     const art = (id) => { const c = IDX.get(id); return c && c[8] ? `background-image:url('../lorcana-card-images/${encodeURI(c[8]).replace(/'/g, "%27")}')` : ""; };
@@ -958,8 +1011,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   }
 
   const go = async () => {
-    colsP = null;   // "Try again" asks again
+    colsP = null; colsFailed = false;   // "Try again" asks again
     renderForYou();
+    renderKeep();
     renderEvents();
     try { await loadPeople(); renderLeft(); await Promise.all([loadPosts(), loadSocial()]); renderSide(); renderComposer(); renderFeed();
       if (!myDecks) myCols().then((r) => { myDecks = (r || []).flatMap((x) => (Array.isArray(x.decks) ? x.decks : [])).filter((d) => d?.cards && Object.keys(d.cards).length); renderComposer(); }).catch(() => {}); if (location.hash === "#amigos") { if (phone()) $("openFriends").click(); else $("findPeople")?.focus(); } }
