@@ -103,3 +103,7 @@ Não entram nos 9 eventos do relatório P0; ver "Como ler" abaixo.
 cartas, jogos ou pedidos. "Taxa de correção do scanner" = visitas com `scan_fixed` ÷ visitas com `scan_saved`. "Importações concluídas" =
 visitas com `import_done` ÷ visitas com `import_open`. Tempo por tarefa **não** é medido: exigiria guardar instantes por pessoa, o que
 esta instrumentação evita de propósito.
+
+**Uso (Conselho, 17/11/2026).** É instrumentação inicial: aponta onde olhar e serve de linha de base, não é conclusão.
+Não leia estes números como duração de tarefa, como taxa de conversão ou como número de pessoas; mudanças de produto
+decididas a partir deles devem ser confirmadas com teste com jogadores.
