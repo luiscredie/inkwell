@@ -68,12 +68,13 @@ button.fy-tile { border: 0; font: inherit; text-align: left; width: 100%; cursor
 }
 @media (max-width: 760px) { .page.split.home3 > #left, .page.split.home3 > #aside { display: none; } .page.split.home3 { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; grid-template-areas: "head" "main"; } }
 #keep { display: none; }
-@media (max-width: 760px) { #keep:not(:empty) { display: block; margin-bottom: var(--sp-4); } }
+@media (max-width: 760px) { #keep:not(:empty) { display: block; margin-bottom: var(--sp-4); } .home3:has(#keep:not(:empty)) .page-head p { display: none; } }   /* "o que seus amigos andam fazendo" no longer describes the top of the phone screen */
 #keep h2 { margin: 0 0 var(--sp-3); font-size: var(--fs-h2); }
 #keep .fy-row { grid-template-columns: minmax(0, 1fr); }
 #keep .fy-tile { min-height: 56px; }
 #keep .fy-tile b { overflow-wrap: anywhere; }
 .home-retry { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
+.home-retry .btn { min-height: 44px; }   /* easy to hit with a thumb */
 body.out .page.split.home3 { display: block; }
 .home-left { display: grid; gap: var(--sp-3); align-content: start; }
 .me-card { padding: var(--sp-4); border-radius: var(--r-lg); background: var(--surface-1); border: 1px solid var(--line); box-shadow: var(--e1); display: grid; gap: var(--sp-3); }
@@ -296,7 +297,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "Add my collection": "Cadastrar minha coleção", "Scan your cards or import a list.": "Escaneie suas cartas ou importe uma lista.",
     "Import a deck": "Importar um deck", "Paste a list and see what you're missing.": "Cole uma lista e veja o que falta.",
     "Find a tournament": "Procurar campeonato", "Official events and tables near you.": "Eventos oficiais e mesas perto de você.",
-    "Couldn't load this part of your home.": "Não deu para carregar esta parte do seu Início.",
+    "Couldn't load this part of your home.": "Não deu para carregar esta parte do seu Início.", "Couldn't load your decks and collection.": "Não deu para carregar seus decks e sua coleção.",
     "See my profile": "Ver meu perfil", "Shortcuts": "Atalhos", "Deck builder": "Construtor de decks", "Scan cards": "Escanear cartas", "Lore counter": "Contador de lore",
     "Trades and loans ": "Trocas e empréstimos", "Prices and wishlist": "Preços e lista de desejos", "Games and stats": "Jogos e estatísticas",
     "A kind, safe space": "Espaço gentil e seguro", "Communities and recados are for members 18+. Be kind at the table and online; report what isn't.": "Comunidades e recados são para membros 18+. Gentileza na mesa e aqui; denuncie o que não for.",
@@ -908,7 +909,11 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   async function renderKeep() {
     const el = $("keep"); if (!el || !me) return;
     const [cols, marks] = await Promise.all([myCols(), rpcS("my_event_marks").catch(() => [])]);
-    if (colsFailed) { el.innerHTML = ""; return; }   // the notice under "For you" offers "Try again"
+    if (colsFailed) {   // say so and offer to ask again: the block must not just vanish
+      el.innerHTML = `<section aria-labelledby="hKeep"><h2 id="hKeep">${Tx("Continue")}</h2><div class="panel home-retry" role="alert" data-testid="keep-error"><span>${Tx("Couldn't load your decks and collection.")}</span><button type="button" class="btn small" id="keepRetry">${Tx("Try again")}</button></div></section>`;
+      $("keepRetry").onclick = (e) => { e.currentTarget.disabled = true; colsP = null; colsFailed = false; renderKeep(); };
+      return;
+    }
     const col = (cols || []).find((c) => c.profile === "principal") || (cols || [])[0] || {};
     let cards = 0; for (const v of Object.values(col.collection || {})) cards += (+v?.n || 0) + (+v?.f || 0);
     const decks = (cols || []).flatMap((c) => (Array.isArray(c.decks) ? c.decks : [])).filter((d) => d?.id && d.cards && Object.keys(d.cards).length);

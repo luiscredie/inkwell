@@ -13,7 +13,7 @@ const DECK_B = { id: 'deck-b', name: 'Rubi Safira', format: 'core', cards: { 'LO
 const HOME = { profile: { handle: 'luis', is_public: true }, friend_requests: [], recados_waiting: 0, communities: [], community_posts: [], recados_new: [] };
 const soon = () => new Date(Date.now() + 3 * 86400e3).toISOString();
 
-async function open(page, { width = 390, collection = {}, decks = [], marks = [], home = HOME, homeFails = () => false, lastDeck = null } = {}) {
+async function open(page, { width = 390, collection = {}, decks = [], marks = [], home = HOME, homeFails = () => false, colsFail = () => false, lastDeck = null } = {}) {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.setViewportSize({ width, height: width < 700 ? 760 : 900 });
@@ -26,6 +26,7 @@ async function open(page, { width = 390, collection = {}, decks = [], marks = []
   await page.route('**/rest/v1/**', (route) => {
     const path = new URL(route.request().url()).pathname.replace(/.*\/rest\/v1\//, '');
     const json = (v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+    if (path === 'inkwell_profiles' && colsFail()) return route.fulfill({ status: 500, contentType: 'application/json', body: '{"message":"down"}' });
     if (path === 'inkwell_profiles') return json([{ profile: 'principal', updated_at: '2026-11-15T10:00:00Z', collection, decks, wishlist: {} }]);
     if (path === 'rpc/my_home') return homeFails() ? route.fulfill({ status: 500, contentType: 'application/json', body: '{"message":"down"}' }) : json(home);
     if (path === 'rpc/my_event_marks') return json(marks);
@@ -130,4 +131,22 @@ test('phone: tapping a Continuar tile sends one event with no deck name or numbe
   expect(ev.map((b) => b.p_name)).toEqual(['home_keep_deck']);
   expect(Object.keys(ev[0]).sort()).toEqual(['p_dev', 'p_kind', 'p_name', 'p_page', 'p_ref', 'p_sid']);
   expect(JSON.stringify(ev[0])).not.toContain('deck-a');
+});
+
+test('phone: when decks and collection fail to load, Continuar says so and Tentar de novo brings the tiles back', async ({ page }) => {
+  let down = true;
+  const errors = await open(page, { collection: { 'LOR10-1': { n: 1 } }, decks: [DECK_A], lastDeck: 'deck-a', colsFail: () => down });
+  const keep = page.getByTestId('home-continue');
+  await expect(keep.getByRole('heading', { name: 'Continuar' })).toBeVisible();
+  const err = keep.getByTestId('keep-error');
+  await expect(err).toContainText('Não deu para carregar seus decks e sua coleção.');
+  const b = await err.getByRole('button', { name: 'Tentar de novo' }).boundingBox();
+  expect(b.height).toBeGreaterThanOrEqual(44);
+  expect(await noSideScroll(page)).toBeLessThanOrEqual(1);
+  await shot(page, '390-falha-colecao');
+  down = false;
+  await err.getByRole('button', { name: 'Tentar de novo' }).click();
+  await expect(keep.getByTestId('keep-error')).toHaveCount(0);
+  await expect(keep.getByTestId('keep-deck')).toContainText('Âmbar Aço');
+  expect(errors).toEqual([]);
 });
