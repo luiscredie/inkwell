@@ -93,6 +93,16 @@ class ImportTests(unittest.TestCase):
             mod.write_outputs(self.root / "out", self.catalog, snapshots, problems)
         self.assertEqual(["2026-11-17"], json.loads((self.root / "out/historico/index.json").read_text())["dias"])
 
+    def test_invalid_price_is_reported_without_fabricating_value(self):
+        doc = json.loads(json.dumps(DETAIL))
+        doc["cards_editions"][0]["price"]["0"]["p"] = "11.00"
+        file = self.write("invalid.json", doc)
+        snapshots, issues = mod.import_data(self.catalog, [file], None)
+        self.assertEqual(1, len(issues))
+        value = next(iter(snapshots["2026-11-17"].values()))
+        self.assertEqual("invalido", value["normal"]["status"])
+        self.assertNotIn("min_centavos", value["normal"])
+
     def test_no_offer_finish_real_case(self):
         doc = {"_capturado_em": CAPTURE, "cards_editions": [{"idcard": 3354, "id": 9, "code": "LOR14", "num": "205",
                 "price": {"0": {"p": "2", "m": "3", "g": "4"}, "2": []}}]}
