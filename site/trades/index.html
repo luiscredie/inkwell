@@ -966,6 +966,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         if (!person || !items.length) { msg.textContent = Tx("Add at least one card and the person's name."); return; }
         busy();
         await CLOUD.api("loans", { method: "POST", prefer: "return=minimal", body: { direction: f.direction, person, items, due_on: f.due_on || null, note: (f.note || "").slice(0, 500) } });
+        window.INKWELL_TRACK?.("loan_saved");
       } else if (f.kind === "post") {
         const items = cleanItems(f.items);
         if (!items.length) { msg.textContent = Tx("Add at least one card."); return; }

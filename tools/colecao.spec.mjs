@@ -2,6 +2,8 @@
 //   (cd site && python3 -m http.server 8080) &
 //   INKWELL_URL=http://localhost:8080/index.html npx playwright test tools/colecao.spec.mjs
 import { test, expect } from '@playwright/test';
+// Pacote 2: Importar, Exportar, Compartilhar, Conferir estoque and Idiomas live in "Mais ações"
+async function more(page) { const m = page.getByTestId('more-actions'); if (!(await m.evaluate((d) => d.open))) await m.locator('summary').click(); }
 
 const BASE = new URL('colecao/', process.env.INKWELL_URL || 'http://localhost:8080/index.html').href;
 const ME = '11111111-1111-4111-8111-111111111111';
@@ -36,6 +38,7 @@ async function setup(page, { collection = { 'LOR10-10': { n: 2, f: 0 } }, added 
 test('binder check mode follows the binder order and saves changes', async ({ page }) => {
   const calls = await setup(page);
   await page.goto(BASE);
+  await more(page);
   await page.getByRole('button', { name: 'Conferir estoque' }).click();
   await expect(page).toHaveURL(/conferir=1/);
   await expect(page.locator('[data-testid="binder-page"]')).toHaveText(/^Amber · custo \d$/);
@@ -73,6 +76,7 @@ test('binder check mode follows the binder order and saves changes', async ({ pa
 
   await page.locator('#backColl').click();
   await expect(page).not.toHaveURL(/conferir/);
+  await more(page);
   await expect(page.getByRole('button', { name: 'Conferir estoque' })).toBeVisible();
 });
 
@@ -317,6 +321,7 @@ test('stocks: binder and home counts, move a card home, binder check counts only
   await expect.poll(() => rpc(calls, 'collection_change').at(-1)).toEqual({ p_profile: 'luiscredie', p_delta: [{ card_id: 'LOR10-10', qty: 1, foil: true }], p_home: [{ card_id: 'LOR10-10', qty: 1, foil: true }] });
   await page.keyboard.press('Escape');
   // Conferir fichário shows what is in the binder (3 normal − 2 at home = 1) and how many are at home
+  await more(page);
   await page.getByRole('button', { name: 'Conferir estoque' }).click();
   await page.locator('[data-bsec="core"]').click();
   await page.locator('[data-bink="Amber"]').click();
@@ -436,6 +441,7 @@ test('combo sale: add cards, keep each price, a lower total becomes the discount
 test('conferir estoque: pick a set; only its cards and pages; checked marks kept per set', async ({ page }) => {
   await setup(page, { collection: { 'LOR10-10': { n: 2, f: 0 }, 'LOR13-12': { n: 3, f: 0 } } });
   await page.goto(BASE);
+  await more(page);
   await expect(page.locator('#openBinder')).toHaveText('Conferir estoque');
   await page.locator('#openBinder').click();
   await expect(page.locator('#title')).toHaveText('Conferir estoque');
@@ -475,6 +481,7 @@ test('a new account gets an empty collection, so its first card saves', async ({
 test('import: a Dreamborn file is recognised on its own; review, then "keep the larger number" adds only what is missing', async ({ page }) => {
   const calls = await setup(page, { collection: { 'LOR10-10': { n: 2, f: 0 }, 'LOR1-41': { n: 3, f: 0 } } });
   await page.goto(BASE);
+  await more(page);
   await page.locator('[data-testid="import"]').click();
   const csv = 'Set Number,Card Number,Variant,Count,Name\n1,41,Normal,3,Elsa - Snow Queen\n1,41,Foil,1,Elsa - Snow Queen\n10,10,Normal,4,Gurgi - Apple Lover\n99,1,Normal,1,Nobody\n';
   await page.locator('#impFile').setInputFiles({ name: 'dreamborn.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
@@ -502,6 +509,7 @@ test('import: a Dreamborn file is recognised on its own; review, then "keep the 
 test('import: a pasted list; nothing matched says so', async ({ page }) => {
   const calls = await setup(page, { collection: {} });
   await page.goto(BASE);
+  await more(page);
   await page.locator('[data-testid="import"]').click();
   await page.locator('#impText').fill('carta que não existe\noutra');
   await page.locator('#impRead').click();
@@ -668,6 +676,7 @@ test('a foil with no foil price: valued at the normal price and marked "estimado
   await expect(page.getByTestId('foil-est').first()).toHaveAttribute('title', 'Sem cotação específica para foil: usamos o preço normal como referência.');
   await expect(page.getByTestId('card-value')).toHaveText('R$ 8,00 foil estimado');
   await page.keyboard.press('Escape');
+  await more(page);
   await page.locator('[data-testid="export"]').click();
   const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('[data-testid="export-go"]').click()]);
   const lines = (await (await import('node:fs')).promises.readFile(await dl.path(), 'utf8')).slice(1).trim().split('\r\n');
@@ -719,6 +728,7 @@ test('export: a CSV of the collection (Excel-friendly in Portuguese) that Import
   await page.route('**/data/prices.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ generated_at: '2026-10-28T00:00:00Z', usd_brl: 5.4, prices: { 'LOR10-10': { n: 1.5, nl: 1.5, f: 3, fl: 3 } } }) }));
   await page.route('**/data/prices-br.json', (r) => r.fulfill({ status: 404, body: '' }));
   await page.goto(BASE);
+  await more(page);
   await page.locator('[data-testid="export"]').click();
   await expect(page.locator('[data-testid="export-count"]')).toContainText('2 cartas, 9 cópias');
   const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('[data-testid="export-go"]').click()]);
@@ -737,6 +747,7 @@ test('export: a CSV of the collection (Excel-friendly in Portuguese) that Import
 test('export in the Liga Lorcana template: one line per finish, set code, card number', async ({ page }) => {
   await setup(page, { collection: { 'LOR10-10': { n: 4, f: 1 }, 'LOR13-27': { n: 2, f: 0 } } });
   await page.goto(BASE);
+  await more(page);
   await page.locator('[data-testid="export"]').click();
   await page.locator('[name="exFmt"][value="liga"]').check();
   const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('[data-testid="export-go"]').click()]);
@@ -788,4 +799,63 @@ test('#145 P0-C: fresh prices are labelled as indicative, in reais, with the dat
   await page.goto(BASE);
   await expect(page.locator('#sub')).toContainText('Preços indicativos em R$: TCGplayer');
   await expect(page.getByTestId('price-note')).toHaveCount(0);
+});
+
+test('Pacote 2: Escanear is the one main action; the rest is in Mais ações, which closes on a choice, outside tap or Esc', async ({ page }) => {
+  await setup(page);
+  await page.setViewportSize({ width: 390, height: 760 });
+  await page.goto(BASE);
+  const head = page.locator('#headActions');
+  await expect(head.locator('.btn.primary')).toHaveCount(1);
+  await expect(head.locator('.btn.primary')).toHaveText('Escanear');
+  const scan = await page.getByTestId('scan').boundingBox(), moreB = await page.getByTestId('more-actions').locator('summary').boundingBox();
+  expect(scan.height).toBeGreaterThanOrEqual(44); expect(moreB.height).toBeGreaterThanOrEqual(44); expect(moreB.width).toBeGreaterThanOrEqual(44);
+  expect(Math.abs(scan.y - moreB.y)).toBeLessThan(4);                          // one row: Escanear and the menu
+  await expect(page.getByTestId('more-actions').locator('summary')).toHaveAccessibleName('Mais ações');
+  for (const id of ['import', 'export', 'share']) await expect(page.getByTestId(id)).toBeHidden();
+  if (process.env.COLECAO_EVIDENCE) await page.screenshot({ path: 'docs/evidencias/colecao/390-cabecalho.png' });
+  await more(page);
+  const menu = page.getByTestId('more-menu');
+  await expect(menu.locator('.menu-item')).toHaveText(['Importar', 'Exportar', 'Compartilhar', 'Conferir estoque']);
+  await menu.evaluate((m) => Promise.all(m.getAnimations({ subtree: true }).map((x) => x.finished)));   // the menu opens with a short scale-in
+  for (const b of await menu.locator('.menu-item').all()) expect((await b.boundingBox()).height).toBeGreaterThanOrEqual(44);
+  { const mb = await menu.boundingBox(), sb = await page.getByTestId('more-actions').locator('summary').boundingBox();   // opens right under its button, inside the screen
+    expect(mb.y).toBeGreaterThanOrEqual(sb.y + sb.height); expect(mb.y - (sb.y + sb.height)).toBeLessThan(16);
+    expect(Math.abs((mb.x + mb.width) - (sb.x + sb.width))).toBeLessThan(2); expect(mb.x).toBeGreaterThanOrEqual(0); }
+  if (process.env.COLECAO_EVIDENCE) await page.screenshot({ path: 'docs/evidencias/colecao/390-mais-acoes.png' });
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+  await more(page);
+  await page.locator('h1').click();                                            // outside
+  await expect(menu).toBeHidden();
+  await more(page);
+  await page.getByTestId('export').click();                                    // a choice closes it and opens the sheet
+  await expect(menu).toBeHidden();
+  await expect(page.getByTestId('export-go')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('export-go')).toBeHidden();
+  for (const w of [320, 768, 860, 1280]) {
+    await page.setViewportSize({ width: w, height: 900 });
+    await expect(page.getByTestId('scan')).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+    if (process.env.COLECAO_EVIDENCE) { await page.evaluate(() => scrollTo(0, 0)); await page.screenshot({ path: `docs/evidencias/colecao/${w}-cabecalho.png` }); }
+  }
+});
+
+test('Conselho (#244): an empty collection shows Importar next to Escanear and in the empty state; with cards it moves to Mais ações', async ({ page }) => {
+  await setup(page, { collection: {} });
+  await page.setViewportSize({ width: 390, height: 760 });
+  await page.goto(BASE);
+  const head = page.locator('#headActions');
+  await expect(head.locator('.btn.primary')).toHaveText('Escanear');                 // still one main action
+  await expect(head.getByTestId('import')).toBeVisible();                            // Importar visible, no menu to open
+  await expect(head.getByTestId('import')).toHaveText('Importar');
+  expect((await head.getByTestId('import').boundingBox()).height).toBeGreaterThanOrEqual(44);
+  await expect(page.getByTestId('more-menu').getByTestId('import')).toHaveCount(0);  // not twice
+  await expect(page.locator('[data-testid="import"]')).toHaveCount(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+  if (process.env.COLECAO_EVIDENCE) await page.screenshot({ path: 'docs/evidencias/colecao/390-colecao-vazia.png' });
+  await head.getByTestId('import').click();
+  await expect(page.locator('#impFile')).toBeAttached();                            // the same import sheet as before
+  await expect(page.locator('#impFile').locator('xpath=ancestor::dialog[1]')).toBeVisible();
 });

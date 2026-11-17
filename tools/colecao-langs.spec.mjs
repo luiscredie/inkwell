@@ -2,6 +2,8 @@
 //   (cd site && python3 -m http.server 8080) &
 //   INKWELL_URL=http://localhost:8080/index.html npx playwright test tools/colecao-langs.spec.mjs
 import { test, expect } from '@playwright/test';
+// Pacote 2: Importar, Exportar, Compartilhar, Conferir estoque and Idiomas live in "Mais ações"
+async function more(page) { const m = page.getByTestId('more-actions'); if (!(await m.evaluate((d) => d.open))) await m.locator('summary').click(); }
 
 const BASE = new URL('colecao/', process.env.INKWELL_URL || 'http://localhost:8080/index.html').href;
 const ME = '11111111-1111-4111-8111-111111111111';
@@ -69,6 +71,7 @@ test('old copies: the question once; "Decidir depois" hides it and nothing chang
   await expect(page.locator('[data-testid="lang-progress"]')).toHaveCount(0);
   expect(rpc(calls, 'set_collection_prefs')).toEqual([{ p_owner: null, p_profile: 'luiscredie', p_prefs: { card_lang_prompt: 'later' } }]);
   expect(rpc(calls, 'mark_unknown_langs')).toEqual([]);
+  await more(page);
   await expect(page.locator('#openLangs')).toBeVisible();   // can be reopened
 });
 
@@ -119,6 +122,7 @@ test('lists per language: a conflict blocks saving until fixed; normal and foil 
 test('the collection changed on another device: checked again before saving', async ({ page }) => {
   const { calls } = await setup(page, { failMark: 'collection_changed' });
   await page.goto(BASE);
+  await more(page);
   await page.locator('#openLangs').click();
   const sh = page.locator('#langSheet');
   await sh.locator('#lList').click();
@@ -225,6 +229,7 @@ test('filter by card language, and the tag on cards with copies in another langu
 test('import: a file with a language column, compared language by language; lines without one get the language chosen', async ({ page }) => {
   const { calls } = await setup(page, { collection: { [MUSHU]: { n: 2, f: 0, l: { it: { n: 1 } } }, [MICKEY]: { n: 1, f: 0 } }, prefs: { card_lang_prompt: 'done' } });
   await page.goto(BASE);
+  await more(page);
   await page.getByRole('button', { name: 'Importar' }).click();
   await page.locator('#impFile').setInputFiles({ name: 'tcg.csv', mimeType: 'text/csv', buffer: Buffer.from('Name,Quantity,Language\nMushu - Majestic Dragon,2,Italian\nMickey Mouse - Brave Little Tailor,2,\n') });
   await expect(page.locator('[data-testid="imp-langs"]')).toHaveText('Idiomas no arquivo: IT 2 · 2 sem idioma');
@@ -237,12 +242,14 @@ test('import: a file with a language column, compared language by language; line
 test('import: a plain list with language headings; a file with no languages keeps comparing totals, in the default language', async ({ page }) => {
   const { calls } = await setup(page, { collection: { [MUSHU]: { n: 1, f: 0 } }, prefs: { card_lang_prompt: 'done', card_lang: 'en' } });
   await page.goto(BASE);
+  await more(page);
   await page.getByRole('button', { name: 'Importar' }).click();
   await page.locator('#impText').fill('Japonês\n1 Mickey Mouse - Brave Little Tailor\nItaliano:\n2 Mushu - Majestic Dragon');
   await page.getByRole('button', { name: 'Ler a lista' }).click();
   await expect(page.locator('[data-testid="imp-langs"]')).toHaveText('Idiomas no arquivo: IT 2 · JA 1');
   await page.getByRole('button', { name: 'Adicionar 3 cartas à coleção' }).click();
   await expect.poll(() => deltas(calls)).toEqual([{ card_id: MICKEY, qty: 1, foil: false, lang: 'ja' }, { card_id: MUSHU, qty: 2, foil: false, lang: 'it' }]);
+  await more(page);
   await page.getByRole('button', { name: 'Importar' }).click();
   await page.locator('#impText').fill('4 Mushu - Majestic Dragon');
   await page.getByRole('button', { name: 'Ler a lista' }).click();
@@ -255,6 +262,7 @@ test('import: a plain list with language headings; a file with no languages keep
 test('export: the Inkwell CSV has one line per card and language, and reads back', async ({ page }) => {
   await setup(page, { collection: { [MUSHU]: { n: 3, f: 1, l: { it: { n: 1 }, en: { n: 1, f: 1 } } } }, prefs: { card_lang_prompt: 'done' } });
   await page.goto(BASE);
+  await more(page);
   await page.locator('[data-testid="export"]').click();
   const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('[data-testid="export-go"]').click()]);
   const text = await (await import('node:fs')).promises.readFile(await dl.path(), 'utf8');
