@@ -1,6 +1,8 @@
 // Coleção shared between people (supabase/collection_shares.sql), more than one collection, a friend's collection.
 //   INKWELL_URL=http://localhost:8080/index.html npx playwright test tools/shared-colecao.spec.mjs
 import { test, expect } from '@playwright/test';
+// Pacote 2: Compartilhar lives in "Mais ações"
+async function more(page) { const m = page.getByTestId('more-actions'); if (!(await m.evaluate((d) => d.open))) await m.locator('summary').click(); }
 
 const BASE = new URL('colecao/', process.env.INKWELL_URL || 'http://localhost:8080/index.html').href;
 const ME = '22222222-2222-4222-8222-222222222222';
@@ -63,6 +65,7 @@ test('view only: no + / −, no import or scan', async ({ page }) => {
 test('share sheet: invite link (can change), friends switches, new collection', async ({ page }) => {
   const calls = await setup(page, { own: [{ profile: 'principal', collection: { 'LOR10-10': { n: 1, f: 0 } } }], given: [{ profile: 'principal', member: LUIS, name: 'Luís Credie', can_edit: false }] });
   await page.goto(BASE);
+  await more(page);
   await page.locator('[data-testid="share"]').click();
   await expect(page.locator('[data-member]')).toContainText('Luís Credie');
   await page.locator(`[data-edit="${LUIS}"]`).check();
