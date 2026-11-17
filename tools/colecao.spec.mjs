@@ -841,3 +841,21 @@ test('Pacote 2: Escanear is the one main action; the rest is in Mais ações, wh
     if (process.env.COLECAO_EVIDENCE) { await page.evaluate(() => scrollTo(0, 0)); await page.screenshot({ path: `docs/evidencias/colecao/${w}-cabecalho.png` }); }
   }
 });
+
+test('Conselho (#244): an empty collection shows Importar next to Escanear and in the empty state; with cards it moves to Mais ações', async ({ page }) => {
+  await setup(page, { collection: {} });
+  await page.setViewportSize({ width: 390, height: 760 });
+  await page.goto(BASE);
+  const head = page.locator('#headActions');
+  await expect(head.locator('.btn.primary')).toHaveText('Escanear');                 // still one main action
+  await expect(head.getByTestId('import')).toBeVisible();                            // Importar visible, no menu to open
+  await expect(head.getByTestId('import')).toHaveText('Importar');
+  expect((await head.getByTestId('import').boundingBox()).height).toBeGreaterThanOrEqual(44);
+  await expect(page.getByTestId('more-menu').getByTestId('import')).toHaveCount(0);  // not twice
+  await expect(page.locator('[data-testid="import"]')).toHaveCount(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+  if (process.env.COLECAO_EVIDENCE) await page.screenshot({ path: 'docs/evidencias/colecao/390-colecao-vazia.png' });
+  await head.getByTestId('import').click();
+  await expect(page.locator('#impFile')).toBeAttached();                            // the same import sheet as before
+  await expect(page.locator('#impFile').locator('xpath=ancestor::dialog[1]')).toBeVisible();
+});
