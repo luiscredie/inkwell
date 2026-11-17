@@ -19,7 +19,7 @@ async function open(page, { width = 390, collection = {}, decks = [], marks = []
   await page.setViewportSize({ width, height: width < 700 ? 760 : 900 });
   await page.addInitScript(([me, last]) => {
     localStorage.setItem('inkwell-lang', 'pt');
-    if (last) localStorage.setItem('inkwell-last-deck', last);
+    if (last) localStorage.setItem(`inkwell-last-deck:${me}`, last);
     const exp = Math.floor(Date.now() / 1000) + 3600;
     localStorage.setItem('inkwell-counter-auth', JSON.stringify({ access_token: 'x.' + btoa(JSON.stringify({ sub: me, exp })) + '.y', refresh_token: 'r', expires_at: exp, user: { id: me, email: 'luis@example.com' } }));
   }, [ME, lastDeck]);
@@ -149,4 +149,21 @@ test('phone: when decks and collection fail to load, Continuar says so and Tenta
   await expect(keep.getByTestId('keep-error')).toHaveCount(0);
   await expect(keep.getByTestId('keep-deck')).toContainText('Âmbar Aço');
   expect(errors).toEqual([]);
+});
+
+test('phone, two accounts on one device: the last deck of another account (or the old shared key) is never used', async ({ page }) => {
+  const OTHER = '99999999-9999-4999-8999-999999999999';
+  await page.addInitScript((other) => {
+    if (sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');   // only before the first page
+    localStorage.setItem(`inkwell-last-deck:${other}`, 'deck-a');   // the other account opened Âmbar Aço
+    localStorage.setItem('inkwell-last-deck', 'deck-a');             // and the key before this fix, shared by everyone
+  }, OTHER);
+  await open(page, { collection: { 'LOR10-1': { n: 1 } }, decks: [DECK_A, DECK_B] });
+  await expect(page.getByTestId('keep-deck')).toContainText('Rubi Safira');   // this account's newest, not the other's choice
+  await page.getByTestId('keep-deck').click();                               // opening a deck stores it for this account only
+  await expect(page).toHaveURL(/deck=deck-b/);
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Rubi Safira');
+  const keys = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('inkwell-last-deck')).sort());
+  expect(keys).toEqual(['inkwell-last-deck:11111111-1111-4111-8111-111111111111', 'inkwell-last-deck:99999999-9999-4999-8999-999999999999']);
+  expect(await page.evaluate(() => localStorage.getItem('inkwell-last-deck:11111111-1111-4111-8111-111111111111'))).toBe('deck-b');
 });

@@ -1331,7 +1331,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const col = (cols || []).find((c) => c.profile === "principal") || (cols || [])[0] || {};
     let cards = 0; for (const v of Object.values(col.collection || {})) cards += (+v?.n || 0) + (+v?.f || 0);
     const decks = (cols || []).flatMap((c) => (Array.isArray(c.decks) ? c.decks : [])).filter((d) => d?.id && d.cards && Object.keys(d.cards).length);
-    let last = null; try { last = localStorage.getItem("inkwell-last-deck"); } catch { /* */ }
+    // per account (Conselho, #235): two accounts on one device never pick up each other's last deck; the old shared key is ignored
+    let last = null; try { last = localStorage.getItem(`inkwell-last-deck:${me.id}`); } catch { /* */ }
     const deck = decks.find((d) => d.id === last) || decks[decks.length - 1];
     const size = (d) => Object.values(d.cards).reduce((s, q) => s + (+q || 0), 0);
     const ev = (Array.isArray(marks) ? marks : []).find((m) => m?.snap?.start && Date.parse(m.snap.start) > Date.now() - 6 * 3600e3);
