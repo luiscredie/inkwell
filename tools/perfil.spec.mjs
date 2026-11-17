@@ -406,10 +406,15 @@ test('admin Tarefas (R02): task events by group, visits and times, rates only wh
   await expect(t.locator('[data-task="home_keep_deck"] td')).toHaveText([/Tocou em Continuar meu deck/, '6', '7']);
   await expect(t.locator('[data-task="scan_fixed"] td')).toHaveText([/Corrigiu o scanner/, '2', '2']);
   await expect(t.locator('[data-task="loan_saved"] td')).toHaveText([/Registrou um empréstimo/, '—', '—']);   // not in the answer: unknown, not zero
-  await expect(t.getByTestId('rate-scan_fixed')).toContainText('25%');
-  await expect(t.getByTestId('rate-scan_fixed')).toContainText('2/8');
-  await expect(t.getByTestId('rate-scan_saved')).toContainText('80%');
-  await expect(t.getByTestId('rate-import_done')).toContainText('—');   // base zero: no rate
+  await expect(t.getByTestId('rate-scan_fixed').locator('b')).toHaveText('0,25');           // a ratio, not a percentage
+  await expect(t.getByTestId('rate-scan_fixed')).toContainText('2 ÷ 8 visitas');
+  await expect(t.getByTestId('rate-scan_fixed')).toContainText('Scanner: com correção ÷ que salvaram');
+  await expect(t.getByTestId('rate-scan_saved').locator('b')).toHaveText('0,80');
+  await expect(t.getByTestId('rate-import_done').locator('b')).toHaveText('—');             // base zero: no ratio
+  await expect(t.getByTestId('rate-import_done')).toContainText('sem visitas na base');
+  await expect(t.getByTestId('rates-note')).toContainText('Razões entre visitas, não conversões.');
+  await expect(t.getByTestId('rates-note')).toContainText('Ninguém é acompanhado de uma etapa para a outra');
+  await expect(t).not.toContainText('%');                                                  // nothing reads as a conversion rate
   await expect(t).toContainText('Tempo por tarefa não é medido');
   if (process.env.TASKS_EVIDENCE) for (const w of [390, 1280]) { await page.setViewportSize({ width: w, height: 900 }); await t.screenshot({ path: `docs/evidencias/admin-tarefas/${w}.png` }); }
   expect(asked).toEqual([{ p_days: 14 }]);
