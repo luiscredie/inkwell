@@ -517,11 +517,16 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "lowest MYP Cards listing ({d}); without one, {s}": "menor anúncio na MYP Cards ({d}); sem anúncio lá, {s}", "{n} can come from friends": "{n} podem vir de amigos", "{n} can come from friends_1": "1 pode vir de amigos",
     "You have every card for this deck.": "Você tem todas as cartas deste deck.", "Copies lent to friends still count as yours.": "Cópias emprestadas a amigos contam como suas.",
     "Lends": "Empresta", "Trades": "Troca", "Has it": "Possui", "{who} offers it in trade": "{who} oferece em troca", "{n} on the board": "{n} no Mural", "Profile of {who}": "Perfil de {who}",
-    "How to complete it": "Como completar", "With friends": "Com amigos", "Friends lend or trade these. Ask first: it's free.": "Amigos emprestam ou trocam estas. Peça primeiro: é de graça.",
-    "On the board": "No Mural", "Someone sells these on the board.": "Alguém vende estas no Mural.", "To buy": "Para comprar", "No friend has these yet. The stores open in another tab.": "Nenhum amigo tem estas ainda. As lojas abrem em outra aba.",
-    "{n} card": "{n} carta", "{n} with friends": "{n} com amigos", "1 card · ask to borrow or trade": "1 carta · pedir emprestado ou trocar", "{n} different cards · ask to borrow or trade": "{n} cartas diferentes · pedir emprestado ou trocar",
-    "See who lends": "Ver quem empresta", "See cards": "Ver cartas", "{n} on the board": "{n} no Mural", "1 card · someone sells it": "1 carta · alguém vende", "{n} different cards · someone sells them": "{n} cartas diferentes · alguém vende",
-    "{n} to buy": "{n} para comprar", "1 card": "1 carta", "{n} different cards": "{n} cartas diferentes", "about {v}": "cerca de {v}", "See stores": "Ver lojas",
+    "How to complete it": "Como completar", "Buying all of it: about {v} at market price": "Comprando tudo: cerca de {v} pelo preço de mercado", "Friends offered": "Amigos ofereceram", "Lending costs nothing; a trade asks for cards of yours in return. Each friend decides.": "Empréstimo não tem custo; troca pede cartas suas em troca. Cada amigo decide.",
+    "On the board": "No Mural", "For sale on the board, at the price in the listing.": "À venda no Mural, pelo preço do anúncio.", "To buy": "Para comprar", "No one offered these. The stores open in another tab.": "Ninguém ofereceu estas. As lojas abrem em outra aba.",
+    "Up to {n} lent by friends": "Até {n} emprestadas por amigos", "Up to 1 lent by a friend": "Até 1 emprestada por amigo", "free copies they offered; each friend decides": "cópias livres que ofereceram; cada amigo decide", "Up to {n} by trade": "Até {n} por troca", "you give cards in return": "você dá cartas em troca",
+    "Up to {n} on the board": "Até {n} no Mural", "for sale, at the listing's price": "à venda, pelo preço do anúncio", "about {v} at market price": "cerca de {v} pelo preço de mercado", "1 card with no price": "1 carta sem preço", "{n} cards with no price": "{n} cartas sem preço",
+    "“Up to”: what was offered today, not reserved. The rows add up to what is missing.": "“Até”: o que foi oferecido hoje, sem reserva. As linhas somam o que falta.",
+    "up to {n} lent": "até {n} emprestadas", "up to 1 lent": "até 1 emprestada", "up to {n} by trade": "até {n} por troca", "up to {n} on the board": "até {n} no Mural", 
+    
+    "{n} card": "{n} carta", 
+    "See who lends": "Ver quem empresta", "See cards": "Ver cartas", 
+    "{n} to buy": "{n} para comprar", "1 card": "1 carta", "{n} different cards": "{n} cartas diferentes",  "See stores": "Ver lojas",
     "{who} lends": "{who} empresta", "{n} free": "{n} livres", "{n} free_1": "1 livre", "Ask to borrow": "Pedir emprestado", "{who} has it": "{who} tem", "{n} in their collection · they decide": "{n} na coleção · a pessoa decide se empresta", "Show on my public profile": "Mostrar no meu perfil público", "public": "público", "People who aren't your friends see it on your profile and in the Lore Counter, when your profile is public. Friends already see all your decks.": "Quem não é seu amigo vê no seu perfil e no Lore Counter, quando seu perfil é público. Amigos já veem todos os seus decks.", "Asked": "Pedido enviado", "For the deck {d}": "Para o deck {d}", "Request sent. You'll see the answer in Trades.": "Pedido enviado. A resposta aparece em Trocas.", "Too many requests today. Try tomorrow.": "Muitos pedidos hoje. Tente amanhã.", "{who} sells on the board": "{who} vende no Mural", "{v} each": "{v} cada", "See listing": "Ver anúncio",
     "None of your friends has it": "Ninguém dos seus amigos tem",
     "In their collection · they did not offer to lend": "Na coleção · não ofereceu empréstimo", "This friend did not offer to lend this card.": "Este amigo não ofereceu esta carta para empréstimo.",
@@ -1602,11 +1607,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   function missingTab(d, m) {
     if (!m.known.length) return emptyBox("decks", Tx("This deck is empty."), Tx("Tap Edit list to add cards."));
     if (!m.missing.length) return emptyBox("collection", Tx("You have every card for this deck."), Tx("Copies lent to friends still count as yours."));
-    let fromFriends = 0;
     const groups = { friends: [], board: [], buy: [] };
     m.missing.forEach(({ c, n }) => {
       const { lend, sell, trade } = offersFor(c), [a, b] = split(c.name), p = priceOf(c);
-      if (lend.length) fromFriends += Math.min(n, lend.reduce((s, l) => s + l.qty, 0));
       const who = (u) => names.get(u) || "—";
       const q = encodeURIComponent(a);
       const offers = [
@@ -1615,36 +1618,53 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         ...sell.slice(0, 3).map((l) => `<div class="list-row flat two" style="min-height:52px"><span class="t"><span>${esc(Tx("{who} sells on the board", { who: who(l.user_id) }))}</span><span class="meta">${l.price_brl != null ? esc(Tx("{v} each", { v: money(+l.price_brl) })) : ""}</span></span><a class="btn small" href="../trades/?tab=board&q=${q}">${Tx("See listing")}</a></div>`),
       ];
       const fl = friendsLend(c);
-      if (fl.length) fromFriends += Math.min(n, fl.filter(lends).reduce((s2, x) => s2 + x.free, 0));
       // Possui: only that the friend has it (printing named), no quantity, no request. Empresta: explicit "empresta"
       // and free copies, with the quantity and the request.
       offers.unshift(...fl.slice(0, 3).map((x) => { const k = `${x.user}|${x.card_id}`, asked = lendAsked.has(k), ok = lends(x);
         const ed = x.card_id === c.id ? "" : ` · ${Tx("Other printing · {id}", { id: x.card_id })}`;
         return `<div class="list-row flat two" style="min-height:52px" data-testid="friend-has" data-state="${ok ? "lend" : "has"}"><span class="t"><span class="fwho">${friendFace(x.user, x.name)}${friendTag(ok ? "lend" : "has")}${esc(Tx("{who} has it", { who: x.name || "—" }))}</span><span class="meta">${esc((ok ? Tx("{n} free", { n: x.free }) : Tx("In their collection · they did not offer to lend")) + ed)}</span></span>${!ok ? "" : asked ? `<a class="btn small ghost" href="../trades/">${Tx("Asked")}</a>` : `<button type="button" class="btn small" data-borrow="${esc(x.user)}" data-bcard="${esc(x.card_id)}" data-bq="${Math.min(n, x.free)}">${Tx("Ask to borrow")}</button>`}</div>`; }));
-      const viaFriends = lend.length || trade.length || fl.some(lends), where = viaFriends ? "friends" : sell.length ? "board" : "buy";
+      // Conselho (#246): count only copies actually offered, never a whole card because one friend has one.
+      // Lending: per friend, the larger of the free copies they offer and their "Empresto" post (not both: the same copies).
+      // "Possui" (has it, did not offer) counts nothing. Each source takes what is still missing after the one before.
+      const lendBy1 = new Map();
+      for (const x of fl) if (lends(x) && friends.has(x.user)) lendBy1.set(x.user, Math.max(lendBy1.get(x.user) || 0, +x.free || 0));
+      for (const l of lend) lendBy1.set(l.user_id, Math.max(lendBy1.get(l.user_id) || 0, +l.qty || 0));
+      const take = (left, offered) => Math.max(0, Math.min(left, offered));
+      const sp = { lend: take(n, [...lendBy1.values()].reduce((t, q) => t + q, 0)) };
+      sp.trade = take(n - sp.lend, trade.reduce((t, l) => t + (+l.qty || 0), 0));
+      sp.board = take(n - sp.lend - sp.trade, sell.reduce((t, l) => t + (+l.qty || 0), 0));
+      sp.buy = n - sp.lend - sp.trade - sp.board;
+      const where = sp.lend + sp.trade ? "friends" : sp.board ? "board" : "buy";
+      const splitLine = sp.buy === n ? "" : [sp.lend ? Tx(sp.lend === 1 ? "up to 1 lent" : "up to {n} lent", { n: sp.lend }) : "", sp.trade ? Tx("up to {n} by trade", { n: sp.trade }) : "", sp.board ? Tx("up to {n} on the board", { n: sp.board }) : "", sp.buy ? Tx("{n} to buy", { n: sp.buy }) : ""].filter(Boolean).join(" · ");
       if (!lend.length && !fl.length && !sell.length && !trade.length) offers.push(`<div class="list-row flat two" style="min-height:44px"><span class="t"><span class="muted" style="font-weight:400">${Tx("None of your friends has it")}</span></span></div>`);
       // buy it: always offered, after friends and the board — the stores open in a new tab, nothing is shared with them
       offers.push(buyLinks(c, n));
-      groups[where].push({ n, value: p != null ? p * n : null, html: `<section class="card miss" data-miss="${esc(c.id)}" data-where="${where}"><div class="row" style="flex-wrap:nowrap;align-items:flex-start;gap:var(--sp-3)">${thumb(c, "md")}<div class="grow" style="min-width:0">
+      groups[where].push({ n, sp, price: p, html: `<section class="card miss" data-miss="${esc(c.id)}" data-where="${where}"><div class="row" style="flex-wrap:nowrap;align-items:flex-start;gap:var(--sp-3)">${thumb(c, "md")}<div class="grow" style="min-width:0">
         <div class="row between" style="flex-wrap:nowrap"><b>${esc(a)}${b ? ` · ${esc(b)}` : ""}</b><span class="tag warn">${esc(Tx("missing {n}", { n }))}</span></div>
         <div class="small muted" style="margin-top:2px">${esc(fromMyp(c) ? "MYP Cards" : priceSrc)} <span class="money">${p != null ? esc(money(p)) : "–"}</span></div>
+        ${splitLine ? `<div class="small" style="margin-top:2px" data-testid="miss-split">${esc(splitLine)}</div>` : ""}
         <div class="list tight divided" style="margin-top:var(--sp-2)">${offers.join("")}</div></div></div></section>` });
     });
-    const count = (g) => g.reduce((t, x) => t + x.n, 0), cardsN = (g) => g.length;
-    const buyValue = groups.buy.reduce((t, x) => t + (x.value || 0), 0);
-    const GROUP = { friends: ["With friends", "Friends lend or trade these. Ask first: it's free."], board: ["On the board", "Someone sells these on the board."], buy: ["To buy", "No friend has these yet. The stores open in another tab."] };
-    const cards = ["friends", "board", "buy"].filter((k) => groups[k].length).map((k) => `<h3 class="miss-group" id="miss-${k}" data-testid="miss-group-${k}">${esc(Tx(GROUP[k][0]))} <span class="muted small">· ${esc(Tx(cardsN(groups[k]) === 1 ? "{n} card" : "{n} cards", { n: cardsN(groups[k]) }))}</span><span class="small muted" style="display:block;font-weight:400">${esc(Tx(GROUP[k][1]))}</span></h3>${groups[k].map((x) => x.html).join("")}`).join("");
-    // one row per way of getting the cards, in the order that costs least: friends, the board, the stores
+    const all = [...groups.friends, ...groups.board, ...groups.buy], sum = (k) => all.reduce((t, x) => t + x.sp[k], 0), cardsWith = (k) => all.filter((x) => x.sp[k] > 0).length;
+    // the cost: only the copies left to buy, at the market price; copies with no price are said, not counted as zero
+    const toBuy = all.filter((x) => x.sp.buy > 0), buyValue = toBuy.reduce((t, x) => t + (x.price != null ? x.price * x.sp.buy : 0), 0), noPrice = toBuy.filter((x) => x.price == null).length;
+    const GROUP = { friends: ["Friends offered", "Lending costs nothing; a trade asks for cards of yours in return. Each friend decides."], board: ["On the board", "For sale on the board, at the price in the listing."], buy: ["To buy", "No one offered these. The stores open in another tab."] };
+    const cards = ["friends", "board", "buy"].filter((k) => groups[k].length).map((k) => `<h3 class="miss-group" id="miss-${k}" data-testid="miss-group-${k}">${esc(Tx(GROUP[k][0]))} <span class="muted small">· ${esc(Tx(groups[k].length === 1 ? "{n} card" : "{n} cards", { n: groups[k].length }))}</span><span class="small muted" style="display:block;font-weight:400">${esc(Tx(GROUP[k][1]))}</span></h3>${groups[k].map((x) => x.html).join("")}`).join("");
+    // one row per source, in the order that costs least; every row counts copies, and together they add up to the heading
     const planRow = (k, ic, title, sub, btn, href) => `<div class="plan-row card inset" style="padding:var(--sp-2) var(--sp-3)" data-testid="plan-${k}"><span class="t" style="min-width:0"><b><i class="ic i-${ic}" style="vertical-align:-3px;margin-right:6px"></i>${esc(title)}</b><span class="small muted" style="display:block">${esc(sub)}</span></span><a class="btn small" href="${href}" data-jump>${esc(btn)}</a></div>`;
+    const cardsTx = (n) => Tx(n === 1 ? "1 card" : "{n} different cards", { n });
     const plan = [
-      groups.friends.length ? planRow("friends", "users", Tx("{n} with friends", { n: count(groups.friends) }), Tx(cardsN(groups.friends) === 1 ? "1 card · ask to borrow or trade" : "{n} different cards · ask to borrow or trade", { n: cardsN(groups.friends) }), Tx(whoHelps(m) ? "See who lends" : "See cards"), whoHelps(m) ? "#who-helps-anchor" : "#miss-friends") : "",
-      groups.board.length ? planRow("board", "trades", Tx("{n} on the board", { n: count(groups.board) }), Tx(cardsN(groups.board) === 1 ? "1 card · someone sells it" : "{n} different cards · someone sells them", { n: cardsN(groups.board) }), Tx("See cards"), "#miss-board") : "",
-      groups.buy.length ? planRow("buy", "coins", Tx("{n} to buy", { n: count(groups.buy) }), [Tx(cardsN(groups.buy) === 1 ? "1 card" : "{n} different cards", { n: cardsN(groups.buy) }), havePrices() && buyValue ? Tx("about {v}", { v: money(buyValue) }) : ""].filter(Boolean).join(" · "), Tx("See stores"), "#miss-buy") : "",
+      sum("lend") ? planRow("lend", "users", Tx(sum("lend") === 1 ? "Up to 1 lent by a friend" : "Up to {n} lent by friends", { n: sum("lend") }), `${cardsTx(cardsWith("lend"))} · ${Tx("free copies they offered; each friend decides")}`, Tx(whoHelps(m) ? "See who lends" : "See cards"), whoHelps(m) ? "#who-helps-anchor" : "#miss-friends") : "",
+      sum("trade") ? planRow("trade", "trades", Tx("Up to {n} by trade", { n: sum("trade") }), `${cardsTx(cardsWith("trade"))} · ${Tx("you give cards in return")}`, Tx("See cards"), "#miss-friends") : "",
+      sum("board") ? planRow("board", "board", Tx("Up to {n} on the board", { n: sum("board") }), `${cardsTx(cardsWith("board"))} · ${Tx("for sale, at the listing's price")}`, Tx("See cards"), "#miss-board") : "",
+      sum("buy") ? planRow("buy", "coins", Tx("{n} to buy", { n: sum("buy") }), [cardsTx(cardsWith("buy")), havePrices() && buyValue ? Tx("about {v} at market price", { v: money(buyValue) }) : "", noPrice ? Tx(noPrice === 1 ? "1 card with no price" : "{n} cards with no price", { n: noPrice }) : ""].filter(Boolean).join(" · "), Tx("See stores"), "#miss-buy") : "",
     ].join("");
+    const offeredNote = sum("lend") + sum("trade") + sum("board") ? `<p class="micro muted" style="margin:0" data-testid="plan-note">${esc(Tx("“Up to”: what was offered today, not reserved. The rows add up to what is missing."))}</p>` : "";
     const head = [Tx(m.missingN === 1 ? "{n} card missing" : "{n} cards missing", { n: m.missingN })];
-    const sub = [!havePrices() ? "" : BR ? Tx("{v} estimated (MYP Cards, else TCGplayer)", { v: money(m.missingValue) }) : Tx("{v} at {s}", { v: money(m.missingValue), s: priceSrc }), ""].filter(Boolean).join(" · ");   // the plan rows below add up to the heading
+    // the whole-missing value is what buying everything would cost; the plan says what is actually left to buy
+    const sub = !havePrices() ? "" : Tx("Buying all of it: about {v} at market price", { v: money(m.missingValue) });
     return `<section class="card" data-testid="missing-summary" style="padding:var(--sp-3) var(--sp-4)"><b style="font-size:var(--fs-h3, 1.125rem)">${esc(head[0])}</b><span class="small muted" style="display:block">${esc(sub)}</span>
-        <div class="plan-rows" data-testid="completion-plan"><span class="small" style="font-weight:600">${Tx("How to complete it")}</span>${plan}</div></section>
+        <div class="plan-rows" data-testid="completion-plan"><span class="small" style="font-weight:600">${Tx("How to complete it")}</span>${plan}${offeredNote}</div></section>
       <span id="who-helps-anchor"></span>${whoHelps(m)}
       <div class="stack">${cards}</div>
       <div class="card inset miss-export" data-testid="miss-export" style="margin:var(--sp-3) 0;padding:var(--sp-3)"><div class="row between" style="gap:var(--sp-2);flex-wrap:wrap">
