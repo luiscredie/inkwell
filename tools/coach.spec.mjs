@@ -385,3 +385,73 @@ test('Feed: a linked best-of-3 is one post with the match score; an unlinked gam
   expect(asked).toContain('mid:log->event->>match_id');
   expect(asked).not.toMatch(/players|name/);   // the feed never reads opponents' names
 });
+
+// Pacote 2: games and "Novo jogo" first; duels.ink and coaches are settings, closed, after the games.
+async function jogos(page, rows, width = 390) {
+  await page.setViewportSize({ width, height: width < 700 ? 760 : 900 });
+  await page.addInitScript((me) => {
+    localStorage.setItem('inkwell-lang', 'pt');
+    const exp = Math.floor(Date.now() / 1000) + 3600;
+    localStorage.setItem('inkwell-counter-auth', JSON.stringify({ access_token: 'x.' + btoa(JSON.stringify({ sub: me, exp })) + '.y', refresh_token: 'r', expires_at: exp, user: { id: me, email: 'luis@example.com' } }));
+  }, ME);
+  await page.route('**/rest/v1/**', (route) => {
+    const u = new URL(route.request().url()), path = u.pathname.replace(/.*\/rest\/v1\//, '');
+    const json = (v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+    if (path === 'game_logs') return json(u.searchParams.get('game_id') ? [] : rows);
+    if (path === 'rpc/my_profile') return json({ display_name: 'Luís', adult: true });
+    return json(path.startsWith('rpc/') ? null : []);
+  });
+  await page.goto(url('coach/'));
+  await expect(page.locator('.game[data-k]').first()).toBeVisible();
+}
+const NO_INK_ROW = { user_id: ME, game_id: 'c9', source: 'lore_counter', played_at: '2026-11-01T20:00:00Z', visibility: 'private', created_at: '2026-11-01T20:00:00Z',
+  summary: { result: 'loss', my_deck: 'Physical game', opp_deck: 'Unknown', my_inks: '', opp_inks: '', my_lore: 12, opp_lore: 20, went_first: null } };
+
+test('Jogos on a phone: Novo jogo and the games come before duels.ink and coaches, which start closed', async ({ page }) => {
+  const errors = []; page.on('pageerror', (e) => errors.push(e.message));
+  await jogos(page, ROWS);
+  const novo = page.getByTestId('new-game');
+  await expect(novo).toHaveText('Novo jogo');
+  await expect(novo).toHaveAttribute('href', '../counter/');
+  const nb = await novo.boundingBox();
+  expect(nb.height).toBeGreaterThanOrEqual(44);
+  const firstGame = await page.locator('.game[data-k]').first().boundingBox();
+  expect(nb.y + nb.height).toBeLessThanOrEqual(760 - 56);                  // seen without scrolling
+  expect(firstGame.y).toBeLessThan(760);                                  // the first game too
+  const setup = page.getByTestId('setup');
+  expect((await setup.boundingBox()).y).toBeGreaterThan(firstGame.y);     // settings after the games
+  await expect(setup.locator('#duelsBox')).not.toHaveAttribute('open', '');
+  await expect(setup.locator('details.coaches:not(#duelsBox)')).not.toHaveAttribute('open', '');
+  await expect(page.locator('#duelsTok')).toBeHidden();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+  if (process.env.JOGOS_EVIDENCE) await page.screenshot({ path: 'docs/evidencias/jogos/390-jogos.png' });
+  // Colar jogos opens the paste box and puts the cursor in it
+  await page.getByTestId('paste-games').click();
+  await expect(page.locator('#addBox')).toHaveAttribute('open', '');
+  await expect(page.locator('#pasteLog')).toBeFocused();
+  // the duels.ink form is one tap away
+  await setup.locator('#duelsBox > summary').click();
+  await expect(page.locator('#duelsTok')).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('Jogos at 320, 768, 860 and 1280px: Novo jogo visible, no sideways scroll', async ({ page }) => {
+  for (const w of [320, 768, 860, 1280]) {
+    await jogos(page, ROWS, w);
+    await expect(page.getByTestId('new-game')).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+    if (process.env.JOGOS_EVIDENCE) await page.screenshot({ path: `docs/evidencias/jogos/${w}-jogos.png` });
+  }
+});
+
+test('R24 stats: a game without inks counts in the totals and shows as "Tintas não informadas" by ink combination', async ({ page }) => {
+  await jogos(page, [...ROWS, NO_INK_ROW]);
+  await page.locator('#tabStats').click();
+  const opp = page.locator('[data-opp="Unknown"]');
+  await expect(opp.locator('td').first()).toHaveText('Tintas não informadas');
+  await expect(opp.locator('td').nth(1)).toHaveText('1');
+  await expect(page.locator('table.mx')).toContainText('Tintas não informadas');   // in the matrix too, mine and theirs
+  await expect(page.locator('table.mx th .nm', { hasText: 'Tintas não informadas' })).toHaveCount(2);
+  await expect(page.locator('#review')).not.toContainText('Physical game');
+  if (process.env.JOGOS_EVIDENCE) await page.screenshot({ path: 'docs/evidencias/jogos/390-estatisticas-sem-tintas.png', fullPage: true });
+});

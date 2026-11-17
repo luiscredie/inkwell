@@ -37,6 +37,7 @@ window.INKWELL_NO_STORE_MSG = "Your games appear here after you sign in.";
     "Lore Counter": "Contador de lore",
     "· games save here": "· os jogos ficam salvos aqui",
     "Stats: decks, matchups, trend": "Estatísticas: decks, confrontos, evolução",
+    "New game": "Novo jogo", "Paste games": "Colar jogos", "Connections and coaches": "Conexões e coaches",
     "Show games": "Mostrar jogos",
     "Loading games…": "Carregando jogos…",
     "{m} Bo3 matches ({w} won of {d} finished)": "{m} confrontos Bo3 ({w} vencidos de {d} terminados)", "Incomplete": "Incompleto",
@@ -71,7 +72,7 @@ window.INKWELL_NO_STORE_MSG = "Your games appear here after you sign in.";
     "Gained {v} lore": "Ganhou {v} de lore", "Lost {v} lore": "Perdeu {v} de lore", "Moved {c} to {t}": "Moveu {c} para {t}", "Note: {t}": "Nota: {t}",
     // review
     "All games": "Todos os jogos", "Format": "Formato", "Sealed": "Selado", "Both formats": "Os dois formatos", "Win": "Vitória", "Loss": "Derrota", "Played by {name}": "Jogado por {name}",
-    "Your deck": "Seu deck", "Unknown": "Desconhecido", "vs": "vs",
+    "Your deck": "Seu deck", "Unknown": "Desconhecido", "Inks not given": "Tintas não informadas", "vs": "vs",
     "{n} turns": "{n} turnos", "Lore Counter game, under 2 minutes": "Jogo do Contador de lore, menos de 2 minutos",
     "Lore Counter game, about {m} minutes": "Jogo do Contador de lore, cerca de {m} minutos",
     "Lore Counter game, final lore and result only": "Jogo do Contador de lore, só lore final e resultado",
@@ -730,7 +731,7 @@ window.INKWELL_CLOUD = (() => {
     const on = !!duelsSync?.enabled;
     const form = `<span class="small muted">${Tx("On duels.ink, create an API token in your account settings (it only reads your games) and paste it here. Your games arrive here as private games, every 30 minutes.")}</span>
         <div class="row2"><input id="duelsTok" type="password" autocomplete="off" spellcheck="false" maxlength="200" placeholder="${Tx("duels.ink token")}" aria-label="${Tx("duels.ink token")}"><button type="button" class="btn small" id="duelsSave">${Tx("Connect")}</button></div>`;
-    return `<details class="coaches" id="duelsBox" ${!on || duelsEditing || duelsMsg ? "open" : ""}><summary>${on ? Tx("duels.ink") : Tx("Connect my duels.ink")}</summary>
+    return `<details class="coaches" id="duelsBox" ${duelsEditing || duelsMsg || duelsSync?.ok === false ? "open" : ""}><summary>${on ? Tx("duels.ink") : Tx("Connect my duels.ink")}</summary>
         ${on ? `<span class="small" id="duelsSync">${syncLine(duelsSync)}</span>
         <span class="small"><button type="button" class="linkbtn" id="duelsNow">${Tx("Sync now")}</button> · <button type="button" class="linkbtn" id="duelsEdit">${Tx("Change token")}</button> · <button type="button" class="linkbtn" id="duelsOff">${Tx("Disconnect")}</button></span>` : ""}
         ${!on || duelsEditing ? form : ""}
@@ -770,6 +771,7 @@ window.INKWELL_CLOUD = (() => {
     if (!me) {
       host.innerHTML = `<div class="empty">\u003Cimg src="../ui/assets/empty/signedout.svg" alt=""><b>${Tx("Sign in to see your games")}</b><p>${Tx("Use your e-mail. We e-mail you a code, no password.")}</p><button type="button" class="btn primary" id="signIn">${Tx("Sign in")}</button></div>`;
       document.getElementById("signIn").onclick = () => window.INKWELL_SIGNIN?.();
+      document.getElementById("setupPanel")?.replaceChildren();
       return;
     }
     const students = links.filter((l) => l.owner_id !== me.id);
@@ -777,10 +779,13 @@ window.INKWELL_CLOUD = (() => {
     const viewing = player === me.id ? null : students.find((l) => l.owner_id === player);
     host.innerHTML = `<div class="acct">
       <div class="viewrow"><label class="small muted" for="whose">${Tx("View")}</label><select id="whose" class="inline"><option value="${esc(me.id)}">${Tx("My games")}</option><option value="${COMMUNITY}" ${player === COMMUNITY ? "selected" : ""}>${Tx("Community: public games")}</option>${students.map((l) => `<option value="${esc(l.owner_id)}" ${l.owner_id === player ? "selected" : ""}>${esc(Tx("Games of {name}", { name: names.get(l.owner_id) || l.owner_email || Tx("A player") }))}</option>`).join("")}</select></div>
-      ${player === me.id ? duelsBox() : ""}
       ${player === COMMUNITY ? `<span class="small muted">${Tx("Public games from every player. Anyone signed in can read them and comment.")}</span>`
         : viewing ? `<span class="small muted">${esc(Tx("You're coaching {name}: you can read their games and comment.", { name: names.get(viewing.owner_id) || viewing.owner_email }))}</span>` : ""}
-      <details class="coaches" ${coachesOpen ?? !names.has(me.id) ? "open" : ""}><summary>${Tx("Coaches and your name")} · ${mine.length}</summary>
+    </div>`;
+    const setup = document.getElementById("setupPanel");
+    if (setup) setup.innerHTML = `<div class="acct setup" data-testid="setup"><span class="cap">${Tx("Connections and coaches")}</span>
+      ${player === me.id ? duelsBox() : ""}
+      <details class="coaches" ${coachesOpen ? "open" : ""}><summary>${Tx("Coaches and your name")} · ${mine.length}</summary>
         ${!names.has(me.id) ? `<div class="row2"><input id="dispName" maxlength="40" placeholder="${Tx("Your name for public games and comments")}" aria-label="${Tx("Your name for public games and comments")}"><button type="button" class="btn small" id="dispSave">${Tx("Save")}</button></div>`
           : `<span class="small muted">${esc(Tx("Your name: {name}", { name: names.get(me.id) }))} · <button type="button" class="linkbtn" id="dispEdit">${Tx("Change")}</button></span>`}
         <span class="small" id="dispMsg" aria-live="polite"></span>
@@ -789,7 +794,7 @@ window.INKWELL_CLOUD = (() => {
         <div class="row2"><input id="coachEmail" type="email" placeholder="${Tx("Coach's email")}" aria-label="${Tx("Coach's email")}"><button type="button" class="btn small" id="coachAdd">${Tx("Add")}</button></div>
         <span class="small" id="coachMsg" aria-live="polite"></span>`}</details>
     </div>`;
-    host.querySelector("details.coaches:not(#duelsBox)")?.addEventListener("toggle", (e) => { coachesOpen = e.target.open; });
+    setup?.querySelector("details.coaches:not(#duelsBox)")?.addEventListener("toggle", (e) => { coachesOpen = e.target.open; });
     duelsWire();
     const saveName = async (v) => {
       v = String(v || "").trim();
@@ -842,6 +847,12 @@ window.INKWELL_CLOUD = (() => {
 
 /* account, view, coaches */
 .acct { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-2); }
+/* Pacote 2: the games and "Novo jogo" come first; duels.ink and coaches are settings, closed, at the end */
+.jg-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--sp-2); }
+.jg-actions[hidden] { display: none; }
+.jg-actions .btn { min-height: 44px; }
+.acct.setup { margin-top: var(--sp-2); }
+.acct.setup > .cap { font-size: var(--fs-small); font-weight: 600; color: var(--text-2); }
 .acct .viewrow { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
 .acct .viewrow select { flex: 1; min-width: 0; }
 .acct details.coaches { background: var(--surface-1); border-radius: var(--r-md); padding: var(--sp-2) var(--sp-3); box-shadow: var(--e1); }
@@ -1061,6 +1072,7 @@ table.mt tr[data-opp]:hover td, table.mt tr[data-opp]:focus-visible td { backgro
   <aside class="list" aria-label="Games">
     <div class="titlerow"><h1 data-i18n>Coach review</h1><span class="small"><a id="homeLink" class="linkbtn" hidden></a> <button type="button" class="linkbtn small" id="langBtn" hidden></button></span></div>
     <div id="accountPanel"></div>
+    <div class="jg-actions" id="jgActions" hidden><a class="btn primary" href="../counter/" id="newGame" data-testid="new-game"><i class="ic i-counter"></i><span data-i18n>New game</span></a><button type="button" class="btn" id="pasteGames" data-testid="paste-games" data-i18n>Paste games</button></div>
     <button type="button" class="btn primary counterBtn" id="openCounter" hidden><span data-i18n>Lore Counter</span> <span class="small" data-i18n>· games save here</span></button>
     <div class="stats" id="stats" hidden></div>
     <button type="button" class="btn small statsBtn" id="openStats" hidden data-i18n>Stats: decks, matchups, trend</button>
@@ -1074,6 +1086,7 @@ table.mt tr[data-opp]:hover td, table.mt tr[data-opp]:focus-visible td { backgro
         <label class="btn small filebtn"><span data-i18n>Import a file</span><input type="file" id="addFile" accept=".json,.gz,application/json,application/gzip" hidden></label></div>
       <span class="small" id="addStatus" aria-live="polite"></span>
     </details>
+    <div id="setupPanel"></div>
   </aside>
   <section class="review" id="review" aria-live="polite">
     <p class="empty" data-i18n>Pick a game to review it turn by turn.</p>
@@ -1595,6 +1608,12 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
   const DAY = 864e5, byAt = (a, b) => String(a.at).localeCompare(String(b.at));
   const qOf = (s) => s.queue || "";
   const inksKey = (v) => v && v !== "Physical game" ? v : null;
+  // R24: a game without inks still counts everywhere; in the analyses by deck or ink combination it shows as
+  // "Tintas não informadas" (stored as "Physical game" for my side and "Unknown" for the opponent's).
+  const NO_INKS = "Unknown";
+  const noInks = (k) => !k || k === "Unknown" || k === "Physical game";
+  const deckLabel = (k) => (noInks(k) ? Tx("Inks not given") : k);
+  const dotsOf = (k) => (noInks(k) ? "" : inkDots(k));
   // duels.ink best-of-3 matches: only games linked by their match id (a match.json from duels.ink, linkMatch).
   // Nothing is guessed from queues, numbers or times; a match counts once it has a winner (2 games won).
   function matchesOf(rows) {
@@ -1659,20 +1678,20 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     </svg>`;
   }
   function matrixHtml(rows) {
-    const mineK = (r) => inksKey(r.s.my_inks) || inksKey(r.s.my_deck), oppK = (r) => r.s.opp_inks || r.s.opp_deck || "Unknown";
-    const mine = groupBy(rows.filter(mineK), mineK).slice(0, 6), opp = groupBy(rows.filter(mineK), oppK).slice(0, 8);
+    const mineK = (r) => inksKey(r.s.my_inks) || inksKey(r.s.my_deck) || NO_INKS, oppK = (r) => r.s.opp_inks || r.s.opp_deck || NO_INKS;
+    const mine = groupBy(rows, mineK).slice(0, 6), opp = groupBy(rows, oppK).slice(0, 8);
     if (!mine.length || opp.length < 2) return "";
     const cell = new Map();
-    for (const r of rows) { const a = mineK(r); if (!a) continue; const k = `${a}|${oppK(r)}`; const c = cell.get(k) || { n: 0, w: 0 }; c.n += 1; c.w += r.s.result === "win" ? 1 : 0; cell.set(k, c); }
+    for (const r of rows) { const a = mineK(r); const k = `${a}|${oppK(r)}`; const c = cell.get(k) || { n: 0, w: 0 }; c.n += 1; c.w += r.s.result === "win" ? 1 : 0; cell.set(k, c); }
     const td = (a, b) => {
       const c = cell.get(`${a}|${b}`);
       if (!c) return `<td class="mx-e">·</td>`;
       const wr = c.w / c.n, tone = wr >= 0.5 ? "var(--win)" : "var(--loss)", strength = Math.round(10 + Math.abs(wr - 0.5) * 2 * 40);
-      return `<td class="${c.n < 3 ? "few" : ""}" style="background:color-mix(in srgb, ${tone} ${c.n < 3 ? 6 : strength}%, transparent)" title="${esc(`${a} vs ${b}`)}: ${hint(c.n, c.w)}"><b>${Math.round(100 * wr)}%</b><small>${c.n}</small></td>`;
+      return `<td class="${c.n < 3 ? "few" : ""}" style="background:color-mix(in srgb, ${tone} ${c.n < 3 ? 6 : strength}%, transparent)" title="${esc(`${deckLabel(a)} vs ${deckLabel(b)}`)}: ${hint(c.n, c.w)}"><b>${Math.round(100 * wr)}%</b><small>${c.n}</small></td>`;
     };
     return `<div class="sv-card"><h3>${Tx("Matchup matrix")}</h3><span class="muted small">${Tx("Your colors (rows) against the opponent's colors (columns). Small number: games.")}</span>
-      <div class="mx-wrap"><table class="mx"><tr><th>${Tx("You / Opp")}</th>${opp.map((o) => `<th>${inkDots(o.k)}<span class="sr">${esc(o.k)}</span></th>`).join("")}</tr>
-      ${mine.map((m) => `<tr><th>${inkDots(m.k)}<span class="nm">${esc(m.k)}</span></th>${opp.map((o) => td(m.k, o.k)).join("")}</tr>`).join("")}</table></div></div>`;
+      <div class="mx-wrap"><table class="mx"><tr><th>${Tx("You / Opp")}</th>${opp.map((o) => `<th>${noInks(o.k) ? `<span class="nm">${esc(Tx("Inks not given"))}</span>` : `${inkDots(o.k)}<span class="sr">${esc(o.k)}</span>`}</th>`).join("")}</tr>
+      ${mine.map((m) => `<tr><th>${dotsOf(m.k)}<span class="nm">${esc(deckLabel(m.k))}</span></th>${opp.map((o) => td(m.k, o.k)).join("")}</tr>`).join("")}</table></div></div>`;
   }
   // Deck versions: each distinct list of the chosen deck, oldest = version 1.
   function versionsOf(rows) {
@@ -1738,8 +1757,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     const mmr = rated.filter((r) => (qOf(r.s) || "—") === mq).sort(byAt).map((r) => ({ at: r.at, v: r.s.mmr_before + r.s.mmr_delta }));
     const chip = (group, v, l) => `<button type="button" class="chipbtn" data-sv="${group}" data-v="${esc(v)}" aria-pressed="${String(sv[group]) === String(v)}">${esc(l)}</button>`;
     const sel = (id, label, cur, opts) => `<label class="small svsel">${label} <select id="${id}">${opts.map(([v, l]) => `<option value="${esc(v)}" ${v === cur ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></label>`;
-    const row = (x, isOpp) => `<tr class="${x.t.n < 5 ? "few" : ""}" ${isOpp ? `data-opp="${esc(x.k)}" tabindex="0" aria-label="${esc(Tx("Show games against {deck}", { deck: x.k }))}"` : ""}>
-      <td>${inkDots(x.k)}${esc(x.k)}</td><td class="n">${x.t.n}</td>
+    const row = (x, isOpp) => `<tr class="${x.t.n < 5 ? "few" : ""}" ${isOpp ? `data-opp="${esc(x.k)}" tabindex="0" aria-label="${esc(Tx("Show games against {deck}", { deck: deckLabel(x.k) }))}"` : ""}>
+      <td>${dotsOf(x.k)}${esc(deckLabel(x.k))}</td><td class="n">${x.t.n}</td>
       <td class="n">${pct(x.t.w, x.t.n)}<span class="wbar" aria-hidden="true"><i style="width:${x.t.n ? (100 * x.t.w / x.t.n).toFixed(0) : 0}%"></i></span></td>
       <td class="n">${pct(x.t.fw, x.t.fn)} <span class="muted small">(${x.t.fn})</span></td><td class="n">${pct(x.t.dw, x.t.dn)} <span class="muted small">(${x.t.dn})</span></td></tr>`;
     const head = (first) => `<tr><th>${first}</th><th class="n">${Tx("Games")}</th><th class="n">${Tx("Won")}</th><th class="n">${Tx("Going first")}</th><th class="n">${Tx("Going second")}</th></tr>`;
@@ -1753,7 +1772,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
         <div class="ctl" role="group" aria-label="${Tx("Period")}">${chip("days", 0, Tx("All time"))}${chip("days", 90, Tx("Last 90 days"))}${chip("days", 30, Tx("Last 30 days"))}${chip("days", 7, Tx("Last 7 days"))}</div>
         <div class="ctl">
           ${queues.length > 1 ? sel("svQueue", Tx("Queue"), sv.queue, [["all", Tx("All queues")], ...queues.map((q) => [q, q === "—" ? Tx("Other games") : q])]) : ""}
-          ${decks.length > 1 ? sel("svDeck", Tx("Deck"), sv.deck, [["all", Tx("All my decks")], ...decks.map((d) => [d, d])]) : ""}
+          ${decks.length > 1 ? sel("svDeck", Tx("Deck"), sv.deck, [["all", Tx("All my decks")], ...decks.map((d) => [d, deckLabel(d)])]) : ""}
           ${vs.length > 1 ? sel("svVer", Tx("Version"), sv.version, [["all", Tx("All versions")], ...[...vs].reverse().map((v) => [v.k, Tx("Version {n}", { n: v.n }) + (v.n === vs.length ? ` (${Tx("latest")})` : "")])]) : ""}
         </div>
       </div>
@@ -1986,6 +2005,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     remember(on ? "counter" : "coach");
   }
   $("openCounter").addEventListener("click", () => showCounter(true));
+  $("pasteGames").addEventListener("click", () => { const b = $("addBox"); b.open = true; b.scrollIntoView({ block: "start", behavior: "smooth" }); setTimeout(() => $("pasteLog").focus({ preventScroll: true }), 300); });
   window.addEventListener("message", async (e) => {
     const frame = $("counterFrame");
     if (e.source !== frame.contentWindow || !e.data) return;
@@ -2013,6 +2033,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
       if (canWrite === null && !me?.id) canWrite = false;
     }
     $("addBox").hidden = !(db && isOwner);
+    $("jgActions").hidden = !(db && isOwner);
     $("openCounter").hidden = !(db && isOwner);
     let view = null; try { view = localStorage.getItem(VIEW_KEY); } catch { /* storage off */ }
     if (db && isOwner && view === "counter" && COUNTER_DOC) showCounter(true);
