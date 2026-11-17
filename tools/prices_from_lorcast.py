@@ -15,10 +15,12 @@ The Liga agent (tools/run_daily_price_refresh.ps1) overwrites this file when it 
 from __future__ import annotations
 
 import argparse
+import http.client
 import json
 import re
 import time
 import unicodedata
+import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -27,6 +29,8 @@ ROOT = Path(__file__).resolve().parents[1]
 PRICES = ROOT / "site" / "data" / "prices.json"
 HISTORY = ROOT / "site" / "data" / "price-history-tcg.json"   # index of the days kept
 HISTORY_DIR = ROOT / "site" / "data" / "price-history-tcg"
+RETRIES = 4       # tries per set when Lorcast cuts the answer or the connection drops
+RETRY_WAIT = 3.0   # seconds before the 2nd try; 6 before the 3rd, 9 before the 4th
 MIN_TCG = 3000   # fewer priced cards than this means Lorcast answered only in part: keep yesterday's file
 SETS = [str(n) for n in range(1, 15)] + ["P1", "P2", "P3", "P4", "D23", "cp", "DIS", "C2", "CC1", "Q3", "PD1", "RPH"]
 
@@ -55,9 +59,24 @@ def load_set(code: str, folder: Path | None) -> list[dict]:
         p = folder / f"set_{code}.json"
         return json.loads(p.read_text(encoding="utf-8")) if p.exists() else []
     req = urllib.request.Request(f"https://api.lorcast.com/v0/sets/{code}/cards", headers={"User-Agent": "inkwell-prices (github.com/luiscredie/inkwell)", "Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=60) as r:
-        time.sleep(0.15)
-        return json.loads(r.read().decode("utf-8"))
+    # Lorcast sometimes cuts the answer short (http.client.IncompleteRead) or drops the connection: the daily run
+    # failed on 14 and 15/11/2026 for that alone. Ask again a few times before giving up; a 4xx is not retried.
+    last: Exception | None = None
+    for attempt in range(RETRIES):
+        if attempt:
+            time.sleep(RETRY_WAIT * attempt)
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                time.sleep(0.15)
+                return json.loads(r.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            if e.code < 500 and e.code != 429:
+                raise
+            last = e
+        except (http.client.HTTPException, urllib.error.URLError, TimeoutError, ConnectionError, json.JSONDecodeError) as e:
+            last = e
+        print(f"set {code}: attempt {attempt + 1}/{RETRIES} failed ({type(last).__name__}: {last})", flush=True)
+    raise RuntimeError(f"Lorcast did not answer set {code} after {RETRIES} attempts") from last
 
 
 def today_sp() -> str:   # the date in São Paulo (UTC-3), so a morning run is "today" there
