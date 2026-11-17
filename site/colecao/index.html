@@ -379,6 +379,21 @@ body.coll-ro .qty button, body.coll-ro .mv, body.coll-ro [data-bq], body.coll-no
 .lang-ask .actions { flex-wrap: wrap; }
 .tag.lang-tag { background: var(--surface-2); color: var(--text); font-weight: 700; letter-spacing: .02em; }
 .lang-sel { width: auto; min-height: 40px; border-radius: var(--r-md); border: 1px solid var(--line-strong); background-color: var(--field); color: var(--text); padding: 0 28px 0 8px; background-position: right 8px center; font: inherit; }
+/* Pacote 2: Escanear is the main action; the rest live in "Mais ações" */
+#headActions { align-items: center; }
+#headActions #openScan { min-height: 44px; }
+.hmore { position: relative; }
+.hmore > summary { list-style: none; min-height: 44px; }
+.hmore > summary::-webkit-details-marker { display: none; }
+.hmore > .menu { display: grid; gap: 2px; position: absolute; top: calc(100% + 8px); right: 0; left: auto; bottom: auto; width: 240px; max-width: calc(100vw - 2 * var(--sp-4)); }   /* anchored to its button (the phone rule in tokens.css pins .menu to the top bar) */
+.hmore .menu-item { min-height: 44px; }
+.hmore:not([open]) > .menu { display: none; }
+@media (max-width: 760px) {
+  #headActions #openScan { flex: 1 1 auto; }
+  .page-head .actions .hmore { flex: none; }
+  .hmore > summary span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }   /* icon only on phones, name kept for screen readers */
+  .hmore > summary { width: 44px; padding: 0; justify-content: center; }
+}
 </style>
 
 <main class="page" id="page">
@@ -576,7 +591,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Ink": "Tinta", "Set": "Set", "Rarity": "Raridade", "Only cards I own": "Só as que tenho", "Only foil": "Só foil", "Only lent out": "Só emprestadas", "Your cards that are with friends": "Cartas suas que estão com amigos",
     "Clear": "Limpar", "Show {n} cards": "Ver {n} cartas", "Remove filter {f}": "Remover filtro {f}", "Close": "Fechar",
     "No cards match these filters.": "Nenhuma carta com esses filtros.", "Clear filters": "Limpar filtros",
-    "Your collection is empty": "Sua coleção está vazia", "Turn off \"Only cards I own\" to add cards with +, or import your collection in Inkwell.": "Desligue \"Só as que tenho\" para adicionar cartas com +, ou importe sua coleção no Inkwell.",
+    "Scan your cards with the camera or import a list from another app. You can also turn off \"Only cards I own\" and add cards with +.": "Escaneie suas cartas com a câmera ou importe uma lista de outro app. Você também pode desligar \"Só as que tenho\" e adicionar cartas com +.", "Your collection is empty": "Sua coleção está vazia", "Turn off \"Only cards I own\" to add cards with +, or import your collection in Inkwell.": "Desligue \"Só as que tenho\" para adicionar cartas com +, ou importe sua coleção no Inkwell.",
     "Legal in Core.": "Vale no Core.", "Legal in Core through the reprint in {s}, nº {n}.": "Vale no Core pela reimpressão em {s}, nº {n}.", "Infinity only: no reprint in a Core set.": "Só no Infinito: não tem reimpressão em set do Core.", "reprint": "reimpressão", "See card {c}": "Ver carta {c}",
     "Check my binder": "Conferir fichário", "Prices": "Preços", "In your binder's order: Core first, then Infinity; ink, cost and name.": "Na ordem do seu fichário: Core primeiro, depois Infinito; tinta, custo e nome.",
     "Infinity": "Infinito", "Dual ink": "Duas tintas", "No ink": "Sem tinta", "cost {c}": "custo {c}", "{ink} · cost {c}": "{ink} · custo {c}",
@@ -875,7 +890,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       </div>
       ${rows.length ? (v.view === "grid" ? `<div class="cgrid" id="grid">${rows.slice(0, shown).map(gridCard).join("")}</div>` : `<div class="list" id="grid">${rows.slice(0, shown).map(listRow).join("")}</div>`)
         + (rows.length > shown ? `<div class="load-more"><button type="button" class="btn" id="more">${Tx("Show more")}</button></div>` : "")
-        : empty && v.owned ? `<div class="empty">\u003Cimg src="../ui/assets/empty/collection.svg" alt=""><b>${Tx("Your collection is empty")}</b><p>${esc(Tx("Turn off \"Only cards I own\" to add cards with +, or import your collection in Inkwell."))}</p><button type="button" class="btn primary" id="allCards">${Tx("Only cards I own")} ✕</button></div>`
+        : empty && v.owned ? `<div class="empty">\u003Cimg src="../ui/assets/empty/collection.svg" alt=""><b>${Tx("Your collection is empty")}</b><p>${esc(Tx("Scan your cards with the camera or import a list from another app. You can also turn off \"Only cards I own\" and add cards with +."))}</p>${readOnly() ? "" : `<div class="row" style="justify-content:center;gap:var(--sp-2);flex-wrap:wrap"><button type="button" class="btn primary" data-empty-scan><i class="ic i-camera"></i>${Tx("Scan")}</button><button type="button" class="btn" data-empty-import data-testid="empty-import"><i class="ic i-import"></i>${Tx("Import")}</button></div>`}<button type="button" class="btn ghost" id="allCards">${Tx("Only cards I own")} ✕</button></div>`
         : `<div class="empty">\u003Cimg src="../ui/assets/empty/search.svg" alt=""><b>${Tx("No cards match these filters.")}</b><button type="button" class="btn" id="clearAll">${Tx("Clear filters")}</button></div>`}`;
     wire();
     if (keep && $(keep)) { const el = $(keep); el.focus(); try { if (caret != null) el.setSelectionRange(caret, caret); } catch { /* */ } }
@@ -900,6 +915,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     $("openTradePost")?.addEventListener("click", () => openTradePost($("openTradePost")));
     $("clearAll")?.addEventListener("click", () => { v = { ...v, q: "", inks: [], sets: [], rar: [], cost: [], langs: [], foil: false, lent: false }; again(); });
     $("allCards")?.addEventListener("click", () => { v.owned = false; again(); });
+    document.querySelector("[data-empty-scan]")?.addEventListener("click", (e) => openScanner(e.currentTarget));
+    document.querySelector("[data-empty-import]")?.addEventListener("click", (e) => openImport(e.currentTarget));
     $("grid")?.addEventListener("click", (e) => { const b = e.target.closest("[data-card]"); if (b) openCard(b.dataset.card, b); });
   }
 
@@ -1591,10 +1608,25 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     if (me && friendView) {
       $("headActions").innerHTML = `<a class="btn" href="./" data-testid="back-mine"><i class="ic i-chevron-left"></i>${esc(P("Voltar para a minha", "Back to mine"))}</a>`;
     } else if (me) {
+      // Conselho (#244): an empty collection shows Importar next to Escanear, the two ways to start; later it moves to "Mais ações"
+      const fresh = !readOnly() && !Object.values(coll()).some((e) => (+e?.n || 0) + (+e?.f || 0) > 0);
       const all = [...profiles, ...shared];
       $("headActions").innerHTML = `${all.length > 1 ? `<select class="inline" id="collSrc" data-testid="coll-source" aria-label="${esc(P("Coleção", "Collection"))}">${all.map((x) => `<option value="${esc(x.profile)}" ${x === cur ? "selected" : ""}>${esc(collName(x))}</option>`).join("")}</select>` : ""}
-        <button type="button" class="btn" id="openShare" data-testid="share"><i class="ic i-users"></i>${esc(P("Compartilhar", "Share"))}</button>
-        <button type="button" class="btn" id="openBinder"><i class="ic i-cards"></i>${Tx(homeReady ? "Check stock" : "Check my binder")}</button><button type="button" class="btn" id="openExport" data-testid="export"><i class="ic i-export"></i>${esc(P("Exportar", "Export"))}</button>${lstate() && !readOnly() ? `<button type="button" class="btn" id="openLangs" data-testid="langs"><i class="ic i-globe"></i>${esc(P("Idiomas", "Languages"))}</button>` : ""}${readOnly() ? "" : `<button type="button" class="btn" id="openImport" data-testid="import"><i class="ic i-import"></i>${Tx("Import")}</button><button type="button" class="btn primary" id="openScan"><i class="ic i-camera"></i>${Tx("Scan")}</button>`}`;
+        ${readOnly() ? "" : `<button type="button" class="btn primary" id="openScan" data-testid="scan"><i class="ic i-camera"></i>${Tx("Scan")}</button>`}
+        ${fresh ? `<button type="button" class="btn" id="openImport" data-testid="import"><i class="ic i-import"></i>${Tx("Import")}</button>` : ""}
+        <details class="hmore" id="moreActions" data-testid="more-actions"><summary class="btn" aria-label="${esc(P("Mais ações", "More actions"))}"><i class="ic i-more"></i><span>${esc(P("Mais ações", "More actions"))}</span></summary>
+          <div class="menu sm" data-testid="more-menu">
+            ${readOnly() || fresh ? "" : `<button type="button" class="menu-item" id="openImport" data-testid="import"><i class="ic i-import"></i>${Tx("Import")}</button>`}
+            <button type="button" class="menu-item" id="openExport" data-testid="export"><i class="ic i-export"></i>${esc(P("Exportar", "Export"))}</button>
+            <button type="button" class="menu-item" id="openShare" data-testid="share"><i class="ic i-users"></i>${esc(P("Compartilhar", "Share"))}</button>
+            <button type="button" class="menu-item" id="openBinder"><i class="ic i-cards"></i>${Tx(homeReady ? "Check stock" : "Check my binder")}</button>
+            ${lstate() && !readOnly() ? `<button type="button" class="menu-item" id="openLangs" data-testid="langs"><i class="ic i-globe"></i>${esc(P("Idiomas", "Languages"))}</button>` : ""}
+          </div></details>`;
+      // Pacote 2: one main action (Escanear); the rest in "Mais ações", which closes on a choice, outside tap or Esc
+      const more = $("moreActions");
+      more.querySelectorAll(".menu-item").forEach((b) => b.addEventListener("click", () => { more.open = false; }));
+      more.addEventListener("keydown", (e) => { if (e.key === "Escape" && more.open) { more.open = false; more.querySelector("summary").focus(); } });
+      if (!window.__iwMoreOut) { window.__iwMoreOut = true; document.addEventListener("click", (e) => { const m = $("moreActions"); if (m?.open && !m.contains(e.target)) m.open = false; }); }
       $("collSrc")?.addEventListener("change", (e) => useSource(e.target.value));
       $("openShare").onclick = () => openShare($("openShare"));
       $("openExport").onclick = () => openExport($("openExport"));
