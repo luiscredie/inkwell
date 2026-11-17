@@ -1085,6 +1085,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       return;
     }
     if (!["list", "analysis", "missing", "games", "plan", "gala"].includes(tab)) tab = "list";
+    try { if (me?.id) localStorage.setItem(`inkwell-last-deck:${me.id}`, d.id); localStorage.removeItem("inkwell-last-deck"); } catch { /* */ }   // Início > Continuar picks up this deck (per account)
     const m = measure(d), inks = deckInks(d, m);
     const keep = document.activeElement?.id, caret = document.activeElement?.selectionStart;
     const when = d.updated_at ? Tx("updated {d}", { d: dateFmt(d.updated_at) }) : d.created_at ? Tx("created {d}", { d: dateFmt(d.created_at) }) : "";
