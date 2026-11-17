@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import html
 import json
 import re
 import sys
@@ -36,7 +37,9 @@ def iso(value):
 
 
 def text_name(value):
-    name = re.sub(r"\s*\([^()]*\)\s*$", "", str(value or "")).strip()
+    # Remove somente sufixos de numero de carta, preservando (Alternate Art).
+    name = html.unescape(html.unescape(str(value or ""))).strip()
+    name = re.sub(r"\s*\([A-Za-z]{0,2}\d+[A-Za-z0-9-]*\)\s*$", "", name).strip()
     name = unicodedata.normalize("NFKD", name).casefold()
     name = "".join(ch for ch in name if not unicodedata.combining(ch))
     return re.sub(r"[^a-z0-9]", "", name)
