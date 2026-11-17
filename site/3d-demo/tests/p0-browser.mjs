@@ -73,6 +73,18 @@ for(const width of [320,375,390,430,1280]){
     await stage.dispatchEvent('touchend',{changedTouches:[{clientX:140,clientY:150}]});
     assert.equal(await page.locator('.binder-page').first().getAttribute('aria-label'),stableLabel,'Cancelled touch changed page');
     assert.equal(await page.evaluate(()=>binderTouchX===null&&binderTouchY===null&&binderGestureAt===0),true,'Cancelled touch left gesture state');
+    // Dispatch a horizontal touch gesture through the DOM handlers, not by calling
+    // the implementation functions directly. Verify page direction and position.
+    await stage.dispatchEvent('touchstart',{touches:[{clientX:230,clientY:200}]});
+    await stage.dispatchEvent('touchend',{changedTouches:[{clientX:140,clientY:202}]});
+    await page.waitForTimeout(210);
+    const swipedLabel=await page.locator('.binder-page').first().getAttribute('aria-label');
+    assert.notEqual(swipedLabel,stableLabel,'Horizontal touch swipe did not turn page');
+    await stage.dispatchEvent('touchstart',{touches:[{clientX:140,clientY:200}]});
+    await stage.dispatchEvent('touchend',{changedTouches:[{clientX:230,clientY:202}]});
+    await page.waitForTimeout(210);
+    assert.equal(await page.locator('.binder-page').first().getAttribute('aria-label'),stableLabel,
+      'Reverse touch swipe did not restore page');
     // Desktop mouse/pen drags should capture the pointer so release outside the stage is handled.
     await page.evaluate(()=>{
       const stage=document.querySelector('[data-binder-swipe]');
