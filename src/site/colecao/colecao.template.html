@@ -19,6 +19,20 @@
 #cardSheet .big { width: 176px; margin: 0 auto var(--sp-4); border-radius: 12px; }
 .places { display: flex; width: 100%; max-width: 100%; overflow-x: auto; margin: 0 0 var(--sp-3); }
 .places button { white-space: nowrap; }
+/* the estimated value on top never spills into the next tile (reported 18/11 on an iPhone); on the narrowest phones it
+   gets a row of its own, under Cartas and Emprestadas, so it stays large enough to read */
+@media (max-width: 374px) {
+  [data-testid="coll-stats"].stats-row.three { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  [data-testid="coll-stats"] [data-testid="to-prices"] { grid-column: 1 / -1; order: 3; }
+}
+@media (max-width: 480px) {   /* a long value (millions) gets its own row on any phone */
+  [data-testid="coll-stats"].stats-row.three.long { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  [data-testid="coll-stats"].long [data-testid="to-prices"] { grid-column: 1 / -1; order: 3; }
+}
+[data-testid="to-prices"] { min-width: 0; container-type: inline-size; }
+/* the number shrinks only as much as it must to fit its tile: --chars is how many characters it shows */
+[data-testid="to-prices"] b.money { overflow: hidden; font-size: min(var(--fs-stat), calc(100cqi / (var(--chars, 9) * 0.62))); }
+@media (max-width: 480px) { [data-testid="to-prices"] b.money { font-size: min(1.375rem, calc(100cqi / (var(--chars, 9) * 0.62))); } }
 @media (max-width: 480px) { .places button { padding: 0 9px; font-size: var(--fs-micro); } }
 .places .n { color: var(--text-3); font-weight: 600; margin-left: 4px; font-variant-numeric: tabular-nums; }
 .places button[aria-pressed="true"] .n { color: inherit; }
@@ -208,6 +222,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const LOC = lang === "pt" ? "pt-BR" : "en";
   const money = (v) => (v ?? 0).toLocaleString(LOC, { style: "currency", currency: "BRL" });
   const moneySplit = (v) => { const s = money(v), i = s.lastIndexOf(lang === "pt" ? "," : "."); return i > 0 ? `${esc(s.slice(0, i))}<small>${esc(s.slice(i))}</small>` : esc(s); };
+  // the estimated value on top: from R$ 1.000 in whole reais (an estimate; the cents made it too wide for a phone);
+  // the exact value stays in the tile's title and on Preços
+  const moneyTile = (v) => (v ?? 0) >= 1000 ? esc((v ?? 0).toLocaleString(LOC, { style: "currency", currency: "BRL", maximumFractionDigits: 0, minimumFractionDigits: 0 })) : moneySplit(v);
   const INKS = ["Amber", "Amethyst", "Emerald", "Ruby", "Sapphire", "Steel"];
   const RAR = [["C", "Common"], ["U", "Uncommon"], ["R", "Rare"], ["SR", "Super rare"], ["L", "Legendary"], ["E", "Enchanted"], ["EP", "Epic"], ["I", "Iconic"], ["P", "Promo"]];
   const rarName = (r) => Tx((RAR.find(([k]) => k === r) || [r, r])[1] || "");
@@ -386,8 +403,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     for (const id of Object.keys(coll())) { const { n, f } = inPlace(id), pn = priceOf(id), pf = priceOf(id, true); cards += n + f; value += (pn ?? 0) * n + (pf ?? 0) * f; unpriced += (pn == null ? n : 0) + (pf == null ? f : 0); if (pf != null && f && foilEst(id)) estimated += f; if (mypOf(id) != null) viaMyp += (mypOf(id) || 0) * n; }
     const share = value ? Math.round((viaMyp / value) * 100) : 0;
     const lent = [...lentN.values(), ...lentF.values()].reduce((a, b) => a + b, 0);
-    return `<div class="stats-row three" data-testid="coll-stats"><div class="stat"><b>${cards.toLocaleString(LOC)}</b><span>${Tx("Cards")}</span></div>
-      <a class="stat" href="../precos/?tab=value" data-testid="to-prices" style="text-decoration:none;color:inherit"><b class="money">${PRJ ? moneySplit(value) : "—"}</b><span>${esc(P("Valor estimado", "Estimated value"))} ›</span>${value ? `<small class="micro muted" data-testid="value-src" style="display:block" title="${esc(BR ? P("Preço no Brasil: menor anúncio na MYP Cards para cópias normais; TCGplayer convertido para foil e cartas sem anúncio lá", "Price in Brazil: lowest MYP Cards listing for normal copies; TCGplayer converted for foils and cards not listed there") : P("Preço do TCGplayer convertido para reais, atualizado todo dia", "TCGplayer price converted to reais, updated daily"))}">${esc(share >= 100 ? "MYP Cards" : share > 0 ? P(`${share}% MYP · resto TCG`, `${share}% MYP · rest TCG`) : priceSrc)}</small>` : ""}</a>
+    const valueText = PRJ ? (value >= 1000 ? (value ?? 0).toLocaleString(LOC, { style: "currency", currency: "BRL", maximumFractionDigits: 0 }) : money(value)) : "—";
+    return `<div class="stats-row three${valueText.length > 9 ? " long" : ""}" data-testid="coll-stats"><div class="stat"><b>${cards.toLocaleString(LOC)}</b><span>${Tx("Cards")}</span></div>
+      <a class="stat" href="../precos/?tab=value" data-testid="to-prices" style="text-decoration:none;color:inherit"><b class="money" style="--chars:${valueText.length}"${PRJ && value >= 1000 ? ` title="${esc(money(value))}"` : ""}>${PRJ ? moneyTile(value) : "—"}</b><span>${esc(P("Valor estimado", "Estimated value"))} ›</span>${value ? `<small class="micro muted" data-testid="value-src" style="display:block" title="${esc(BR ? P("Preço no Brasil: menor anúncio na MYP Cards para cópias normais; TCGplayer convertido para foil e cartas sem anúncio lá", "Price in Brazil: lowest MYP Cards listing for normal copies; TCGplayer converted for foils and cards not listed there") : P("Preço do TCGplayer convertido para reais, atualizado todo dia", "TCGplayer price converted to reais, updated daily"))}">${esc(share >= 100 ? "MYP Cards" : share > 0 ? P(`${share}% MYP · resto TCG`, `${share}% MYP · rest TCG`) : priceSrc)}</small>` : ""}</a>
       <div class="stat"><b>${lent.toLocaleString(LOC)}</b><span>${Tx("Lent out")}</span></div></div>${PRJ && unpriced ? `<p class="micro muted" style="margin:var(--sp-1) 0 0" data-testid="value-unpriced">${esc(unpriced === 1 ? P("+ 1 carta sem preço (fora do valor estimado)", "+ 1 card with no price (not in the estimated value)") : P(`+ ${unpriced.toLocaleString(LOC)} cartas sem preço (fora do valor estimado)`, `+ ${unpriced.toLocaleString(LOC)} cards with no price (not in the estimated value)`))}</p>` : ""}${PRJ && estimated ? `<p class="micro muted" style="margin:var(--sp-1) 0 0" data-testid="value-estimated" title="${esc(estNote())}">${esc(estimated === 1 ? P("Inclui 1 foil com preço estimado (sem cotação foil; usamos o preço normal)", "Includes 1 foil at an estimated price (no foil price; the normal price is used)") : P(`Inclui ${estimated.toLocaleString(LOC)} foil com preço estimado (sem cotação foil; usamos o preço normal)`, `Includes ${estimated.toLocaleString(LOC)} foils at an estimated price (no foil price; the normal price is used)`))}</p>` : ""}`;
   }
   // "JA", "IT", "+2": the languages of a card's copies other than the collection's default (src/site/cardlang.js)

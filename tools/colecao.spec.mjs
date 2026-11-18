@@ -899,3 +899,31 @@ test('Mais ações stays open (and keeps the focus) when the header is drawn aga
   await page.getByTestId('export').click();                                   // and the choice still works
   await expect(page.getByTestId('export-go')).toBeVisible();
 });
+
+// ---------- the estimated value on top fits its tile on a phone (reported 18/11 on an iPhone: "R$ 24.451,…" cut off) ----------
+for (const [value, shown] of [[24451.37, 'R$ 24.451'], [1234567.89, 'R$ 1.234.568'], [987.65, 'R$ 987,65']]) {
+  for (const width of [320, 360, 390, 430, 768]) {
+    test(`value ${shown} fits its tile at ${width}px (no cut, no spill into "Emprestadas")`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await setup(page, { collection: { 'LOR10-10': { n: 1, f: 0 } } });
+      await page.route('**/data/prices.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ generated_at: '2026-11-17T09:00:00Z', usd_brl: 5.4, prices: { 'LOR10-10': { n: value, nl: value } } }) }));
+      await page.goto(BASE);
+      const b = page.locator('[data-testid="to-prices"] b');
+      await expect(b).toHaveText(shown);
+      if (value >= 1000) await expect(b).toHaveAttribute('title', /,\d\d$/);          // the exact value, with cents
+      const m = await page.evaluate(() => {
+        const tile = document.querySelector('[data-testid="to-prices"]'), t = tile.getBoundingClientRect();
+        const others = [...document.querySelectorAll('[data-testid="coll-stats"] > *')].filter((e) => e !== tile).map((e) => e.getBoundingClientRect());
+        const overlaps = others.filter((o) => o.left < t.right - 0.5 && o.right > t.left + 0.5 && o.top < t.bottom - 0.5 && o.bottom > t.top + 0.5).length;
+        const b = tile.querySelector('b');
+        return { over: b.scrollWidth - b.clientWidth, right: b.getBoundingClientRect().right, tileRight: t.right, overlaps, size: parseFloat(getComputedStyle(b).fontSize), page: document.documentElement.scrollWidth - innerWidth };
+      });
+      expect(m.over, 'the number is not cut').toBeLessThanOrEqual(0);
+      expect(m.right, 'the number stays inside its tile').toBeLessThanOrEqual(m.tileRight);
+      expect(m.overlaps, 'the tile does not overlap another').toBe(0);
+      expect(m.size, 'the number stays readable (16px or more)').toBeGreaterThanOrEqual(16);
+      expect(m.page, 'no sideways scroll').toBeLessThanOrEqual(0);
+      if (process.env.SHOT_DIR && value === 24451.37) await page.locator('[data-testid="coll-stats"]').screenshot({ path: `${process.env.SHOT_DIR}/valor-${width}.png` });
+    });
+  }
+}
