@@ -10,8 +10,8 @@ name: Daily TCGplayer prices
 #      dispara os release checks e o deploy da main. Nada de bypass: a ruleset decide o merge.
 # Sem o app, o PR e aberto pelo GITHUB_TOKEN e os checks esperam "Approve workflows to run" + merge manual.
 on:
-  schedule:
-    - cron: "23 10 * * *"   # 07:23 em Sao Paulo
+  # Agendamento TCGplayer desativado na migração para LigaLorcana.
+  # Reativação somente por nova aprovação explícita.
   workflow_dispatch:
 
 permissions:
