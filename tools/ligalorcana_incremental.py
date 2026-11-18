@@ -5,7 +5,10 @@ from collections import Counter
 from datetime import datetime,date
 from pathlib import Path
 from zoneinfo import ZoneInfo
-from tools.ligalorcana_release_candidate import captures,master_rows,resolve,parse_finish,reviewed_map,FINISHES,blob
+if __package__:
+    from .ligalorcana_release_candidate import captures,master_rows,resolve,parse_finish,reviewed_map,FINISHES,blob
+else:
+    from ligalorcana_release_candidate import captures,master_rows,resolve,parse_finish,reviewed_map,FINISHES,blob
 SP=ZoneInfo('America/Sao_Paulo')
 def run(source,cards_path,prices_path,map_path,out):
     cards=master_rows(json.loads(Path(cards_path).read_text('utf-8-sig')))
