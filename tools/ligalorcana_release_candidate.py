@@ -15,7 +15,9 @@ def blob(obj): return (json.dumps(obj,ensure_ascii=False,sort_keys=True,indent=2
 def digest(data): return hashlib.sha256(data).hexdigest()
 def norm(value):
     value=html.unescape(html.unescape(str(value or '')))
-    value=re.sub(r'\s*\((?:enchanted|alternate art|foil|promo)\)\s*    value=''.join(x for x in unicodedata.normalize('NFKD',value).casefold() if not unicodedata.combining(x))
+    value=re.sub(r'\s*\((?:enchanted|alternate art|foil|promo)\)\s*$', '', value, flags=re.I)
+    value=value.replace('&',' and ')
+    value=''.join(x for x in unicodedata.normalize('NFKD',value).casefold() if not unicodedata.combining(x))
     return re.sub(r'[^a-z0-9]','',value)
 def master_rows(master):
     cards=master.get('cards',master) if isinstance(master,dict) else master
