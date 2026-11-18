@@ -156,8 +156,15 @@ window.INKWELL_NO_STORE_MSG = "Your games appear here after you sign in.";
     "duels.ink games sync every 30 minutes.": "Os jogos do duels.ink sincronizam a cada 30 minutos.",
     "duels.ink sync needs attention: {error}.": "A sincronização com o duels.ink precisa de atenção: {error}.",
     "duels.ink games sync every 30 minutes. Last check {when}, {n} new.": "Os jogos do duels.ink sincronizam a cada 30 minutos. Última verificação {when}, {n} novos.",
+    "duels.ink games sync every 30 minutes. Last check {when}, 1 new.": "Os jogos do duels.ink sincronizam a cada 30 minutos. Última verificação {when}, 1 novo.",
     "duels.ink games sync every 30 minutes. Last check {when}, nothing new.": "Os jogos do duels.ink sincronizam a cada 30 minutos. Última verificação {when}, nada novo.",
     " {n} more on the next runs.": " Mais {n} nas próximas verificações.",
+    "duels.ink sync needs attention: no check since {when}.": "A sincronização do duels.ink precisa de atenção: nenhuma verificação desde {when}.",
+    " 1 game waits for its replay on duels.ink.": " 1 jogo aguarda o replay no duels.ink.",
+    " {n} games wait for their replay on duels.ink.": " {n} jogos aguardam o replay no duels.ink.",
+    " Part of the history is left for the next checks.": " Parte do histórico ficou para as próximas verificações.",
+    " Games that end after a check arrive on the next one, around {next}.": " Jogos terminados depois de uma verificação chegam na seguinte, por volta de {next}.",
+    " Account: {name}.": " Conta: {name}.",
     "Connect my duels.ink": "Conectar meu duels.ink", "duels.ink": "duels.ink",
     "On duels.ink, create an API token in your account settings (it only reads your games) and paste it here. Your games arrive here as private games, every 30 minutes.": "No duels.ink, crie um token de API nas configurações da sua conta (ele só lê seus jogos) e cole aqui. Seus jogos chegam aqui como privados, a cada 30 minutos.",
     "duels.ink token": "Token do duels.ink", "Connect": "Conectar", "Sync now": "Sincronizar agora", "Change token": "Trocar token", "Disconnect": "Desconectar", "Confirm disconnect": "Confirmar",
@@ -723,8 +730,16 @@ window.INKWELL_CLOUD = (() => {
     const r = d.last_result || {};
     if (!d.last_run_at) return Tx("duels.ink games sync every 30 minutes.");
     if (r.ok === false) return esc(Tx("duels.ink sync needs attention: {error}.", { error: r.error || "unknown error" }));
-    return esc(Tx(r.added ? "duels.ink games sync every 30 minutes. Last check {when}, {n} new." : "duels.ink games sync every 30 minutes. Last check {when}, nothing new.", { when: when(d.last_run_at), n: r.added })
-      + (r.waiting ? Tx(" {n} more on the next runs.", { n: r.waiting }) : ""));
+    // #241: say when the next check is (a game that ends after a check arrives on the next one), what is still
+    // missing and why, and which duels.ink account the token reads; a check that stopped coming is not "nothing new".
+    const last = Date.parse(d.last_run_at), hm = (t) => { try { return new Date(t).toLocaleTimeString(LOC, { hour: "2-digit", minute: "2-digit" }); } catch { return ""; } };
+    if (Date.now() - last > 75 * 60e3) return esc(Tx("duels.ink sync needs attention: no check since {when}.", { when: when(d.last_run_at) }));
+    return esc(Tx(r.added === 1 ? "duels.ink games sync every 30 minutes. Last check {when}, 1 new." : r.added ? "duels.ink games sync every 30 minutes. Last check {when}, {n} new." : "duels.ink games sync every 30 minutes. Last check {when}, nothing new.", { when: when(d.last_run_at), n: r.added })
+      + (r.waiting ? Tx(" {n} more on the next runs.", { n: r.waiting }) : "")
+      + (r.replay_missing ? Tx(r.replay_missing === 1 ? " 1 game waits for its replay on duels.ink." : " {n} games wait for their replay on duels.ink.", { n: r.replay_missing }) : "")
+      + (r.more ? Tx(" Part of the history is left for the next checks.") : "")
+      + Tx(" Games that end after a check arrive on the next one, around {next}.", { next: hm(last + 30 * 60e3) })
+      + (r.account_name ? Tx(" Account: {name}.", { name: r.account_name }) : ""));
   }
 
   // My own duels.ink: connect with a token (supabase/duels_tokens.sql), sync now, change the token, disconnect.
@@ -734,7 +749,7 @@ window.INKWELL_CLOUD = (() => {
     const form = `<span class="small muted">${Tx("On duels.ink, create an API token in your account settings (it only reads your games) and paste it here. Your games arrive here as private games, every 30 minutes.")}</span>
         <div class="row2"><input id="duelsTok" type="password" autocomplete="off" spellcheck="false" maxlength="200" placeholder="${Tx("duels.ink token")}" aria-label="${Tx("duels.ink token")}"><button type="button" class="btn small" id="duelsSave">${Tx("Connect")}</button></div>`;
     return `<details class="coaches" id="duelsBox" ${duelsEditing || duelsMsg || duelsSync?.ok === false ? "open" : ""}><summary>${on ? Tx("duels.ink") : Tx("Connect my duels.ink")}</summary>
-        ${on ? `<span class="small" id="duelsSync">${syncLine(duelsSync)}</span>
+        ${on ? `<span class="small" id="duelsSync" style="display:block">${syncLine(duelsSync)}</span>
         <span class="small"><button type="button" class="linkbtn" id="duelsNow">${Tx("Sync now")}</button> · <button type="button" class="linkbtn" id="duelsEdit">${Tx("Change token")}</button> · <button type="button" class="linkbtn" id="duelsOff">${Tx("Disconnect")}</button></span>` : ""}
         ${!on || duelsEditing ? form : ""}
         <span class="small" id="duelsMsg" aria-live="polite">${esc(duelsMsg)}</span></details>`;

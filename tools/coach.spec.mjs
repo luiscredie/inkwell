@@ -462,3 +462,33 @@ test('R24 stats: a game without inks counts in the totals and shows as "Tintas n
   await expect(page.locator('table.mx tr').first().locator('th').last()).toHaveClass(/noinks/);
   if (process.env.JOGOS_EVIDENCE) await page.screenshot({ path: 'docs/evidencias/jogos/390-estatisticas-sem-tintas.png', fullPage: true });
 });
+
+// ---------- #241: the duels.ink sync line says when the next check is, what is still missing, and which account ----------
+test('#241: the duels.ink sync line names the next check, games waiting for a replay, the account, and a stalled sync', async ({ page }) => {
+  await page.addInitScript((me) => {
+    localStorage.setItem('inkwell-lang', 'pt');
+    const exp = Math.floor(Date.now() / 1000) + 3600;
+    localStorage.setItem('inkwell-counter-auth', JSON.stringify({ access_token: 'x.' + btoa(JSON.stringify({ sub: me, exp })) + '.y', refresh_token: 'r', expires_at: exp, user: { id: me, email: 'luis@example.com' } }));
+  }, ME);
+  let sync = { enabled: true, last_run_at: new Date(Date.now() - 10 * 60e3).toISOString(),
+    last_result: { ok: true, seen: 6, already: 5, added: 1, waiting: 0, replay_missing: 2, more: false, account_name: 'Luís', status: 'pending' } };
+  await page.route('**/rest/v1/**', (route) => {
+    const path = new URL(route.request().url()).pathname.replace(/.*\/rest\/v1\//, '');
+    const json = (v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+    if (path === 'game_logs') return json(ROWS);
+    if (path === 'rpc/my_profile') return json({ display_name: 'Luís', adult: true });
+    if (path === 'rpc/my_duels_sync') return json([sync]);
+    return json(path.startsWith('rpc/') ? null : []);
+  });
+  await page.goto(url('coach/'));
+  const line = page.locator('#duelsSync');
+  await expect(line).toContainText('1 novo.');
+  await expect(line).toContainText('2 jogos aguardam o replay no duels.ink.');
+  await expect(line).toContainText('chegam na seguinte, por volta de');
+  await expect(line).toContainText('Conta: Luís.');
+  // a sync that stopped: not "nada novo"
+  sync = { ...sync, last_run_at: new Date(Date.now() - 3 * 3600e3).toISOString() };
+  await page.reload();
+  await expect(line).toContainText('precisa de atenção: nenhuma verificação desde');
+  await expect(line).not.toContainText('nada novo');
+});
