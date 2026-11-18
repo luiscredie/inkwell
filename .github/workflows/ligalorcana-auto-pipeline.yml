@@ -47,7 +47,7 @@ jobs:
             --source coletas/ligalorcana/coleta \
             --cards site/data/cards.json \
             --output coletas/ligalorcana/mapeamento/ligalorcana-id-map.json \
-            --existing site/data/ligalorcana-id-map.json
+            --existing coletas/ligalorcana/mapeamento/ligalorcana-id-map.json
       - name: Consolidar pacote de aplicacao, sem publicar
         run: |
           python tools/ligalorcana_release_candidate.py \
