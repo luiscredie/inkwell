@@ -2,18 +2,19 @@
 //
 // Port of tools/duels/duels_import.py (convert + Catalog). Each run:
 //   1. checks the caller's key (x-sync-key) against the one in Vault, via public.duels_sync_begin
-//   2. reads match history since the newest duels.ink game already stored (minus 2 days of overlap)
-//   3. downloads and converts up to MAX_PER_RUN games not stored yet, paced under duels.ink's limits
-//   4. upserts them as private games and records the result (public.duels_sync_finish)
+//   2-3. sync.ts: reads match history since the newest stored game (minus OVERLAP_DAYS), imports the games not stored
+//        yet (up to MAX_PER_RUN, paced under duels.ink's limits) and reports what it saw, left out and still misses
+//   4. records the result (public.duels_sync_finish)
 // Tokens: each player's own (saved with public.set_my_duels_token, supabase/duels_tokens.sql);
-// a row without one uses the DUELS_TOKEN secret (read-only duels.ink API token). SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are provided by the platform.
+// a row without one may use the DUELS_TOKEN secret (read-only duels.ink API token) only if it is the row named by the
+// DUELS_TOKEN_USER secret. SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are provided by the platform.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { Catalog, convert, decklistOf, linkMatchFromRow, namesFromEvents, type Json } from "./convert.ts";
+import { Catalog, decklistOf, linkMatchFromRow, namesFromEvents, type Json } from "./convert.ts";
+import { sharedTokenCheck, syncUser } from "./sync.ts";
 
 const BASE = "https://duels.ink";
 // the site address; set the SITE_URL secret when the domain changes
 const CATALOG_URL = (Deno.env.get("SITE_URL") || "https://luiscredie.github.io/inkwell/").replace(/\/*$/, "/") + "data/cards.json";
-const MAX_PER_RUN = 12;
 const UA = "inkwell-duels-sync/1.0 (personal use)";
 const SB = Deno.env.get("SUPABASE_URL")!;
 const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -50,43 +51,6 @@ async function duels(path: string, token: string, binary = false): Promise<any> 
     return JSON.parse(text);
   }
   throw new Error(`gave up on ${path}`);
-}
-
-async function syncUser(userId: string, token: string, cat: Catalog) {
-  const newest = await db(`game_logs?user_id=eq.${userId}&source=eq.duels_ink&select=played_at&order=played_at.desc.nullslast&limit=1`);
-  const since = newest?.[0]?.played_at ? new Date(Date.parse(newest[0].played_at) - 2 * 864e5).toISOString() : null;
-  const me = await duels("/api/me", token);
-  const rows: Json[] = [];
-  let cursor: string | null = null;
-  for (let page = 0; page < 8; page++) {
-    const q = new URLSearchParams({ format: "json", limit: "250", ...(cursor ? { cursor } : {}), ...(since ? { from: since } : {}) });
-    const res = await duels(`/api/me/match-history?${q}`, token);
-    rows.push(...(res?.games || []));
-    cursor = res?.next_cursor || null;
-    if (!cursor || !since) break;          // first run without a stored game: the newest page is enough here
-    await sleep(3100);
-  }
-  const wanted = rows.filter((r) => ["win", "loss", "draw"].includes(r.result) && !r.opp_is_bot);
-  const ids = wanted.map((r) => `duels-${r.game_id}`);
-  const have = new Set<string>();
-  for (let i = 0; i < ids.length; i += 100) {
-    const chunk = ids.slice(i, i + 100).map((x) => `"${x}"`).join(",");
-    for (const r of (await db(`game_logs?user_id=eq.${userId}&game_id=in.(${chunk})&select=game_id`)) || []) have.add(r.game_id);
-  }
-  const todo = wanted.filter((r) => !have.has(`duels-${r.game_id}`)).sort((a, b) => String(a.started_at).localeCompare(String(b.started_at))).slice(0, MAX_PER_RUN);
-  const logs: Json[] = [];
-  for (const r of todo) {
-    const events = await duels(`/g/${encodeURIComponent(r.game_id)}`, token, true);
-    if (events) logs.push(convert(r, events, cat, me?.name || "Me"));
-    await sleep(2100);
-  }
-  if (logs.length) {
-    await db("game_logs?on_conflict=user_id,game_id", {
-      method: "POST", headers: { Prefer: "resolution=ignore-duplicates,return=minimal" },
-      body: JSON.stringify(logs.map((l) => ({ user_id: userId, game_id: l.game_id, source: "duels_ink", played_at: l.played_at, log: l, visibility: "private" }))),
-    });
-  }
-  return { seen: wanted.length, already: have.size, added: logs.length, waiting: Math.max(0, wanted.length - have.size - logs.length) };
 }
 
 // Rewrites my deck list in the duels.ink games already stored, from match history (fixes lists that lost cards
@@ -154,17 +118,30 @@ Deno.serve(async (req) => {
   const users: Json[] = await db("rpc/duels_sync_begin", { method: "POST", body: JSON.stringify(only ? { p_key: key, p_user: only } : { p_key: key }) }).catch(() => null);
   if (!users) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Content-Type": "application/json" } });
   const fallback = (Deno.env.get("DUELS_TOKEN") || "").trim();
+  // the Inkwell user id the shared token belongs to; unset = the shared token is not used (docs/duels-sync-241.md)
+  const owner = (Deno.env.get("DUELS_TOKEN_USER") || "").trim() || null;
   const out: Json[] = [];
   let cat: Catalog | null = null;
   for (const u of users) {
     let result: Json;
     try {
+      // a row without its own token may use the shared one only if DUELS_TOKEN_USER names it (sync.ts: sharedTokenCheck)
+      const shared = !u.token;
       const token = String(u.token || fallback).trim();
       if (!/^[0-9a-f]{96}$/i.test(token)) throw new Error(u.token ? "the duels.ink token is malformed" : "no duels.ink token saved");
       cat ??= new Catalog((await (await fetch(CATALOG_URL)).json()).cards || []);
-      result = { ok: true, ...(only && body?.refresh_decks === true ? await refreshDecks(u.user_id, token, cat) : await syncUser(u.user_id, token, cat)) };
+      const io = { duels: (p: string, bin = false) => duels(p, token, bin), db, sleep };
+      const refresh = only && body?.refresh_decks === true;
+      if (refresh && shared) { const no = await sharedTokenCheck(u.user_id, await duels("/api/me", token), io, owner); if (no) throw new Error(no); }
+      result = { ok: true, ...(refresh
+        ? await refreshDecks(u.user_id, token, cat)
+        : await syncUser(u.user_id, cat, io, { state: u.state ?? null, ...(shared ? { shared: { ownerId: owner } } : {}) })) };
+      if (!result.state && u.state) result.state = u.state;          // a deck refresh keeps the sync position
+      // duels_sync_begin without the state column (supabase/duels_sync_state.sql not run yet): say so, plainly
+      if (!("state" in u)) result.state_read = false;
     } catch (e) {
-      result = { ok: false, error: String((e as Error).message || e).slice(0, 300) };
+      // keep where the sync was (scan position, games waiting for a replay): a failed run must not lose it
+      result = { ok: false, error: String((e as Error).message || e).slice(0, 300), ...(u.state ? { state: u.state } : {}) };
     }
     await db("rpc/duels_sync_finish", { method: "POST", body: JSON.stringify({ p_key: key, p_user: u.user_id, p_result: result }) }).catch(() => {});
     out.push({ user: u.user_id, ...result });
