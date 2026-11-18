@@ -161,7 +161,7 @@
   // ---------- Painel: supabase/site_stats.sql ----------
   // one load at a time: render() starts a load when there are no numbers yet, and this draws the skeleton first —
   // without the flag the two called each other until the stack overflowed, firing ~1000 admin_stats queries
-  let statLoading = 0, metrics = null, metricsErr = "";
+  let statLoading = 0, metrics = null, metricsErr = "", tasks = null, tasksErr = "";
   const PP = (p, e) => (lang === "pt" ? p : e);
   // ---------- issue #145, P0-B: the product metrics (supabase/metrics_p0.sql). Real counts only: zero shows as zero. ----------
   const EVENT_NAME = { page_view: ["Páginas vistas", "Pages viewed"], try_deck_started: ["Começou a testar um deck", "Started trying a deck"], deck_sample_loaded: ["Carregou o deck de exemplo", "Loaded the example deck"],
@@ -210,16 +210,48 @@
         <li>${PP("Não contamos administradores, navegadores automáticos nem quem pede \"não rastrear\" (DNT/GPC). Nada de e-mail, nome, código de entrada ou conteúdo.", "Admins, automated browsers and \"do not track\" (DNT/GPC) browsers are not counted. No e-mail, name, sign-in code or content.")}</li>
         <li>${PP(`Eventos guardados por ${m.retention_days || 90} dias` + (m.first_event_at ? `; o mais antigo é de ${dd(m.first_event_at)}.` : "."), `Events kept ${m.retention_days || 90} days` + (m.first_event_at ? `; the oldest is from ${dd(m.first_event_at)}.` : "."))}</li></ul></details></section>`;
   }
+  // ---------- roadmap 2027, R02: the task events (supabase/metrics_tasks.sql; docs/metricas.md, "Tarefas") ----------
+  // Visits = tabs in which the task happened at least once. No rate is shown when its base is zero or smaller than the part.
+  const TASKS = [["Início no celular", "Home on phones", [["home_keep_deck", "Tocou em Continuar meu deck", "Tapped Continue my deck"], ["home_keep_collection", "Tocou em Minha coleção", "Tapped My collection"],
+      ["home_keep_event", "Tocou no próximo evento", "Tapped the next event"], ["home_first_collection", "Conta nova: Cadastrar coleção", "New account: Add collection"],
+      ["home_first_deck", "Conta nova: Importar deck", "New account: Import a deck"], ["home_first_event", "Conta nova: Procurar campeonato", "New account: Find a tournament"]]],
+    ["Coleção", "Collection", [["scan_open", "Abriu o scanner", "Opened the scanner"], ["scan_saved", "Salvou cartas escaneadas", "Saved scanned cards"], ["scan_fixed", "Corrigiu o scanner (tirou carta da lista)", "Fixed the scanner (removed a card)"],
+      ["scan_asked", "O scanner perguntou a edição", "The scanner asked which printing"], ["import_open", "Abriu Importar", "Opened Import"], ["import_done", "Concluiu uma importação", "Finished an import"]]],
+    ["Amigos, eventos e jogos", "Friends, events and games", [["loan_requested", "Pediu carta emprestada (Decks › Faltando)", "Asked to borrow (Decks › Missing)"], ["loan_saved", "Registrou um empréstimo (Trocas)", "Logged a loan (Trades)"],
+      ["event_marked", "Marcou um evento", "Marked an event"], ["game_added", "Adicionou jogos", "Added games"]]]];
+  // Ratios between counts of DIFFERENT visits in the period, not conversion rates: nobody is followed from one step to
+  // the next, so a visit that fixed the scanner is not necessarily one of the visits that saved. Shown as a ratio
+  // ("0,25 · 2 ÷ 8 visitas"), never as a percentage of people; no ratio when the base is zero.
+  const RATES = [["scan_fixed", "scan_saved", "Scanner: com correção ÷ que salvaram", "Scanner: fixed ÷ saved"],
+    ["import_done", "import_open", "Importar: concluíram ÷ abriram", "Import: finished ÷ opened"],
+    ["scan_saved", "scan_open", "Scanner: salvaram ÷ abriram", "Scanner: saved ÷ opened"]];
+  function tasksHtml() {
+    if (tasksErr) return `<section class="card" data-testid="tasks" style="margin-bottom:var(--sp-4)"><b>${PP("Tarefas", "Tasks")}</b><p class="small muted" data-testid="tasks-error" style="margin:var(--sp-2) 0 0">${esc(tasksErr)}</p></section>`;
+    if (!tasks) return "";
+    const ev = new Map((tasks.events || []).map((e) => [e.name, e])), vis = (k) => (ev.has(k) ? +ev.get(k).visits || 0 : null);
+    const rate = ([a, b, pt, en]) => { const x = vis(a), y = vis(b), ok = x != null && y != null && y > 0;
+      const v = ok ? (x / y).toLocaleString(LOC, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—";
+      return `<div class="stat" data-testid="rate-${a}"><b>${v}</b><span>${esc(PP(pt, en))}</span><small class="micro muted" style="display:block">${ok ? esc(PP(`${num(x)} ÷ ${num(y)} visitas`, `${num(x)} ÷ ${num(y)} visits`)) : esc(PP("sem visitas na base", "no visits in the base"))}</small></div>`; };
+    const rows = TASKS.map(([gpt, gen, list]) => `<tr><th colspan="3" scope="colgroup" style="text-align:left">${esc(PP(gpt, gen))}</th></tr>` + list.map(([k, pt, en]) => { const e = ev.get(k);
+      return `<tr data-task="${k}"><td>${esc(PP(pt, en))} <code class="micro muted">${k}</code></td><td>${e ? num(e.visits) : "—"}</td><td>${e ? num(e.count) : "—"}</td></tr>`; }).join("")).join("");
+    return `<section class="card" data-testid="tasks" style="margin-bottom:var(--sp-4)"><div class="hd"><h3>${PP("Tarefas", "Tasks")}</h3><span class="small muted">${esc(PP(`últimos ${tasks.days} dias`, `last ${tasks.days} days`))}</span></div>
+      <p class="small" style="margin:var(--sp-3) 0 0" data-testid="rates-note"><b>${PP("Razões entre visitas, não conversões.", "Ratios between visits, not conversions.")}</b> <span class="muted">${PP("Cada número divide duas contagens de visitas diferentes no período. Ninguém é acompanhado de uma etapa para a outra, então não dizem quantas pessoas que abriram depois salvaram.", "Each number divides two counts of different visits in the period. Nobody is followed from one step to the next, so they do not say how many people who opened then saved.")}</span></p>
+      <div class="stats-row" style="margin-top:var(--sp-2)">${RATES.map(rate).join("")}</div>
+      <div class="st-wrap" style="margin-top:var(--sp-3)"><table class="st-table" data-testid="tasks-table"><thead><tr><th>${PP("Tarefa", "Task")}</th><th>${PP("Visitas", "Visits")}</th><th>${PP("Vezes", "Times")}</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <p class="micro muted" style="margin:var(--sp-2) 0 0">${PP("Visita = aba em que a tarefa aconteceu ao menos uma vez; não são pessoas nem quantidades de cartas ou jogos. As razões dividem contagens de visitas diferentes; não são taxas de conversão. Tempo por tarefa não é medido. São dados iniciais: indicam onde olhar, não concluem nada.", "Visit = a tab in which the task happened at least once; not people, nor numbers of cards or games. The ratios divide counts of different visits; they are not conversion rates. Time per task is not measured. Early data: it shows where to look, it concludes nothing.")}</p></section>`;
+  }
   async function loadStats() {
     const mine = ++statLoading;
     statErr = ""; stats = null; render();
     let r = null, err = "";
+    const tp = rpc("admin_task_metrics", { p_days: statDays }).then((x) => (x && typeof x === "object" && !Array.isArray(x) ? { x } : { e: "empty" }), (e) => ({ e: String(e?.message || e) }));
     const mp = rpc("admin_metrics", { p_days: statDays }).then((x) => (x && typeof x === "object" && !Array.isArray(x) ? { x } : { e: "empty" }), (e) => ({ e: String(e?.message || e) }));   // handled now: no unhandled rejection
     try { r = await rpc("admin_stats", { p_days: statDays }); if (!r || typeof r !== "object") err = Tx("Couldn't load."); }
     catch (e) { err = /admin_stats|404|PGRST202/.test(String(e?.message || e)) ? Tx("Run supabase/site_stats.sql to start counting.") : Tx("Couldn't load."); }
-    const m = await mp;
+    const [m, t] = await Promise.all([mp, tp]);
     if (mine !== statLoading) return;   // another period was picked meanwhile: that answer wins
     metrics = m.x || null; metricsErr = m.e ? (/admin_metrics|404|PGRST202/.test(m.e) ? PP("Rode supabase/metrics_p0.sql para ver as métricas P0.", "Run supabase/metrics_p0.sql to see the P0 metrics.") : Tx("Couldn't load.")) : "";
+    tasks = t.x || null; tasksErr = t.e ? (/admin_task_metrics|404|PGRST202/.test(t.e) ? PP("Rode supabase/metrics_tasks.sql para ver as tarefas.", "Run supabase/metrics_tasks.sql to see the tasks.") : Tx("Couldn't load.")) : "";
     statLoading = 0; stats = err ? null : r; statErr = err;
     render();
   }
@@ -239,14 +271,14 @@
   const num = (n) => Number(n || 0).toLocaleString(LOC);
   function statsHtml() {
     const seg = `<div class="seg" role="group" aria-label="${Tx("Period")}" style="margin:var(--sp-3) 0">${[7, 14, 30, 90].map((d) => `<button type="button" data-days="${d}" aria-pressed="${statDays === d}">${Tx("{n} days", { n: d })}</button>`).join("")}</div>`;
-    if (statErr) return seg + metricsHtml() + `<p class="muted" data-testid="stats-error">${esc(statErr)}</p>`;
+    if (statErr) return seg + metricsHtml() + tasksHtml() + `<p class="muted" data-testid="stats-error">${esc(statErr)}</p>`;
     if (!stats) return seg + `<div class="skel" style="height:240px"></div>`;
     const t = stats.totals || {}, series = stats.series || [], va = +t.visits_anon || 0;
     const kpi = (v, l, sub, id) => `<div class="stat" data-testid="kpi-${id}"><b>${esc(v)}</b><span>${esc(l)}</span>${sub ? `<small class="micro muted" style="display:block">${esc(sub)}</small>` : ""}</div>`;
     const steps = [["Arrived without an account", va], ["Saw 2 or more pages", t.two_plus], ["Tried something", t.tried], ["Opened “Sign in”", t.opened_signin], ["Got the code", t.got_code], ["Signed in", t.signed_in]];
     const max = Math.max(1, ...series.map((x) => +x.visits_anon || 0));
     const dlabel = (d) => new Date(d + "T12:00:00").toLocaleDateString(LOC, { day: "numeric", month: "short" });
-    return `${seg}${metricsHtml()}
+    return `${seg}${metricsHtml()}${tasksHtml()}
       <div class="stats-row four" data-testid="stats-kpis">${kpi(num(va), Tx("Visits without an account"), Tx("{p}% left on the first page", { p: pct(t.bounced, va) }), "visits")}
         ${kpi(num(t.signups), Tx("Sign-ups"), Tx("{n} confirmed the e-mail", { n: num(t.signups_confirmed) }), "signups")}
         ${kpi(num((+t.profiles_public || 0) + (+t.profiles_private || 0)), Tx("New profiles"), Tx("{a} public · {b} private", { a: num(t.profiles_public), b: num(t.profiles_private) }), "profiles")}
