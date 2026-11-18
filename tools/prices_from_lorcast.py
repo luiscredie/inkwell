@@ -219,7 +219,7 @@ def main() -> int:
         "tcg_prices": dict(sorted(fresh.items())),
         "prices": dict(sorted(combined.items())),
     }
-    PRICES.write_text(json.dumps(doc, ensure_ascii=False, separators=(",", ":")) + "\\n", encoding="utf-8")
+    PRICES.write_text(json.dumps(doc, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
     print(f"{tcg} TCGplayer cards, {len(active_liga)} recent Liga cards, {fallback_count} fallback finishes")
     if a.history:
         print(f"price-history-tcg.json: {add_history(today_sp(), a.rate, fresh)} snapshots")
