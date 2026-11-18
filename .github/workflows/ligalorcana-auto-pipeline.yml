@@ -116,7 +116,7 @@ jobs:
         run: |
           mkdir -p /tmp/ligalorcana-release
           git worktree add --detach /tmp/ligalorcana-release origin/main
-          python tools/ligalorcana_apply_candidate.py --package "$PACKAGE" --site-root /tmp/ligalorcana-release/site --write
+          python tools/ligalorcana_apply_candidate.py --package "$PACKAGE" --site-root /tmp/ligalorcana-release/site --map coletas/ligalorcana/mapeamento/ligalorcana-id-map.json --write
           (
             cd /tmp/ligalorcana-release
             python tools/refresh_data_manifest.py --root site
