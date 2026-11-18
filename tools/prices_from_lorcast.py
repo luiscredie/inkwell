@@ -193,7 +193,9 @@ def main() -> int:
         for finish, keys in (("normal", ("nl", "n", "nh")), ("foil", ("fl", "f", "fh"))):
             if not all(k in source_entry for k in keys):
                 continue
-            last = ages.get(cid, {}).get(finish) or old.get("liga_date")
+            last = ages.get(cid, {}).get(finish)
+            # Legacy Liga values without a per-card timestamp are stale;
+            # never re-date them using the latest edition's liga_date.
             try:
                 last_date = datetime.fromisoformat(str(last).replace("Z", "+00:00")).date()
                 active = 0 <= (today - last_date).days < 5
