@@ -450,7 +450,7 @@ table.stats td.n { text-align: right; }
   // a pane with no ink chosen (R24: inks are optional): Inkwell gold, no ink symbol
   const NEUTRAL = "#c9a85a";
   const L = {
-    pt: { you: "Você", opp: "Oponente", player: "Jogador", undo: "Desfazer", newGame: "Novo jogo", newMatch: "Nova partida", settings: "Ajustes", judge: "Mostrar ao juiz", close: "Fechar",
+    pt: { you: "Você", opp: "Oponente", player: "Jogador", undo: "Desfazer", newGame: "Próximo jogo", newMatch: "Nova partida", settings: "Ajustes", judge: "Mostrar ao juiz", close: "Fechar",
       lang: "Idioma", langName: "English", players: "Jogadores", playersSub: "1 conta só o seu lore", bestOf: "Partida", magic: "Magia animada", magicSub: "Brilhos e tinta subindo da sua borda",
       decks: "Pedir as tintas ao começar", decksSub: "Seu deck no início, o do oponente no fim (2 jogadores). Desligado, o contador começa direto e você informa as tintas depois, se quiser", tour: "Modo torneio", tourSub: "Deck do oponente só ao fim da partida (Regras §5.2)",
       flip: "Virar os painéis do outro lado", history: "Partidas registradas", none: "Nenhuma partida registrada ainda.",
@@ -462,7 +462,7 @@ table.stats td.n { text-align: right; }
       clock: "Relógio da partida", clockSub: "Toque no relógio para começar; toque de novo para pausar e continuar", off: "Desligado",
       turnMode: "Modo turno a turno", turnModeSub: "Cada jogador passa o turno no contador; um cronômetro mede o turno", startTurn: "Começar meu turno", passTurn: "Passar turno", yourTurnTime: "seu último turno", timeUp: "Tempo!", turn: "Turno",
       confirmNew: "Começar nova partida? O placar volta a zero.", yes: "Sim", cancel: "Cancelar", colors: "Tintas", clear: "Apagar histórico", cleared: "Histórico apagado.", game: "Jogo", vs: "vs" },
-    en: { you: "You", opp: "Opponent", player: "Player", undo: "Undo", newGame: "New game", newMatch: "New match", settings: "Settings", judge: "Show the judge", close: "Close",
+    en: { you: "You", opp: "Opponent", player: "Player", undo: "Undo", newGame: "Next game", newMatch: "New match", settings: "Settings", judge: "Show the judge", close: "Close",
       lang: "Language", langName: "Português", players: "Players", playersSub: "1 counts only your lore", bestOf: "Match", magic: "Animated magic", magicSub: "Sparkles and ink rising from your edge",
       decks: "Ask for the inks at the start", decksSub: "Your deck at the start, the opponent's at the end (2 players). Off, the counter starts right away and you can add the inks later", tour: "Tournament mode", tourSub: "Opponent's deck only when the match ends (Rules §5.2)",
       flip: "Turn the panes on the far side", history: "Recorded matches", none: "No matches recorded yet.",
@@ -1214,7 +1214,7 @@ table.stats td.n { text-align: right; }
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") wake(); });
   wake();
   build();
-  // "Novo jogo" in Jogos opens ../counter/?new: a new match, with no inks. A match in play asks first.
+  // "Nova partida" in Jogos opens ../counter/?new: a new match, with no inks. A match in play asks first.
   if (new URLSearchParams(location.search).has("new")) {
     try { window.history.replaceState(null, "", location.pathname); } catch { /* file: */ }   // (history is the counter's own history screen)
     const inPlay = s.match && !s.matchDone && (s.match.games?.length || seats().some((x) => s.lore[x] > 0));

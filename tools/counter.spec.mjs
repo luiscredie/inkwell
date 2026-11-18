@@ -349,7 +349,7 @@ test('R24: the setting that asks for the inks at the start is named for what it 
   await expect(page.getByText('Desligado, o contador começa direto e você informa as tintas depois, se quiser', { exact: false })).toBeVisible();
 });
 
-// ---------- R24 (reported 18/11): "Novo jogo" keeps the last match's inks, and unpicking them does not stick ----------
+// ---------- R24 (reported 18/11): "Novo jogo" in Jogos (now "Nova partida") kept the last match's inks, and unpicking them does not stick ----------
 async function seeded(page, state) {
   await page.addInitScript(([st]) => {
     if (sessionStorage.getItem('t')) return; sessionStorage.setItem('t', '1');
@@ -360,7 +360,7 @@ async function seeded(page, state) {
 const saved = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('inkwell-lorecounter-v3') || '{}'));
 const lastMatch = { started: '2026-11-18T12:00:00Z', format: 'core', tour: true, players: 2, best_of: 3, me: { inks: ['Ruby', 'Amethyst'] }, opp: { inks: ['Sapphire'] }, games: [{ winner: 'p1' }, { winner: 'p1' }] };
 
-test('R24: "Novo jogo" (counter/?new) after a finished match starts a new one with no inks, nothing carried over', async ({ page }) => {
+test('R24: "Nova partida" from Jogos (counter/?new) after a finished match starts a new one with no inks, nothing carried over', async ({ page }) => {
   await seeded(page, { color: { p1: ['Ruby', 'Amethyst'], p2: ['Sapphire'], p3: ['Emerald'], p4: ['Amber'] }, match: lastMatch, matchDone: true, wins: { p1: 2, p2: 0, p3: 0, p4: 0 } });
   await page.goto(BASE + '?new');
   await expect(page.locator('#k1 b')).toHaveCount(0);                    // no ink symbol on either pane
@@ -372,7 +372,7 @@ test('R24: "Novo jogo" (counter/?new) after a finished match starts a new one wi
   expect(await page.evaluate(() => location.search)).toBe('');           // a reload does not start another one
 });
 
-test('R24: "Novo jogo" while a match is being played asks first; Cancelar keeps the score, Sim starts clean', async ({ page }) => {
+test('R24: "Nova partida" from Jogos while a match is being played asks first; Cancelar keeps the score, Sim starts clean', async ({ page }) => {
   await seeded(page, { color: { p1: ['Ruby'], p2: ['Sapphire'], p3: ['Emerald'], p4: ['Amber'] }, match: { ...lastMatch, games: [] }, lore: { p1: 7, p2: 3, p3: 0, p4: 0 } });
   await page.goto(BASE + '?new');
   await expect(page.getByRole('heading', { name: 'Começar nova partida? O placar volta a zero.' })).toBeVisible();
@@ -402,4 +402,12 @@ test('R24: inks unpicked in the menu stay unpicked (after a reload too), and the
   await page.locator('#cp1 [data-ink="Steel"]').click();
   await expect(page.locator('#k1 b')).toHaveCount(2);
   expect((await saved(page)).match.me.inks).toEqual(['Emerald', 'Steel']);
+});
+
+test('the menu says "Próximo jogo" (same match, next game) and "Nova partida" (score back to zero)', async ({ page }) => {
+  await seeded(page, {});
+  await page.goto(BASE);
+  await page.click('#menuBtn');
+  await expect(page.locator('#mGame')).toHaveText('Próximo jogo');
+  await expect(page.locator('#mMatch')).toHaveText('Nova partida');
 });
