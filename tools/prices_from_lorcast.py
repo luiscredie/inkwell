@@ -167,28 +167,60 @@ def main() -> int:
                 out[cid] = e
     tcg = len(out)
     if tcg < MIN_TCG:
-        raise SystemExit(f"only {tcg} cards priced from TCGplayer (expected {MIN_TCG}+): keeping the current prices")
+        raise SystemExit(f"only {tcg} cards priced from TCGplayer (expected {MIN_TCG}+): keeping current prices")
     fresh = dict(out)
-    liga = old.get("liga_prices")   # the last Liga Lorcana prices, for cards TCGplayer does not price
-    if not isinstance(liga, dict):
-        liga = {cid: e for cid, e in old["prices"].items() if cid not in out}   # first run after the switch: what TCGplayer did not price
-    m = re.search(r"Liga Lorcana (\d{4}-\d{2}-\d{2})", str(old.get("source") or ""))
-    liga_date = old.get("liga_date") or (m.group(1) if m else str(old.get("generated_at"))[:10])
-    for cid, e in liga.items():
-        out.setdefault(cid, e)
+    # Keep independent datasets. Liga prices are the preferred *per-finish*
+    # source until five full local days have elapsed since their last valid
+    # capture. Expired Liga finishes fall back to fresh TCG prices if available.
+    from datetime import date
+    liga = old.get("liga_prices") or {}
+    ages = old.get("ligalorcana_last_valid_at") or {}
+    today = datetime.fromisoformat(today_sp()).date()
+    combined = {cid: dict(v) for cid, v in fresh.items()}
+    # Incomplete Lorcast updates must never delete previously displayed finishes.
+    for cid, previous in old.get("prices", {}).items():
+        if isinstance(previous, dict):
+            dest = combined.setdefault(cid, {})
+            for k, value in previous.items():
+                if k in ("n", "nl", "nh", "f", "fl", "fh"):
+                    dest.setdefault(k, value)
+    active_liga = set()
+    fallback_count = 0
+    for cid, source_entry in liga.items():
+        if not isinstance(source_entry, dict):
+            continue
+        dest = combined.setdefault(cid, {})
+        for finish, keys in (("normal", ("nl", "n", "nh")), ("foil", ("fl", "f", "fh"))):
+            if not all(k in source_entry for k in keys):
+                continue
+            last = ages.get(cid, {}).get(finish) or old.get("liga_date")
+            try:
+                last_date = datetime.fromisoformat(str(last).replace("Z", "+00:00")).date()
+                active = 0 <= (today - last_date).days < 5
+            except (ValueError, TypeError):
+                active = False
+            if active or not all(k in fresh.get(cid, {}) for k in keys):
+                dest.update({k: source_entry[k] for k in keys})
+                if active:
+                    active_liga.add(cid)
+            else:
+                fallback_count += 1
     doc = {
         "schema_version": old.get("schema_version", 2),
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "source": f"TCGplayer market price via Lorcast (USD x {a.rate} = BRL); Liga Lorcana {liga_date} where TCGplayer has no price",
+        "source": "LigaLorcana (<5 days) preferred, TCGplayer via Lorcast fallback",
         "currency": "BRL",
         "usd_brl": a.rate,
-        "sources": {"tcgplayer": tcg, "ligalorcana": len(out) - tcg},
-        "liga_date": liga_date,
-        "liga_prices": dict(sorted((cid, e) for cid, e in liga.items() if cid not in fresh)),
-        "prices": dict(sorted(out.items())),
+        "sources": {"tcgplayer": tcg, "ligalorcana_active": len(active_liga),
+                    "tcgplayer_fallback_finishes": fallback_count},
+        "liga_date": old.get("liga_date"),
+        "liga_prices": dict(sorted(liga.items())),
+        "ligalorcana_last_valid_at": ages,
+        "tcg_prices": dict(sorted(fresh.items())),
+        "prices": dict(sorted(combined.items())),
     }
-    PRICES.write_text(json.dumps(doc, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
-    print(f"{tcg} cards priced from TCGplayer, {len(out) - tcg} kept from Liga Lorcana, {len(out)} in total")
+    PRICES.write_text(json.dumps(doc, ensure_ascii=False, separators=(",", ":")) + "\\n", encoding="utf-8")
+    print(f"{tcg} TCGplayer cards, {len(active_liga)} recent Liga cards, {fallback_count} fallback finishes")
     if a.history:
         print(f"price-history-tcg.json: {add_history(today_sp(), a.rate, fresh)} snapshots")
     return 0
