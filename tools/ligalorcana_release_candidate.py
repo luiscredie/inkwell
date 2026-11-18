@@ -85,7 +85,8 @@ def make_release(source,cards_path,prices_path,history_path,map_path,outdir,min_
     final_day=max(dt.astimezone(BR).date().isoformat() for dt,_ in all_samples)
     by_day={final_day:all_samples};outputs=[]
     for day,samples in sorted(by_day.items()):
-        dest=Path(outdir)/day
+        batch_id=digest(blob(sources))[:12]
+        dest=Path(outdir)/day/batch_id
         if dest.exists():raise FileExistsError(f'immutable package already exists: {dest}')
         previous=preserve_prices(base.get('liga_prices',{}))
         # Preserve only provenance-verified legacy Liga data, never fall back to TCGplayer.
