@@ -121,7 +121,9 @@ def make_release(source,cards_path,prices_path,history_path,map_path,outdir,min_
             for f in FINISHES:
                 vals,st=parse_finish(row,f);status[f]=st
                 if st=='ok':
-                    candidate.update(vals);today.update(vals);ages.setdefault(cid,{})[f]=dt.astimezone(BR).isoformat()
+                    candidate.update(vals)
+                    if dt.astimezone(BR).date().isoformat()==day:today.update(vals)
+                    ages.setdefault(cid,{})[f]=dt.astimezone(BR).isoformat()
                     counts[f+'_ok']+=1;edition_counts[code][f+'_ok']+=1
                 else:
                     counts[f+'_'+st]+=1
