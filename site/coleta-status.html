@@ -47,7 +47,7 @@ function badge(el,label,kind){el.textContent=label;el.className='tag '+(kind||''
 function updateClock(){if(!data)return;put('heartbeat','Último sinal '+since(data.updated_at));put('last-progress',since(data.last_progress_at));put('last-ack',since(data.last_checkpoint_ack_at));
  const age=Date.now()-Date.parse(data.updated_at);const stalled=data.running&&validDate(data.last_progress_at)&&Date.now()-Date.parse(data.last_progress_at)>15*60000;
  const dot=$('health-dot');dot.className='dot';
- if(age>15*60000){put('health','Sem sinal recente');put('health-help','Última transmissão antiga. Verifique o Chrome e a conexão.');dot.classList.add('bad');}
+ if(age>(data.running?15:45)*60000){put('health','Sem sinal recente');put('health-help','Última transmissão antiga. Verifique o Chrome e a conexão.');dot.classList.add('bad');}
  else if(data.attention){put('health','Intervenção necessária');put('health-help','A extensão registrou uma condição que exige atenção.');dot.classList.add('bad');}
  else if(stalled){put('health','Sem progresso recente');put('health-help','A extensão responde, mas não registrou novas cartas há mais de 15 minutos.');dot.classList.add('warn');}
  else if(data.running){put('health','Coleta em andamento');put('health-help','Chrome transmitindo status; acompanhe a edição abaixo.');dot.classList.add('live');}
