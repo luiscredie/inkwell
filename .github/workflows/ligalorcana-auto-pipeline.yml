@@ -19,11 +19,21 @@ jobs:
   processar:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      HAS_APP: ${{ secrets.INKWELL_APP_PRIVATE_KEY != '' && vars.INKWELL_APP_ID != '' }}
     steps:
+      - name: Inkwell bot token
+        id: app
+        if: env.HAS_APP == 'true'
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.INKWELL_APP_ID }}
+          private-key: ${{ secrets.INKWELL_APP_PRIVATE_KEY }}
       - uses: actions/checkout@v4
         with:
           ref: feature/ligalorcana-review-pipeline
           fetch-depth: 0
+          token: ${{ steps.app.outputs.token || github.token }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -107,18 +117,27 @@ jobs:
             python tools/build_site_pages.py --check
             git config user.name "inkwell-prices[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git switch -c auto/ligalorcana-prices
+            BRANCH="auto/ligalorcana-prices-$(basename "$(dirname "$PACKAGE")")-$(basename "$PACKAGE")"
+            git switch -c "$BRANCH"
             git add site/data/prices.json site/data/price-history.json site/data-manifest.json
             git commit -m "prices: snapshot LigaLorcana validado"
-            git push origin HEAD:auto/ligalorcana-prices
+            git push origin "HEAD:$BRANCH"
+            echo "$BRANCH" > /tmp/ligalorcana-release-branch
           )
           echo "ready=true" >> "$GITHUB_OUTPUT"
+          echo "branch=$(cat /tmp/ligalorcana-release-branch)" >> "$GITHUB_OUTPUT"
       - name: Abrir PR de publicacao (sem merge automatico)
         if: steps.staged.outputs.ready == 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app.outputs.token || github.token }}
         run: |
-          gh pr create --base main --head auto/ligalorcana-prices \
+          gh pr create --base main --head "${{ steps.staged.outputs.branch }}" \
             --title "Precos LigaLorcana - proposta automatica" \
             --body "Precos vindos de captura autorizada, conferidos por ID, cobertura, hashes e tests. Sem merge automatico; revisar relatorio em coletas/ligalorcana/aplicar. CI de main obrigatorio." \
             || echo "::notice::PR existente ou sem permissao para criar PR; revisar manualmente."
+
+      - name: Merge automatico somente quando habilitado pelo proprietario
+        if: steps.staged.outputs.ready == 'true' && env.HAS_APP == 'true' && vars.LIGALORCANA_AUTO_MERGE == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: gh pr merge "${{ steps.staged.outputs.branch }}" --auto --merge
