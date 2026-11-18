@@ -274,6 +274,20 @@ window.INKWELL_CLOUD = (() => {
 #cardSheet .big { width: 176px; margin: 0 auto var(--sp-4); border-radius: 12px; }
 .places { display: flex; width: 100%; max-width: 100%; overflow-x: auto; margin: 0 0 var(--sp-3); }
 .places button { white-space: nowrap; }
+/* the estimated value on top never spills into the next tile (reported 18/11 on an iPhone); on the narrowest phones it
+   gets a row of its own, under Cartas and Emprestadas, so it stays large enough to read */
+@media (max-width: 374px) {
+  [data-testid="coll-stats"].stats-row.three { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  [data-testid="coll-stats"] [data-testid="to-prices"] { grid-column: 1 / -1; order: 3; }
+}
+@media (max-width: 480px) {   /* a long value (millions) gets its own row on any phone */
+  [data-testid="coll-stats"].stats-row.three.long { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  [data-testid="coll-stats"].long [data-testid="to-prices"] { grid-column: 1 / -1; order: 3; }
+}
+[data-testid="to-prices"] { min-width: 0; container-type: inline-size; }
+/* the number shrinks only as much as it must to fit its tile: --chars is how many characters it shows */
+[data-testid="to-prices"] b.money { overflow: hidden; font-size: min(var(--fs-stat), calc(100cqi / (var(--chars, 9) * 0.62))); }
+@media (max-width: 480px) { [data-testid="to-prices"] b.money { font-size: min(1.375rem, calc(100cqi / (var(--chars, 9) * 0.62))); } }
 @media (max-width: 480px) { .places button { padding: 0 9px; font-size: var(--fs-micro); } }
 .places .n { color: var(--text-3); font-weight: 600; margin-left: 4px; font-variant-numeric: tabular-nums; }
 .places button[aria-pressed="true"] .n { color: inherit; }
@@ -379,6 +393,21 @@ body.coll-ro .qty button, body.coll-ro .mv, body.coll-ro [data-bq], body.coll-no
 .lang-ask .actions { flex-wrap: wrap; }
 .tag.lang-tag { background: var(--surface-2); color: var(--text); font-weight: 700; letter-spacing: .02em; }
 .lang-sel { width: auto; min-height: 40px; border-radius: var(--r-md); border: 1px solid var(--line-strong); background-color: var(--field); color: var(--text); padding: 0 28px 0 8px; background-position: right 8px center; font: inherit; }
+/* Pacote 2: Escanear is the main action; the rest live in "Mais ações" */
+#headActions { align-items: center; }
+#headActions #openScan { min-height: 44px; }
+.hmore { position: relative; }
+.hmore > summary { list-style: none; min-height: 44px; }
+.hmore > summary::-webkit-details-marker { display: none; }
+.hmore > .menu { display: grid; gap: 2px; position: absolute; top: calc(100% + 8px); right: 0; left: auto; bottom: auto; width: 240px; max-width: calc(100vw - 2 * var(--sp-4)); }   /* anchored to its button (the phone rule in tokens.css pins .menu to the top bar) */
+.hmore .menu-item { min-height: 44px; }
+.hmore:not([open]) > .menu { display: none; }
+@media (max-width: 760px) {
+  #headActions #openScan { flex: 1 1 auto; }
+  .page-head .actions .hmore { flex: none; }
+  .hmore > summary span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }   /* icon only on phones, name kept for screen readers */
+  .hmore > summary { width: 44px; padding: 0; justify-content: center; }
+}
 </style>
 
 <main class="page" id="page">
@@ -576,7 +605,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Ink": "Tinta", "Set": "Set", "Rarity": "Raridade", "Only cards I own": "Só as que tenho", "Only foil": "Só foil", "Only lent out": "Só emprestadas", "Your cards that are with friends": "Cartas suas que estão com amigos",
     "Clear": "Limpar", "Show {n} cards": "Ver {n} cartas", "Remove filter {f}": "Remover filtro {f}", "Close": "Fechar",
     "No cards match these filters.": "Nenhuma carta com esses filtros.", "Clear filters": "Limpar filtros",
-    "Your collection is empty": "Sua coleção está vazia", "Turn off \"Only cards I own\" to add cards with +, or import your collection in Inkwell.": "Desligue \"Só as que tenho\" para adicionar cartas com +, ou importe sua coleção no Inkwell.",
+    "Scan your cards with the camera or import a list from another app. You can also turn off \"Only cards I own\" and add cards with +.": "Escaneie suas cartas com a câmera ou importe uma lista de outro app. Você também pode desligar \"Só as que tenho\" e adicionar cartas com +.", "Your collection is empty": "Sua coleção está vazia", "Turn off \"Only cards I own\" to add cards with +, or import your collection in Inkwell.": "Desligue \"Só as que tenho\" para adicionar cartas com +, ou importe sua coleção no Inkwell.",
     "Legal in Core.": "Vale no Core.", "Legal in Core through the reprint in {s}, nº {n}.": "Vale no Core pela reimpressão em {s}, nº {n}.", "Infinity only: no reprint in a Core set.": "Só no Infinito: não tem reimpressão em set do Core.", "reprint": "reimpressão", "See card {c}": "Ver carta {c}",
     "Check my binder": "Conferir fichário", "Prices": "Preços", "In your binder's order: Core first, then Infinity; ink, cost and name.": "Na ordem do seu fichário: Core primeiro, depois Infinito; tinta, custo e nome.",
     "Infinity": "Infinito", "Dual ink": "Duas tintas", "No ink": "Sem tinta", "cost {c}": "custo {c}", "{ink} · cost {c}": "{ink} · custo {c}",
@@ -612,6 +641,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const LOC = lang === "pt" ? "pt-BR" : "en";
   const money = (v) => (v ?? 0).toLocaleString(LOC, { style: "currency", currency: "BRL" });
   const moneySplit = (v) => { const s = money(v), i = s.lastIndexOf(lang === "pt" ? "," : "."); return i > 0 ? `${esc(s.slice(0, i))}<small>${esc(s.slice(i))}</small>` : esc(s); };
+  // the estimated value on top: from R$ 1.000 in whole reais (an estimate; the cents made it too wide for a phone);
+  // the exact value stays in the tile's title and on Preços
+  const moneyTile = (v) => (v ?? 0) >= 1000 ? esc((v ?? 0).toLocaleString(LOC, { style: "currency", currency: "BRL", maximumFractionDigits: 0, minimumFractionDigits: 0 })) : moneySplit(v);
   const INKS = ["Amber", "Amethyst", "Emerald", "Ruby", "Sapphire", "Steel"];
   const RAR = [["C", "Common"], ["U", "Uncommon"], ["R", "Rare"], ["SR", "Super rare"], ["L", "Legendary"], ["E", "Enchanted"], ["EP", "Epic"], ["I", "Iconic"], ["P", "Promo"]];
   const rarName = (r) => Tx((RAR.find(([k]) => k === r) || [r, r])[1] || "");
@@ -790,8 +822,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     for (const id of Object.keys(coll())) { const { n, f } = inPlace(id), pn = priceOf(id), pf = priceOf(id, true); cards += n + f; value += (pn ?? 0) * n + (pf ?? 0) * f; unpriced += (pn == null ? n : 0) + (pf == null ? f : 0); if (pf != null && f && foilEst(id)) estimated += f; if (mypOf(id) != null) viaMyp += (mypOf(id) || 0) * n; }
     const share = value ? Math.round((viaMyp / value) * 100) : 0;
     const lent = [...lentN.values(), ...lentF.values()].reduce((a, b) => a + b, 0);
-    return `<div class="stats-row three" data-testid="coll-stats"><div class="stat"><b>${cards.toLocaleString(LOC)}</b><span>${Tx("Cards")}</span></div>
-      <a class="stat" href="../precos/?tab=value" data-testid="to-prices" style="text-decoration:none;color:inherit"><b class="money">${PRJ ? moneySplit(value) : "—"}</b><span>${esc(P("Valor estimado", "Estimated value"))} ›</span>${value ? `<small class="micro muted" data-testid="value-src" style="display:block" title="${esc(BR ? P("Preço no Brasil: menor anúncio na MYP Cards para cópias normais; TCGplayer convertido para foil e cartas sem anúncio lá", "Price in Brazil: lowest MYP Cards listing for normal copies; TCGplayer converted for foils and cards not listed there") : P("Preço do TCGplayer convertido para reais, atualizado todo dia", "TCGplayer price converted to reais, updated daily"))}">${esc(share >= 100 ? "MYP Cards" : share > 0 ? P(`${share}% MYP · resto TCG`, `${share}% MYP · rest TCG`) : priceSrc)}</small>` : ""}</a>
+    const valueText = PRJ ? (value >= 1000 ? (value ?? 0).toLocaleString(LOC, { style: "currency", currency: "BRL", maximumFractionDigits: 0 }) : money(value)) : "—";
+    return `<div class="stats-row three${valueText.length > 9 ? " long" : ""}" data-testid="coll-stats"><div class="stat"><b>${cards.toLocaleString(LOC)}</b><span>${Tx("Cards")}</span></div>
+      <a class="stat" href="../precos/?tab=value" data-testid="to-prices" style="text-decoration:none;color:inherit"><b class="money" style="--chars:${valueText.length}"${PRJ && value >= 1000 ? ` title="${esc(money(value))}"` : ""}>${PRJ ? moneyTile(value) : "—"}</b><span>${esc(P("Valor estimado", "Estimated value"))} ›</span>${value ? `<small class="micro muted" data-testid="value-src" style="display:block" title="${esc(BR ? P("Preço no Brasil: menor anúncio na MYP Cards para cópias normais; TCGplayer convertido para foil e cartas sem anúncio lá", "Price in Brazil: lowest MYP Cards listing for normal copies; TCGplayer converted for foils and cards not listed there") : P("Preço do TCGplayer convertido para reais, atualizado todo dia", "TCGplayer price converted to reais, updated daily"))}">${esc(share >= 100 ? "MYP Cards" : share > 0 ? P(`${share}% MYP · resto TCG`, `${share}% MYP · rest TCG`) : priceSrc)}</small>` : ""}</a>
       <div class="stat"><b>${lent.toLocaleString(LOC)}</b><span>${Tx("Lent out")}</span></div></div>${PRJ && unpriced ? `<p class="micro muted" style="margin:var(--sp-1) 0 0" data-testid="value-unpriced">${esc(unpriced === 1 ? P("+ 1 carta sem preço (fora do valor estimado)", "+ 1 card with no price (not in the estimated value)") : P(`+ ${unpriced.toLocaleString(LOC)} cartas sem preço (fora do valor estimado)`, `+ ${unpriced.toLocaleString(LOC)} cards with no price (not in the estimated value)`))}</p>` : ""}${PRJ && estimated ? `<p class="micro muted" style="margin:var(--sp-1) 0 0" data-testid="value-estimated" title="${esc(estNote())}">${esc(estimated === 1 ? P("Inclui 1 foil com preço estimado (sem cotação foil; usamos o preço normal)", "Includes 1 foil at an estimated price (no foil price; the normal price is used)") : P(`Inclui ${estimated.toLocaleString(LOC)} foil com preço estimado (sem cotação foil; usamos o preço normal)`, `Includes ${estimated.toLocaleString(LOC)} foils at an estimated price (no foil price; the normal price is used)`))}</p>` : ""}`;
   }
   // "JA", "IT", "+2": the languages of a card's copies other than the collection's default (src/site/cardlang.js)
@@ -875,7 +908,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       </div>
       ${rows.length ? (v.view === "grid" ? `<div class="cgrid" id="grid">${rows.slice(0, shown).map(gridCard).join("")}</div>` : `<div class="list" id="grid">${rows.slice(0, shown).map(listRow).join("")}</div>`)
         + (rows.length > shown ? `<div class="load-more"><button type="button" class="btn" id="more">${Tx("Show more")}</button></div>` : "")
-        : empty && v.owned ? `<div class="empty">\u003Cimg src="../ui/assets/empty/collection.svg" alt=""><b>${Tx("Your collection is empty")}</b><p>${esc(Tx("Turn off \"Only cards I own\" to add cards with +, or import your collection in Inkwell."))}</p><button type="button" class="btn primary" id="allCards">${Tx("Only cards I own")} ✕</button></div>`
+        : empty && v.owned ? `<div class="empty">\u003Cimg src="../ui/assets/empty/collection.svg" alt=""><b>${Tx("Your collection is empty")}</b><p>${esc(Tx("Scan your cards with the camera or import a list from another app. You can also turn off \"Only cards I own\" and add cards with +."))}</p>${readOnly() ? "" : `<div class="row" style="justify-content:center;gap:var(--sp-2);flex-wrap:wrap"><button type="button" class="btn primary" data-empty-scan><i class="ic i-camera"></i>${Tx("Scan")}</button><button type="button" class="btn" data-empty-import data-testid="empty-import"><i class="ic i-import"></i>${Tx("Import")}</button></div>`}<button type="button" class="btn ghost" id="allCards">${Tx("Only cards I own")} ✕</button></div>`
         : `<div class="empty">\u003Cimg src="../ui/assets/empty/search.svg" alt=""><b>${Tx("No cards match these filters.")}</b><button type="button" class="btn" id="clearAll">${Tx("Clear filters")}</button></div>`}`;
     wire();
     if (keep && $(keep)) { const el = $(keep); el.focus(); try { if (caret != null) el.setSelectionRange(caret, caret); } catch { /* */ } }
@@ -900,6 +933,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     $("openTradePost")?.addEventListener("click", () => openTradePost($("openTradePost")));
     $("clearAll")?.addEventListener("click", () => { v = { ...v, q: "", inks: [], sets: [], rar: [], cost: [], langs: [], foil: false, lent: false }; again(); });
     $("allCards")?.addEventListener("click", () => { v.owned = false; again(); });
+    document.querySelector("[data-empty-scan]")?.addEventListener("click", (e) => openScanner(e.currentTarget));
+    document.querySelector("[data-empty-import]")?.addEventListener("click", (e) => openImport(e.currentTarget));
     $("grid")?.addEventListener("click", (e) => { const b = e.target.closest("[data-card]"); if (b) openCard(b.dataset.card, b); });
   }
 
@@ -1591,10 +1626,30 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     if (me && friendView) {
       $("headActions").innerHTML = `<a class="btn" href="./" data-testid="back-mine"><i class="ic i-chevron-left"></i>${esc(P("Voltar para a minha", "Back to mine"))}</a>`;
     } else if (me) {
+      // Conselho (#244): an empty collection shows Importar next to Escanear, the two ways to start; later it moves to "Mais ações"
+      const fresh = !readOnly() && !Object.values(coll()).some((e) => (+e?.n || 0) + (+e?.f || 0) > 0);
       const all = [...profiles, ...shared];
+      // the header is drawn again when late data arrives (the language state, a sync): an open "Mais ações" stays open,
+      // with the focus where it was, instead of closing under the user's finger
+      const moreWas = $("moreActions"), moreOpen = !!moreWas?.open, focusId = moreWas?.contains(document.activeElement) ? (document.activeElement.id || (document.activeElement.tagName === "SUMMARY" ? "moreSummary" : "")) : "";
       $("headActions").innerHTML = `${all.length > 1 ? `<select class="inline" id="collSrc" data-testid="coll-source" aria-label="${esc(P("Coleção", "Collection"))}">${all.map((x) => `<option value="${esc(x.profile)}" ${x === cur ? "selected" : ""}>${esc(collName(x))}</option>`).join("")}</select>` : ""}
-        <button type="button" class="btn" id="openShare" data-testid="share"><i class="ic i-users"></i>${esc(P("Compartilhar", "Share"))}</button>
-        <button type="button" class="btn" id="openBinder"><i class="ic i-cards"></i>${Tx(homeReady ? "Check stock" : "Check my binder")}</button><button type="button" class="btn" id="openExport" data-testid="export"><i class="ic i-export"></i>${esc(P("Exportar", "Export"))}</button>${lstate() && !readOnly() ? `<button type="button" class="btn" id="openLangs" data-testid="langs"><i class="ic i-globe"></i>${esc(P("Idiomas", "Languages"))}</button>` : ""}${readOnly() ? "" : `<button type="button" class="btn" id="openImport" data-testid="import"><i class="ic i-import"></i>${Tx("Import")}</button><button type="button" class="btn primary" id="openScan"><i class="ic i-camera"></i>${Tx("Scan")}</button>`}`;
+        ${readOnly() ? "" : `<button type="button" class="btn primary" id="openScan" data-testid="scan"><i class="ic i-camera"></i>${Tx("Scan")}</button>`}
+        ${fresh ? `<button type="button" class="btn" id="openImport" data-testid="import"><i class="ic i-import"></i>${Tx("Import")}</button>` : ""}
+        <details class="hmore" id="moreActions" data-testid="more-actions"><summary class="btn" aria-label="${esc(P("Mais ações", "More actions"))}"><i class="ic i-more"></i><span>${esc(P("Mais ações", "More actions"))}</span></summary>
+          <div class="menu sm" data-testid="more-menu">
+            ${readOnly() || fresh ? "" : `<button type="button" class="menu-item" id="openImport" data-testid="import"><i class="ic i-import"></i>${Tx("Import")}</button>`}
+            <button type="button" class="menu-item" id="openExport" data-testid="export"><i class="ic i-export"></i>${esc(P("Exportar", "Export"))}</button>
+            <button type="button" class="menu-item" id="openShare" data-testid="share"><i class="ic i-users"></i>${esc(P("Compartilhar", "Share"))}</button>
+            <button type="button" class="menu-item" id="openBinder"><i class="ic i-cards"></i>${Tx(homeReady ? "Check stock" : "Check my binder")}</button>
+            ${lstate() && !readOnly() ? `<button type="button" class="menu-item" id="openLangs" data-testid="langs"><i class="ic i-globe"></i>${esc(P("Idiomas", "Languages"))}</button>` : ""}
+          </div></details>`;
+      // Pacote 2: one main action (Escanear); the rest in "Mais ações", which closes on a choice, outside tap or Esc
+      const more = $("moreActions");
+      if (moreOpen) more.open = true;
+      if (focusId) (focusId === "moreSummary" ? more.querySelector("summary") : $(focusId))?.focus({ preventScroll: true });
+      more.querySelectorAll(".menu-item").forEach((b) => b.addEventListener("click", () => { more.open = false; }));
+      more.addEventListener("keydown", (e) => { if (e.key === "Escape" && more.open) { more.open = false; more.querySelector("summary").focus(); } });
+      if (!window.__iwMoreOut) { window.__iwMoreOut = true; document.addEventListener("click", (e) => { const m = $("moreActions"); if (m?.open && !m.contains(e.target)) m.open = false; }); }
       $("collSrc")?.addEventListener("change", (e) => useSource(e.target.value));
       $("openShare").onclick = () => openShare($("openShare"));
       $("openExport").onclick = () => openExport($("openExport"));
@@ -1994,7 +2049,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
           for (const d of part) { p.collection[d.card_id] = langApply(p.collection[d.card_id], d.foil ? "f" : "n", d.qty, d.lang); ADDED.set(`${p.profile}|${d.card_id}`, Date.now()); done += d.qty; }
           b.textContent = Tx("Saving… {n}", { n: done });
         }
-        close(); renderAll(); toast(Tx("Collection updated: {n} cards added", { n: done }));
+        close(); renderAll(); toast(Tx("Collection updated: {n} cards added", { n: done })); window.INKWELL_TRACK?.("import_done");
       } catch {
         renderAll();
         $("impMsg").textContent = done ? Tx("Stopped after {n} cards. Import again with “Keep the larger number” to finish without counting twice.", { n: done }) : Tx("Couldn't save. Try again.");
@@ -2192,7 +2247,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     box.querySelectorAll("[data-rq]").forEach((b) => b.onclick = () => {
       const [id, f, lg = ""] = b.closest("[data-rev]").dataset.rev.split(":"), foil = f === "1";
       if (b.dataset.rq === "1") scan.added.push({ id, foil, lang: lg || null });
-      else { const i = scan.added.map((a) => same(a, id, foil, lg)).lastIndexOf(true); if (i >= 0) scan.added.splice(i, 1); }
+      else { const i = scan.added.map((a) => same(a, id, foil, lg)).lastIndexOf(true); if (i >= 0) scan.added.splice(i, 1); window.INKWELL_TRACK?.("scan_fixed"); }   // took a scanned card off the list before saving
       scan.last = scan.added[scan.added.length - 1] || null; showReview();
     });
     $("revDrop").onclick = (e) => {
@@ -2204,12 +2259,13 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       for (const x of reviewGroups()) change(x.id, x.foil ? "f" : "n", x.n, true, homeReady ? scanPlace() : "binder", x.lang || addLangNow());
       if (scan.lang) lastLang = scan.lang;
       scan.saved = scan.added.length; scan.added = []; scan.last = null;
+      window.INKWELL_TRACK?.("scan_saved");
       clearTimeout(pendingTimer); $("scan").close();
     };
     $("revAdd").focus();
   }
   function askWhich(group) {
-    scan.askOpen = true; $("scanGuide")?.classList.add("ask");
+    scan.askOpen = true; $("scanGuide")?.classList.add("ask"); window.INKWELL_TRACK?.("scan_asked");
     scanSay(Tx("Not sure which printing this is. Which one?"));
     const box = $("scanPick");
     box.innerHTML = `<div class="pick" data-testid="scan-pick">${group.slice(0, 6).map((id) => { const c = BY.get(id); return c ? `<button type="button" data-pick="${esc(id)}">${thumb(c, "", false)}</span><span>${esc(setName(c.set))} · nº ${esc(c.num)}</span></button>` : ""; }).join("")}
@@ -2555,7 +2611,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     document.head.insertAdjacentHTML("beforeend", `<link rel="manifest" href="../inkwell.webmanifest"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Inkwell">`);
   }
   const bar = document.createElement("header");
-  bar.className = "appbar";
+  bar.className = me ? "appbar signed" : "appbar";   // signed in: fewer controls in the bar (theme and language are in the account menu)
   // the other language, one tap away: the US flag switches to English, the Brazilian flag to Portuguese
   const FLAG_US = '<svg viewBox="0 0 30 20" width="24" height="16" aria-hidden="true"><rect width="30" height="20" fill="#b22234"/><g fill="#fff">' + [1, 3, 5, 7, 9, 11].map((i) => `<rect y="${(i * 20) / 13}" width="30" height="${20 / 13}"/>`).join("") + '</g><rect width="13" height="10.77" fill="#3c3b6e"/><g fill="#fff">' + [[2, 2], [5, 2], [8, 2], [11, 2], [3.5, 4.5], [6.5, 4.5], [9.5, 4.5], [2, 7], [5, 7], [8, 7], [11, 7], [3.5, 9.3], [6.5, 9.3], [9.5, 9.3]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".7"/>`).join("") + '</g></svg>';
   const FLAG_BR = '<svg viewBox="0 0 30 20" width="24" height="16" aria-hidden="true"><rect width="30" height="20" fill="#009c3b"/><path d="M15 2.2 27.6 10 15 17.8 2.4 10z" fill="#ffdf00"/><circle cx="15" cy="10" r="4.6" fill="#002776"/><path d="M10.6 9.1c2.9-.6 6.2-.2 8.8 1.1" stroke="#fff" stroke-width=".8" fill="none"/></svg>';
@@ -2563,9 +2619,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   bar.innerHTML = `<div class="appbar-in"><a class="brand" href="../feed/">\u003Cimg src="../ink/logo-coin.png" alt="" width="32" height="32">Inkwell</a>
     <nav class="sections" aria-label="${T("Seções", "Sections")}">${NAV.map(([k, href, label, ic]) => `<a href="${href}"${cur(k)} data-iw="${k}"><i class="ic i-${ic}"></i>${label}${k === "trades" ? '<span class="count" data-trades-count hidden></span>' : ""}</a>`).join("")}</nav>
     <div class="end">
-      <button type="button" class="btn ghost icon" id="iwTheme" aria-pressed="${theme === "noite"}" aria-label="${theme === "noite" ? T("Usar o tema claro", "Use the light theme") : T("Usar o tema escuro", "Use the dark theme")}"><i class="ic ${theme === "noite" ? "i-sun" : "i-moon"}"></i></button>
+      ${me ? "" : `<button type="button" class="btn ghost icon" id="iwTheme" aria-pressed="${theme === "noite"}" aria-label="${theme === "noite" ? T("Usar o tema claro", "Use the light theme") : T("Usar o tema escuro", "Use the dark theme")}"><i class="ic ${theme === "noite" ? "i-sun" : "i-moon"}"></i></button>`}
       <a class="btn ghost counter-btn" href="../counter/" aria-label="${T("Abrir o Contador", "Open the Counter")}"><i class="ic i-counter"></i><span>${T("Contador", "Counter")}</span></a>
-      ${flagBtn}
+      ${me ? "" : flagBtn}
       ${me ? `<button type="button" class="btn ghost icon" id="iwFind" aria-label="${T("Buscar pessoas e comunidades", "Search people and communities")}" aria-haspopup="dialog" aria-expanded="false" title="${T("Buscar", "Search")} ( / )"><i class="ic i-search"></i></button>` : ""}
       ${me ? `<button type="button" class="btn ghost icon bell-btn" id="iwBell" aria-label="${T("Notificações", "Notifications")}" aria-haspopup="menu" aria-expanded="false" hidden><i class="ic i-bell"></i><span class="count" id="iwBellN" hidden></span></button>` : ""}
       ${me ? `<button type="button" class="av-btn" id="iwAcct" aria-label="${T("Sua conta", "Your account")}" aria-haspopup="menu" aria-expanded="false"><span class="av" id="iwAv">${esc((me.email || "?")[0].toUpperCase())}</span><span class="count iw-badge" id="iwBadge" hidden></span></button>`
@@ -2593,6 +2649,10 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     menu.innerHTML = html;
     end.append(menu);
     menu.querySelector("[role^=menuitem], button")?.focus();
+    menu.querySelectorAll("[data-theme-pick]").forEach((b) => b.addEventListener("click", () => {
+      setTheme(b.dataset.themePick);
+      menu.querySelectorAll("[data-theme-pick]").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.themePick === theme)));
+    }));
     menu.querySelectorAll("[data-lang-pick]").forEach((b) => b.addEventListener("click", () => {
       if (b.dataset.langPick !== lang) { try { localStorage.setItem("inkwell-lang", b.dataset.langPick); } catch { /* */ } location.reload(); }
     }));
@@ -2614,6 +2674,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   });
   const langSeg = () => `<div class="menu-label">${T("Idioma", "Language")}</div>
     <div class="seg block" role="group" aria-label="${T("Idioma", "Language")}">${[["pt", "Português"], ["en", "English"]].map(([k, l]) => `<button type="button" data-lang-pick="${k}" aria-pressed="${k === lang}">${l}</button>`).join("")}</div>`;
+  const themeSeg = () => `<div class="menu-label">${T("Tema", "Theme")}</div>
+    <div class="seg block" role="group" aria-label="${T("Tema", "Theme")}">${[["dia", T("Claro", "Light")], ["noite", T("Escuro", "Dark")]].map(([k, l]) => `<button type="button" data-theme-pick="${k}" aria-pressed="${k === theme}">${l}</button>`).join("")}</div>`;
   let profileName = "", syncAgo = "", isAdmin = false, news = null, myInvite = null;
   // ---------- "Convidar para o Inkwell": your invite link (perfil/?convite=…); whoever signs up through it gets your friend request ----------
   window.INKWELL_INVITE = async (btn) => {
@@ -2661,9 +2723,11 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     ${isAdmin ? `<a class="menu-item" role="menuitem" href="../admin/"><i class="ic i-shield"></i>Admin</a>` : ""}
     <button type="button" class="menu-item" role="menuitem" data-feedback><i class="ic i-comment"></i>${T("Enviar feedback", "Send feedback")}</button>
     <a class="menu-item" role="menuitem" href="../privacidade/"><i class="ic i-info"></i>${T("Termos e privacidade", "Terms and privacy")}</a>
+    <div class="menu-sep"></div>
+    ${themeSeg()}
     ${langSeg()}
     <div class="menu-sep"></div>
-    <button type="button" class="menu-item" role="menuitem" data-signout><i class="ic i-logout"></i>${T("Sair", "Sign out")}</button>`));
+    <button type="button" class="menu-item" role="menuitem" data-signout><i class="ic i-logout"></i>${T("Sair", "Sign out")}</button>`, "acct-menu"));
   $("iwFlag")?.addEventListener("click", () => { try { localStorage.setItem("inkwell-lang", pt ? "en" : "pt"); } catch { /* */ } location.reload(); });
   $("iwLangBtn")?.addEventListener("click", (e) => openMenu(e.currentTarget, `<div class="menu-label">${T("Idioma", "Language")}</div>
     ${[["pt", "Português"], ["en", "English"]].map(([k, l]) => `<button type="button" class="menu-item" role="menuitemradio" aria-checked="${k === lang}" data-lang-pick="${k}">${l}${k === lang ? '<i class="ic i-check" style="margin-left:auto;color:var(--text)"></i>' : ""}</button>`).join("")}
@@ -2671,15 +2735,16 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   function $(id) { return document.getElementById(id); }
 
   // ---------- light / dark ----------
-  $("iwTheme")?.addEventListener("click", () => {
-    theme = theme === "noite" ? "dia" : "noite";
+  function setTheme(t) {
+    theme = t === "noite" ? "noite" : "dia";
     try { localStorage.setItem("inkwell-theme", theme); } catch { /* the choice lasts this page only */ }
     document.documentElement.dataset.theme = theme;
-    const b = $("iwTheme");
+    const b = $("iwTheme"); if (!b) return;
     b.setAttribute("aria-pressed", String(theme === "noite"));
     b.setAttribute("aria-label", theme === "noite" ? T("Usar o tema claro", "Use the light theme") : T("Usar o tema escuro", "Use the dark theme"));
     b.innerHTML = `<i class="ic ${theme === "noite" ? "i-sun" : "i-moon"}"></i>`;
-  });
+  }
+  $("iwTheme")?.addEventListener("click", () => setTheme(theme === "noite" ? "dia" : "noite"));
 
   // ---------- "Mais" on phones: the modules that are not in the bottom bar ----------
   const more = document.createElement("dialog");

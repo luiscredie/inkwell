@@ -3,6 +3,7 @@
 //   (cd site && python3 -m http.server 8080) &
 //   INKWELL_URL=http://localhost:8080/index.html npx playwright test tools/smoke.spec.mjs
 import { test, expect } from '@playwright/test';
+import { expectNotFound, describe } from './http-origin.mjs';
 
 const ROOT = new URL('./', process.env.INKWELL_URL || 'http://localhost:8080/index.html').href;
 
@@ -34,7 +35,8 @@ test('the simulator address goes to Início', async ({ page }) => {
 
 test('the old app files are not published any more', async ({ request }) => {
   for (const f of ['support.js', 'match-center-engine.js', 'manifest.webmanifest', 'users/luis.json', 'sim/game.js']) {
-    expect((await request.get(ROOT + f)).status(), f).toBe(404);
+    const o = await expectNotFound(request, ROOT + f);   // the CDN's own first-miss 503 is recorded and asked again (at most 3 tries)
+    expect(o.status, `${f}: ${describe(o)}`).toBe(404);
   }
   const sw = await (await request.get(ROOT + 'sw.js')).text();
   expect(sw).toContain('unregister');
@@ -89,11 +91,9 @@ test('account menu (light theme): the picked language is readable', async ({ pag
   if (process.env.SHOT_DIR) await page.screenshot({ path: process.env.SHOT_DIR + '/menu-lang.png' });
 });
 
-test('language flag in the top bar: US flag switches to English, Brazilian flag back; fits a 360px phone signed in', async ({ page }) => {
+test('language flag in the top bar for visitors: US flag switches to English, Brazilian flag back; fits a 360px phone', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 780 });
-  const ME = '11111111-1111-4111-8111-111111111111';
-  await page.addInitScript((me) => { if (!localStorage.getItem('inkwell-lang')) localStorage.setItem('inkwell-lang', 'pt'); const exp = Math.floor(Date.now() / 1000) + 3600;
-    localStorage.setItem('inkwell-counter-auth', JSON.stringify({ access_token: 'x.' + btoa(JSON.stringify({ sub: me, exp })) + '.y', refresh_token: 'r', expires_at: exp, user: { id: me, email: 'a@b.c' } })); }, ME);
+  await page.addInitScript(() => { if (!localStorage.getItem('inkwell-lang')) localStorage.setItem('inkwell-lang', 'pt'); });
   await page.route('**/rest/v1/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
   await page.goto(new URL('decks/', process.env.INKWELL_URL || 'http://localhost:8080/index.html').href);
   const flag = page.getByTestId('lang-flag');
@@ -106,6 +106,37 @@ test('language flag in the top bar: US flag switches to English, Brazilian flag 
   await expect(page.locator('html')).toHaveAttribute('lang', /en/);
   await page.getByTestId('lang-flag').click();
   await expect(page.getByTestId('lang-flag')).toHaveAttribute('aria-label', 'Switch to English');
+});
+
+// Pacote 2: signed in, theme and language are set once, so they live in the account menu, not the bar.
+test('signed in: theme and language in the account menu (keyboard too); the bar keeps only what is used often', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  const ME = '11111111-1111-4111-8111-111111111111';
+  await page.addInitScript((me) => { if (!localStorage.getItem('inkwell-lang')) localStorage.setItem('inkwell-lang', 'pt'); const exp = Math.floor(Date.now() / 1000) + 3600;
+    localStorage.setItem('inkwell-counter-auth', JSON.stringify({ access_token: 'x.' + btoa(JSON.stringify({ sub: me, exp })) + '.y', refresh_token: 'r', expires_at: exp, user: { id: me, email: 'a@b.c' } })); }, ME);
+  await page.route('**/rest/v1/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+  await page.goto(new URL('decks/', process.env.INKWELL_URL || 'http://localhost:8080/index.html').href);
+  await expect(page.getByTestId('lang-flag')).toHaveCount(0);
+  await expect(page.locator('#iwTheme')).toHaveCount(0);
+  if (process.env.SHOT_DIR) await page.screenshot({ path: process.env.SHOT_DIR + '/320-topo.png', clip: { x: 0, y: 0, width: 320, height: 70 } });
+  await page.locator('#iwAcct').focus();
+  await page.keyboard.press('Enter');                               // keyboard opens the menu
+  const menu = page.locator('.menu.acct-menu');
+  await expect(menu.getByRole('group', { name: 'Tema' })).toBeVisible();
+  await expect(menu.getByRole('group', { name: 'Idioma' })).toBeVisible();
+  const box = await menu.boundingBox();
+  expect(box.y + box.height).toBeLessThanOrEqual(640);              // fits a short phone (scrolls inside)
+  const escuro = menu.getByRole('button', { name: 'Escuro' });
+  await escuro.scrollIntoViewIfNeeded();
+  if (process.env.SHOT_DIR) await page.screenshot({ path: process.env.SHOT_DIR + '/320-menu-conta.png' });
+  await escuro.click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'noite');
+  await expect(escuro).toHaveAttribute('aria-pressed', 'true');
+  expect(await page.evaluate(() => localStorage.getItem('inkwell-theme'))).toBe('noite');
+  await menu.getByRole('button', { name: 'English' }).click();
+  await expect(page.locator('html')).toHaveAttribute('lang', /en/);
+  await page.locator('#iwAcct').click();
+  await expect(page.locator('.menu.acct-menu').getByRole('button', { name: 'Dark' })).toHaveAttribute('aria-pressed', 'true');   // kept after reload
 });
 
 // Pacote 1, item 3. Chrome's preload scanner read `<img src="${...}">` inside the big inline scripts as tags and asked
@@ -209,9 +240,9 @@ for (const width of [320, 360, 390, 430]) {
       let overlap = 0; for (let i = 1; i < boxes.length; i++) if (boxes[i].left < boxes[i - 1].right - 0.5) overlap++;
       return { out, overlap, n: els.length, sw: document.documentElement.scrollWidth, vw, min: Math.min(...boxes.slice(1).map((b) => b.width)) };
     });
-    expect(r).toMatchObject({ out: 0, overlap: 0, n: 7 });
+    expect(r).toMatchObject({ out: 0, overlap: 0, n: 5 });   // brand, counter, search, bell, account (theme and language: account menu)
     expect(r.sw).toBeLessThanOrEqual(r.vw);
-    expect(r.min).toBeGreaterThanOrEqual(width < 375 ? 38 : 44);   // still a comfortable tap
+    expect(r.min).toBeGreaterThanOrEqual(44);   // a comfortable tap at every width now that the bar has room
     if (process.env.SHOT_DIR) await page.screenshot({ path: `${process.env.SHOT_DIR}/topbar-${width}.png`, clip: { x: 0, y: 0, width, height: 64 } });
   });
 }

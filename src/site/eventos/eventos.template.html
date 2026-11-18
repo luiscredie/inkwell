@@ -217,7 +217,7 @@
     const snap = e.gone ? {} : { name: e.name, start: e.start, end: e.end, store: e.store?.name || null, address: e.address, url: e.url, format: e.format, cost_cents: e.cost_cents, currency: e.currency, category: e.category, category_source: e.category_source };   // the type follows a marked event out of range
     try {
       await rpc("mark_event", { p_rph_id: e.id, p_status: next.status, p_registered: !!next.registered, p_paid: !!next.paid, p_snap: snap });
-      if (next.status) marks.set(String(e.id), { ...next, rph_id: e.id, snap: e.gone ? cur.snap : snap }); else marks.delete(String(e.id));
+      if (next.status) { marks.set(String(e.id), { ...next, rph_id: e.id, snap: e.gone ? cur.snap : snap }); window.INKWELL_TRACK?.("event_marked"); } else marks.delete(String(e.id));
       if ("status" in patch && !["went", "missed"].includes(next.status) && !isPast(e)) for (const t of tables.filter((x) => x.rph_id === e.id && x.me !== next.status)) {   // the same answer on its community table
         try { await rpc("rsvp_event", { p_event: t.id, p_status: next.status }); t.me = next.status; const l = (linked[e.id] || []).find((x) => x.id === t.id); if (l) { l.me = next.status; l.going = (l.going || 0) + (next.status === "going" ? 1 : 0) - (cur.status === "going" ? 1 : 0); } } catch { /* full or not a member */ }
       }

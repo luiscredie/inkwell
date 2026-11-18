@@ -7,14 +7,14 @@ const BASE = new URL('counter/', process.env.INKWELL_URL || 'http://localhost:80
 const ME = '11111111-1111-4111-8111-111111111111';
 const RODRIGO = '22222222-2222-4222-8222-222222222222';
 
-async function setup(page, { tour = false, findFails = false } = {}) {
+async function setup(page, { tour = false, findFails = false, decks = true, bestOf = 3 } = {}) {
   const calls = [];
-  await page.addInitScript(([me, tour]) => {
+  await page.addInitScript(([me, tour, decks, bestOf]) => {
     if (sessionStorage.getItem('t')) return; sessionStorage.setItem('t', '1');
     const exp = Math.floor(Date.now() / 1000) + 3600;
     localStorage.setItem('inkwell-counter-auth', JSON.stringify({ access_token: 'x.' + btoa(JSON.stringify({ sub: me, exp })) + '.y', refresh_token: 'r', expires_at: exp, user: { id: me } }));
-    localStorage.setItem('inkwell-lorecounter-v3', JSON.stringify({ lang: 'pt', players: 2, decks: true, tour, bestOf: 3 }));
-  }, [ME, tour]);
+    localStorage.setItem('inkwell-lorecounter-v3', JSON.stringify({ lang: 'pt', players: 2, decks, tour, bestOf }));
+  }, [ME, tour, decks, bestOf]);
   await page.route('**/rest/v1/**', async (route) => {
     const req = route.request(), path = new URL(req.url()).pathname.replace(/.*\/rest\/v1\//, '');
     const body = req.postData() ? JSON.parse(req.postData()) : null;
@@ -119,7 +119,7 @@ test('opponent deck skipped: asked again at the end, and can still be set from t
   await winGame(page);
   await expect(page.getByRole('heading', { name: 'O oponente usa o Inkwell?' })).toBeVisible();   // end of match, still unknown
   await page.getByRole('button', { name: 'Pular' }).click();
-  await page.getByRole('button', { name: 'Escolher deck do oponente' }).click();
+  await page.getByRole('button', { name: 'Informar tintas (opcional)' }).click();
   await page.getByRole('button', { name: 'Não' }).click();
   await page.locator('#dk [data-ink="Ruby"]').click();
   await page.getByRole('button', { name: 'Salvar' }).click();
@@ -155,12 +155,14 @@ test('match clock: 50 minutes by default, in both score pills; a tap starts it, 
   await expect(clk).toHaveText('▶48:59');
   await expect(clk).toHaveClass(/paused/);
   await page.locator('#pillR').click();                                     // and goes on
-  await page.clock.runFor(44 * 60000);
+  // long stretches: jump the fake clock (each due timer fires once) instead of running every 1-second tick;
+  // the clock shows timestamps, so the result is the same and the test no longer depends on the machine's speed
+  await page.clock.fastForward(44 * 60000);
   await expect(clk).toHaveClass(/low/);                                   // 5 minutes or less
-  await page.clock.runFor(6 * 60000);
+  await page.clock.fastForward(6 * 60000);
   await expect(clk).toHaveText('Tempo!');
-  // it survives a reload (times are timestamps)
-  await page.reload();
+  // it survives a reload (times are timestamps); don't wait for the network's "load" under a fake clock
+  await page.reload({ waitUntil: 'domcontentloaded' });
   await expect(page.locator('#pillR [data-clk]')).toHaveText('Tempo!');
 });
 
@@ -313,4 +315,99 @@ test('sealed format: any number of inks, no Inkwell decks, opponent by inks only
   await page.locator('#sFormat [data-v="core"]').click();
   st = await page.evaluate(() => JSON.parse(localStorage.getItem('inkwell-lorecounter-v3')));
   expect(st.color.p1.length).toBeLessThanOrEqual(2);
+});
+
+// R24: by default the counter starts counting at once, with no inks; they can be added after the match.
+test('R24: no inks asked by default; the game goes out without inks and the inks can be added after the match', async ({ page }) => {
+  const calls = await setup(page, { decks: false, bestOf: 1 });
+  await page.goto(BASE);
+  await expect(page.locator('#sheet')).toBeHidden();                       // no form before counting
+  await winGame(page);
+  const later = page.getByTestId('add-inks');
+  await expect(later).toHaveText('Informar tintas (opcional)');
+  await expect.poll(() => calls.filter((c) => c.path.startsWith('game_logs')).length).toBeGreaterThan(0);
+  const first = calls.find((c) => c.path.startsWith('game_logs')).body;
+  const log = (Array.isArray(first) ? first[0] : first).log || (Array.isArray(first) ? first[0] : first);
+  expect(JSON.stringify(log)).not.toMatch(/"inks":\["/);                   // nothing invented from the screen colours
+  await later.click();
+  await page.getByRole('button', { name: 'Circle of Life' }).click();      // my deck
+  await page.getByRole('button', { name: 'Não' }).click();                 // opponent not on Inkwell: just the inks
+  await page.locator('#dk [data-ink="Ruby"]').click();
+  await page.getByRole('button', { name: 'Salvar' }).click();
+  await expect.poll(() => calls.filter((c) => c.path.startsWith('game_logs') && JSON.stringify(c.body).includes('Ruby') && JSON.stringify(c.body).includes('Amber')).length).toBeGreaterThan(0);
+  const st = await page.evaluate(() => JSON.parse(localStorage.getItem('inkwell-lorecounter-v3')));
+  expect(st.history[0].me.inks).toEqual(['Amber', 'Emerald']);
+  expect(st.history[0].opp.inks).toEqual(['Ruby']);
+});
+
+test('R24: the setting that asks for the inks at the start is named for what it does', async ({ page }) => {
+  await setup(page, { decks: false });
+  await page.goto(BASE);
+  await page.click('#menuBtn');
+  await page.getByRole('button', { name: 'Ajustes' }).click();
+  await expect(page.getByText('Pedir as tintas ao começar')).toBeVisible();
+  await expect(page.getByText('Desligado, o contador começa direto e você informa as tintas depois, se quiser', { exact: false })).toBeVisible();
+});
+
+// ---------- R24 (reported 18/11): "Novo jogo" in Jogos (now "Nova partida") kept the last match's inks, and unpicking them does not stick ----------
+async function seeded(page, state) {
+  await page.addInitScript(([st]) => {
+    if (sessionStorage.getItem('t')) return; sessionStorage.setItem('t', '1');
+    localStorage.setItem('inkwell-lorecounter-v3', JSON.stringify({ lang: 'pt', players: 2, decks: false, tour: true, bestOf: 3, ...st }));
+  }, [state]);
+  await page.route('**/rest/v1/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+}
+const saved = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('inkwell-lorecounter-v3') || '{}'));
+const lastMatch = { started: '2026-11-18T12:00:00Z', format: 'core', tour: true, players: 2, best_of: 3, me: { inks: ['Ruby', 'Amethyst'] }, opp: { inks: ['Sapphire'] }, games: [{ winner: 'p1' }, { winner: 'p1' }] };
+
+test('R24: "Nova partida" from Jogos (counter/?new) after a finished match starts a new one with no inks, nothing carried over', async ({ page }) => {
+  await seeded(page, { color: { p1: ['Ruby', 'Amethyst'], p2: ['Sapphire'], p3: ['Emerald'], p4: ['Amber'] }, match: lastMatch, matchDone: true, wins: { p1: 2, p2: 0, p3: 0, p4: 0 } });
+  await page.goto(BASE + '?new');
+  await expect(page.locator('#k1 b')).toHaveCount(0);                    // no ink symbol on either pane
+  await expect(page.locator('#k2 b')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Seu deck' })).toHaveCount(0);   // and no question: it starts right away
+  const st = await saved(page);
+  expect(st.match.me).toBeNull(); expect(st.match.opp).toBeNull(); expect(st.match.games).toEqual([]);
+  expect(st.color.p1).toEqual([]); expect(st.color.p2).toEqual([]);
+  expect(await page.evaluate(() => location.search)).toBe('');           // a reload does not start another one
+});
+
+test('R24: "Nova partida" from Jogos while a match is being played asks first; Cancelar keeps the score, Sim starts clean', async ({ page }) => {
+  await seeded(page, { color: { p1: ['Ruby'], p2: ['Sapphire'], p3: ['Emerald'], p4: ['Amber'] }, match: { ...lastMatch, games: [] }, lore: { p1: 7, p2: 3, p3: 0, p4: 0 } });
+  await page.goto(BASE + '?new');
+  await expect(page.getByRole('heading', { name: 'Começar nova partida? O placar volta a zero.' })).toBeVisible();
+  await page.getByRole('button', { name: 'Cancelar' }).click();
+  await expect(page.locator('#o1')).toHaveText('7');
+  await page.goto(BASE + '?new');
+  await page.getByRole('button', { name: 'Sim' }).click();
+  await expect(page.locator('#o1')).toHaveText('0');
+  await expect(page.locator('#k1 b')).toHaveCount(0);
+  expect((await saved(page)).match.me).toBeNull();
+});
+
+test('R24: inks unpicked in the menu stay unpicked (after a reload too), and the inks shown are the match\'s inks', async ({ page }) => {
+  await seeded(page, { color: { p1: ['Ruby'], p2: ['Sapphire'], p3: ['Emerald'], p4: ['Amber'] }, match: { ...lastMatch, me: { inks: ['Ruby'] }, games: [] } });
+  await page.goto(BASE);
+  await page.click('#menuBtn');
+  const ruby = page.locator('#cp1 [data-ink="Ruby"]');
+  await expect(ruby).toHaveAttribute('aria-pressed', 'true');
+  await ruby.click();                                                    // unpick the last ink
+  await expect(ruby).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#k1 b')).toHaveCount(0);
+  expect((await saved(page)).match.me).toBeNull();                       // the match has no inks for me now
+  await page.reload();
+  await expect(page.locator('#k1 b')).toHaveCount(0);                    // and it stays that way
+  await page.click('#menuBtn');
+  await page.locator('#cp1 [data-ink="Emerald"]').click();
+  await page.locator('#cp1 [data-ink="Steel"]').click();
+  await expect(page.locator('#k1 b')).toHaveCount(2);
+  expect((await saved(page)).match.me.inks).toEqual(['Emerald', 'Steel']);
+});
+
+test('the menu says "Próximo jogo" (same match, next game) and "Nova partida" (score back to zero)', async ({ page }) => {
+  await seeded(page, {});
+  await page.goto(BASE);
+  await page.click('#menuBtn');
+  await expect(page.locator('#mGame')).toHaveText('Próximo jogo');
+  await expect(page.locator('#mMatch')).toHaveText('Nova partida');
 });
