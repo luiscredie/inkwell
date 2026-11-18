@@ -27,7 +27,7 @@ def make_map(source,cards_path,out,existing=None):
                 mapping[k]=prev;counts['previously_reviewed']+=1;continue
         candidate=f"{row['code']}-{row['num']}"
         master_card=master.get(candidate)
-        name=next((master_card[n] for n in ('name','fullName','full_name','nEN','title')
+        name=next((master_card[n] for n in ('name_en','name','fullName','full_name','nEN','title','name_pt')
                   if master_card.get(n)),None) if master_card else None
         if name and norm(name)==norm(row['name']):
             mapping[k]={'card_id':candidate,'metodo':'edicao_numero_nome_exatos','revisado':True}
