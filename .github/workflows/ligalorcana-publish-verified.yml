@@ -1,0 +1,104 @@
+name: LigaLorcana - publicar edicoes verificadas
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/ligalorcana-publish-verified.yml"
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+concurrency:
+  group: ligalorcana-price-publication
+  cancel-in-progress: false
+jobs:
+  collect_and_propose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      HAS_APP: ${{ secrets.INKWELL_APP_PRIVATE_KEY != '' && vars.INKWELL_APP_ID != '' }}
+      BRANCH: auto/ligalorcana-prices
+    steps:
+      - name: Inkwell bot token
+        if: env.HAS_APP == 'true'
+        id: app
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.INKWELL_APP_ID }}
+          private-key: ${{ secrets.INKWELL_APP_PRIVATE_KEY }}
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ steps.app.outputs.token || github.token }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Avoid racing an existing price PR
+        id: open_pr
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token || github.token }}
+        run: |
+          pr=$(gh pr list --base main --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
+          echo "exists=$([ -n "$pr" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          if [ -n "$pr" ]; then echo "::notice::Price PR #$pr awaiting CI/merge. No new proposal."; fi
+      - uses: actions/checkout@v4
+        if: steps.open_pr.outputs.exists != 'true'
+        with:
+          ref: feature/ligalorcana-review-pipeline
+          path: chrome-source
+          persist-credentials: false
+      - name: Verify importer unit tests
+        if: steps.open_pr.outputs.exists != 'true'
+        run: python -m unittest discover -s tools -p 'test_ligalorcana_publish_incremental.py' -v
+      - name: Build incremental patch and quality report
+        if: steps.open_pr.outputs.exists != 'true'
+        run: |
+          python tools/ligalorcana_publish_incremental.py \
+            --source chrome-source/coletas/ligalorcana/coleta \
+            --cards site/data/cards.json \
+            --prices site/data/prices.json \
+            --history site/data/price-history.json \
+            --report /tmp/ligalorcana-quality.json
+          cat /tmp/ligalorcana-quality.json >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: steps.open_pr.outputs.exists != 'true'
+        with:
+          name: ligalorcana-quality-report
+          path: /tmp/ligalorcana-quality.json
+          retention-days: 30
+      - name: Validate site data before proposing
+        if: steps.open_pr.outputs.exists != 'true'
+        run: |
+          if git diff --quiet -- site/data/prices.json; then
+            echo "No newly valid Liga prices."; exit 0
+          fi
+          python tools/refresh_data_manifest.py --root site
+          python tools/validate_release.py --root site
+          python tools/build_site_pages.py --check
+      - name: Create controlled production PR
+        if: steps.open_pr.outputs.exists != 'true'
+        id: proposal
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token || github.token }}
+        run: |
+          if git diff --quiet -- site/data/prices.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          git config user.name "inkwell-prices[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git add site/data/prices.json site/data/price-history.json site/data-manifest.json
+          git add -u site/data
+          git commit -m "prices: LigaLorcana verified completed editions"
+          git push --force origin "HEAD:$BRANCH"
+          gh pr create --base main --head "$BRANCH" \
+            --title "Precos LigaLorcana - edicoes validadas" \
+            --body "Proposta automatica, so edicoes com fila e captura completas, correspondencia ID+numero+nome e precos validos. Preserva precos nao visitados. Relatorio no artifact ligalorcana-quality-report. Merge condicionado aos checks obrigatorios." 
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+      - name: Enable automatic merge after required checks
+        if: steps.proposal.outputs.changed == 'true' && env.HAS_APP == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: gh pr merge "$BRANCH" --auto --merge
