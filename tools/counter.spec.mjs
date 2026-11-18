@@ -155,12 +155,14 @@ test('match clock: 50 minutes by default, in both score pills; a tap starts it, 
   await expect(clk).toHaveText('▶48:59');
   await expect(clk).toHaveClass(/paused/);
   await page.locator('#pillR').click();                                     // and goes on
-  await page.clock.runFor(44 * 60000);
+  // long stretches: jump the fake clock (each due timer fires once) instead of running every 1-second tick;
+  // the clock shows timestamps, so the result is the same and the test no longer depends on the machine's speed
+  await page.clock.fastForward(44 * 60000);
   await expect(clk).toHaveClass(/low/);                                   // 5 minutes or less
-  await page.clock.runFor(6 * 60000);
+  await page.clock.fastForward(6 * 60000);
   await expect(clk).toHaveText('Tempo!');
-  // it survives a reload (times are timestamps)
-  await page.reload();
+  // it survives a reload (times are timestamps); don't wait for the network's "load" under a fake clock
+  await page.reload({ waitUntil: 'domcontentloaded' });
   await expect(page.locator('#pillR [data-clk]')).toHaveText('Tempo!');
 });
 
