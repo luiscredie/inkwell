@@ -3,7 +3,10 @@
 import argparse,json
 from collections import Counter
 from pathlib import Path
-from tools.ligalorcana_release_candidate import captures,master_rows,norm,blob
+if __package__:
+    from .ligalorcana_release_candidate import captures,master_rows,norm,blob
+else:
+    from ligalorcana_release_candidate import captures,master_rows,norm,blob
 
 def make_map(source,cards_path,out,existing=None):
     master=master_rows(json.loads(Path(cards_path).read_text(encoding='utf-8-sig')))
