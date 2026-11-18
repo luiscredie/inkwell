@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
       cat ??= new Catalog((await (await fetch(CATALOG_URL)).json()).cards || []);
       const io = { duels: (p: string, bin = false) => duels(p, token, bin), db, sleep };
       const refresh = only && body?.refresh_decks === true;
-      if (refresh && shared && !(await sharedTokenAllowed(u.user_id, (await duels("/api/me", token))?.name ?? null, io, owner)))
+      if (refresh && shared && !(await sharedTokenAllowed(u.user_id, await duels("/api/me", token), io, owner)))
         throw new Error("no duels.ink token saved (the shared token belongs to another account)");
       result = { ok: true, ...(refresh
         ? await refreshDecks(u.user_id, token, cat)

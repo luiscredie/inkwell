@@ -1,10 +1,17 @@
 // duels-sync, one player's run (issue #241). Kept apart from index.ts so it can be tested without network or SQL:
 // io.duels / io.db / io.sleep / io.now are the real helpers in the function, fakes in tools/duels-sync.test.mjs.
 //
+// duels.ink API (https://duels.ink/api-docs.md): match-history lists finished games, newest first by last-update time;
+// `from` is a lower bound on that time (never earlier than the start, so a bound taken from started_at is safe); the
+// cursor is a keyset value ("<updated-at>|<game-id>") that does not expire; a game updated later moves to the top.
+// /g/{id} answers 404 alike for "not yours", "does not exist" and "not authenticated"; for a finished game of the
+// player's own history it should not happen, so such a game waits and is tried again rather than being dropped.
+// Limits: match-history 20 requests/min, /g 30/min per user (the pauses below stay under both).
+//
 // Rule: no finished game is lost for good, and none is stored twice (insert, ignore duplicates).
 // Each run:
 //   1. window: re-reads history from (newest stored game − OVERLAP_DAYS), so new games come in on the next run;
-//   2. scan: a read of older history that goes on over several runs, one page at a time, and moves past a page only
+//   2. scan: a read of older history that goes on over several runs, a page at a time, and moves past a page only
 //      once every finished game on it is stored or waiting for its replay. It is used for a first sync (the whole
 //      history, not just the newest page), when the window itself went past MAX_PAGES, and to reach back to a game
 //      waiting for its replay that is older than the window;
@@ -50,12 +57,18 @@ export function classify(rows: Json[]) {
 
 // The shared token (DUELS_TOKEN secret) reads one duels.ink account, the owner's. A row without its own token may use it
 // only if that row is the owner's: the user named by DUELS_TOKEN_USER when that secret is set; otherwise a user whose
-// stored duels.ink games were imported for this same duels.ink account. A new account, or another one, is refused.
-export async function sharedTokenAllowed(userId: string, meName: string | null, io: SyncIO, ownerId: string | null) {
+// newest stored duels.ink game was imported for this same duels.ink account. duels.ink says to tie a token to an account
+// by the id of GET /api/me, never by the name (players can change it): new games keep that id (source_ref.duels_user_id)
+// and it is what is compared; games stored before that carry only the name, used until a newer game carries the id.
+// A new account, or another one, is refused.
+export async function sharedTokenAllowed(userId: string, me: { id?: string | null; name?: string | null } | null, io: SyncIO, ownerId: string | null) {
   if (ownerId) return ownerId === userId;
-  if (!meName) return false;
-  const rows = await io.db(`game_logs?user_id=eq.${userId}&source=eq.duels_ink&select=players:log->players&order=played_at.desc.nullslast&limit=1`);
-  return (rows?.[0]?.players || []).some((p: Json) => p?.is_me === true && p?.name === meName);
+  const rows = await io.db(`game_logs?user_id=eq.${userId}&source=eq.duels_ink&select=players:log->players,ref:log->source_ref&order=played_at.desc.nullslast&limit=1`);
+  const last = rows?.[0];
+  if (!last) return false;
+  const storedId = last.ref?.duels_user_id;
+  if (storedId) return !!me?.id && storedId === me.id;
+  return !!me?.name && (last.players || []).some((p: Json) => p?.is_me === true && p?.name === me.name);
 }
 
 const newestOf = (xs: (string | null | undefined)[]) => xs.filter(Boolean).sort().pop() ?? null;
@@ -69,7 +82,8 @@ export async function syncUser(userId: string, cat: Catalog, io: SyncIO,
 
   const me = await io.duels("/api/me");
   const meName = typeof me?.name === "string" ? me.name : null;
-  if (opts.shared && !(await sharedTokenAllowed(userId, meName, io, opts.shared.ownerId)))
+  const meId = typeof me?.id === "string" ? me.id : null;
+  if (opts.shared && !(await sharedTokenAllowed(userId, me, io, opts.shared.ownerId)))
     throw new Error("no duels.ink token saved (the shared token belongs to another account)");
 
   const newest = await io.db(`game_logs?user_id=eq.${userId}&source=eq.duels_ink&select=played_at&order=played_at.desc.nullslast&limit=1`);
@@ -117,7 +131,7 @@ export async function syncUser(userId: string, cat: Catalog, io: SyncIO,
   for (;;) {
     if (pages >= MAX_PAGES) { stop = { cursor }; break; }
     let p = await page(cursor);
-    if (!p && jumped && !scanRestarted) {          // duels.ink no longer takes the saved position: go on page by page
+    if (!p && jumped && !scanRestarted) {          // the saved position refused (not expected: it is a keyset value)
       scanRestarted = true; jumped = false; cursor = afterTop; p = await page(cursor);
     }
     if (!p) throw new Error(pages === 1 ? "duels.ink match history did not answer (no games list)" : `duels.ink match history stopped answering at page ${pages}`);
@@ -142,7 +156,11 @@ export async function syncUser(userId: string, cat: Catalog, io: SyncIO,
     tried++;
     const id = String(r.game_id);
     const events = await io.duels(`/g/${encodeURIComponent(id)}`, true);
-    if (events) { logs.push(convert(r, events, cat, meName || "Me")); delete wait[id]; }
+    if (events) {
+      const log = convert(r, events, cat, meName || "Me");
+      if (meId) log.source_ref = { ...(log.source_ref || {}), duels_user_id: meId };   // the account, by its stable id
+      logs.push(log); delete wait[id];
+    }
     else { const n = (wait[id]?.n || 0) + 1; wait[id] = { s: String(r.started_at), n, next: new Date(now + backoff(n)).toISOString() }; }
     await io.sleep(2100);
   }

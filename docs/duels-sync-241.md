@@ -32,12 +32,14 @@ accepts: the run goes on page by page from the top (`scan_restarted`). Inserting
 twice never stores a game twice.
 
 **Shared token (`DUELS_TOKEN`).** It reads one duels.ink account, the owner's. A row without its own token may now use
-it only if the row is the owner's: the user named by the secret `DUELS_TOKEN_USER` when it is set, otherwise a user whose
-stored duels.ink games were imported for that same duels.ink account. The owner's current connection matches (its
-stored games are of that account) and keeps working with no secret changed. A new account, or one whose games are
-another duels.ink account, is refused ("the shared token belongs to another account") and nothing is read for it. The
-same check guards the deck-list refresh. If the owner ever changes the duels.ink display name, the check fails safely
-(refused, shown in Jogos); setting `DUELS_TOKEN_USER` to the owner's user id then fixes it for good.
+it only if the row is the owner's: the user named by the secret `DUELS_TOKEN_USER` when it is set; otherwise a user whose
+newest stored duels.ink game was imported for that same duels.ink account. duels.ink's reference says to tie a token to
+an account by the `id` of `GET /api/me`, never by the display name (players can change it). So new games now keep that id
+(`source_ref.duels_user_id`) and it is what is compared; games stored before carry only the name, which is used until a
+newer game carries the id. The owner's current connection matches and keeps working with no secret changed; after the
+next imported game it is checked by id, so a later name change does not break it. A new account, or one whose games are
+another duels.ink account (even with the same display name), is refused ("the shared token belongs to another account")
+and nothing is read for it. The same check guards the deck-list refresh.
 
 ## State between runs
 Two things need memory: the saved position and the wait list. They live in `last_result.state` (written by
@@ -55,15 +57,16 @@ newest_api_game_at, newest_stored_game_at, account_name, status` (`complete` / `
 No token, e-mail, user id or opponent name.
 
 ## Tests
-- `tools/duels-sync.test.mjs` (27, in CI): runs one after another against a fake duels.ink (from, keyset cursor, page
-  size, 404 replays, a refused cursor) and an in-memory game_logs that counts duplicates, with the state of each run
+- `tools/duels-sync.test.mjs` (31, in CI): runs one after another against a fake duels.ink that follows the reference
+  (update-time order, `from`, keyset cursor, page size, 404 replays, a refused position) and an in-memory game_logs that counts duplicates, with the state of each run
   passed to the next and a fake clock. Scenarios: the #241 timing case; a replay missing for 12 days (window 7);
   a first sync of 60 games in 9 pages; 16 games with no replay before 2 new ones; 40 games in 20 pages; 6 missing games
-  under 15 pages already stored; a refused cursor; the shared token for the owner, a new account, another account, and
+  under 15 pages already stored; a game updated later (moves to the top); a refused position; the shared token for the
+  owner, the owner after a name change (same id), a new account, another account, the same name with another id, and
   `DUELS_TOKEN_USER`; filters; a broken answer; no private data. Every scenario checks no duplicate.
-- Mutations, each one making its tests fail: no wait list kept (5 fail); first sync reads only the newest page (3);
+- Mutations, each one making its tests fail: no wait list kept (5 fail); first sync reads only the newest page (2);
   retries before new games (2); no position saved at the page limit (2, and that run says `complete` with 6 games
-  missing); shared token unchecked (3).
+  missing); shared token unchecked (4); owner matched by name only, not id (1).
 - `tools/duels_sync_state_sql_test.sh` (13, local Postgres): applies twice; one definition; owner postgres and ACL
   `{postgres, service_role}` like production; security definer with empty search_path; returns the state; only enabled
   rows; one player; wrong key refused; anon and authenticated refused, service_role allowed. With the `revoke` removed,
@@ -82,8 +85,18 @@ No token, e-mail, user id or opponent name.
 - Site: revert the merge. The old Jogos line reads only `added` and `waiting`.
 - No data to undo: the function only inserts games, ignoring duplicates.
 
+## What the duels.ink reference says (https://duels.ink/api-docs.md, read 18/11)
+- `match-history` lists **finished** games, newest first by **last-update time**; `from`/`to` bound that time. A bound
+  taken from `started_at` is safe (the update time is never earlier). A game updated later moves to the top.
+- The cursor is a keyset value (`"<updated-at>|<game-id>"`), stable under new games; it does not expire. The saved
+  position can therefore be kept between runs; a refused one is still handled (`scan_restarted`).
+- `/g/{game_id}` answers 404 alike for "not a participant", "does not exist" and "not authenticated". For a finished game
+  of the player's own history it should not happen; such a game waits and is tried again instead of being dropped.
+- Limits: `match-history` 20 requests/min (3 at once), `/g` 30/min per user. The pauses between requests (3.1 s and 2.1 s)
+  stay under both.
+- `result` can also be `abandoned` or null; those rows are not imported (as in v8) and are counted in `excluded_result`.
+- The tests' fake duels.ink follows these rules (update-time order, `from` on update time, keyset cursor).
+
 ## Known limits
-- duels.ink's API is not documented here; the fake follows what v8 relies on (`from`, a cursor that keeps its place).
-  If duels.ink cursors expired between runs, a very deep read would restart from the top each run and only reach 8
-  pages: the result would say `incomplete` and `scan_restarted`, never `complete`.
 - A first sync of a long history takes about one run per 12 games (as before: duels.ink's rate limits).
+- Games with `result: "abandoned"` are not imported (unchanged from v8); if players want them, that is a product decision.
