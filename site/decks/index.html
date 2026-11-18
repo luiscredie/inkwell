@@ -383,6 +383,14 @@ window.INKWELL_DECKVIEW = function ({ esc, Tx, split, inksOf, imgUrl, setNo, nam
 .add-results .list-row { min-height: 52px; }
 .miss .thumb { width: 56px; }
 .miss .list-row .t > .fwho { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 6px; white-space: normal; overflow-wrap: anywhere; }   /* "Ana Souza empresta" was cut at 390px */
+.miss .ftag { flex: none; }   /* the tag is never cut */
+.miss .list-row.flat.two .t > span:first-child { white-space: normal; }   /* "Bruno Lima vende no Mural" wraps instead of "vende no M…" */
+/* narrow phones: the friend's name gets the whole width and the button goes below it ("Empresta" was cut and "Ana Souz/a" broke at 320px) */
+@media (max-width: 420px) {
+  .miss .list-row.flat.two { grid-template-columns: minmax(0, 1fr); gap: var(--sp-1); padding-block: var(--sp-2); }
+  .miss .list-row.flat.two > .btn { justify-self: start; }
+  .miss .list-row .t > .fwho { overflow-wrap: break-word; }
+}
 /* Pacote 2: "Como completar" and the cards grouped by where they can come from */
 .plan-rows { display: grid; gap: var(--sp-2); margin-top: var(--sp-3); }
 .plan-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--sp-3); min-height: 52px; }
