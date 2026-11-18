@@ -10,3 +10,4 @@ node_modules/
 # Local price-agent backups and scratch captures — never commit
 site/data/*.before-*.json
 *-access-headers.txt
+.http-5xx.jsonl

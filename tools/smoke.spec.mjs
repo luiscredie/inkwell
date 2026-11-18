@@ -3,6 +3,7 @@
 //   (cd site && python3 -m http.server 8080) &
 //   INKWELL_URL=http://localhost:8080/index.html npx playwright test tools/smoke.spec.mjs
 import { test, expect } from '@playwright/test';
+import { expectNotFound, describe } from './http-origin.mjs';
 
 const ROOT = new URL('./', process.env.INKWELL_URL || 'http://localhost:8080/index.html').href;
 
@@ -34,7 +35,8 @@ test('the simulator address goes to Início', async ({ page }) => {
 
 test('the old app files are not published any more', async ({ request }) => {
   for (const f of ['support.js', 'match-center-engine.js', 'manifest.webmanifest', 'users/luis.json', 'sim/game.js']) {
-    expect((await request.get(ROOT + f)).status(), f).toBe(404);
+    const o = await expectNotFound(request, ROOT + f);   // the CDN's own first-miss 503 is recorded and asked again (at most 3 tries)
+    expect(o.status, `${f}: ${describe(o)}`).toBe(404);
   }
   const sw = await (await request.get(ROOT + 'sw.js')).text();
   expect(sw).toContain('unregister');

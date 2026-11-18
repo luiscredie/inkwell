@@ -141,15 +141,18 @@ async function virtualAuthenticator(page) {
   await cdp.send('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true } });
 }
 const b64 = (s) => Buffer.from(s).toString('base64url');
+// The relying party is the site the test runs on (localhost in CI, inkwell.com.br against production): a passkey
+// is bound to its origin, and a browser refuses one created for another site. Only this fake server changes.
+const RP_ID = new URL(ROOT).hostname;
 async function passkeyServer(page) {
   const got = [];
   await page.route('**/auth/v1/passkeys/**', async (route) => {
     const path = new URL(route.request().url()).pathname.replace(/.*\/auth\/v1\//, ''), body = route.request().postData() ? JSON.parse(route.request().postData()) : null;
     got.push({ path, body, auth: route.request().headers().authorization || '' });
     const j = (v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
-    if (path === 'passkeys/registration/options') return j({ challenge_id: 'reg1', options: { challenge: b64('challenge-registration-0001'), rp: { id: 'localhost', name: 'Inkwell' }, user: { id: b64(ME), name: 'a@b.c', displayName: 'a@b.c' }, pubKeyCredParams: [{ type: 'public-key', alg: -7 }], authenticatorSelection: { residentKey: 'required', userVerification: 'preferred' }, timeout: 60000 } });
+    if (path === 'passkeys/registration/options') return j({ challenge_id: 'reg1', options: { challenge: b64('challenge-registration-0001'), rp: { id: RP_ID, name: 'Inkwell' }, user: { id: b64(ME), name: 'a@b.c', displayName: 'a@b.c' }, pubKeyCredParams: [{ type: 'public-key', alg: -7 }], authenticatorSelection: { residentKey: 'required', userVerification: 'preferred' }, timeout: 60000 } });
     if (path === 'passkeys/registration/verify') return j({ id: 'pk1', friendly_name: 'iPhone' });
-    if (path === 'passkeys/authentication/options') return j({ challenge_id: 'auth1', options: { challenge: b64('challenge-authentication-01'), rpId: 'localhost', userVerification: 'preferred', timeout: 60000 } });
+    if (path === 'passkeys/authentication/options') return j({ challenge_id: 'auth1', options: { challenge: b64('challenge-authentication-01'), rpId: RP_ID, userVerification: 'preferred', timeout: 60000 } });
     if (path === 'passkeys/authentication/verify') return j({ access_token: jwt(ME), refresh_token: 'r2', expires_in: 3600, user: { id: ME, email: 'a@b.c' } });
     return j([]);
   });
