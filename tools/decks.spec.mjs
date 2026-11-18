@@ -366,6 +366,39 @@ test('a collection a friend shares with me does not make the card mine: still mi
   expect(posts[0]).toEqual({ lender: FRIEND, borrower: ME, created_by: ME, items: [{ card_id: 'LOR10-1', qty: 2, foil: false }], note: 'Para o deck Amber Test' });
 });
 
+test('requests already made survive a reload: the row shows their state, nothing is asked twice, and the plan lists them', async ({ page }) => {
+  await setup(page);
+  const posts = [], reads = [];
+  await page.route('**/rest/v1/friendships*', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+    { requester: ME, addressee: FRIEND, status: 'accepted' }, { requester: SELLER, addressee: ME, status: 'accepted' }]) }));
+  await page.route('**/rest/v1/rpc/friends_lending', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+    { user: FRIEND, name: 'Ana Souza', handle: 'ana', card_id: 'LOR10-1', free: 3, lend: true },
+    { user: SELLER, name: 'Bruno Lima', handle: 'b', card_id: 'LOR10-1', free: 2, lend: true }]) }));
+  await page.route('**/rest/v1/user_loans*', (r) => {
+    const u = decodeURIComponent(r.request().url());
+    if (r.request().method() === 'POST') { posts.push(JSON.parse(r.request().postData())); return r.fulfill({ status: 201, body: '' }); }
+    reads.push(u);
+    const mine = u.includes(`borrower=eq.${ME}`) ? [{ lender: FRIEND, status: 'accepted', items: [{ card_id: 'LOR10-1', qty: 2, foil: false }] }] : [];
+    return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mine) });
+  });
+  await page.goto(BASE + '?deck=deck-a&tab=missing');
+  // only my own open requests are read, as the borrower
+  await expect.poll(() => reads.some((u) => u.includes(`borrower=eq.${ME}`) && u.includes('status=in.(requested,accepted,delivered)'))).toBe(true);
+  const ana = page.locator('[data-miss="LOR10-1"] [data-testid="friend-has"]').filter({ hasText: 'Ana Souza' });
+  await expect(ana.getByTestId('asked')).toHaveText('Pedido aceito');
+  await expect(ana.getByTestId('asked')).toHaveAttribute('href', '../trades/?tab=loans');
+  await expect(ana.locator('[data-borrow]')).toHaveCount(0);
+  await expect(page.getByTestId('who-helps').locator(`[data-helper="${FRIEND}"] [data-hborrow]`)).toHaveCount(0);
+  await expect(page.getByTestId('plan-asked')).toContainText('1 pedido de empréstimo em andamento');
+  await expect(page.getByTestId('plan-asked')).toContainText('1 aceito');
+  // Bruno was not asked yet: asking him adds a second request to the plan
+  await page.locator(`[data-miss="LOR10-1"] [data-borrow="${SELLER}"]`).click();
+  await expect(page.locator('[data-miss="LOR10-1"] [data-testid="friend-has"]').filter({ hasText: 'Bruno' }).getByTestId('asked')).toHaveText('Pedido enviado');
+  await expect(page.getByTestId('plan-asked')).toContainText('2 pedidos de empréstimo em andamento');
+  await expect(page.getByTestId('plan-asked')).toContainText('1 aguardando resposta · 1 aceito');
+  expect(posts.map((p) => p.lender)).toEqual([SELLER]);
+});
+
 test('a friend whose collection is only visible (no lending) shows as Possui: no quantity, no request — and a tampered button sends nothing', async ({ page }) => {
   const OTHER = '99999999-9999-4999-8999-999999999999';
   await setup(page);

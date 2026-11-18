@@ -527,7 +527,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "{n} card": "{n} carta", 
     "See who lends": "Ver quem empresta", "See cards": "Ver cartas", 
     "{n} to buy": "{n} para comprar", "1 card": "1 carta", "{n} different cards": "{n} cartas diferentes",  "See stores": "Ver lojas",
-    "{who} lends": "{who} empresta", "{n} free": "{n} livres", "{n} free_1": "1 livre", "Ask to borrow": "Pedir emprestado", "{who} has it": "{who} tem", "{n} in their collection · they decide": "{n} na coleção · a pessoa decide se empresta", "Show on my public profile": "Mostrar no meu perfil público", "public": "público", "People who aren't your friends see it on your profile and in the Lore Counter, when your profile is public. Friends already see all your decks.": "Quem não é seu amigo vê no seu perfil e no Lore Counter, quando seu perfil é público. Amigos já veem todos os seus decks.", "Asked": "Pedido enviado", "For the deck {d}": "Para o deck {d}", "Request sent. You'll see the answer in Trades.": "Pedido enviado. A resposta aparece em Trocas.", "Too many requests today. Try tomorrow.": "Muitos pedidos hoje. Tente amanhã.", "{who} sells on the board": "{who} vende no Mural", "{v} each": "{v} cada", "See listing": "Ver anúncio",
+    "{who} lends": "{who} empresta", "{n} free": "{n} livres", "{n} free_1": "1 livre", "Ask to borrow": "Pedir emprestado", "{who} has it": "{who} tem", "{n} in their collection · they decide": "{n} na coleção · a pessoa decide se empresta", "Show on my public profile": "Mostrar no meu perfil público", "public": "público", "People who aren't your friends see it on your profile and in the Lore Counter, when your profile is public. Friends already see all your decks.": "Quem não é seu amigo vê no seu perfil e no Lore Counter, quando seu perfil é público. Amigos já veem todos os seus decks.", "Asked": "Pedido enviado", "Request accepted": "Pedido aceito", "Lent to you": "Emprestada a você", "{n} waiting for an answer": "{n} aguardando resposta", "{n} accepted": "{n} aceitos", "{n} accepted_1": "1 aceito", "{n} with you": "{n} com você", "1 loan request in progress": "1 pedido de empréstimo em andamento", "{n} loan requests in progress": "{n} pedidos de empréstimo em andamento", "See in Trades": "Ver em Trocas", "For the deck {d}": "Para o deck {d}", "Request sent. You'll see the answer in Trades.": "Pedido enviado. A resposta aparece em Trocas.", "Too many requests today. Try tomorrow.": "Muitos pedidos hoje. Tente amanhã.", "{who} sells on the board": "{who} vende no Mural", "{v} each": "{v} cada", "See listing": "Ver anúncio",
     "None of your friends has it": "Ninguém dos seus amigos tem",
     "In their collection · they did not offer to lend": "Na coleção · não ofereceu empréstimo", "This friend did not offer to lend this card.": "Este amigo não ofereceu esta carta para empréstimo.",
     "Who helps most": "Quem mais ajuda", "Friends who lend or trade cards this deck is missing, most cards first. Owning a card is not offering it.": "Amigos que emprestam ou trocam cartas que faltam neste deck, quem ajuda com mais cartas primeiro. Possuir uma carta não é oferecê-la.",
@@ -730,7 +730,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   // the cards you can build with: all your collections plus the ones shared with you (supabase/collection_shares.sql)
   let ALL_COLL = null;
   const coll = () => ALL_COLL || prof()?.collection || {};
-  let sharedColls = [], lendBy = new Map(), lendAsked = new Set();
+  let sharedColls = [], lendBy = new Map(), lendAsked = new Map();   // "lender|card_id" -> status of my open request
+  const ASK_RANK = { requested: 1, accepted: 2, delivered: 3 };
   // ---------- deck físico / virtual (supabase/deck_built.sql) ----------
   // A physical deck has its cards set aside in the collection ("Decks" place in Coleção): they leave the binder (and
   // home, when the binder is short). A virtual deck moves nothing: it only uses the collection to count what's missing.
@@ -844,14 +845,19 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const ids = [...new Set(listings.map((l) => l.user_id).filter((u) => u !== me.id))];
     if (ids.length) for (const r of (await CLOUD.api(`profiles?user_id=in.(${ids.slice(0, 150).join(",")})&select=user_id,display_name`).catch(() => [])) || []) names.set(r.user_id, r.display_name);
     games = (gl || []).map(gameOf).filter(Boolean);
-    const [sc, hm, tr, dk, lo, ul] = await Promise.all([
+    const [sc, hm, tr, dk, lo, ul, mine] = await Promise.all([
       CLOUD.api("rpc/shared_collections", { method: "POST", body: {} }).catch(() => []),
       CLOUD.api("collection_home?select=profile,card_id,n,f").catch(() => []),
       CLOUD.api("collection_trade?select=profile,card_id,n,f").catch(() => []),
       CLOUD.api("collection_decked?select=profile,deck_id,deck_name,card_id,n,f").catch(() => null),   // null: supabase/deck_built.sql not run yet
       CLOUD.api("loans?select=items&direction=eq.lent&returned_at=is.null").catch(() => []),
       CLOUD.api(`user_loans?select=items&lender=eq.${me.id}&status=in.(accepted,delivered)`).catch(() => []),
+      // my own open requests (I am the borrower): after a reload the row still says "asked", so the same card is not asked twice
+      CLOUD.api(`user_loans?select=lender,items,status&borrower=eq.${me.id}&status=in.(requested,accepted,delivered)`).catch(() => []),
     ]);
+    lendAsked = new Map();
+    for (const x of Array.isArray(mine) ? mine : []) for (const it of x.items || []) { const k = `${x.lender}|${it.card_id}`;
+      if (!lendAsked.has(k) || ASK_RANK[x.status] > ASK_RANK[lendAsked.get(k)]) lendAsked.set(k, x.status); }
     sharedColls = Array.isArray(sc) ? sc : [];
     STOCK = { ready: Array.isArray(dk), home: hm || [], trade: tr || [], decked: dk || [], lent: [...(lo || []), ...(ul || [])].flatMap((x) => x.items || []) };
     ALL_COLL = {};
@@ -1605,6 +1611,15 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       });
     });
   }
+  // the requests already made for this deck's missing cards (any printing), so the plan says what is on its way
+  function askedRow(m) {
+    const ids = new Set(m.missing.flatMap(({ c }) => printings(c).map((p) => p.id)));
+    const st = [...lendAsked].filter(([k]) => ids.has(k.slice(k.indexOf("|") + 1))).map(([, v]) => v);
+    if (!st.length) return "";
+    const n = (s) => st.filter((x) => x === s).length;
+    const sub = [n("requested") ? Tx("{n} waiting for an answer", { n: n("requested") }) : "", n("accepted") ? Tx("{n} accepted", { n: n("accepted") }) : "", n("delivered") ? Tx("{n} with you", { n: n("delivered") }) : ""].filter(Boolean).join(" · ");
+    return `<div class="plan-row card inset" style="padding:var(--sp-2) var(--sp-3)" data-testid="plan-asked"><span class="t" style="min-width:0"><b><i class="ic i-users" style="vertical-align:-3px;margin-right:6px"></i>${esc(Tx(st.length === 1 ? "1 loan request in progress" : "{n} loan requests in progress", { n: st.length }))}</b><span class="small muted" style="display:block">${esc(sub)}</span></span><a class="btn small" href="../trades/?tab=loans">${esc(Tx("See in Trades"))}</a></div>`;
+  }
   function missingTab(d, m) {
     if (!m.known.length) return emptyBox("decks", Tx("This deck is empty."), Tx("Tap Edit list to add cards."));
     if (!m.missing.length) return emptyBox("collection", Tx("You have every card for this deck."), Tx("Copies lent to friends still count as yours."));
@@ -1623,7 +1638,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       // and free copies, with the quantity and the request.
       offers.unshift(...fl.slice(0, 3).map((x) => { const k = `${x.user}|${x.card_id}`, asked = lendAsked.has(k), ok = lends(x);
         const ed = x.card_id === c.id ? "" : ` · ${Tx("Other printing · {id}", { id: x.card_id })}`;
-        return `<div class="list-row flat two" style="min-height:52px" data-testid="friend-has" data-state="${ok ? "lend" : "has"}"><span class="t"><span class="fwho">${friendFace(x.user, x.name)}${friendTag(ok ? "lend" : "has")}${esc(Tx("{who} has it", { who: x.name || "—" }))}</span><span class="meta">${esc((ok ? Tx("{n} free", { n: x.free }) : Tx("In their collection · they did not offer to lend")) + ed)}</span></span>${!ok ? "" : asked ? `<a class="btn small ghost" href="../trades/">${Tx("Asked")}</a>` : `<button type="button" class="btn small" data-borrow="${esc(x.user)}" data-bcard="${esc(x.card_id)}" data-bq="${Math.min(n, x.free)}">${Tx("Ask to borrow")}</button>`}</div>`; }));
+        return `<div class="list-row flat two" style="min-height:52px" data-testid="friend-has" data-state="${ok ? "lend" : "has"}"><span class="t"><span class="fwho">${friendFace(x.user, x.name)}${friendTag(ok ? "lend" : "has")}${esc(Tx("{who} has it", { who: x.name || "—" }))}</span><span class="meta">${esc((ok ? Tx("{n} free", { n: x.free }) : Tx("In their collection · they did not offer to lend")) + ed)}</span></span>${!ok ? "" : asked ? askedBtn(k) : `<button type="button" class="btn small" data-borrow="${esc(x.user)}" data-bcard="${esc(x.card_id)}" data-bq="${Math.min(n, x.free)}">${Tx("Ask to borrow")}</button>`}</div>`; }));
       // Conselho (#246): count only copies actually offered, never a whole card because one friend has one.
       // Lending: per friend, the larger of the free copies they offer and their "Empresto" post (not both: the same copies).
       // "Possui" (has it, did not offer) counts nothing. Each source takes what is still missing after the one before.
@@ -1665,7 +1680,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     // the whole-missing value is what buying everything would cost; the plan says what is actually left to buy
     const sub = !havePrices() ? "" : Tx("Buying all of it: about {v} at market price", { v: money(m.missingValue) });
     return `<section class="card" data-testid="missing-summary" style="padding:var(--sp-3) var(--sp-4)"><b style="font-size:var(--fs-h3, 1.125rem)">${esc(head[0])}</b><span class="small muted" style="display:block">${esc(sub)}</span>
-        <div class="plan-rows" data-testid="completion-plan"><span class="small" style="font-weight:600">${Tx("How to complete it")}</span>${plan}${offeredNote}</div></section>
+        <div class="plan-rows" data-testid="completion-plan"><span class="small" style="font-weight:600">${Tx("How to complete it")}</span>${plan}${offeredNote}${askedRow(m)}</div></section>
       <span id="who-helps-anchor"></span>${whoHelps(m)}
       <div class="stack">${cards}</div>
       <div class="card inset miss-export" data-testid="miss-export" style="margin:var(--sp-3) 0;padding:var(--sp-3)"><div class="row between" style="gap:var(--sp-2);flex-wrap:wrap">
@@ -1696,13 +1711,16 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       .sort((a, b) => b.cards - a.cards || b.copies - a.copies || b.owns - a.owns || String(friendName(a.user)).localeCompare(String(friendName(b.user))));
   }
   const friendName = (u) => faces?.get(u)?.name || names.get(u) || "—";
+  // a request already made: the button becomes its state, and opens Trocas › Empréstimos where it is answered
+  const ASK_LABEL = { requested: "Asked", accepted: "Request accepted", delivered: "Lent to you" };
+  const askedBtn = (k) => `<a class="btn small ghost" href="../trades/?tab=loans" data-testid="asked" data-ask="${esc(lendAsked.get(k))}">${Tx(ASK_LABEL[lendAsked.get(k)] || "Asked")}</a>`;
   function whoHelps(m) {
     const hs = helpers(m); if (!hs.length) return "";
     const ed = (c, id) => id === c.id ? `<span class="tag" data-testid="help-exact">${esc(Tx("Exact printing · {id}", { id }))}</span>`
       : `<span class="tag" data-testid="help-other" title="${esc(Tx("Same card to play; a different printing to collect"))}">${esc(Tx("Other printing · {id}", { id }))}</span>`;
     const row = (h, r) => { const [a, b] = split(r.c.name), q = encodeURIComponent(a), out = [];
       if (r.lend) { const k = `${h.user}|${r.lend.card_id}`;
-        out.push(`<div class="list-row flat two" style="min-height:48px" data-testid="help-lend">${friendTag("lend")}<span class="t"><span>${ed(r.c, r.lend.card_id)}</span><span class="meta">${esc(Tx("Lends {n}", { n: r.lend.free }))}</span></span>${lendAsked.has(k) ? `<a class="btn small ghost" href="../trades/?tab=loans">${Tx("Asked")}</a>` : `<button type="button" class="btn small" data-hborrow="${esc(h.user)}" data-bcard="${esc(r.lend.card_id)}" data-bq="${Math.min(r.n, r.lend.free)}">${Tx("Ask to borrow")}</button>`}</div>`); }
+        out.push(`<div class="list-row flat two" style="min-height:48px" data-testid="help-lend">${friendTag("lend")}<span class="t"><span>${ed(r.c, r.lend.card_id)}</span><span class="meta">${esc(Tx("Lends {n}", { n: r.lend.free }))}</span></span>${lendAsked.has(k) ? askedBtn(k) : `<button type="button" class="btn small" data-hborrow="${esc(h.user)}" data-bcard="${esc(r.lend.card_id)}" data-bq="${Math.min(r.n, r.lend.free)}">${Tx("Ask to borrow")}</button>`}</div>`); }
       if (r.post) out.push(`<div class="list-row flat two" style="min-height:48px" data-testid="help-post">${friendTag("lend")}<span class="t"><span>${ed(r.c, r.post.card_id)}</span><span class="meta">${esc(Tx("Lends {n}", { n: r.post.qty }))}</span></span><a class="btn small" href="../trades/?tab=board&q=${q}">${Tx("See listing")}</a></div>`);
       if (r.trade) out.push(`<div class="list-row flat two" style="min-height:48px" data-testid="help-trade">${friendTag("trade")}<span class="t"><span>${ed(r.c, r.trade.card_id)}</span><span class="meta">${esc(Tx(r.trade.foil ? "Trades {n} foil" : "Trades {n}", { n: r.trade.qty }))}</span></span><a class="btn small" href="../trades/?tab=trades&anuncio=${encodeURIComponent(r.trade.id)}">${Tx("See listing")}</a></div>`);
       if (!out.length && r.owns) out.push(`<div class="list-row flat two" style="min-height:44px" data-testid="help-owns">${friendTag("has")}<span class="t"><span>${ed(r.c, r.owns.card_id)}</span></span></div>`);
@@ -1757,7 +1775,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     b.disabled = true;
     try {
       await CLOUD.api("user_loans", { method: "POST", prefer: "return=minimal", body: { lender: b.dataset.borrow, borrower: me.id, created_by: me.id, items: [{ card_id: b.dataset.bcard, qty: Math.min(+x.free, Math.max(1, +b.dataset.bq || 1)), foil: false }], note: Tx("For the deck {d}", { d: d.name }).slice(0, 500) } });
-      lendAsked.add(k); toast(Tx("Request sent. You'll see the answer in Trades.")); window.INKWELL_TRACK?.("loan_requested"); render();
+      lendAsked.set(k, "requested"); toast(Tx("Request sent. You'll see the answer in Trades.")); window.INKWELL_TRACK?.("loan_requested"); render();
     } catch (e) { b.disabled = false; toast(/too_many/.test(String(e?.why || "")) ? Tx("Too many requests today. Try tomorrow.") : Tx("Couldn't save. Try again."), null, true); }
   }
   async function postMissing(d, kindName) {
