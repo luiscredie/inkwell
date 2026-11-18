@@ -67,9 +67,11 @@ jobs:
           python - <<'PY'
           import json,os
           from pathlib import Path
-          paths=sorted(Path('coletas/ligalorcana/aplicar').glob('*/*/manifest.json'))
+          paths=list(Path('coletas/ligalorcana/aplicar').glob('*/*/manifest.json'))
           if not paths:raise RuntimeError('Nenhum pacote produzido')
-          p=paths[-1]; d=json.loads(p.read_text())
+          # Prefer the capture covering the greatest number of source uploads.
+          p=max(paths,key=lambda x:(len(json.loads(x.read_text()).get('sources',[])),str(x.parent.parent),str(x)))
+          d=json.loads(p.read_text())
           with open(os.environ['GITHUB_OUTPUT'],'a') as f:
               f.write('package='+str(p.parent)+'\n')
               f.write('ready='+str(bool(d.get('publishable'))).lower()+'\n')
