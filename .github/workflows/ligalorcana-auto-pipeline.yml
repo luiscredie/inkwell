@@ -38,9 +38,16 @@ jobs:
         with:
           python-version: '3.12'
       - name: Testar gerador e integridade
-        run: python -m unittest tools/test_ligalorcana_release_candidate.py -v
+        run: python -m unittest tools/test_ligalorcana_release_candidate.py tools/test_ligalorcana_generate_map.py -v
       - name: Normalizar e auditar novos arquivos
         run: python tools/ligalorcana_stage.py --source coletas/ligalorcana/coleta --root coletas/ligalorcana
+      - name: Resolver IDs inequivocos e registrar pendencias
+        run: |
+          python tools/ligalorcana_generate_map.py \
+            --source coletas/ligalorcana/coleta \
+            --cards site/data/cards.json \
+            --output coletas/ligalorcana/mapeamento/ligalorcana-id-map.json \
+            --existing site/data/ligalorcana-id-map.json
       - name: Consolidar pacote de aplicacao, sem publicar
         run: |
           python tools/ligalorcana_release_candidate.py \
@@ -48,7 +55,7 @@ jobs:
             --cards site/data/cards.json \
             --prices site/data/prices.json \
             --history site/data/price-history.json \
-            --map site/data/ligalorcana-id-map.json \
+            --map coletas/ligalorcana/mapeamento/ligalorcana-id-map.json \
             --daily-workflow .github/workflows/daily-prices.yml \
             --min-coverage 0.98 \
             --output coletas/ligalorcana/aplicar
@@ -79,7 +86,7 @@ jobs:
         run: |
           git config user.name "inkwell-prices[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add coletas/ligalorcana/tratados coletas/ligalorcana/data coletas/ligalorcana/aplicar
+          git add coletas/ligalorcana/tratados coletas/ligalorcana/data coletas/ligalorcana/aplicar coletas/ligalorcana/mapeamento
           if ! git diff --cached --quiet; then
             git commit -m "data: normalizar e preparar LigaLorcana (sem publicar)"
             git pull --rebase origin feature/ligalorcana-review-pipeline
