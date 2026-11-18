@@ -45,6 +45,20 @@ for(const width of [320,375,390,430,1280]){
       assert(visibility.unobscured,'Central featured card obscured at its center');
       assert(Number(visibility.opacity)>0.9,'Central featured card is faded');
     }
+    // Verify actual CSS animation durations with reduced-motion disabled.
+    // JS completes page turning after 160ms; visual animations must not outlast it.
+    await page.emulateMedia({reducedMotion:'no-preference'});
+    const animationDurations=await page.evaluate(()=>{
+      const sheet=[...document.styleSheets].find(s=>s.href?.endsWith('/experience.css'));
+      const text=[...(sheet?.cssRules||[])].map(r=>r.cssText).join(' ');
+      return {
+        leaf:/\\.binder-leaf\\s*\\{[^}]*animation:\\s*leaf-in\\s+\\.16s/.test(text),
+        next:/is-turning-next[^}]*page-turn-next\\s+\\.16s/.test(text),
+        prev:/is-turning-prev[^}]*page-turn-prev\\s+\\.16s/.test(text)
+      };
+    });
+    assert(Object.values(animationDurations).every(Boolean),'Binder CSS animation exceeds 160ms interaction window');
+    await page.emulateMedia({reducedMotion:'reduce'});
     const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth);
     assert(overflow<=2,`Horizontal overflow: ${overflow}px`);
     await page.screenshot({path:join(output,`home-${width}.png`),fullPage:true});
