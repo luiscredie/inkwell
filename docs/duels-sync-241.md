@@ -49,9 +49,11 @@ the SQL can go first without breaking it. A failed run keeps the previous state.
 
 **Bounded, and nothing dropped.** The state holds no history rows and stays about 8 KB however many games wait (tested
 with 320). A game in the summed-up range is not on the list but is not forgotten: it waits for the range's next look
-like a listed game, and on that day the read reaches back to the range and each game in it is tried again (12 a run,
-the range stays due until all got a try). The count is exact after any run that read the whole range, an estimate in
-between. If the function ran before the SQL, each result says `state_read: false`.
+like a listed game; a look goes on run after run (12 a run, oldest first, `done` marks how far it got) and ends once
+every game of the range got a try, then the next look is a day later. While nothing comes back, a waiting game costs
+about one request a day. As soon as one waiting game's replay is back, every waiting game (listed or summed up) is due
+at once, and each run imports 12 until none is left. The count is exact after any run that read the whole range, an
+estimate in between. If the function ran before the SQL, each result says `state_read: false`.
 
 ## What a run reports (`last_result`)
 `seen, already, added, waiting` (as before; `waiting` = games not tried yet) + `replay_missing` (all games waiting for a
@@ -61,19 +63,24 @@ newest_api_game_at, newest_stored_game_at, account_name, status` (`complete` / `
 No token, e-mail, user id or opponent name.
 
 ## Tests
-- `tools/duels-sync.test.mjs` (35, in CI): runs one after another against a fake duels.ink that follows the reference
+- `tools/duels-sync.test.mjs` (38, in CI): runs one after another against a fake duels.ink that follows the reference
   (update-time order, `from`, keyset cursor, page size, 404 replays, a refused position) and an in-memory game_logs that
   counts duplicates, with the state of each run passed to the next and a fake clock. Scenarios: the #241 timing case; a
   replay missing for 12 days (window 7); a first sync of 60 games in 9 pages; 16 games with no replay before 2 new ones;
   40 games in 20 pages; 6 missing games under 15 pages already stored; a game updated later (moves to the top); a
   refused position; **320 games with no replay** (all accounted for: 100 listed + 220 summed up, state about 8 KB, new
-  games still imported meanwhile, then all 320 imported in 27 runs, the minimum at 12 a run); the shared token with
+  games still imported meanwhile, then all 320 imported in 27 runs, the minimum at 12 a run); **the queue at the real
+  pace** (a run every 30 minutes): with 320 waiting and nothing coming back, about one request per game per day (210 a
+  day) and the state the same size; replays back while nothing is due: recovery starts at the next look (1.5 h in the
+  test, 24 h at most by construction), then 12 a run until done (27 runs, 13.5 h), no duplicate; the shared token with
   `DUELS_TOKEN_USER` set to the account, not set, set to another account, a token now reading another duels.ink account,
   and the owner after a name change; filters; a broken answer; no private data. Every scenario checks no duplicate.
 - Mutations, each one making its tests fail: rest of the list dropped instead of summed up (1); no wait list kept (5);
   first sync reads only the newest page (2 + a crash); retries competing with new games for the slots (1); no position
   saved at the page limit (2, and that run says `complete` with 6 games missing); shared token used without
-  `DUELS_TOKEN_USER` (1); shared token without the duels.ink account check (1).
+  `DUELS_TOKEN_USER` (1); shared token without the duels.ink account check (1); a look at the summed-up range without
+  its progress mark (1: the range stays due forever, 12 requests every run); no wake-up when a replay comes back (1:
+  recovery takes 22.5 h instead of 13.5 h).
 - `tools/duels_sync_state_sql_test.sh` (13, local Postgres): applies twice; one definition; owner postgres and ACL
   `{postgres, service_role}` like production; security definer with empty search_path; returns the state; only enabled
   rows; one player; wrong key refused; anon and authenticated refused, service_role allowed. With the `revoke` removed,
@@ -110,6 +117,17 @@ Nothing here reads or shows the token. The user id is not a secret; the token st
 5. Site: merge (the Jogos line).
 Doing 3 before 1 does no harm to data, but the owner's sync would stop with "not tied to an Inkwell account" until the
 secret is set.
+
+## Publication checklist (18/11)
+| Item | State |
+|---|---|
+| Authorized account for the shared token | Exactly **one** row without its own token (`private.duels_sync`, read only): user id `68dad53f…`, enabled, 982 duels.ink games, last run ok, and the only row in `public.admins` (account created 26/07/2026). No token read. |
+| SQL test (`tools/duels_sync_state_sql_test.sh`, local Postgres 16, production default privileges) | 13/13; with the `revoke` removed, 3 fail |
+| Production function today | v8, identical to main's `index.ts` (read 17/11); `duels_sync_begin` ACL `{postgres, service_role}` (read 18/11) |
+| Sync tests (`tools/duels-sync.test.mjs`) | 38/38, in CI; every mutation above makes its test fail |
+| Queue moves on, run after run | 320 waiting: recovery starts at the next look (≤ 24 h), then 12 a run until done, 27 runs = 13.5 h at one run per 30 min; new games are never held back meanwhile |
+| CI on the PR head | green (python, js, smoke, journeys-webkit) |
+| Rollback | below; no data to undo |
 
 ## Rollback
 - Function: deploy `index.ts` + `convert.ts` from the commit before this PR (v8). It ignores `state`, the new fields and

@@ -200,6 +200,39 @@ const allStored = (w, ids) => ids.every((id) => w.store.has('duels-' + id));
   ck(`…and all ${N} are imported, no duplicate, nothing left waiting`, ok && w.dupes === 0 && w.last.replay_missing === 0 && !w.state.more, `runs ${w.runs}, stored ${lost.filter((g) => w.store.has('duels-' + g.game_id)).length}/${N}, ${JSON.stringify(w.state.more)}`);
 }
 
+// ---------------------------------------------------------------- the queue moves on run after run (every 30 minutes), worst case
+// The replays come back while nothing is due: they wait for the next look (≤ 24 h by construction: the longest pause);
+// from the first replay back, every waiting game is due and each run imports MAX_PER_RUN until none is left.
+{
+  const N = WAIT_MAX * 3 + 20;
+  const lost = many('q', N, -24 * 15, 0.02);
+  const w = world({ games: [game('seed', -24 * 16), ...lost], noReplay: lost.map((g) => g.game_id) });
+  w.t = Date.parse(at(-24 * 15 + 10)); await w.run({ advance: 0 });
+  // until a daily look at the summary has just ended (its next look ~24 h away) and every game was tried
+  // a moment when nothing is due for a while: every game tried, the next look (list or summary) at least 2 h away
+  const nextLook = () => Math.min(Date.parse(w.state.more?.next || '9999'), ...Object.values(w.state.wait).map((x) => Date.parse(x.next)));
+  const reached = await w.runUntil(() => !!w.state.more && w.last.waiting === 0 && nextLook() - w.t >= 2 * 3600e3, 600);
+  const gapH = (nextLook() - w.t) / 3600e3;
+  // cost while nothing comes back: about one request per waiting game per day, not 12 every run forever
+  const askedBefore = [...w.asked.values()].reduce((a, b) => a + b, 0), tBefore = w.t, stBefore = JSON.stringify(w.state);
+  for (let i = 0; i < 96; i++) await w.run();                                          // two days
+  const perDay = ([...w.asked.values()].reduce((a, b) => a + b, 0) - askedBefore) / 2;
+  ck(`waiting games cost about one request each per day (${perDay} a day for ${N}), state unchanged in size`, perDay <= N * 1.2 && Math.abs(JSON.stringify(w.state).length - stBefore.length) < 400, `${perDay}/day`);
+  // back to a quiet moment before the replays return
+  await w.runUntil(() => nextLook() - w.t >= 2 * 3600e3, 200);
+  const gapH2 = (nextLook() - w.t) / 3600e3;
+  const lookedAt = w.t;
+  w.noReplay.clear();
+  const added = [];
+  let seenRun = w.runs;
+  await w.runUntil(() => { if (w.runs > seenRun) { seenRun = w.runs; added.push(w.last.added); } return allStored(w, lost.map((g) => g.game_id)); }, 200);
+  const first = added.findIndex((a) => a > 0), hoursIdle = first / 2, tail = added.slice(first);
+  // the first run imports what was due then; from it on every waiting game is due: 12 a run until the last
+  const steady = tail.slice(1, -1).every((a) => a === MAX_PER_RUN);
+  ck(`replays back while nothing is due: recovery starts at the next look (${gapH2.toFixed(1)} h away → ${hoursIdle} h), never later than 24 h`, reached && first >= 0 && hoursIdle <= Math.ceil(gapH2 * 2) / 2 + 0.5 && hoursIdle <= 24, `reached ${reached}; ` + JSON.stringify(added.slice(0, 60)));
+  ck(`…then, after the first replay back, every run imports ${MAX_PER_RUN} until done (${tail.length} runs, ${tail.length / 2} h), no duplicate`, steady && allStored(w, lost.map((g) => g.game_id)) && w.dupes === 0 && tail.length <= Math.ceil(N / MAX_PER_RUN) + 1, JSON.stringify(tail));
+}
+
 // ---------------------------------------------------------------- what is left out, broken answers, privacy
 {
   const { wanted, excluded } = classify([game('w', 1), game('L', 1, { result: 'LOSS' }), game('bot', 1, { opp_is_bot: true }), game('live', 1, { result: 'in_progress' }), game('none', 1, { result: null })]);

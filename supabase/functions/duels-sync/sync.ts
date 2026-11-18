@@ -43,7 +43,7 @@ export type Wait = { s: string; n: number; next: string };   // started_at, trie
 // when to look again (once a day). A missing game in that range, not on the list, waits for that day like a listed one;
 // on that day the read reaches back to `oldest` and tries each of them again. The count is exact after any run that read
 // the whole range (an estimate in between).
-export type More = { oldest: string; newest: string; n: number; next: string };
+export type More = { oldest: string; newest: string; n: number; next: string; done?: string | null };   // done: tried up to, in a look
 export type SyncState = { scan?: Scan | null; wait?: Record<string, Wait>; more?: More | null };
 
 // Which history rows become games, and why the others do not.
@@ -121,7 +121,13 @@ export async function syncUser(userId: string, cat: Catalog, io: SyncIO,
   const counted: Json[] = [];
   const note = (games: Json[]) => { for (const g of games) if (g?.game_id != null && !seen.has(String(g.game_id))) { seen.set(String(g.game_id), g); counted.push(g); } };
   const inMore = (r: Json) => !!more && !wait[String(r.game_id)] && String(r.started_at) >= more.oldest && String(r.started_at) <= more.newest;
-  const isWaiting = (r: Json) => { const w = wait[String(r.game_id)]; return w ? Date.parse(w.next) > now : (!dueMore && inMore(r)); };
+  // a game of the summed-up range waits until the range's look; during the look (12 a run, oldest first) the ones already
+  // tried in it (up to `done`) wait for the next look
+  const isWaiting = (r: Json) => {
+    const w = wait[String(r.game_id)];
+    if (w) return Date.parse(w.next) > now;
+    return inMore(r) && (!dueMore || (!!dueMore.done && String(r.started_at) <= dueMore.done));
+  };
   // games never tried come first, newest first (a new game is never held back by old ones looked for again); then
   // retries (on the list, or in the summed-up range), oldest first
   const retry = (r: Json) => !!wait[String(r.game_id)] || inMore(r);
@@ -171,12 +177,14 @@ export async function syncUser(userId: string, cat: Catalog, io: SyncIO,
 
   // 3. replays
   const logs: Json[] = [];
-  let tried = 0;
+  let tried = 0, recovered = false;
+  const rangeTried = queue.filter((r) => inMore(r)).map((r) => String(r.started_at)).sort();   // before the tries change `wait`
   for (const r of queue) {
     tried++;
     const id = String(r.game_id);
     const events = await io.duels(`/g/${encodeURIComponent(id)}`, true);
     if (events) {
+      if (retry(r)) recovered = true;                                       // a replay that was missing is back
       const log = convert(r, events, cat, meName || "Me");
       if (meId) log.source_ref = { ...(log.source_ref || {}), duels_user_id: meId };   // the account, by its stable id
       logs.push(log); delete wait[id];
@@ -203,19 +211,29 @@ export async function syncUser(userId: string, cat: Catalog, io: SyncIO,
     const lo = span[0], hi = span[span.length - 1];
     const covered = !scan && (from === null || from <= lo);           // this run read every page of the range
     const missingIn = wanted.filter((r) => !stored(r) && !keptIds.has(String(r.game_id)) && String(r.started_at) >= lo && String(r.started_at) <= hi);
-    // a due range stays due until each of its games got a try (12 a run); then once a day
-    const triedAll = covered && missingIn.every((r) => queued.has(String(r.game_id)));
-    const next = dueMore ? (triedAll ? new Date(now + 24 * HOUR).toISOString() : dueMore.next)
+    // a look at the range goes on run after run (12 a run, oldest first, `done` = tried up to); it ends once every game
+    // of the range got a try, then the next look is a day later
+    const done = dueMore ? [dueMore.done, rangeTried[rangeTried.length - 1]].filter(Boolean).sort().pop() ?? null : null;
+    const lookOver = !!dueMore && covered && missingIn.every((r) => queued.has(String(r.game_id)) || (!!done && String(r.started_at) <= done));
+    const next = dueMore ? (lookOver ? new Date(now + 24 * HOUR).toISOString() : dueMore.next)
       : [...over.map(([, w]) => w.next), ...(more ? [more.next] : [])].sort()[0];
+    const keepDone = dueMore && !lookOver ? done : null;
     if (covered) {
       const ss = missingIn.map((r) => String(r.started_at)).sort();
-      nextMore = ss.length ? { oldest: ss[0], newest: ss[ss.length - 1], n: ss.length, next } : null;
+      nextMore = ss.length ? { oldest: ss[0], newest: ss[ss.length - 1], n: ss.length, next, done: keepDone } : null;
     } else {
       // between exact counts: add only games that left the list now and were not in the range already (a game of the
       // range tried again and still missing is the same game, not one more)
       const fresh = over.filter(([, w]) => !more || w.s < more.oldest || w.s > more.newest).length;
-      nextMore = { oldest: lo, newest: hi, n: (more?.n || 0) + fresh, next };
+      nextMore = { oldest: lo, newest: hi, n: (more?.n || 0) + fresh, next, done: keepDone };
     }
+  }
+  // A missing replay came back: duels.ink serves them again, so every waiting game is due now (MAX_PER_RUN a run) instead
+  // of at its own time, up to a day away. Those still missing go back to waiting, with a longer pause.
+  if (recovered) {
+    const nowIso = new Date(now).toISOString();
+    for (const [, w] of kept) w.next = nowIso;
+    if (nextMore) { nextMore.next = nowIso; nextMore.done = null; }
   }
   const summed = (r: Json) => !!nextMore && !keptIds.has(String(r.game_id)) && String(r.started_at) >= nextMore.oldest && String(r.started_at) <= nextMore.newest;
   const waiting = wanted.filter((r) => !stored(r) && !wait[String(r.game_id)] && !summed(r)).length;   // not tried yet: next runs
