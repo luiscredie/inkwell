@@ -192,8 +192,10 @@ table.stats td.n { text-align: right; }
   const SEATS = ["p1", "p2", "p3", "p4"];
   const INKS = ["Amber", "Amethyst", "Emerald", "Ruby", "Sapphire", "Steel"];
   const HEX = { Amber: "#f59e0b", Amethyst: "#8b5cf6", Emerald: "#10b981", Ruby: "#ef4444", Sapphire: "#3b82f6", Steel: "#7c8ba1" };
+  // a pane with no ink chosen (R24: inks are optional): Inkwell gold, no ink symbol
+  const NEUTRAL = "#c9a85a";
   const L = {
-    pt: { you: "Você", opp: "Oponente", player: "Jogador", undo: "Desfazer", newGame: "Novo jogo", newMatch: "Nova partida", settings: "Ajustes", judge: "Mostrar ao juiz", close: "Fechar",
+    pt: { you: "Você", opp: "Oponente", player: "Jogador", undo: "Desfazer", newGame: "Próximo jogo", newMatch: "Nova partida", settings: "Ajustes", judge: "Mostrar ao juiz", close: "Fechar",
       lang: "Idioma", langName: "English", players: "Jogadores", playersSub: "1 conta só o seu lore", bestOf: "Partida", magic: "Magia animada", magicSub: "Brilhos e tinta subindo da sua borda",
       decks: "Pedir as tintas ao começar", decksSub: "Seu deck no início, o do oponente no fim (2 jogadores). Desligado, o contador começa direto e você informa as tintas depois, se quiser", tour: "Modo torneio", tourSub: "Deck do oponente só ao fim da partida (Regras §5.2)",
       flip: "Virar os painéis do outro lado", history: "Partidas registradas", none: "Nenhuma partida registrada ainda.",
@@ -205,7 +207,7 @@ table.stats td.n { text-align: right; }
       clock: "Relógio da partida", clockSub: "Toque no relógio para começar; toque de novo para pausar e continuar", off: "Desligado",
       turnMode: "Modo turno a turno", turnModeSub: "Cada jogador passa o turno no contador; um cronômetro mede o turno", startTurn: "Começar meu turno", passTurn: "Passar turno", yourTurnTime: "seu último turno", timeUp: "Tempo!", turn: "Turno",
       confirmNew: "Começar nova partida? O placar volta a zero.", yes: "Sim", cancel: "Cancelar", colors: "Tintas", clear: "Apagar histórico", cleared: "Histórico apagado.", game: "Jogo", vs: "vs" },
-    en: { you: "You", opp: "Opponent", player: "Player", undo: "Undo", newGame: "New game", newMatch: "New match", settings: "Settings", judge: "Show the judge", close: "Close",
+    en: { you: "You", opp: "Opponent", player: "Player", undo: "Undo", newGame: "Next game", newMatch: "New match", settings: "Settings", judge: "Show the judge", close: "Close",
       lang: "Language", langName: "Português", players: "Players", playersSub: "1 counts only your lore", bestOf: "Match", magic: "Animated magic", magicSub: "Sparkles and ink rising from your edge",
       decks: "Ask for the inks at the start", decksSub: "Your deck at the start, the opponent's at the end (2 players). Off, the counter starts right away and you can add the inks later", tour: "Tournament mode", tourSub: "Opponent's deck only when the match ends (Rules §5.2)",
       flip: "Turn the panes on the far side", history: "Recorded matches", none: "No matches recorded yet.",
@@ -247,7 +249,7 @@ table.stats td.n { text-align: right; }
     : `<b style="background:${HEX[ink] || HEX.Ruby}" title="${ink}"><svg viewBox="0 0 24 24" fill="currentColor">${INK_GLYPH[ink] || ""}</svg></b>`;
   const blank = () => ({ format: "core", lang: "pt", players: 2, bestOf: 3, magic: true, decks: false, tour: true, flip: true, clockMin: 50, turnMode: false,
     clk: { acc: 0, run: null }, turn: { seat: null, at: null, n: 0, first: null },
-    color: { p1: ["Ruby"], p2: ["Sapphire"], p3: ["Emerald"], p4: ["Amber"] }, lore: zero(), wins: zero(), log: [], won: null, matchDone: false,
+    color: { p1: [], p2: [], p3: ["Emerald"], p4: ["Amber"] }, lore: zero(), wins: zero(), log: [], won: null, matchDone: false,
     match: null, history: [], recent: [] });
   let s;
   try { s = { ...blank(), ...JSON.parse(localStorage.getItem(KEY) || "{}") }; } catch { s = blank(); }
@@ -295,7 +297,7 @@ table.stats td.n { text-align: right; }
 
   // Ink as light: each ink glows up from the player's edge of the pane, two inks from either side.
   function paint(el, inks) {
-    const a = HEX[inks[0]] || HEX.Ruby, b = HEX[inks[1]] || null;
+    const a = HEX[inks?.[0]] || NEUTRAL, b = HEX[inks?.[1]] || null;
     const glow = (c, x) => `radial-gradient(130% 95% at ${x} 102%, ${c}dd 0%, ${c}66 34%, ${c}20 60%, transparent 80%)`;
     el.style.backgroundImage = b
       ? `${glow(a, "15%")}, ${glow(b, "85%")}, linear-gradient(180deg, #161925, #0f1117)`
@@ -308,7 +310,7 @@ table.stats td.n { text-align: right; }
       paint(h, s.color[seat]);
       $(`o${i}`).textContent = s.lore[seat];
       // lore track: one diamond per point up to 20, in the player's ink; and how many are still needed
-      const lore = s.lore[seat], ink = HEX[s.color[seat]?.[0]] || HEX.Ruby;
+      const lore = s.lore[seat], ink = HEX[s.color[seat]?.[0]] || NEUTRAL;
       const tr = $(`t${i}`);
       tr.style.setProperty("--ink", ink);
       tr.innerHTML = Array.from({ length: GOAL }, (_, k) => `<i class="${k < lore ? "on" : ""}"></i>`).join("");
@@ -342,7 +344,7 @@ table.stats td.n { text-align: right; }
     let panes = [], raf = 0, last = 0;
     const rnd = (a, b) => a + Math.random() * (b - a);
     function seed(w, h, inks) {
-      const cols = inks.map((i) => HEX[i] || HEX.Ruby);
+      const cols = (inks || []).length ? inks.map((i) => HEX[i] || NEUTRAL) : [NEUTRAL];
       const motes = Array.from({ length: Math.round(w * h / 9000) + 14 }, () => ({
         x: rnd(0, w), y: rnd(h * .2, h * 1.1), r: rnd(.6, 2.2), v: rnd(6, 22), ph: rnd(0, 6.28), sw: rnd(4, 16), c: Math.random() < .3 ? "#e9d28a" : cols[(Math.random() * cols.length) | 0] }));
       const wisps = Array.from({ length: 3 }, (_, k) => ({ c: cols[k % cols.length], x: rnd(.15, .85), ph: rnd(0, 6.28), sp: rnd(.08, .16), amp: rnd(.08, .2) }));
@@ -578,12 +580,22 @@ table.stats td.n { text-align: right; }
       draw();
     });
   }
+  // The inks picked for a pane are this match's inks too (2 players: you, the opponent); none picked = not given.
+  function inksToMatch(seat, inks) {
+    if (s.players !== 2 || (seat !== "p1" && seat !== "p2")) return;
+    if (!s.match) s.match = { started: new Date().toISOString(), format: s.format, tour: s.tour, players: s.players, best_of: s.bestOf, me: null, opp: null, games: [] };
+    const k = seat === "p1" ? "me" : "opp", was = s.match[k];
+    s.match[k] = inks.length ? (was && (was.inks || []).join() === inks.join() ? was : { inks: [...inks] }) : null;
+  }
   const setOpp = (d) => { if (d) { s.match.opp = d; if (d.inks?.length) { s.color.p2 = d.inks; magic.reset(); } } render(); };
 
   // ---------- games and matches ----------
   function startMatch() {
     s.wins = zero(); resetLore(); s.won = null; s.matchDone = false; clockReset();
-    s.match = { started: new Date().toISOString(), format: s.format, tour: s.tour, players: s.players, best_of: s.bestOf, me: sealed() ? null : s.match?.me || null, opp: null, games: [] };
+    // R24: a new match starts with no inks (nothing carried over from the last one); they can be given now or later
+    s.match = { started: new Date().toISOString(), format: s.format, tour: s.tour, players: s.players, best_of: s.bestOf, me: null, opp: null, games: [] };
+    if (s.players === 2) { s.color.p1 = []; s.color.p2 = []; }
+    magic.reset();
     render();
     if (s.decks && s.players === 2) pickDeck(t().yourDeck, s.match.me, (d) => {
       s.match.me = d; if (d?.inks?.length) { s.color.p1 = d.inks; magic.reset(); } render();
@@ -719,7 +731,7 @@ table.stats td.n { text-align: right; }
       if (SYNC) $("mCoach").onclick = () => { close(); parent.postMessage({ type: "inkwell-close" }, "*"); };
       for (const x of seats()) {
         const sel = [...s.color[x]];
-        wireInks(`cp${n(x)}`, sel, (v) => { if (v.length) { s.color[x] = [...v]; render(); magic.reset(); } });
+        wireInks(`cp${n(x)}`, sel, (v) => { s.color[x] = [...v]; inksToMatch(x, v); render(); magic.reset(); });
       }
       if (two) {
         $("mW1").onclick = () => { close(); award("p1", "concede", "p2"); };   // opponent conceded
@@ -947,6 +959,15 @@ table.stats td.n { text-align: right; }
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") wake(); });
   wake();
   build();
+  // "Nova partida" in Jogos opens ../counter/?new: a new match, with no inks. A match in play asks first.
+  if (new URLSearchParams(location.search).has("new")) {
+    try { window.history.replaceState(null, "", location.pathname); } catch { /* file: */ }   // (history is the counter's own history screen)
+    const inPlay = s.match && !s.matchDone && (s.match.games?.length || seats().some((x) => s.lore[x] > 0));
+    if (!inPlay) startMatch();
+    else open(`<h2>${t().confirmNew}</h2><div class="row"><button type="button" class="btn quiet" id="nn">${t().cancel}</button><button type="button" class="btn primary" id="ny">${t().yes}</button></div>`, () => {
+      $("ny").onclick = () => { close(); startMatch(); }; $("nn").onclick = close;
+    });
+  }
   setTimeout(sync, 1500);
   loadInkDecks();   // retry anything a previous session couldn't save
 })();

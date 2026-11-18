@@ -386,7 +386,7 @@ test('Feed: a linked best-of-3 is one post with the match score; an unlinked gam
   expect(asked).not.toMatch(/players|name/);   // the feed never reads opponents' names
 });
 
-// Pacote 2: games and "Novo jogo" first; duels.ink and coaches are settings, closed, after the games.
+// Pacote 2: games and "Nova partida" first; duels.ink and coaches are settings, closed, after the games.
 async function jogos(page, rows, width = 390) {
   await page.setViewportSize({ width, height: width < 700 ? 760 : 900 });
   await page.addInitScript((me) => {
@@ -407,12 +407,12 @@ async function jogos(page, rows, width = 390) {
 const NO_INK_ROW = { user_id: ME, game_id: 'c9', source: 'lore_counter', played_at: '2026-11-01T20:00:00Z', visibility: 'private', created_at: '2026-11-01T20:00:00Z',
   summary: { result: 'loss', my_deck: 'Physical game', opp_deck: 'Unknown', my_inks: '', opp_inks: '', my_lore: 12, opp_lore: 20, went_first: null } };
 
-test('Jogos on a phone: Novo jogo and the games come before duels.ink and coaches, which start closed', async ({ page }) => {
+test('Jogos on a phone: Nova partida and the games come before duels.ink and coaches, which start closed', async ({ page }) => {
   const errors = []; page.on('pageerror', (e) => errors.push(e.message));
   await jogos(page, ROWS);
   const novo = page.getByTestId('new-game');
-  await expect(novo).toHaveText('Novo jogo');
-  await expect(novo).toHaveAttribute('href', '../counter/');
+  await expect(novo).toHaveText('Nova partida');   // the counter's own word for it (18/11)
+  await expect(novo).toHaveAttribute('href', '../counter/?new')   // a new match, no inks carried over;
   const nb = await novo.boundingBox();
   expect(nb.height).toBeGreaterThanOrEqual(44);
   const firstGame = await page.locator('.game[data-k]').first().boundingBox();
@@ -435,7 +435,7 @@ test('Jogos on a phone: Novo jogo and the games come before duels.ink and coache
   expect(errors).toEqual([]);
 });
 
-test('Jogos at 320, 768, 860 and 1280px: Novo jogo visible, no sideways scroll', async ({ page }) => {
+test('Jogos at 320, 768, 860 and 1280px: Nova partida visible, no sideways scroll', async ({ page }) => {
   for (const w of [320, 768, 860, 1280]) {
     await jogos(page, ROWS, w);
     await expect(page.getByTestId('new-game')).toBeVisible();
