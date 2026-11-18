@@ -2,7 +2,9 @@
 -- Run after duels_sync.sql. The token stays in the
 -- private schema (not reachable through the API);
 -- only the duels-sync function reads it.
--- A row without a token uses the DUELS_TOKEN secret.
+-- A row without a token may use the DUELS_TOKEN secret only if it is the
+-- owner's row (checked in the function, sync.ts: sharedTokenAllowed).
+-- duels_sync_begin is redefined by duels_sync_state.sql (run after this).
 
 alter table private.duels_sync
   add column if not exists token text;
