@@ -5,6 +5,7 @@ on:
       - feature/ligalorcana-review-pipeline
     paths:
       - 'coletas/ligalorcana/coleta/coleta_*.json'
+      - '.github/workflows/ligalorcana-auto-pipeline.yml'
   workflow_dispatch:
 
 permissions:
