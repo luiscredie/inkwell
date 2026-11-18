@@ -76,7 +76,7 @@ def preserve_prices(prices):
                    and isinstance(v,(int,float)) and not isinstance(v,bool) and v>0}
         if sanitized:result[cid]=sanitized
     return result
-def make_release(source,cards_path,prices_path,history_path,map_path,outdir,min_coverage=0.90):
+def make_release(source,cards_path,prices_path,history_path,map_path,outdir,min_coverage=0.98,daily_workflow=None):
     master_bytes=Path(cards_path).read_bytes();cards=master_rows(json.loads(master_bytes.decode('utf-8-sig')))
     base_bytes=Path(prices_path).read_bytes();base=json.loads(base_bytes)
     history=read(history_path);mapping=reviewed_map(map_path)
@@ -149,7 +149,10 @@ def make_release(source,cards_path,prices_path,history_path,map_path,outdir,min_
         if counts['duplicate_card_id']:blockers.append('ambiguous card ID collisions')
         if any(i['kind']=='date_already_in_history' for i in issues):blockers.append('history day already exists')
         if not daily:blockers.append('no valid prices')
-        blockers.append('daily-prices.yml must stop overwriting Liga prices before publishing')
+        if not daily_workflow or not Path(daily_workflow).exists():
+            blockers.append('cannot verify retired TCGplayer schedule')
+        elif re.search(r'(?m)^  schedule:',Path(daily_workflow).read_text(encoding='utf-8')):
+            blockers.append('daily-prices.yml still schedules TCGplayer overwrite')
         snapshot={'schema':'inkwell-ligalorcana-snapshot-v1','date':day,'cards':details,'updated':daily,
                   'preserved_from_liga':sorted(set(final)-set(daily)),'counts':dict(counts)}
         delta={cid:{'before':previous.get(cid,{}),'after':final[cid]} for cid in sorted(final)
@@ -175,8 +178,9 @@ def main():
     p.add_argument('--source',required=True);p.add_argument('--cards',required=True)
     p.add_argument('--prices',required=True);p.add_argument('--history',required=True)
     p.add_argument('--map',default=None);p.add_argument('--output',required=True)
-    p.add_argument('--min-coverage',type=float,default=0.90)
+    p.add_argument('--min-coverage',type=float,default=0.98)
+    p.add_argument('--daily-workflow',default='.github/workflows/daily-prices.yml')
     args=p.parse_args()
     print(json.dumps(make_release(args.source,args.cards,args.prices,args.history,
-                                  args.map,args.output,args.min_coverage),ensure_ascii=False))
+                                  args.map,args.output,args.min_coverage,args.daily_workflow),ensure_ascii=False))
 if __name__=='__main__':main()
