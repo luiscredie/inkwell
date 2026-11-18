@@ -59,7 +59,7 @@ def stage(path,root):
         base=root/"tratados"/day/path.stem
         handoff=root/"data"/day/(path.stem+".json")
         report=root/"tratados"/"relatorios"/(path.stem+".json")
-        if any(p.exists() for p in (base/"cartas.json",handoff,report)):
+        if any(p.exists() for p in (base/"cartas.json",handoff)):
             raise FileExistsError("immutable snapshot already exists")
         base.mkdir(parents=True,exist_ok=True);handoff.parent.mkdir(parents=True,exist_ok=True)
         payload={"schema":"inkwell-ligalorcana-handoff-v1","publicavel":False,"requires_review":bool(issues),"source":str(path),"capture_day":day,"total":len(rows),"records":rows}
