@@ -1200,6 +1200,16 @@ test('Faltando: the buy row asks for the copies left to buy (not all missing) an
   await expect(noPrice.first().getByTestId('buy-cost')).toHaveCount(0);
 });
 
+for (const W of [320, 390, 430]) test(`Faltando on a ${W}px phone: friend rows are never cut (tag, name, "vende no Mural"); no horizontal scroll`, async ({ page }) => {
+  await page.route('**/data/prices.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(pricesAt(new Date().toISOString())) }));
+  await completion(page, { partial: true });
+  await page.setViewportSize({ width: W, height: 900 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
+  const cut = await page.locator('.miss .list-row').evaluateAll((rows) => rows.flatMap((r) => [...r.querySelectorAll('.ftag, .t > span:first-child')]
+    .filter((e) => e.scrollWidth > e.clientWidth + 1 || e.getBoundingClientRect().right > e.closest('.t').getBoundingClientRect().right + 1).map((e) => e.textContent)));
+  expect(cut).toEqual([]);
+});
+
 test('Faltando: only copies actually offered count — a friend with 1 free of 4 covers 1; the board 1; the rest is to buy', async ({ page }) => {
   await completion(page, { partial: true });
   const plan = page.getByTestId('completion-plan');
