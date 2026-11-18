@@ -1180,6 +1180,26 @@ test('Faltando: Como completar adds up, cards grouped friends → board → buy,
   }
 });
 
+test('Faltando: the buy row asks for the copies left to buy (not all missing) and says what they cost; a card with no price shows no cost', async ({ page }) => {
+  await page.route('**/data/prices.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(pricesAt(new Date().toISOString())) }));
+  await completion(page, { partial: true });
+  const num = (t) => +t.replace(/[^\d,]/g, '').replace(',', '.');
+  // Gurgi: 4 missing, 1 lent + 1 on the board → buy 2, at 2× the unit price shown on the card
+  const gurgi = page.locator('[data-miss="LOR10-10"]');
+  await expect(gurgi.getByTestId('miss-split')).toContainText('2 para comprar');
+  await expect(gurgi.getByTestId('buy-links')).toContainText('Comprar 2 cópias');
+  const unit = num(await gurgi.locator('.small.muted .money').first().innerText());
+  expect(unit).toBeGreaterThan(0);
+  expect(num(await gurgi.getByTestId('buy-cost').innerText())).toBeCloseTo(unit * 2, 2);
+  await expect(gurgi.getByTestId('buy-cost')).toContainText('cerca de R$');
+  // every buy row says copies that are really left to buy, and none says R$ 0
+  for (const t of await page.getByTestId('buy-cost').allInnerTexts()) expect(num(t)).toBeGreaterThan(0);
+  // a card with no price: the row still offers the stores, with no cost
+  const noPrice = page.locator('[data-miss]').filter({ has: page.locator('.small.muted .money', { hasText: '–' }) });
+  await expect(noPrice.first().getByTestId('buy-links')).toBeVisible();
+  await expect(noPrice.first().getByTestId('buy-cost')).toHaveCount(0);
+});
+
 test('Faltando: only copies actually offered count — a friend with 1 free of 4 covers 1; the board 1; the rest is to buy', async ({ page }) => {
   await completion(page, { partial: true });
   const plan = page.getByTestId('completion-plan');
