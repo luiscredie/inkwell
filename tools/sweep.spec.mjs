@@ -2,9 +2,13 @@
 // The Supabase answers are empty (a new account): the pages must still draw.
 //   (cd site && python3 -m http.server 8080) &   npx playwright test tools/sweep.spec.mjs
 import { test, expect } from '@playwright/test';
+import { originOf, record, describe } from './http-origin.mjs';
 
 const ROOT = new URL('./', process.env.INKWELL_URL || 'http://localhost:8080/index.html').href;
-const PAGES = ['', 'colecao/', 'decks/', 'trades/', 'amigos/', 'feed/', 'perfil/', 'precos/', 'comunidades/', 'eventos/', 'coach/', 'counter/', 'comecar/', 'entrar/', 'privacidade/', 'dlc-londres/', 'push/'];
+const PAGES = ['', 'colecao/', 'decks/', 'trades/', 'amigos/', 'feed/', 'perfil/', 'precos/', 'comunidades/', 'eventos/', 'coach/', 'counter/', 'comecar/', 'entrar/', 'privacidade/', 'dlc-londres/'];
+// push/ is not a page: it is the scope of the push service worker (push/sw.js, registered by shell.js), with no
+// index.html by design. Locally the test server lists the folder; on the site GitHub answers with its own 404 page.
+// It is checked apart below (the worker is served), not swept as a product page.
 const ME = '11111111-1111-4111-8111-111111111111';
 
 async function prepare(page, signedIn) {
@@ -33,7 +37,9 @@ for (const signedIn of [false, true]) for (const w of [320, 390]) for (const p o
   test(`${signedIn ? 'signed in' : 'signed out'} ${w}px /${p}`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: 760 });
     const errors = await prepare(page, signedIn);
-    await page.goto(ROOT + p);
+    const res = await page.goto(ROOT + p);
+    const o = originOf(res); record(ROOT + p, o);
+    expect(o.status, `/${p} is a page of the site: ${describe(o)}`).toBe(200);   // a 404/503 page is not swept as a product page
     await page.waitForLoadState('networkidle').catch(() => {});
     await page.waitForTimeout(400);
     const over = await page.evaluate(() => {
@@ -51,3 +57,10 @@ for (const signedIn of [false, true]) for (const w of [320, 390]) for (const p o
     expect(over.scroll, `page scrolls sideways: ${over.out.join(' | ')}`).toBeLessThanOrEqual(1);
   });
 }
+
+test('push/: the push service worker is served (the folder is its scope, not a page)', async ({ request }) => {
+  const r = await request.get(ROOT + 'push/sw.js');
+  expect(r.status()).toBe(200);
+  expect(r.headers()['content-type'] || '').toMatch(/javascript/);
+  expect(await r.text()).toMatch(/addEventListener\(\s*["']push["']/);
+});

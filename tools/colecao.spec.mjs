@@ -222,6 +222,9 @@ test('closing the scanner with cards in the list asks first; discarding saves no
 
 test('sort by recently added, and the MYP Cards price in the card sheet', async ({ page }) => {
   await page.addInitScript(() => { window.INKWELL_PRICES_BR = true; });   // MYP Cards is off by default (cloud.js)
+  // MYP Cards left the price strategy (01/11, Conselho 17/11): prices-br.json is not published. This test keeps the
+  // switched-off code path working from its own fixture and depends on no published MYP file.
+  await page.route('**/data/prices-br.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ retrieved_at: '2026-10-21T17:00:00Z', product_url: 'https://mypcards.com/lorcana/produto/{path}', cards: { 'LOR13-80': [12.5, '363191/rapunzel-tower-defender'] } }) }));
   await setup(page, {
     collection: { 'LOR10-10': { n: 2, f: 0 }, 'LOR13-80': { n: 1, f: 0 }, 'LOR9-7': { n: 1, f: 0 } },
     added: [{ profile: 'luiscredie', card_id: 'LOR13-80', added_at: '2026-10-21T12:00:00Z' }, { profile: 'luiscredie', card_id: 'LOR9-7', added_at: '2026-10-20T12:00:00Z' }],
@@ -627,6 +630,21 @@ test('by default (MYP Cards off) every card and total uses TCGplayer: card sheet
   await expect(page.locator('[data-testid="card-prices"]')).toContainText('Normal R$ 1,00');
   await expect(page.locator('#cardSheet')).not.toContainText('MYP');
   expect(asked).toEqual([]);
+});
+
+test('a TCGplayer price is said to be TCGplayer converted to reais, never a lowest listing in Brazil', async ({ page }) => {
+  // Conselho 17/11: the price in prices.json today is a TCGplayer market price converted from USD; it must not read as
+  // the lowest Brazilian listing (that is what the Liga Lorcana source will bring, separately).
+  await setup(page, { collection: { 'LOR10-10': { n: 1, f: 0 } } });
+  await page.route('**/data/prices.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ generated_at: '2026-11-17T09:00:00Z', usd_brl: 5.4, prices: { 'LOR10-10': { n: 2, nl: 2 } } }) }));
+  await page.goto(BASE);
+  const src = page.locator('[data-testid="value-src"]');
+  await expect(src).toHaveText('TCGplayer');
+  await expect(src).toHaveAttribute('title', /TCGplayer convertido para reais/);
+  await expect(src).not.toHaveAttribute('title', /menor anúncio/);
+  await page.locator('[data-card="LOR10-10"]').click();
+  await expect(page.locator('[data-testid="card-prices"]')).toContainText('TCGplayer');
+  await expect(page.locator('#cardSheet')).not.toContainText(/menor anúncio|No Brasil a partir de/);
 });
 
 test('a card shows the price of one copy first, and the subtotal of your copies under it (list and card sheet)', async ({ page }) => {
