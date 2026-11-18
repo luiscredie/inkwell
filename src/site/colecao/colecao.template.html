@@ -1192,6 +1192,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       // Conselho (#244): an empty collection shows Importar next to Escanear, the two ways to start; later it moves to "Mais ações"
       const fresh = !readOnly() && !Object.values(coll()).some((e) => (+e?.n || 0) + (+e?.f || 0) > 0);
       const all = [...profiles, ...shared];
+      // the header is drawn again when late data arrives (the language state, a sync): an open "Mais ações" stays open,
+      // with the focus where it was, instead of closing under the user's finger
+      const moreWas = $("moreActions"), moreOpen = !!moreWas?.open, focusId = moreWas?.contains(document.activeElement) ? (document.activeElement.id || (document.activeElement.tagName === "SUMMARY" ? "moreSummary" : "")) : "";
       $("headActions").innerHTML = `${all.length > 1 ? `<select class="inline" id="collSrc" data-testid="coll-source" aria-label="${esc(P("Coleção", "Collection"))}">${all.map((x) => `<option value="${esc(x.profile)}" ${x === cur ? "selected" : ""}>${esc(collName(x))}</option>`).join("")}</select>` : ""}
         ${readOnly() ? "" : `<button type="button" class="btn primary" id="openScan" data-testid="scan"><i class="ic i-camera"></i>${Tx("Scan")}</button>`}
         ${fresh ? `<button type="button" class="btn" id="openImport" data-testid="import"><i class="ic i-import"></i>${Tx("Import")}</button>` : ""}
@@ -1205,6 +1208,8 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
           </div></details>`;
       // Pacote 2: one main action (Escanear); the rest in "Mais ações", which closes on a choice, outside tap or Esc
       const more = $("moreActions");
+      if (moreOpen) more.open = true;
+      if (focusId) (focusId === "moreSummary" ? more.querySelector("summary") : $(focusId))?.focus({ preventScroll: true });
       more.querySelectorAll(".menu-item").forEach((b) => b.addEventListener("click", () => { more.open = false; }));
       more.addEventListener("keydown", (e) => { if (e.key === "Escape" && more.open) { more.open = false; more.querySelector("summary").focus(); } });
       if (!window.__iwMoreOut) { window.__iwMoreOut = true; document.addEventListener("click", (e) => { const m = $("moreActions"); if (m?.open && !m.contains(e.target)) m.open = false; }); }
