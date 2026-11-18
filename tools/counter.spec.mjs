@@ -348,3 +348,58 @@ test('R24: the setting that asks for the inks at the start is named for what it 
   await expect(page.getByText('Pedir as tintas ao começar')).toBeVisible();
   await expect(page.getByText('Desligado, o contador começa direto e você informa as tintas depois, se quiser', { exact: false })).toBeVisible();
 });
+
+// ---------- R24 (reported 18/11): "Novo jogo" keeps the last match's inks, and unpicking them does not stick ----------
+async function seeded(page, state) {
+  await page.addInitScript(([st]) => {
+    if (sessionStorage.getItem('t')) return; sessionStorage.setItem('t', '1');
+    localStorage.setItem('inkwell-lorecounter-v3', JSON.stringify({ lang: 'pt', players: 2, decks: false, tour: true, bestOf: 3, ...st }));
+  }, [state]);
+  await page.route('**/rest/v1/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+}
+const saved = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('inkwell-lorecounter-v3') || '{}'));
+const lastMatch = { started: '2026-11-18T12:00:00Z', format: 'core', tour: true, players: 2, best_of: 3, me: { inks: ['Ruby', 'Amethyst'] }, opp: { inks: ['Sapphire'] }, games: [{ winner: 'p1' }, { winner: 'p1' }] };
+
+test('R24: "Novo jogo" (counter/?new) after a finished match starts a new one with no inks, nothing carried over', async ({ page }) => {
+  await seeded(page, { color: { p1: ['Ruby', 'Amethyst'], p2: ['Sapphire'], p3: ['Emerald'], p4: ['Amber'] }, match: lastMatch, matchDone: true, wins: { p1: 2, p2: 0, p3: 0, p4: 0 } });
+  await page.goto(BASE + '?new');
+  await expect(page.locator('#k1 b')).toHaveCount(0);                    // no ink symbol on either pane
+  await expect(page.locator('#k2 b')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Seu deck' })).toHaveCount(0);   // and no question: it starts right away
+  const st = await saved(page);
+  expect(st.match.me).toBeNull(); expect(st.match.opp).toBeNull(); expect(st.match.games).toEqual([]);
+  expect(st.color.p1).toEqual([]); expect(st.color.p2).toEqual([]);
+  expect(await page.evaluate(() => location.search)).toBe('');           // a reload does not start another one
+});
+
+test('R24: "Novo jogo" while a match is being played asks first; Cancelar keeps the score, Sim starts clean', async ({ page }) => {
+  await seeded(page, { color: { p1: ['Ruby'], p2: ['Sapphire'], p3: ['Emerald'], p4: ['Amber'] }, match: { ...lastMatch, games: [] }, lore: { p1: 7, p2: 3, p3: 0, p4: 0 } });
+  await page.goto(BASE + '?new');
+  await expect(page.getByRole('heading', { name: 'Começar nova partida? O placar volta a zero.' })).toBeVisible();
+  await page.getByRole('button', { name: 'Cancelar' }).click();
+  await expect(page.locator('#o1')).toHaveText('7');
+  await page.goto(BASE + '?new');
+  await page.getByRole('button', { name: 'Sim' }).click();
+  await expect(page.locator('#o1')).toHaveText('0');
+  await expect(page.locator('#k1 b')).toHaveCount(0);
+  expect((await saved(page)).match.me).toBeNull();
+});
+
+test('R24: inks unpicked in the menu stay unpicked (after a reload too), and the inks shown are the match\'s inks', async ({ page }) => {
+  await seeded(page, { color: { p1: ['Ruby'], p2: ['Sapphire'], p3: ['Emerald'], p4: ['Amber'] }, match: { ...lastMatch, me: { inks: ['Ruby'] }, games: [] } });
+  await page.goto(BASE);
+  await page.click('#menuBtn');
+  const ruby = page.locator('#cp1 [data-ink="Ruby"]');
+  await expect(ruby).toHaveAttribute('aria-pressed', 'true');
+  await ruby.click();                                                    // unpick the last ink
+  await expect(ruby).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#k1 b')).toHaveCount(0);
+  expect((await saved(page)).match.me).toBeNull();                       // the match has no inks for me now
+  await page.reload();
+  await expect(page.locator('#k1 b')).toHaveCount(0);                    // and it stays that way
+  await page.click('#menuBtn');
+  await page.locator('#cp1 [data-ink="Emerald"]').click();
+  await page.locator('#cp1 [data-ink="Steel"]').click();
+  await expect(page.locator('#k1 b')).toHaveCount(2);
+  expect((await saved(page)).match.me.inks).toEqual(['Emerald', 'Steel']);
+});

@@ -412,7 +412,7 @@ test('Jogos on a phone: Novo jogo and the games come before duels.ink and coache
   await jogos(page, ROWS);
   const novo = page.getByTestId('new-game');
   await expect(novo).toHaveText('Novo jogo');
-  await expect(novo).toHaveAttribute('href', '../counter/');
+  await expect(novo).toHaveAttribute('href', '../counter/?new')   // a new match, no inks carried over;
   const nb = await novo.boundingBox();
   expect(nb.height).toBeGreaterThanOrEqual(44);
   const firstGame = await page.locator('.game[data-k]').first().boundingBox();
