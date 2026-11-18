@@ -85,6 +85,26 @@ jobs:
         run: python -m unittest tools/test_ligalorcana_price_agent_daily_v5.py
       - name: LigaLorcana release and ID-map safety suite
         run: python -m unittest tools/test_ligalorcana_release_candidate.py tools/test_ligalorcana_generate_map.py
+      - name: LigaLorcana integration dry run on existing captures
+        shell: bash
+        run: |
+          if compgen -G "coletas/ligalorcana/coleta/coleta_*.json" > /dev/null; then
+            mkdir -p build/liga-ci
+            python tools/ligalorcana_generate_map.py \
+              --source coletas/ligalorcana/coleta \
+              --cards site/data/cards.json \
+              --output build/liga-ci/map.json
+            python tools/ligalorcana_release_candidate.py \
+              --source coletas/ligalorcana/coleta \
+              --cards site/data/cards.json \
+              --prices site/data/prices.json \
+              --history site/data/price-history.json \
+              --map build/liga-ci/map.json \
+              --daily-workflow .github/workflows/daily-prices.yml \
+              --output build/liga-ci/aplicar
+          else
+            echo "No raw captures on this branch; integration dry run skipped."
+          fi
       - name: Daily-price fetch retry suite
         run: python -m unittest tools/test_prices_from_lorcast.py
       - name: PT-BR translation suite
