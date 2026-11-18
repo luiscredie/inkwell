@@ -3,7 +3,7 @@
 -- private schema (not reachable through the API);
 -- only the duels-sync function reads it.
 -- A row without a token may use the DUELS_TOKEN secret only if it is the
--- owner's row (checked in the function, sync.ts: sharedTokenAllowed).
+-- row named by the DUELS_TOKEN_USER secret (sync.ts: sharedTokenCheck).
 -- duels_sync_begin is redefined by duels_sync_state.sql (run after this).
 
 alter table private.duels_sync

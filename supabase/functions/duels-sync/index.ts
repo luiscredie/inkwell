@@ -6,10 +6,11 @@
 //        yet (up to MAX_PER_RUN, paced under duels.ink's limits) and reports what it saw, left out and still misses
 //   4. records the result (public.duels_sync_finish)
 // Tokens: each player's own (saved with public.set_my_duels_token, supabase/duels_tokens.sql);
-// a row without one may use the DUELS_TOKEN secret (read-only duels.ink API token) only if it is the owner's row. SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are provided by the platform.
+// a row without one may use the DUELS_TOKEN secret (read-only duels.ink API token) only if it is the row named by the
+// DUELS_TOKEN_USER secret. SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are provided by the platform.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { Catalog, decklistOf, linkMatchFromRow, namesFromEvents, type Json } from "./convert.ts";
-import { sharedTokenAllowed, syncUser } from "./sync.ts";
+import { sharedTokenCheck, syncUser } from "./sync.ts";
 
 const BASE = "https://duels.ink";
 // the site address; set the SITE_URL secret when the domain changes
@@ -117,22 +118,21 @@ Deno.serve(async (req) => {
   const users: Json[] = await db("rpc/duels_sync_begin", { method: "POST", body: JSON.stringify(only ? { p_key: key, p_user: only } : { p_key: key }) }).catch(() => null);
   if (!users) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Content-Type": "application/json" } });
   const fallback = (Deno.env.get("DUELS_TOKEN") || "").trim();
-  // optional: the user id the shared token belongs to; unset = matched by the duels.ink account of their stored games
+  // the Inkwell user id the shared token belongs to; unset = the shared token is not used (docs/duels-sync-241.md)
   const owner = (Deno.env.get("DUELS_TOKEN_USER") || "").trim() || null;
   const out: Json[] = [];
   let cat: Catalog | null = null;
   for (const u of users) {
     let result: Json;
     try {
-      // a row without its own token may use the shared one only if it is the owner's (sync.ts: sharedTokenAllowed)
+      // a row without its own token may use the shared one only if DUELS_TOKEN_USER names it (sync.ts: sharedTokenCheck)
       const shared = !u.token;
       const token = String(u.token || fallback).trim();
       if (!/^[0-9a-f]{96}$/i.test(token)) throw new Error(u.token ? "the duels.ink token is malformed" : "no duels.ink token saved");
       cat ??= new Catalog((await (await fetch(CATALOG_URL)).json()).cards || []);
       const io = { duels: (p: string, bin = false) => duels(p, token, bin), db, sleep };
       const refresh = only && body?.refresh_decks === true;
-      if (refresh && shared && !(await sharedTokenAllowed(u.user_id, await duels("/api/me", token), io, owner)))
-        throw new Error("no duels.ink token saved (the shared token belongs to another account)");
+      if (refresh && shared) { const no = await sharedTokenCheck(u.user_id, await duels("/api/me", token), io, owner); if (no) throw new Error(no); }
       result = { ok: true, ...(refresh
         ? await refreshDecks(u.user_id, token, cat)
         : await syncUser(u.user_id, cat, io, { state: u.state ?? null, ...(shared ? { shared: { ownerId: owner } } : {}) })) };

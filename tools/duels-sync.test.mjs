@@ -3,7 +3,7 @@
 // a game updated later moves to the top; /g 404s) and an in-memory game_logs that counts duplicates. The state each run returns is passed to the next,
 // as duels_sync_begin does after supabase/duels_sync_state.sql. A fake clock moves between runs. No network, no SQL.
 //   node tools/duels-sync.test.mjs
-import { syncUser, classify, sharedTokenAllowed, MAX_PER_RUN, MAX_PAGES, OVERLAP_DAYS } from '../supabase/functions/duels-sync/sync.ts';
+import { syncUser, classify, sharedTokenCheck, MAX_PER_RUN, MAX_PAGES, OVERLAP_DAYS, WAIT_MAX } from '../supabase/functions/duels-sync/sync.ts';
 import { Catalog } from '../supabase/functions/duels-sync/convert.ts';
 
 let pass = 0, fail = 0;
@@ -34,7 +34,7 @@ function world({ games = [], pageSize = 250, noReplay = [], meName = 'Luís', me
   };
   const db = async (path, init = {}) => {
     const all = () => [...w.store.values()].sort((a, b) => b.played_at.localeCompare(a.played_at));
-    if (path.includes('select=players:log->players')) return all().slice(0, 1).map((r) => ({ players: r.log.players, ref: r.log.source_ref }));
+    if (path.includes('select=ref:log->source_ref')) return all().slice(0, 1).map((r) => ({ ref: r.log.source_ref }));
     if (path.includes('order=played_at.desc')) return all().slice(0, 1).map((r) => ({ played_at: r.played_at }));
     if (path.includes('game_id=in.(')) {
       const ids = decodeURIComponent(path.split('game_id=in.(')[1].split(')')[0]).split(',').map((x) => x.replace(/"/g, ''));
@@ -159,31 +159,45 @@ const allStored = (w, ids) => ids.every((id) => w.store.has('duels-' + id));
   ck('a game updated later (moves to the top of the history) is still imported, once', ok && w.dupes === 0 && allStored(w, deep.map((g) => g.game_id)), `runs ${w.runs}`);
 }
 
-// ---------------------------------------------------------------- 5. the shared token (DUELS_TOKEN) is the owner's only
+// ---------------------------------------------------------------- 5. the shared token (DUELS_TOKEN): only the account DUELS_TOKEN_USER names
 {
+  const OWNER = U, OTHER = '22222222-2222-2222-2222-222222222222';
   const owner = world({ games: [game('o1', 1)] });
-  owner.t = Date.parse(at(2)); await owner.run({ advance: 0 });                       // the owner's games, already stored
-  owner.games.push(game('o2', 3));
-  const r = await owner.run({ shared: { ownerId: null }, advance: 2 * 3600e3 });
-  ck('shared token: the owner (stored games of this duels.ink account) keeps syncing', r.added === 1 && owner.store.has('duels-o2'));
-  const stranger = world({ games: [game('o1', 1), game('o2', 3)] });                   // the same duels.ink history…
-  let err = null; try { await stranger.run({ shared: { ownerId: null } }); } catch (e) { err = String(e.message); }
-  ck('shared token: a new account with no games of its own is refused, nothing stored', /another account/.test(err || '') && stranger.store.size === 0, err);
-  const other = world({ games: [game('p1', 1)], meName: 'Someone', meId: 'u_someone' });
-  other.t = Date.parse(at(2)); await other.run({ advance: 0 });                       // has games for "Someone"
-  const viaOwner = world({ games: [game('o3', 4)], meName: 'Luís' }); viaOwner.store = other.store;
-  err = null; try { await viaOwner.run({ shared: { ownerId: null } }); } catch (e) { err = String(e.message); }
-  ck('shared token: an account whose games are another duels.ink account is refused', /another account/.test(err || '') && !other.store.has('duels-o3'), err);
-  // duels.ink: tie an account by the id of /api/me, never by the name. New games keep the id; it wins over the name.
-  ck('new games keep the duels.ink account id (source_ref.duels_user_id)', owner.store.get('duels-o2')?.log?.source_ref?.duels_user_id === 'u_luis');
-  const renamed = world({ games: [game('o4', 5)], meName: 'Luís Credie', meId: 'u_luis' }); renamed.store = owner.store; renamed.t = Date.parse(at(6));
-  let rr = null; try { rr = await renamed.run({ shared: { ownerId: null }, advance: 0 }); } catch (e) { rr = { error: String(e.message) }; }
-  ck('shared token: the owner after changing the display name (same account id) keeps syncing', rr?.added === 1, JSON.stringify(rr));
-  const sameName = world({ games: [game('o5', 7)], meName: 'Luís Credie', meId: 'u_someone_else' }); sameName.store = owner.store; sameName.t = Date.parse(at(8));
-  err = null; try { await sameName.run({ shared: { ownerId: null }, advance: 0 }); } catch (e) { err = String(e.message); }
-  ck('shared token: same display name but another duels.ink account (id) is refused', /another account/.test(err || '') && !owner.store.has('duels-o5'), err);
-  ck('shared token: DUELS_TOKEN_USER names the owner (allowed) and only the owner (refused)',
-    (await sharedTokenAllowed(U, null, stranger.io, U)) === true && (await sharedTokenAllowed(U, { id: 'u_luis', name: 'Luís' }, owner.io, '22222222-2222-2222-2222-222222222222')) === false);
+  owner.t = Date.parse(at(2));
+  const r1 = await owner.run({ shared: { ownerId: OWNER }, advance: 0 });
+  ck('shared token: the account DUELS_TOKEN_USER names syncs', r1.added === 1 && owner.store.has('duels-o1'));
+  ck('new games keep the duels.ink account id (source_ref.duels_user_id)', owner.store.get('duels-o1')?.log?.source_ref?.duels_user_id === 'u_luis');
+  const tryRun = async (w, ownerId) => { try { await w.run({ shared: { ownerId }, advance: 0 }); return null; } catch (e) { return String(e.message); } };
+  const unset = world({ games: [game('x1', 1)] }); unset.t = Date.parse(at(2));
+  const e1 = await tryRun(unset, null);
+  ck('shared token: DUELS_TOKEN_USER not set: not used at all, nothing read or stored', /not tied/.test(e1 || '') && unset.store.size === 0, e1);
+  const e2 = await tryRun(owner, OTHER);
+  ck('shared token: DUELS_TOKEN_USER names another account: refused', /another account/.test(e2 || ''), e2);
+  const moved = world({ games: [game('o2', 3)], meId: 'u_someone_else' }); moved.store = owner.store; moved.t = Date.parse(at(4));
+  const e3 = await tryRun(moved, OWNER);
+  ck('shared token: the token now reads another duels.ink account than the stored games: refused', /another duels.ink account/.test(e3 || '') && !owner.store.has('duels-o2'), e3);
+  const renamed = world({ games: [game('o3', 5)], meName: 'Luís Credie' }); renamed.store = owner.store; renamed.t = Date.parse(at(6));
+  const e4 = await tryRun(renamed, OWNER);
+  ck('shared token: the owner after a display-name change (same account id) keeps syncing', e4 === null && owner.store.has('duels-o3'), e4);
+  ck('sharedTokenCheck: allowed only for the named account', (await sharedTokenCheck(OWNER, { id: 'u_luis' }, owner.io, OWNER)) === null && (await sharedTokenCheck(OTHER, { id: 'u_luis' }, owner.io, OWNER)) !== null);
+}
+
+// ---------------------------------------------------------------- more games without a replay than the list keeps
+{
+  const N = WAIT_MAX * 3 + 20;                                                         // 320: more than the old 300 cap
+  const lost = many('z', N, -24 * 15, 0.02);                                           // 15 days ago, no replay
+  const w = world({ games: [game('seed', -24 * 16), ...lost], noReplay: lost.map((g) => g.game_id) });
+  w.t = Date.parse(at(-24 * 15 + 10)); await w.run({ advance: 0 });
+  await w.runUntil(() => !w.state.scan && w.last.waiting === 0, 200);                  // every game tried once
+  for (let d = 1; d <= 3; d++) w.games.push({ ...game('n' + d, 0), started_at: new Date(w.t + d * 60e3).toISOString() });   // new games meanwhile
+  await w.runUntil(() => allStored(w, ['n1', 'n2', 'n3']), 100);
+  const st = JSON.stringify(w.state).length;
+  ck(`${N} games with no replay: all accounted for (${WAIT_MAX} listed + the rest summed up), none dropped`, w.last.replay_missing === N && w.last.replay_missing_listed === WAIT_MAX && w.last.replay_missing_more === N - WAIT_MAX, JSON.stringify({ m: w.last.replay_missing, l: w.last.replay_missing_listed, more: w.last.replay_missing_more }));
+  ck('…the state stays bounded (the list is capped; the rest is one line)', st < 15000, `${st} bytes`);
+  ck('…newer games still came in meanwhile', allStored(w, ['n1', 'n2', 'n3']));
+  w.noReplay.clear();                                                                   // the replays exist now
+  const ok = await w.runUntil(() => allStored(w, lost.map((g) => g.game_id)), 400);
+  ck(`…and all ${N} are imported, no duplicate, nothing left waiting`, ok && w.dupes === 0 && w.last.replay_missing === 0 && !w.state.more, `runs ${w.runs}, stored ${lost.filter((g) => w.store.has('duels-' + g.game_id)).length}/${N}, ${JSON.stringify(w.state.more)}`);
 }
 
 // ---------------------------------------------------------------- what is left out, broken answers, privacy
