@@ -859,3 +859,25 @@ test('Conselho (#244): an empty collection shows Importar next to Escanear and i
   await expect(page.locator('#impFile')).toBeAttached();                            // the same import sheet as before
   await expect(page.locator('#impFile').locator('xpath=ancestor::dialog[1]')).toBeVisible();
 });
+
+// #244 in production: the header is drawn again when late data arrives (prices, the stocks); an open "Mais ações"
+// must stay open, with the focus where it was, instead of closing under the user's finger.
+test('Mais ações stays open (and keeps the focus) when the header is drawn again by the late language state', async ({ page }) => {
+  await setup(page);
+  let release; const late = new Promise((r) => { release = r; });
+  await page.route('**/rest/v1/rpc/collection_lang_state', async (route) => {                     // the language state arrives after the menu opens
+    await late; await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ revision: 1, prefs: {}, unknown: 0 }) }); });
+  await page.setViewportSize({ width: 390, height: 760 });
+  await page.goto(BASE);
+  const sum = page.getByTestId('more-actions').locator('summary');
+  await sum.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('more-menu')).toBeVisible();
+  await page.evaluate(() => { document.getElementById('moreActions').dataset.old = '1'; });   // mark the menu drawn first
+  release();                                                                  // the late data redraws the header
+  await expect.poll(() => page.evaluate(() => !document.querySelector('#moreActions[data-old]'))).toBe(true);   // it was drawn again
+  await expect(page.getByTestId('more-menu')).toBeVisible();
+  await expect(page.getByTestId('more-actions').locator('summary')).toBeFocused();
+  await page.getByTestId('export').click();                                   // and the choice still works
+  await expect(page.getByTestId('export-go')).toBeVisible();
+});
