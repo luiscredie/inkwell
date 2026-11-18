@@ -87,7 +87,12 @@ def make_release(source,cards_path,prices_path,history_path,map_path,outdir,min_
     for day,samples in sorted(by_day.items()):
         batch_id=digest(blob(sources))[:12]
         dest=Path(outdir)/day/batch_id
-        if dest.exists():raise FileExistsError(f'immutable package already exists: {dest}')
+        if dest.exists():
+            manifest_path=dest/'manifest.json'
+            if not manifest_path.exists() or read(manifest_path).get('sources')!=sources:
+                raise FileExistsError(f'conflicting immutable package: {dest}')
+            outputs.append({'directory':str(dest),'status':'already_processed'})
+            continue
         previous=preserve_prices(base.get('liga_prices',{}))
         # Preserve only provenance-verified legacy Liga data, never fall back to TCGplayer.
         final={k:dict(v) for k,v in previous.items() if k in cards}
