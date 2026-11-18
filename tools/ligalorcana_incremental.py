@@ -16,9 +16,9 @@ def run(source,cards_path,prices_path,map_path,out):
     for src in files:
         raw=json.loads(Path(src['file']).read_text('utf-8-sig'))
         for code,audit in raw.get('editionAudit',{}).items():
-            expected=audit.get('listing_total',audit.get('listingTotal'))
+            expected=audit.get('queued_urls',audit.get('listing_total',audit.get('listingTotal')))
             captured=audit.get('captured_urls',audit.get('capturedUrls'))
-            if isinstance(expected,int) and expected>0 and isinstance(captured,int) and captured>=expected:
+            if isinstance(expected,int) and expected>0 and isinstance(captured,int) and captured>=expected and audit.get('failed_urls',0)==0:
                 complete.add(code)
     prices={k:dict(v) for k,v in base.get('prices',{}).items() if isinstance(v,dict)}
     liga={k:dict(v) for k,v in base.get('liga_prices',{}).items() if isinstance(v,dict)}
