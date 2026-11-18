@@ -46,7 +46,8 @@ class ReleaseTests(unittest.TestCase):
         self.assertTrue(any(x['kind']=='price_quality' and x['card_id']=='LOR13-226'
             for x in json.loads((base/'qualidade.json').read_text())['issues']))
         self.assertFalse(json.loads((base/'manifest.json').read_text())['publishable'])
-    def test_immutable(self):
+    def test_idempotent(self):
         make_release(*self.args())
-        with self.assertRaises(FileExistsError):make_release(*self.args())
+        result=make_release(*self.args())
+        self.assertEqual(result[0]['status'],'already_processed')
 if __name__=='__main__':unittest.main()
