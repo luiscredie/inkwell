@@ -42,6 +42,49 @@ class PublishSafetyTest(unittest.TestCase):
         row["normal_status"] = "ok"  # corrected collector
         self.assertEqual(valid_finish(row, "normal"), values)
 
+    def test_legacy_13_14_may_publish_only_exact_audited_snapshot(self):
+        all_rows = []
+        audits = {}
+        for code, expected, edition_id in (("LOR13", 261, "19"), ("LOR14", 254, "9")):
+            rows = []
+            for index in range(1, expected + 1):
+                row = rec(code, index, f"Card {index}")
+                row["edition_id"] = edition_id
+                row["idkey"] = f"{edition_id}_{index}"
+                row["url"] = (f"https://www.ligalorcana.com.br/?view=cards/card"
+                              f"&card=Card%20{index}&ed={code}&num={index}")
+                rows.append(row)
+            all_rows.extend(rows)
+            audits[code] = {"queued_urls": None, "captured_urls": expected,
+                            "recorded_at": "2026-11-18T03:13:52Z", "verified": False}
+        snapshot = {"records": all_rows, "editionAudit": audits, "pending": []}
+        ready, excluded = completed_editions(snapshot)
+        self.assertEqual(set(ready), {"LOR13", "LOR14"})
+        self.assertFalse(excluded)
+
+        # A count mismatch, pending card, duplicate number or altered ID
+        # must block the entire legacy edition, never force an empty price.
+        snapshot["records"].pop()
+        ready, excluded = completed_editions(snapshot)
+        self.assertNotIn("LOR14", ready)
+        snapshot["records"].append(dict(all_rows[-1]))
+        snapshot["pending"] = [{"edition": "LOR13"}]
+        ready, excluded = completed_editions(snapshot)
+        self.assertNotIn("LOR13", ready)
+        snapshot["pending"] = []
+        snapshot["records"][-1]["idkey"] = "9_wrong"
+        ready, excluded = completed_editions(snapshot)
+        self.assertNotIn("LOR14", ready)
+
+    def test_legacy_requires_known_edition_id_and_existing_audit(self):
+        row = rec("LOR13", 1, "Unknown Card")
+        snapshot = {"records": [row], "editionAudit": {
+            "LOR13": {"queued_urls": None, "captured_urls": 1,
+                      "recorded_at": "2026-11-18T03:13:52Z"}}}
+        ready, excluded = completed_editions(snapshot)
+        self.assertNotIn("LOR13", ready)
+        self.assertIn("LOR13", excluded)
+
     def test_invalid_price_order_refused(self):
         row = rec("LOR10", 1, "Card A", normal=(300, 200, 100))
         self.assertIsNone(valid_finish(row, "normal"))
