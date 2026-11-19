@@ -85,6 +85,8 @@ jobs:
         run: python -m unittest tools/test_ligalorcana_price_agent_daily_v4.py
       - name: Price-agent v5 safety suite
         run: python -m unittest tools/test_ligalorcana_price_agent_daily_v5.py
+      - name: Offline LigaLorcana import safety suite
+        run: python -m unittest tools/test_ligalorcana_offline_import.py
       - name: Daily-price fetch retry suite
         run: python -m unittest tools/test_prices_from_lorcast.py
       - name: PT-BR translation suite
