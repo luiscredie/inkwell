@@ -208,8 +208,22 @@ test('tournament: a direct link to a past event, a "Talvez" one or one not marke
   await setup(page, { marks: [{ rph_id: 1, status: 'going', snap: { name: 'Passado', start: past } }, { rph_id: 2, status: 'maybe', snap: { name: 'Talvez', start: soon } }] });
   for (const id of ['1', '2', '999']) {
     await page.goto(BASE + '?evento=' + id);
-    await expect(page.getByTestId('prep-unavailable')).toHaveText('A preparação vale para eventos futuros que você marcou como “Vou” em Eventos.');
+    await expect(page.getByTestId('prep-unavailable')).toHaveText('A preparação vale para eventos que ainda não terminaram e que você marcou como “Vou” em Eventos.');
     await expect(page.getByTestId('prep-pick')).toHaveCount(0);
+  }
+});
+
+test('tournament: same rule as Eventos — started 1 h ago and not over counts; ended (its end time passed) or 6 h after a start with no end does not', async ({ page }) => {
+  const h = (n) => new Date(Date.now() + n * 3600e3).toISOString();
+  await setup(page, { marks: [
+    { rph_id: 11, status: 'going', snap: { name: 'Começou há 1 h', start: h(-1) } },                    // no end: over at start + 6 h
+    { rph_id: 12, status: 'going', snap: { name: 'Já terminou', start: h(-2), end: h(-0.5) } },          // its end passed
+    { rph_id: 13, status: 'going', snap: { name: 'Começou há 7 h', start: h(-7) } },
+    { rph_id: 14, status: 'going', snap: { name: 'Dia inteiro', start: h(-7), end: h(3) } }] });      // long event, still on
+  for (const [id, ok] of [['11', true], ['12', false], ['13', false], ['14', true]]) {
+    await page.goto(BASE + '?evento=' + id);
+    await expect(page.getByTestId(ok ? 'prep-pick' : 'prep-unavailable')).toBeVisible();
+    await expect(page.getByTestId(ok ? 'prep-unavailable' : 'prep-pick')).toHaveCount(0);
   }
 });
 
