@@ -328,6 +328,14 @@ button.fy-tile { border: 0; font: inherit; text-align: left; width: 100%; cursor
 #keep .fy-row { grid-template-columns: minmax(0, 1fr); }
 #keep .fy-tile { min-height: 56px; }
 #keep .fy-tile b { overflow-wrap: anywhere; }
+/* desktop (Missão 2027, etapa 1): the side columns already show the deck, the cards and the events, so the block shows
+   only a next step that isn't there — the first steps of a new account, or the missing half (deck without cards, cards
+   without a deck). A complete account keeps today's desktop home. */
+@media (min-width: 761px) {
+  #keep:has([data-next]) { display: block; margin-bottom: var(--sp-4); }
+  #keep .fy-tile:not([data-next]) { display: none; }
+  #keep .fy-row { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+}
 .home-retry { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
 .home-retry .btn { min-height: 44px; }   /* easy to hit with a thumb */
 body.out .page.split.home3 { display: block; }
@@ -706,7 +714,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Couldn't load the timeline.": "Não foi possível carregar a linha do tempo.", "Check your connection and try again.": "Confira a internet e tente de novo.", "Try again": "Tentar de novo",
     "Won": "Venceu", "Lost": "Perdeu", "against": "contra", "went first": "começou jogando", "went second": "começou comprando", "Confirm removal": "Confirmar remoção", "Confirm delete": "Confirmar exclusão",
     "My Inkwell": "Meu Inkwell", "Private profile": "Perfil privado", "Cards": "Cartas", "Decks": "Decks", "Friends  ": "Amigos",
-    "Continue": "Continuar", "Get started": "Comece por aqui", "Continue my deck": "Continuar meu deck", "{n} cards · see what's missing": "{n} cartas · ver o que falta",
+    "Continue": "Continuar", "Get started": "Comece por aqui", "Continue my deck": "Continuar meu deck", "Add my cards": "Cadastrar minhas cartas", "Then {d} shows only what you really lack.": "Assim {d} mostra só o que falta de verdade.", "your deck": "seu deck", "Import or build a deck": "Importar ou montar um deck", "See which of your cards it already uses.": "Veja quais das suas cartas ele já usa.", "{n} cards · see what's missing": "{n} cartas · ver o que falta",
     "My collection": "Minha coleção", "{n} cards · scan more": "{n} cartas · escanear mais", "1 card · scan more": "1 carta · escanear mais", "Next event": "Próximo evento",
     "Add my collection": "Cadastrar minha coleção", "Scan your cards or import a list.": "Escaneie suas cartas ou importe uma lista.",
     "Import a deck": "Importar um deck", "Paste a list and see what you're missing.": "Cole uma lista e veja o que falta.",
@@ -1336,18 +1344,21 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const deck = decks.find((d) => d.id === last) || decks[decks.length - 1];
     const size = (d) => Object.values(d.cards).reduce((s, q) => s + (+q || 0), 0);
     const ev = (Array.isArray(marks) ? marks : []).find((m) => m?.snap?.start && Date.parse(m.snap.start) > Date.now() - 6 * 3600e3);
-    const tile = (href, ic, title, sub, id) => `<a class="fy-tile" href="${href}" data-testid="${id}"><i class="ic i-${ic}"></i><span><b>${esc(title)}</b><span class="small muted" style="display:block">${esc(sub)}</span></span><i class="ic i-chevron-right"></i></a>`;
+    const tile = (href, ic, title, sub, id, next = false) => `<a class="fy-tile" href="${href}" data-testid="${id}"${next ? " data-next" : ""}><i class="ic i-${ic}"></i><span><b>${esc(title)}</b><span class="small muted" style="display:block">${esc(sub)}</span></span><i class="ic i-chevron-right"></i></a>`;
     const tiles = [];
     if (deck) tiles.push(tile(`../decks/?deck=${enc(deck.id)}&tab=missing`, "decks", deck.name || Tx("Continue my deck"), Tx("{n} cards · see what's missing", { n: size(deck) }), "keep-deck"));
+    // the missing half: with a deck and no cards, "what's missing" counts every card; with cards and no deck, nothing uses them yet
+    if (deck && !cards) tiles.push(tile("../colecao/", "camera", Tx("Add my cards"), Tx("Then {d} shows only what you really lack.", { d: deck.name || Tx("your deck") }), "keep-add-collection", true));
+    if (cards && !deck) tiles.push(tile("../decks/?importar=1", "import", Tx("Import or build a deck"), Tx("See which of your cards it already uses."), "keep-add-deck", true));
     if (cards) tiles.push(tile("../colecao/", "camera", Tx("My collection"), cards === 1 ? Tx("1 card · scan more") : Tx("{n} cards · scan more", { n: cards.toLocaleString(LOC) }), "keep-collection"));
     if (ev) tiles.push(tile("../eventos/", "calendar", ev.snap.name || Tx("Next event"), [evWhen(ev.snap.start), ev.snap.store].filter(Boolean).join(" · "), "keep-event"));
     const first = !deck && !cards;
     if (first) tiles.push(
-      tile("../colecao/", "camera", Tx("Add my collection"), Tx("Scan your cards or import a list."), "first-collection"),
-      tile("../decks/", "decks", Tx("Import a deck"), Tx("Paste a list and see what you're missing."), "first-deck"),
-      ...(ev ? [] : [tile("../eventos/", "calendar", Tx("Find a tournament"), Tx("Official events and tables near you."), "first-event")]));
+      tile("../colecao/", "camera", Tx("Add my collection"), Tx("Scan your cards or import a list."), "first-collection", true),
+      tile("../decks/?importar=1", "decks", Tx("Import a deck"), Tx("Paste a list and see what you're missing."), "first-deck", true),
+      ...(ev ? [] : [tile("../eventos/", "calendar", Tx("Find a tournament"), Tx("Official events and tables near you."), "first-event", true)]));
     el.innerHTML = tiles.length ? `<section aria-labelledby="hKeep"><h2 id="hKeep">${Tx(first ? "Get started" : "Continue")}</h2><div class="fy-row">${tiles.join("")}</div></section>` : "";
-    el.onclick = (e) => { const t = e.target.closest?.("[data-testid]")?.dataset.testid; if (/^(keep|first)-(deck|collection|event)$/.test(t || "")) window.INKWELL_TRACK?.("home_" + t.replace("-", "_")); };   // docs/metricas.md
+    el.onclick = (e) => { const t = e.target.closest?.("[data-testid]")?.dataset.testid; if (/^(keep|first)-(deck|collection|event|add-collection|add-deck)$/.test(t || "")) window.INKWELL_TRACK?.("home_" + t.replace(/-/g, "_")); };   // docs/metricas.md
   }
   async function renderLeft() {
     const el = $("left"); if (!el || !me) return;
