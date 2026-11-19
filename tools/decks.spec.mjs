@@ -28,9 +28,10 @@ function fixtures() {
   };
 }
 
-async function setup(page, { signedIn = true, extraDecks = [], marks = [] } = {}) {
+async function setup(page, { signedIn = true, extraDecks = [], marks = [], coll = null } = {}) {
   const db = fixtures();
   db.profiles[0].decks.push(...extraDecks);
+  if (coll) db.profiles[0].collection = coll;
   const calls = [];
   await page.addInitScript(([signed, me]) => {
     localStorage.setItem('inkwell-lang', 'pt');
@@ -202,6 +203,41 @@ test('tournament: a past event or one only marked "Talvez" shows no checklist', 
   await page.goto(BASE + '?deck=deck-a');
   await expect(page.locator('h1')).toHaveText('Amber Test');
   await expect(page.getByTestId('event-prep')).toHaveCount(0);
+});
+
+// Missão 2027, etapa 2: Deck ↔ Coleção
+test('an imported deck is compared with the collection at once: the notice says how many are missing and opens Faltando', async ({ page }) => {
+  await setup(page, { coll: { 'LOR10-10': { n: 1, f: 0 } } });
+  await page.goto(BASE);
+  await page.locator('#import').click();
+  await page.locator('#iName').fill('Colado');
+  await page.locator('#iText').fill('4 Gurgi - Apple Lover\n2x Baloo - Friend and Guardian');
+  await page.locator('#iSave').click();
+  await expect(page.locator('h1')).toHaveText('Colado');
+  await expect(page.locator('#toast')).toContainText('Deck importado: faltam 5 cartas na sua coleção.');
+  await page.getByTestId('toast-action').click();
+  await expect(page).toHaveURL(/tab=missing/);
+  await expect(page.getByTestId('missing-summary')).toBeVisible();
+  await expect(page.getByTestId('miss-empty-coll')).toHaveCount(0);
+});
+
+test('Faltando with an empty collection says why everything is missing, and offers both ways out', async ({ page }) => {
+  await setup(page, { coll: {} });
+  await page.goto(BASE + '?deck=deck-a&tab=missing');
+  const box = page.getByTestId('miss-empty-coll');
+  await expect(box).toContainText('Sua coleção ainda está vazia, então todas as cartas aparecem como faltando.');
+  await expect(box.getByTestId('miss-add-cards')).toHaveAttribute('href', '../colecao/');
+  await box.getByTestId('miss-have-deck').click();
+  await expect(page.getByTestId('dtc-missing')).toBeVisible();          // the existing "Adicionar deck à coleção" sheet
+});
+
+test('a complete deck offers to play a game or see its games — nothing social', async ({ page }) => {
+  await setup(page, { coll: Object.fromEntries(IDS.map((id) => [id, { n: 4, f: 0 }])) });
+  await page.goto(BASE + '?deck=deck-a&tab=missing');
+  await expect(page.locator('#tabBody')).toContainText('Você tem todas as cartas deste deck.');
+  await expect(page.getByTestId('complete-play')).toHaveAttribute('href', '../counter/?new');
+  await page.getByTestId('complete-games').click();
+  await expect(page).toHaveURL(/tab=games/);
 });
 
 test('delete asks for a second tap', async ({ page }) => {

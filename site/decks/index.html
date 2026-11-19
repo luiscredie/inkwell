@@ -400,6 +400,7 @@ window.INKWELL_DECKVIEW = function ({ esc, Tx, split, inksOf, imgUrl, setNo, nam
 .prep-i[data-ok="false"] > .ic { color: var(--warn, var(--accent-ink)); }
 .plan-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--sp-3); min-height: 52px; }
 .plan-row .btn { min-height: 44px; }
+@media (max-width: 420px) { .plan-row { grid-template-columns: minmax(0, 1fr); gap: var(--sp-1); } .plan-row > .btn { justify-self: start; } }   /* 320px: the text was squeezed into a narrow column beside the button */
 .miss-group { margin: var(--sp-5) 0 var(--sp-2); scroll-margin-top: calc(var(--bar-h) + var(--sp-3)); }
 #who-helps-anchor, .tabs[role=tablist] { scroll-margin-top: calc(var(--bar-h) + var(--sp-2)); }
 .miss .fav { flex: none; width: 26px; height: 26px; border-radius: 50%; overflow: hidden; display: inline-grid; place-items: center; background: var(--surface-3); color: var(--text); font-weight: 800; font-size: var(--fs-small); text-decoration: none; box-shadow: 0 0 0 1.5px var(--line-strong); }
@@ -528,7 +529,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Some of these cards aren't free anymore. Reload and try again.": "Algumas destas cartas não estão mais livres. Recarregue e tente de novo.", "Try it with an example deck": "Experimentar com um deck de exemplo", "Example deck": "Deck de exemplo", "Amber/Steel, made to show the tool — not a competitive list. Change it as you like.": "Âmbar/Aço, feito para mostrar a ferramenta — não é lista competitiva. Mude à vontade.", "{v} estimated (MYP Cards, else TCGplayer)": "{v} estimados (MYP Cards; sem anúncio lá, TCGplayer)", "estimate": "estimativa",
     "Estimate in reais: {s}, updated {d}. A card with no price is left out of the total, never counted as zero.": "Estimativa em reais: {s}, atualizado em {d}. Carta sem preço fica fora do total, nunca conta como zero.",
     "lowest MYP Cards listing ({d}); without one, {s}": "menor anúncio na MYP Cards ({d}); sem anúncio lá, {s}", "{n} can come from friends": "{n} podem vir de amigos", "{n} can come from friends_1": "1 pode vir de amigos",
-    "You have every card for this deck.": "Você tem todas as cartas deste deck.", "Getting ready for {e}": "Preparação para {e}", "the event": "o evento", "Which deck will you play?": "Qual deck você vai jogar?", "not legal": "fora do formato", "1 missing": "falta 1", "{n} missing": "faltam {n}", "Tournament: {e}": "Campeonato: {e}", "Change deck": "Trocar deck", "Not for this event": "Não usar neste evento", "Registration marked": "Inscrição marcada", "Registration not marked yet": "Inscrição ainda não marcada", "Events": "Eventos", "Payment marked": "Pagamento marcado", "Payment not marked yet": "Pagamento ainda não marcado", "The list has {n} of {m} cards.": "A lista tem {n} de {m} cartas.", "Not legal in its format.": "Fora do formato.", "Legal in {f}.": "Dentro do formato {f}.", "See the list": "Ver lista", "You have every card.": "Você tem todas as cartas.", "1 card missing.": "Falta 1 carta.", "{n} cards missing.": "Faltam {n} cartas.", "See what's missing": "Ver o que falta", "1 game with this deck in the last 14 days.": "1 jogo com o deck nos últimos 14 dias.", "{n} games with this deck in the last 14 days.": "{n} jogos com o deck nos últimos 14 dias.", "No games with this deck in the last 14 days.": "Nenhum jogo com o deck nos últimos 14 dias.", "Play a game": "Jogar uma partida", "Review your games before the event.": "Revise seus jogos antes do evento.", "See its games": "Ver jogos do deck", "Copies lent to friends still count as yours.": "Cópias emprestadas a amigos contam como suas.",
+    "You have every card for this deck.": "Você tem todas as cartas deste deck.", "Getting ready for {e}": "Preparação para {e}", "the event": "o evento", "Which deck will you play?": "Qual deck você vai jogar?", "not legal": "fora do formato", "1 missing": "falta 1", "{n} missing": "faltam {n}", "Tournament: {e}": "Campeonato: {e}", "Change deck": "Trocar deck", "Not for this event": "Não usar neste evento", "Registration marked": "Inscrição marcada", "Registration not marked yet": "Inscrição ainda não marcada", "Events": "Eventos", "Payment marked": "Pagamento marcado", "Payment not marked yet": "Pagamento ainda não marcado", "The list has {n} of {m} cards.": "A lista tem {n} de {m} cartas.", "Not legal in its format.": "Fora do formato.", "Legal in {f}.": "Dentro do formato {f}.", "See the list": "Ver lista", "You have every card.": "Você tem todas as cartas.", "1 card missing.": "Falta 1 carta.", "{n} cards missing.": "Faltam {n} cartas.", "See what's missing": "Ver o que falta", "1 game with this deck in the last 14 days.": "1 jogo com o deck nos últimos 14 dias.", "{n} games with this deck in the last 14 days.": "{n} jogos com o deck nos últimos 14 dias.", "No games with this deck in the last 14 days.": "Nenhum jogo com o deck nos últimos 14 dias.", "Play a game": "Jogar uma partida", "Review your games before the event.": "Revise seus jogos antes do evento.", "See its games": "Ver jogos do deck", "Copies lent to friends still count as yours.": "Cópias emprestadas a amigos contam como suas.", "Play a game": "Jogar uma partida", "See its games": "Ver jogos do deck", "Your collection is empty, so every card shows as missing.": "Sua coleção ainda está vazia, então todas as cartas aparecem como faltando.", "Add your cards and this tab shows only what you really lack.": "Cadastre suas cartas e esta aba mostra só o que falta de verdade.", "Add my cards": "Cadastrar minhas cartas", "I own this deck": "Já tenho este deck", "Deck imported: 1 card missing from your collection.": "Deck importado: falta 1 carta na sua coleção.", "Deck imported: {n} cards missing from your collection.": "Deck importado: faltam {n} cartas na sua coleção.", "See what's missing": "Ver o que falta", "Deck imported: you have every card.": "Deck importado: você tem todas as cartas.", "Copies lent to friends still count as yours.": "Cópias emprestadas a amigos contam como suas.",
     "Lends": "Empresta", "Trades": "Troca", "Has it": "Possui", "{who} offers it in trade": "{who} oferece em troca", "{n} on the board": "{n} no Mural", "Profile of {who}": "Perfil de {who}",
     "How to complete it": "Como completar", "Buying all of it: about {v} at market price": "Comprando tudo: cerca de {v} pelo preço de mercado", "Friends offered": "Amigos ofereceram", "Lending costs nothing; a trade asks for cards of yours in return. Each friend decides.": "Empréstimo não tem custo; troca pede cartas suas em troca. Cada amigo decide.",
     "On the board": "No Mural", "For sale on the board, at the price in the listing.": "À venda no Mural, pelo preço do anúncio.", "To buy": "Para comprar", "No one offered these. The stores open in another tab.": "Ninguém ofereceu estas. As lojas abrem em outra aba.",
@@ -781,6 +782,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       </ul>
       <div class="row" style="gap:var(--sp-1);border-top:1px solid var(--line);padding-top:var(--sp-2)"><a class="btn small ghost" href="./?evento=${encodeURIComponent(ev.rph_id)}">${Tx("Change deck")}</a><button type="button" class="btn small ghost" data-prep-clear="${esc(String(ev.rph_id))}">${Tx("Not for this event")}</button></div></section>`;
   }
+  const collHas = () => Object.values(coll()).some((e) => (+e?.n || 0) + (+e?.f || 0) > 0);   // an empty collection makes every card "missing"
   let sharedColls = [], lendBy = new Map(), lendAsked = new Map();   // "lender|card_id" -> status of my open request
   const ASK_RANK = { requested: 1, accepted: 2, delivered: 3 };
   // ---------- deck físico / virtual (supabase/deck_built.sql) ----------
@@ -1191,6 +1193,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     $("toColl")?.addEventListener("click", (e) => openDeckToColl(d, e.currentTarget));
     $("app").querySelectorAll("[data-prep-tab]").forEach((b) => b.onclick = () => go(d.id, b.dataset.prepTab));
     $("app").querySelector("[data-prep-clear]")?.addEventListener("click", (e) => { setEvDeck(e.currentTarget.dataset.prepClear, null); render(); });
+    $("app").querySelector("[data-to-coll]")?.addEventListener("click", (e) => openDeckToColl(d, e.currentTarget));   // Faltando, empty collection: "Já tenho este deck"
+    $("app").querySelector("[data-tab-go]")?.addEventListener("click", (e) => go(d.id, e.currentTarget.dataset.tabGo));
     document.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => go(d.id, b.dataset.tab, true));
     $("edit").onclick = () => { editing = !editing; if (editing && tab !== "list") go(d.id, "list", true); else render(); if (editing) setTimeout(() => $("addQ")?.focus(), 0); };
     $("more").onclick = (e) => { e.stopPropagation(); toggleMenu(d, m); };
@@ -1679,7 +1683,12 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   }
   function missingTab(d, m) {
     if (!m.known.length) return emptyBox("decks", Tx("This deck is empty."), Tx("Tap Edit list to add cards."));
-    if (!m.missing.length) return emptyBox("collection", Tx("You have every card for this deck."), Tx("Copies lent to friends still count as yours."));
+    // complete: something to do with it that isn't social (Missão 2027, etapa 2)
+    if (!m.missing.length) return emptyBox("collection", Tx("You have every card for this deck."), Tx("Copies lent to friends still count as yours."),
+      `<div class="row" style="justify-content:center;gap:var(--sp-2)" data-testid="complete-actions"><a class="btn primary" href="../counter/?new" data-testid="complete-play"><i class="ic i-counter"></i>${Tx("Play a game")}</a><button type="button" class="btn" data-tab-go="games" data-testid="complete-games"><i class="ic i-games"></i>${Tx("See its games")}</button></div>`);
+    // nothing in the collection yet: say why everything is missing, and the two ways out
+    const emptyColl = me && prof() && !prof().shared && !collHas() ? `<section class="card inset stack" style="padding:var(--sp-3);gap:var(--sp-2);margin-bottom:var(--sp-4)" data-testid="miss-empty-coll"><b>${Tx("Your collection is empty, so every card shows as missing.")}</b><span class="small muted">${Tx("Add your cards and this tab shows only what you really lack.")}</span>
+        <div class="row" style="gap:var(--sp-2)"><a class="btn primary small" href="../colecao/" data-testid="miss-add-cards"><i class="ic i-camera"></i>${Tx("Add my cards")}</a>${m.known.length ? `<button type="button" class="btn small" data-testid="miss-have-deck" data-to-coll><i class="ic i-plus"></i>${Tx("I own this deck")}</button>` : ""}</div></section>` : "";
     const groups = { friends: [], board: [], buy: [] };
     m.missing.forEach(({ c, n }) => {
       const { lend, sell, trade } = offersFor(c), [a, b] = split(c.name), p = priceOf(c);
@@ -1737,7 +1746,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const head = [Tx(m.missingN === 1 ? "{n} card missing" : "{n} cards missing", { n: m.missingN })];
     // the whole-missing value is what buying everything would cost; the plan says what is actually left to buy
     const sub = !havePrices() ? "" : Tx("Buying all of it: about {v} at market price", { v: money(m.missingValue) });
-    return `<section class="card" data-testid="missing-summary" style="padding:var(--sp-3) var(--sp-4)"><b style="font-size:var(--fs-h3, 1.125rem)">${esc(head[0])}</b><span class="small muted" style="display:block">${esc(sub)}</span>
+    return `${emptyColl}<section class="card" data-testid="missing-summary" style="padding:var(--sp-3) var(--sp-4)"><b style="font-size:var(--fs-h3, 1.125rem)">${esc(head[0])}</b><span class="small muted" style="display:block">${esc(sub)}</span>
         <div class="plan-rows" data-testid="completion-plan"><span class="small" style="font-weight:600">${Tx("How to complete it")}</span>${plan}${offeredNote}${askedRow(m)}</div></section>
       <span id="who-helps-anchor"></span>${whoHelps(m)}
       <div class="stack">${cards}</div>
@@ -2235,6 +2244,11 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         await flush(deck, true);
         if (initial) { pubDrop(); window.INKWELL_TRACK?.("deck_saved"); }   // the list tried without an account is now in the account
         go(deck.id, "list");
+        // Missão 2027, etapa 2: an imported deck is compared with the collection right away (the official count, measure())
+        if (me && collHas()) { const mm = measure(deck);
+          if (mm.missingN) toast(Tx(mm.missingN === 1 ? "Deck imported: 1 card missing from your collection." : "Deck imported: {n} cards missing from your collection.", { n: mm.missingN }), () => go(deck.id, "missing"), false, 8000, { label: Tx("See what's missing"), icon: "i-chevron-right" });
+          else if (mm.known.length) toast(Tx("Deck imported: you have every card."));
+        }
       };
     };
     draw();
@@ -2320,10 +2334,11 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     draw();
     return box;
   };
-  function toast(text, undo, err, ms = 5000) {
+  // act: { label, icon } turns the Undo button into another action (e.g. "Ver o que falta" after an import)
+  function toast(text, undo, err, ms = 5000, act = null) {
     const t = $("toast");
     t.className = `toast${err ? " err" : ""}`;
-    t.innerHTML = `<i class="ic ${err ? "i-alert" : "i-check"}"></i><span>${esc(text)}</span>${undo ? `<button type="button" class="btn ghost small" id="undo"><i class="ic i-undo"></i>${Tx("Undo")}</button>` : ""}`;
+    t.innerHTML = `<i class="ic ${err ? "i-alert" : "i-check"}"></i><span>${esc(text)}</span>${undo ? `<button type="button" class="btn ghost small" id="undo"${act ? ' data-testid="toast-action"' : ""}><i class="ic ${act?.icon || "i-undo"}"></i>${esc(act?.label || Tx("Undo"))}</button>` : ""}`;
     t.hidden = false;
     if (undo) $("undo").onclick = () => { t.hidden = true; undo(); };
     clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, ms);
