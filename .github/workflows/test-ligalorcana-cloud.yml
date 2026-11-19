@@ -1,0 +1,93 @@
+name: LigaLorcana cloud connectivity experiment
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'experiment/ligalorcana-actions-20261116'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install browser
+        run: |
+          python -m pip install playwright
+          python -m playwright install --with-deps chromium
+      - name: Probe one edition (no GitHub writes)
+        run: |
+          cat > /tmp/probe_liga.py <<'PY'
+          import asyncio, json, re
+          from urllib.parse import urlparse, parse_qs
+          from playwright.async_api import async_playwright
+          URL = 'https://www.ligalorcana.com.br/?view=cards/search&card=edid=9%20ed=LOR14'
+          async def main():
+              async with async_playwright() as pw:
+                  browser = await pw.chromium.launch(headless=True)
+                  try:
+                      page = await browser.new_page()
+                      response = await page.goto(URL,wait_until='domcontentloaded',timeout=45000)
+                      print('DOCUMENT_STATUS:',response.status if response else 'none',flush=True)
+                      if response and response.status in (401,403,429):
+                          raise SystemExit('ACCESS_DENIED')
+                      last = 0
+                      for step in range(22):
+                          result = await page.evaluate("""() => {
+                            let ids = new Set(), priced = new Set();
+                            for (const a of document.querySelectorAll('a[href]')) {
+                              let u;
+                              try { u = new URL(a.href); } catch(e) { continue; }
+                              if(u.searchParams.get('view') !== 'cards/card' || u.searchParams.get('ed') !== 'LOR14') continue;
+                              const num=u.searchParams.get('num');
+                              if(!num)continue;
+                              ids.add(num);
+                              let node=a;
+                              for(let i=0;node && i<10;i++,node=node.parentElement){
+                                let vals=(node.innerText || '').match(/R\\$\\s*[\\d.]+,\\d{2}/g)||[];
+                                const links = new Set([...node.querySelectorAll('a[href]')].map(x=>x.href).filter(x=>x.includes('view=cards/card')));
+                                if(vals.length>=2 && vals.length<=4 && links.size===1){priced.add(num);break;}
+                              }
+                            }
+                            return {count:ids.size,with_two_prices:priced.size};
+                          }""")
+                          print('STEP',step,result,flush=True)
+                          if result['count']>=254 and result['with_two_prices']>=254:
+                              break
+                          if result['count']==last and step>=14:
+                              break
+                          last=result['count']
+                          await page.evaluate('window.scrollTo(0,document.body.scrollHeight)')
+                          await page.wait_for_timeout(1100)
+                      print('RESULT:',json.dumps(result),flush=True)
+                      if result['count']<254 or result['with_two_prices']<254:
+                          raise SystemExit('INCOMPLETE_OR_BLOCKED')
+                  finally:
+                      await browser.close()
+          asyncio.run(main())
+          PY
+          python /tmp/probe_liga.py
+
+  probe-windows:
+    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'experiment/ligalorcana-actions-20261116'
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - name: Test HTTPS document from Windows runner (no retries)
+        shell: pwsh
+        run: |
+          $url = 'https://www.ligalorcana.com.br/?view=cards%2Fsearch&card=edid%3D9%20ed%3DLOR14'
+          try {
+            $res = Invoke-WebRequest -Uri $url -TimeoutSec 30 -MaximumRedirection 3 -UseBasicParsing
+            Write-Host "WINDOWS_STATUS: $($res.StatusCode)"
+            Write-Host "WINDOWS_LENGTH: $($res.Content.Length)"
+          } catch {
+            $r = $_.Exception.Response
+            if ($null -ne $r) { Write-Host "WINDOWS_STATUS: $([int]$r.StatusCode)" }
+            Write-Host "WINDOWS_ACCESS_ERROR: $($_.Exception.Message)"
+            exit 1
+          }
