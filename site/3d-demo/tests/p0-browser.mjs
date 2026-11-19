@@ -24,6 +24,8 @@ for(const width of [320,375,390,430,1280]){
     page.on('pageerror',e=>errors.push(e.message));
     await page.goto(url,{waitUntil:'domcontentloaded'});
     await page.locator('.hero-stories .fan .card3d').first().waitFor();
+    // Repeated open requests must not schedule overlapping binder transitions.
+    await page.evaluate(()=>{binderOpening=true;openBinder();if(!binderOpening)throw Error('Opening guard lost');binderOpening=false;});
     const hero=await page.locator('.hero-stories .fan .card3d').evaluateAll(cards=>cards.map(c=>{
       const r=c.getBoundingClientRect();
       return {left:r.left,right:r.right,filter:getComputedStyle(c).filter};
