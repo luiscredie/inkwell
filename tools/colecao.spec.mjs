@@ -837,6 +837,43 @@ test('Decks place: copies set aside for built decks leave the binder, and the ca
   expect(builds[0]).toMatchObject({ p_owner: null, p_profile: 'luiscredie', p_deck: 'd1', p_items: [], p_from_home: [] });
 });
 
+// 18/11 (print from Luis): 4 copies, all in a built deck — the sheet showed six big "0" and read as "I have none"
+test('card sheet: says first where the copies are; empty Casa and Fichário de trocas fold into one line that opens on tap', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const calls = await setup(page, { collection: { 'LOR10-10': { n: 3, f: 1 }, 'LOR13-27': { n: 0, f: 0 } }, home: [], trade: [],
+    decked: [{ profile: 'luiscredie', deck_id: 'd1', deck_name: 'Evasives', card_id: 'LOR10-10', n: 3, f: 1 }] });
+  await page.goto(BASE);
+  await page.locator('[data-card="LOR10-10"]').click();
+  await expect(page.getByTestId('stock-sum')).toHaveText('Você tem 4: 4 no deck Evasives');
+  const st = page.locator('[data-testid="stocks"]');
+  await expect(st.locator('[data-n="binder-n"]')).toHaveText('0');                 // the + to add stays where it was
+  await expect(st.locator('[data-n="home-n"]')).toHaveCount(0);                    // Casa: one line, no steppers
+  await expect(page.getByTestId('stock-home-empty')).toContainText('Casa');
+  await expect(page.getByTestId('stock-trade-empty')).toContainText('Fichário de trocas');
+  await expect(page.getByTestId('stock-decks')).toContainText('4');
+  // one tap opens Casa with its steppers, the + focused; adding there works as before
+  await page.getByTestId('stock-home-empty').click();
+  await expect(st.locator('[data-n="home-n"]')).toHaveText('0');
+  await expect(st.locator('[data-d="n:1:home"]')).toBeFocused();
+  await st.locator('[data-d="n:1:home"]').click();
+  await expect(page.getByTestId('stock-sum')).toHaveText('Você tem 5: 1 em casa · 4 no deck Evasives');
+  await expect.poll(() => calls.filter((c) => c.path === 'rpc/collection_change').length).toBe(1);
+  // the stock that just got a copy stays open even back at 0
+  await st.locator('[data-d="n:-1:home"]').click();
+  await expect(st.locator('[data-n="home-n"]')).toHaveText('0');
+});
+
+for (const W of [320, 360]) test(`card sheet on a ${W}px phone: the stocks fit the screen (move buttons under the counter)`, async ({ page }) => {
+  await page.setViewportSize({ width: W, height: 844 });
+  await setup(page, { collection: { 'LOR10-10': { n: 3, f: 1 } }, home: [{ profile: 'luiscredie', card_id: 'LOR10-10', n: 1, f: 0 }], trade: [] });
+  await page.goto(BASE);
+  await page.locator('[data-card="LOR10-10"]').click();
+  await page.getByTestId('stocks').waitFor();
+  const wide = await page.evaluate(() => [...document.querySelectorAll('#cardSheet [data-testid="stocks"] *')].filter((e) => e.getBoundingClientRect().right > innerWidth + 1).map((e) => e.className || e.tagName));
+  expect(wide).toEqual([]);
+  await expect(page.locator('[data-testid="stocks"] [data-mv="n:home"]')).toBeVisible();
+});
+
 test('#145 P0-C: collection value shows — and a clear notice when prices do not load; the collection still works', async ({ page }) => {
   await setup(page);
   await page.route('**/data/prices.json', (r) => r.fulfill({ status: 503, body: '' }));
