@@ -28,7 +28,7 @@ function fixtures() {
   };
 }
 
-async function setup(page, { signedIn = true, extraDecks = [], coll = null } = {}) {
+async function setup(page, { signedIn = true, extraDecks = [], marks = [], coll = null } = {}) {
   const db = fixtures();
   db.profiles[0].decks.push(...extraDecks);
   if (coll) db.profiles[0].collection = coll;
@@ -54,6 +54,7 @@ async function setup(page, { signedIn = true, extraDecks = [], coll = null } = {
     if (path === 'rpc/save_deck') return json({ ...body.p_deck, updated_at: '2026-10-21T10:00:00Z' });
     if (path === 'rpc/delete_deck') return route.fulfill({ status: 204, body: '' });
     if (path === 'rpc/my_duels_sync') return json(null);
+    if (path === 'rpc/my_event_marks') return json(marks);
     return json([]);
   });
   return calls;
@@ -169,6 +170,85 @@ test('new deck and import', async ({ page }) => {
   await expect.poll(() => saves(calls).length).toBe(2);
   expect(saves(calls)[1].body.p_deck).toMatchObject({ name: 'Colado', cards: { 'LOR10-10': 4, 'LOR10-1': 2 }, colors: ['Amber'] });
   await expect(page.locator('h1')).toHaveText('Colado');
+});
+
+// Missão 2027, etapa 6: getting a deck ready for an event marked "Vou" in Eventos (no new table: the choice stays on the device)
+test('tournament: Eventos › "Preparar meu deck" picks the deck, and the deck shows a checklist from real data', async ({ page }) => {
+  const start = new Date(Date.now() + 5 * 86400e3).toISOString();
+  await setup(page, { marks: [{ rph_id: 77, status: 'going', registered: true, paid: false, snap: { name: 'Liga de Sábado', start, store: 'Loja Exemplo', format: 'Core Constructed' } }] });
+  await page.goto(BASE + '?evento=77');
+  const pick = page.getByTestId('prep-pick');
+  await expect(pick).toContainText('Preparação para Liga de Sábado');
+  await expect(pick).toContainText('Loja Exemplo');
+  await expect(pick).toContainText('A escolha fica salva só neste aparelho.');
+  await pick.locator('[data-prep-deck="deck-a"]').click();
+  await expect(page).toHaveURL(/deck=deck-a/);
+  const prep = page.getByTestId('event-prep');
+  await expect(prep).toContainText('Campeonato: Liga de Sábado');
+  await expect(prep.getByTestId('prep-registered')).toHaveAttribute('data-ok', 'true');
+  await expect(prep.getByTestId('prep-registered')).toHaveText('Inscrição: marcada por você em Eventos');   // what the player marked, not the Play Hub
+  await expect(prep.getByTestId('prep-paid')).toHaveAttribute('data-ok', 'false');
+  await expect(prep.getByTestId('prep-paid')).toContainText('Pagamento: ainda não marcado por você');
+  await expect(prep.getByTestId('prep-note')).toHaveText('Inscrição e pagamento são o que você marcou em Eventos, não uma confirmação do Play Hub. A escolha do deck fica salva só neste aparelho.');
+  // format: the deck's own check, never "legal in the event"
+  await expect(prep.getByTestId('prep-legal')).toContainText('É o mesmo formato do evento (Core Constructed); o Inkwell não confere regras próprias do evento.');
+  await expect(prep.getByTestId('prep-legal')).not.toContainText('legal no evento');
+  await expect(prep.getByTestId('prep-missing')).toContainText('Faltam 2 cartas.');                 // the official count (LOR10-1: 2 of 4)
+  await expect(prep.getByTestId('prep-practice')).toContainText('Nenhum jogo com o deck nos últimos 14 dias.');   // the only game is from October
+  await expect(prep.getByTestId('prep-review')).toBeVisible();
+  await prep.getByTestId('prep-missing').getByRole('button', { name: 'Ver o que falta' }).click();
+  await expect(page).toHaveURL(/tab=missing/);
+  await expect(page.getByTestId('event-prep')).toBeVisible();                                        // stays on every tab of the deck
+  await page.getByRole('button', { name: 'Não usar neste evento' }).click();
+  await expect(page.getByTestId('event-prep')).toHaveCount(0);
+});
+
+test('tournament: a direct link to a past event, a "Talvez" one or one not marked shows no deck choice', async ({ page }) => {
+  const past = new Date(Date.now() - 3 * 86400e3).toISOString(), soon = new Date(Date.now() + 2 * 86400e3).toISOString();
+  await setup(page, { marks: [{ rph_id: 1, status: 'going', snap: { name: 'Passado', start: past } }, { rph_id: 2, status: 'maybe', snap: { name: 'Talvez', start: soon } }] });
+  for (const id of ['1', '2', '999']) {
+    await page.goto(BASE + '?evento=' + id);
+    await expect(page.getByTestId('prep-unavailable')).toHaveText('A preparação vale para eventos que ainda não terminaram e que você marcou como “Vou” em Eventos.');
+    await expect(page.getByTestId('prep-pick')).toHaveCount(0);
+  }
+});
+
+test('tournament: same rule as Eventos — started 1 h ago and not over counts; ended (its end time passed) or 6 h after a start with no end does not', async ({ page }) => {
+  const h = (n) => new Date(Date.now() + n * 3600e3).toISOString();
+  await setup(page, { marks: [
+    { rph_id: 11, status: 'going', snap: { name: 'Começou há 1 h', start: h(-1) } },                    // no end: over at start + 6 h
+    { rph_id: 12, status: 'going', snap: { name: 'Já terminou', start: h(-2), end: h(-0.5) } },          // its end passed
+    { rph_id: 13, status: 'going', snap: { name: 'Começou há 7 h', start: h(-7) } },
+    { rph_id: 14, status: 'going', snap: { name: 'Dia inteiro', start: h(-7), end: h(3) } }] });      // long event, still on
+  for (const [id, ok] of [['11', true], ['12', false], ['13', false], ['14', true]]) {
+    await page.goto(BASE + '?evento=' + id);
+    await expect(page.getByTestId(ok ? 'prep-pick' : 'prep-unavailable')).toBeVisible();
+    await expect(page.getByTestId(ok ? 'prep-unavailable' : 'prep-pick')).toHaveCount(0);
+  }
+});
+
+test('tournament format: a limited event says the list doesn\'t apply; another constructed format flags the deck; no format says what was checked', async ({ page }) => {
+  const soon = new Date(Date.now() + 2 * 86400e3).toISOString();
+  await page.addInitScript((me) => { for (const k of [5, 6, 7]) localStorage.setItem(`inkwell-event-deck:${me}:${k}`, 'deck-a'); }, ME);
+  for (const [id, format, want, ok] of [[5, 'Sealed', 'Evento Sealed: o deck é montado no próprio evento, então esta lista não se aplica.', 'null'],
+    [6, 'Infinity Constructed', 'O evento é Infinity Constructed; este deck está como Core. Confira o formato do deck.', 'false'],
+    [7, undefined, 'Conferido só pelo formato do deck; o evento não informa o formato.', null]]) {
+    await setup(page, { marks: [{ rph_id: id, status: 'going', snap: { name: 'Evento ' + id, start: soon, ...(format ? { format } : {}) } }] });
+    await page.goto(BASE + '?deck=deck-a');
+    const legal = page.getByTestId('prep-legal');
+    await expect(legal).toContainText(want);
+    if (ok) await expect(legal).toHaveAttribute('data-ok', ok);
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+  }
+});
+
+test('tournament: a past event or one only marked "Talvez" shows no checklist', async ({ page }) => {
+  const past = new Date(Date.now() - 3 * 86400e3).toISOString(), soon = new Date(Date.now() + 2 * 86400e3).toISOString();
+  await page.addInitScript((me) => { localStorage.setItem(`inkwell-event-deck:${me}:1`, 'deck-a'); localStorage.setItem(`inkwell-event-deck:${me}:2`, 'deck-a'); }, ME);
+  await setup(page, { marks: [{ rph_id: 1, status: 'going', snap: { name: 'Passado', start: past } }, { rph_id: 2, status: 'maybe', snap: { name: 'Talvez', start: soon } }] });
+  await page.goto(BASE + '?deck=deck-a');
+  await expect(page.locator('h1')).toHaveText('Amber Test');
+  await expect(page.getByTestId('event-prep')).toHaveCount(0);
 });
 
 // Missão 2027, etapa 2: Deck ↔ Coleção
