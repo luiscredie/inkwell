@@ -36,10 +36,22 @@ def normalise(value):
 
 
 def valid_finish(row, finish):
-    if row.get(finish + "_status") != "ok":
+    """Accept a reported mean above the highest current offer without altering it.
+
+    The marketplace mean may be based on historical sales, while the low/high
+    are current offers. Legacy collectors tag these cases invalid_order.
+    """
+    status = row.get(finish + "_status")
+    if status not in ("ok", "invalid_order"):
         return None
     vals = [row.get(finish + "_" + k + "_centavos") for k in ("min", "med", "max")]
-    if any(type(n) is not int or n <= 0 for n in vals) or vals != sorted(vals):
+    if any(type(n) is not int or n <= 0 for n in vals):
+        return None
+    low, mean, high = vals
+    if low > high or mean < low:
+        return None
+    # Accept legacy invalid_order only when the mean is above the high offer.
+    if status == "invalid_order" and mean <= high:
         return None
     return {k: float(Decimal(n) / 100) for k, n in zip(FINISH_KEYS[finish], vals)}
 
