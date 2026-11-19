@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Inkwell · Status da coleta</title>
+<style>
+:root{color-scheme:light;--ink:#172443;--deep:#101a34;--deep2:#29385e;--paper:#f6f7fb;--purple:#6752c6;--purplelight:#ece9fa;--muted:#68758e;--line:#e2e6ef;--green:#178362;--amber:#a75c14;--red:#ac4851}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink);line-height:1.5}
+header{background:linear-gradient(125deg,#111a35,#28345e 75%,#3c3473);color:#fff;padding:32px 20px 53px}header .wrap,main,footer{max-width:940px;margin:auto}.eyebrow{text-transform:uppercase;letter-spacing:.15em;font-size:11px;font-weight:800;color:#cbd1e6}.brand{display:flex;align-items:center;gap:12px}.seal{width:43px;height:43px;background:linear-gradient(130deg,#ffe1a2,#cea24c);color:#382858;display:grid;place-items:center;font-size:25px;font-weight:800;border-radius:14px}header h1{font-size:clamp(25px,4vw,34px);line-height:1.18;margin:14px 0 5px;letter-spacing:-1px}header p{color:#d6ddf1;margin:0;font-size:14px}.top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}button{border:1px solid #d6dce8;border-radius:11px;background:#fff;color:#25375e;padding:10px 14px;cursor:pointer;font:700 12px system-ui}button:hover{border-color:#a6a0d5}button:focus-visible{outline:3px solid #a5a0e2;outline-offset:2px}button:disabled{cursor:wait;opacity:.6}
+main{padding:0 20px 35px;position:relative;margin-top:-26px}.status{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:17px;padding:18px 20px;box-shadow:0 11px 32px #16214712;margin-bottom:16px;flex-wrap:wrap}.dot{height:11px;width:11px;border-radius:100%;background:#b0b8c7;box-shadow:0 0 0 5px #c2c8d433}.dot.live{background:var(--green);box-shadow:0 0 0 5px #c0e7da}.dot.warn{background:#d38d25;box-shadow:0 0 0 5px #f7e8cb}.dot.bad{background:var(--red);box-shadow:0 0 0 5px #f6d8df}.status strong{font-size:16px}.status small{color:var(--muted);display:block;font-size:12px}.status .time{margin-left:auto;color:var(--muted);font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}.card{background:#fff;border:1px solid var(--line);border-radius:17px;padding:20px;box-shadow:0 2px 12px #16214707}.label{color:var(--muted);font-size:12px;font-weight:650}.big{font-size:clamp(27px,5vw,37px);letter-spacing:-1.6px;font-weight:810;line-height:1.3;font-variant-numeric:tabular-nums}.card .note{color:var(--muted);font-size:11px;margin-top:3px}.detail{margin-top:14px}.detailheader{display:flex;align-items:center;justify-content:space-between;margin:0 0 13px;gap:10px}.detailheader h2{font-size:16px;margin:0;letter-spacing:-.25px}.edition{font-size:28px;font-weight:800;letter-spacing:-.8px}.counter{font-weight:750;font-size:22px;font-variant-numeric:tabular-nums}.track{height:11px;background:#eef0f6;border-radius:12px;overflow:hidden;margin:15px 0 9px}.bar{height:100%;background:linear-gradient(90deg,#5f4cc1,#a58be5);width:0;transition:width .3s}.tiny{font-size:12px;color:var(--muted)}.stats{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:16px 0 0}.stat{background:#f8f9fd;border:1px solid #edf0f6;border-radius:12px;padding:10px 12px}.stat strong{display:block;font-size:13px}.stat span{font-size:11px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#79839c;font-weight:700;padding:0 8px 9px}td{border-top:1px solid #edf0f5;padding:10px 8px;font-variant-numeric:tabular-nums}th:last-child,td:last-child{text-align:right}.tag{border-radius:100px;font-size:10px;font-weight:780;padding:4px 8px;display:inline-flex;background:#f0effb;color:#5746a8}.tag.ok{background:#e4f6ed;color:#127c55}.tag.warn{background:#fff1da;color:#9d641c}.tag.still{background:#eff1f5;color:#778399}a{color:#5e4bb5;text-decoration:none}a:hover{text-decoration:underline}.message{padding:12px;background:#fff8e7;border:1px solid #f2dfaf;border-radius:10px;color:#8e5e13;font-size:12px;margin-top:12px;display:none}footer{font-size:12px;padding:0 20px 40px;color:#8994a7}footer p{margin:6px 0}#refresh{background:#ffffff1c;border:1px solid #ffffff5d;color:white}#refresh:hover{background:#ffffff32}#error-note{color:#a23e49}
+@media(max-width:600px){header{padding-top:25px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.grid>.card:first-child{grid-column:span 2}main{padding:0 13px 26px}.status{padding:15px;align-items:flex-start}.status .time{width:100%;margin:0 0 0 24px}.card{padding:15px}.stats{grid-template-columns:1fr 1fr}.tag{padding:3px 6px}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+ <div class="top"><div class="brand"><div class="seal" aria-hidden="true">✧</div><div><div style="font-size:20px;font-weight:800;letter-spacing:-.6px;line-height:1.1">Inkwell</div><div class="eyebrow">MONITOR LIGALORCANA</div></div></div><button id="refresh">Atualizar status</button></div>
+ <h1>Coleta sob controle.</h1><p>Acompanhe pelo celular o trabalho da extensão no seu Chrome.</p>
+</div></header>
+<main>
+ <div class="status" role="status" aria-live="polite"><span class="dot" id="health-dot"></span><div><strong id="health">Aguardando primeiro status</strong><small id="health-help">Conectando ao GitHub...</small></div><div class="time" id="heartbeat">Ainda sem comunicação</div></div>
+ <div class="grid">
+  <section class="card"><div class="label">Cartas coletadas e preservadas</div><div class="big" id="stored">—</div><div class="note">Total acumulado da extensão</div></section>
+  <section class="card"><div class="label">Edições verificadas</div><div class="big" id="editions">—</div><div class="note" id="editions-note">Total a confirmar</div></section>
+  <section class="card"><div class="label">Pendências</div><div class="big" id="pending">—</div><div class="note">Falhas que precisam de reparo</div></section>
+ </div>
+ <section class="card detail"><div class="detailheader"><h2>Progresso da edição atual</h2><span class="tag" id="edition-phase">Aguardando</span></div><div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px"><div class="edition" id="edition">—</div><div class="counter" id="counter">— / —</div></div><div class="track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Progresso da edição" id="track"><div class="bar" id="bar"></div></div><div class="tiny" id="denominator">O total da edição aparecerá depois da leitura da listagem.</div><div class="stats"><div class="stat"><span>Última carta processada</span><strong id="last-progress">—</strong></div><div class="stat"><span>Último checkpoint no GitHub</span><strong id="last-ack">—</strong></div></div><div class="message" id="notice"></div></section>
+ <section class="card detail"><div class="detailheader"><h2>Edições e andamento</h2><span class="tiny" id="edition-count">—</span></div><div style="overflow-x:auto"><table><thead><tr><th>Edição</th><th>Cartas</th><th>Pendentes</th><th>Situação</th></tr></thead><tbody id="edition-rows"><tr><td colspan="4">Aguardando primeiro status da extensão.</td></tr></tbody></table></div></section>
+ <section class="card detail"><div class="detailheader"><h2>Informações da conexão</h2><a id="source-link" href="https://github.com/luiscredie/inkwell/tree/feature/ligalorcana-review-pipeline/coletas/ligalorcana/monitor" rel="noopener noreferrer" target="_blank">Ver no GitHub</a></div><div class="tiny" id="source-meta">O monitor mostra dados agregados enviados pela extensão, sem nomes de cartas, URLs ou credenciais.</div><p class="tiny" id="error-note" role="status"></p></section>
+</main>
+<footer><p>Inkwell · De ilumineers para ilumineers</p><p>Consulta automática a cada 5 minutos. Status antigo não comprova travamento: o Chrome pode estar fechado, desconectado ou com problema de autenticação no GitHub.</p></footer>
+<script>
+(()=>{'use strict';
+const $=id=>document.getElementById(id);
+const API='https://api.github.com/repos/luiscredie/inkwell/contents/coletas/ligalorcana/monitor/atual.json?ref=feature%2Fligalorcana-review-pipeline';
+let data=null,loading=false;
+const fmt=n=>Number.isFinite(n)?new Intl.NumberFormat('pt-BR').format(n):'—';
+const validDate=d=>typeof d==='string'&&Number.isFinite(Date.parse(d));
+function since(value){if(!validDate(value))return 'Não informado';let ms=Date.now()-Date.parse(value);if(ms<0)ms=0;const m=Math.floor(ms/60000);return m<1?'Há menos de 1 min':m<60?`Há ${m} min`:m<1440?`Há ${Math.floor(m/60)} h e ${m%60} min`:`Há ${Math.floor(m/1440)} dia(s)`;}
+const phaseText={idle:'Parada',home:'Navegando',editions:'Listando edições',discoverEditions:'Descobrindo edições',chooseEdition:'Abrindo edição',listing:'Lendo listagem',card:'Coletando',retryPending:'Corrigindo pendências',paused:'Pausada',complete:'Concluída',needs_review:'Revisão necessária'};
+const stateText={running:'Coletando',verified:'Verificada',incomplete:'Incompleta',deferred:'Adiada',queued:'Na fila'};
+function put(id,value){$(id).textContent=String(value??'—');}
+function badge(el,label,kind){el.textContent=label;el.className='tag '+(kind||'');}
+function updateClock(){if(!data)return;put('heartbeat','Último sinal '+since(data.updated_at));put('last-progress',since(data.last_progress_at));put('last-ack',since(data.last_checkpoint_ack_at));
+ const age=Date.now()-Date.parse(data.updated_at);const stalled=data.running&&validDate(data.last_progress_at)&&Date.now()-Date.parse(data.last_progress_at)>15*60000;
+ const dot=$('health-dot');dot.className='dot';
+ if(age>(data.running?15:45)*60000){put('health','Sem sinal recente');put('health-help','Última transmissão antiga. Verifique o Chrome e a conexão.');dot.classList.add('bad');}
+ else if(data.attention){put('health','Intervenção necessária');put('health-help','A extensão registrou uma condição que exige atenção.');dot.classList.add('bad');}
+ else if(stalled){put('health','Sem progresso recente');put('health-help','A extensão responde, mas não registrou novas cartas há mais de 15 minutos.');dot.classList.add('warn');}
+ else if(data.running){put('health','Coleta em andamento');put('health-help','Chrome transmitindo status; acompanhe a edição abaixo.');dot.classList.add('live');}
+ else {put('health',data.phase==='complete'?'Coleta encerrada':'Coleta em espera');put('health-help',phaseText[data.phase]||'Último estado recebido');dot.classList.add('warn');}
+}
+function render(s){data=s;put('stored',fmt(s.totals?.cards_stored));put('pending',fmt(s.totals?.pending_cards));put('editions',fmt(s.totals?.editions_verified));put('editions-note',s.totals?.editions_discovered?`de ${fmt(s.totals.editions_discovered)} edições descobertas`:'Total de edições não confirmado');
+ put('edition',s.current_edition||'Nenhuma em andamento');const p=s.current_edition_progress||{};
+ put('counter',`${fmt(p.captured)} / ${fmt(p.queued)}`);$('bar').style.width=(Number.isFinite(p.percent)?Math.max(0,Math.min(p.percent,100)):0)+'%';$('track').setAttribute('aria-valuenow',String(p.percent||0));
+ put('denominator',p.denominator_verified?'Total confirmado pela listagem':p.queued?'Contagem da fila encontrada; total ainda não verificado':'Aguardando descoberta da fila desta edição');
+ badge($('edition-phase'),phaseText[s.phase]||s.phase,s.running?'ok':s.attention?'warn':'still');
+ const rows=$('edition-rows');rows.replaceChildren();const ed=Array.isArray(s.editions)?s.editions:[];
+ for(const e of ed){const tr=document.createElement('tr');const labels=[e.code,fmt(e.captured)+' / '+fmt(e.queued),fmt(e.failed)];
+ for(const label of labels){let td=document.createElement('td');td.textContent=label;tr.appendChild(td);}
+ const td=document.createElement('td');const sp=document.createElement('span');badge(sp,stateText[e.status]||e.status,e.status==='verified'?'ok':e.status==='deferred'||e.status==='incomplete'?'warn':e.status==='queued'?'still':'');td.appendChild(sp);tr.appendChild(td);rows.appendChild(tr);}
+ if(!ed.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=4;td.textContent='As edições serão exibidas quando a extensão as descobrir.';tr.appendChild(td);rows.appendChild(tr);}
+ put('edition-count',`${ed.length} exibidas`);put('source-meta',`Extensão ${s.version||'—'} · Último status ${new Date(s.updated_at).toLocaleString('pt-BR')} · Dados agregados, sem cartas ou credenciais.`);
+ const notice=$('notice');let msg='';if(s.checkpoint_upload_pending)msg='O último checkpoint completo ainda aguarda confirmação no GitHub; o monitor de progresso é separado.';
+ if(s.totals?.global_total_verified===false)msg+=(msg?'\n':'')+'O total global de cartas ainda não foi validado. Não calculamos porcentagem global artificial.';
+ if(msg){notice.textContent=msg;notice.style.display='block'}else notice.style.display='none';
+ updateClock();
+}
+async function refresh(){if(loading)return;loading=true;$('refresh').disabled=true;
+ try{const r=await fetch(API+'&_='+Date.now(),{cache:'no-store',headers:{Accept:'application/vnd.github+json'}});
+  if(!r.ok)throw Error(r.status===404?'Ainda não existe um status remoto. Ative a opção na extensão.':`GitHub retornou HTTP ${r.status}`);
+  const doc=await r.json();if(!doc.content)throw Error('GitHub não retornou o conteúdo do monitor.');
+  const bytes=Uint8Array.from(atob(doc.content.replace(/\s/g,'')),c=>c.charCodeAt(0));const s=JSON.parse(new TextDecoder().decode(bytes));
+  if(s.schema!=='inkwell-ligalorcana-remote-status-v1')throw Error('Formato de monitor incompatível.');
+  render(s);put('error-note','');
+ }catch(e){put('error-note',String(e.message||e));if(!data){put('health','Aguardando comunicação');put('health-help','Ainda não há um status remoto disponível.');$('health-dot').className='dot warn';}}
+ finally{loading=false;$('refresh').disabled=false;}
+}
+$('refresh').addEventListener('click',refresh);refresh();setInterval(refresh,5*60*1000);setInterval(updateClock,60*1000);
+})();
+</script>
+</body>
+</html>
