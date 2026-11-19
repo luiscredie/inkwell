@@ -88,7 +88,7 @@ test('phone, empty account: three first steps and no blank page', async ({ page 
   const keep = page.getByTestId('home-continue');
   await expect(keep.getByRole('heading', { name: 'Comece por aqui' })).toBeVisible();
   await expect(keep.getByTestId('first-collection')).toHaveAttribute('href', '../colecao/');
-  await expect(keep.getByTestId('first-deck')).toHaveAttribute('href', '../decks/');
+  await expect(keep.getByTestId('first-deck')).toHaveAttribute('href', '../decks/?importar=1');
   await expect(keep.getByTestId('first-event')).toHaveAttribute('href', '../eventos/');
   await expect(keep.getByTestId('keep-deck')).toHaveCount(0);
   expect(await noSideScroll(page)).toBeLessThanOrEqual(1);
@@ -110,10 +110,56 @@ test('phone: when the home data fails there is a notice and Tentar de novo loads
   await expect(page.getByTestId('keep-deck')).toBeVisible();
 });
 
-test('desktop keeps today\'s home: the block is not shown from 761px up', async ({ page }) => {
+// Missão 2027, etapa 1: the missing half of a partial account, and only next steps on the desktop
+const W = [320, 360, 390, 430, 1280];
+test('deck and no cards: "Cadastrar minhas cartas", on phones and on the desktop', async ({ page }) => {
+  for (const width of W) {
+    const errors = await open(page, { width, decks: [DECK_A] });
+    const keep = page.getByTestId('home-continue');
+    const add = keep.getByTestId('keep-add-collection');
+    await expect(add).toBeVisible();
+    await expect(add).toHaveAttribute('href', '../colecao/');
+    await expect(add).toContainText('Cadastrar minhas cartas');
+    await expect(add).toContainText('Assim Âmbar Aço mostra só o que falta de verdade.');
+    await expect(keep.getByTestId('keep-add-deck')).toHaveCount(0);
+    await expect(keep.getByTestId('keep-collection')).toHaveCount(0);                       // no "0 cartas" tile
+    if (width < 761) await expect(keep.getByTestId('keep-deck')).toBeVisible();
+    else { await expect(keep.getByTestId('keep-deck')).toBeHidden(); await expect(page.getByTestId('me-card')).toBeVisible(); }   // the left column has it
+    expect(await noSideScroll(page)).toBeLessThanOrEqual(1);
+    expect(errors).toEqual([]);
+    await shot(page, `${width}-deck-sem-colecao`);
+  }
+});
+
+test('cards and no deck: "Importar ou montar um deck" opens the import sheet in Decks', async ({ page }) => {
+  for (const width of W) {
+    await open(page, { width, collection: { 'LOR10-1': { n: 2 } } });
+    const add = page.getByTestId('keep-add-deck');
+    await expect(add).toBeVisible();
+    await expect(add).toContainText('Importar ou montar um deck');
+    await expect(page.getByTestId('keep-add-collection')).toHaveCount(0);
+    expect(await noSideScroll(page)).toBeLessThanOrEqual(1);
+    await shot(page, `${width}-colecao-sem-deck`);
+  }
+  await page.getByTestId('keep-add-deck').click();
+  await expect(page).toHaveURL(/\/decks\/$/);                  // the flag is dropped: Back or reload don't reopen it
+  await expect(page.locator('#iName')).toBeVisible();          // the paste sheet is open
+});
+
+test('empty account on the desktop: the first steps show too', async ({ page }) => {
+  await open(page, { width: 1280 });
+  const keep = page.getByTestId('home-continue');
+  await expect(keep.getByRole('heading', { name: 'Comece por aqui' })).toBeVisible();
+  for (const id of ['first-collection', 'first-deck', 'first-event']) await expect(keep.getByTestId(id)).toBeVisible();
+  expect(await noSideScroll(page)).toBeLessThanOrEqual(1);
+  await shot(page, '1280-conta-vazia');
+});
+
+test('desktop keeps today\'s home: a complete account sees no block from 761px up', async ({ page }) => {
   for (const width of [768, 860, 1280]) {
     await open(page, { width, collection: { 'LOR10-1': { n: 2 } }, decks: [DECK_A] });
     await expect(page.getByTestId('home-continue')).toBeHidden();
+    await expect(page.getByTestId('keep-add-collection')).toHaveCount(0);
     await expect(page.getByTestId('me-card')).toBeVisible();
     expect(await noSideScroll(page)).toBeLessThanOrEqual(1);
     await shot(page, `${width}-desktop`);

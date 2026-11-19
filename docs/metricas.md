@@ -47,6 +47,8 @@ Usa o `public.track` como está (nome `[a-z_]`, até 30 letras), sem mudança no
 tocou num cartão do bloco "Continuar" ou "Comece por aqui" do Início no celular (até 760px). Uma vez por visita à página, por cartão.
 Não diz qual deck, quantas cartas nem qual evento. Usa o `public.track` como está; não entra nos 9 eventos do relatório P0.
 
+`home_keep_add_collection`, `home_keep_add_deck` (19/11/2026): tocou na metade que falta — "Cadastrar minhas cartas" (tem deck e nenhuma carta) ou "Importar ou montar um deck" (tem cartas e nenhum deck). Aparecem também no computador, onde o bloco só mostra próximos passos (primeiros passos ou a metade que falta). `home_first_*` passa a contar também o computador. Mesmas regras acima.
+
 ## Definições
 
 - **Visita / sessão**: uma aba do navegador (código aleatório que some ao fechar a aba). **Não é número de pessoas**: uma pessoa gera

@@ -768,6 +768,11 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     $("planNotice")?.addEventListener("click", (e) => { e.preventDefault(); go(null, "plan"); });
     $("new")?.addEventListener("click", () => openDeckForm(null, $("new")));
     $("import")?.addEventListener("click", () => openImport($("import")));
+    // ?importar=1 (Início: "Importar um deck"): open the paste sheet once, then drop the flag so Back/reload don't reopen it
+    if ($("import") && new URLSearchParams(location.search).has("importar")) {
+      const u = new URL(location.href); u.searchParams.delete("importar"); window.history.replaceState(window.history.state, "", u);
+      setTimeout(() => $("import")?.click(), 0);
+    }
   }
 
   function renderDeck(id, tab) {
