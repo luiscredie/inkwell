@@ -584,7 +584,17 @@ test('tap a card in a deck: it opens large, with your copies of that printing; a
 
 test('foil with no price of its own: "estimado com base no preço normal" in Fada Madrinha and the large card; no price: out of the totals and said', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  // DLPC1-43-P3 (Ariel promo): only a normal price (R$ 380); LOR14-20 (Russell): no price at all
+  // Stable fixture: new LigaLorcana collections can price cards that used to be unpriced.
+  // Keep Russell unpriced *only in this test* to verify Gala excludes unknown values.
+  await page.route('**/data/prices.json', async (route) => {
+    const response = await route.fetch();
+    const data = await response.json();
+    delete data.prices?.['LOR14-20'];
+    delete data.liga_prices?.['LOR14-20'];
+    delete data.ligalorcana_last_valid_at?.['LOR14-20'];
+    await route.fulfill({ response, body: JSON.stringify(data) });
+  });
+  // DLPC1-43-P3 (Ariel promo): normal price only (R$ 380); Russell: unpriced fixture.
   await setup(page, { extraDecks: [{ id: 'deck-e', name: 'Estimado', format: 'core', colors: ['Amber'], cards: { 'DLPC1-43-P3': 2, 'LOR14-20': 1, 'LOR10-1': 4 }, created_at: '2026-10-01' }] });
   await page.goto(BASE + '?deck=deck-e&tab=gala');
   const grid = page.getByTestId('gala-grid');
