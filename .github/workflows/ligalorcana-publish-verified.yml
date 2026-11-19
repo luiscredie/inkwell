@@ -4,6 +4,8 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/ligalorcana-publish-verified.yml"
+      - "tools/ligalorcana_publish_incremental.py"
+      - "tools/test_ligalorcana_publish_incremental.py"
   schedule:
     - cron: "17 * * * *"
   workflow_dispatch:
