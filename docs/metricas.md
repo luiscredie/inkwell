@@ -41,6 +41,8 @@ Outros eventos auxiliares continuam (`deck_result`, `deck_save`, `deck_paste`, `
 É um evento do navegador, como os outros desta lista: não é contagem do banco. Não leva quantidade, nome ou dado pessoal.
 Usa o `public.track` como está (nome `[a-z_]`, até 30 letras), sem mudança no esquema. Não entra nos 9 eventos do relatório P0.
 
+`event_deck_chosen` (19/11/2026): escolheu o deck para um evento marcado "Vou" (Eventos › Preparar meu deck › Decks). Não diz qual deck nem qual evento. Usa o `public.track` como está.
+
 `home_keep_deck`, `home_keep_collection`, `home_keep_event`, `home_first_collection`, `home_first_deck`, `home_first_event` (16/11/2026):
 tocou num cartão do bloco "Continuar" ou "Comece por aqui" do Início no celular (até 760px). Uma vez por visita à página, por cartão.
 Não diz qual deck, quantas cartas nem qual evento. Usa o `public.track` como está; não entra nos 9 eventos do relatório P0.

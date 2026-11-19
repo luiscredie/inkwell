@@ -55,6 +55,11 @@
 }
 /* Pacote 2: "Como completar" and the cards grouped by where they can come from */
 .plan-rows { display: grid; gap: var(--sp-2); margin-top: var(--sp-3); }
+.prep-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-1); }
+.prep-i { display: flex; align-items: center; gap: var(--sp-2); min-height: 40px; flex-wrap: wrap; }
+.prep-i > span { flex: 1 1 160px; min-width: 0; }
+.prep-i[data-ok="true"] > .ic { color: var(--win); }
+.prep-i[data-ok="false"] > .ic { color: var(--warn, var(--accent-ink)); }
 .plan-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--sp-3); min-height: 52px; }
 .plan-row .btn { min-height: 44px; }
 .miss-group { margin: var(--sp-5) 0 var(--sp-2); scroll-margin-top: calc(var(--bar-h) + var(--sp-3)); }
@@ -185,7 +190,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     "Some of these cards aren't free anymore. Reload and try again.": "Algumas destas cartas não estão mais livres. Recarregue e tente de novo.", "Try it with an example deck": "Experimentar com um deck de exemplo", "Example deck": "Deck de exemplo", "Amber/Steel, made to show the tool — not a competitive list. Change it as you like.": "Âmbar/Aço, feito para mostrar a ferramenta — não é lista competitiva. Mude à vontade.", "{v} estimated (MYP Cards, else TCGplayer)": "{v} estimados (MYP Cards; sem anúncio lá, TCGplayer)", "estimate": "estimativa",
     "Estimate in reais: {s}, updated {d}. A card with no price is left out of the total, never counted as zero.": "Estimativa em reais: {s}, atualizado em {d}. Carta sem preço fica fora do total, nunca conta como zero.",
     "lowest MYP Cards listing ({d}); without one, {s}": "menor anúncio na MYP Cards ({d}); sem anúncio lá, {s}", "{n} can come from friends": "{n} podem vir de amigos", "{n} can come from friends_1": "1 pode vir de amigos",
-    "You have every card for this deck.": "Você tem todas as cartas deste deck.", "Copies lent to friends still count as yours.": "Cópias emprestadas a amigos contam como suas.",
+    "You have every card for this deck.": "Você tem todas as cartas deste deck.", "Getting ready for {e}": "Preparação para {e}", "the event": "o evento", "Which deck will you play?": "Qual deck você vai jogar?", "not legal": "fora do formato", "1 missing": "falta 1", "{n} missing": "faltam {n}", "Tournament: {e}": "Campeonato: {e}", "Change deck": "Trocar deck", "Not for this event": "Não usar neste evento", "Registration marked": "Inscrição marcada", "Registration not marked yet": "Inscrição ainda não marcada", "Events": "Eventos", "Payment marked": "Pagamento marcado", "Payment not marked yet": "Pagamento ainda não marcado", "The list has {n} of {m} cards.": "A lista tem {n} de {m} cartas.", "Not legal in its format.": "Fora do formato.", "Legal in {f}.": "Dentro do formato {f}.", "See the list": "Ver lista", "You have every card.": "Você tem todas as cartas.", "1 card missing.": "Falta 1 carta.", "{n} cards missing.": "Faltam {n} cartas.", "See what's missing": "Ver o que falta", "1 game with this deck in the last 14 days.": "1 jogo com o deck nos últimos 14 dias.", "{n} games with this deck in the last 14 days.": "{n} jogos com o deck nos últimos 14 dias.", "No games with this deck in the last 14 days.": "Nenhum jogo com o deck nos últimos 14 dias.", "Play a game": "Jogar uma partida", "Review your games before the event.": "Revise seus jogos antes do evento.", "See its games": "Ver jogos do deck", "Copies lent to friends still count as yours.": "Cópias emprestadas a amigos contam como suas.",
     "Lends": "Empresta", "Trades": "Troca", "Has it": "Possui", "{who} offers it in trade": "{who} oferece em troca", "{n} on the board": "{n} no Mural", "Profile of {who}": "Perfil de {who}",
     "How to complete it": "Como completar", "Buying all of it: about {v} at market price": "Comprando tudo: cerca de {v} pelo preço de mercado", "Friends offered": "Amigos ofereceram", "Lending costs nothing; a trade asks for cards of yours in return. Each friend decides.": "Empréstimo não tem custo; troca pede cartas suas em troca. Cada amigo decide.",
     "On the board": "No Mural", "For sale on the board, at the price in the listing.": "À venda no Mural, pelo preço do anúncio.", "To buy": "Para comprar", "No one offered these. The stores open in another tab.": "Ninguém ofereceu estas. As lojas abrem em outra aba.",
@@ -339,6 +344,40 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
   // the cards you can build with: all your collections plus the ones shared with you (supabase/collection_shares.sql)
   let ALL_COLL = null;
   const coll = () => ALL_COLL || prof()?.collection || {};
+  // ---------- campeonato (Missão 2027, etapa 6): the deck chosen for an event I marked "Vou", kept on this device per account.
+  // No new table: the event, the registration and the payment come from Eventos (my_event_marks); everything else is
+  // this deck's own numbers (measure: format, missing cards, games). ----------
+  let MARKS = [];
+  const evKey = (rph) => `inkwell-event-deck:${me?.id}:${rph}`;
+  const evDeck = (rph) => { try { return localStorage.getItem(evKey(rph)); } catch { return null; } };
+  const setEvDeck = (rph, id) => { try { if (id) localStorage.setItem(evKey(rph), id); else localStorage.removeItem(evKey(rph)); } catch { /* */ } };
+  const upcoming = () => MARKS.filter((x) => x?.snap?.start && x.status === "going" && Date.parse(x.snap.start) > Date.now() - 6 * 3600e3).sort((a, b) => Date.parse(a.snap.start) - Date.parse(b.snap.start));
+  const evWhenWhere = (x) => [dateFmt(x.snap.start), x.snap.store].filter(Boolean).join(" · ");
+  function prepPick() {   // Decks with ?evento=<id> (Eventos › "Preparar meu deck"): which deck goes to this event
+    const rph = new URLSearchParams(location.search).get("evento"), ev = rph && MARKS.find((x) => String(x.rph_id) === rph);
+    if (!ev || !decks().length) return "";
+    const cur = evDeck(ev.rph_id);
+    return `<section class="card stack prep" style="gap:var(--sp-2);margin-bottom:var(--sp-4)" data-testid="prep-pick"><b>${esc(Tx("Getting ready for {e}", { e: ev.snap?.name || Tx("the event") }))}</b>
+      <span class="small muted">${esc(evWhenWhere(ev))} · ${esc(Tx("Which deck will you play?"))}</span>
+      <div class="row" style="gap:var(--sp-2)">${decks().map((d) => { const m = measure(d); return `<button type="button" class="btn small${cur === d.id ? " primary" : ""}" data-prep-deck="${esc(d.id)}" data-ev="${esc(String(ev.rph_id))}">${esc(d.name)}${m.legal && !m.missingN ? "" : ` <span class="small muted">· ${esc(!m.legal ? Tx("not legal") : Tx(m.missingN === 1 ? "1 missing" : "{n} missing", { n: m.missingN }))}</span>`}</button>`; }).join("")}</div></section>`;
+  }
+  function prepBox(d, m) {   // on the deck chosen for my next marked event: a short checklist from real data
+    const ev = me && upcoming().find((x) => evDeck(x.rph_id) === d.id); if (!ev) return "";
+    const recent = m.games.filter((g) => Date.parse(g.at) > Date.now() - 14 * 86400e3).length;
+    const act = (k, label) => k.startsWith("../") ? `<a class="btn small ghost" href="${k}">${esc(label)}</a>` : `<button type="button" class="btn small ghost" data-prep-tab="${k}">${esc(label)}</button>`;
+    const item = (ok, text, k, label, id) => `<li class="prep-i" data-testid="prep-${id}" data-ok="${ok}"><i class="ic ${ok ? "i-check" : "i-alert"}"></i><span>${esc(text)}</span>${k && !ok ? act(k, label) : ""}</li>`;
+    const fmtOk = m.legal, fmtText = m.total < MIN ? Tx("The list has {n} of {m} cards.", { n: m.total, m: MIN }) : !m.legal ? (m.issues[0]?.text || Tx("Not legal in its format.")) : Tx("Legal in {f}.", { f: fmtName(d.format) });
+    return `<section class="card stack prep" style="gap:var(--sp-2);margin-top:var(--sp-4)" data-testid="event-prep"><span><b>${esc(Tx("Tournament: {e}", { e: ev.snap.name || Tx("the event") }))}</b><span class="small muted" style="display:block">${esc(evWhenWhere(ev))}</span></span>
+      <ul class="prep-list">
+        ${item(!!ev.registered, ev.registered ? Tx("Registration marked") : Tx("Registration not marked yet"), "../eventos/", Tx("Events"), "registered")}
+        ${item(!!ev.paid, ev.paid ? Tx("Payment marked") : Tx("Payment not marked yet"), "../eventos/", Tx("Events"), "paid")}
+        ${item(fmtOk, fmtText, "list", Tx("See the list"), "legal")}
+        ${item(!m.missingN, !m.missingN ? Tx("You have every card.") : Tx(m.missingN === 1 ? "1 card missing." : "{n} cards missing.", { n: m.missingN }), "missing", Tx("See what's missing"), "missing")}
+        ${item(recent > 0, recent ? Tx(recent === 1 ? "1 game with this deck in the last 14 days." : "{n} games with this deck in the last 14 days.", { n: recent }) : Tx("No games with this deck in the last 14 days."), "../counter/?new", Tx("Play a game"), "practice")}
+        ${m.games.length ? `<li class="prep-i" data-testid="prep-review"><i class="ic i-games"></i><span>${esc(Tx("Review your games before the event."))}</span>${act("games", Tx("See its games"))}</li>` : ""}
+      </ul>
+      <div class="row" style="gap:var(--sp-1);border-top:1px solid var(--line);padding-top:var(--sp-2)"><a class="btn small ghost" href="./?evento=${encodeURIComponent(ev.rph_id)}">${Tx("Change deck")}</a><button type="button" class="btn small ghost" data-prep-clear="${esc(String(ev.rph_id))}">${Tx("Not for this event")}</button></div></section>`;
+  }
   let sharedColls = [], lendBy = new Map(), lendAsked = new Map();   // "lender|card_id" -> status of my open request
   const ASK_RANK = { requested: 1, accepted: 2, delivered: 3 };
   // ---------- deck físico / virtual (supabase/deck_built.sql) ----------
@@ -454,7 +493,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     const ids = [...new Set(listings.map((l) => l.user_id).filter((u) => u !== me.id))];
     if (ids.length) for (const r of (await CLOUD.api(`profiles?user_id=in.(${ids.slice(0, 150).join(",")})&select=user_id,display_name`).catch(() => [])) || []) names.set(r.user_id, r.display_name);
     games = (gl || []).map(gameOf).filter(Boolean);
-    const [sc, hm, tr, dk, lo, ul, mine] = await Promise.all([
+    const [sc, hm, tr, dk, lo, ul, mine, evm] = await Promise.all([
       CLOUD.api("rpc/shared_collections", { method: "POST", body: {} }).catch(() => []),
       CLOUD.api("collection_home?select=profile,card_id,n,f").catch(() => []),
       CLOUD.api("collection_trade?select=profile,card_id,n,f").catch(() => []),
@@ -463,7 +502,9 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
       CLOUD.api(`user_loans?select=items&lender=eq.${me.id}&status=in.(accepted,delivered)`).catch(() => []),
       // my own open requests (I am the borrower): after a reload the row still says "asked", so the same card is not asked twice
       CLOUD.api(`user_loans?select=lender,items,status&borrower=eq.${me.id}&status=in.(requested,accepted,delivered)`).catch(() => []),
+      CLOUD.api("rpc/my_event_marks", { method: "POST", body: {} }).catch(() => []),   // events I marked (Eventos): the tournament checklist
     ]);
+    MARKS = Array.isArray(evm) ? evm : [];
     lendAsked = new Map();
     for (const x of Array.isArray(mine) ? mine : []) for (const it of x.items || []) { const k = `${x.lender}|${it.card_id}`;
       if (!lendAsked.has(k) || ASK_RANK[x.status] > ASK_RANK[lendAsked.get(k)]) lendAsked.set(k, x.status); }
@@ -686,7 +727,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
       ${kinds ? `<div class="seg" role="group" aria-label="${Tx("Deck type")}" data-testid="kind-filter">${[["all", "All"], ["virtual", "Virtual"], ["physical", "Physical"]].map(([k, l]) => `<button type="button" data-dkind="${k}" aria-pressed="${view.kind === k}">${Tx(l)}</button>`).join("")}</div>` : ""}</span>
       ${metas.length > 1 ? `<label class="small svmeta">${Tx("Meta")} <select class="inline" id="metaF" data-testid="meta-filter"><option value="all">${Tx("All")}</option>${metas.map((x) => `<option value="${esc(x)}" ${view.meta === x ? "selected" : ""}>${esc(metaLabel(x))}</option>`).join("")}</select></label>` : ""}
       <select class="inline" id="sort" aria-label="${Tx("Sort")}">${[["recent", "Recently played"], ["wins", "Win rate"], ["name", "Name"]].map(([k, l]) => `<option value="${k}" ${view.sort === k ? "selected" : ""}>${Tx(l)}</option>`).join("")}</select></div>
-      ${planNotice()}${pendingNotice()}
+      ${prepPick()}${planNotice()}${pendingNotice()}
       ${shown.length ? `<div class="list" id="deckList" data-testid="deck-list">${shown.map(row).join("")}</div>` : emptyBox("search", Tx(view.meta !== "all" || view.kind !== "all" ? "No decks with these filters." : "No decks in this format."), "")}
       <div style="margin-top:var(--sp-4)">${priceNote()}</div>`;
     wireHead();
@@ -704,6 +745,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
       <span class="actions"><button type="button" class="btn primary small" id="pendKeep">${Tx("Save as a deck")}</button><button type="button" class="btn ghost small" id="pendDrop">${Tx("Discard")}</button></span></div>`;
   }
   function wireHead() {
+    $("app").querySelectorAll("[data-prep-deck]").forEach((b) => b.onclick = () => { setEvDeck(b.dataset.ev, b.dataset.prepDeck); window.INKWELL_TRACK?.("event_deck_chosen"); go(b.dataset.prepDeck, "list"); });
     $("pendKeep")?.addEventListener("click", (e) => { const x = pubLoad(); if (x) openImport(e.currentTarget, null, x); });
     if ($("pendKeep") && saveIntent()) { try { localStorage.removeItem(SAVE_INTENT); } catch { /* */ } setTimeout(() => $("pendKeep")?.click(), 0); }   // straight to naming and saving it
     $("pendDrop")?.addEventListener("click", () => { pubDrop(); render(); });
@@ -737,12 +779,15 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
         <div class="stat"><b class="${m.wr != null && m.wr >= 50 ? "win" : ""}">${m.wr != null ? m.wr + "%" : "—"}</b><span>${Tx("Wins")}</span></div></div>
       ${priceNote()}
       ${buildBox(d)}
+      ${prepBox(d, m)}
       ${me && prof() && !prof().shared && m.known.length ? `<div class="row" style="margin-top:var(--sp-3)"><button type="button" class="btn" id="toColl" data-testid="deck-to-coll"><i class="ic i-plus"></i>${Tx("Add deck to collection")}</button></div>` : ""}
       <div class="tabs" role="tablist" style="margin-top:var(--sp-5)">${tabs.map(([k, l, n]) => `<button type="button" class="tab" role="tab" data-tab="${k}" aria-selected="${tab === k}">${Tx(l)}${n ? `<span class="count quiet">${n}</span>` : ""}</button>`).join("")}</div>
       <div id="tabBody" role="tabpanel">${tab === "analysis" ? analysis(d, m) : tab === "missing" ? missingTab(d, m) : tab === "games" ? gamesTab(d, m) : tab === "plan" ? planTab(d) : tab === "gala" ? galaTab(d, m) : listTab(d, m)}</div>
       ${overview(d, m)}`;
     $("back").onclick = (e) => { e.preventDefault(); go(null); };
     $("toColl")?.addEventListener("click", (e) => openDeckToColl(d, e.currentTarget));
+    $("app").querySelectorAll("[data-prep-tab]").forEach((b) => b.onclick = () => go(d.id, b.dataset.prepTab));
+    $("app").querySelector("[data-prep-clear]")?.addEventListener("click", (e) => { setEvDeck(e.currentTarget.dataset.prepClear, null); render(); });
     document.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => go(d.id, b.dataset.tab, true));
     $("edit").onclick = () => { editing = !editing; if (editing && tab !== "list") go(d.id, "list", true); else render(); if (editing) setTimeout(() => $("addQ")?.focus(), 0); };
     $("more").onclick = (e) => { e.stopPropagation(); toggleMenu(d, m); };

@@ -28,7 +28,7 @@ function fixtures() {
   };
 }
 
-async function setup(page, { signedIn = true, extraDecks = [] } = {}) {
+async function setup(page, { signedIn = true, extraDecks = [], marks = [] } = {}) {
   const db = fixtures();
   db.profiles[0].decks.push(...extraDecks);
   const calls = [];
@@ -53,6 +53,7 @@ async function setup(page, { signedIn = true, extraDecks = [] } = {}) {
     if (path === 'rpc/save_deck') return json({ ...body.p_deck, updated_at: '2026-10-21T10:00:00Z' });
     if (path === 'rpc/delete_deck') return route.fulfill({ status: 204, body: '' });
     if (path === 'rpc/my_duels_sync') return json(null);
+    if (path === 'rpc/my_event_marks') return json(marks);
     return json([]);
   });
   return calls;
@@ -168,6 +169,39 @@ test('new deck and import', async ({ page }) => {
   await expect.poll(() => saves(calls).length).toBe(2);
   expect(saves(calls)[1].body.p_deck).toMatchObject({ name: 'Colado', cards: { 'LOR10-10': 4, 'LOR10-1': 2 }, colors: ['Amber'] });
   await expect(page.locator('h1')).toHaveText('Colado');
+});
+
+// Missão 2027, etapa 6: getting a deck ready for an event marked "Vou" in Eventos (no new table: the choice stays on the device)
+test('tournament: Eventos › "Preparar meu deck" picks the deck, and the deck shows a checklist from real data', async ({ page }) => {
+  const start = new Date(Date.now() + 5 * 86400e3).toISOString();
+  await setup(page, { marks: [{ rph_id: 77, status: 'going', registered: true, paid: false, snap: { name: 'Liga de Sábado', start, store: 'Loja Exemplo' } }] });
+  await page.goto(BASE + '?evento=77');
+  const pick = page.getByTestId('prep-pick');
+  await expect(pick).toContainText('Preparação para Liga de Sábado');
+  await expect(pick).toContainText('Loja Exemplo');
+  await pick.locator('[data-prep-deck="deck-a"]').click();
+  await expect(page).toHaveURL(/deck=deck-a/);
+  const prep = page.getByTestId('event-prep');
+  await expect(prep).toContainText('Campeonato: Liga de Sábado');
+  await expect(prep.getByTestId('prep-registered')).toHaveAttribute('data-ok', 'true');
+  await expect(prep.getByTestId('prep-paid')).toHaveAttribute('data-ok', 'false');
+  await expect(prep.getByTestId('prep-missing')).toContainText('Faltam 2 cartas.');                 // the official count (LOR10-1: 2 of 4)
+  await expect(prep.getByTestId('prep-practice')).toContainText('Nenhum jogo com o deck nos últimos 14 dias.');   // the only game is from October
+  await expect(prep.getByTestId('prep-review')).toBeVisible();
+  await prep.getByTestId('prep-missing').getByRole('button', { name: 'Ver o que falta' }).click();
+  await expect(page).toHaveURL(/tab=missing/);
+  await expect(page.getByTestId('event-prep')).toBeVisible();                                        // stays on every tab of the deck
+  await page.getByRole('button', { name: 'Não usar neste evento' }).click();
+  await expect(page.getByTestId('event-prep')).toHaveCount(0);
+});
+
+test('tournament: a past event or one only marked "Talvez" shows no checklist', async ({ page }) => {
+  const past = new Date(Date.now() - 3 * 86400e3).toISOString(), soon = new Date(Date.now() + 2 * 86400e3).toISOString();
+  await page.addInitScript((me) => { localStorage.setItem(`inkwell-event-deck:${me}:1`, 'deck-a'); localStorage.setItem(`inkwell-event-deck:${me}:2`, 'deck-a'); }, ME);
+  await setup(page, { marks: [{ rph_id: 1, status: 'going', snap: { name: 'Passado', start: past } }, { rph_id: 2, status: 'maybe', snap: { name: 'Talvez', start: soon } }] });
+  await page.goto(BASE + '?deck=deck-a');
+  await expect(page.locator('h1')).toHaveText('Amber Test');
+  await expect(page.getByTestId('event-prep')).toHaveCount(0);
 });
 
 test('delete asks for a second tap', async ({ page }) => {

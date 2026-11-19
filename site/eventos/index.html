@@ -522,6 +522,7 @@ window.INKWELL_CLOUD = (() => {
         <button type="button" class="btn small ${st === "going" ? "primary" : ""}" data-act="going" aria-pressed="${st === "going"}">${T("Vou", "Going")}</button>
         <button type="button" class="btn small ghost" data-act="maybe" aria-pressed="${st === "maybe"}">${T("Talvez", "Maybe")}</button>
         ${e.kind === "rph" && st ? `<button type="button" class="chipbtn" data-act="registered" aria-pressed="${!!m?.registered}">${T("Inscrito", "Registered")}</button><button type="button" class="chipbtn" data-act="paid" aria-pressed="${!!m?.paid}">${T("Pago", "Paid")}</button>` : ""}
+        ${e.kind === "rph" && st === "going" && !isPast(e) ? `<a class="btn small" href="../decks/?evento=${encodeURIComponent(e.id)}" data-testid="prep-link"><i class="ic i-decks"></i>${T("Preparar meu deck", "Get my deck ready")}</a>` : ""}
         <span class="grow" style="flex:1"></span>
         ${e.kind === "rph" && e.url ? `<a class="btn small ghost" href="${esc(e.url)}" target="_blank" rel="noopener">${T("Play Hub", "Play Hub")} <i class="ic i-external"></i></a>` : e.kind === "table" ? `<a class="btn small ghost" href="../comunidades/?c=${encodeURIComponent(e.slug)}#mesas">${T("Comunidade", "Community")}</a>` : ""}
         <button type="button" class="btn small ghost" data-act="ics" title="${T("Adicionar ao calendário", "Add to calendar")}"><i class="ic i-calendar"></i>${T("Calendário", "Calendar")}</button>

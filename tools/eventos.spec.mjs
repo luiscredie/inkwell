@@ -61,6 +61,9 @@ test('list: events by day, friends going, table from my community, marks and sam
   await expect(page.locator('[data-ev="tb:e1"]')).toContainText('Mesa da comunidade');
   await expect(page.locator('[data-ev="rph:102"] [data-act="registered"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('[data-testid="clash"]')).toHaveCount(0);
+  // Missão 2027, etapa 6: an event marked "Vou" leads to getting a deck ready; one not marked doesn't
+  await expect(page.locator('[data-ev="rph:102"] [data-testid="prep-link"]')).toHaveAttribute('href', '../decks/?evento=102');
+  await expect(page.locator('[data-ev="rph:101"] [data-testid="prep-link"]')).toHaveCount(0);
   // "Vou" on the other event that day -> warning
   await page.locator('[data-ev="rph:101"] [data-act="going"]').click();
   await expect(page.locator('[data-testid="clash"]')).toContainText('2 eventos');
