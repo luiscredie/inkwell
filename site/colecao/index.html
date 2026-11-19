@@ -293,7 +293,10 @@ window.INKWELL_CLOUD = (() => {
 .places button[aria-pressed="true"] .n { color: inherit; }
 .stock-h { display: flex; align-items: center; gap: 6px; padding: var(--sp-3) 0 var(--sp-1); font-weight: 700; border-top: 1px solid var(--line-strong); }
 .stock-h:first-child { border-top: 0; padding-top: var(--sp-1); }
-.stock-sum { margin: 0 0 var(--sp-2); }
+.stock-sum { margin: 0 0 var(--sp-2); font-size: var(--fs-h3); line-height: 1.35; }
+.stock-sum b { font-weight: 700; }
+.stocks .undeck { color: var(--text-2); font-weight: 500; font-size: var(--fs-small); }   /* Conselho 18/11: secondary, not the row's main action */
+.stocks .undeck.armed { color: var(--loss); font-weight: 600; }
 /* 320px phones: "→ Casa → Trocas" and the counter were 35px wider than the screen; the move buttons go to a second line */
 @media (max-width: 360px) {
   .stocks .stock-row > .row { display: grid !important; grid-auto-flow: column; justify-content: end; justify-items: end; row-gap: 2px; padding: 4px 0; }
@@ -302,7 +305,8 @@ window.INKWELL_CLOUD = (() => {
 }
 button.stock-h.stock-empty { width: 100%; background: none; border-left: 0; border-right: 0; border-bottom: 0; color: var(--text-2); font: inherit; font-weight: 600; min-height: 48px; cursor: pointer; text-align: left; }
 button.stock-h.stock-empty .muted { margin-left: 0; }
-button.stock-h.stock-empty .open-word { margin-left: auto; color: var(--accent-ink); font-weight: 600; white-space: nowrap; }
+button.stock-h.stock-empty .open-word { margin-left: auto; color: var(--text-2); font-weight: 600; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }   /* neutral: gold is the main action */
+button.stock-h.stock-empty .open-word .ic { width: 14px; height: 14px; }
 .stock-h .ic { width: 16px; height: 16px; color: var(--text-2); }
 .stock-h .muted { font-weight: 600; margin-left: auto; font-variant-numeric: tabular-nums; }
 .stock-row + .stock-row { border-top: 1px solid var(--line); }
@@ -1016,17 +1020,21 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       const sumParts = [tot(w.binder) ? P(`${tot(w.binder)} no fichário`, `${tot(w.binder)} in the binder`) : "", tot(w.home) ? P(`${tot(w.home)} em casa`, `${tot(w.home)} at home`) : "",
         tot(w.decks) ? (dks.length === 1 ? P(`${tot(w.decks)} no deck ${dks[0].name || "Deck"}`, `${tot(w.decks)} in the deck ${dks[0].name || "Deck"}`) : P(`${tot(w.decks)} em ${dks.length} decks`, `${tot(w.decks)} in ${dks.length} decks`)) : "",
         tot(w.trade) ? P(`${tot(w.trade)} no fichário de trocas`, `${tot(w.trade)} in the trade binder`) : "", tot(w.lent) ? P(`${tot(w.lent)} emprestada${tot(w.lent) > 1 ? "s" : ""}`, `${tot(w.lent)} lent`) : ""].filter(Boolean);
-      const stockSum = `<p class="small stock-sum" data-testid="stock-sum">${allN ? `<b>${esc(P(`Você tem ${allN}`, `You have ${allN}`))}</b>: ${esc(sumParts.join(" · "))}` : esc(P("Você ainda não tem esta carta. Toque em + no Fichário para adicionar.", "You don't have this card yet. Tap + in the Binder to add it."))}</p>`;
+      // all in one place: where, without repeating the number ("Você tem 4, todas no deck Evasives")
+      const onePlace = sumParts.length === 1 ? sumParts[0].replace(/^\d+ /, "") : null;
+      const sumText = !allN ? "" : onePlace ? (allN === 1 ? P(`, ${onePlace}`, `, ${onePlace}`) : P(`, todas ${onePlace}`, `, all ${onePlace}`)) : `: ${sumParts.join(" · ")}`;
+      const stockSum = `<p class="stock-sum" data-testid="stock-sum">${allN ? `<b>${esc(P(`Você tem ${allN}`, `You have ${allN}`))}</b>${esc(sumText)}` : esc(P("Você ainda não tem esta carta. Toque em + no Fichário para adicionar.", "You don't have this card yet. Tap + in the Binder to add it."))}</p>`;
       // Casa and Fichário de trocas: with nothing there, one line that opens on tap (the + to add there is one tap away)
       // a place that had copies stays open while the sheet is open (taking the last one out does not fold it under the finger)
-      for (const k of ["home", "trade"]) if (tot(w[k])) openPlaces.add(k);
-      const place = (k, ic, label) => openPlaces.has(k) ? `<div class="stock-h"${k === "trade" ? ' data-testid="stock-trade"' : ""}><i class="ic i-${ic}"></i>${label} <span class="muted">${tot(w[k])}</span></div>${stockRows(k)}`
-        : `<button type="button" class="stock-h stock-empty" data-open-place="${k}" data-testid="stock-${k}-empty" aria-expanded="false"><i class="ic i-${ic}"></i>${label} <span class="muted">0</span><span class="small open-word">${esc(P("Adicionar aqui", "Add here"))}</span></button>`;
+      for (const k of ["binder", "home", "trade"]) if (tot(w[k])) openPlaces.add(k);
+      if (!allN) openPlaces.add("binder");   // no copy anywhere: the Binder is open, its + is how you add the first one
+      const place = (k, ic, label) => openPlaces.has(k) ? `<div class="stock-h"${k === "trade" ? ' data-testid="stock-trade"' : k === "binder" ? ' data-testid="stock-binder"' : ""}><i class="ic i-${ic}"></i>${label} <span class="muted">${tot(w[k])}</span></div>${stockRows(k)}`
+        : `<button type="button" class="stock-h stock-empty" data-open-place="${k}" data-testid="stock-${k}-empty" aria-expanded="false"><i class="ic i-${ic}"></i>${label} <span class="muted">0</span><span class="small open-word"><i class="ic i-plus"></i>${esc(P("Adicionar", "Add"))}</span></button>`;
       const stocks = `${stockSum}<div class="card inset stack stocks" style="gap:0;padding:var(--sp-2) var(--sp-3)" data-testid="stocks">
-        <div class="stock-h"><i class="ic i-cards"></i>${Tx("Binder")} <span class="muted">${w.binder.n + w.binder.f}</span></div>${stockRows("binder")}
+        ${place("binder", "cards", Tx("Binder"))}
         ${place("home", "home", Tx("Home"))}
         ${deckedOf(id).decks.length ? `<div class="stock-h" data-testid="stock-decks"><i class="ic i-decks"></i>${esc(P("Em decks", "In decks"))} <span class="muted">${w.decks.n + w.decks.f}</span></div>${deckedOf(id).decks.map((x) => `<div class="row between stock-row" style="min-height:44px;flex-wrap:nowrap;gap:var(--sp-2)"><a href="../decks/?deck=${encodeURIComponent(x.id)}" style="text-decoration:none;color:inherit;min-width:0"><span>${esc(x.name || P("Deck", "Deck"))}</span> <span class="small muted">${esc([x.n ? `${x.n} normal` : "", x.f ? `${x.f} foil` : ""].filter(Boolean).join(" · "))} ›</span></a>
-          ${readOnly() ? "" : `<button type="button" class="btn ghost small" data-undeck="${esc(x.id)}" data-testid="undeck">${esc(undeckArmed === x.id ? P("Toque de novo: o deck todo volta ao fichário", "Tap again: the whole deck goes back") : P("Desmontar", "Take apart"))}</button>`}</div>`).join("")}` : ""}
+          ${readOnly() ? "" : `<button type="button" class="btn ghost small undeck${undeckArmed === x.id ? " armed" : ""}" data-undeck="${esc(x.id)}" data-testid="undeck">${esc(undeckArmed === x.id ? P("Toque de novo: o deck todo volta ao fichário", "Tap again: the whole deck goes back") : P("Desmontar", "Take apart"))}</button>`}</div>`).join("")}` : ""}
         ${tradeReady ? place("trade", "trades", esc(P("Fichário de trocas", "Trade binder"))) : ""}
         ${w.lent.n + w.lent.f ? `<div class="stock-h"><i class="ic i-loan"></i>${Tx("Lent out")} <span class="muted">${w.lent.n + w.lent.f}</span></div>` : ""}</div>`;
       const moveBox = () => {

@@ -844,10 +844,17 @@ test('card sheet: says first where the copies are; empty Casa and Fichário de t
     decked: [{ profile: 'luiscredie', deck_id: 'd1', deck_name: 'Evasives', card_id: 'LOR10-10', n: 3, f: 1 }] });
   await page.goto(BASE);
   await page.locator('[data-card="LOR10-10"]').click();
-  await expect(page.getByTestId('stock-sum')).toHaveText('Você tem 4: 4 no deck Evasives');
+  await expect(page.getByTestId('stock-sum')).toHaveText('Você tem 4, todas no deck Evasives');
   const st = page.locator('[data-testid="stocks"]');
-  await expect(st.locator('[data-n="binder-n"]')).toHaveText('0');                 // the + to add stays where it was
+  // Conselho 18/11: an empty Fichário folds too when the copies are elsewhere; its + is one tap away
+  await expect(st.locator('[data-n="binder-n"]')).toHaveCount(0);
+  await expect(page.getByTestId('stock-binder-empty')).toContainText('Fichário');
+  await expect(page.getByTestId('stock-binder-empty')).toContainText('Adicionar');
+  // neutral, not the gold of the main action
+  const [word, gold] = await page.getByTestId('stock-binder-empty').locator('.open-word').evaluate((e) => { const g = document.createElement('span'); g.style.color = 'var(--accent-ink)'; e.parentNode.append(g); const r = [getComputedStyle(e).color, getComputedStyle(g).color]; g.remove(); return r; });
+  expect(word).not.toBe(gold);
   await expect(st.locator('[data-n="home-n"]')).toHaveCount(0);                    // Casa: one line, no steppers
+  await expect(page.getByTestId('undeck')).toHaveClass(/undeck/);                  // "Desmontar": secondary text
   await expect(page.getByTestId('stock-home-empty')).toContainText('Casa');
   await expect(page.getByTestId('stock-trade-empty')).toContainText('Fichário de trocas');
   await expect(page.getByTestId('stock-decks')).toContainText('4');
@@ -857,10 +864,23 @@ test('card sheet: says first where the copies are; empty Casa and Fichário de t
   await expect(st.locator('[data-d="n:1:home"]')).toBeFocused();
   await st.locator('[data-d="n:1:home"]').click();
   await expect(page.getByTestId('stock-sum')).toHaveText('Você tem 5: 1 em casa · 4 no deck Evasives');
+  // the Fichário opens on tap with its + focused
+  await page.getByTestId('stock-binder-empty').click();
+  await expect(st.locator('[data-n="binder-n"]')).toHaveText('0');
+  await expect(st.locator('[data-d="n:1:binder"]')).toBeFocused();
   await expect.poll(() => calls.filter((c) => c.path === 'rpc/collection_change').length).toBe(1);
   // the stock that just got a copy stays open even back at 0
   await st.locator('[data-d="n:-1:home"]').click();
   await expect(st.locator('[data-n="home-n"]')).toHaveText('0');
+});
+
+test('card sheet: copies only in the Fichário keep it open; one place reads "Você tem 1, no fichário"', async ({ page }) => {
+  await setup(page, { collection: { 'LOR10-10': { n: 1, f: 0 }, 'LOR13-27': { n: 0, f: 0 } }, home: [], trade: [] });
+  await page.goto(BASE);
+  await page.locator('[data-card="LOR10-10"]').click();
+  await expect(page.getByTestId('stock-sum')).toHaveText('Você tem 1, no fichário');
+  await expect(page.locator('[data-testid="stocks"] [data-n="binder-n"]')).toHaveText('1');
+  await expect(page.getByTestId('stock-binder-empty')).toHaveCount(0);
 });
 
 for (const W of [320, 360]) test(`card sheet on a ${W}px phone: the stocks fit the screen (move buttons under the counter)`, async ({ page }) => {
