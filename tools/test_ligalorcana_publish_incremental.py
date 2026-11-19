@@ -34,6 +34,14 @@ class PublishSafetyTest(unittest.TestCase):
         self.assertNotIn("LOR10", accepted)
         self.assertIn("LOR10", excluded)
 
+    def test_average_above_maximum_is_valid(self):
+        row = rec("LOR10", 1, "Card A", normal=(89099, 98250, 97500))
+        row["normal_status"] = "invalid_order"  # legacy collector
+        values = valid_finish(row, "normal")
+        self.assertEqual(values, {"nl": 890.99, "n": 982.5, "nh": 975.0})
+        row["normal_status"] = "ok"  # corrected collector
+        self.assertEqual(valid_finish(row, "normal"), values)
+
     def test_invalid_price_order_refused(self):
         row = rec("LOR10", 1, "Card A", normal=(300, 200, 100))
         self.assertIsNone(valid_finish(row, "normal"))
