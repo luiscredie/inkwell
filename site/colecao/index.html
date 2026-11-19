@@ -671,7 +671,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   // you have a foil worth more); for a card you don't have, the normal price
   const topPrice = (id, q) => { const n = priceOf(id), f = q && q.f > 0 ? priceOf(id, true) : null;
     return f != null && (n == null || f > n || !q.n) ? { v: f, foil: true } : { v: n, foil: false }; };
-  const srcOf = (id, foil) => (!foil && mypOf(id) != null ? "MYP Cards" : priceSrc);
+  // the source next to one price: MYP for a normal copy listed there; else Liga Lorcana (with the day it was collected) or TCGplayer
+  const srcOf = (id, foil) => (!foil && mypOf(id) != null ? "MYP Cards" : window.INKWELL_PRICE_ORIGIN_LABEL?.(PRJ, id, foil) || priceSrc);
   // a foil with no price of its own is valued at the normal price, and always says so ("estimado")
   const foilEst = (id) => { const p = PRICES[id]; return !!p && p.fl == null && p.f == null && (p.nl ?? p.n) != null; };
   const estNote = () => P("Sem cotação específica para foil: usamos o preço normal como referência.", "No foil price of its own: the normal price is used as a reference.");
@@ -740,7 +741,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     ADDED = new Map(); for (const r of ad || []) ADDED.set(`${r.profile}|${r.card_id}`, Date.parse(r.added_at) || 0);
     profiles = (p || []).map((x) => ({ ...x, collection: x.collection && typeof x.collection === "object" ? x.collection : {} }));
     PRJ = pr?.prices ? pr : null;
-    if (pr?.prices) { PRICES = pr.prices; pricesDate = pr.generated_at; priceSrc = pr.usd_brl ? "TCGplayer" : "Liga Lorcana"; }
+    if (pr?.prices) { PRICES = pr.prices; pricesDate = pr.generated_at; priceSrc = window.INKWELL_PRICE_SRC?.(pr) || (pr.usd_brl ? "TCGplayer" : "Liga Lorcana"); }
     lentN = new Map(); lentF = new Map(); lentWho = new Map();
     const names = new Map();
     const mineToFriends = (ul || []).filter((x) => x.lender === me.id);
@@ -824,7 +825,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const lent = [...lentN.values(), ...lentF.values()].reduce((a, b) => a + b, 0);
     const valueText = PRJ ? (value >= 1000 ? (value ?? 0).toLocaleString(LOC, { style: "currency", currency: "BRL", maximumFractionDigits: 0 }) : money(value)) : "—";
     return `<div class="stats-row three${valueText.length > 9 ? " long" : ""}" data-testid="coll-stats"><div class="stat"><b>${cards.toLocaleString(LOC)}</b><span>${Tx("Cards")}</span></div>
-      <a class="stat" href="../precos/?tab=value" data-testid="to-prices" style="text-decoration:none;color:inherit"><b class="money" style="--chars:${valueText.length}"${PRJ && value >= 1000 ? ` title="${esc(money(value))}"` : ""}>${PRJ ? moneyTile(value) : "—"}</b><span>${esc(P("Valor estimado", "Estimated value"))} ›</span>${value ? `<small class="micro muted" data-testid="value-src" style="display:block" title="${esc(BR ? P("Preço no Brasil: menor anúncio na MYP Cards para cópias normais; TCGplayer convertido para foil e cartas sem anúncio lá", "Price in Brazil: lowest MYP Cards listing for normal copies; TCGplayer converted for foils and cards not listed there") : P("Preço do TCGplayer convertido para reais, atualizado todo dia", "TCGplayer price converted to reais, updated daily"))}">${esc(share >= 100 ? "MYP Cards" : share > 0 ? P(`${share}% MYP · resto TCG`, `${share}% MYP · rest TCG`) : priceSrc)}</small>` : ""}</a>
+      <a class="stat" href="../precos/?tab=value" data-testid="to-prices" style="text-decoration:none;color:inherit"><b class="money" style="--chars:${valueText.length}"${PRJ && value >= 1000 ? ` title="${esc(money(value))}"` : ""}>${PRJ ? moneyTile(value) : "—"}</b><span>${esc(P("Valor estimado", "Estimated value"))} ›</span>${value ? `<small class="micro muted" data-testid="value-src" style="display:block" title="${esc(BR ? P("Preço no Brasil: menor anúncio na MYP Cards para cópias normais; TCGplayer convertido para foil e cartas sem anúncio lá", "Price in Brazil: lowest MYP Cards listing for normal copies; TCGplayer converted for foils and cards not listed there") : (window.INKWELL_PRICE_LIGA_N?.(PRJ) ? P("Liga Lorcana nas cartas em que foi coletada; nas demais, TCGplayer convertido para reais", "Liga Lorcana for the cards it was collected for; for the rest, TCGplayer converted to reais") : P("Preço do TCGplayer convertido para reais, atualizado todo dia", "TCGplayer price converted to reais, updated daily")))}">${esc(share >= 100 ? "MYP Cards" : share > 0 ? P(`${share}% MYP · resto TCG`, `${share}% MYP · rest TCG`) : window.INKWELL_PRICE_SRC?.(PRJ, true) || priceSrc)}</small>` : ""}</a>
       <div class="stat"><b>${lent.toLocaleString(LOC)}</b><span>${Tx("Lent out")}</span></div></div>${PRJ && unpriced ? `<p class="micro muted" style="margin:var(--sp-1) 0 0" data-testid="value-unpriced">${esc(unpriced === 1 ? P("+ 1 carta sem preço (fora do valor estimado)", "+ 1 card with no price (not in the estimated value)") : P(`+ ${unpriced.toLocaleString(LOC)} cartas sem preço (fora do valor estimado)`, `+ ${unpriced.toLocaleString(LOC)} cards with no price (not in the estimated value)`))}</p>` : ""}${PRJ && estimated ? `<p class="micro muted" style="margin:var(--sp-1) 0 0" data-testid="value-estimated" title="${esc(estNote())}">${esc(estimated === 1 ? P("Inclui 1 foil com preço estimado (sem cotação foil; usamos o preço normal)", "Includes 1 foil at an estimated price (no foil price; the normal price is used)") : P(`Inclui ${estimated.toLocaleString(LOC)} foil com preço estimado (sem cotação foil; usamos o preço normal)`, `Includes ${estimated.toLocaleString(LOC)} foils at an estimated price (no foil price; the normal price is used)`))}</p>` : ""}`;
   }
   // "JA", "IT", "+2": the languages of a card's copies other than the collection's default (src/site/cardlang.js)
@@ -1050,7 +1051,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
           <div class="row between" style="align-items:flex-end;margin:var(--sp-4) 0">
             <div>${(() => { const u = topPrice(id, o); return `<div class="small muted">${esc(P("Preço unitário", "Unit price"))}${u.foil ? " · foil" : ""}</div><div class="hero-num" style="color:var(--money)" data-testid="card-unit">${u.v != null ? esc(money(u.v)) : "–"}</div>`; })()}
               ${o.n + o.f ? `<div class="small muted" style="margin-top:2px">${esc(Tx("Value of your {n}", { n: o.n + o.f }))}: <b class="money" data-testid="card-value">${noPrice === o.n + o.f ? esc(P("sem preço", "no price")) : esc(money(value)) + (noPrice ? ` <small class="micro">${esc(P(`+ ${noPrice} sem preço`, `+ ${noPrice} with no price`))}</small>` : "") + (o.f && pf != null && foilEst(id) ? ` <small class="micro" data-testid="value-foil-est" title="${esc(estNote())}">${esc(P("foil estimado", "foil estimated"))}</small>` : "")}</b></div>` : ""}</div>
-            <div class="small muted" style="text-align:right" data-testid="card-prices">${Tx("Normal")} ${pn != null ? esc(money(pn)) : "–"} <span class="faint">${esc(srcOf(id, false))}</span><br>${Tx("Foil")} ${pf != null ? esc(money(pf)) + (foilEst(id) ? estTag() : "") : "–"} <span class="faint">${esc(pf != null && foilEst(id) ? P("sem cotação foil · preço normal", "no foil price · normal price") : priceSrc)}</span></div></div>
+            <div class="small muted" style="text-align:right" data-testid="card-prices">${Tx("Normal")} ${pn != null ? esc(money(pn)) : "–"} <span class="faint">${esc(srcOf(id, false))}</span><br>${Tx("Foil")} ${pf != null ? esc(money(pf)) + (foilEst(id) ? estTag() : "") : "–"} <span class="faint">${esc(pf != null && foilEst(id) ? P("sem cotação foil · preço normal", "no foil price · normal price") : srcOf(id, true))}</span></div></div>
           ${brLine(id)}
           ${act ? `<div id="actBox" data-testid="act-${act.kind}"></div>` : `${homeReady ? (mv ? moveBox() : stocks) : `<div class="card inset stack" style="gap:0;padding:var(--sp-2) var(--sp-3)">${row("n", Tx("Normal"), o.n, lentN.get(id) || 0)}${row("f", Tx("Foil"), o.f, lentF.get(id) || 0)}</div>`}
           ${avail(id).n + avail(id).f ? `<div class="row act-btns"><button type="button" class="btn" id="aLoan"><i class="ic i-loan"></i>${Tx("Lend")}</button><button type="button" class="btn" id="aSale"><i class="ic i-trades"></i>${Tx("Sell")}</button></div>` : ""}`}
@@ -2567,12 +2568,31 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   // pr = site/data/prices.json (or null when it didn't load). Says the source, the currency, the date and that it's an
   // estimate; older than PRICE_STALE_DAYS -> "desatualizados"; missing -> "indisponíveis" (pages keep working without it).
   const PRICE_STALE_DAYS = 3;
+  // Where one price came from (prices.json schema 2, written by tools/ligalorcana_publish_incremental.py): Liga Lorcana
+  // when the value in use for that finish is the one the Liga collector published (liga_prices) — it stays right if the
+  // nightly TCGplayer job overwrites it — with the time it was collected (ligalorcana_last_valid_at); else TCGplayer
+  // converted. A file with no dollar rate is the old Liga-only file. null: no price for that finish.
+  const FIN = { false: ["nl", "n", "nh"], true: ["fl", "f", "fh"] };
+  window.INKWELL_PRICE_ORIGIN = (pr, id, foil = false) => {
+    const p = pr?.prices?.[id], ks = FIN[!!foil]; if (!p || !ks.some((k) => p[k] != null)) return null;
+    if (!pr.usd_brl) return { liga: true, src: "Liga Lorcana", at: null };
+    // the value pages use is the low one, else the middle one (nl ?? n; fl ?? f): Liga when it is the Liga's
+    const use = (o) => o[ks[0]] ?? o[ks[1]] ?? null, l = pr.liga_prices?.[id], liga = !!l && use(l) != null && use(l) === use(p);
+    return liga ? { liga: true, src: "Liga Lorcana", at: pr.ligalorcana_last_valid_at?.[id]?.[foil ? "foil" : "normal"] || null } : { liga: false, src: "TCGplayer", at: null };
+  };
+  // how many cards carry a Liga price (0 for a TCGplayer-only file), and one short name for the sources of a whole file
+  window.INKWELL_PRICE_LIGA_N = (pr) => (pr?.usd_brl ? Object.keys(pr.liga_prices || {}).length : 0);
+  window.INKWELL_PRICE_SRC = (pr, short = false) => (!pr?.usd_brl ? "Liga Lorcana" : window.INKWELL_PRICE_LIGA_N(pr) ? (short ? "Liga · TCG" : T("Liga Lorcana e TCGplayer", "Liga Lorcana and TCGplayer")) : "TCGplayer");
+  // the label next to one price: "Liga Lorcana · 18 de nov." / "TCGplayer"
+  window.INKWELL_PRICE_ORIGIN_LABEL = (pr, id, foil = false) => { const o = window.INKWELL_PRICE_ORIGIN(pr, id, foil); if (!o) return "";
+    const at = Date.parse(o.at || ""); return o.src + (at ? " · " + new Date(at).toLocaleDateString(pt ? "pt-BR" : "en", { day: "numeric", month: "short" }) : ""); };
   window.INKWELL_PRICE_NOTE = (pr) => {
     const at = Date.parse(pr?.generated_at || ""), ok = !!(pr && pr.prices && Object.keys(pr.prices).length && at);
     if (!ok) return { ok: false, stale: false, text: T("Preços indisponíveis no momento. Deck e coleção funcionam normalmente; os valores voltam quando a fonte responder.", "Prices are unavailable right now. Decks and collection work as usual; values come back when the source answers.") };
     const days = (Date.now() - at) / 864e5, when = new Date(at).toLocaleDateString(pt ? "pt-BR" : "en", { day: "numeric", month: "short", year: "numeric" });
-    const rate = pr.usd_brl ? String(pr.usd_brl).replace(".", pt ? "," : ".") : null;
-    const src = rate ? T(`preço de mercado do TCGplayer (em dólar) convertido a R$ ${rate}`, `TCGplayer market price (in dollars) converted at R$ ${rate}`) : "Liga Lorcana";
+    const rate = pr.usd_brl ? String(pr.usd_brl).replace(".", pt ? "," : ".") : null, liga = window.INKWELL_PRICE_LIGA_N(pr);
+    const tcg = rate ? T(`preço de mercado do TCGplayer (em dólar) convertido a R$ ${rate}`, `TCGplayer market price (in dollars) converted at R$ ${rate}`) : "";
+    const src = !rate ? "Liga Lorcana" : liga ? T(`Liga Lorcana em ${liga} ${liga === 1 ? "carta" : "cartas"}; nas demais, ${tcg}`, `Liga Lorcana for ${liga} ${liga === 1 ? "card" : "cards"}; for the rest, ${tcg}`) : tcg;
     if (days > PRICE_STALE_DAYS) return { ok: true, stale: true, date: when, text: T(`Preços desatualizados: última atualização em ${when}. Valores em reais, apenas indicativos (${src}).`, `Prices are out of date: last updated ${when}. Values in reais, only indicative (${src}).`) };
     return { ok: true, stale: false, date: when, text: T(`Valores indicativos em reais: ${src}, atualizado em ${when}. Não é oferta de venda.`, `Indicative values in reais: ${src}, updated ${when}. Not an offer to sell.`) };
   };

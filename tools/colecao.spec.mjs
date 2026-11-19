@@ -647,6 +647,40 @@ test('a TCGplayer price is said to be TCGplayer converted to reais, never a lowe
   await expect(page.locator('#cardSheet')).not.toContainText(/menor anúncio|No Brasil a partir de/);
 });
 
+// prices.json schema 2 (tools/ligalorcana_publish_incremental.py): Liga Lorcana prices per finish, with the collection time
+const LIGA_FILE = { schema_version: 2, generated_at: '2026-11-18T23:23:00Z', usd_brl: 5.7, liga_date: '2026-11-18',
+  sources: { ligalorcana: 1, tcgplayer_fallback: 1 },
+  liga_prices: { 'LOR10-10': { n: 3, nl: 3, nh: 3 } },                                   // normal only from the Liga
+  ligalorcana_last_valid_at: { 'LOR10-10': { normal: '2026-11-18T15:00:00Z' } },
+  prices: { 'LOR10-10': { n: 3, nl: 3, nh: 3, f: 9, fl: 9 }, 'LOR13-27': { n: 4, nl: 4 } } };
+test('Liga Lorcana prices say so, per finish, with the day they were collected; the others still say TCGplayer', async ({ page }) => {
+  await setup(page, { collection: { 'LOR10-10': { n: 1, f: 1 }, 'LOR13-27': { n: 1, f: 0 } } });
+  await page.route('**/data/prices.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(LIGA_FILE) }));
+  await page.goto(BASE);
+  const src = page.locator('[data-testid="value-src"]');
+  await expect(src).toHaveText('Liga · TCG');
+  await expect(src).toHaveAttribute('title', /Liga Lorcana nas cartas em que foi coletada/);
+  await expect(page.locator('#sub')).toContainText('Liga Lorcana e TCGplayer');
+  await page.locator('[data-card="LOR10-10"]').first().click();
+  const prices = page.locator('[data-testid="card-prices"]');
+  await expect(prices).toContainText(/Normal R\$\s3,00 Liga Lorcana · 18 de nov/);   // normal: from the Liga, with the day
+  await expect(prices).toContainText(/Foil R\$\s9,00 TCGplayer/);                     // foil: the Liga did not price it
+  await page.keyboard.press('Escape');
+  await page.locator('[data-card="LOR13-27"]').first().click();
+  await expect(page.locator('[data-testid="card-prices"]')).toContainText(/Normal R\$\s4,00 TCGplayer/);
+  await expect(page.locator('[data-testid="card-prices"]')).not.toContainText('Liga');
+});
+
+test('a Liga price overwritten by a newer TCGplayer one is said to be TCGplayer (the label follows the value in use)', async ({ page }) => {
+  await setup(page, { collection: { 'LOR10-10': { n: 1, f: 0 } } });
+  const file = JSON.parse(JSON.stringify(LIGA_FILE)); file.prices['LOR10-10'] = { n: 2.5, nl: 2.5 };
+  await page.route('**/data/prices.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(file) }));
+  await page.goto(BASE);
+  await page.locator('[data-card="LOR10-10"]').first().click();
+  await expect(page.locator('[data-testid="card-prices"]')).toContainText(/Normal R\$\s2,50 TCGplayer/);
+  await expect(page.locator('[data-testid="card-prices"]')).not.toContainText('Liga');
+});
+
 test('a card shows the price of one copy first, and the subtotal of your copies under it (list and card sheet)', async ({ page }) => {
   await setup(page, { collection: { 'LOR10-10': { n: 2, f: 1 }, 'LOR13-27': { n: 1, f: 0 } } });
   await page.route('**/data/prices.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ generated_at: '2026-10-28T00:00:00Z', usd_brl: 5.4, prices: { 'LOR10-10': { n: 1, nl: 1, f: 5, fl: 5 }, 'LOR13-27': { n: 4, nl: 4 } } }) }));

@@ -104,6 +104,21 @@ test('sources and dates: each source with its own date, and values are estimates
   await expect(s).toContainText('estimativas');
 });
 
+test('with Liga Lorcana prices in the file, the page says both sources and how many cards come from the Liga', async ({ page }) => {
+  await setup(page);
+  await page.route('**/data/prices.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+    schema_version: 2, generated_at: new Date().toISOString(), usd_brl: 5.7, liga_date: '2026-11-18',
+    liga_prices: { 'LOR10-10': { n: 3, nl: 3, nh: 3 }, 'LOR13-31': { n: 5, nl: 5, nh: 5 } }, ligalorcana_last_valid_at: {},
+    prices: { 'LOR10-10': { n: 3, nl: 3, nh: 3 }, 'LOR13-31': { n: 5, nl: 5, nh: 5, f: 8, fl: 8 }, 'LOR10-1': { n: 1, nl: 1 } } }) }));
+  await page.goto(BASE);
+  await expect(page.locator('#sub')).toContainText('Preços indicativos: Liga Lorcana em 2 cartas; nas demais, TCGplayer convertido a R$ 5,70');
+  const s = page.getByTestId('price-sources');
+  await s.locator('summary').click();
+  await expect(s).toContainText('Liga Lorcana: 2 cartas, coletadas até 18 de nov');
+  await expect(s).toContainText('usado nas cartas que a Liga Lorcana ainda não cobre');
+  await expect(s).not.toContainText('usada só onde o TCGplayer não tem preço');   // no longer true
+});
+
 test('by default the prices are TCGplayer only (MYP Cards off)', async ({ page }) => {
   await setup(page);
   await page.goto(BASE);

@@ -48,7 +48,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const PT = {
     "Prices": "Preços", "Collection": "Coleção", "Loading…": "Carregando…", "Liga Lorcana prices, {d}": "Preços da Liga Lorcana de {d}", "Sources and dates": "Fontes e datas", "Prices read on {d}.": "Preços lidos em {d}.",
     "TCGplayer (via Lorcast): market price in dollars, read on {d} and converted at R$ {r} per dollar, the rate on that day.": "TCGplayer (via Lorcast): preço de mercado em dólar, lido em {d} e convertido a R$ {r} por dólar, a cotação desse dia.",
-    "Liga Lorcana: used only where TCGplayer has no price; those prices are from {d}.": "Liga Lorcana: usada só onde o TCGplayer não tem preço; esses preços são de {d}.",
+    "Indicative prices: Liga Lorcana for {n} cards; for the rest, TCGplayer converted at R$ {r} per dollar, {d}": "Preços indicativos: Liga Lorcana em {n} cartas; nas demais, TCGplayer convertido a R$ {r} por dólar, {d}", "TCGplayer (via Lorcast): market price in dollars, converted at R$ {r} per dollar; used for the cards Liga Lorcana does not cover yet.": "TCGplayer (via Lorcast): preço de mercado em dólar, convertido a R$ {r} por dólar; usado nas cartas que a Liga Lorcana ainda não cobre.", "Liga Lorcana: {n} cards, collected up to {d}; in Coleção and Decks each price shows the day it was collected.": "Liga Lorcana: {n} cartas, coletadas até {d}; em Coleção e Decks cada preço mostra o dia da coleta.", "Liga Lorcana: used only where TCGplayer has no price; those prices are from {d}.": "Liga Lorcana: usada só onde o TCGplayer não tem preço; esses preços são de {d}.",
     "MYP Cards: lowest listing, read on {d}; it doesn't separate normal and foil, language or condition.": "MYP Cards: menor anúncio, lido em {d}; não separa normal e foil, idioma nem condição.",
     "Every value here is an estimate: it doesn't mean the card is for sale, nor that it will be sold at that price.": "Todos os valores aqui são estimativas: não significam que a carta esteja à venda, nem que será vendida por esse preço.",
     "These prices are from {d}, {n} days ago.": "Estes preços são de {d}, há {n} dias.",
@@ -93,7 +93,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   // ---------- state ----------
   const CLOUD = window.INKWELL_CLOUD;
   const me = CLOUD?.user();
-  let ligaDate = null;
+  let ligaDate = null, PRJ = null, ligaN = 0;   // PRJ: prices.json as loaded; ligaN: cards priced from Liga Lorcana
   let PRICES = {}, BR = null, pricesDate = null, usdBrl = null, HISTORY = null, histTcg = false, profiles = [], profileName = null;
   const VIEW_KEY = "inkwell-prices-view-v1";
   let v = { tab: "movers", period: "7d", owned: false, hideStale: null };
@@ -119,7 +119,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
       (window.INKWELL_PRICES_BR ? fetch(window.INKWELL_PRICES_BR_URL || "../data/prices-br.json") : Promise.reject(new Error("MYP Cards off"))).then((r) => (r.ok ? r.json() : null)).catch(() => null),
     ]);
     BR = br?.cards ? br : null;
-    PRICES = pr?.prices || {}; pricesDate = pr?.generated_at || null; usdBrl = pr?.usd_brl || null; ligaDate = pr?.liga_date || null;
+    PRICES = pr?.prices || {}; pricesDate = pr?.generated_at || null; usdBrl = pr?.usd_brl || null; ligaDate = pr?.liga_date || null; PRJ = pr || null; ligaN = window.INKWELL_PRICE_LIGA_N?.(pr) || 0;
     profiles = (p || []).map((x) => ({ ...x, collection: x.collection && typeof x.collection === "object" ? x.collection : {}, wishlist: x.wishlist && typeof x.wishlist === "object" ? x.wishlist : {} }));
     try { profileName = localStorage.getItem("inkwell-trades-profile"); } catch { /* */ }
     if (!profiles.some((x) => x.profile === profileName)) profileName = profiles.slice().sort((a, b) => Object.keys(b.collection).length - Object.keys(a.collection).length)[0]?.profile || null;
@@ -152,8 +152,8 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   function render() {
     const keep = document.activeElement?.id, caret = document.activeElement?.selectionStart;
     const days = pricesDate ? Math.floor((Date.now() - new Date(pricesDate)) / 864e5) : 0;
-    $("sub").textContent = !pricesDate ? "" : usdBrl ? Tx("Indicative prices: TCGplayer converted at R$ {r} per dollar, {d}", { r: usdBrl.toLocaleString(LOC, { minimumFractionDigits: 2, maximumFractionDigits: 4 }), d: dateFmt(pricesDate) }) : Tx("Liga Lorcana prices, {d}", { d: dateFmt(pricesDate) });
-    const pn = window.INKWELL_PRICE_NOTE?.({ prices: PRICES, generated_at: pricesDate, usd_brl: usdBrl }) || { stale: days > 3 };
+    $("sub").textContent = !pricesDate ? "" : usdBrl && ligaN ? Tx("Indicative prices: Liga Lorcana for {n} cards; for the rest, TCGplayer converted at R$ {r} per dollar, {d}", { n: ligaN, r: usdBrl.toLocaleString(LOC, { minimumFractionDigits: 2, maximumFractionDigits: 4 }), d: dateFmt(pricesDate) }) : usdBrl ? Tx("Indicative prices: TCGplayer converted at R$ {r} per dollar, {d}", { r: usdBrl.toLocaleString(LOC, { minimumFractionDigits: 2, maximumFractionDigits: 4 }), d: dateFmt(pricesDate) }) : Tx("Liga Lorcana prices, {d}", { d: dateFmt(pricesDate) });
+    const pn = window.INKWELL_PRICE_NOTE?.(PRJ || { prices: PRICES, generated_at: pricesDate, usd_brl: usdBrl }) || { stale: days > 3 };
     const stale = pn.stale && v.hideStale !== pricesDate
       ? `<div class="notice warn" data-testid="stale" style="margin-bottom:var(--sp-4)"><i class="ic i-alert"></i><span class="t">${esc(pn.text || Tx("These prices are from {d}, {n} days ago.", { d: dateFmt(pricesDate), n: days }))}</span><div class="actions"><button type="button" class="btn ghost small" id="hideStale">${Tx("Hide")}</button></div></div>` : "";
     const wn = Object.keys(wish()).length;
@@ -169,8 +169,10 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   function sourcesHtml() {
     if (!pricesDate && !BR) return "";
     const li = [];
-    if (pricesDate) li.push(usdBrl ? Tx("TCGplayer (via Lorcast): market price in dollars, read on {d} and converted at R$ {r} per dollar, the rate on that day.", { d: dateFmt(pricesDate), r: usdBrl.toLocaleString(LOC, { minimumFractionDigits: 2, maximumFractionDigits: 4 }) }) : Tx("Prices read on {d}.", { d: dateFmt(pricesDate) }));
-    if (ligaDate) li.push(Tx("Liga Lorcana: used only where TCGplayer has no price; those prices are from {d}.", { d: dateFmt(ligaDate) }));
+    if (pricesDate && usdBrl && ligaN) li.push(Tx("TCGplayer (via Lorcast): market price in dollars, converted at R$ {r} per dollar; used for the cards Liga Lorcana does not cover yet.", { r: usdBrl.toLocaleString(LOC, { minimumFractionDigits: 2, maximumFractionDigits: 4 }) }));
+    else if (pricesDate) li.push(usdBrl ? Tx("TCGplayer (via Lorcast): market price in dollars, read on {d} and converted at R$ {r} per dollar, the rate on that day.", { d: dateFmt(pricesDate), r: usdBrl.toLocaleString(LOC, { minimumFractionDigits: 2, maximumFractionDigits: 4 }) }) : Tx("Prices read on {d}.", { d: dateFmt(pricesDate) }));
+    if (ligaN) li.push(Tx("Liga Lorcana: {n} cards, collected up to {d}; in Coleção and Decks each price shows the day it was collected.", { n: ligaN, d: dateFmt(ligaDate || pricesDate) }));
+    else if (ligaDate) li.push(Tx("Liga Lorcana: used only where TCGplayer has no price; those prices are from {d}.", { d: dateFmt(ligaDate) }));
     if (BR?.retrieved_at) li.push(Tx("MYP Cards: lowest listing, read on {d}; it doesn't separate normal and foil, language or condition.", { d: dateFmt(BR.retrieved_at) }));
     return `<details class="card src-box" data-testid="price-sources" style="margin-top:var(--sp-5)"><summary><b>${Tx("Sources and dates")}</b></summary>
       <ul class="small" style="margin:var(--sp-2) 0 0;padding-left:1.2em">${li.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
