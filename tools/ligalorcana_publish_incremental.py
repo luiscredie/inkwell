@@ -19,6 +19,11 @@ from pathlib import Path
 
 FINISH_KEYS = {"normal": ("nl", "n", "nh"), "foil": ("fl", "f", "fh")}
 MONEY_KEYS = frozenset(("n", "nl", "nh", "f", "fl", "fh"))
+# Two early Chrome runs predate queued_urls. Counts and collector edition IDs
+# were independently checked against the uploaded source and card catalog.
+# This is a narrow reconciliation exception, NOT a blanket count bypass.
+LEGACY_CAPTURE = {"LOR13": (261, "19"), "LOR14": (254, "9")}
+
 
 
 def load(path):
@@ -74,10 +79,21 @@ def completed_editions(snapshot):
         rows = grouped.get(code, [])
         unique = {(str(r.get("edition_id")), str(r.get("idcard")), str(r.get("num"))) for r in rows}
         pending = [p for p in snapshot.get("pending", []) if p.get("edition") == code]
-        if (type(expected) is int and expected > 0 and type(got) is int
-                and got == expected == len(rows) == len(unique)
-                and audit.get("failed_urls", 0) == 0
-                and audit.get("skipped_urls", 0) == 0 and not pending):
+        basic_ok = (type(got) is int and got == len(rows) == len(unique)
+                    and len({str(r.get("num")) for r in rows}) == len(rows)
+                    and audit.get("failed_urls", 0) == 0
+                    and audit.get("skipped_urls", 0) == 0 and not pending)
+        queued_ok = type(expected) is int and expected > 0 and got == expected
+        legacy = LEGACY_CAPTURE.get(code)
+        legacy_ok = (legacy is not None and expected is None
+                     and audit.get("expected") is None and got == legacy[0]
+                     and bool(audit.get("recorded_at"))
+                     and all(str(r.get("edition_id")) == legacy[1]
+                             and str(r.get("idkey")) == legacy[1] + "_" + str(r.get("num"))
+                             and str(r.get("code")) == code
+                             and "&ed=" + code + "&num=" in str(r.get("url", ""))
+                             for r in rows))
+        if basic_ok and (queued_ok or legacy_ok):
             result[code] = rows
         else:
             excluded[code] = {"queued": expected, "captured": got, "records": len(rows),
@@ -108,7 +124,10 @@ def apply(source, catalog_path, prices_path, history_path, report_path):
     liga = prices.setdefault("liga_prices", {})
     times = prices.setdefault("ligalorcana_last_valid_at", {})
     report = {"snapshot": str(filename), "exported_at": raw["exported_at"],
-              "completed_editions": sorted(editions), "excluded_editions": excluded,
+              "completed_editions": sorted(editions),
+              "legacy_reconciled": [code for code in editions if code in LEGACY_CAPTURE
+                                    and raw["editionAudit"][code].get("queued_urls") is None],
+              "excluded_editions": excluded,
               "accepted": {}, "rejected": [], "preserved": 0, "changed_cards": 0}
     current = Counter()
     updates = defaultdict(dict)
