@@ -1,0 +1,153 @@
+name: LigaLorcana - receber, preparar e propor publicacao
+on:
+  push:
+    branches:
+      - feature/ligalorcana-review-pipeline
+    paths:
+      - 'coletas/ligalorcana/coleta/coleta_*.json'
+      - '.github/workflows/ligalorcana-auto-pipeline.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: ligalorcana-receipt
+  cancel-in-progress: false
+
+jobs:
+  processar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      HAS_APP: ${{ secrets.INKWELL_APP_PRIVATE_KEY != '' && vars.INKWELL_APP_ID != '' }}
+    steps:
+      - name: Inkwell bot token
+        id: app
+        if: env.HAS_APP == 'true'
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.INKWELL_APP_ID }}
+          private-key: ${{ secrets.INKWELL_APP_PRIVATE_KEY }}
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/ligalorcana-review-pipeline
+          fetch-depth: 0
+          token: ${{ steps.app.outputs.token || github.token }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Testar gerador e integridade
+        run: python -m unittest tools/test_ligalorcana_release_candidate.py tools/test_ligalorcana_generate_map.py -v
+      - name: Normalizar e auditar novos arquivos
+        run: python tools/ligalorcana_stage.py --source coletas/ligalorcana/coleta --root coletas/ligalorcana
+      - name: Resolver IDs inequivocos e registrar pendencias
+        run: |
+          python tools/ligalorcana_generate_map.py \
+            --source coletas/ligalorcana/coleta \
+            --cards site/data/cards.json \
+            --output coletas/ligalorcana/mapeamento/ligalorcana-id-map.json \
+            --existing coletas/ligalorcana/mapeamento/ligalorcana-id-map.json
+      - name: Consolidar pacote de aplicacao, sem publicar
+        run: |
+          python tools/ligalorcana_release_candidate.py \
+            --source coletas/ligalorcana/coleta \
+            --cards site/data/cards.json \
+            --prices site/data/prices.json \
+            --history site/data/price-history.json \
+            --map coletas/ligalorcana/mapeamento/ligalorcana-id-map.json \
+            --daily-workflow .github/workflows/daily-prices.yml \
+            --min-coverage 0.98 \
+            --output coletas/ligalorcana/aplicar
+      - name: Ler o pacote e gerar sumario
+        id: pacote
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          paths=list(Path('coletas/ligalorcana/aplicar').glob('*/*/manifest.json'))
+          if not paths:raise RuntimeError('Nenhum pacote produzido')
+          # Prefer the capture covering the greatest number of source uploads.
+          p=max(paths,key=lambda x:(len(json.loads(x.read_text()).get('sources',[])),str(x.parent.parent),str(x)))
+          d=json.loads(p.read_text())
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:
+              f.write('package='+str(p.parent)+'\n')
+              f.write('ready='+str(bool(d.get('publishable'))).lower()+'\n')
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
+              f.write('## LigaLorcana '+d['date']+'\n')
+              f.write('- Pronto para publicacao: '+str(d.get('publishable'))+'\n')
+              f.write('- Impedimentos: '+', '.join(d.get('blockers',[]))+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ligalorcana-release-candidate
+          path: coletas/ligalorcana/aplicar/
+          retention-days: 30
+      - name: Versionar dados tratados na branch de coleta
+        run: |
+          git config user.name "inkwell-prices[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add coletas/ligalorcana/tratados coletas/ligalorcana/data coletas/ligalorcana/aplicar coletas/ligalorcana/mapeamento
+          if ! git diff --cached --quiet; then
+            git commit -m "data: normalizar e preparar LigaLorcana (sem publicar)"
+            git pull --rebase origin feature/ligalorcana-review-pipeline
+            git push origin HEAD:feature/ligalorcana-review-pipeline
+          fi
+      - name: Parar se pacote nao estiver pronto
+        if: steps.pacote.outputs.ready != 'true'
+        run: echo "::notice::Pacote guardado para revisao; nenhum preco foi publicado."
+      - name: Verificar se main ja desativou o coletor diario TCGplayer
+        id: migration
+        if: steps.pacote.outputs.ready == 'true'
+        shell: bash
+        run: |
+          git fetch origin main
+          if git show origin/main:.github/workflows/daily-prices.yml | grep -q '^  schedule:'; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Main ainda agenda TCGplayer; nao abrir PR de precos."
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Criar branch isolada com os precos propostos
+        id: staged
+        if: steps.migration.outputs.ready == 'true'
+        shell: bash
+        env:
+          PACKAGE: ${{ steps.pacote.outputs.package }}
+        run: |
+          mkdir -p /tmp/ligalorcana-release
+          git worktree add --detach /tmp/ligalorcana-release origin/main
+          python tools/ligalorcana_apply_candidate.py --package "$PACKAGE" --site-root /tmp/ligalorcana-release/site --map coletas/ligalorcana/mapeamento/ligalorcana-id-map.json --write
+          (
+            cd /tmp/ligalorcana-release
+            python tools/refresh_data_manifest.py --root site
+            python tools/validate_release.py --root site
+            python tools/build_site_pages.py --check
+            git config user.name "inkwell-prices[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            BRANCH="auto/ligalorcana-prices-$(basename "$(dirname "$PACKAGE")")-$(basename "$PACKAGE")"
+            git switch -c "$BRANCH"
+            git add site/data/prices.json site/data/price-history.json site/data-manifest.json
+            git commit -m "prices: snapshot LigaLorcana validado"
+            git push origin "HEAD:$BRANCH"
+            echo "$BRANCH" > /tmp/ligalorcana-release-branch
+          )
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+          echo "branch=$(cat /tmp/ligalorcana-release-branch)" >> "$GITHUB_OUTPUT"
+      - name: Abrir PR de publicacao (sem merge automatico)
+        if: steps.staged.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token || github.token }}
+        run: |
+          gh pr create --base main --head "${{ steps.staged.outputs.branch }}" \
+            --title "Precos LigaLorcana - proposta automatica" \
+            --body "Precos vindos de captura autorizada, conferidos por ID, cobertura, hashes e tests. Sem merge automatico; revisar relatorio em coletas/ligalorcana/aplicar. CI de main obrigatorio." \
+            || echo "::notice::PR existente ou sem permissao para criar PR; revisar manualmente."
+
+      - name: Merge automatico somente quando habilitado pelo proprietario
+        if: steps.staged.outputs.ready == 'true' && env.HAS_APP == 'true' && vars.LIGALORCANA_AUTO_MERGE == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: gh pr merge "${{ steps.staged.outputs.branch }}" --auto --merge

@@ -1,33 +1,8 @@
-name: LigaLorcana — preparar coleta para revisão
+name: LigaLorcana staging (legado - manual)
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-    paths:
-      - 'coletas/ligalorcana/coleta/*.json'
   workflow_dispatch:
-permissions:
-  contents: write
 jobs:
-  stage:
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'feature/ligalorcana-review-pipeline'
+  notice:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
-          persist-credentials: true
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Preparar snapshots sem publicar
-        run: |
-          python tools/ligalorcana_stage.py --source coletas/ligalorcana/coleta --root coletas/ligalorcana
-      - name: Commit somente arquivos tratados, nunca produção
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add coletas/ligalorcana/tratados coletas/ligalorcana/data
-          if ! git diff --cached --quiet; then
-            git commit -m "data: preparar LigaLorcana para revisão (sem publicar)"
-            git push origin "HEAD:${{ github.head_ref }}"
-          fi
+      - run: echo "O processamento automatico foi consolidado em ligalorcana-auto-pipeline.yml"
