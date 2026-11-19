@@ -23,10 +23,19 @@ async function setup(page, { collection = { 'LOR10-10': { n: 4, f: 0 }, 'LOR13-3
   });
   return calls;
 }
+// MYP Cards left the price strategy (01/11, Conselho 17/11): prices-br.json is not published (tools/build_pages_artifact.py),
+// so the site answers 404 for it. The tests that switch MYP on keep that code path working from their own fixture,
+// with the values of the last file, and depend on no published MYP file (as tools/colecao.spec.mjs).
+const MYP_FIXTURE = { retrieved_at: '2026-10-21T17:28:47Z', product_url: 'https://mypcards.com/lorcana/produto/{path}',
+  cards: { 'LOR13-31': [19.0, '341976/lilo-stitch-fun-loving-friends'], 'LOR10-10': [0.15, '302039/gurgi-apple-lover'], 'LOR10-1': [0.25, '302105/baloo-friend-and-guardian'] } };
+const mypOn = async (page) => {
+  await page.addInitScript(() => { window.INKWELL_PRICES_BR = true; });   // MYP Cards is off by default (cloud.js)
+  await page.route('**/data/prices-br.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MYP_FIXTURE) }));
+};
 const wl = (calls) => calls.filter((c) => c.path === 'rpc/set_wishlist').map((c) => c.body);
 
 test('movers, wishlist and collection value', async ({ page }) => {
-  await page.addInitScript(() => { window.INKWELL_PRICES_BR = true; });   // MYP Cards is off by default (cloud.js)
+  await mypOn(page);
   const calls = await setup(page);
   await page.goto(BASE);
   await expect(page.locator('h1')).toHaveText('Preços');
@@ -94,7 +103,7 @@ test('movers switch to the TCGplayer history once it has two days', async ({ pag
 });
 
 test('sources and dates: each source with its own date, and values are estimates', async ({ page }) => {
-  await page.addInitScript(() => { window.INKWELL_PRICES_BR = true; });   // MYP Cards is off by default (cloud.js)
+  await mypOn(page);
   await setup(page);
   await page.goto(BASE);
   const s = page.getByTestId('price-sources');
