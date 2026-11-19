@@ -29,6 +29,12 @@ test('a win: asks why I won, names cards, keeps whose card is whose', () => {
   // the real card text goes in, so the AI doesn't invent it
   assert.match(p, /- Elinor - Renowned Diplomat \(4⬡, Character, Emerald, não inkável, 3\/4, lore 1\) — COORDINATED EFFORTS: At the end of your turn/);
   assert.doesNotMatch(p, /LOR\d+-\d+/);   // no raw ids left
+  // Missão 2027, etapa 7: decisions by turn, decision vs result, what the log lacks, one practice goal
+  for (const part of ['Mulligan e abertura', 'Sequência e tinta', 'Quest x desafio', 'Decisão x resultado', 'Informação que faltou', 'Próximo treino']) assert.match(p, new RegExp(part));
+  assert.match(p, /## O que o registro não mostra\n- Minha mão e minhas compras[^]*- Mulligan: só a quantidade de cartas trocadas \(eu 2, oponente 4\), não quais\.\n- Do oponente, só as 11 cartas diferentes/);
+  assert.match(p, /T6 Eu \(inkwell 3\): .* → 1–3 · custo impresso jogado 3$/m);       // my turns: printed cost next to the inkwell
+  assert.doesNotMatch(p, /T5 Oponente .*custo impresso/);                              // not on the opponent's turns
+  assert.ok(p.indexOf('## O que o registro não mostra') < p.indexOf('## Turno a turno'));
 });
 
 test('a loss asks why I lost; English works; games without turns give nothing', () => {
@@ -39,6 +45,9 @@ test('a loss asks why I lost; English works; games without turns give nothing', 
   const en = build(game(), cards, { lang: 'en' });
   assert.match(en, /Why I won/);
   assert.match(en, /T19 Opponent \(inkwell 5\): passed with no actions/);
+  assert.match(en, /Decision vs result/);
+  assert.match(en, /## What the log doesn't show/);
+  assert.match(en, /printed cost played \d+/);
   assert.equal(build({ ...game(), turns: [] }, cards), '');
   assert.equal(build(null, cards), '');
 });
