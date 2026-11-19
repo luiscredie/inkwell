@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-19T07:30:20.555582+00:00",
+  "generated_at": "2026-11-19T10:57:10.131306+00:00",
   "status": "pass",
   "summary": {
     "cards": 3767,
     "pt_overlay_cards": 3686,
-    "priced_cards": 3588,
+    "priced_cards": 3598,
     "errors": 0,
-    "warnings": 427,
-    "missing_prices": 179,
+    "warnings": 417,
+    "missing_prices": 169,
     "missing_images": 166,
     "missing_translations": 81,
     "orphan_prices_detected": 0,
@@ -895,46 +895,6 @@
     {
       "code": "MISSING_PRICE",
       "card_id": "LOR13-247"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "LOR13-T01"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "LOR13-T02"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "LOR13-T03"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "LOR13-T04"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "LOR13-T05"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "LOR13-T06"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "LOR13-T07"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "LOR13-T08"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "LOR13-T09"
-    },
-    {
-      "code": "MISSING_PRICE",
-      "card_id": "LOR14-20"
     },
     {
       "code": "MISSING_PRICE",
