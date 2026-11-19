@@ -1210,6 +1210,15 @@ for (const W of [320, 390, 430]) test(`Faltando on a ${W}px phone: friend rows a
   expect(cut).toEqual([]);
 });
 
+test('Faltando: each card says where its price comes from — Liga Lorcana with the day, or TCGplayer', async ({ page }) => {
+  await page.route('**/data/prices.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+    ...pricesAt(new Date().toISOString()), liga_prices: { 'LOR10-1': { n: 2, nl: 2, nh: 2 } }, ligalorcana_last_valid_at: { 'LOR10-1': { normal: '2026-11-18T15:00:00Z' } } }) }));
+  await completion(page, { partial: true });
+  await expect(page.locator('[data-miss="LOR10-1"] [data-testid="price-src"]')).toHaveText(/^Liga Lorcana · 18 de nov/);
+  await expect(page.locator('[data-miss="LOR10-10"] [data-testid="price-src"]')).toHaveText('TCGplayer');
+  await expect(page.getByTestId('price-note')).toContainText('Liga Lorcana em 1 carta; nas demais, preço de mercado do TCGplayer');
+});
+
 test('Faltando: only copies actually offered count — a friend with 1 free of 4 covers 1; the board 1; the rest is to buy', async ({ page }) => {
   await completion(page, { partial: true });
   const plan = page.getByTestId('completion-plan');

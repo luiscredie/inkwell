@@ -830,12 +830,31 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   // pr = site/data/prices.json (or null when it didn't load). Says the source, the currency, the date and that it's an
   // estimate; older than PRICE_STALE_DAYS -> "desatualizados"; missing -> "indisponíveis" (pages keep working without it).
   const PRICE_STALE_DAYS = 3;
+  // Where one price came from (prices.json schema 2, written by tools/ligalorcana_publish_incremental.py): Liga Lorcana
+  // when the value in use for that finish is the one the Liga collector published (liga_prices) — it stays right if the
+  // nightly TCGplayer job overwrites it — with the time it was collected (ligalorcana_last_valid_at); else TCGplayer
+  // converted. A file with no dollar rate is the old Liga-only file. null: no price for that finish.
+  const FIN = { false: ["nl", "n", "nh"], true: ["fl", "f", "fh"] };
+  window.INKWELL_PRICE_ORIGIN = (pr, id, foil = false) => {
+    const p = pr?.prices?.[id], ks = FIN[!!foil]; if (!p || !ks.some((k) => p[k] != null)) return null;
+    if (!pr.usd_brl) return { liga: true, src: "Liga Lorcana", at: null };
+    // the value pages use is the low one, else the middle one (nl ?? n; fl ?? f): Liga when it is the Liga's
+    const use = (o) => o[ks[0]] ?? o[ks[1]] ?? null, l = pr.liga_prices?.[id], liga = !!l && use(l) != null && use(l) === use(p);
+    return liga ? { liga: true, src: "Liga Lorcana", at: pr.ligalorcana_last_valid_at?.[id]?.[foil ? "foil" : "normal"] || null } : { liga: false, src: "TCGplayer", at: null };
+  };
+  // how many cards carry a Liga price (0 for a TCGplayer-only file), and one short name for the sources of a whole file
+  window.INKWELL_PRICE_LIGA_N = (pr) => (pr?.usd_brl ? Object.keys(pr.liga_prices || {}).length : 0);
+  window.INKWELL_PRICE_SRC = (pr, short = false) => (!pr?.usd_brl ? "Liga Lorcana" : window.INKWELL_PRICE_LIGA_N(pr) ? (short ? "Liga · TCG" : T("Liga Lorcana e TCGplayer", "Liga Lorcana and TCGplayer")) : "TCGplayer");
+  // the label next to one price: "Liga Lorcana · 18 de nov." / "TCGplayer"
+  window.INKWELL_PRICE_ORIGIN_LABEL = (pr, id, foil = false) => { const o = window.INKWELL_PRICE_ORIGIN(pr, id, foil); if (!o) return "";
+    const at = Date.parse(o.at || ""); return o.src + (at ? " · " + new Date(at).toLocaleDateString(pt ? "pt-BR" : "en", { day: "numeric", month: "short" }) : ""); };
   window.INKWELL_PRICE_NOTE = (pr) => {
     const at = Date.parse(pr?.generated_at || ""), ok = !!(pr && pr.prices && Object.keys(pr.prices).length && at);
     if (!ok) return { ok: false, stale: false, text: T("Preços indisponíveis no momento. Deck e coleção funcionam normalmente; os valores voltam quando a fonte responder.", "Prices are unavailable right now. Decks and collection work as usual; values come back when the source answers.") };
     const days = (Date.now() - at) / 864e5, when = new Date(at).toLocaleDateString(pt ? "pt-BR" : "en", { day: "numeric", month: "short", year: "numeric" });
-    const rate = pr.usd_brl ? String(pr.usd_brl).replace(".", pt ? "," : ".") : null;
-    const src = rate ? T(`preço de mercado do TCGplayer (em dólar) convertido a R$ ${rate}`, `TCGplayer market price (in dollars) converted at R$ ${rate}`) : "Liga Lorcana";
+    const rate = pr.usd_brl ? String(pr.usd_brl).replace(".", pt ? "," : ".") : null, liga = window.INKWELL_PRICE_LIGA_N(pr);
+    const tcg = rate ? T(`preço de mercado do TCGplayer (em dólar) convertido a R$ ${rate}`, `TCGplayer market price (in dollars) converted at R$ ${rate}`) : "";
+    const src = !rate ? "Liga Lorcana" : liga ? T(`Liga Lorcana em ${liga} ${liga === 1 ? "carta" : "cartas"}; nas demais, ${tcg}`, `Liga Lorcana for ${liga} ${liga === 1 ? "card" : "cards"}; for the rest, ${tcg}`) : tcg;
     if (days > PRICE_STALE_DAYS) return { ok: true, stale: true, date: when, text: T(`Preços desatualizados: última atualização em ${when}. Valores em reais, apenas indicativos (${src}).`, `Prices are out of date: last updated ${when}. Values in reais, only indicative (${src}).`) };
     return { ok: true, stale: false, date: when, text: T(`Valores indicativos em reais: ${src}, atualizado em ${when}. Não é oferta de venda.`, `Indicative values in reais: ${src}, updated ${when}. Not an offer to sell.`) };
   };

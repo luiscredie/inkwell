@@ -238,7 +238,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     const want = [...new Set([...friends, ...uloans.map(other), ...utrades.map(otherT), ...listings.map((l) => l.user_id)])].filter((id) => id !== me.id && !names.has(id));
     if (want.length) for (const r of (await CLOUD.api(`profiles?user_id=in.(${want.join(",")})&select=user_id,display_name`).catch(() => [])) || []) names.set(r.user_id, r.display_name);
     PRJ = pr?.prices ? pr : null;
-    if (pr?.prices) { PRICES = pr.prices; pricesDate = pr.generated_at; priceSrc = pr.usd_brl ? "TCGplayer" : "Liga Lorcana"; }
+    if (pr?.prices) { PRICES = pr.prices; pricesDate = pr.generated_at; priceSrc = window.INKWELL_PRICE_SRC?.(pr) || (pr.usd_brl ? "TCGplayer" : "Liga Lorcana"); }
     try { profileName = localStorage.getItem("inkwell-trades-profile"); } catch { /* */ }
     if (!profiles.some((x) => x.profile === profileName)) profileName = profiles.sort((a, b) => Object.keys(b.collection).length - Object.keys(a.collection).length)[0]?.profile || null;
   }
