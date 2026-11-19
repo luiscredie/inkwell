@@ -23,31 +23,30 @@
     caveats: "Limites do registro: ele mostra o que foi jogado, não a minha mão nem o que comprei. Do oponente só conheço as cartas que apareceram. Use apenas os textos de carta listados abaixo; não invente efeitos. Se algo depender da mão, diga que é uma hipótese.",
     // Missão 2027, etapa 7: every part asks for a concrete turn, separates decision from result, and ends in one training goal
     askLoss: [
-      "Responda em português, direto e prático (até ~400 palavras), nesta ordem, sempre citando turnos (ex.: \"T6\"):",
+      "Responda em português, direto e prático (até ~400 palavras), nesta ordem, sempre citando turnos (ex.: \"T6\"). Marque cada afirmação como [fato] (está no registro) ou [hipótese] (depende de mão, compras ou custos que o registro não traz):",
       "1. Por que perdi: os 2 ou 3 momentos que decidiram o jogo.",
-      "2. Mulligan e abertura: o registro só diz quantas cartas troquei, não quais. Avalie pela curva dos primeiros turnos o que a mão parece ter permitido, sem afirmar que cartas eu tinha.",
-      "3. Sequência e tinta: em turnos concretos, a ordem das jogadas e o que coloquei no inkwell (tinta sobrando, carta que fez falta por ter ido para a tinta).",
+      "2. Mulligan e abertura: este registro traz só quantas cartas troquei, não quais. Avalie pelas jogadas dos primeiros turnos o que a mão parece ter permitido, como [hipótese], sem afirmar que cartas eu tinha.",
+      "3. Sequência e tinta: em turnos concretos, a ordem das jogadas e quais cartas foram para o inkwell. Não conclua que sobrou tinta somando custos impressos: reduções, shift, canções e efeitos mudam o custo pago. Se suspeitar de tinta parada, diga que é [hipótese].",
       "4. Quest x desafio: onde eu deveria ter feito quest em vez de desafiar, ou o contrário, e por quê.",
       "5. Decisão x resultado: separe decisões ruins de variância. Diga se alguma boa decisão deu errado ou alguma decisão ruim deu certo.",
       "6. Informação que faltou: o que você precisaria saber (mão, compras) para ter certeza. Marque como palpite o que depende disso.",
       "7. Próximo treino: um único objetivo concreto e verificável para o próximo jogo com este deck (ex.: \"até o T4, colocar na tinta só cartas sem função no plano de jogo\").",
     ],
     askWin: [
-      "Responda em português, direto e prático (até ~400 palavras), nesta ordem, sempre citando turnos (ex.: \"T6\"):",
+      "Responda em português, direto e prático (até ~400 palavras), nesta ordem, sempre citando turnos (ex.: \"T6\"). Marque cada afirmação como [fato] (está no registro) ou [hipótese] (depende de mão, compras ou custos que o registro não traz):",
       "1. Por que ganhei: os 2 ou 3 momentos que decidiram o jogo.",
-      "2. Mulligan e abertura: o registro só diz quantas cartas troquei, não quais. Avalie pela curva dos primeiros turnos, sem afirmar que cartas eu tinha.",
-      "3. Sequência e tinta: decisões de ordem e de inkwell que devo repetir, e onde sobrou tinta.",
+      "2. Mulligan e abertura: este registro traz só quantas cartas troquei, não quais. Avalie pelas jogadas dos primeiros turnos, como [hipótese], sem afirmar que cartas eu tinha.",
+      "3. Sequência e tinta: decisões de ordem e de inkwell que devo repetir. Não conclua que sobrou tinta somando custos impressos; se suspeitar, diga que é [hipótese].",
       "4. Quest x desafio: onde acertei a escolha e onde corri risco à toa.",
       "5. Decisão x resultado: o que ganhei por boa decisão e o que ganhei por erro do oponente ou por sorte.",
       "6. Informação que faltou: o que você precisaria saber para ter certeza; marque palpites.",
       "7. Próximo treino: um único objetivo concreto e verificável para o próximo jogo com este deck.",
     ],
     missing: "O que o registro não mostra",
-    missHand: "Minha mão e minhas compras: só aparece o que foi jogado ou colocado na tinta.",
-    missMull: "Mulligan: só a quantidade de cartas trocadas (eu {m}, oponente {o}), não quais.", missMullNone: "Mulligan: não registrado.",
+    missHand: "Minha mão e minhas compras: este registro não traz; só aparece o que foi jogado ou colocado na tinta.",
+    missMull: "Mulligan: este registro traz só a quantidade de cartas trocadas (eu {m}, oponente {o}), não quais.", missMullNone: "Mulligan: não consta neste registro.",
     missOpp: "Do oponente, só as {n} cartas diferentes que apareceram; o resto da lista é desconhecido.",
-    missCost: "\"Custo impresso jogado\" por turno soma o custo impresso das cartas que joguei; não conta reduções, shift, canções nem efeitos, então pode passar do inkwell.",
-    spent: "custo impresso jogado {v}", spentShift: " + shift",
+    missCost: "Custo pago: não consta. O custo impresso nas cartas não é o que foi pago (reduções, shift, canções e efeitos).",
     match: "Partida", queue: "Fila", gameN: "jogo {n} da série", result: "Resultado", won: "VENCI", lost: "PERDI", draw: "EMPATE",
     by: { lore: "por lore", concede: "o oponente desistiu", timeout: "por tempo", deckout: "deck acabou" },
     first: "Quem começou", mull: "Mulligan (cartas trocadas)", turns: "Turnos", final: "Lore final",
@@ -74,31 +73,30 @@
     ],
     caveats: "Limits of the log: it shows what was played, not my hand or draws. For the opponent I only know the cards that showed up. Use only the card texts listed below; don't invent effects. If something depends on the hand, say it is a guess.",
     askLoss: [
-      "Answer in English, direct and practical (up to ~400 words), in this order, always citing turns (e.g. \"T6\"):",
+      "Answer in English, direct and practical (up to ~400 words), in this order, always citing turns (e.g. \"T6\"). Mark every claim as [fact] (it is in the log) or [hypothesis] (it depends on hand, draws or costs the log doesn't have):",
       "1. Why I lost: the 2 or 3 moments that decided the game.",
-      "2. Mulligan and opening: the log only says how many cards I put back, not which. Judge from the curve of the first turns what the hand seems to have allowed, without claiming which cards I had.",
-      "3. Sequencing and ink: on concrete turns, the play order and what I put in the inkwell (unspent ink, a card missed because it was inked).",
+      "2. Mulligan and opening: this log only has how many cards I put back, not which. Judge from the plays of the first turns what the hand seems to have allowed, as a [hypothesis], without claiming which cards I had.",
+      "3. Sequencing and ink: on concrete turns, the play order and which cards went to the inkwell. Don't conclude ink went unspent by adding printed costs: reductions, shift, songs and effects change the cost paid. If you suspect idle ink, call it a [hypothesis].",
       "4. Quest vs challenge: where I should have quested instead of challenging, or the other way round, and why.",
       "5. Decision vs result: separate bad decisions from variance. Say if a good decision went wrong or a bad one worked.",
       "6. Missing information: what you would need to know (hand, draws) to be sure. Mark as a guess what depends on it.",
       "7. Next practice: one concrete, checkable goal for my next game with this deck (e.g. \"until T4, ink only cards with no role in the game plan\").",
     ],
     askWin: [
-      "Answer in English, direct and practical (up to ~400 words), in this order, always citing turns (e.g. \"T6\"):",
+      "Answer in English, direct and practical (up to ~400 words), in this order, always citing turns (e.g. \"T6\"). Mark every claim as [fact] (it is in the log) or [hypothesis] (it depends on hand, draws or costs the log doesn't have):",
       "1. Why I won: the 2 or 3 moments that decided the game.",
-      "2. Mulligan and opening: the log only says how many cards I put back, not which. Judge from the curve of the first turns, without claiming which cards I had.",
-      "3. Sequencing and ink: order and inkwell decisions to repeat, and where ink went unspent.",
+      "2. Mulligan and opening: this log only has how many cards I put back, not which. Judge from the plays of the first turns, as a [hypothesis], without claiming which cards I had.",
+      "3. Sequencing and ink: order and inkwell decisions to repeat. Don't conclude ink went unspent by adding printed costs; if you suspect it, call it a [hypothesis].",
       "4. Quest vs challenge: where I chose right and where I took needless risks.",
       "5. Decision vs result: what I won by good decisions and what by the opponent's mistakes or luck.",
       "6. Missing information: what you would need to know to be sure; mark guesses.",
       "7. Next practice: one concrete, checkable goal for my next game with this deck.",
     ],
     missing: "What the log doesn't show",
-    missHand: "My hand and my draws: only what was played or inked shows up.",
-    missMull: "Mulligan: only how many cards were put back (me {m}, opponent {o}), not which.", missMullNone: "Mulligan: not recorded.",
+    missHand: "My hand and my draws: not in this log; only what was played or inked shows up.",
+    missMull: "Mulligan: this log only has how many cards were put back (me {m}, opponent {o}), not which.", missMullNone: "Mulligan: not in this log.",
     missOpp: "For the opponent, only the {n} different cards that showed up; the rest of the list is unknown.",
-    missCost: "\"Printed cost played\" per turn adds the printed cost of the cards I played; it ignores reductions, shift, songs and effects, so it can exceed the inkwell.",
-    spent: "printed cost played {v}", spentShift: " + shift",
+    missCost: "Cost paid: not in the log. A card's printed cost is not what was paid (reductions, shift, songs and effects).",
     match: "Game", queue: "Queue", gameN: "game {n} of the series", result: "Result", won: "WON", lost: "LOST", draw: "DRAW",
     by: { lore: "on lore", concede: "opponent conceded", timeout: "on time", deckout: "deck ran out" },
     first: "Went first", mull: "Mulligan (cards put back)", turns: "Turns", final: "Final lore",
@@ -181,11 +179,7 @@
       for (const a of acts) if (a.type === "ink" && inkSoFar[a.by] != null) inkSoFar[a.by]++;
       const le = t.lore_end || {};
       const parts = acts.map((a) => (a.by && a.by !== t.player && a.type !== "banish" ? `[${who(a.by)}] ` : "") + act(a));
-      // my turns: the printed cost of what I played next to the inkwell size, so unspent ink can be discussed (an estimate)
-      const mine = t.player === me ? acts.filter((a) => a.by === me && a.type === "play" && get(a.card_id)?.ink_cost != null) : [];
-      const shifted = t.player === me && acts.some((a) => a.by === me && a.type === "shift");
-      const spent = mine.length || shifted ? ` · ${fill(L.spent, { v: mine.reduce((n, a) => n + (+get(a.card_id).ink_cost || 0), 0) })}${shifted ? L.spentShift : ""}` : "";
-      return `T${t.number} ${who(t.player)} (inkwell ${inkSoFar[t.player] ?? "?"}): ${parts.length ? parts.join("; ") : L.noAct} → ${le[me] ?? "?"}–${le[opp] ?? "?"}${spent}`;
+      return `T${t.number} ${who(t.player)} (inkwell ${inkSoFar[t.player] ?? "?"}): ${parts.length ? parts.join("; ") : L.noAct} → ${le[me] ?? "?"}–${le[opp] ?? "?"}`;
     });
 
     const ev = log.event || {}, ref = log.source_ref || {};
