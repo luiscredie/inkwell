@@ -117,5 +117,49 @@ ck('reprocessing a concession records it as absent (not as kept 7)', (() => {
   return l.players[0].opening.status === 'absent';
 })());
 
+// ---- (Conselho #1) the original cards kept vs the hand the game started with
+const ids = (cs) => cs.map((c) => c.card_id);
+const m4 = openingOf([hand(2, HAND), mull(2, { mulliganCount: 3, mulliganedCards: [ANGEL, URS, URS], drawnCards: [PEG, ELI, TOD] })], 2, cat);
+ck('kept = only cards of the original hand (4), none of the drawn', eq(ids(m4.kept), ['LOR11-86', 'LOR13-97', 'LOR11-87', 'LOR11-89']));
+ck('final = kept, then drawn: the 7 the game started with', eq(ids(m4.final), ['LOR11-86', 'LOR13-97', 'LOR11-87', 'LOR11-89', 'LOR4-84', 'LOR12-86', 'LOR11-87']) && m4.final.length === 7);
+ck('a drawn copy of a card already kept is told apart: Tod in kept once, in final twice', ids(m4.kept).filter((x) => x === 'LOR11-87').length === 1 && ids(m4.final).filter((x) => x === 'LOR11-87').length === 2);
+ck('hand stays the 7 dealt, untouched by the mulligan', eq(ids(m4.hand), ids(openingOf(game([mull(2, { mulliganCount: 0 })]), 2, cat).hand)));
+ck('kept all 7: kept = final = hand', eq(ids(zero.kept), ids(zero.hand)) && eq(ids(zero.final), ids(zero.hand)));
+ck('mulligan unknown: kept and final unknown too (null), not the 7 dealt', noEvent.kept === null && noEvent.final === null);
+
+// ---- (Conselho #2) returned cards under another printing's id
+const PEG_PROMO = C('9-C2-1', 'Pegasus - Gift for Hercules'), WR_PROMO = C('11-P3-29', 'White Rabbit - Late Again');
+const promoHand = [PEG_PROMO, WR_PROMO, TOD, VIX, MUSHU, ANGEL, URS];
+const r1 = openingOf([hand(2, promoHand), mull(2, { mulliganCount: 1, mulliganedCards: [PEG_PROMO], drawnCards: [ELI] })], 2, cat);
+ck('promo in the hand, put back under the same promo id: recorded', r1.status === 'recorded' && r1.mulligan.returned[0].duels_id === '9-C2-1' && r1.kept.length === 6);
+const r2 = openingOf([hand(2, promoHand), mull(2, { mulliganCount: 2, mulliganedCards: [PEG, WR], drawnCards: [ELI, URS] })], 2, cat);
+ck('promo in the hand, put back under the regular id (4-84, 11-89): recorded, not invalid', r2.status === 'recorded', JSON.stringify(r2));
+ck('…and it is that card that leaves the hand', !!r2.kept && !r2.kept.some((c) => ['9-C2-1', '11-P3-29'].includes(c.duels_id)) && r2.kept.length === 5);
+const r3 = openingOf([hand(2, [PEG, PEG_PROMO, TOD, VIX, MUSHU, ANGEL, URS]), mull(2, { mulliganCount: 1, mulliganedCards: [PEG_PROMO], drawnCards: [ELI] })], 2, cat);
+ck('both printings in the hand, the promo put back: the exact printing leaves, the regular one stays', r3.status === 'recorded' && r3.kept.some((c) => c.duels_id === '4-84') && !r3.kept.some((c) => c.duels_id === '9-C2-1'));
+const r4 = openingOf([hand(2, [PEG_PROMO, TOD, VIX, MUSHU, ANGEL, URS, URS]), mull(2, { mulliganCount: 2, mulliganedCards: [PEG, PEG], drawnCards: [ELI, WR] })], 2, cat);
+ck('one Pegasus in the hand, two put back: still invalid (printings do not create copies)', r4.status === 'invalid');
+const r5 = openingOf([hand(2, promoHand), mull(2, { mulliganCount: 1, mulliganedCards: [C('77-1', 'A Card Not Yet In The Catalog')], drawnCards: [ELI] })], 2, cat);
+ck('a returned card the catalog lacks and the hand lacks: invalid (no match by guess)', r5.status === 'invalid');
+
+// ---- (Conselho #3) INITIAL_HAND repeated or contradictory
+const twice = openingOf([hand(2, HAND), hand(2, [...HAND].reverse()), mull(2, { mulliganCount: 0 }), start(1)], 2, cat);
+ck('the same hand twice (same cards, any order): recorded once, the first order kept', twice.status === 'recorded' && eq(ids(twice.hand), ids(zero.hand)));
+const diffHands = openingOf([hand(2, HAND), hand(2, [...HAND.slice(0, 6), ELI]), mull(2, { mulliganCount: 0 })], 2, cat);
+ck('two different hands for the owner: invalid', diffHands.status === 'invalid' && diffHands.issues.some((x) => /different initial hands/.test(x)), JSON.stringify(diffHands));
+ck('an empty INITIAL_HAND beside the real one is not a second hand', openingOf([hand(2), hand(2, HAND), mull(2, { mulliganCount: 0 })], 2, cat).status === 'recorded');
+const late = openingOf([mull(2, { mulliganCount: 0 }), hand(2, HAND)], 2, cat);
+ck('a hand that comes after the mulligan: invalid', late.status === 'invalid' && late.issues.some((x) => /after the mulligan/.test(x)));
+const afterTurn = openingOf([hand(2, HAND), mull(2, { mulliganCount: 0 }), start(1), hand(2, HAND)], 2, cat);
+ck('a hand repeated after the first turn: invalid', afterTurn.status === 'invalid' && afterTurn.issues.some((x) => /after the first turn/.test(x)));
+const oppCards = openingOf([hand(1, [TOD, TOD, TOD, TOD, VIX, VIX, VIX]), hand(2, HAND), mull(2, { mulliganCount: 0 })], 2, cat);
+ck("an opponent's INITIAL_HAND with cards is ignored (only the owner's counts)", oppCards.status === 'recorded' && eq(ids(oppCards.hand), ids(zero.hand)));
+
+// ---- (Conselho #4) compatibility: format 1.0, converter 1 fields unchanged
+const v2 = convert(row(), game([mull(2, { mulliganCount: 1, mulliganedCards: [URS], drawnCards: [PEG] })]), cat, 'Me');
+ck('format_version stays "1.0"', v2.format_version === '1.0');
+const strip = (l) => { const c = JSON.parse(JSON.stringify(l)); delete c.players[0].opening; delete c.source_ref.converter; return c; };
+ck('without the two new keys, the log has exactly the converter 1 keys', eq(Object.keys(strip(v2).players[0]).sort(), ['deck', 'is_me', 'mulligan_count', 'name', 'seat', 'went_first']) && eq(Object.keys(strip(v2).source_ref).sort(), ['game_id', 'mmr_before', 'mmr_delta', 'queue', 'replay_url']));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

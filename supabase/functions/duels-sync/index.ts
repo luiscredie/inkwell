@@ -1,6 +1,6 @@
 // duels-sync: copies new duels.ink games into public.game_logs, on a schedule (pg_cron, every 30 minutes).
 //
-// Port of tools/duels/duels_import.py (convert + Catalog). Each run:
+// convert.ts was ported from tools/duels/duels_import.py (not in this repository; convert.ts is the one in use). Each run:
 //   1. checks the caller's key (x-sync-key) against the one in Vault, via public.duels_sync_begin
 //   2-3. sync.ts: reads match history since the newest stored game (minus OVERLAP_DAYS), imports the games not stored
 //        yet (up to MAX_PER_RUN, paced under duels.ink's limits) and reports what it saw, left out and still misses
