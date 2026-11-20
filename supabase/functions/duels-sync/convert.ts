@@ -7,14 +7,24 @@ const norm = (s: string) => s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerC
 export class Catalog {
   ids = new Set<string>();
   byName = new Map<string, string>();
+  nameOf = new Map<string, string>();
   constructor(cards: Json[]) {
     const main = new Set(["C", "U", "R", "SR", "L"]);
     const sorted = [...cards].sort((a, b) => Number(!main.has(a.rarity)) - Number(!main.has(b.rarity)) || (a.card_id < b.card_id ? -1 : a.card_id > b.card_id ? 1 : 0));
     for (const c of sorted) {
       this.ids.add(c.card_id);
       const base = norm(String(c.name_en || "").replace(/\s*\([^)]*\)\s*$/, ""));
+      if (base) this.nameOf.set(c.card_id, base);
       if (base && !this.byName.has(base)) this.byName.set(base, c.card_id);
     }
+  }
+  // The same card in any printing (a promo, an enchanted or a reprint in a later set) -> one id: the main-rarity printing
+  // with the same name, lowest id first. Printings of one card share the name in the catalog and differ only in art,
+  // so a hand from the log and a deck list compare as the same card. An id the catalog lacks is returned as it is.
+  baseOf(cardId?: string | null): string | null {
+    if (!cardId) return null;
+    const nm = this.nameOf.get(cardId);
+    return (nm && this.byName.get(nm)) || cardId;
   }
   resolve(duelsId?: string | null, name?: string | null): string | null {
     const m = duelsId ? /^(\d+)-(\d+)$/.exec(duelsId) : null;
@@ -68,6 +78,61 @@ export function decklistOf(row: Json, cat: Catalog, names: Map<string, string> =
     if (have) have.qty += qty; else if (card_id) list.push({ card_id, qty }); else unresolved.push({ duels_id: id, ...(nm ? { name: nm } : {}), qty });
   }
   return { list, unresolved };
+}
+
+// ---------------------------------------------------------------- opening hand and mulligan (converter 2)
+// The log's owner only. duels.ink logs are from one player's side: the opponent's INITIAL_HAND and MULLIGAN cards come
+// empty and only the count is public. Those hidden fields are never filled in.
+//   status "recorded": the 7 cards; `mulligan` = what was put back and drawn ({count: 0, returned: [], drawn: []} =
+//     kept all 7), or null when the log has the hand but no MULLIGAN event (unknown, never "kept all 7").
+//   status "absent": the log has no hand for this player (e.g. a concession before the game started).
+//   status "invalid": the events disagree (hand not 7, a returned card not in the hand, ...). No card is kept then:
+//     nothing is guessed; `issues` says why.
+export const CONVERTER = 2;
+export function openingOf(events: Json[], mine: number, cat: Catalog): Json {
+  const ev = events || [];
+  const own = (t: string) => ev.filter((e) => e?.type === t && Number(e.player) === mine);
+  const hand0 = own("INITIAL_HAND").map((e) => e.data?.initialHandCards).find((c) => Array.isArray(c) && c.length);
+  if (!hand0) {
+    const started = ev.some((e) => e?.type === "TURN_START");
+    return { status: "absent", reason: !started && ev.some((e) => e?.type === "GAME_CONCEDED") ? "conceded_before_start" : "not_in_log" };
+  }
+  const one = (c: Json) => {
+    const card_id = cat.resolve(c?.id, c?.name), o: Json = { card_id, duels_id: c?.id ?? null };
+    if (!card_id && c?.name) o.card_name = c.name;
+    return o;
+  };
+  const issues: string[] = [];
+  if (hand0.length !== 7) issues.push(`hand has ${hand0.length} cards`);
+  const mulls = own("MULLIGAN");
+  if (mulls.length > 1) issues.push(`${mulls.length} mulligan events`);
+  let mulligan: Json | null = null, keptRaw: Json[] = [...hand0];
+  if (mulls.length === 1) {
+    const d = mulls[0].data || {};
+    const ret: Json[] = d.mulliganedCards || [], drew: Json[] = d.drawnCards || [];
+    const count = d.mulliganCount ?? null;
+    if (ret.length !== drew.length) issues.push(`${ret.length} returned, ${drew.length} drawn`);
+    if (count !== null && Number(count) !== ret.length) issues.push(`count ${count}, ${ret.length} cards returned`);
+    for (const c of ret) {                                       // returned ⊆ hand, as a multiset (two copies are two cards)
+      const i = keptRaw.findIndex((h) => h?.id === c?.id);
+      if (i < 0) { issues.push(`returned ${c?.id} not in the hand`); continue; }
+      keptRaw.splice(i, 1);
+    }
+    mulligan = { count: ret.length, returned: ret.map(one), drawn: drew.map(one) };
+  }
+  if (issues.length) return { status: "invalid", issues };
+  return { status: "recorded", hand: hand0.map(one), mulligan, kept: keptRaw.map(one) };
+}
+// Adds the opening to a log stored by an earlier converter (a reprocessing). Changes only players[me].opening and
+// source_ref.converter: turns, result, deck and summary stay. True when something changed; running it again changes nothing.
+export function addOpening(log: Json, row: Json, events: Json[], cat: Catalog): boolean {
+  const me = log?.players?.find((p: Json) => p?.is_me);
+  if (!me || log.source_ref?.game_id !== row?.game_id) return false;
+  const next = openingOf(events, Number(row.your_player), cat);
+  if (JSON.stringify(me.opening) === JSON.stringify(next) && log.source_ref?.converter === CONVERTER) return false;
+  me.opening = next;
+  log.source_ref = { ...(log.source_ref || {}), converter: CONVERTER };
+  return true;
 }
 
 // ---------------------------------------------------------------- conversion (same rules as duels_import.convert)
@@ -204,12 +269,12 @@ export function convert(row: Json, events: Json[], cat: Catalog, meName: string)
   for (const k of Object.keys(ev)) if (ev[k] === null || ev[k] === undefined) delete ev[k];
   return {
     format_version: "1.0", game_id: `duels-${row.game_id}`, source: "duels_ink",
-    source_ref: { game_id: row.game_id, replay_url: row.replay_url ?? null, queue: row.queue_name ?? null, mmr_before: row.mmr_before ?? null, mmr_delta: row.mmr_delta ?? null },
+    source_ref: { game_id: row.game_id, replay_url: row.replay_url ?? null, queue: row.queue_name ?? null, mmr_before: row.mmr_before ?? null, mmr_delta: row.mmr_delta ?? null, converter: CONVERTER },
     played_at: row.started_at,
     game_format: String(row.queue_id || row.queue_name || "").toLowerCase().includes("core") ? "core" : "other",
     event: ev,
     players: [
-      { seat: "p1", name: meName, is_me: true, went_first: first === "p1", mulligan_count: mull.p1,
+      { seat: "p1", name: meName, is_me: true, went_first: first === "p1", mulligan_count: mull.p1, opening: openingOf(events, mine, cat),
         deck: { inks: colors(row.your_deck_colors), list: deck.list, list_source: "duels_ink", ...(deck.unresolved.length ? { unresolved: deck.unresolved } : {}) } },
       { seat: "p2", name: row.opp_display_name || "Opponent", is_me: false, went_first: first === "p2", mulligan_count: mull.p2,
         deck: { archetype: row.opp_deck_colors || "Unknown", inks: colors(row.opp_deck_colors), list_source: "observed" } },
