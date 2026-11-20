@@ -1,0 +1,20 @@
+name: LigaLorcana extension tests
+on:
+  pull_request:
+    paths:
+      - 'tools/ligalorcana_extension/**'
+      - '.github/workflows/ligalorcana-extension.yml'
+permissions:
+  contents: read
+jobs:
+  extension:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Offline extension regressions
+        working-directory: tools/ligalorcana_extension
+        run: |
+          for test in test*.js; do node "$test" || exit 1; done

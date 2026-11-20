@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "Inkwell - LigaLorcana Coleta Local",
+  "version": "0.8.13",
+  "description": "Coleta diaria as 00h03 de Sao Paulo, preservando sessao, checkpoints e revisao GitHub.",
+  "permissions": [
+    "storage",
+    "tabs",
+    "scripting",
+    "downloads",
+    "identity",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://www.ligalorcana.com.br/*",
+    "https://api.github.com/*",
+    "https://github.com/*"
+  ],
+  "action": {
+    "default_title": "Coletor Inkwell",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "worker.js"
+  }
+}
