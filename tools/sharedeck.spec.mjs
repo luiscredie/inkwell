@@ -4,9 +4,9 @@
 //   INKWELL_URL=http://localhost:8080/index.html npx playwright test tools/sharedeck.spec.mjs
 // Screenshots go to docs/evidencias/deck-compartilhado/ (SD_EVIDENCE=1).
 import { test, expect } from '@playwright/test';
+import { ROOT, fakeSupabase } from './fake-supabase.mjs';   // site + fake Supabase on one local server (#286)
 import { mkdirSync } from 'node:fs';
 
-const ROOT = process.env.INKWELL_URL || 'http://localhost:8080/index.html';
 const url = (p) => new URL(p, ROOT).href;
 const ME = '11111111-1111-4111-8111-111111111111';
 const EVID = new URL('../docs/evidencias/deck-compartilhado/', import.meta.url);
@@ -45,7 +45,7 @@ async function setup(page, { pp = profile(), signedIn = false, mine = null, dela
       if (document.querySelector('[data-testid="profile"], [data-testid="showcase"], [data-testid="record"], [data-testid="trade"], [data-testid="friends"], [data-testid="recados"]') && !window.__seen.includes('profile-section')) window.__seen.push('profile-section');
     }).observe(document, { childList: true, subtree: true, characterData: true });
   }, [signedIn, ME]);
-  await page.route('**/rest/v1/**', async (route) => {
+  await (await fakeSupabase(page)).route('**/rest/v1/**', async (route) => {   // no page.route: WebKit drops navigations while it is on (#286)
     const req = route.request(), path = new URL(req.url()).pathname.replace(/.*\/rest\/v1\//, '');
     const body = req.postData() ? JSON.parse(req.postData()) : null;
     st.calls.push(path);
@@ -231,8 +231,8 @@ test('links and history: another deck in the address, no deck, back, reload', as
   // keeps no history entry for that same-page change (the address stays #deck-d-outro) — either way they must match.
   if (browserName === 'chromium') await expect(page).toHaveURL(/#deck-deck-ov$/);
   await expect(page.getByTestId('sd-name')).toHaveText(page.url().endsWith('#deck-d-outro') ? 'OUTRO-DECK-MARCADOR' : 'Âmbar Esmeralda');
-  if (!page.url().endsWith('#deck-deck-ov')) { await page.goto(deckUrl()); await expect(page.getByTestId('sd-name')).toHaveText('Âmbar Esmeralda'); }
-  await page.reload();
+  if (!page.url().endsWith('#deck-deck-ov')) { await page.goto(deckUrl(), { waitUntil: 'commit' }); await expect(page.getByTestId('sd-name')).toHaveText('Âmbar Esmeralda'); }
+  await page.reload({ waitUntil: 'commit' });   // #286: wait for the content below, not for "load"
   await expect(page.getByTestId('sd-name')).toHaveText('Âmbar Esmeralda');
   await expect(page.getByTestId('profile')).toHaveCount(0);
   await page.evaluate(() => { history.pushState(null, '', location.pathname + location.search); dispatchEvent(new HashChangeEvent('hashchange')); });
