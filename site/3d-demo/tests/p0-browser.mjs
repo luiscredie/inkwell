@@ -65,6 +65,21 @@ for(const width of [320,375,390,430,1280]){
     assert(overflow<=2,`Horizontal overflow: ${overflow}px`);
     await page.screenshot({path:join(output,`home-${width}.png`),fullPage:true});
     await page.evaluate(()=>navigate('Coleção'));
+    // A delayed opening must not resurrect a binder that was closed meanwhile.
+    await page.emulateMedia({reducedMotion:'no-preference'});
+    await page.evaluate(()=>{
+      const original=window.setTimeout;
+      let pending;
+      window.setTimeout=(fn,ms,...args)=>{if(ms===160){pending=()=>fn(...args);return 1}return original(fn,ms,...args)};
+      try{
+        openBinder();
+        if(!binderOpening||!pending)throw Error('Opening did not schedule a transition');
+        closeBinder();
+        pending();
+        if(binderOpen||binderOpening)throw Error('Cancelled opening reopened the binder');
+      }finally{window.setTimeout=original}
+    });
+    await page.emulateMedia({reducedMotion:'reduce'});
     await page.getByRole('button',{name:/Abrir meu fichário/}).click();
     await page.locator('.binder-book:not(.is-closed)').waitFor();
     const slots=await page.locator('.binder-page .binder-pocket').count();
