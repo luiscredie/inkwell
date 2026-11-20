@@ -22,7 +22,16 @@ async function run(code){return vm.runInContext(code,ctx);}
  await run('configureDaily(false)');assert.equal((await run('dailyTick()')).action,'disabled');
  await run('configureDaily(true)');job={phase:'complete',rows:{old:{}}};
  ctx.exportSnapshot=async()=>{throw Error('disk full');};await assert.rejects(run('dailyTick()'),/disk full/);assert.equal(starts,1);
- ctx.exportSnapshot=async()=>{};ctx.handleMessage=async()=>({error:'failed'});
- await assert.rejects(run('dailyTick()'),/failed/);assert.notEqual(data.daily.startedDay,'2026-11-22');
+ ctx.exportSnapshot=async()=>{};
+ job={phase:'needs_review',rows:{old:{captured_at:'2026-11-22T03:01:00Z'}},pending:{flute:{last_attempt_at:'2026-11-22T03:02:00Z'}},editionAudit:{}};
+ assert.equal((await run('dailyTick({dryRun:true})')).action,'review_wait_next_day');
+ assert.equal((await run('dailyTick({dryRun:true})')).nextDayAction,'start_after_backup');
+ clock='2026-11-23T03:03:00Z';
+ assert.equal((await run('dailyTick({dryRun:true})')).action,'start');
+ assert.equal((await run('dailyTick()')).action,'started');
+ assert.ok(data.previousDailyReview.pending.flute,'unresolved card archived');
+ clock='2026-11-24T03:03:00Z';job={phase:'complete',rows:{}};
+ ctx.handleMessage=async()=>({error:'failed'});
+ await assert.rejects(run('dailyTick()'),/failed/);assert.notEqual(data.daily.startedDay,'2026-11-24');
  console.log('PASS daily: Sao Paulo midnight, dry-run has no effects, duplicate triggers, checkpoint/CAPTCHA guards, backup failure, retry after start failure.');
 })().catch(e=>{console.error(e);process.exitCode=1});

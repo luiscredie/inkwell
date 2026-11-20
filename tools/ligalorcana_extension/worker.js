@@ -420,7 +420,7 @@ async function handleMessage(msg){
  if(msg.cmd==='githubAuto'){await chrome.storage.local.set({githubAutoUpload:!!msg.enabled});return {ok:true,enabled:!!msg.enabled};}
  if(msg.cmd==='githubStatus')return await ghStatus();
  if(msg.cmd==='status')return {captchaUntil:j.captchaUntil||null,captchaChecks:j.captchaChecks||0,autoAll:j.autoAll,editions:j.editions,editionIndex:j.editionIndex,phase:j.phase,running:j.running,edition:j.editions[j.editionIndex],index:j.cardIndex,queue:j.queue.length,listingTotal:j.listingTotal,scanCount:j.scanCount,editionAudit:j.editionAudit,skipped:Object.values(j.skipped||{}),stored:Object.keys(j.rows).length,pending:Object.keys(j.pending||{}).length,pendingCards:Object.values(j.pending||{}).slice(-8),retryPass:!!j.retryPass,lastError:j.lastError,log:j.log.slice(-10)};
- if(msg.cmd==='copyLog'){return {ok:true,diagnostic:{version:'0.8.13',date:new Date().toISOString(),phase:j.phase,index:j.cardIndex,queue:j.queue.length,stored:Object.keys(j.rows||{}).length,pendingCards:Object.values(j.pending||{}),skippedCards:Object.values(j.skipped||{}),editionAudit:j.editionAudit,lastError:j.lastError,log:j.log||[]}};}
+ if(msg.cmd==='copyLog'){return {ok:true,diagnostic:{version:'0.8.14',date:new Date().toISOString(),phase:j.phase,index:j.cardIndex,queue:j.queue.length,stored:Object.keys(j.rows||{}).length,pendingCards:Object.values(j.pending||{}),skippedCards:Object.values(j.skipped||{}),editionAudit:j.editionAudit,lastError:j.lastError,log:j.log||[]}};}
  if(msg.cmd==='pause'){await stop(j,'Pausado manualmente');return {ok:true,phase:'paused',stored:Object.keys((await load()).rows).length}}
  if(msg.cmd==='import'){
   if(j.running)throw Error('Pause a coleta antes de restaurar');
@@ -468,7 +468,7 @@ async function handleMessage(msg){
     queued_urls:value.queued_urls??null,captured_urls:value.captured_urls??null,
     failed_urls:value.failed_urls??null,verified:!!value.verified
   }]));
-  const diagnostics={version:'0.8.13',date:new Date().toISOString(),phase:j.phase,
+  const diagnostics={version:'0.8.14',date:new Date().toISOString(),phase:j.phase,
     activeEdition:j.editions?.[j.editionIndex]||null,stored:Object.keys(j.rows||{}).length,
     pending:Object.values(j.pending||{}).map(x=>({edition:x.edition,num:queryValue(x.url,'num'),
       url:x.url,attempts:x.attempts,reason:x.reason,last_attempt_at:x.last_attempt_at})),

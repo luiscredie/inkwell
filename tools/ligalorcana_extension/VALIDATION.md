@@ -9,3 +9,5 @@ Scripts PowerShell analisados pelo parser. Install-DailyTask.ps1 -DryRun executa
 Nao houve registro de tarefa, reload da extensao instalada, navega�ao de coleta, requisi�ao � LigaLorcana, upload de pre�os, merge ou altera�ao do live. A abertura da URL interna no Chrome e a execu�ao real pelo Agendador exigem a instala�ao no perfil do usu�rio; nao foram testadas ponta a ponta nesta entrega. O sandbox nao disponibiliza CIM do Agendador para um teste real de registro.
 
 Para repetir testes: execute `node test_daily.js` e os demais `test*.js` nesta pasta. Use os comandos -DryRun de INSTALL.md para testar instala�ao sem coletar.
+
+Corre�ao 0.8.14: needs_review encerrado no dia anterior permite novo lote ap�s backup e arquivo de pend�ncias; mesmo dia aguarda. Testados erro de backup, arquivo de Sleepy pendente, simula�ao sem escrita e passagem de dia. Nenhum pre�o marcado como v�lido artificialmente.
