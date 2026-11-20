@@ -39,6 +39,13 @@ export class Catalog {
     const id = String(duelsId || "");
     const hit = this.resolve(id, name);
     if (hit) return hit;
+    // 3-D23-3 on duels.ink is D23C-3 here (Ursula - Deceiver). Not D23-3: that id is another card (Elsa - Snow Queen).
+    // Taken only when the D23C card is the same card as one of set {set}; otherwise unresolved, never a guess (#292).
+    const d23 = /^(\d+)-D23-(\d+)$/i.exec(id);
+    if (d23) {
+      const c = `D23C-${d23[2]}`;
+      return this.ids.has(c) && String(this.baseOf(c)).startsWith(`LOR${d23[1]}-`) ? c : null;
+    }
     const cc = /^(\d+)-([A-Za-z]+\d*)-(\d+)$/.exec(id);   // 9-CC1-4 on duels.ink is DLPC1-4-CC1 here
     if (cc) for (const x of this.ids) if (x.endsWith(`-${cc[3]}-${cc[2].toUpperCase()}`)) return x;
     const m = /^([A-Za-z]*)(\d+)-(\d+)/.exec(id);
