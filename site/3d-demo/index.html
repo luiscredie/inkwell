@@ -29,22 +29,24 @@ function mobileBinder(){return window.matchMedia('(max-width:850px)').matches}
 function binderPageSize(){return mobileBinder()?9:18}
 function binderPageCount(){return Math.max(1,Math.ceil(visibleCards().length/binderPageSize()))}
 
-let binderOpening=false;
+let binderOpening=false,binderOpenGeneration=0;
 function openBinder(){
   if(binderOpen||binderOpening)return;
   const cover=document.querySelector('.binder-cover');
   if(!cover){binderOpen=true;render();return}
   binderOpening=true;
+  const generation=++binderOpenGeneration;
   cover.classList.add('is-opening');
   if(window.matchMedia('(prefers-reduced-motion:reduce)').matches){
     binderOpening=false;binderOpen=true;updateTiles();return;
   }
   window.setTimeout(()=>{
+    if(generation!==binderOpenGeneration)return; // Opening was cancelled.
     binderOpening=false;
     if(screen==='Coleção'&&collectionView==='fichario'){binderOpen=true;updateTiles()}
   },160);
 }
-function closeBinder(){binderOpen=false;binderPage=0;updateTiles()}
+function closeBinder(){binderOpenGeneration++;binderOpening=false;binderOpen=false;binderPage=0;updateTiles()}
 let binderTouchY=null,binderGestureAt=0,binderDragClickUntil=0;
 // A swipe can synthesize a click on the card under the finger/pointer.
 // Ignore only that trailing click, not deliberate subsequent taps.
