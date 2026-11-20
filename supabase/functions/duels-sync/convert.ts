@@ -1,5 +1,7 @@
 // Conversion of a duels.ink match-history row + gamelog events to game log 1.0.
-// Same rules as tools/duels/duels_import.py (Catalog + convert); parity.mjs checks they produce the same logs.
+// Ported from tools/duels/duels_import.py (Catalog + convert), which is not in this repository and is not run by any
+// workflow or function here; there is no parity check. This file is the converter in use (duels-sync). Converter 2 only
+// adds fields (players[me].opening, source_ref.converter): a reader of 1.0 logs that ignores unknown keys reads it as before.
 export type Json = Record<string, any>;
 
 // ---------------------------------------------------------------- catalog ids
@@ -7,14 +9,24 @@ const norm = (s: string) => s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerC
 export class Catalog {
   ids = new Set<string>();
   byName = new Map<string, string>();
+  nameOf = new Map<string, string>();
   constructor(cards: Json[]) {
     const main = new Set(["C", "U", "R", "SR", "L"]);
     const sorted = [...cards].sort((a, b) => Number(!main.has(a.rarity)) - Number(!main.has(b.rarity)) || (a.card_id < b.card_id ? -1 : a.card_id > b.card_id ? 1 : 0));
     for (const c of sorted) {
       this.ids.add(c.card_id);
       const base = norm(String(c.name_en || "").replace(/\s*\([^)]*\)\s*$/, ""));
+      if (base) this.nameOf.set(c.card_id, base);
       if (base && !this.byName.has(base)) this.byName.set(base, c.card_id);
     }
+  }
+  // The same card in any printing (a promo, an enchanted or a reprint in a later set) -> one id: the main-rarity printing
+  // with the same name, lowest id first. Printings of one card share the name in the catalog and differ only in art,
+  // so a hand from the log and a deck list compare as the same card. An id the catalog lacks is returned as it is.
+  baseOf(cardId?: string | null): string | null {
+    if (!cardId) return null;
+    const nm = this.nameOf.get(cardId);
+    return (nm && this.byName.get(nm)) || cardId;
   }
   resolve(duelsId?: string | null, name?: string | null): string | null {
     const m = duelsId ? /^(\d+)-(\d+)$/.exec(duelsId) : null;
@@ -70,7 +82,94 @@ export function decklistOf(row: Json, cat: Catalog, names: Map<string, string> =
   return { list, unresolved };
 }
 
-// ---------------------------------------------------------------- conversion (same rules as duels_import.convert)
+// ---------------------------------------------------------------- opening hand and mulligan (converter 2)
+// The log's owner only. duels.ink logs are from one player's side: the opponent's INITIAL_HAND and MULLIGAN cards come
+// empty and only the count is public. Those hidden fields are never filled in.
+//   status "recorded":
+//     hand     = the 7 cards dealt (the original hand), in the log's order
+//     mulligan = {count, returned, drawn}: what was put back and what came in its place. {count: 0, returned: [], drawn: []}
+//                = kept all 7, only when the event says mulliganCount 0. null when it is unknown, never "kept all 7";
+//                `mulligan_unknown` then says why: "no_event" (no MULLIGAN event), "event_without_data" (an event with no
+//                count and no cards), "event_without_cards" (a count above 0 but not which cards)
+//     kept     = the cards of the original hand that stayed (hand minus returned); null when the mulligan is unknown
+//     final    = the hand the game started with: kept, then drawn (7 cards); null when the mulligan is unknown
+//   status "absent": the log has no hand for this player (e.g. a concession before the game started).
+//   status "invalid": the events disagree (hand not 7, a returned card not in the hand, two different hands, a hand after
+//     the mulligan or the first turn, a mulligan after the first turn, ...). No card is kept then: nothing is guessed; `issues` says why.
+// A returned card is matched to the hand by its duels.ink id first, then by the same card in another printing (a promo
+// in the hand put back under its regular id is the same card, not an invalid event).
+export const CONVERTER = 2;
+export function openingOf(events: Json[], mine: number, cat: Catalog): Json {
+  const ev = events || [];
+  const at = (t: string) => ev.map((e, i) => [e, i] as [Json, number]).filter(([e]) => e?.type === t && Number(e.player) === mine);
+  const hands = at("INITIAL_HAND").filter(([e]) => Array.isArray(e.data?.initialHandCards) && e.data.initialHandCards.length);
+  if (!hands.length) {
+    const started = ev.some((e) => e?.type === "TURN_START");
+    return { status: "absent", reason: !started && ev.some((e) => e?.type === "GAME_CONCEDED") ? "conceded_before_start" : "not_in_log" };
+  }
+  const one = (c: Json) => {
+    const card_id = cat.resolve(c?.id, c?.name), o: Json = { card_id, duels_id: c?.id ?? null };
+    if (!card_id && c?.name) o.card_name = c.name;
+    return o;
+  };
+  const issues: string[] = [];
+  const bag = (cs: Json[]) => cs.map((c) => String(c?.id)).sort().join("|");
+  const [[h0, hi]] = hands, hand0: Json[] = h0.data.initialHandCards;
+  if (hands.some(([e]) => bag(e.data.initialHandCards) !== bag(hand0))) issues.push(`${hands.length} different initial hands`);
+  if (hand0.length !== 7) issues.push(`hand has ${hand0.length} cards`);
+  const mulls = at("MULLIGAN");
+  if (mulls.length > 1) issues.push(`${mulls.length} mulligan events`);
+  const firstTurn = ev.findIndex((e) => e?.type === "TURN_START");
+  const lastHand = hands[hands.length - 1][1];
+  if (firstTurn >= 0 && lastHand > firstTurn) issues.push("initial hand after the first turn");
+  if (mulls.length && lastHand > mulls[0][1]) issues.push("initial hand after the mulligan");
+  if (firstTurn >= 0 && mulls.some(([, i]) => i > firstTurn)) issues.push("mulligan after the first turn");
+  let mulligan: Json | null = null, kept: Json[] | null = null, final: Json[] | null = null;
+  let unknown: string | null = mulls.length ? null : "no_event";
+  const d = mulls.length === 1 ? mulls[0][0].data || {} : null;
+  if (d) {
+    const has = (x: unknown) => Array.isArray(x) && x.length > 0;
+    const count = typeof d.mulliganCount === "number" ? d.mulliganCount : null;
+    // the cards say what happened; without them, only mulliganCount 0 says "kept all 7" (absent lists are not zero)
+    if (!has(d.mulliganedCards) && !has(d.drawnCards)) {
+      if (count === null) unknown = "event_without_data";
+      else if (count > 0) unknown = "event_without_cards";
+    }
+  }
+  if (d && !unknown) {
+    const ret: Json[] = d.mulliganedCards || [], drew: Json[] = d.drawnCards || [];
+    const count = d.mulliganCount ?? null;
+    if (ret.length !== drew.length) issues.push(`${ret.length} returned, ${drew.length} drawn`);
+    if (count !== null && Number(count) !== ret.length) issues.push(`count ${count}, ${ret.length} cards returned`);
+    const left = [...hand0], same = (c: Json) => cat.baseOf(cat.resolve(c?.id, c?.name));
+    for (const c of ret) {                       // returned ⊆ hand, as a multiset (two copies are two cards)
+      let i = left.findIndex((h) => h?.id === c?.id);                                   // the same printing first
+      if (i < 0 && same(c)) i = left.findIndex((h) => same(h) === same(c));             // then the same card
+      if (i < 0) { issues.push(`returned ${c?.id} not in the hand`); continue; }
+      left.splice(i, 1);
+    }
+    mulligan = { count: ret.length, returned: ret.map(one), drawn: drew.map(one) };
+    kept = left.map(one);
+    final = [...kept, ...mulligan.drawn];
+  }
+  if (issues.length) return { status: "invalid", issues };
+  const out: Json = { status: "recorded", hand: hand0.map(one), mulligan, kept, final };
+  if (unknown) out.mulligan_unknown = unknown;
+  return out;
+}
+// Adds the opening to a log stored by an earlier converter (a reprocessing). Changes only players[me].opening and
+// source_ref.converter: turns, result, deck and summary stay. True when something changed; running it again changes nothing.
+export function addOpening(log: Json, row: Json, events: Json[], cat: Catalog): boolean {
+  const me = log?.players?.find((p: Json) => p?.is_me);
+  if (!me || log.source_ref?.game_id !== row?.game_id) return false;
+  const next = openingOf(events, Number(row.your_player), cat);
+  if (JSON.stringify(me.opening) === JSON.stringify(next) && log.source_ref?.converter === CONVERTER) return false;
+  me.opening = next;
+  log.source_ref = { ...(log.source_ref || {}), converter: CONVERTER };
+  return true;
+}
+
+// ---------------------------------------------------------------- conversion (rules first ported from duels_import.convert)
 const PRIMARY = new Set(["ink", "play", "shift", "sing", "quest", "challenge", "activate"]);
 const REASON: Record<string, string | null> = { concession: "concede", lore: "lore", abandoned: "other", deck_out: "deck_out", timeout: "time" };
 
@@ -204,12 +303,12 @@ export function convert(row: Json, events: Json[], cat: Catalog, meName: string)
   for (const k of Object.keys(ev)) if (ev[k] === null || ev[k] === undefined) delete ev[k];
   return {
     format_version: "1.0", game_id: `duels-${row.game_id}`, source: "duels_ink",
-    source_ref: { game_id: row.game_id, replay_url: row.replay_url ?? null, queue: row.queue_name ?? null, mmr_before: row.mmr_before ?? null, mmr_delta: row.mmr_delta ?? null },
+    source_ref: { game_id: row.game_id, replay_url: row.replay_url ?? null, queue: row.queue_name ?? null, mmr_before: row.mmr_before ?? null, mmr_delta: row.mmr_delta ?? null, converter: CONVERTER },
     played_at: row.started_at,
     game_format: String(row.queue_id || row.queue_name || "").toLowerCase().includes("core") ? "core" : "other",
     event: ev,
     players: [
-      { seat: "p1", name: meName, is_me: true, went_first: first === "p1", mulligan_count: mull.p1,
+      { seat: "p1", name: meName, is_me: true, went_first: first === "p1", mulligan_count: mull.p1, opening: openingOf(events, mine, cat),
         deck: { inks: colors(row.your_deck_colors), list: deck.list, list_source: "duels_ink", ...(deck.unresolved.length ? { unresolved: deck.unresolved } : {}) } },
       { seat: "p2", name: row.opp_display_name || "Opponent", is_me: false, went_first: first === "p2", mulligan_count: mull.p2,
         deck: { archetype: row.opp_deck_colors || "Unknown", inks: colors(row.opp_deck_colors), list_source: "observed" } },

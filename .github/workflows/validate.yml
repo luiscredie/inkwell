@@ -67,7 +67,7 @@ jobs:
       - name: Task metrics contract (events sent, named and documented)
         run: node --test tools/task-metrics-contract.test.mjs
       - name: duels.ink sync (#241) — window, cursor, filters, late replays, no duplicates
-        run: node tools/duels-sync.test.mjs && node tools/duels-match.test.mjs
+        run: node tools/duels-sync.test.mjs && node tools/duels-match.test.mjs && node tools/duels-opening.test.mjs
   python:
     runs-on: ubuntu-latest
     steps:
