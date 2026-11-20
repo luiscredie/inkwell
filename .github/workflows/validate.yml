@@ -75,6 +75,8 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
+      - name: Inkable tag audit (read-only, #293)
+        run: python -m unittest tools/test_audit_inkable_tags.py
       - name: Release validator fixtures
         run: python -m unittest tools/test_validate_release.py
       - name: Card-art validator fixtures
