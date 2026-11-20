@@ -35,8 +35,20 @@ Uma cópia comprada de uma carta já mantida aparece uma vez em `kept` e duas em
 | `status` | Quando | O que tem |
 | --- | --- | --- |
 | `recorded` | O log tem as 7 cartas do dono | `hand`, `mulligan`, `kept` e `final` |
-| `recorded` com `mulligan: null` | Tem a mão, mas não tem o evento `MULLIGAN` | Mulligan **desconhecido**, nunca "manteve as 7"; `kept` e `final` também `null` |
-| `recorded` com `mulligan.count: 0` | Evento `MULLIGAN` com 0 cartas | Manteve as 7: `returned` e `drawn` vazios |
+| `recorded` com `mulligan: null` | Tem a mão, mas o mulligan não pode ser conhecido (motivo em `mulligan_unknown`, abaixo) | Mulligan **desconhecido**, nunca "manteve as 7"; `kept` e `final` também `null` |
+| `recorded` com `mulligan.count: 0` | Evento `MULLIGAN` com `mulliganCount: 0` explícito | Manteve as 7: `returned` e `drawn` vazios |
+
+Informação insuficiente não é mulligan zero. "Manteve as 7" só vale quando o evento diz `mulliganCount: 0`. Nos demais
+casos sem cartas, o mulligan fica desconhecido:
+
+| `mulligan_unknown` | O evento | Por que não é zero |
+| --- | --- | --- |
+| `no_event` | Não há `MULLIGAN` do dono | Nada foi registrado |
+| `event_without_data` | `MULLIGAN` sem contagem e sem cartas (inclusive listas vazias sem contagem) | Uma lista ausente ou vazia não afirma nada |
+| `event_without_cards` | Contagem acima de 0, sem as cartas | Sabe-se quantas, não quais; a contagem continua em `mulligan_count` |
+
+Nos 49 logs reais, o evento do dono sempre traz contagem e cartas, ou só `mulliganCount: 0` (o "manteve as 7"). Os 45
+eventos com contagem e sem cartas são do oponente, que não é processado.
 | `absent` | O log não tem a mão (`reason`: `conceded_before_start` ou `not_in_log`) | Nenhuma carta |
 | `invalid` | Os eventos se contradizem | Só `issues`; nenhuma carta é guardada |
 
@@ -49,7 +61,8 @@ Checagens que levam a `invalid`:
 - há mais de um `MULLIGAN` do dono;
 - há duas `INITIAL_HAND` do dono com cartas diferentes (a mesma mão repetida, em qualquer ordem, conta uma vez; uma
   `INITIAL_HAND` vazia não conta);
-- a mão aparece depois do `MULLIGAN` ou depois do primeiro turno.
+- a mão aparece depois do `MULLIGAN` ou depois do primeiro turno;
+- o `MULLIGAN` do dono aparece depois do primeiro turno (mesmo dizendo 0). Nos logs reais, isso nunca acontece.
 
 Nos 49 logs reais, cada jogador tem exatamente uma `INITIAL_HAND`, sempre antes do `MULLIGAN` e do primeiro turno.
 Essas regras só pegam logs fora desse padrão.
@@ -109,10 +122,12 @@ continua dizendo "custo pago: não consta".
 
 ## Testes
 
-`tools/duels-opening.test.mjs` (59 checagens, em CI junto com `duels-sync` e `duels-match`) usa só logs sintéticos.
+`tools/duels-opening.test.mjs` (72 checagens, em CI junto com `duels-sync` e `duels-match`) usa só logs sintéticos.
 Cobre:
 
-- mulligan com cartas, com 0 cartas e sem evento;
+- mulligan com cartas, com 0 cartas explícito e sem evento;
+- `MULLIGAN` sem contagem e sem cartas, com listas vazias, com contagem e sem cartas: desconhecido, nunca zero;
+- `MULLIGAN` depois do primeiro turno: inválido;
 - `hand`, `kept` e `final` separados, inclusive com uma cópia comprada de uma carta mantida;
 - concessão antes do início, e o log convertido dessa concessão;
 - o lado do oponente, inclusive uma `INITIAL_HAND` do oponente com cartas (ignorada);
@@ -130,8 +145,12 @@ Mutações (cada uma quebra o código de propósito; todas fazem testes falharem
 
 | Mutação | Testes que falham |
 | --- | --- |
-| Ler a falta do evento como "manteve as 7" | 1 |
-| Mostrar a mão distribuída como `kept`/`final` quando o mulligan é desconhecido | 1 |
+| Ler a falta do evento como "manteve as 7" | 4 |
+| Ler um `MULLIGAN` sem contagem e sem cartas como "manteve as 7" | 4 |
+| Ler contagem acima de 0 sem cartas como resolvida | 1 |
+| Ler listas vazias sem contagem como zero explícito | 1 |
+| Aceitar `MULLIGAN` depois do primeiro turno | 2 |
+| Mostrar a mão distribuída como `kept`/`final` quando o mulligan é desconhecido | 2 |
 | Aceitar carta devolvida que não está na mão | 5 |
 | Não procurar a carta devolvida em outra impressão | 2 |
 | Não preferir a impressão exata | 1 |

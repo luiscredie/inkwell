@@ -161,5 +161,24 @@ ck('format_version stays "1.0"', v2.format_version === '1.0');
 const strip = (l) => { const c = JSON.parse(JSON.stringify(l)); delete c.players[0].opening; delete c.source_ref.converter; return c; };
 ck('without the two new keys, the log has exactly the converter 1 keys', eq(Object.keys(strip(v2).players[0]).sort(), ['deck', 'is_me', 'mulligan_count', 'name', 'seat', 'went_first']) && eq(Object.keys(strip(v2).source_ref).sort(), ['game_id', 'mmr_before', 'mmr_delta', 'queue', 'replay_url']));
 
+// ---- (Conselho, 2ª revisão) insufficient data is not "kept all 7"; a mulligan after the turns begin
+const noData = openingOf([hand(2, HAND), mull(2, {}), start(1)], 2, cat);
+ck('MULLIGAN with no count and no lists: unknown (event_without_data), not zero', noData.status === 'recorded' && noData.mulligan === null && noData.mulligan_unknown === 'event_without_data', JSON.stringify(noData));
+ck('…kept and final unknown too, the hand still recorded', noData.kept === null && noData.final === null && noData.hand.length === 7);
+ck('MULLIGAN with no data at all (data missing): unknown, not zero', openingOf([hand(2, HAND), { type: 'MULLIGAN', player: 2 }], 2, cat).mulligan_unknown === 'event_without_data');
+const emptyLists = openingOf([hand(2, HAND), mull(2, { mulliganedCards: [], drawnCards: [] })], 2, cat);
+ck('MULLIGAN with empty lists but no count: unknown, not zero (only mulliganCount 0 says so)', emptyLists.mulligan === null && emptyLists.mulligan_unknown === 'event_without_data');
+const countOnly = openingOf([hand(2, HAND), mull(2, { mulliganCount: 3 })], 2, cat);
+ck('MULLIGAN with a count above 0 but no cards: unknown which cards (event_without_cards)', countOnly.status === 'recorded' && countOnly.mulligan === null && countOnly.mulligan_unknown === 'event_without_cards');
+ck('…the public count stays in mulligan_count of the converted log', convert(row(), [hand(2, HAND), mull(2, { mulliganCount: 3 }), start(2)], cat, 'Me').players[0].mulligan_count === 3);
+ck('explicit zero (mulliganCount 0) is still "kept all 7", with no unknown reason', zero.mulligan.count === 0 && !('mulligan_unknown' in zero));
+ck('cards without a count: recorded from the cards', openingOf([hand(2, HAND), mull(2, { mulliganedCards: [URS], drawnCards: [PEG] })], 2, cat).mulligan?.count === 1);
+ck('no MULLIGAN event: unknown, reason no_event', noEvent.mulligan_unknown === 'no_event');
+const lateMull = openingOf([hand(2, HAND), start(1), mull(2, { mulliganCount: 1, mulliganedCards: [URS], drawnCards: [PEG] })], 2, cat);
+ck('MULLIGAN after the first turn: invalid', lateMull.status === 'invalid' && lateMull.issues.some((x) => /mulligan after the first turn/.test(x)), JSON.stringify(lateMull));
+ck('MULLIGAN after the first turn, even saying 0: invalid (not kept all 7)', openingOf([hand(2, HAND), start(1), mull(2, { mulliganCount: 0 })], 2, cat).status === 'invalid');
+ck('MULLIGAN before the first turn, as in duels.ink logs: recorded', openingOf([hand(2, HAND), mull(2, { mulliganCount: 0 }), start(1)], 2, cat).status === 'recorded');
+ck("the opponent's MULLIGAN after the first turn does not touch the owner's opening", openingOf([hand(2, HAND), mull(2, { mulliganCount: 0 }), start(1), mull(1, { mulliganCount: 2 })], 2, cat).status === 'recorded');
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

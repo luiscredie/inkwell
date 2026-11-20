@@ -88,12 +88,14 @@ export function decklistOf(row: Json, cat: Catalog, names: Map<string, string> =
 //   status "recorded":
 //     hand     = the 7 cards dealt (the original hand), in the log's order
 //     mulligan = {count, returned, drawn}: what was put back and what came in its place. {count: 0, returned: [], drawn: []}
-//                = kept all 7. null when the log has the hand but no MULLIGAN event: unknown, never "kept all 7"
+//                = kept all 7, only when the event says mulliganCount 0. null when it is unknown, never "kept all 7";
+//                `mulligan_unknown` then says why: "no_event" (no MULLIGAN event), "event_without_data" (an event with no
+//                count and no cards), "event_without_cards" (a count above 0 but not which cards)
 //     kept     = the cards of the original hand that stayed (hand minus returned); null when the mulligan is unknown
 //     final    = the hand the game started with: kept, then drawn (7 cards); null when the mulligan is unknown
 //   status "absent": the log has no hand for this player (e.g. a concession before the game started).
 //   status "invalid": the events disagree (hand not 7, a returned card not in the hand, two different hands, a hand after
-//     the mulligan or the first turn, ...). No card is kept then: nothing is guessed; `issues` says why.
+//     the mulligan or the first turn, a mulligan after the first turn, ...). No card is kept then: nothing is guessed; `issues` says why.
 // A returned card is matched to the hand by its duels.ink id first, then by the same card in another printing (a promo
 // in the hand put back under its regular id is the same card, not an invalid event).
 export const CONVERTER = 2;
@@ -121,9 +123,20 @@ export function openingOf(events: Json[], mine: number, cat: Catalog): Json {
   const lastHand = hands[hands.length - 1][1];
   if (firstTurn >= 0 && lastHand > firstTurn) issues.push("initial hand after the first turn");
   if (mulls.length && lastHand > mulls[0][1]) issues.push("initial hand after the mulligan");
+  if (firstTurn >= 0 && mulls.some(([, i]) => i > firstTurn)) issues.push("mulligan after the first turn");
   let mulligan: Json | null = null, kept: Json[] | null = null, final: Json[] | null = null;
-  if (mulls.length === 1) {
-    const d = mulls[0][0].data || {};
+  let unknown: string | null = mulls.length ? null : "no_event";
+  const d = mulls.length === 1 ? mulls[0][0].data || {} : null;
+  if (d) {
+    const has = (x: unknown) => Array.isArray(x) && x.length > 0;
+    const count = typeof d.mulliganCount === "number" ? d.mulliganCount : null;
+    // the cards say what happened; without them, only mulliganCount 0 says "kept all 7" (absent lists are not zero)
+    if (!has(d.mulliganedCards) && !has(d.drawnCards)) {
+      if (count === null) unknown = "event_without_data";
+      else if (count > 0) unknown = "event_without_cards";
+    }
+  }
+  if (d && !unknown) {
     const ret: Json[] = d.mulliganedCards || [], drew: Json[] = d.drawnCards || [];
     const count = d.mulliganCount ?? null;
     if (ret.length !== drew.length) issues.push(`${ret.length} returned, ${drew.length} drawn`);
@@ -140,7 +153,9 @@ export function openingOf(events: Json[], mine: number, cat: Catalog): Json {
     final = [...kept, ...mulligan.drawn];
   }
   if (issues.length) return { status: "invalid", issues };
-  return { status: "recorded", hand: hand0.map(one), mulligan, kept, final };
+  const out: Json = { status: "recorded", hand: hand0.map(one), mulligan, kept, final };
+  if (unknown) out.mulligan_unknown = unknown;
+  return out;
 }
 // Adds the opening to a log stored by an earlier converter (a reprocessing). Changes only players[me].opening and
 // source_ref.converter: turns, result, deck and summary stay. True when something changed; running it again changes nothing.
