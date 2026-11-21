@@ -26,11 +26,14 @@ assert.equal(state().binderOpening,true);
 vm.runInContext('closeBinder()',context);
 assert.equal(state().binderOpening,false);
 assert.equal(state().binderPage,0);
-timers.shift()();
-assert.equal(state().binderOpen,false,'Cancelled callback must not reopen binder');
+// Race: user reopens before the cancelled opening's timer has fired.
 vm.runInContext('openBinder()',context);
-assert.equal(timers.length,1,'Opening after cancellation must work');
-timers.shift()();
+assert.equal(timers.length,2,'Reopening should schedule one new timer');
+timers.shift()(); // stale callback from the first opening
+assert.equal(state().binderOpen,false,'Stale callback must not reopen binder');
+assert.equal(state().binderOpening,true,'Stale callback must not cancel newer opening');
+timers.shift()(); // current opening
 assert.equal(state().binderOpen,true,'Latest opening must complete');
+assert.equal(state().binderOpening,false,'Opening flag must clear after completion');
 assert(renders>=2,'UI updates missing');
-console.log('PASS binder opening: duplicate, cancellation, reopening');
+console.log('PASS binder opening: duplicate, cancellation, stale timer race, reopening');
