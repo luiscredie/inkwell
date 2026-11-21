@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101828">
+<meta name="description" content="Resultados experimentais do Inkwell AI Lab. Dados agregados e sem informações pessoais.">
+<title>Inkwell AI Lab — Dashboard</title>
+<style>
+:root{color-scheme:dark;--bg:#0d1626;--panel:#142237;--text:#edf4f6;--muted:#a9bbcb;--line:#314256;--gold:#f0c77f;--teal:#77d2c7;--red:#e59a9a}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 85% 0,#253a58 0,transparent 42%),var(--bg);color:var(--text);font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:1140px;margin:auto;padding:30px 20px 70px}
+a{color:var(--gold)}a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.eyebrow{letter-spacing:.16em;text-transform:uppercase;font-size:12px;font-weight:700;color:var(--teal)}
+h1{font:600 clamp(2rem,5vw,3.5rem)/1.1 Georgia,serif;letter-spacing:-.025em;margin:10px 0}
+h2{font-size:1.1rem;margin:0 0 10px}
+.lead,.muted{color:var(--muted)}.lead{max-width:760px}
+.stamp{color:var(--muted);font-size:13px;border:1px solid var(--line);border-radius:50px;padding:7px 13px}
+.notice{border-left:3px solid var(--gold);padding:10px 14px;background:#1d2b41;border-radius:6px;margin:24px 0;color:#f8e8c9}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:22px 0}
+.card,.panel{background:linear-gradient(165deg,#18283f,#111e31);border:1px solid var(--line);border-radius:15px;padding:18px;min-width:0}
+.card .label{color:var(--muted);font-size:13px}.card strong{display:block;font-size:clamp(1.6rem,3vw,2.35rem);line-height:1.2;margin:7px 0 3px;font-variant-numeric:tabular-nums}
+.small{font-size:13px;color:var(--muted)}.panels{display:grid;grid-template-columns:2fr 1fr;gap:14px}
+.panel{margin:0 0 14px}#chart{display:block;width:100%;height:260px;overflow:visible}
+.graphlabels{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+.pill{display:inline-block;padding:4px 9px;border-radius:20px;background:#2a3b4e;color:#c4e9e3;font-size:12px}
+.metric{display:flex;justify-content:space-between;border-top:1px solid var(--line);gap:10px;padding:13px 0}
+.metric:first-of-type{border-top:0}.metric b{font-variant-numeric:tabular-nums}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}th{text-align:left;color:var(--muted);font-weight:500;font-size:12px}th,td{padding:10px;border-bottom:1px solid var(--line)}td:not(:first-child),th:not(:first-child){text-align:right}
+.positive{color:var(--teal)}.negative{color:var(--red)}
+footer{margin-top:25px;color:var(--muted);font-size:13px}
+@media(max-width:850px){.grid{grid-template-columns:repeat(2,1fr)}.panels{grid-template-columns:1fr}}
+@media(max-width:460px){main{padding:20px 13px 45px}.card,.panel{padding:14px}.grid{gap:9px}td,th{padding:8px 4px}}
+</style>
+</head>
+<body>
+<main>
+<header>
+<div>
+<div class="eyebrow">Inkwell · pesquisa experimental</div>
+<h1>AI Lab <span style="color:var(--gold)">/</span> Evolução</h1>
+<p class="lead">Acompanhamento de experimentos locais de aprendizado por reforço, com estatísticas agregadas e avaliações independentes. O laboratório não modifica automaticamente o Inkwell live.</p>
+</div>
+<div class="stamp" id="updated" aria-live="polite">Verificando dados…</div>
+</header>
+<div class="notice"><strong>Não é taxa de vitória.</strong> A recompensa atual mede uma heurística estrutural dos três primeiros turnos. Ganhos neste gráfico não comprovam que uma política vence mais partidas.</div>
+<div class="grid" aria-label="Indicadores principais">
+<div class="card"><span class="label">Episódios simulados</span><strong id="episodes">—</strong><span class="small">Treinamento acumulado</span></div>
+<div class="card"><span class="label">Lotes avaliados</span><strong id="batches">—</strong><span class="small">Comparações de candidatos</span></div>
+<div class="card"><span class="label">Promoções</span><strong id="promotions">—</strong><span class="small">Somente no laboratório RL</span></div>
+<div class="card"><span class="label">Lotes sem promoção</span><strong id="plateau">—</strong><span class="small" id="plateauStatus">Desde o último campeão</span></div>
+</div>
+<div class="panels">
+<section class="panel">
+<h2>Evolução da vantagem heurística</h2>
+<p class="muted small">Diferença candidato − campeão no momento da avaliação. Linhas: média e limite inferior de IC95%. Pontos dourados: promoção.</p>
+<svg id="chart" viewBox="0 0 700 260" role="img" aria-label="Gráfico de diferença de recompensa simulada por episódio"></svg>
+<div class="graphlabels"><span id="start">—</span><span>Episódios acumulados</span><span id="end">—</span></div>
+</section>
+<section class="panel">
+<h2>Qualidade dos dados</h2>
+<div class="metric"><span>Partidas identificadas</span><b id="games">—</b></div>
+<div class="metric"><span>Logs arquivados</span><b id="logs">—</b></div>
+<div class="metric"><span>Partidas aptas à análise</span><b id="eligible">—</b></div>
+<div class="metric"><span>Registros com horário inconsistente</span><b id="anomalies">—</b></div>
+<div class="metric"><span>Última diferença heurística</span><b id="delta">—</b></div>
+<div class="metric"><span>Último limite inferior de IC95%</span><b id="lower">—</b></div>
+<p class="small">Dados de partidas aparecem apenas como contagens. Não são enviados nomes, logs, IDs de jogos ou listas privadas.</p>
+</section>
+</div>
+<section class="panel">
+<h2>Histórico diário</h2>
+<p class="small">Resumo dos lotes e promoções por dia; sem dados brutos.</p>
+<div style="overflow-x:auto"><table><thead><tr><th>Data</th><th>Episódios</th><th>Lotes</th><th>Promoções</th><th>Vantagem média</th></tr></thead><tbody id="days"></tbody></table></div>
+</section>
+<section class="panel">
+<h2>Próxima etapa de pesquisa</h2>
+<p>Um ambiente de partidas completas, com regras verificadas para cartas, efeitos, tinta, combate e lore. Só então será possível usar vitória e derrota como recompensa e gerar matrizes de confrontos comparáveis às experiências descritas por MaroneFed.</p>
+<span class="pill">Motor de jogo completo: ainda não validado</span>
+</section>
+<footer>Dados lidos da branch pública <code>ai-lab-metrics</code>. <a href="https://github.com/luiscredie/inkwell">Código no GitHub</a>. A página não contém credenciais nem recebe dados diretamente do duels.ink. Última consulta realizada ao carregar a página.</footer>
+</main>
+<script>
+"use strict";
+const URL_METRICS="https://raw.githubusercontent.com/luiscredie/inkwell/ai-lab-metrics/data/latest.json";
+const byId=id=>document.getElementById(id);
+const number=new Intl.NumberFormat("pt-BR");
+const fmt=n=>Number.isFinite(n)?number.format(n):"—";
+const dec=n=>Number.isFinite(n)?new Intl.NumberFormat("pt-BR",{minimumFractionDigits:3,maximumFractionDigits:4,signDisplay:"always"}).format(n):"—";
+const assign=(id,s)=>{byId(id).textContent=s};
+const svg=(tag,attrs)=>{const el=document.createElementNS("http://www.w3.org/2000/svg",tag);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,String(v));return el};
+function draw(points){
+ const root=byId("chart");root.replaceChildren();
+ if(!points.length)return;
+ const values=points.flatMap(p=>[p.delta,p.lower_ci95]).filter(Number.isFinite);
+ if(!values.length)return;
+ let low=Math.min(0,...values),high=Math.max(0,...values);
+ if(low===high){low-=1;high+=1}
+ const margin=30, x1=42,x2=685,y1=20,y2=232;
+ const e1=points[0].episodes,e2=points[points.length-1].episodes;
+ const xp=e=>x1+(e-e1)/Math.max(1,e2-e1)*(x2-x1);
+ const yp=v=>y2-(v-low)/(high-low)*(y2-y1);
+ root.append(svg("line",{x1,y1:yp(0),x2,y2:yp(0),stroke:"#6f8093","stroke-dasharray":"5 6","stroke-width":1.5}));
+ for(const [field,color] of [["lower_ci95","#c2a9e6"],["delta","#77d2c7"]]){
+  const samples=points.filter(p=>Number.isFinite(p[field]));
+  if(samples.length>1)root.append(svg("polyline",{points:samples.map(p=>xp(p.episodes)+","+yp(p[field])).join(" "),stroke:color,fill:"none","stroke-width":2.3,"stroke-linecap":"round","stroke-linejoin":"round"}));
+ }
+ for(const p of points.filter(p=>p.promoted))root.append(svg("circle",{cx:xp(p.episodes),cy:yp(p.delta),r:5.5,fill:"#f0c77f",stroke:"#101828","stroke-width":2}));
+ const cap=svg("text",{x:8,y:yp(0)-6,fill:"#a9bbcb","font-size":12});cap.textContent="0";root.append(cap);
+ assign("start",fmt(e1));assign("end",fmt(e2));
+}
+function render(data){
+ if(data?.schema_version!==1||data.status!=="reported"){assign("updated","Aguardando primeiro envio");return}
+ const s=data.summary||{},q=data.data_quality||{};
+ assign("updated","Atualizado: "+(data.updated_at?new Date(data.updated_at).toLocaleString("pt-BR"):"—"));
+ assign("episodes",fmt(s.episodes));assign("batches",fmt(s.training_batches));
+ assign("promotions",fmt(s.promotions));assign("plateau",fmt(s.plateau_batches));
+ assign("plateauStatus",s.plateau_batches>=100?"Sinal de platô — rever recompensa":"Desde o último campeão");
+ assign("games",fmt(q.history_games));assign("logs",fmt(q.logs_archived));
+ assign("eligible",fmt(q.observer_eligible));assign("anomalies",fmt(s.anomalous_timestamps));
+ assign("delta",dec(s.latest_delta));assign("lower",dec(s.latest_lower_ci95));
+ draw(Array.isArray(data.history)?data.history:[]);
+ const tbody=byId("days");tbody.replaceChildren();
+ const rows=(Array.isArray(data.daily)?data.daily:[]).slice(-14).reverse();
+ for(const d of rows){
+  const tr=document.createElement("tr");
+  const values=[d.day,fmt(d.last_episodes),fmt(d.batches),fmt(d.promotions),dec(d.average_delta)];
+  values.forEach(value=>{const td=document.createElement("td");td.textContent=value;tr.append(td)});
+  tbody.append(tr);
+ }
+}
+fetch(URL_METRICS+"?v="+Date.now(),{cache:"no-store"}).then(r=>{if(!r.ok)throw Error("no data");return r.json()}).then(render).catch(()=>assign("updated","Ainda sem métricas publicadas"));
+</script>
+</body>
+</html>
