@@ -151,17 +151,30 @@ def github_publish(payload: str):
         raise RuntimeError("GitHub CLI (gh) is missing; install and run gh auth login locally")
     endpoint = "repos/" + REPO + "/contents/" + REMOTE_PATH
     fetch = subprocess.run(
-        ["gh", "api", endpoint + "?ref=" + BRANCH, "--jq", ".sha"],
+        ["gh", "api", endpoint + "?ref=" + BRANCH],
         capture_output=True, text=True, timeout=30, check=False,
     )
-    if fetch.returncode != 0 or not fetch.stdout.strip():
+    if fetch.returncode != 0:
         raise RuntimeError("Could not read public metrics branch; run gh auth login and verify repo access")
-    # A content SHA prevents accidental overwrites of concurrent updates.
-    import base64
+    try:
+        remote = json.loads(fetch.stdout)
+        sha = remote["sha"]
+        import base64
+        old = json.loads(base64.b64decode(remote["content"]).decode("utf-8"))
+        new = json.loads(payload)
+        # The collection timestamp changes every export; avoid hourly commits
+        # if all actual aggregate metrics and data-quality counts are identical.
+        old.pop("updated_at", None)
+        new.pop("updated_at", None)
+        if old == new:
+            print("No new aggregate results; GitHub update skipped.")
+            return False
+    except (ValueError, KeyError, TypeError, UnicodeError) as exc:
+        raise RuntimeError("Public metrics JSON invalid; refusing to overwrite it") from exc
     request = {
         "message": "data(ai-lab): update sanitized RL training aggregates",
         "branch": BRANCH,
-        "sha": fetch.stdout.strip(),
+        "sha": sha,
         "content": base64.b64encode(payload.encode("utf-8")).decode("ascii"),
     }
     write = subprocess.run(
