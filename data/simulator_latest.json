@@ -1,0 +1,136 @@
+{
+  "schema_version": 1,
+  "source": "user-provided-console-output-import",
+  "status": "imported",
+  "updated_at": "2026-11-21T12:40:12.914Z",
+  "run": {
+    "target": "emerald-steel-current",
+    "nodes": 0,
+    "samples": 1,
+    "seed": 20261121,
+    "games_per_matchup": 4,
+    "reference": "meta-s14",
+    "skipped_opponents": [
+      "items"
+    ]
+  },
+  "summary": {
+    "completed_games": 36,
+    "planned_games": 36,
+    "wins": 26,
+    "losses": 10,
+    "undecided": 0,
+    "errors": 0,
+    "matchups": 9
+  },
+  "matchups": [
+    {
+      "opponent": "aggro",
+      "games": 4,
+      "wins": 1,
+      "losses": 3,
+      "undecided": 0,
+      "play_wins": 0,
+      "play_games": 2,
+      "draw_wins": 1,
+      "draw_games": 2,
+      "errors": 0
+    },
+    {
+      "opponent": "amber-amethyst",
+      "games": 4,
+      "wins": 3,
+      "losses": 1,
+      "undecided": 0,
+      "play_wins": 2,
+      "play_games": 2,
+      "draw_wins": 1,
+      "draw_games": 2,
+      "errors": 0
+    },
+    {
+      "opponent": "circle",
+      "games": 4,
+      "wins": 3,
+      "losses": 1,
+      "undecided": 0,
+      "play_wins": 1,
+      "play_games": 2,
+      "draw_wins": 2,
+      "draw_games": 2,
+      "errors": 0
+    },
+    {
+      "opponent": "detectives",
+      "games": 4,
+      "wins": 4,
+      "losses": 0,
+      "undecided": 0,
+      "play_wins": 2,
+      "play_games": 2,
+      "draw_wins": 2,
+      "draw_games": 2,
+      "errors": 0
+    },
+    {
+      "opponent": "midrange",
+      "games": 4,
+      "wins": 3,
+      "losses": 1,
+      "undecided": 0,
+      "play_wins": 2,
+      "play_games": 2,
+      "draw_wins": 1,
+      "draw_games": 2,
+      "errors": 0
+    },
+    {
+      "opponent": "mirror",
+      "games": 4,
+      "wins": 1,
+      "losses": 3,
+      "undecided": 0,
+      "play_wins": 0,
+      "play_games": 2,
+      "draw_wins": 1,
+      "draw_games": 2,
+      "errors": 0
+    },
+    {
+      "opponent": "retro",
+      "games": 4,
+      "wins": 4,
+      "losses": 0,
+      "undecided": 0,
+      "play_wins": 2,
+      "play_games": 2,
+      "draw_wins": 2,
+      "draw_games": 2,
+      "errors": 0
+    },
+    {
+      "opponent": "shere-khan",
+      "games": 4,
+      "wins": 4,
+      "losses": 0,
+      "undecided": 0,
+      "play_wins": 2,
+      "play_games": 2,
+      "draw_wins": 2,
+      "draw_games": 2,
+      "errors": 0
+    },
+    {
+      "opponent": "stitch",
+      "games": 4,
+      "wins": 3,
+      "losses": 1,
+      "undecided": 0,
+      "play_wins": 2,
+      "play_games": 2,
+      "draw_wins": 1,
+      "draw_games": 2,
+      "errors": 0
+    }
+  ]
+}
