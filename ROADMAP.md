@@ -1899,3 +1899,33 @@ Ficam para depois, sem data:
 - notificações de campeonatos e alertas aos membros;
 - estatísticas para lojas e ferramentas avançadas para organizadores;
 - personalização comercial das páginas, patrocínios, parcerias e monetização.
+
+## Decks · Faltando — imprimir proxies (ideia, 21/11/2026)
+
+Status: **ideia, sem data**. Pedido do Luis.
+
+Hoje, a aba **Faltando** de um deck mostra o que falta e como conseguir: comprar (links de loja e preço), pedir
+emprestado e trocar com amigos. A ideia é acrescentar **imprimir proxies** das cartas que faltam, para o jogador
+testar o deck antes de comprá-las.
+
+Escopo proposto:
+
+- só as cópias que faltam, com a mesma conta da aba (coleção + empréstimos); opção de imprimir o deck inteiro;
+- folha A4 ou Carta, 3 × 3 cartas no tamanho real (63 × 88 mm), com marcas de corte, gerada pela impressão do
+  navegador (PDF), sem servidor;
+- cada proxy com nome, custo, tinta, tipo, força / vontade / lore e o texto das habilidades, e a marca
+  **"PROXY — só para treino"**.
+
+A decidir antes de construir:
+
+- **Torneios:** pelas regras oficiais de torneio (14/07/2026), só o Lead Lore Guide emite proxy, e só quando uma
+  carta é danificada durante a partida (seção 2.2). Eventos Competitive e Premier aceitam só cartas oficiais
+  licenciadas e sem alteração (seção 3.11). A tela precisa dizer isso: a proxy do Inkwell serve para treino e
+  partidas casuais. Fonte: <https://files.disneylorcana.com/Tournament-Rules-7.14.2026_Update_EN.pdf>.
+- **Arte:** a arte oficial é material protegido (Disney / Ravensburger). Proposta padrão: proxy **só com texto**,
+  sem arte. Usar a imagem oficial só depois de avaliação jurídica.
+- **Não parecer carta verdadeira:** sem moldura nem logo oficiais; marca d'água "PROXY".
+
+Fica de fora: vender, enviar ou imprimir proxies para terceiros; proxies para torneio.
+
+Métrica, quando for construída: um evento novo em `docs/metricas.md` (por exemplo, `decks_miss_print_proxies`).
