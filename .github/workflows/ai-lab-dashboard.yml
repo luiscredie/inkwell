@@ -7,6 +7,8 @@ on:
       - "tools/test_ai_lab_metrics.py"
       - "tools/ai_lab_plateau_guard.py"
       - "tools/test_ai_lab_plateau.py"
+      - "tools/ai_lab_simulator_live.py"
+      - "tools/test_ai_lab_simulator_live.py"
       - ".github/workflows/ai-lab-dashboard.yml"
 permissions:
   contents: read
@@ -29,6 +31,8 @@ jobs:
           assert "<!doctype html>" in s.lower()
           assert "ai-lab-metrics/data/latest.json" in s
           assert "Não é taxa de vitória" in s
+          assert "simulator_latest.json" in s
+          assert "setInterval(refreshDashboard,60000)" in s
           assert "duels.token" not in s
           assert "service_role" not in s
           print("Dashboard static checks OK")
