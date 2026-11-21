@@ -1,23 +1,1121 @@
 {
   "schema_version": 1,
-  "updated_at": null,
+  "updated_at": "2026-11-21T11:28:38+00:00",
   "source": "inkwell-ai-lab-local-sanitized",
-  "status": "awaiting_first_upload",
+  "status": "reported",
   "summary": {
-    "episodes": 0,
-    "training_batches": 0,
-    "promotions": 0,
-    "latest_delta": null,
-    "latest_lower_ci95": null,
-    "last_promotion_episodes": null,
-    "plateau_batches": 0,
-    "anomalous_timestamps": 0
+    "episodes": 7122200,
+    "training_batches": 1424,
+    "promotions": 1,
+    "latest_delta": 0.0007,
+    "latest_lower_ci95": -0.0007,
+    "last_promotion_episodes": 602200,
+    "plateau_batches": 1304,
+    "anomalous_timestamps": 55,
+    "invalid_rows": 0
   },
   "data_quality": {
-    "history_games": null,
-    "logs_archived": null,
-    "observer_eligible": null
+    "history_games": 1119,
+    "logs_archived": 1116,
+    "observer_eligible": 1076
   },
-  "daily": [],
-  "history": []
+  "daily": [
+    {
+      "day": "2026-11-20",
+      "batches": 456,
+      "last_episodes": 2287200,
+      "promotions": 1,
+      "average_delta": 0.01176
+    },
+    {
+      "day": "2026-11-21",
+      "batches": 968,
+      "last_episodes": 7122200,
+      "promotions": 0,
+      "average_delta": -0.00257
+    }
+  ],
+  "history": [
+    {
+      "episodes": 7200,
+      "delta": -0.0425,
+      "lower_ci95": -0.0714,
+      "promoted": false
+    },
+    {
+      "episodes": 47200,
+      "delta": 0.0515,
+      "lower_ci95": 0.0276,
+      "promoted": false
+    },
+    {
+      "episodes": 87200,
+      "delta": 0.043,
+      "lower_ci95": 0.0242,
+      "promoted": false
+    },
+    {
+      "episodes": 127200,
+      "delta": 0.0681,
+      "lower_ci95": 0.0356,
+      "promoted": false
+    },
+    {
+      "episodes": 167200,
+      "delta": 0.0573,
+      "lower_ci95": 0.0335,
+      "promoted": false
+    },
+    {
+      "episodes": 207200,
+      "delta": 0.0633,
+      "lower_ci95": 0.0328,
+      "promoted": false
+    },
+    {
+      "episodes": 247200,
+      "delta": 0.0482,
+      "lower_ci95": 0.0253,
+      "promoted": false
+    },
+    {
+      "episodes": 287200,
+      "delta": 0.0567,
+      "lower_ci95": 0.0324,
+      "promoted": false
+    },
+    {
+      "episodes": 327200,
+      "delta": 0.0379,
+      "lower_ci95": 0.0154,
+      "promoted": false
+    },
+    {
+      "episodes": 367200,
+      "delta": -0.0026,
+      "lower_ci95": -0.0304,
+      "promoted": false
+    },
+    {
+      "episodes": 407200,
+      "delta": 0.0656,
+      "lower_ci95": 0.0403,
+      "promoted": false
+    },
+    {
+      "episodes": 447200,
+      "delta": 0.0522,
+      "lower_ci95": 0.0237,
+      "promoted": false
+    },
+    {
+      "episodes": 487200,
+      "delta": 0.0544,
+      "lower_ci95": 0.0229,
+      "promoted": false
+    },
+    {
+      "episodes": 527200,
+      "delta": 0.044,
+      "lower_ci95": 0.0168,
+      "promoted": false
+    },
+    {
+      "episodes": 567200,
+      "delta": 0.0577,
+      "lower_ci95": 0.0349,
+      "promoted": false
+    },
+    {
+      "episodes": 602200,
+      "delta": 0.107,
+      "lower_ci95": 0.0721,
+      "promoted": true
+    },
+    {
+      "episodes": 607200,
+      "delta": 0.0029,
+      "lower_ci95": -0.0056,
+      "promoted": false
+    },
+    {
+      "episodes": 647200,
+      "delta": -0.0216,
+      "lower_ci95": -0.0415,
+      "promoted": false
+    },
+    {
+      "episodes": 687200,
+      "delta": 0.0016,
+      "lower_ci95": -0.0106,
+      "promoted": false
+    },
+    {
+      "episodes": 727200,
+      "delta": 0.0003,
+      "lower_ci95": -0.0047,
+      "promoted": false
+    },
+    {
+      "episodes": 767200,
+      "delta": -0.0128,
+      "lower_ci95": -0.0303,
+      "promoted": false
+    },
+    {
+      "episodes": 807200,
+      "delta": -0.0004,
+      "lower_ci95": -0.0074,
+      "promoted": false
+    },
+    {
+      "episodes": 847200,
+      "delta": -0.0098,
+      "lower_ci95": -0.0184,
+      "promoted": false
+    },
+    {
+      "episodes": 887200,
+      "delta": -0.0049,
+      "lower_ci95": -0.0165,
+      "promoted": false
+    },
+    {
+      "episodes": 927200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 967200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 1007200,
+      "delta": -0.0029,
+      "lower_ci95": -0.0158,
+      "promoted": false
+    },
+    {
+      "episodes": 1047200,
+      "delta": -0.0006,
+      "lower_ci95": -0.0137,
+      "promoted": false
+    },
+    {
+      "episodes": 1087200,
+      "delta": -0.0029,
+      "lower_ci95": -0.0061,
+      "promoted": false
+    },
+    {
+      "episodes": 1127200,
+      "delta": -0.0073,
+      "lower_ci95": -0.011,
+      "promoted": false
+    },
+    {
+      "episodes": 1167200,
+      "delta": -0.0115,
+      "lower_ci95": -0.0268,
+      "promoted": false
+    },
+    {
+      "episodes": 1207200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 1247200,
+      "delta": -0.0094,
+      "lower_ci95": -0.0161,
+      "promoted": false
+    },
+    {
+      "episodes": 1287200,
+      "delta": -0.0055,
+      "lower_ci95": -0.0266,
+      "promoted": false
+    },
+    {
+      "episodes": 1327200,
+      "delta": 0.0007,
+      "lower_ci95": -0.009,
+      "promoted": false
+    },
+    {
+      "episodes": 1367200,
+      "delta": -0.0093,
+      "lower_ci95": -0.0168,
+      "promoted": false
+    },
+    {
+      "episodes": 1407200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 1447200,
+      "delta": -0.011,
+      "lower_ci95": -0.0258,
+      "promoted": false
+    },
+    {
+      "episodes": 1487200,
+      "delta": -0.0044,
+      "lower_ci95": -0.0185,
+      "promoted": false
+    },
+    {
+      "episodes": 1527200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 1567200,
+      "delta": -0.0184,
+      "lower_ci95": -0.0308,
+      "promoted": false
+    },
+    {
+      "episodes": 1607200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 1647200,
+      "delta": -0.0027,
+      "lower_ci95": -0.0148,
+      "promoted": false
+    },
+    {
+      "episodes": 1687200,
+      "delta": -0.0035,
+      "lower_ci95": -0.0174,
+      "promoted": false
+    },
+    {
+      "episodes": 1727200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 1767200,
+      "delta": -0.0036,
+      "lower_ci95": -0.0108,
+      "promoted": false
+    },
+    {
+      "episodes": 1807200,
+      "delta": 0.0063,
+      "lower_ci95": -0.0046,
+      "promoted": false
+    },
+    {
+      "episodes": 1847200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 1887200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 1927200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 1967200,
+      "delta": -0.0033,
+      "lower_ci95": -0.0104,
+      "promoted": false
+    },
+    {
+      "episodes": 2007200,
+      "delta": 0.0013,
+      "lower_ci95": -0.0144,
+      "promoted": false
+    },
+    {
+      "episodes": 2047200,
+      "delta": -0.0017,
+      "lower_ci95": -0.0044,
+      "promoted": false
+    },
+    {
+      "episodes": 2087200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 2127200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 2167200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 2207200,
+      "delta": -0.0044,
+      "lower_ci95": -0.0252,
+      "promoted": false
+    },
+    {
+      "episodes": 2247200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 2287200,
+      "delta": -0.0086,
+      "lower_ci95": -0.0308,
+      "promoted": false
+    },
+    {
+      "episodes": 2327200,
+      "delta": -0.0355,
+      "lower_ci95": -0.0616,
+      "promoted": false
+    },
+    {
+      "episodes": 2367200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 2407200,
+      "delta": 0.0008,
+      "lower_ci95": -0.0003,
+      "promoted": false
+    },
+    {
+      "episodes": 2447200,
+      "delta": -0.0259,
+      "lower_ci95": -0.0475,
+      "promoted": false
+    },
+    {
+      "episodes": 2487200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 2527200,
+      "delta": -0.0075,
+      "lower_ci95": -0.0233,
+      "promoted": false
+    },
+    {
+      "episodes": 2567200,
+      "delta": 0.005,
+      "lower_ci95": -0.0177,
+      "promoted": false
+    },
+    {
+      "episodes": 2607200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 2647200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 2687200,
+      "delta": -0.0116,
+      "lower_ci95": -0.0162,
+      "promoted": false
+    },
+    {
+      "episodes": 2727200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 2767200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 2807200,
+      "delta": -0.0367,
+      "lower_ci95": -0.0691,
+      "promoted": false
+    },
+    {
+      "episodes": 2847200,
+      "delta": -0.017,
+      "lower_ci95": -0.0323,
+      "promoted": false
+    },
+    {
+      "episodes": 2887200,
+      "delta": -0.0111,
+      "lower_ci95": -0.0229,
+      "promoted": false
+    },
+    {
+      "episodes": 2927200,
+      "delta": -0.0155,
+      "lower_ci95": -0.0373,
+      "promoted": false
+    },
+    {
+      "episodes": 2967200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 3007200,
+      "delta": -0.0024,
+      "lower_ci95": -0.0073,
+      "promoted": false
+    },
+    {
+      "episodes": 3047200,
+      "delta": -0.0152,
+      "lower_ci95": -0.0347,
+      "promoted": false
+    },
+    {
+      "episodes": 3087200,
+      "delta": 0.0066,
+      "lower_ci95": -0.005,
+      "promoted": false
+    },
+    {
+      "episodes": 3127200,
+      "delta": 0.0033,
+      "lower_ci95": -0.0071,
+      "promoted": false
+    },
+    {
+      "episodes": 3167200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 3207200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 3247200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 3287200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 3327200,
+      "delta": -0.0027,
+      "lower_ci95": -0.0142,
+      "promoted": false
+    },
+    {
+      "episodes": 3367200,
+      "delta": -0.0079,
+      "lower_ci95": -0.019,
+      "promoted": false
+    },
+    {
+      "episodes": 3407200,
+      "delta": -0.0481,
+      "lower_ci95": -0.073,
+      "promoted": false
+    },
+    {
+      "episodes": 3447200,
+      "delta": 0.0017,
+      "lower_ci95": -0.0064,
+      "promoted": false
+    },
+    {
+      "episodes": 3487200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 3527200,
+      "delta": -0.0024,
+      "lower_ci95": -0.0067,
+      "promoted": false
+    },
+    {
+      "episodes": 3567200,
+      "delta": -0.0011,
+      "lower_ci95": -0.0035,
+      "promoted": false
+    },
+    {
+      "episodes": 3607200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 3647200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 3687200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 3727200,
+      "delta": -0.0061,
+      "lower_ci95": -0.0161,
+      "promoted": false
+    },
+    {
+      "episodes": 3767200,
+      "delta": -0.002,
+      "lower_ci95": -0.0118,
+      "promoted": false
+    },
+    {
+      "episodes": 3807200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 3847200,
+      "delta": -0.0016,
+      "lower_ci95": -0.0043,
+      "promoted": false
+    },
+    {
+      "episodes": 3887200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 3927200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 3967200,
+      "delta": -0.0097,
+      "lower_ci95": -0.0228,
+      "promoted": false
+    },
+    {
+      "episodes": 4007200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 4047200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 4087200,
+      "delta": -0.0058,
+      "lower_ci95": -0.0125,
+      "promoted": false
+    },
+    {
+      "episodes": 4127200,
+      "delta": -0.0249,
+      "lower_ci95": -0.0498,
+      "promoted": false
+    },
+    {
+      "episodes": 4167200,
+      "delta": 0.0086,
+      "lower_ci95": -0.0082,
+      "promoted": false
+    },
+    {
+      "episodes": 4207200,
+      "delta": 0.0021,
+      "lower_ci95": -0.0118,
+      "promoted": false
+    },
+    {
+      "episodes": 4247200,
+      "delta": -0.009,
+      "lower_ci95": -0.0268,
+      "promoted": false
+    },
+    {
+      "episodes": 4287200,
+      "delta": -0.0042,
+      "lower_ci95": -0.0092,
+      "promoted": false
+    },
+    {
+      "episodes": 4327200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 4367200,
+      "delta": 0.0087,
+      "lower_ci95": -0.0049,
+      "promoted": false
+    },
+    {
+      "episodes": 4407200,
+      "delta": 0.007,
+      "lower_ci95": -0.0056,
+      "promoted": false
+    },
+    {
+      "episodes": 4447200,
+      "delta": -0.0029,
+      "lower_ci95": -0.0105,
+      "promoted": false
+    },
+    {
+      "episodes": 4487200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 4527200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 4567200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 4607200,
+      "delta": -0.0003,
+      "lower_ci95": -0.0009,
+      "promoted": false
+    },
+    {
+      "episodes": 4647200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 4687200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 4727200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 4767200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 4807200,
+      "delta": -0.0031,
+      "lower_ci95": -0.0057,
+      "promoted": false
+    },
+    {
+      "episodes": 4847200,
+      "delta": -0.0074,
+      "lower_ci95": -0.0192,
+      "promoted": false
+    },
+    {
+      "episodes": 4887200,
+      "delta": 0.0132,
+      "lower_ci95": -0.0107,
+      "promoted": false
+    },
+    {
+      "episodes": 4927200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 4967200,
+      "delta": -0.0039,
+      "lower_ci95": -0.0218,
+      "promoted": false
+    },
+    {
+      "episodes": 5007200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 5047200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 5087200,
+      "delta": -0.011,
+      "lower_ci95": -0.0238,
+      "promoted": false
+    },
+    {
+      "episodes": 5127200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 5167200,
+      "delta": -0.0042,
+      "lower_ci95": -0.0081,
+      "promoted": false
+    },
+    {
+      "episodes": 5207200,
+      "delta": -0.0068,
+      "lower_ci95": -0.0104,
+      "promoted": false
+    },
+    {
+      "episodes": 5247200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 5287200,
+      "delta": -0.0087,
+      "lower_ci95": -0.0218,
+      "promoted": false
+    },
+    {
+      "episodes": 5327200,
+      "delta": 0.0044,
+      "lower_ci95": -0.0096,
+      "promoted": false
+    },
+    {
+      "episodes": 5367200,
+      "delta": -0.0018,
+      "lower_ci95": -0.0156,
+      "promoted": false
+    },
+    {
+      "episodes": 5407200,
+      "delta": -0.0273,
+      "lower_ci95": -0.0496,
+      "promoted": false
+    },
+    {
+      "episodes": 5447200,
+      "delta": -0.0052,
+      "lower_ci95": -0.0157,
+      "promoted": false
+    },
+    {
+      "episodes": 5487200,
+      "delta": -0.0037,
+      "lower_ci95": -0.0177,
+      "promoted": false
+    },
+    {
+      "episodes": 5527200,
+      "delta": 0.0064,
+      "lower_ci95": -0.0052,
+      "promoted": false
+    },
+    {
+      "episodes": 5567200,
+      "delta": -0.0067,
+      "lower_ci95": -0.0235,
+      "promoted": false
+    },
+    {
+      "episodes": 5607200,
+      "delta": 0.0061,
+      "lower_ci95": -0.0069,
+      "promoted": false
+    },
+    {
+      "episodes": 5647200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 5687200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 5727200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 5767200,
+      "delta": 0.0074,
+      "lower_ci95": -0.0031,
+      "promoted": false
+    },
+    {
+      "episodes": 5807200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 5847200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 5887200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 5927200,
+      "delta": -0.0046,
+      "lower_ci95": -0.0123,
+      "promoted": false
+    },
+    {
+      "episodes": 5967200,
+      "delta": -0.0008,
+      "lower_ci95": -0.0014,
+      "promoted": false
+    },
+    {
+      "episodes": 6007200,
+      "delta": -0.0132,
+      "lower_ci95": -0.0275,
+      "promoted": false
+    },
+    {
+      "episodes": 6047200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 6087200,
+      "delta": -0.0108,
+      "lower_ci95": -0.0247,
+      "promoted": false
+    },
+    {
+      "episodes": 6127200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 6167200,
+      "delta": -0.0033,
+      "lower_ci95": -0.0137,
+      "promoted": false
+    },
+    {
+      "episodes": 6207200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 6247200,
+      "delta": -0.0101,
+      "lower_ci95": -0.0218,
+      "promoted": false
+    },
+    {
+      "episodes": 6287200,
+      "delta": 0.0012,
+      "lower_ci95": -0.001,
+      "promoted": false
+    },
+    {
+      "episodes": 6327200,
+      "delta": -0.0,
+      "lower_ci95": -0.0045,
+      "promoted": false
+    },
+    {
+      "episodes": 6367200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 6407200,
+      "delta": -0.0,
+      "lower_ci95": -0.0041,
+      "promoted": false
+    },
+    {
+      "episodes": 6447200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 6487200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 6527200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 6567200,
+      "delta": -0.0044,
+      "lower_ci95": -0.0203,
+      "promoted": false
+    },
+    {
+      "episodes": 6607200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 6647200,
+      "delta": 0.0101,
+      "lower_ci95": 0.0004,
+      "promoted": false
+    },
+    {
+      "episodes": 6687200,
+      "delta": 0.0166,
+      "lower_ci95": 0.0025,
+      "promoted": false
+    },
+    {
+      "episodes": 6727200,
+      "delta": -0.0032,
+      "lower_ci95": -0.0255,
+      "promoted": false
+    },
+    {
+      "episodes": 6767200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 6807200,
+      "delta": 0.0062,
+      "lower_ci95": -0.0028,
+      "promoted": false
+    },
+    {
+      "episodes": 6847200,
+      "delta": 0.0016,
+      "lower_ci95": -0.0045,
+      "promoted": false
+    },
+    {
+      "episodes": 6887200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 6927200,
+      "delta": -0.0027,
+      "lower_ci95": -0.0061,
+      "promoted": false
+    },
+    {
+      "episodes": 6967200,
+      "delta": 0.002,
+      "lower_ci95": -0.0115,
+      "promoted": false
+    },
+    {
+      "episodes": 7007200,
+      "delta": -0.0013,
+      "lower_ci95": -0.0019,
+      "promoted": false
+    },
+    {
+      "episodes": 7047200,
+      "delta": -0.0068,
+      "lower_ci95": -0.015,
+      "promoted": false
+    },
+    {
+      "episodes": 7087200,
+      "delta": 0.0,
+      "lower_ci95": 0.0,
+      "promoted": false
+    },
+    {
+      "episodes": 7122200,
+      "delta": 0.0007,
+      "lower_ci95": -0.0007,
+      "promoted": false
+    }
+  ],
+  "caveat": "3-turn heuristic reward; not match win rate or complete Lorcana gameplay"
 }
