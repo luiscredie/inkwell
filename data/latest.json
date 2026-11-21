@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "updated_at": null,
+  "source": "inkwell-ai-lab-local-sanitized",
+  "status": "awaiting_first_upload",
+  "summary": {
+    "episodes": 0,
+    "training_batches": 0,
+    "promotions": 0,
+    "latest_delta": null,
+    "latest_lower_ci95": null,
+    "last_promotion_episodes": null,
+    "plateau_batches": 0,
+    "anomalous_timestamps": 0
+  },
+  "data_quality": {
+    "history_games": null,
+    "logs_archived": null,
+    "observer_eligible": null
+  },
+  "daily": [],
+  "history": []
+}
