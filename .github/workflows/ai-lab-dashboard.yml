@@ -5,6 +5,8 @@ on:
       - "site/ai-lab/**"
       - "tools/ai_lab_metrics.py"
       - "tools/test_ai_lab_metrics.py"
+      - "tools/ai_lab_plateau_guard.py"
+      - "tools/test_ai_lab_plateau.py"
       - ".github/workflows/ai-lab-dashboard.yml"
 permissions:
   contents: read
@@ -17,7 +19,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Test metrics exporter
-        run: python -m unittest discover -s tools -p 'test_ai_lab_metrics.py' -v
+        run: python -m unittest discover -s tools -p 'test_ai_lab_*.py' -v
       - name: Static dashboard checks
         run: |
           python - <<'PY'
