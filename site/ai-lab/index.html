@@ -32,6 +32,17 @@ table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}th{t
 footer{margin-top:25px;color:var(--muted);font-size:13px}
 @media(max-width:850px){.grid{grid-template-columns:repeat(2,1fr)}.panels{grid-template-columns:1fr}}
 @media(max-width:460px){main{padding:20px 13px 45px}.card,.panel{padding:14px}.grid{gap:9px}td,th{padding:8px 4px}}
+
+/* Full-game simulator view; intentionally distinct from the RL proxy metrics. */
+.sim-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.sim-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:14px 0}
+.sim-note{font-size:12px;color:var(--muted);margin:10px 0}
+.progress-track{height:11px;background:#263649;border-radius:20px;overflow:hidden;margin:16px 0 6px}
+.progress-fill{height:100%;width:0;background:var(--teal);transition:width .3s}
+.sim-table{overflow-x:auto}
+.sim-table th,.sim-table td{white-space:nowrap}
+.sim-table td:first-child,.sim-table th:first-child{text-align:left}
+@media(max-width:850px){.sim-grid{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
@@ -74,16 +85,35 @@ footer{margin-top:25px;color:var(--muted);font-size:13px}
 <p class="small">Resumo dos lotes e promoções por dia; sem dados brutos.</p>
 <div style="overflow-x:auto"><table><thead><tr><th>Data</th><th>Episódios</th><th>Lotes</th><th>Promoções</th><th>Vantagem média</th></tr></thead><tbody id="days"></tbody></table></div>
 </section>
+
+<section class="panel" id="simulator" aria-label="Avaliação por partidas completas">
+<div class="sim-header">
+  <h2>Partidas completas · Set 14</h2>
+  <span class="pill" id="simStatus" aria-live="polite">Aguardando relatórios locais</span>
+</div>
+<p class="muted small">Experimentos do simulador externo. Estes resultados <strong>não</strong> são os episódios de treinamento RL; as taxas de vitória são de bots e só têm validade após a verificação das regras e decisões.</p>
+<div class="sim-grid">
+  <div class="card"><span class="label">Partidas concluídas</span><strong id="simGames">—</strong><span class="small" id="simTarget">Experimento local</span></div>
+  <div class="card"><span class="label">Taxa de vitória do bot</span><strong id="simRate">—</strong><span class="small" id="simRecord">Sem dados</span></div>
+  <div class="card"><span class="label">Confrontos avaliados</span><strong id="simMatchups">—</strong><span class="small">Arquetipos do Set 14</span></div>
+  <div class="card"><span class="label">Falhas / inconclusivas</span><strong id="simErrors">—</strong><span class="small">Eventos do simulador</span></div>
+</div>
+<div class="progress-track" role="progressbar" aria-label="Progresso de partidas completas" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="simProgressTrack"><div class="progress-fill" id="simProgress"></div></div>
+<div class="sim-note" id="simMetadata">Sem experimento publicado.</div>
+<div class="sim-table"><table><thead><tr><th>Oponente</th><th>V–D</th><th>Vitórias</th><th>Jogando primeiro</th><th>Jogando segundo</th></tr></thead><tbody id="simRows"></tbody></table></div>
+<p class="sim-note">Atualização automática a cada 60 segundos enquanto a página estiver aberta. Os resultados são publicados pelo computador do laboratório; não há streaming direto de partidas. Só são enviados agregados de confrontos, sem listas de cartas, nomes de jogadores ou logs de decisões.</p>
+</section>
 <section class="panel">
 <h2>Próxima etapa de pesquisa</h2>
 <p>Um ambiente de partidas completas, com regras verificadas para cartas, efeitos, tinta, combate e lore. Só então será possível usar vitória e derrota como recompensa e gerar matrizes de confrontos comparáveis às experiências descritas por MaroneFed.</p>
 <span class="pill">Motor de jogo completo: ainda não validado</span>
 </section>
-<footer>Dados lidos da branch pública <code>ai-lab-metrics</code>. <a href="https://github.com/luiscredie/inkwell">Código no GitHub</a>. A página não contém credenciais nem recebe dados diretamente do duels.ink. Última consulta realizada ao carregar a página.</footer>
+<footer>Dados lidos da branch pública <code>ai-lab-metrics</code>. <a href="https://github.com/luiscredie/inkwell">Código no GitHub</a>. A página não contém credenciais nem recebe dados diretamente do duels.ink. Consulta automática a cada 60 segundos; o indicador mostra o horário da última publicação, não o horário do navegador.</footer>
 </main>
 <script>
 "use strict";
 const URL_METRICS="https://raw.githubusercontent.com/luiscredie/inkwell/ai-lab-metrics/data/latest.json";
+const URL_SIMULATOR="https://raw.githubusercontent.com/luiscredie/inkwell/ai-lab-metrics/data/simulator_latest.json";
 const byId=id=>document.getElementById(id);
 const number=new Intl.NumberFormat("pt-BR");
 const fmt=n=>Number.isFinite(n)?number.format(n):"—";
@@ -130,7 +160,57 @@ function render(data){
   tbody.append(tr);
  }
 }
-fetch(URL_METRICS+"?v="+Date.now(),{cache:"no-store"}).then(r=>{if(!r.ok)throw Error("no data");return r.json()}).then(render).catch(()=>assign("updated","Ainda sem métricas publicadas"));
+function simRender(data){
+ if(!data || data.schema_version!==1 || !["running","completed","failed","imported"].includes(data.status)){assign("simStatus","Aguardando experimento válido");return}
+ const summary=data.summary||{},run=data.run||{},completed=Number(summary.completed_games)||0,planned=Number(summary.planned_games)||0;
+ const matchups=Array.isArray(data.matchups)?data.matchups:[];
+ const win=Number(summary.wins)||0,loss=Number(summary.losses)||0,draw=Number(summary.undecided)||0,errors=Number(summary.errors)||0;
+ const state=data.status==="running"?"Em andamento":data.status==="failed"?"Falhou":data.status==="imported"?"Resultado importado":"Concluído";
+ const stamp=data.updated_at?new Date(data.updated_at).toLocaleString("pt-BR"):"sem data";
+ const stale=data.status==="running" && (Date.now()-Date.parse(data.updated_at||""))>180000;
+ assign("simStatus",stale?"Publicação interrompida":state);
+ assign("simGames",fmt(completed)+(planned?" / "+fmt(planned):""));
+ assign("simTarget",String(run.target||"Deck próprio").slice(0,72));
+ const decided=win+loss;assign("simRate",decided?(100*win/decided).toLocaleString("pt-BR",{maximumFractionDigits:1})+"%":"—");
+ assign("simRecord",fmt(win)+" V · "+fmt(loss)+" D"+(draw?" · "+fmt(draw)+" inconclusivas":""));
+ assign("simMatchups",fmt(matchups.length||Number(summary.matchups)||0));
+ assign("simErrors",fmt(errors+draw));
+ const progress=planned?Math.max(0,Math.min(100,100*completed/planned)):0;
+ byId("simProgress").style.width=progress.toFixed(1)+"%";
+ byId("simProgressTrack").setAttribute("aria-valuenow",progress.toFixed(0));
+ const settings="Nós de busca: "+fmt(Number(run.nodes))+" · seed: "+(run.seed??"—")+" · amostras: "+fmt(Number(run.samples));
+ assign("simMetadata",state+" · Publicado: "+stamp+" · "+settings+(run.skipped_opponents?.length?" · Ausentes: "+run.skipped_opponents.join(", "):"")+(stale?" · Sem atualização há mais de 3 minutos":""));
+ const tbody=byId("simRows");tbody.replaceChildren();
+ for(const m of matchups.slice(0,60)){
+  const tr=document.createElement("tr");
+  const decided=(Number(m.wins)||0)+(Number(m.losses)||0);
+  const pct=decided?(100*(Number(m.wins)||0)/decided).toFixed(0)+"%":"—";
+  const sample=[String(m.opponent||"—"),fmt(m.wins)+"–"+fmt(m.losses),pct,(Number(m.play_games)||0)?fmt(m.play_wins)+"/"+fmt(m.play_games):"—",(Number(m.draw_games)||0)?fmt(m.draw_wins)+"/"+fmt(m.draw_games):"—"];
+  for(const item of sample){const cell=document.createElement("td");cell.textContent=item;tr.append(cell)}
+  tbody.append(tr);
+ }
+}
+async function requestJson(url){
+ const response=await fetch(url+"?v="+Date.now(),{cache:"no-store"});
+ if(!response.ok)throw Error("HTTP "+response.status);
+ return response.json();
+}
+let updating=false;
+async function refreshDashboard(){
+ if(updating)return;
+ updating=true;
+ try{
+  const [rl,sim]=await Promise.allSettled([requestJson(URL_METRICS),requestJson(URL_SIMULATOR)]);
+  if(rl.status==="fulfilled")render(rl.value);
+  else assign("updated","Falha de consulta · mantendo dados anteriores");
+  if(sim.status==="fulfilled")simRender(sim.value);
+  else if(!byId("simRows").childElementCount)assign("simStatus","Aguardando primeira publicação");
+ }finally{updating=false}
+}
+refreshDashboard();
+setInterval(refreshDashboard,60000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshDashboard()});
+
 </script>
 </body>
 </html>
