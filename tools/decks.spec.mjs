@@ -133,14 +133,18 @@ test('edit list: change a quantity, block an illegal add, undo', async ({ page }
   const calls = await setup(page);
   await page.goto(BASE + '?deck=deck-a');
   await page.getByRole('button', { name: 'Editar lista' }).click();
-  await page.getByRole('button', { name: 'Tirar uma · Gurgi' }).click();
+  await page.getByTestId('bld-deck').getByRole('button', { name: 'Tirar uma · Gurgi' }).click();
   await expect.poll(() => saves(calls).length).toBe(1);
   expect(saves(calls)[0].body.p_deck.cards['LOR10-10']).toBe(3);
   await expect(page.locator('[data-testid="deck-stats"]')).toContainText('59/60');
-  await page.locator('#addQ').fill('ariel on human');
-  await expect(page.locator('#addRes')).toContainText(/Fora do Core|Limite de cópias|Outra tinta/);
+  // a card out of Core shows only with "Legais no Core" off, with the reason and no +
+  await page.locator('#addQ').fill('ariel on human legs');
+  await expect(page.getByTestId('bgrid-empty')).toBeVisible();
+  await page.locator('[data-blegal]').click();
+  await expect(page.getByTestId('bgrid')).toContainText('Fora do Core');
+  await page.locator('[data-blegal]').click();
   await page.locator('#addQ').fill('gurgi');
-  await page.locator('#addRes [data-add]').first().click();
+  await page.getByTestId('bgrid').getByRole('button', { name: 'Pôr uma · Gurgi' }).click();
   await expect.poll(() => saves(calls).length).toBe(2);
   expect(saves(calls)[1].body.p_deck.cards['LOR10-10']).toBe(4);
   await page.locator('#undo').click();

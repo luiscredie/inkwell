@@ -41,6 +41,53 @@
 .dl-row.edit { grid-template-columns: 24px 34px minmax(0,1fr) auto; }
 .dl-row > .thumb { width: 34px; display: block; border-radius: 4px; }
 .dl-row.bad .t { color: var(--loss); }
+/* Montar (edit mode): a grid of cards for the deck's inks, the deck beside it (computer) or one tap away (phone) */
+.bld { margin-bottom: var(--sp-4); scroll-margin-top: calc(var(--bar-h) + 8px); }
+.bld-bar { position: sticky; top: var(--bar-h); z-index: 6; display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) 0; background: var(--bg); }
+.bld-bar .seg { flex: 1 1 auto; }
+.bld-bar .seg button { flex: 1 1 0; }
+.bld-count { margin-left: auto; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bld-count.short { color: var(--warn, var(--text)); }
+.bld-main { display: grid; gap: var(--sp-4); }
+.bld-pool { display: grid; gap: var(--sp-3); min-width: 0; align-content: start; }
+.bld-inks { display: grid; gap: var(--sp-2); }
+.bld-inks .chips .chipbtn[data-bink] { padding-left: 8px; }
+.bld-inks .chipbtn .inks { margin: 0; }
+.bld-inks .hint { margin: 0; }
+.bld-alt { justify-self: start; min-height: 32px; padding: 0 2px; border: 0; background: none; color: var(--text-2); font-size: var(--fs-small); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.bld-filt { display: grid; gap: var(--sp-2); }
+.bld-more { display: grid; gap: var(--sp-2); padding: var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-md); }
+.bld-more select { max-width: 100%; }
+.bld-res { display: flex; align-items: center; gap: var(--sp-2); min-height: 32px; }
+.bgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); }
+@media (min-width: 600px) { .bgrid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } }
+.bt { position: relative; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.bt .thumb.bt-img { width: 100%; border-radius: 10px; box-shadow: 0 4px 14px rgba(5,3,20,.18); }
+.bt.in .thumb.bt-img { outline: 2px solid var(--accent, var(--text)); outline-offset: 2px; }
+.bt-zoom { position: absolute; z-index: 3; top: 6px; right: 6px; display: grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: 999px; background: rgba(10,8,24,.62); color: #fff; }
+.bt-zoom .ic { width: 18px; height: 18px; }
+.bt-ph { position: absolute; inset: 0; display: grid; place-items: center; padding: 8px; text-align: center; font-size: var(--fs-small); color: var(--text-2); }
+.bt-info { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.bt-nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; font-size: var(--fs-small); }
+.bt-own { margin: 0; color: var(--text-2); font-size: var(--fs-micro, .75rem); min-height: 1.2em; }
+.bt-own .miss { color: var(--warn-text, var(--text)); font-weight: 700; }
+.bt .qty { justify-self: stretch; justify-content: space-between; }
+.bt .qty button { width: 44px; height: 40px; }
+.bt .qty button:disabled { opacity: .35; }
+.bt .qty output { min-width: 3ch; text-align: center; font-weight: 800; font-variant-numeric: tabular-nums; }
+.bt .tag { justify-self: start; }
+.bld-sent { height: 1px; }
+.bld-deck { min-width: 0; }
+.bld-deck .group-head:first-child { margin-top: 0; }
+@media (max-width: 959px) {
+  .bld-count { display: none; }   /* the "Meu deck 52/60" tab already shows it */
+  .bld[data-pane="cards"] .bld-deck, .bld[data-pane="deck"] .bld-pool { display: none; }
+}
+@media (min-width: 960px) {
+  .bld-bar .seg { display: none; }
+  .bld-main { grid-template-columns: minmax(0, 1fr) 340px; align-items: start; }
+  .bld-deck { position: sticky; top: calc(var(--bar-h) + 56px); max-height: calc(100vh - var(--bar-h) - 72px); overflow: auto; scrollbar-width: thin; }
+}
 .add-results { max-height: 340px; overflow: auto; margin-top: var(--sp-2); }
 .add-results .list-row { min-height: 52px; }
 .miss .thumb { width: 56px; }
@@ -218,6 +265,14 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     "Add a card": "Pôr carta", "Search a card to add": "Buscar carta para pôr", "Remove one": "Tirar uma", "Add one": "Pôr uma", "Saved": "Deck salvo", "Undo": "Desfazer",
     "Add deck to collection": "Adicionar deck à coleção", "Deck: {d} → {c}": "Deck: {d} → {c}", "What to add": "O que adicionar", "All the deck's cards": "Todas as cartas do deck", "Every copy in the list, added to the ones you already have. For a deck you bought or got.": "Todas as cópias da lista, somadas às que você já tem. Para um deck que você comprou ou ganhou.", "Only what's missing": "Só as que faltam", "Only what it takes to complete the deck; copies in your collections, in any art or finish, count (not collections shared with you).": "Só o necessário para completar o deck; contam as cópias das suas coleções, em qualquer arte ou acabamento (não as compartilhadas com você).", "These cards are added even if you already have the same copies.": "Estas cartas serão acrescentadas mesmo que você já tenha cópias iguais.", "You already have every card of this deck. Nothing to add.": "Você já tem todas as cartas deste deck. Não há nada a acrescentar.", "Not in the catalogue, left out: {c}": "Fora do catálogo, ficam de fora: {c}", "1 card to add": "1 carta a adicionar", "{n} cards to add": "{n} cartas a adicionar", "Adding…": "Adicionando…", "Confirm and add": "Confirmar e adicionar", "in the deck: {n}": "no deck: {n}", "you have: {n} normal · {f} foil": "você tem: {n} normal · {f} foil", "foil only": "só existe em foil", "Couldn't confirm the save. Reload the page and check the collection before trying again.": "Não foi possível confirmar a gravação. Recarregue a página e confira a coleção antes de tentar de novo.", "Couldn't save. Nothing was changed. Try again.": "Não foi possível salvar. Nada foi alterado. Tente de novo.", "Cards added to the collection.": "Cartas adicionadas à coleção.", "Couldn't undo: {c} changed after being added (here or on another device). Nothing was changed.": "Não foi possível desfazer: {c} mudou depois de adicionada (aqui ou em outro aparelho). Nada foi alterado.", "Couldn't undo: these cards changed after being added (here or on another device). Nothing was changed.": "Não foi possível desfazer: estas cartas mudaram depois de adicionadas (aqui ou em outro aparelho). Nada foi alterado.", "Undo isn't available right now. Nothing was changed; you can take the cards out in Coleção.": "O Desfazer não está disponível agora. Nada foi alterado; você pode retirar as cartas em Coleção.", "Couldn't undo. Nothing was changed. Check the collection before trying again.": "Não foi possível desfazer. Nada foi alterado. Confira a coleção antes de tentar de novo.", "This was already undone.": "Isso já foi desfeito.", "Adding a whole deck isn't available right now. Nothing was changed.": "Adicionar o deck inteiro não está disponível agora. Nada foi alterado.", "Undone: the cards added were taken out.": "Desfeito: as cartas adicionadas foram retiradas.", "Couldn't undo. Check the collection before trying again.": "Não foi possível desfazer. Confira a coleção antes de tentar de novo.",
     "Couldn't save. Try again.": "Não foi possível salvar. Tente de novo.", "In your collection “{c}” · this printing": "Na sua coleção “{c}” · esta arte", "✨ Fairy Godmother": "✨ Fada Madrinha", "Previous art": "Arte anterior", "Next art": "Próxima arte", "Iconic": "Icônica", "Epic": "Épica", "Enchanted": "Encantada", "Promo": "Promo", "Legendary": "Lendária", "Super rare": "Super-rara", "Rare": "Rara", "Uncommon": "Incomum", "Common": "Comum", "You have {h} of {q}": "Você tem {h} de {q}", "You have them all": "Você tem todas", "Your deck with the most special art of each card": "Toque da Fada Madrinha: seu deck com a arte mais especial de cada carta", "Same cards and rules: only the art changes. The most expensive printing of each card, in foil — swipe a card (or use the arrows) to see its other arts.": "As mesmas cartas e regras: só a arte muda. A impressão mais cara de cada carta, em foil — passe a carta para o lado (ou use as setas) para ver as outras artes.", "This version": "Esta versão", "Your list": "Sua lista", "You already have": "Você já tem", "To complete": "Para completar", "Foil prices. Tap a card to see it large and add the copies you have.": "Preços de foil. Toque numa carta para ver grande e adicionar as cópias que você tem.", "Normal": "Normal", "Foil": "Foil", "One less": "Menos um", "One more": "Mais um", "In this deck: {n}": "No deck: {n}", "All your collections: {n} normal · {f} foil": "Somando todas as suas coleções: {n} normais · {f} foil", "Save to collection": "Salvar na coleção", "Collection updated": "Coleção atualizada", "Changes save right away.": "As mudanças salvam na hora.",
+    // Montar (edit mode): the grid of cards
+    "See the card": "Ver a carta", "not inkable": "não tintável", "you have {n}": "você tem {n}", "not in your collection": "não está na sua coleção",
+    "Every ink, to look around. Only cards of the deck's inks can be added.": "Todas as tintas, para explorar. Só entram no deck as cartas das tintas dele.",
+    "Choose up to 2 inks": "Escolha até 2 tintas", "Choose the second ink": "Escolha a segunda tinta", "Tap an ink to take it out, then choose another": "Toque numa tinta para tirá-la e escolha outra",
+    "Change inks": "Mudar tintas", "Only the deck's inks": "Só as tintas do deck", "Show every ink": "Mostrar todas as tintas", "Legal in Core": "Legais no Core",
+    "Only the ones I have": "Só as que tenho", "More filters": "Mais filtros", "Set": "Coleção", "Any set": "Qualquer coleção", "Inkable or not": "Tintável ou não", "Inkable only": "Tintáveis", "Not inkable only": "Não tintáveis", "Items": "Itens", "Locations": "Locais",
+    "Builder": "Montar deck", "My deck": "Meu deck", "Name or ability": "Nome ou habilidade", "Clear filters": "Limpar filtros", "Loading abilities…": "Carregando habilidades…",
+    "None of your cards fit these filters.": "Nenhuma carta sua com esses filtros.", "Take an ink out first.": "Tire uma tinta antes de escolher outra.",
     "Copy limit": "Limite de cópias", "Other ink": "Outra tinta", "Not in Core": "Fora do Core", "Ink limit": "Limite de tintas", "Type at least 2 letters.": "Digite pelo menos 2 letras.", "No card found.": "Nenhuma carta encontrada.",
     "Deck name": "Nome do deck", "Inks": "Tintas", "Pick up to 2.": "Escolha até 2.", "Create deck": "Criar deck", "Save": "Salvar", "Cancel": "Cancelar", "Close": "Fechar",
     "Paste a list": "Cole a lista", "One card per line, like \"4 Stitch - Rock Star\". Lists from duels.ink, Dreamborn and Lorcanito work.": "Uma carta por linha, como \"4 Stitch - Rock Star\". Listas do duels.ink, Dreamborn e Lorcanito funcionam.",
@@ -812,7 +867,11 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     $("app").querySelector("[data-to-coll]")?.addEventListener("click", (e) => openDeckToColl(d, e.currentTarget));   // Faltando, empty collection: "Já tenho este deck"
     $("app").querySelector("[data-tab-go]")?.addEventListener("click", (e) => go(d.id, e.currentTarget.dataset.tabGo));
     document.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => go(d.id, b.dataset.tab, true));
-    $("edit").onclick = () => { editing = !editing; if (editing && tab !== "list") go(d.id, "list", true); else render(); if (editing) setTimeout(() => $("addQ")?.focus(), 0); };
+    $("edit").onclick = () => {
+      editing = !editing; if (editing && tab !== "list") go(d.id, "list", true); else render();
+      // the builder is below the deck's summary: bring it up; the keyboard opens by itself only with a mouse (on a phone it would cover the grid)
+      if (editing) setTimeout(() => { $("bld")?.scrollIntoView({ block: "start" }); if (matchMedia("(pointer: fine)").matches) $("addQ")?.focus({ preventScroll: true }); }, 0);
+    };
     $("more").onclick = (e) => { e.stopPropagation(); toggleMenu(d, m); };
     $("metaSel").onchange = (e) => saveMeta(d, e.target.value);
     wireBuild(d);
@@ -1130,6 +1189,10 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
   const GROUPS = [["char", "Characters"], ["song", "Songs"], ["action", "Actions"], ["item", "Items and locations"]];
   let addQ = "";
   function listTab(d, m) {
+    if (editing) return `<div id="bldSlot" data-testid="builder-slot"></div>`;   // the builder (bMount) takes its place
+    return deckRows(d, m);
+  }
+  function deckRows(d, m) {
     const unknown = m.entries.filter((e) => !e.c);
     const missingBy = new Map(m.missing.map((x) => [x.c.key, x.n]));
     const groups = GROUPS.map(([k, label]) => [label, m.known.filter((e) => kind(e.c) === k).sort((a, b) => a.c.cost - b.c.cost || a.c.name.localeCompare(b.c.name))]).filter(([, rows]) => rows.length);
@@ -1140,8 +1203,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
         : miss ? `<span class="tag warn">${esc(Tx("missing {n}", { n: Math.min(miss, e.q) }))}</span>` : dots(inksOf(e.c));
       return `<div class="dl-row${editing ? " edit" : ""}${m.bad.has(e.id) ? " bad" : ""}">${editing ? "" : `<span class="q">${e.q}×</span>`}<span class="cost${e.c.inkable ? " ink" : ""}" title="${esc(Tx("cost {c}", { c: e.c.cost }) + (e.c.inkable ? " · " + Tx("inkable") : ""))}">${e.c.cost}</span>${thumb(e.c)}<span class="t">${esc(a)}<small>${esc(b || typeName(e.c))}</small></span>${trail}</div>`;
     };
-    return `${editing ? addBox(d, m) : ""}
-      ${m.issues.length && !editing ? `<div class="notice warn" style="margin-bottom:var(--sp-3)"><i class="ic i-alert"></i><span class="t"><b>${esc(m.issues[0].text)}</b>${m.issues.length > 1 ? esc(m.issues.slice(1, 3).map((i) => i.text).join(" ")) : ""}</span></div>` : ""}
+    return `${m.issues.length ? `<div class="notice warn" style="margin-bottom:var(--sp-3)"><i class="ic i-alert"></i><span class="t"><b>${esc(m.issues[0].text)}</b>${m.issues.length > 1 ? esc(m.issues.slice(1, 3).map((i) => i.text).join(" ")) : ""}</span></div>` : ""}
       ${groups.length ? groups.map(([label, rows]) => `<div class="group-head"><h3>${Tx(label)}</h3><span class="small muted">${rows.reduce((s, e) => s + e.q, 0)}</span></div>
         <div class="card" style="padding:var(--sp-1) var(--sp-4)"><div class="dl" data-testid="dl">${rows.map(row).join("")}</div></div>`).join("")
         : emptyBox("decks", Tx("This deck is empty."), editing ? "" : Tx("Tap Edit list to add cards."), "")}
@@ -1156,20 +1218,234 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     let n = 0; for (const e of m.known) if (e.c.key === c.key) n += e.q; if (n >= copyLimit(c)) return Tx("Copy limit");
     return "";
   }
-  function addBox(d, m) {
-    const words = norm(addQ).split(" ").filter(Boolean);
-    let rows = [];
-    if (addQ.trim().length >= 2) {
-      const seen = new Set();
-      rows = CARDS.filter((c) => words.every((w) => c.k.includes(w))).sort((a, b) => (ownedName(b) > 0) - (ownedName(a) > 0) || (priceOf(a) ?? 9e9) - (priceOf(b) ?? 9e9))
-        .filter((c) => (seen.has(c.key) ? false : (seen.add(c.key), true))).slice(0, 30);
+  // ---------- Montar (edit mode): the cards that fit the deck's inks, as a grid ----------
+  // One tile per card (every printing of a name together). Inks: none chosen → pick up to two; one → its cards and a
+  // second to choose; two → only cards of those inks (a dual-ink card only when both are the deck's). "Show every ink"
+  // is for looking around. Nothing here changes the deck's inks or cards by itself: only a tap on an ink or on + / −.
+  // The builder is one element kept across renders (bMount), so a + or − never resets the search, the filters, the
+  // images already loaded or where the page was scrolled.
+  const B_STEP = 48, B_MECH = ["Evasive", "Bodyguard", "Challenger", "Shift", "Singer", "Rush", "Resist", "Ward", "Support", "Reckless", "Boost", "Vanish"];
+  const B_TYPES = [["char", "Characters"], ["action", "Actions"], ["song", "Songs"], ["item", "Items"], ["loc", "Locations"]];
+  const bKind = (c) => (c.song ? "song" : c.type === "Character" ? "char" : c.type === "Action" ? "action" : c.type === "Location" ? "loc" : "item");
+  let B = null, BPOOL = null, BTEXT = null, bTextP = null, bObs = null;
+  const bKey = (id) => `inkwell-builder:${id}`;
+  const bFresh = (id) => ({ id, q: "", ink: [], all: false, swap: false, cost: [], type: [], legal: true, owned: false, set: "", inkw: "", mech: [], more: false, pane: "cards" });
+  function bState(d) {
+    if (B?.id === d.id) return B;
+    if (B?.el) B.el.remove();
+    B = bFresh(d.id);
+    try { const kept = JSON.parse(sessionStorage.getItem(bKey(d.id)) || "{}"); for (const k of Object.keys(B)) if (k !== "id" && k in kept) B[k] = kept[k]; } catch { /* the filters only start blank */ }
+    B.shown = B_STEP; addQ = B.q;
+    return B;
+  }
+  const bSave = () => { try { const { id, el, shown, ...keep } = B; sessionStorage.setItem(bKey(id), JSON.stringify(keep)); } catch { /* kept only on this page */ } };
+  const bDeck = () => decks().find((x) => x.id === B?.id) || null;
+  // every card once: the printing shown is a Core one when there is one, else the newest set. A card with no ink
+  // (Illumineer's Quest boss cards, counters) can't go in a deck, so it isn't offered.
+  function bPool() {
+    if (BPOOL) return BPOOL;
+    BPOOL = [...BYNAME.values()].map((ps) => {
+      const pick = ps.slice().sort((a, b) => (CORE_SETS.includes(b.set) - CORE_SETS.includes(a.set)) || (!!b.img - !!a.img) || (setNo(b.set) - setNo(a.set)))[0];
+      return { key: pick.key, ps, c: pick, k: norm(pick.name), sets: new Set(ps.map((p) => p.set)) };
+    }).filter((g) => g.c.cost >= 0 && g.c.type && inksOf(g.c).length).sort((a, b) => a.c.cost - b.c.cost || a.c.name.localeCompare(b.c.name));
+    return BPOOL;
+  }
+  // abilities and keywords, for the text search and the mechanics filter: a separate file, fetched on first use
+  function bLoadText() {
+    return bTextP || (bTextP = fetch("../data/card-text.json").then((r) => (r.ok ? r.json() : null)).then((j) => {
+      BTEXT = new Map(); for (const [id, t, mech] of j?.cards || []) { const c = BY.get(id); if (c) BTEXT.set(c.key, { t: String(t || ""), m: mech || [] }); }
+    }).catch(() => { BTEXT = new Map(); }).then(() => bRedraw(true)));
+  }
+  const bInks = (d, m) => deckInks(d, m).filter((i) => INKS.includes(i));
+  const bFits = (c, sel) => { const ci = inksOf(c); return !ci.length || ci.every((i) => sel.includes(i)); };
+  const bQty = (d, key) => { let n = 0; for (const [id, q] of Object.entries(d.cards || {})) if (BY.get(id)?.key === key) n += +q || 0; return n; };
+  // which printing a + adds: one the deck already has, else the one you own most of, else the one shown
+  function bPrint(d, g) {
+    const inD = g.ps.filter((p) => +d.cards?.[p.id] > 0).sort((a, b) => d.cards[b.id] - d.cards[a.id])[0]; if (inD) return inD;
+    const col = coll(); let best = null, bn = 0;
+    for (const p of g.ps) { const n = (+col[p.id]?.n || 0) + (+col[p.id]?.f || 0); if (n > bn) { best = p; bn = n; } }
+    return best || g.c;
+  }
+  function bList(d, m) {
+    const sel = bInks(d, m), words = norm(B.q).split(" ").filter(Boolean), text = BTEXT;
+    const out = [];
+    for (const g of bPool()) {
+      const c = g.c;
+      if (!B.all && sel.length && !bFits(c, sel)) continue;
+      if (B.ink.length && !inksOf(c).some((i) => B.ink.includes(i))) continue;
+      if (B.cost.length && !B.cost.includes(Math.min(7, Math.max(1, c.cost)))) continue;
+      if (B.type.length && !B.type.includes(bKind(c))) continue;
+      if (B.legal && !legal(c, d.format)) continue;
+      if (B.owned && !ownedMine(c)) continue;
+      if (B.set && !g.sets.has(B.set)) continue;
+      if (B.inkw && (B.inkw === "yes") !== c.inkable) continue;
+      if (B.mech.length) { const t = text?.get(g.key); if (!t || !B.mech.every((x) => t.m.includes(x))) continue; }
+      let rank = 0;
+      if (words.length) {
+        if (!words.every((w) => g.k.includes(w))) { const t = text?.get(g.key); if (!t || !words.every((w) => (g.k + " " + t.t).includes(w))) continue; rank = 1; }
+      }
+      out.push([rank, g]);
     }
-    const res = rows.map((c) => { const why = canAdd(c, d, m), [a, b] = split(c.name), inDeck = m.known.filter((e) => e.c.key === c.key).reduce((s, e) => s + e.q, 0);
-      return `<div class="list-row flat">${thumb(c, "xs")}<span class="t"><span>${esc(a)}${b ? ` · ${esc(b)}` : ""}</span><span class="meta">${esc([inksOf(c).join("/"), Tx("cost {c}", { c: c.cost }), typeName(c), inDeck ? `${inDeck}×` : ""].filter(Boolean).join(" · "))}</span></span>
-        <span class="trail">${why ? `<span class="tag">${esc(why)}</span>` : `<button type="button" class="btn small" data-add="${esc(c.id)}" aria-label="${esc(Tx("Add one") + " · " + a)}"><i class="ic i-plus"></i></button>`}</span></div>`; }).join("");
-    return `<section class="card" style="margin-bottom:var(--sp-4)"><div class="hd"><h3>${Tx("Add a card")}</h3></div>
-      <span class="search"><i class="ic i-search"></i><input type="search" id="addQ" value="${esc(addQ)}" placeholder="${Tx("Search a card to add")}" aria-label="${Tx("Search a card to add")}" autocomplete="off"></span>
-      <div class="list tight divided add-results" id="addRes">${addQ.trim().length < 2 ? `<p class="small faint" style="padding:var(--sp-2) 0">${Tx("Type at least 2 letters.")}</p>` : res || `<p class="small faint" style="padding:var(--sp-2) 0">${Tx("No card found.")}</p>`}</div></section>`;
+    return out.sort((a, b) => a[0] - b[0]).map((x) => x[1]);   // name matches first, then ability text; each by cost
+  }
+  // why + can't add this card (copies are shown by n/4 and a disabled +, not by a message)
+  function bWhy(c, d, m) {
+    const sel = bInks(d, m), ci = inksOf(c);
+    if (sel.length && !bFits(c, sel)) return Tx("Other ink");
+    if (new Set([...sel, ...m.inks, ...ci]).size > MAX_INKS) return Tx("Ink limit");
+    if (!legal(c, d.format)) return Tx("Not in Core");
+    return "";
+  }
+  function bTile(d, m, g) {
+    const c = bPrint(d, g), [a, b] = split(c.name), q = bQty(d, g.key), lim = copyLimit(c), own = ownedMine(c), miss = Math.max(0, q - own), why = bWhy(c, d, m);
+    return `<article class="bt${q ? " in" : ""}" data-bkey="${esc(g.key)}" data-testid="bt">
+      <span class="thumb bt-img" data-card="${esc(c.id)}" data-ink="${(inksOf(c)[0] || "steel").toLowerCase()}">${c.img ? `<img src="${imgUrl(c)}" alt="${esc(c.name)}" loading="lazy" decoding="async" onerror="this.remove()">` : `<span class="bt-ph">${esc(c.name)}</span>`}</span>
+      ${c.img ? `<button type="button" class="bt-zoom" data-bzoom aria-label="${esc(Tx("See the card") + " · " + a)}"><i class="ic i-eye"></i></button>` : ""}
+      <div class="bt-info"><span class="cost${c.inkable ? " ink" : ""}" title="${esc(Tx("cost {c}", { c: c.cost }) + " · " + Tx(c.inkable ? "inkable" : "not inkable"))}">${c.cost}</span><span class="bt-nm" title="${esc(c.name)}">${esc(a)}${b ? `<small class="muted"> · ${esc(b)}</small>` : ""}</span></div>
+      <p class="bt-own" data-bown>${bOwnText(own, miss)}</p>
+      ${why && !q ? `<span class="tag">${esc(why)}</span>`
+        : `<span class="qty"><button type="button" data-bq="${esc(g.key)}:-1" aria-label="${esc(Tx("Remove one") + " · " + a)}" ${q ? "" : "disabled"}>−</button><output data-bn>${q}/${lim > 9 ? "∞" : lim}</output><button type="button" data-bq="${esc(g.key)}:1" aria-label="${esc(Tx("Add one") + " · " + a)}" ${q < lim && !why ? "" : "disabled"}>+</button></span>`}
+    </article>`;
+  }
+  const bOwnText = (own, miss) => `${own ? esc(Tx("you have {n}", { n: own })) : esc(Tx("not in your collection"))}${miss ? ` · <span class="miss">${esc(Tx("missing {n}", { n: miss }))}</span>` : ""}`;
+  function bInkBox(d, m) {
+    const sel = bInks(d, m), chip = (i, attr, on, label) => `<button type="button" class="chipbtn" ${attr}="${i}" aria-pressed="${on}">${dots([i])}${esc(label || Tx(i))}</button>`;
+    let html;
+    if (B.all) html = `<p class="small muted hint">${esc(Tx("Every ink, to look around. Only cards of the deck's inks can be added."))}</p><div class="chips scroll">${INKS.map((i) => chip(i, "data-bfink", B.ink.includes(i))).join("")}</div>`;
+    else if (sel.length < 2 || B.swap) {
+      const ask = sel.length === 0 ? Tx("Choose up to 2 inks") : sel.length === 1 ? Tx("Choose the second ink") : Tx("Tap an ink to take it out, then choose another");
+      html = `<p class="small muted hint" data-testid="ink-ask">${esc(ask)}</p><div class="chips" data-testid="ink-pick">${INKS.map((i) => chip(i, "data-bink", sel.includes(i))).join("")}</div>
+        ${B.swap ? `<button type="button" class="bld-alt" data-bswap>${Tx("Done")}</button>` : ""}`;
+    } else html = `<div class="chips" data-testid="ink-filter">${sel.map((i) => chip(i, "data-bfink", B.ink.includes(i))).join("")}<button type="button" class="bld-alt" data-bswap>${Tx("Change inks")}</button></div>`;
+    return html + `<button type="button" class="bld-alt" data-ball aria-pressed="${B.all}">${Tx(B.all ? "Only the deck's inks" : "Show every ink")}</button>`;
+  }
+  function bFiltBox(d) {
+    const on = (arr, v) => arr.includes(v);
+    const costs = [1, 2, 3, 4, 5, 6, 7].map((n) => `<button type="button" class="chipbtn" data-bcost="${n}" aria-pressed="${on(B.cost, n)}" aria-label="${esc(Tx("cost {c}", { c: n === 7 ? "7+" : n }))}">${n === 7 ? "7+" : n}</button>`).join("");
+    const types = B_TYPES.map(([k, l]) => `<button type="button" class="chipbtn" data-btype="${k}" aria-pressed="${on(B.type, k)}">${Tx(l)}</button>`).join("");
+    const flags = `${d.format !== "infinity" ? `<button type="button" class="chipbtn" data-blegal aria-pressed="${B.legal}">${Tx("Legal in Core")}</button>` : ""}
+      <button type="button" class="chipbtn" data-bowned aria-pressed="${B.owned}">${Tx("Only the ones I have")}</button>
+      <button type="button" class="chipbtn" data-bmore aria-expanded="${B.more}"><i class="ic i-filter"></i>${Tx("More filters")}${B.set || B.inkw || B.mech.length ? ` <span class="count quiet">${(B.set ? 1 : 0) + (B.inkw ? 1 : 0) + B.mech.length}</span>` : ""}</button>`;
+    const sets = (CARD_INDEX.sets || []).filter((s) => s.code && bPool().some((g) => g.sets.has(s.code))).sort((a, b) => setNo(b.code) - setNo(a.code));
+    const more = !B.more ? "" : `<div class="bld-more" data-testid="more-filters">
+      <label class="small">${Tx("Set")} <select class="inline" data-bset><option value="">${Tx("Any set")}</option>${sets.map((s) => `<option value="${esc(s.code)}" ${B.set === s.code ? "selected" : ""}>${esc((lang === "pt" && s.name_pt) || s.name_en || s.code)}</option>`).join("")}</select></label>
+      <div class="chips">${[["", "Inkable or not"], ["yes", "Inkable only"], ["no", "Not inkable only"]].map(([v, l]) => `<button type="button" class="chipbtn" data-binkw="${v}" aria-pressed="${B.inkw === v}">${Tx(l)}</button>`).join("")}</div>
+      <div class="chips" data-testid="mechanics">${B_MECH.map((x) => `<button type="button" class="chipbtn" data-bmech="${x}" aria-pressed="${on(B.mech, x)}">${esc(x)}</button>`).join("")}</div></div>`;
+    return `<div class="chips scroll" data-testid="cost-filter">${costs}</div><div class="chips scroll">${types}</div><div class="chips">${flags}</div>${more}`;
+  }
+  // build the builder once per deck; later renders only move it back in and refresh what changed
+  function bMount(d, m) {
+    const slot = $("bldSlot"); if (!slot) return;
+    bState(d);
+    const focused = B.el?.contains(document.activeElement) ? (document.activeElement.dataset.bq || document.activeElement.id || "") : "";
+    if (!B.el) {
+      const el = document.createElement("div"); el.className = "bld"; el.id = "bld"; el.dataset.testid = "builder"; B.el = el;
+      el.innerHTML = `<div class="bld-bar"><div class="seg" role="group" aria-label="${Tx("Builder")}"><button type="button" data-bpane="cards">${Tx("Cards")}</button><button type="button" data-bpane="deck">${Tx("My deck")} <b data-bcount></b></button></div><span class="bld-count" data-bcount2 data-testid="bld-count"></span></div>
+        <div class="bld-main"><div class="bld-pool">
+          <div class="bld-inks" data-binks></div>
+          <span class="search"><i class="ic i-search"></i><input type="search" id="addQ" placeholder="${Tx("Name or ability")}" aria-label="${Tx("Search a card to add")}" autocomplete="off"></span>
+          <div class="bld-filt" data-bfilt></div>
+          <div class="bld-res"><span class="small muted" data-bres aria-live="polite"></span><button type="button" class="bld-alt" data-bclear hidden>${Tx("Clear filters")}</button></div>
+          <div class="bgrid" data-bgrid data-testid="bgrid"></div><div class="bld-sent" data-bsent></div>
+        </div><aside class="bld-deck" data-bdeck data-testid="bld-deck" aria-label="${Tx("My deck")}"></aside></div>
+        <p class="small faint">${Tx("Changes save right away.")}</p>`;
+      el.querySelector("#addQ").value = B.q;
+      bWire(el);
+      slot.replaceWith(el);
+      bRedraw(true);
+    } else { slot.replaceWith(B.el); bRedraw(false); }
+    if (focused) (B.el.querySelector(`[data-bq="${CSS.escape(focused)}"]`) || (focused === "addQ" ? null : document.getElementById(focused)))?.focus({ preventScroll: true });
+    if ((B.q.trim().length >= 3 || B.mech.length) && !BTEXT) bLoadText();
+  }
+  // full: the list of cards changed (ink, search, filter); otherwise only counts, the deck and each tile's numbers
+  function bRedraw(full) {
+    const d = bDeck(), el = B?.el; if (!d || !el) return;
+    const m = measure(d), sel = bInks(d, m);
+    el.dataset.pane = B.pane;
+    el.querySelectorAll("[data-bpane]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.bpane === B.pane)));
+    const cnt = `${m.total}/${MIN}`;
+    el.querySelector("[data-bcount]").textContent = cnt;
+    const c2 = el.querySelector("[data-bcount2]"); c2.textContent = Tx("{n} cards", { n: cnt }); c2.classList.toggle("short", m.total < MIN);
+    el.querySelector("[data-bdeck]").innerHTML = deckRows(d, m);
+    const sig = JSON.stringify([sel, B.all, B.swap, B.ink]);
+    if (full || el.dataset.bsig !== sig) { el.dataset.bsig = sig; el.querySelector("[data-binks]").innerHTML = bInkBox(d, m); full = true; }
+    if (full) {
+      el.querySelector("[data-bfilt]").innerHTML = bFiltBox(d);
+      const list = bList(d, m); B.list = list; B.shown = Math.max(B_STEP, Math.min(B.shown || B_STEP, list.length));
+      const needText = (B.mech.length || B.q.trim().length >= 3) && !BTEXT;
+      el.querySelector("[data-bres]").textContent = needText && B.mech.length ? Tx("Loading abilities…") : list.length === 1 ? Tx("1 card") : Tx("{n} cards", { n: list.length });
+      el.querySelector("[data-bclear]").hidden = !(B.q || B.cost.length || B.type.length || !B.legal || B.owned || B.set || B.inkw || B.mech.length || B.ink.length);
+      el.querySelector("[data-bgrid]").innerHTML = list.length ? list.slice(0, B.shown).map((g) => bTile(d, m, g)).join("")
+        : `<p class="small faint" data-testid="bgrid-empty">${esc(B.owned && !B.q ? Tx("None of your cards fit these filters.") : Tx("No card found."))}</p>`;
+      bObserve();
+    } else el.querySelectorAll("[data-bkey]").forEach((t) => { const g = B.list?.find((x) => x.key === t.dataset.bkey); if (g) bTileNums(t, d, m, g); });
+  }
+  function bTileNums(t, d, m, g) {
+    const q = bQty(d, g.key), c = bPrint(d, g), lim = copyLimit(c), own = ownedMine(c), why = bWhy(c, d, m);
+    if (why && !q) { t.outerHTML = bTile(d, m, g); return; }
+    const out = t.querySelector("[data-bn]"); if (!out) { t.outerHTML = bTile(d, m, g); return; }
+    out.textContent = `${q}/${lim > 9 ? "∞" : lim}`; t.classList.toggle("in", q > 0);
+    const [minus, plus] = t.querySelectorAll("[data-bq]"); minus.disabled = !q; plus.disabled = !(q < lim && !why);
+    t.querySelector("[data-bown]").innerHTML = bOwnText(own, Math.max(0, q - own));
+  }
+  // more tiles as the end of the grid comes into view
+  function bObserve() {
+    const el = B?.el, sent = el?.querySelector("[data-bsent]"); if (!sent) return;
+    bObs?.disconnect();
+    if (!("IntersectionObserver" in window) || (B.list || []).length <= B.shown) return;
+    bObs = new IntersectionObserver((es) => {
+      if (!es.some((e) => e.isIntersecting)) return;
+      const d = bDeck(); if (!d || !B.list) return; const m = measure(d), from = B.shown; B.shown = Math.min(B.list.length, from + B_STEP);
+      el.querySelector("[data-bgrid]").insertAdjacentHTML("beforeend", B.list.slice(from, B.shown).map((g) => bTile(d, m, g)).join(""));
+      if (B.shown >= B.list.length) bObs.disconnect();
+    }, { rootMargin: "600px 0px" });
+    bObs.observe(sent);
+  }
+  function bStep(key, delta) {
+    const d = bDeck(), g = bPool().find((x) => x.key === key); if (!d || !g) return;
+    if (delta > 0) { const m = measure(d), c = bPrint(d, g); if (bWhy(c, d, m) || bQty(d, key) >= copyLimit(c)) return; setQty(d, c.id, 1); }
+    else { const pick = bPrint(d, g), id = +d.cards?.[pick.id] > 0 ? pick.id : g.ps.find((p) => +d.cards?.[p.id] > 0)?.id; if (!id) return; setQty(d, id, -1); }
+    bRedraw(false);
+  }
+  // the deck's inks: only a tap here changes them, and never takes a card out of the deck
+  function bSetInk(ink) {
+    const d = bDeck(); if (!d) return; const m = measure(d), sel = bInks(d, m);
+    let next = sel.includes(ink) ? sel.filter((i) => i !== ink) : sel.length < MAX_INKS ? [...sel, ink] : null;
+    if (!next) { toast(Tx("Take an ink out first.")); return; }
+    if (!before) before = JSON.parse(JSON.stringify(d));
+    d.colors = next; if (next.length === MAX_INKS && !B.swap) B.ink = [];
+    clearTimeout(saveTimer); saveTimer = setTimeout(() => flush(d), 700);
+    bSave(); render();
+  }
+  function bWire(el) {
+    const toggle = (arr, v) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
+    const changed = () => { B.shown = B_STEP; bSave(); bRedraw(true); };
+    let tq = null;
+    el.querySelector("#addQ").addEventListener("input", (e) => {
+      B.q = addQ = e.target.value; bSave(); clearTimeout(tq);
+      tq = setTimeout(() => { if (B.q.trim().length >= 3 && !BTEXT) bLoadText(); B.shown = B_STEP; bRedraw(true); }, 120);
+    });
+    el.addEventListener("click", (e) => {
+      const t = e.target.closest("button, select"); if (!t || !el.contains(t)) return;
+      const ds = t.dataset;
+      if (ds.bq) { const i = ds.bq.lastIndexOf(":"); bStep(ds.bq.slice(0, i), +ds.bq.slice(i + 1)); return; }
+      if (ds.q) { const d = bDeck(), i = ds.q.lastIndexOf(":"); if (d) { setQty(d, ds.q.slice(0, i), +ds.q.slice(i + 1)); bRedraw(false); el.querySelector(`[data-q="${CSS.escape(ds.q)}"]`)?.focus({ preventScroll: true }); } return; }
+      if ("bzoom" in ds) { t.closest(".bt")?.querySelector(".bt-img img")?.click(); return; }
+      if (ds.bpane) { B.pane = ds.bpane; bSave(); bRedraw(false); el.querySelector(".bld-bar")?.scrollIntoView({ block: "nearest" }); return; }
+      if (ds.bink) return bSetInk(ds.bink);
+      if (ds.bfink) { B.ink = toggle(B.ink, ds.bfink); return changed(); }
+      if ("bswap" in ds) { B.swap = !B.swap; return changed(); }
+      if ("ball" in ds) { B.all = !B.all; B.ink = []; return changed(); }
+      if (ds.bcost) { B.cost = toggle(B.cost, +ds.bcost); return changed(); }
+      if (ds.btype) { B.type = toggle(B.type, ds.btype); return changed(); }
+      if ("blegal" in ds) { B.legal = !B.legal; return changed(); }
+      if ("bowned" in ds) { B.owned = !B.owned; return changed(); }
+      if ("bmore" in ds) { B.more = !B.more; bSave(); el.querySelector("[data-bfilt]").innerHTML = bFiltBox(bDeck()); return; }
+      if ("binkw" in ds) { B.inkw = ds.binkw; return changed(); }
+      if (ds.bmech) { B.mech = toggle(B.mech, ds.bmech); if (!BTEXT) bLoadText(); return changed(); }
+      if ("bclear" in ds) { Object.assign(B, { q: "", ink: [], cost: [], type: [], legal: true, owned: false, set: "", inkw: "", mech: [] }); addQ = ""; el.querySelector("#addQ").value = ""; return changed(); }
+    });
+    el.addEventListener("change", (e) => { if (e.target.matches("[data-bset]")) { B.set = e.target.value; changed(); } });
   }
 
   // ---------- Análise ----------
@@ -1489,12 +1765,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
   }
 
   function wireTab(d, m, tab) {
-    if (tab === "list" && editing) {
-      const q = $("addQ");
-      q?.addEventListener("input", (e) => { addQ = e.target.value; render(); });
-      $("addRes")?.addEventListener("click", (e) => { const b = e.target.closest("[data-add]"); if (b) { setQty(d, b.dataset.add, 1); render(); $("addQ")?.focus(); } });
-      $("tabBody").querySelectorAll("[data-q]").forEach((b) => b.onclick = () => { const i = b.dataset.q.lastIndexOf(":"); setQty(d, b.dataset.q.slice(0, i), +b.dataset.q.slice(i + 1)); render(); document.querySelector(`[data-q="${CSS.escape(b.dataset.q)}"]`)?.focus(); });
-    }
+    if (tab === "list" && editing) bMount(d, m);
     if (tab === "gala") wireGala();
     if (tab === "missing") { document.querySelectorAll("[data-post]").forEach((b) => b.onclick = () => postMissing(d, b.dataset.post));
       // the missing copies as a deck list ("2 Name (LOR1-1)", as Copiar lista): Importar reads it back

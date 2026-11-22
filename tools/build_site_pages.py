@@ -141,12 +141,17 @@ def main() -> int:
             built = build_site_decks.build(Path(tmp) / "decks.html")
             if without_index(built.read_text(encoding="utf-8")) != without_index((SITE / "decks" / "index.html").read_text(encoding="utf-8")):
                 stale.append("site/decks/index.html")
+            text = build_site_decks.write_card_text(catalog, Path(tmp) / "card-text.json").read_text(encoding="utf-8")
+            have = SITE / "data" / "card-text.json"
+            if not have.exists() or have.read_text(encoding="utf-8") != text:
+                stale.append("site/data/card-text.json")
         if stale:
             print("Out of date (run python tools/build_site_pages.py):\n  " + "\n  ".join(stale))
             return 1
         print(f"{len(PAGES) + 1} pages match their sources")
         return 0
     print(build_site_decks.build().relative_to(ROOT))
+    print(build_site_decks.write_card_text(catalog).relative_to(ROOT))
     return 0
 
 
