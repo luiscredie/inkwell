@@ -65,6 +65,21 @@ for(const width of [320,375,390,430,1280]){
     assert(overflow<=2,`Horizontal overflow: ${overflow}px`);
     await page.screenshot({path:join(output,`home-${width}.png`),fullPage:true});
     await page.evaluate(()=>navigate('Coleção'));
+    // Leaving Collection while an opening is pending must release the opening guard.
+    await page.evaluate(()=>{
+      const original=window.setTimeout;
+      let pending;
+      window.setTimeout=(fn,ms,...args)=>{if(ms===160){pending=()=>fn(...args);return 1}return original(fn,ms,...args)};
+      try{
+        openBinder();
+        if(!binderOpening||!pending)throw Error('Opening was not scheduled');
+        navigate('Feed');
+        if(binderOpening)throw Error('Navigation left opening guard active');
+        pending();
+        if(binderOpen||binderOpening)throw Error('Stale timer reopened binder after navigation');
+        navigate('Coleção');
+      }finally{window.setTimeout=original}
+    });
     // A delayed opening must not resurrect a binder that was closed meanwhile.
     await page.emulateMedia({reducedMotion:'no-preference'});
     await page.evaluate(()=>{
