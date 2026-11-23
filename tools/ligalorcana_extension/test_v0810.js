@@ -1,0 +1,16 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const src=fs.readFileSync(__dirname+'/worker.js','utf8');
+const chrome={runtime:{onMessage:{addListener(){}},onStartup:{addListener(){}}},alarms:{onAlarm:{addListener(){}}}};
+const ctx={importScripts(){},chrome,URL,Date,console,setTimeout};vm.createContext(ctx);vm.runInContext(src,ctx);
+const bad='https://www.ligalorcana.com.br/?view=cards/card&card=Beast%20-%20Snowfield%20Troublemaker%20(1%2FPD1)%20(1-PD1)&ed=DLPC1&num=1-PD1';
+ctx.bad=bad;
+assert.equal(vm.runInContext('edOf(undefined)',ctx),null,'end-of-queue must not construct URL(undefined)');
+assert.equal(vm.runInContext('knownUnavailable(bad).num',ctx),'1-PD1');
+ctx.job={pending:{[bad]:{edition:'DLPC1',url:bad}},skipped:{},failures:{[bad]:3},queue:[bad],cardIndex:0,editionAudit:{DLPC1:{captured_urls:223,queued_urls:224,failed_urls:1,verified:false}},log:[]};
+assert.equal(vm.runInContext('quarantineKnown(job,bad)',ctx),true);
+assert.equal(Object.keys(ctx.job.pending).length,0);
+assert.equal(Object.keys(ctx.job.skipped).length,1);
+assert.equal(ctx.job.editionAudit.DLPC1.skipped_urls,1);
+assert.equal(ctx.job.editionAudit.DLPC1.verified,false);
+assert.equal(vm.runInContext('knownUnavailable("https://www.ligalorcana.com.br/?view=cards/card&ed=DLPC1&num=2-PD1")',ctx),null);
+console.log('PASS: end-of-queue URL guard and known-bad DLPC1 quarantine');
