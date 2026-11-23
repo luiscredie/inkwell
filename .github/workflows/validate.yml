@@ -75,6 +75,8 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
+      - name: Audit recovered LOR2 and LOR12 identities against catalog (read-only)
+        run: python tools/audit_lor2_lor12_recovered.py
       - name: Release validator fixtures
         run: python -m unittest tools/test_validate_release.py
       - name: Card-art validator fixtures
