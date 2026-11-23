@@ -1925,6 +1925,12 @@ como Dreamborn, lorcana.gg e duels.ink. Quatro fases, nesta ordem:
 
 As fases 2 a 4 são detalhadas e aprovadas antes de começar.
 
+Melhoria futura (registrada na aprovação da Fase 1, 23/11/2026): quando alguém tira a última tinta
+de um deck que tem cartas, essa escolha fica guardada só no navegador onde foi feita. Em outro
+aparelho, o deck volta a mostrar as tintas das cartas. Para valer em todos os aparelhos, o deck
+precisa guardar no banco que ficou sem tintas de propósito; isso exige uma mudança no banco, a ser
+aprovada à parte.
+
 Regras que valem para todas: legalidade, limite de cópias, coleção, desfazer, importação e as abas
 Análise, Faltando, Jogos, Plano, Fada Madrinha, preparo para evento e compartilhamento continuam
 as mesmas.
