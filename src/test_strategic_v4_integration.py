@@ -166,6 +166,33 @@ class ObserverAdapterTests(unittest.TestCase):
                 self.assertEqual(main([str(path), "--at-seq", "1", "--out-id", "sample"]), 1)
             self.assertIn("cannot evaluate a frame", output.getvalue())
 
+    def test_strength_undo_preserves_choices_without_assigning_unidentified_damage(self):
+        def choice(target):
+            return {"type": "CHOICE_RESOLVED", "data": {"choice": {
+                "sourceCardId": "2-201", "selectedInstanceIds": [target]}}}
+
+        damage = {"type": "DAMAGE_DEALT", "data": {"damage": 3}}
+        events = [{**choice("first"), "undone": True}, {"type": "ABILITY_TRIGGERED", "undone": True},
+                  {**damage, "undone": True}, {"type": "CHOICE_UNDO"}, choice("second"),
+                  {"type": "ABILITY_TRIGGERED"}, damage, {"type": "CARD_DESTROYED"}]
+        report = observer_summary(events)
+        first, second = report["strength_choices"]
+        self.assertEqual((first["target_instance_id"], first["undone_flag"], first["following_undo_index"]),
+                         ("first", True, 3))
+        self.assertEqual((second["target_instance_id"], second["undone_flag"]), ("second", None))
+        self.assertEqual([row["same_target"] for row in second["adjacent_effects"]], [None, None])
+        self.assertEqual(report["actions"]["DAMAGE_DEALT"], 1)
+
+    def test_strength_effect_identity_uses_full_instance_and_stops_at_challenge(self):
+        choice = {"type": "CHOICE_RESOLVED", "data": {"choice": {
+            "sourceCardId": "2-201", "selectedInstanceIds": ["one-1234"]}}}
+        damage = {"type": "DAMAGE_DEALT", "instanceId": "one-1234", "data": {"damage": 5}}
+        events = [choice, damage, {"type": "CARD_ATTACK"}, {"type": "CARD_DESTROYED"},
+                  choice, {**damage, "instanceId": "two-1234"}]
+        first, second = observer_summary(events)["strength_choices"]
+        self.assertEqual([e["same_target"] for e in first["adjacent_effects"]], [True])
+        self.assertEqual([e["same_target"] for e in second["adjacent_effects"]], [False])
+
     def test_reads_partial_observer_turn_report_without_inventing_opponent_turns(self):
         report = observer_summary({"game_id": "synthetic", "first_10_own_turns": [
             {"actions": [{"kind": "play"}]}, {},
