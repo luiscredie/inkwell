@@ -1934,3 +1934,59 @@ aprovada à parte.
 Regras que valem para todas: legalidade, limite de cópias, coleção, desfazer, importação e as abas
 Análise, Faltando, Jogos, Plano, Fada Madrinha, preparo para evento e compartilhamento continuam
 as mesmas.
+
+
+## Pendências novas — Preços e filtro de tintabilidade (23/11/2026)
+
+Relato do usuário com captura de tela no iPhone, em Preços → Valor da coleção,
+23/11/2026. Registro de investigação/aceite; **nenhuma correção de produção
+autorizada por esta seção**.
+
+### P1 — Divergência aparente entre valor destacado e gráfico da coleção
+
+- Evidência visual: o KPI "Valor agora" começa com "R$ 29.918…" (texto cortado
+  no cartão do celular), enquanto o gráfico mostra "R$ 24.655,15" no alto;
+  o eixo temporal termina em 22/nov., e há 31 registros na série mostrada.
+  Os valores exatos do KPI truncado não estão disponíveis na captura.
+- Diagnóstico inicial no código `src/site/precos/precos.template.html`:
+  o KPI usa `priceN/priceF` dos preços atuais; `valueAt(s.prices)` reavalia
+  a coleção atual nos preços de cada snapshot histórico, com fallback para o
+  preço atual quando falta cotação naquele snapshot; o texto superior do SVG
+  representa `hi = max(pts.v)`, **não o último ponto da série**. Portanto,
+  não é correto assumir que o número do gráfico é a avaliação de hoje. A causa
+  quantitativa da diferença **ainda não foi demonstrada**.
+- Investigar datas e cobertura dos datasets, preços Foil estimados, fallback
+  Liga/TCGplayer, IDs sem cotação, alterações da coleção e diferenças entre
+  base atual e série histórica. Registrar a reconciliação por fonte e data,
+  sem forçar números distintos a coincidir artificialmente.
+- Aceite: rotular claramente máximo da série, última data/valor e "Valor agora";
+  quando houver diferença, explicá-la corretamente com data/fonte/coverage.
+  A série deve usar a coleção atual em cada data, sem perder registros com
+  preço ausente silenciosamente. Testes com snapshots defasados, preços
+  ausentes, Foil estimado e conjuntos distintos de IDs.
+- Corrigir o **corte/overflow do KPI em 320–430 px**: o valor completo e a
+  unidade devem ficar legíveis sem invadir o cartão adjacente. Validar em
+  WebKit e Chromium. Não alterar os preços salvos pelo coletor.
+
+### P2 — Filtro Todas / Tintáveis / Não tintáveis em Decks e no construtor
+
+- Já existe `B.inkw` com "Tintáveis" e "Não tintáveis" em **Mais filtros**
+  da Fase 1 do construtor (`src/site/decks/decks.template.html`).
+  O problema na montagem é principalmente **descoberta**: destacar o controle
+  na área principal, sem duplicar lógica de inkability.
+- Adicionar filtro equivalente para a **visualização das cartas de um deck**
+  (não somente o catálogo da montagem), com três estados: Todas (padrão),
+  Tintáveis, Não tintáveis. Preservar o contexto entre Cartas / Meu deck quando
+  fizer sentido, com rótulos inequívocos.
+- Aceite: usar a propriedade canônica `inkable`; atualizar somente os itens
+  visíveis, sem remover cartas, recalcular incorretamente quantidades, mudar
+  preços/estatísticas ou salvar mudanças no deck. Testar cores simples/duplas,
+  cartas de diferentes sets, versões alternativas, acessibilidade e telas
+  320–430 px. Considerar a coexistência com os filtros de custo/tipo/set.
+- Coordenar a exposição do filtro com o painel da Fase 2; o novo painel deverá
+  manter os totais **do deck inteiro**, não apenas das cartas filtradas.
+
+Ordem sugerida: diagnosticar a divergência de Preços antes de considerar
+concluída qualquer melhoria que exponha estimativas de valor. Implementações
+em PRs separados e draft; não incluir modificações de banco, coletor,
+produção ou merge automático.
