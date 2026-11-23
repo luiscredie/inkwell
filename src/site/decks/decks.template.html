@@ -269,7 +269,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     "See the card": "Ver a carta", "not inkable": "não tintável", "you have {n}": "você tem {n}", "not in your collection": "não está na sua coleção",
     "Every ink, to look around. Only cards of the deck's inks can be added.": "Todas as tintas, para explorar. Só entram no deck as cartas das tintas dele.",
     "Choose up to 2 inks": "Escolha até 2 tintas", "Choose the second ink": "Escolha a segunda tinta", "Tap an ink to take it out, then choose another": "Toque numa tinta para tirá-la e escolha outra",
-    "Change inks": "Mudar tintas", "Only the deck's inks": "Só as tintas do deck", "Show every ink": "Mostrar todas as tintas", "Legal in Core": "Legais no Core",
+    "Change inks": "Mudar tintas", "1 card of another ink stays in the deck.": "1 carta de outra tinta continua no deck.", "{n} cards of other inks stay in the deck.": "{n} cartas de outras tintas continuam no deck.", "Only the deck's inks": "Só as tintas do deck", "Show every ink": "Mostrar todas as tintas", "Legal in Core": "Legais no Core",
     "Only the ones I have": "Só as que tenho", "More filters": "Mais filtros", "Set": "Coleção", "Any set": "Qualquer coleção", "Inkable or not": "Tintável ou não", "Inkable only": "Tintáveis", "Not inkable only": "Não tintáveis", "Items": "Itens", "Locations": "Locais",
     "Builder": "Montar deck", "My deck": "Meu deck", "Name or ability": "Nome ou habilidade", "Clear filters": "Limpar filtros", "Loading abilities…": "Carregando habilidades…",
     "None of your cards fit these filters.": "Nenhuma carta sua com esses filtros.", "Take an ink out first.": "Tire uma tinta antes de escolher outra.",
@@ -1256,16 +1256,28 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
       BTEXT = new Map(); for (const [id, t, mech] of j?.cards || []) { const c = BY.get(id); if (c) BTEXT.set(c.key, { t: String(t || ""), m: mech || [] }); }
     }).catch(() => { BTEXT = new Map(); }).then(() => bRedraw(true)));
   }
-  const bInks = (d, m) => deckInks(d, m).filter((i) => INKS.includes(i));
+  // The inks chosen for the deck. A deck saved without inks gets the inks of its cards (older decks) — unless its
+  // last ink was taken out here: then it stays without, even with cards of that ink still in it (they are kept).
+  const INK_OFF = "inkwell-builder-noink";
+  const inkOff = (id) => { try { return (JSON.parse(localStorage.getItem(INK_OFF) || "[]")).includes(id); } catch { return false; } };
+  const setInkOff = (id, on) => { try { const s = new Set(JSON.parse(localStorage.getItem(INK_OFF) || "[]")); on ? s.add(id) : s.delete(id); localStorage.setItem(INK_OFF, JSON.stringify([...s])); } catch { /* this page only */ } };
+  const bInks = (d, m) => { const own = (d.colors || []).filter((i) => INKS.includes(i)); return own.length || inkOff(d.id) ? own : deckInks(d, m).filter((i) => INKS.includes(i)); };
   const bFits = (c, sel) => { const ci = inksOf(c); return !ci.length || ci.every((i) => sel.includes(i)); };
   const bQty = (d, key) => { let n = 0; for (const [id, q] of Object.entries(d.cards || {})) if (BY.get(id)?.key === key) n += +q || 0; return n; };
-  // which printing a + adds: one the deck already has, else the one you own most of, else the one shown
-  function bPrint(d, g) {
-    const inD = g.ps.filter((p) => +d.cards?.[p.id] > 0).sort((a, b) => d.cards[b.id] - d.cards[a.id])[0]; if (inD) return inD;
+  // Which printing a tile shows: with a set chosen, that set's (the one you own most of there); otherwise the one in
+  // the deck, else the one you own most of, else the default. + adds to the printing already in the deck — choosing a
+  // set changes the picture, never the deck — and, when the deck has none, the printing shown.
+  const bInDeck = (d, g) => g.ps.filter((p) => +d.cards?.[p.id] > 0).sort((a, b) => d.cards[b.id] - d.cards[a.id])[0] || null;
+  function bMost(ps) {
     const col = coll(); let best = null, bn = 0;
-    for (const p of g.ps) { const n = (+col[p.id]?.n || 0) + (+col[p.id]?.f || 0); if (n > bn) { best = p; bn = n; } }
-    return best || g.c;
+    for (const p of ps) { const n = (+col[p.id]?.n || 0) + (+col[p.id]?.f || 0); if (n > bn) { best = p; bn = n; } }
+    return best;
   }
+  function bArt(d, g) {
+    if (B.set) { const ps = g.ps.filter((p) => p.set === B.set); if (ps.length) return bMost(ps) || ps.find((p) => p.img) || ps[0]; }
+    return bInDeck(d, g) || bMost(g.ps) || g.c;
+  }
+  const bPrint = (d, g) => bInDeck(d, g) || bArt(d, g);
   function bList(d, m) {
     const sel = bInks(d, m), words = norm(B.q).split(" ").filter(Boolean), text = BTEXT;
     const out = [];
@@ -1292,12 +1304,12 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
   function bWhy(c, d, m) {
     const sel = bInks(d, m), ci = inksOf(c);
     if (sel.length && !bFits(c, sel)) return Tx("Other ink");
-    if (new Set([...sel, ...m.inks, ...ci]).size > MAX_INKS) return Tx("Ink limit");
+    if (!sel.length && new Set([...m.inks, ...ci]).size > MAX_INKS) return Tx("Ink limit");
     if (!legal(c, d.format)) return Tx("Not in Core");
     return "";
   }
   function bTile(d, m, g) {
-    const c = bPrint(d, g), [a, b] = split(c.name), q = bQty(d, g.key), lim = copyLimit(c), own = ownedMine(c), miss = Math.max(0, q - own), why = bWhy(c, d, m);
+    const c = bArt(d, g), [a, b] = split(c.name), q = bQty(d, g.key), lim = copyLimit(c), own = ownedMine(c), miss = Math.max(0, q - own), why = bWhy(c, d, m);
     return `<article class="bt${q ? " in" : ""}" data-bkey="${esc(g.key)}" data-testid="bt">
       <span class="thumb bt-img" data-card="${esc(c.id)}" data-ink="${(inksOf(c)[0] || "steel").toLowerCase()}">${c.img ? `<img src="${imgUrl(c)}" alt="${esc(c.name)}" loading="lazy" decoding="async" onerror="this.remove()">` : `<span class="bt-ph">${esc(c.name)}</span>`}</span>
       ${c.img ? `<button type="button" class="bt-zoom" data-bzoom aria-label="${esc(Tx("See the card") + " · " + a)}"><i class="ic i-eye"></i></button>` : ""}
@@ -1317,6 +1329,8 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
       html = `<p class="small muted hint" data-testid="ink-ask">${esc(ask)}</p><div class="chips" data-testid="ink-pick">${INKS.map((i) => chip(i, "data-bink", sel.includes(i))).join("")}</div>
         ${B.swap ? `<button type="button" class="bld-alt" data-bswap>${Tx("Done")}</button>` : ""}`;
     } else html = `<div class="chips" data-testid="ink-filter">${sel.map((i) => chip(i, "data-bfink", B.ink.includes(i))).join("")}<button type="button" class="bld-alt" data-bswap>${Tx("Change inks")}</button></div>`;
+    const off = sel.length ? Object.entries(d.cards || {}).reduce((n, [id, q]) => { const c = BY.get(id); return n + (c && !bFits(c, sel) ? +q || 0 : 0); }, 0) : 0;
+    if (off) html += `<p class="small muted hint" data-testid="ink-off">${esc(off === 1 ? Tx("1 card of another ink stays in the deck.") : Tx("{n} cards of other inks stay in the deck.", { n: off }))}</p>`;
     return html + `<button type="button" class="bld-alt" data-ball aria-pressed="${B.all}">${Tx(B.all ? "Only the deck's inks" : "Show every ink")}</button>`;
   }
   function bFiltBox(d) {
@@ -1404,7 +1418,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
   function bStep(key, delta) {
     const d = bDeck(), g = bPool().find((x) => x.key === key); if (!d || !g) return;
     if (delta > 0) { const m = measure(d), c = bPrint(d, g); if (bWhy(c, d, m) || bQty(d, key) >= copyLimit(c)) return; setQty(d, c.id, 1); }
-    else { const pick = bPrint(d, g), id = +d.cards?.[pick.id] > 0 ? pick.id : g.ps.find((p) => +d.cards?.[p.id] > 0)?.id; if (!id) return; setQty(d, id, -1); }
+    else { const id = bInDeck(d, g)?.id; if (!id) return; setQty(d, id, -1); }
     bRedraw(false);
   }
   // the deck's inks: only a tap here changes them, and never takes a card out of the deck
@@ -1413,7 +1427,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     let next = sel.includes(ink) ? sel.filter((i) => i !== ink) : sel.length < MAX_INKS ? [...sel, ink] : null;
     if (!next) { toast(Tx("Take an ink out first.")); return; }
     if (!before) before = JSON.parse(JSON.stringify(d));
-    d.colors = next; if (next.length === MAX_INKS && !B.swap) B.ink = [];
+    d.colors = next; setInkOff(d.id, !next.length); if (next.length === MAX_INKS && !B.swap) B.ink = [];
     clearTimeout(saveTimer); saveTimer = setTimeout(() => flush(d), 700);
     bSave(); render();
   }
@@ -1795,7 +1809,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
   function flush(d, quiet) {
     const p = prof(); if (!p) return Promise.resolve();
     const snap = before; before = null;
-    const body = { id: d.id, name: d.name, format: d.format || "core", colors: (d.colors || []).length ? d.colors : measure(d).inks.slice(0, 2), cards: d.cards || {}, notes: d.notes || "", ...(typeof d.public === "boolean" ? { public: d.public } : {}) };
+    const body = { id: d.id, name: d.name, format: d.format || "core", colors: (d.colors || []).length || inkOff(d.id) ? d.colors || [] : measure(d).inks.slice(0, 2), cards: d.cards || {}, notes: d.notes || "", ...(typeof d.public === "boolean" ? { public: d.public } : {}) };
     queue = queue.then(() => CLOUD.api("rpc/save_deck", { method: "POST", body: { p_profile: p.profile, p_deck: body } }))
       .then((saved) => {
         if (saved && typeof saved === "object") Object.assign(d, saved);
@@ -2074,6 +2088,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
         const deck = d || { id: newId(), cards: {}, notes: "" };
         before = d ? JSON.parse(JSON.stringify(d)) : null;
         Object.assign(deck, { name: f.name.trim().slice(0, 80), format: f.format, colors: f.colors });
+        if (f.colors.length) setInkOff(deck.id, false);
         if (f.pub || typeof deck.public === "boolean") deck.public = f.pub;
         if (!d) { p.decks.push(deck); editing = true; }
         sh.close();

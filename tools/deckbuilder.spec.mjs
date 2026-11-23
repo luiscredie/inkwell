@@ -27,7 +27,11 @@ async function setup(page, { deck = AMBER, coll } = {}) {
     const json = (v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
     if (path === 'inkwell_profiles') return json(db.profiles);
     if (path === 'profiles') return json([{ user_id: ME, display_name: 'Luis' }]);
-    if (path === 'rpc/save_deck') return json({ ...body.p_deck, updated_at: '2026-10-21T10:00:00Z' });
+    if (path === 'rpc/save_deck') {   // kept, so a reload reads back what was saved
+      const saved = { ...body.p_deck, updated_at: '2026-10-21T10:00:00Z' }, ds = db.profiles[0].decks;
+      ds.splice(Math.max(0, ds.findIndex((x) => x.id === saved.id)), 1, JSON.parse(JSON.stringify(saved)));
+      return json(saved);
+    }
     if (path === 'rpc/my_duels_sync') return json(null);
     return json([]);
   });
@@ -193,3 +197,54 @@ for (const w of [320, 360, 390, 430]) {
     await expect(page.getByTestId('bgrid')).toBeVisible();
   });
 }
+
+test('taking out the last ink: it stays out (also after a reload) and the cards stay in the deck', async ({ page }) => {
+  const { calls } = await setup(page);
+  await openBuilder(page);
+  await expect(page.locator('[data-bink="Amber"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('[data-bink="Amber"]').click();
+  await expect(page.getByTestId('ink-ask')).toHaveText('Escolha até 2 tintas');
+  await expect(page.locator('[data-bink="Amber"]')).toHaveAttribute('aria-pressed', 'false');
+  await expect.poll(() => lastDeck(calls)?.colors).toEqual([]);
+  expect(Object.values(lastDeck(calls).cards).reduce((a, b) => a + b, 0)).toBe(56);   // no card removed
+  await page.waitForTimeout(900);   // past the save debounce: Amber doesn't come back by itself
+  await expect(page.locator('[data-bink="Amber"]')).toHaveAttribute('aria-pressed', 'false');
+
+  // choosing another ink: its cards can be added; the Amber ones stay and are pointed out
+  await page.locator('[data-bink="Ruby"]').click();
+  await expect.poll(() => lastDeck(calls)?.colors).toEqual(['Ruby']);
+  await expect(page.getByTestId('ink-off')).toHaveText('56 cartas de outras tintas continuam no deck.');
+  await expect(page.getByTestId('bt').first().locator('[data-bq$=":1"]')).toBeEnabled();
+  await page.locator('[data-bink="Ruby"]').click();
+  await expect.poll(() => lastDeck(calls)?.colors).toEqual([]);
+
+  await page.reload();
+  await page.getByRole('button', { name: 'Editar lista' }).click();
+  await expect(page.getByTestId('ink-ask')).toHaveText('Escolha até 2 tintas');
+  await expect(page.locator('[data-bink="Amber"]')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('[data-bpane="deck"]')).toContainText('56/60');
+});
+
+test('set filter: the tile shows that set\'s printing; + keeps the printing already in the deck', async ({ page }) => {
+  const coll = { ...Object.fromEntries(IDS.map((id) => [id, { n: 4, f: 0 }])), 'LOR1-12': { n: 3, f: 0 }, 'LOR1-14': { n: 1, f: 0 } };
+  const { calls } = await setup(page, { deck: { ...AMBER, cards: { ...AMBER.cards, 'LOR1-12': 2 } }, coll });
+  await openBuilder(page);
+  const art = (name) => tile(page, name).locator('[data-card]');
+  await page.locator('#addQ').fill('true friend');
+  await expect(art('Mickey Mouse')).toHaveAttribute('data-card', 'LOR1-12');   // the deck's printing
+  await page.locator('[data-bmore]').click();
+  await page.locator('[data-bset]').selectOption('LOR9');
+  await expect(art('Mickey Mouse')).toHaveAttribute('data-card', 'LOR9-13');
+  await tile(page, 'Mickey Mouse').locator('[data-bq$=":1"]').click();
+  await expect.poll(() => lastDeck(calls)?.cards['LOR1-12']).toBe(3);   // the saved printing, not switched
+  expect(lastDeck(calls).cards['LOR9-13']).toBeUndefined();
+  await expect(art('Mickey Mouse')).toHaveAttribute('data-card', 'LOR9-13');
+
+  // a card not in the deck: the set's printing, even owning another one; + adds the printing shown
+  await page.locator('#addQ').fill('moana of motunui');
+  await expect(art('Moana')).toHaveAttribute('data-card', 'LOR9-20');
+  await tile(page, 'Moana').locator('[data-bq$=":1"]').click();
+  await expect.poll(() => lastDeck(calls)?.cards['LOR9-20']).toBe(1);
+  await page.locator('[data-bset]').selectOption('');
+  await expect(art('Moana')).toHaveAttribute('data-card', 'LOR9-20');   // now in the deck: the deck's printing
+});
