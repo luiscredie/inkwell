@@ -1993,11 +1993,17 @@ produção ou merge automático.
 
 ### Situação em 23/11/2026 (reconciliação após os PRs #312, #313 e #314)
 
-Os três PRs foram aprovados tecnicamente pelo Conselho e estão **em draft, aguardando a decisão de
-publicação**. Ordem de integração: #312 → #313 → #314 (rebaseado na `main` depois do #313) → este
-registro.
+**Publicado em 23/11/2026**, na ordem aprovada pelo Conselho: #312 → #313 → #314 (rebaseado na `main`
+depois do #313, com os 4 checks verdes na nova base) → este registro.
+- O deploy do GitHub Pages publicou o commit `50cf41f` da `main`.
+- As páginas servidas em inkwell.com.br (Decks e Preços) são idênticas às da `main` nesse commit.
+- Os testes das três entregas rodaram contra o site publicado, com Supabase simulado e sem ler nem
+  alterar dados reais: 36/36 no Chromium e 36/36 no WebKit (iPhone).
+- Revisão visual em 1280, 390 e 320 px: sem erros de JavaScript, sem imagens quebradas e sem valor
+  cortado.
+- Nenhum teste foi feito em celular real.
 
-- **P1 — Valor da coleção (#312).** A causa quantitativa foi demonstrada: são duas avaliações
+- **P1 — Valor da coleção (#312, publicado).** A causa quantitativa foi demonstrada: são duas avaliações
   diferentes e as duas estão corretas.
   - O "Valor agora" usa os preços atuais, com a Liga Lorcana quando há cotação recente e o TCGplayer
     nas demais cartas.
@@ -2014,12 +2020,12 @@ registro.
     mais o da Liga, e é contada à parte. Os registros com cobertura parcial também são informados.
   - O corte do valor em 320–430 px foi corrigido.
   - Nenhum preço salvo, coletor ou banco foi alterado.
-- **P2 — Todas / Tintáveis / Não tintáveis (#313).** O filtro está na lista do deck, com as
+- **P2 — Todas / Tintáveis / Não tintáveis (#313, publicado).** O filtro está na lista do deck, com as
   contagens do deck inteiro. No construtor, saiu de "Mais filtros" para os filtros principais.
   - O estado é o mesmo na lista e no construtor.
   - É só visualização: nada é salvo, e contagem, Visão geral, Análise e preços usam o deck inteiro.
   - Usa a propriedade canônica `inkable`.
-- **Fase 2 do Deck Builder (#314).** Contém:
+- **Fase 2 do Deck Builder (#314, publicado).** Contém:
   - no celular, uma linha de 28 px com cartas, tintáveis, curva de 7 colunas (≤1…7+, custo 0 em
     ≤1), cartas que faltam e valor para completar ("+ N sem preço" quando falta preço);
   - no computador, um painel no topo da coluna do deck;
@@ -2037,4 +2043,8 @@ Pendências conhecidas (sem duplicar as entradas já registradas em "Decks · Mo
   Padronizar numa mudança própria, sem alterar cálculos.
 - **WebKit instável (#286):** os testes J1 e o de histórico do sharedeck às vezes falham no WebKit
   sob carga e passam ao repetir. Isso já aconteceu também em PRs que não mexem em Decks (#312).
-  Não é regressão destas entregas, mas continua aberto.
+  Não é regressão destas entregas, mas continua aberto e ficou mais frequente. Em 23/11, depois que o
+  #314 acrescentou testes de WebKit, o J1 falhou em 5 de 9 execuções do CI do #314 e uma vez na
+  `main` (`50cf41f`), o que adiou o deploy até repetir o job. Localmente, o J1 passou 12/12 isolado
+  e a suíte WebKit completa passou 85/85, o que indica falha sob carga e não defeito funcional.
+  Prioridade: tratar a causa no #286 antes que os checks vermelhos virem rotina.
