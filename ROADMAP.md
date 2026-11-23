@@ -1919,7 +1919,9 @@ como Dreamborn, lorcana.gg e duels.ink. Quatro fases, nesta ordem:
      quando usado;
    - celular primeiro (320–430 px): duas colunas, abas "Cartas" e "Meu deck 52/60", busca, filtros
      e rolagem mantidos ao pôr e tirar cartas.
-2. **Painel do deck sempre visível.** O deck e seus números ao lado da grade enquanto se monta.
+2. **Painel do deck sempre visível (Fase 2 — PR #314, aprovada com ajustes em 23/11/2026).** Cartas, tintáveis,
+   curva de 7 colunas, cartas que faltam e valor para completar, numa linha de 28 px no celular e num painel no
+   computador.
 3. **Mão de teste e mulligan.** Comprar uma mão inicial e treinar o mulligan com o deck.
 4. **Exportar para jogar.** Levar a lista para os simuladores onde se joga.
 
@@ -1930,6 +1932,13 @@ de um deck que tem cartas, essa escolha fica guardada só no navegador onde foi 
 aparelho, o deck volta a mostrar as tintas das cartas. Para valer em todos os aparelhos, o deck
 precisa guardar no banco que ficou sem tintas de propósito; isso exige uma mudança no banco, a ser
 aprovada à parte.
+
+Limitação de UX da Fase 1 (registrada na revisão da Fase 2, 23/11/2026): com o teclado do celular aberto, os
+filtros (tintas, custo, tipo, tintabilidade) ficam entre a busca e a grade, então os resultados da busca não
+aparecem logo abaixo do campo. O critério original da Fase 2 ("o começo da primeira fileira de cartas visível
+com o teclado aberto") não foi atendido por isso. O PR #314 garante só o que depende do painel: busca inteira à
+vista e barra fixa de no máximo 96 px. Resolver pede reorganizar os filtros da Fase 1 (por exemplo, recolhê-los
+enquanto se digita), a decidir à parte.
 
 Regras que valem para todas: legalidade, limite de cópias, coleção, desfazer, importação e as abas
 Análise, Faltando, Jogos, Plano, Fada Madrinha, preparo para evento e compartilhamento continuam

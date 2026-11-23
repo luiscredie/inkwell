@@ -328,3 +328,192 @@ for (const w of [320, 430]) {
     await expect(seg).toHaveAttribute('aria-label', 'Tintável ou não');
   });
 }
+
+// ---------- Fase 2: the deck while it is built (spec "Deck builder · Fase 2", Conselho 23/11) ----------
+// Fixture prices: only LOR10-1 (R$ 10,50) and the promo Timon DLPC1-32-P3 (R$ 7,00), so every value is checkable.
+const P2_PRICES = { schema_version: 2, generated_at: new Date().toISOString(), prices: { 'LOR10-1': { n: 10.5, nl: 10.5, nh: 10.5 }, 'DLPC1-32-P3': { n: 7, nl: 7, nh: 7 } } };
+const pricesRoute = (page, body = P2_PRICES) => page.route('**/data/prices.json', (r) => (body ? r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) }) : r.fulfill({ status: 404, body: '' })));
+// LOR10-1: 4 in the deck, none owned (R$ 10,50 each) · LOR10-10 (Gurgi, cost 2): 4 in the deck, 2 owned, no price
+const P2_COLL = Object.fromEntries(IDS.map((id) => [id, { n: id === 'LOR10-1' ? 0 : id === 'LOR10-10' ? 2 : 4, f: 0 }]));
+const curveOf = async (page) => (await page.getByTestId('bp-curve').getAttribute('aria-label'));
+
+test('panel: count, inkable, curve, missing and value — and they follow every + and −', async ({ page }) => {
+  await pricesRoute(page);
+  const { calls } = await setup(page, { coll: P2_COLL });
+  await openBuilder(page);
+  const panel = page.getByTestId('bld-panel');
+  if (!(await panel.isVisible())) await page.locator('[data-bpane="deck"]').click();
+  await expect(page.getByTestId('bp-count')).toHaveText('56/60');
+  await expect(page.getByTestId('bp-miss')).toHaveText('6');
+  await expect(page.getByTestId('bp-val')).toHaveText(/R\$\s42,00 \+ 2 sem preço/);   // 4 × 10,50; Gurgi has no price
+  await expect(page.getByTestId('bp-note')).toContainText('Estimativa parcial: 2 sem preço ficam fora.');
+  // the curve's columns add up to the deck
+  const before = await curveOf(page);
+  const sum = (lbl) => [...lbl.matchAll(/(≤1|\d\+?): (\d+)/g)].reduce((a, m) => a + +m[2], 0);
+  expect(sum(before)).toBe(56);
+  const gurgiCol = (lbl) => +lbl.match(/(?:^|, )2: (\d+)/)[1];
+  // − on Gurgi (cost 2): 55 cards, one fewer missing and without price, one fewer in column 2
+  if (await page.locator('[data-bpane="cards"]').isVisible()) await page.locator('[data-bpane="cards"]').click();
+  await page.locator('#addQ').fill('gurgi apple');
+  await tile(page, 'Gurgi').getByRole('button', { name: 'Tirar uma · Gurgi' }).click();
+  if (!(await panel.isVisible())) await page.locator('[data-bpane="deck"]').click();
+  await expect(page.getByTestId('bp-count')).toHaveText('55/60');
+  await expect(page.getByTestId('bp-miss')).toHaveText('5');
+  await expect(page.getByTestId('bp-val')).toHaveText(/R\$\s42,00 \+ 1 sem preço/);
+  expect(gurgiCol(await curveOf(page))).toBe(gurgiCol(before) - 1);
+  await expect(page.locator('[data-bsay]')).toHaveText(/55 de 60 cartas, \d+ tintáveis, faltam 5, R\$\s42,00 \+ 1 sem preço, estimativa parcial/);
+  // the Missing tab says the same total for the same cards
+  await expect.poll(() => saves(calls).length).toBe(1);
+});
+
+test('panel: another printing you own counts; a printing with no price uses its cheapest reprint', async ({ page }) => {
+  await pricesRoute(page);
+  // Timon - Snowball Swiper: the deck has LOR11-16 (no price); you own one promo DLPC1-32-P3 (R$ 7)
+  const deck = { ...AMBER, cards: { ...AMBER.cards, 'LOR11-16': 2 } };
+  await setup(page, { deck, coll: { ...Object.fromEntries(IDS.map((id) => [id, { n: 4, f: 0 }])), 'DLPC1-32-P3': { n: 1, f: 0 } } });
+  await openBuilder(page);
+  if (!(await page.getByTestId('bld-panel').isVisible())) await page.locator('[data-bpane="deck"]').click();
+  await expect(page.getByTestId('bp-miss')).toHaveText('1');
+  await expect(page.getByTestId('bp-val')).toHaveText(/^R\$\s7,00$/);
+  await expect(page.getByTestId('bp-note')).not.toContainText('Estimativa parcial');
+});
+
+test('panel: prices that did not load say so; a complete deck says "Você tem todas"', async ({ page }) => {
+  await pricesRoute(page, null);
+  await setup(page, { coll: P2_COLL });
+  await openBuilder(page);
+  if (!(await page.getByTestId('bld-panel').isVisible())) await page.locator('[data-bpane="deck"]').click();
+  await expect(page.getByTestId('bp-val')).toHaveText('preço indisponível');
+  await expect(page.getByTestId('bp-count')).toHaveText('56/60');   // the rest works
+  const p2 = await page.context().newPage();
+  await pricesRoute(p2);
+  await setup(p2, { coll: Object.fromEntries(IDS.map((id) => [id, { n: 4, f: 0 }])) });
+  await openBuilder(p2);
+  if (!(await p2.getByTestId('bld-panel').isVisible())) await p2.locator('[data-bpane="deck"]').click();
+  await expect(p2.getByTestId('bld-panel')).toContainText('Você tem todas');
+  await expect(p2.getByTestId('bp-val')).toHaveCount(0);
+});
+
+test('panel: no request beyond the deck saves while building (prices and collection are the ones loaded)', async ({ page }) => {
+  await pricesRoute(page);
+  await setup(page, { coll: P2_COLL });
+  await openBuilder(page);
+  await page.locator('#addQ').fill('gurgi apple');   // (the search's own ability index loads here, Fase 1 — before we count)
+  await expect(tile(page, 'Gurgi')).toHaveCount(1);
+  await page.waitForTimeout(500);
+  const seen = [];
+  page.on('request', (r) => { const u = r.url(); if (/\/rest\/v1\/|\/data\/.*\.json|\/functions\//.test(u)) seen.push(u.replace(/^.*?(\/rest\/v1\/|\/data\/|\/functions\/)/, '$1')); });
+  const g = tile(page, 'Gurgi');
+  for (let i = 0; i < 5; i++) { await g.locator('[data-bq$=":-1"]').click(); await g.locator('[data-bq$=":1"]').click(); }
+  await page.waitForTimeout(1200);
+  expect(seen.filter((u) => u !== '/rest/v1/rpc/save_deck')).toEqual([]);
+});
+
+for (const w of [320, 360, 390, 430]) {
+  test(`phone ${w}px: one 28 px line under the tabs, readable, nothing cut; the grid keeps two columns`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: 800 });
+    await pricesRoute(page);
+    await setup(page, { coll: P2_COLL });
+    await openBuilder(page);
+    const line = page.getByTestId('bld-sum');
+    await expect(line).toBeVisible();
+    const box = await line.boundingBox();
+    expect(Math.round(box.height)).toBeLessThanOrEqual(28);
+    const cut = await page.$$eval('[data-testid="bld-sum"] button', (els) => els.filter((e) => e.scrollWidth > e.clientWidth + 1 || e.getBoundingClientRect().right > innerWidth).map((e) => e.textContent));
+    expect(cut).toEqual([]);
+    expect(await page.$$eval('[data-testid="bld-sum"] button', (els) => Math.min(...els.map((e) => parseFloat(getComputedStyle(e).fontSize))))).toBeGreaterThanOrEqual(12);
+    await expect(page.getByTestId('bs-val')).toContainText(/R\$\s42,00 \+2/);   // cents below R$ 100
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    const xs = await page.$$eval('[data-testid="bt"]', (els) => [...new Set(els.slice(0, 6).map((e) => Math.round(e.getBoundingClientRect().left)))]);
+    expect(xs.length).toBe(2);
+    // the + and − still work right under it
+    await page.locator('#addQ').fill('gurgi apple');
+    await tile(page, 'Gurgi').locator('[data-bq$=":-1"]').click();
+    await expect(page.locator('[data-bpane="deck"]')).toContainText('55/60');
+    await expect(page.getByTestId('bs-open')).toContainText('55/60');
+  });
+}
+
+test('phone: tapping the value opens Faltando; the rest of the line opens the summary sheet, which closes back to the line', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await pricesRoute(page);
+  await setup(page, { coll: P2_COLL });
+  await openBuilder(page);
+  const open = page.getByTestId('bs-open');
+  await expect(open).toHaveAttribute('aria-label', /^Resumo do deck: 56 de 60 cartas, \d+ tintáveis, faltam 6, R\$\s42,00 \+ 2 sem preço, estimativa parcial$/);
+  await open.click();
+  const sheet = page.locator('#sheet');
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByRole('heading', { name: 'Resumo do deck' })).toBeVisible();
+  await expect(sheet.getByTestId('bp-count')).toHaveText('56/60');
+  await page.keyboard.press('Escape');
+  await expect(sheet).toBeHidden();
+  await expect(open).toBeFocused();
+  await open.click();
+  await sheet.getByTestId('sheet-miss').click();
+  await expect(page).toHaveURL(/tab=missing/);
+  await expect(page.getByRole('tab', { name: /Faltando/ })).toHaveAttribute('aria-selected', 'true');
+  // and from the line's value directly
+  await page.getByRole('button', { name: 'Editar lista' }).click();
+  await page.getByTestId('bs-val').click();
+  await expect(page).toHaveURL(/tab=missing/);
+});
+
+test('the summary sheet opened three times navigates once from "Ver o que falta"', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await pricesRoute(page);
+  await setup(page, { coll: P2_COLL });
+  await openBuilder(page);
+  const open = page.getByTestId('bs-open'), sheet = page.locator('#sheet');
+  for (let i = 0; i < 3; i++) { await open.click(); await expect(sheet).toBeVisible(); await page.keyboard.press('Escape'); await expect(sheet).toBeHidden(); }
+  await open.click();
+  await page.evaluate(() => { window.__nav = 0; const push = history.pushState.bind(history); history.pushState = (...a) => { window.__nav++; return push(...a); }; });
+  await sheet.getByTestId('sheet-miss').click();
+  await expect(page).toHaveURL(/tab=missing/);
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => window.__nav)).toBe(1);
+  await expect(page.getByRole('tab', { name: /Faltando/ })).toHaveAttribute('aria-selected', 'true');
+});
+
+test('desktop: the panel sits atop the deck column; its value opens Faltando', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await pricesRoute(page);
+  await setup(page, { coll: P2_COLL });
+  await openBuilder(page);
+  await expect(page.getByTestId('bld-sum')).toBeHidden();
+  await expect(page.getByTestId('bld-panel')).toBeVisible();
+  await page.getByTestId('bp-val').click();
+  await expect(page).toHaveURL(/tab=missing/);
+});
+
+test('phone with the keyboard open: the search stays in view and uncovered; the fixed bar stays small', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 400 });   // about what is left above an on-screen keyboard
+  await pricesRoute(page);
+  await setup(page, { coll: P2_COLL });
+  await openBuilder(page);
+  await page.locator('#addQ').focus();
+  await page.locator('#addQ').scrollIntoViewIfNeeded();
+  const bar = await page.locator('.bld-bar').boundingBox(), q = await page.locator('#addQ').boundingBox();
+  expect(bar.height).toBeLessThanOrEqual(96);
+  expect(q.y).toBeGreaterThanOrEqual(bar.y + bar.height - 1);   // not under the sticky bar
+  expect(q.y + q.height).toBeLessThanOrEqual(400);
+  await page.locator('#addQ').fill('gurgi');
+  await expect(page.getByTestId('bs-open')).toBeVisible();
+});
+
+test('contrast of the compact line: at least 4.5:1 in both themes', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await pricesRoute(page);
+  await setup(page, { coll: P2_COLL });
+  for (const theme of ['dia', 'noite']) {
+    await page.addInitScript((t) => { try { localStorage.setItem('inkwell-theme', t); } catch {} document.documentElement.dataset.theme = t; }, theme);
+    await openBuilder(page);
+    await page.evaluate((t) => { document.documentElement.dataset.theme = t; }, theme);
+    const ratios = await page.$$eval('[data-testid="bld-sum"] b, [data-testid="bld-sum"] span, [data-testid="bs-val"]', (els) => {
+      const rgb = (s) => s.match(/[\d.]+/g).slice(0, 3).map(Number), lum = ([r, g, b]) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+      const bgOf = (e) => { for (let x = e; x; x = x.parentElement) { const c = getComputedStyle(x).backgroundColor; if (c && !/rgba\(0, 0, 0, 0\)|transparent/.test(c)) return rgb(c); } return [255, 255, 255]; };
+      return els.filter((e) => e.textContent.trim()).map((e) => { const a = lum(rgb(getComputedStyle(e).color)), b = lum(bgOf(e)); return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05); });
+    });
+    expect(Math.min(...ratios)).toBeGreaterThanOrEqual(4.5);
+  }
+});

@@ -24,6 +24,8 @@ jobs:
         run: node tools/price-movers.test.mjs
       - name: Deck allocation optimizer
         run: node tools/deck-allocation.test.mjs
+      - name: Deck curve (overview and builder panel)
+        run: node tools/deckview-curve.test.mjs
       - name: Deck portfolio advisor
         run: node tools/deck-portfolio-v4.test.mjs
       - name: Match center
