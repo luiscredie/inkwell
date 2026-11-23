@@ -4,10 +4,10 @@
 //   INKWELL_URL=http://localhost:8080/index.html npx playwright test tools/overview.spec.mjs
 // The PNG files go to docs/evidencias/deck-overview/ (OV_EVIDENCE=1) so a person can open them.
 import { test, expect } from '@playwright/test';
+import { ROOT, fakeSupabase, supaOf } from './fake-supabase.mjs';   // site + fake Supabase on one local server (#286)
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
 
-const ROOT = process.env.INKWELL_URL || 'http://localhost:8080/index.html';
 const BASE = new URL('decks/', ROOT).href;
 const ME = '11111111-1111-4111-8111-111111111111';
 const JSQR = createRequire(import.meta.url).resolve('jsqr');
@@ -36,7 +36,7 @@ async function setup(page, { deck = OVD, decks = [deck], profile = { handle: 'lu
     return { handle: profile.handle, name: 'Luís', inks: [], showcase: [], deck: feat ? { name: feat.name, format: feat.format, colors: feat.colors, cards: pub === 'stale' ? { 'LOR10-1': 4 } : feat.cards } : null,
       public_decks: pub === 'stale' ? listed.map((x) => ({ ...x, cards: { 'LOR10-1': 4 } })) : listed, friends: [], friends_n: 0, recados: [], relation: 'self' };
   };
-  await page.route('**/rest/v1/**', async (route) => {
+  await (await fakeSupabase(page)).route('**/rest/v1/**', async (route) => {   // no page.route: WebKit drops navigations while it is on (#286)
     const req = route.request(), u = new URL(req.url()), path = u.pathname.replace(/.*\/rest\/v1\//, '');
     const body = req.postData() ? JSON.parse(req.postData()) : null;
     calls.push({ method: req.method(), path, body });
@@ -170,7 +170,7 @@ test('Copiar lista: the usual lines plus the printing, and Importar reads the pr
   expect(lines).toContain('4 Strike a Good Match (LOR11-94)');
   expect(lines.reduce((t, l) => t + +l.split(' ')[0], 0)).toBe(60);
   // pasted back into this deck: the same 20 printings
-  await page.route('**/rest/v1/rpc/save_deck', (r) => { const b = JSON.parse(r.request().postData()); calls.push({ path: 'rpc/save_deck', body: b }); return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ...b.p_deck, updated_at: '2026-11-04T10:00:00Z' }) }); });
+  supaOf(page).route('**/rest/v1/rpc/save_deck', (r) => { const b = JSON.parse(r.request().postData()); calls.push({ path: 'rpc/save_deck', body: b }); return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ...b.p_deck, updated_at: '2026-11-04T10:00:00Z' }) }); });
   await page.locator('#more').click();
   await page.locator('#mImport').click();
   await page.locator('#iText').fill(text);

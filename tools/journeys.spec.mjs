@@ -5,8 +5,8 @@
 //   (cd site && python3 -m http.server 8080) &
 //   INKWELL_URL=http://localhost:8080/index.html npx playwright test tools/journeys.spec.mjs
 import { test, expect } from '@playwright/test';
+import { ROOT, fakeSupabase } from './fake-supabase.mjs';   // site + fake Supabase on one local server (#286)
 
-const ROOT = process.env.INKWELL_URL || 'http://localhost:8080/index.html';
 const at = (p) => new URL(p, ROOT).href;
 const ME = '11111111-1111-4111-8111-111111111111';
 const CODE = '12345678';
@@ -16,7 +16,8 @@ const jwt = (sub) => { const exp = Math.floor(Date.now() / 1000) + 3600; return 
 async function backend(page, { slow = 0 } = {}) {
   const db = { rows: [], me: null, verify: [], otp: 0, offline: false };
   await page.addInitScript(() => { localStorage.setItem('inkwell-lang', 'pt'); try { localStorage.setItem('inkwell-passkey-offer', 'no'); } catch { /* */ } });
-  await page.route('**/auth/v1/**', async (route) => {
+  const supa = await fakeSupabase(page);   // no page.route here: WebKit drops navigations while it is on (#286)
+  await supa.route('**/auth/v1/**', async (route) => {
     if (db.offline) return route.abort('internetdisconnected');
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith('/otp')) { db.otp += 1; return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }); }
@@ -29,7 +30,7 @@ async function backend(page, { slow = 0 } = {}) {
     if (path.endsWith('/logout')) return route.fulfill({ status: 204, body: '' });
     return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
   });
-  await page.route('**/rest/v1/**', async (route) => {
+  await supa.route('**/rest/v1/**', async (route) => {
     if (db.offline) return route.abort('internetdisconnected');
     if (slow) await new Promise((r) => setTimeout(r, slow));
     const req = route.request(), url = new URL(req.url()), path = url.pathname.replace(/.*\/rest\/v1\//, '');
@@ -115,13 +116,19 @@ for (const [label, viewport, touch] of [['phone', { width: 390, height: 844 }, t
       expect(Object.values(db.rows[0].data.decks[0].cards).reduce((a, b) => a + b, 0)).toBe(60);
       expect(db.verify).toEqual([7, CODE.length]);   // 7 digits refused by the server, then the 8 (only lengths are kept here)
       // reload, back/forward, logout and login again: the deck is still there
-      await page.goto(at('decks/')).catch(() => page.goto(at('decks/')));   // WebKit sometimes reports an internal error on this navigation: once more
-      await expect(page.locator('.deck-row', { hasText: 'Meu deck de teste' })).toBeVisible();
+      // WebKit (#286): navigations wait for "commit", then for the content — a page restored from the back/forward
+      // cache never fires "load" there. No silent second try: a failure is a failure.
+      await page.goto(at('decks/'), { waitUntil: 'commit' });
+      await expect(page.locator('.deck-row', { hasText: 'Meu deck de teste' })).toBeVisible({ timeout: 10000 });
       await shot(page, '5-deck-saved');
-      await page.goBack(); await page.goForward();
-      await expect(page.locator('.deck-row', { hasText: 'Meu deck de teste' })).toBeVisible({ timeout: 10000 });   // WebKit restores from back/forward more slowly
+      await page.goBack({ waitUntil: 'commit' });
+      await expect(page.locator('h1')).toBeVisible();                     // whatever the entry before was, it is shown
+      await page.goForward({ waitUntil: 'commit' });
+      await expect(page).toHaveURL(/\/decks\/$/);
+      await expect(page.locator('.deck-row', { hasText: 'Meu deck de teste' })).toBeVisible({ timeout: 10000 });
       await page.evaluate(() => localStorage.removeItem('inkwell-counter-auth'));   // logout (this browser)
-      await page.reload();
+      await page.reload({ waitUntil: 'commit' });
+      await page.waitForFunction(() => typeof window.INKWELL_SIGNIN === 'function');   // the new page's scripts ran (commit is not enough)
       await expect(page.locator('.deck-row')).toHaveCount(0);
       await page.evaluate(() => window.INKWELL_SIGNIN());
       await signInWithCode(page, { tooShort: false });
