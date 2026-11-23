@@ -8,10 +8,12 @@ from zipfile import BadZipFile
 if __package__:
     from .strategic_v4_impact import board_impact, observed_followup, undo_equivalence
     from .strategic_v4_outs import STRENGTH_CARD_ID, ready_ink, visible_character
+    from .strategic_v4_recovery import recovery_report
     from .strategic_v4_replay import analyze, board_evidence, disruption_counts, read_replays, replay_frames, undo_target
 else:
     from strategic_v4_impact import board_impact, observed_followup, undo_equivalence
     from strategic_v4_outs import STRENGTH_CARD_ID, ready_ink, visible_character
+    from strategic_v4_recovery import recovery_report
     from strategic_v4_replay import analyze, board_evidence, disruption_counts, read_replays, replay_frames, undo_target
 
 
@@ -177,6 +179,9 @@ def benchmark_game(replay, selections):
         elif action["type"] in ("QUEST", "CHALLENGE"):
             case["resources"] = {"actor": action.get("cardName") or action.get("attackerName")}
             case["opportunity_cost"] = "exerting this character uses its current action"
+        case["opponent_recovery"] = recovery_report(
+            seq, seat, snapshots, frames, entries_by_seq, invalidated, case["followup"]
+        )
         cases.append(case)
     detective_clues = sorted({
         card["id"] for seq, state in snapshots.items() if seq not in invalidated

@@ -24,3 +24,11 @@ Para o mesmo prompt após undo, o benchmark compara o snapshot anterior à prime
 O impacto imediato registra saídas da mesa, banimentos corroborados pela passagem ao descarte, soma do lore dessas cartas no snapshot e os recursos próprios antes e depois. O lore removido da mesa é um indicador da ameaça imediata. Ele não é uma estimativa de lore efetivamente impedido, pois a carta pode retornar ou o turno pode se desenvolver de outra forma.
 
 A continuação acompanha a linha mantida até o início do turno adversário, o início do turno próprio seguinte e o fim desse turno, ou até o fim da partida. Marca se a mesma instância banida retorna à mesa e lista eventos selecionados do replay. Os campos de confiança mantêm a observação, a continuação e a avaliação comparativa separadas. Uma escolha desfeita tem efeito imediato registrado, mas sua continuação fica desconhecida.
+
+## Persistência da ameaça e recuperação adversária
+
+`opponent_recovery` acompanha banimentos adversários corroborados pela transição do campo para o descarte. A seção registra o primeiro retorno da mesma instância, o último frame em que a instância esteve observavelmente ausente, as trocas de jogador ativo e os turnos adversários completos durante a ausência. Uma cópia diferente da mesma carta não encerra a ausência da instância. O fim de jogo atesta ausência até o fim da partida. Uma lacuna de visibilidade encerra a contagem na última observação confiável.
+
+O lore registrado na remoção indica presença potencial. O campo de lore efetivamente impedido permanece desconhecido. As diferenças de placar e do número de personagens visíveis durante a janela e nos próximos pontos de decisão são descrições da linha mantida. O relatório mantém cada medida explícita, inclusive quando o placar melhora e a mesa piora.
+
+O histórico público anterior à decisão registra cartas adversárias jogadas e cartas identificadas em uma nova posição visível de tinta. As jogadas, uso de tinta, canto e mudanças de exertion observados no turno de resposta aparecem em campos próprios. A diferença de tinta disponível registra o que mudou naquele frame. O pagamento informado pelo log permanece separado. Uma carta vista antes da decisão indica que ela apareceu na partida. O sistema não presume outra cópia na mão nem calcula probabilidade de recuperação ou de vitória.
