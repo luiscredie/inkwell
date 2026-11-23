@@ -57,12 +57,32 @@ test('Valor agora, last record, highest record and why they differ — each from
   await expect(page.getByTestId('value-peak')).toContainText(/R\$\s57,00/);
   await expect(page.getByTestId('value-stats')).toContainText('+37,5%');
   await expect(page.getByTestId('value-stats')).toContainText('No gráfico (3 registros)');
-  // the difference is explained, not hidden: 65 − 55 = 10, from the Liga price of A
-  expect(brl(await page.getByTestId('value-why').textContent())).toBe('O “Valor agora” fica R$ 10,00 acima do último registro porque usa preços da Liga Lorcana em 1 das 6 cópias com preço; o gráfico usa só preços do TCGplayer, para comparar as datas pela mesma fonte.');
-  const chart = page.getByTestId('value-chart');
-  await expect(chart).toContainText('2 cartas não têm preço em algumas datas e contam pelo preço de hoje do TCGplayer nelas.');
-  await expect(chart).toContainText('1 registro com menos da metade das cartas não aparece.');
+  // the difference (65 − 55 = 10) is explained as possible contributions, not as one cause
+  const why = page.getByTestId('value-why');
+  expect(brl(await why.locator('p').textContent())).toBe('O “Valor agora” fica R$ 10,00 acima do último registro (21 de nov.). O que pode contribuir para a diferença:');
+  await expect(why.locator('li')).toHaveText([
+    'preços da Liga Lorcana em 1 das 6 cópias com preço (o gráfico usa só preços do TCGplayer);',
+    /^datas diferentes: os preços atuais são de \d+ de \w+\.?, o último registro é de 21 de nov\.;$/,
+    '2 cartas sem preço do TCGplayer em alguma data, contadas pelo preço de hoje nessas datas.',
+  ]);
+  await expect(page.getByTestId('value-chart')).toContainText('1 registro com menos da metade das cartas não aparece.');
   await expect(page.locator('svg.vchart')).toHaveAttribute('aria-label', /último registro R\$\s55,00; maior valor R\$\s57,00 em 20 de nov\./);
+});
+
+test('a card with no TCGplayer quote anywhere: its today price counts on every date, so it moves neither the line nor the gap', async ({ page }) => {
+  // F: priced only by Liga Lorcana (R$ 6), absent from tcg_prices and from every snapshot
+  const F = 'LOR10-14';
+  const prices = { ...PRICES, liga_prices: { ...PRICES.liga_prices, [F]: { n: 6, nl: 6, nh: 6 } }, prices: { ...PRICES.prices, [F]: { n: 6, nl: 6, nh: 6 } } };
+  await setup(page, { prices, collection: { ...COLL, [F]: { n: 1, f: 0 } } });
+  await page.goto(BASE + '?tab=value');
+  await expect(page.getByTestId('value-now')).toHaveText(/R\$\s71,00/);   // 65 + 6
+  await expect(page.getByTestId('value-last')).toContainText(/R\$\s61,00/);   // 55 + 6
+  await expect(page.getByTestId('value-peak')).toContainText(/R\$\s63,00/);   // 57 + 6
+  await expect(page.getByTestId('value-stats')).toContainText('+32,6%');   // 46 → 61
+  const why = page.getByTestId('value-why');
+  await expect(why.locator('p')).toContainText(/R\$\s10,00 acima/);   // the same gap: F is on both sides
+  await expect(why.locator('li').nth(0)).toHaveText('preços da Liga Lorcana em 2 das 7 cópias com preço (o gráfico usa só preços do TCGplayer);');
+  await expect(why.locator('li').nth(2)).toHaveText('3 cartas sem preço do TCGplayer em alguma data, contadas pelo preço de hoje nessas datas.');
 });
 
 test('same source today and in the chart: no difference to explain; the last record is also the highest', async ({ page }) => {
