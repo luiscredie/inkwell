@@ -1,0 +1,18 @@
+# Coach Estratégico V4 · benchmark de decisões
+
+Use replays completos e selecione frames para revisão. **O benchmark mede a evidência disponível sobre cada decisão.** A ordenação de alternativas permanece inconclusiva até haver execução contrafactual comparável.
+
+```bash
+python3 -m unittest discover -s src -p 'test_strategic_v4_*.py' -v
+python3 src/strategic_v4_benchmark.py --cases selecao.json partida.replay.gz partidas.zip > benchmark.local.json
+```
+
+O JSON de seleção associa cada ID de jogo a pares `[frame_da_acao, foco]`. Os focos são `strength`, `comeback` e `disruption`. Para Strength, selecione o frame que resolve a escolha do alvo. Se há um lançamento verificável, a saída inclui também o estado antes do pagamento. IDs e snapshots ficam no relatório local. O comando aceita jogos sem decisões selecionadas para registrar o resultado e as pistas de arquétipo da amostra.
+
+- `confirmed_at_choice` confirma a legalidade do alvo naquele prompt, depois do pagamento. `offered_hypothesis` identifica um alvo legal que ainda não foi executado.
+- `observed_then_undone` identifica um alvo efetivamente escolhido e desfeito no mesmo prompt. O efeito imediato observado fica no relatório. Fora desse caso, use somente a sequência mantida como resultado da partida.
+- Casos de lore e disruption registram a ação, o estado e a consequência observada. Alternativas fora de um prompt exigem ações legais enumeradas pelo motor ou revisão com evidência adicional. A saída deixa a lista de alternativas confirmadas vazia quando a legalidade não está demonstrada.
+- `evaluate_strength` isola pagamento, canto, legalidade do alvo e dano no estado informado. Os testes passam a legalidade como evidência explícita. `strength_response` combina o resultado com o cálculo independente de compra. Nenhum deles estima chance de ganhar a partida.
+- O subtipo Detective é evidência sobre cartas reveladas. O benchmark conserva a classificação do arquétipo como inconclusiva sem uma lista adversária ou evidência equivalente.
+
+Seleções feitas após assistir ao replay servem para revisar casos, com viés de seleção. Os controles sintéticos não validam a instalação do motor no WSL nem substituem alternativas simuladas até o próximo estado de decisão.

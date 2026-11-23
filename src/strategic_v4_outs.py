@@ -49,8 +49,8 @@ def ready_ink(slots):
     return None
 
 
-def strength_response(snapshot, context, draw_estimate):
-    """Test legal payment and lethal damage, conditional on drawing Strength now."""
+def evaluate_strength(snapshot, context):
+    """Evaluate payment, targeting and damage for a fixed state, with no draw calculation."""
     own = snapshot["myPlayer"]
     characters = [card for card in own["field"] if visible_character(card)]
     target_id = context.get("target_instance_id")
@@ -105,13 +105,27 @@ def strength_response(snapshot, context, draw_estimate):
     lethal = None if damage is None or remaining is None else damage >= remaining
     checks = (context.get("play_legal"), context.get("target_legal"), routes["can_use"], lethal)
     status = "blocked" if False in checks else "confirmed_at_frame" if all(checks) else "conditional"
-    bounds = draw_estimate["draw_probability_bounds"]
     return {
         "engine": engine,
-        "status_if_drawn_at_frame": status,
+        "status_as_banishment": status,
+        "play_legal": context.get("play_legal"),
+        "target_legal": context.get("target_legal"),
         "resources": {"ready_ink": ink, **routes},
         "damage": {"raw": raw_damage, "after_reduction": damage, "target_remaining_willpower": remaining,
                    "lethal": lethal},
+    }
+
+
+def strength_response(snapshot, context, draw_estimate):
+    """Combine fixed-state Strength evaluation with an independent draw estimate."""
+    evaluation = evaluate_strength(snapshot, context)
+    status = evaluation.pop("status_as_banishment")
+    evaluation.pop("play_legal")
+    evaluation.pop("target_legal")
+    bounds = draw_estimate["draw_probability_bounds"]
+    return {
+        **evaluation,
+        "status_if_drawn_at_frame": status,
         "candidate_draw_probability_bounds": bounds,
         "legal_lethal_candidate_draw_bounds_at_fixed_frame": (
             bounds if status == "confirmed_at_frame" else [0, 0] if status == "blocked" else [0, bounds[1]]
