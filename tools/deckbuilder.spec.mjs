@@ -248,3 +248,83 @@ test('set filter: the tile shows that set\'s printing; + keeps the printing alre
   await page.locator('[data-bset]').selectOption('');
   await expect(art('Moana')).toHaveAttribute('data-card', 'LOR9-20');   // now in the deck: the deck's printing
 });
+
+// ---------- Todas / Tintáveis / Não tintáveis (Conselho 23/11, ROADMAP #311 P2) ----------
+// Only what the list shows: no card leaves the deck, nothing is saved, and every number stays the whole deck's.
+test('deck list: Todas / Tintáveis / Não tintáveis filters the rows only — counts, stats and the deck stay whole', async ({ page }) => {
+  // Timon - Snowball Swiper (uninkable) in two printings: LOR11-16 and a promo
+  const deck = { ...AMBER, cards: { ...AMBER.cards, 'LOR11-16': 2, 'DLPC1-32-P3': 1 } };
+  const { calls } = await setup(page, { deck });
+  await page.goto(BASE + '?deck=deck-a');
+  const seg = page.getByTestId('inkw');
+  await expect(seg.locator('[data-inkw=""]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(seg).toContainText('Todas 59');
+  await expect(seg).toContainText('Tintáveis 48');
+  await expect(seg).toContainText('Não tintáveis 11');
+  const rows = page.locator('[data-testid="dl"] .dl-row');
+  const all = await rows.count();
+  await seg.locator('[data-inkw="no"]').click();
+  await expect(page.getByTestId('inkw-shown')).toHaveText(/Mostrando 11 de 59 cartas \(não tintáveis\)\./);
+  // every row shown is uninkable (no "ink" mark on its cost), both Timon printings included
+  expect(await page.$$eval('[data-testid="dl"] .dl-row .cost', (els) => els.every((e) => !e.classList.contains('ink')))).toBe(true);
+  await expect(page.locator('[data-testid="dl"] .dl-row', { hasText: 'Timon' })).toHaveCount(2);
+  expect(await rows.count()).toBeLessThan(all);
+  // the deck itself is untouched: its count and overview are the whole deck's, and nothing was saved
+  await expect(page.locator('[data-testid="deck-stats"]')).toContainText('59/60');
+  await expect(page.getByTestId('deck-overview')).toContainText('59');
+  expect(saves(calls)).toHaveLength(0);
+  // Tintáveis, then back to Todas from the line under the buttons
+  await seg.locator('[data-inkw="yes"]').click();
+  expect(await page.$$eval('[data-testid="dl"] .dl-row .cost', (els) => els.every((e) => e.classList.contains('ink')))).toBe(true);
+  await page.getByTestId('inkw-shown').getByRole('button', { name: 'Mostrar todas' }).click();
+  await expect(rows).toHaveCount(all);
+  await expect(page.getByTestId('inkw-shown')).toHaveCount(0);
+  // Análise counts the whole deck whatever the list shows
+  await seg.locator('[data-inkw="no"]').click();
+  await page.getByRole('tab', { name: 'Análise' }).click();
+  await expect(page.locator('main')).toContainText('48 de 59 inkáveis');
+  expect(saves(calls)).toHaveLength(0);
+});
+
+test('the same filter in the builder: one control, kept from the list, works with cost and type; the deck pane says what it hides', async ({ page }) => {
+  const { calls } = await setup(page);
+  await page.goto(BASE + '?deck=deck-a');
+  await page.getByTestId('inkw').locator('[data-inkw="yes"]').click();
+  await page.getByRole('button', { name: 'Editar lista' }).click();
+  const b = page.getByTestId('builder');
+  await expect(b.getByTestId('inkw')).toHaveCount(1);   // in the main filters, not under "Mais filtros"
+  await expect(b.getByTestId('inkw').locator('[data-inkw="yes"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('[data-bcost="2"]').click();
+  await page.locator('[data-btype="char"]').click();
+  await expect(page.getByTestId('bt').first()).toBeVisible();
+  expect(await page.$$eval('[data-testid="bt"] .bt-info .cost', (els) => els.length > 0 && els.every((e) => e.classList.contains('ink') && e.textContent === '2'))).toBe(true);
+  const tabs = page.locator('[data-bpane="deck"]');
+  if (await tabs.isVisible()) await tabs.click();   // phone: the deck pane; desktop: always beside the grid
+  await expect(page.getByTestId('bld-deck').getByTestId('inkw-shown')).toHaveText(/Mostrando 48 de 56 cartas \(tintáveis\)\./);
+  await expect(page.locator('[data-bpane="deck"]')).toContainText('56/60');   // the count is the whole deck's
+  if (await page.locator('[data-bpane="cards"]').isVisible()) await page.locator('[data-bpane="cards"]').click();
+  await b.getByTestId('inkw').locator('[data-inkw="no"]').click();
+  expect(await page.$$eval('[data-testid="bt"] .bt-info .cost', (els) => els.every((e) => !e.classList.contains('ink')))).toBe(true);
+  // "Limpar filtros" clears it too; still nothing saved
+  await page.locator('[data-bclear]').click();
+  await expect(b.getByTestId('inkw').locator('[data-inkw=""]')).toHaveAttribute('aria-pressed', 'true');
+  expect(saves(calls)).toHaveLength(0);
+});
+
+for (const w of [320, 430]) {
+  test(`phone ${w}px: the three buttons fit, are easy to tap and say which is on`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: 800 });
+    await setup(page);
+    await page.goto(BASE + '?deck=deck-a');
+    const seg = page.getByTestId('inkw');
+    for (const k of ['', 'yes', 'no']) {
+      const bb = await seg.locator(`[data-inkw="${k}"]`).boundingBox();
+      expect(bb.height).toBeGreaterThanOrEqual(40);
+      expect(bb.x + bb.width).toBeLessThanOrEqual(w);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await seg.locator('[data-inkw="no"]').click();
+    await expect(seg.locator('[data-inkw="no"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(seg).toHaveAttribute('aria-label', 'Tintável ou não');
+  });
+}

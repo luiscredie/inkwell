@@ -58,6 +58,11 @@
 .bld-filt { display: grid; gap: var(--sp-2); }
 .bld-more { display: grid; gap: var(--sp-2); padding: var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-md); }
 .bld-more select { max-width: 100%; }
+.inkw-bar { display: grid; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+.seg.inkw { display: flex; width: 100%; max-width: 420px; }
+.seg.inkw button { flex: 1 1 0; min-height: 40px; padding: 0 var(--sp-2); white-space: nowrap; }   /* tapped often, from a phone */
+@media (max-width: 400px) { .seg.inkw .count { display: none; } }   /* no room: the numbers are in the line under it */
+.bld .seg.inkw { margin: var(--sp-2) 0; }
 .bld-res { display: flex; align-items: center; gap: var(--sp-2); min-height: 32px; }
 .bgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); }
 @media (min-width: 600px) { .bgrid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } }
@@ -269,6 +274,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     "See the card": "Ver a carta", "not inkable": "não tintável", "you have {n}": "você tem {n}", "not in your collection": "não está na sua coleção",
     "Every ink, to look around. Only cards of the deck's inks can be added.": "Todas as tintas, para explorar. Só entram no deck as cartas das tintas dele.",
     "Choose up to 2 inks": "Escolha até 2 tintas", "Choose the second ink": "Escolha a segunda tinta", "Tap an ink to take it out, then choose another": "Toque numa tinta para tirá-la e escolha outra",
+    "All cards": "Todas", "Showing {a} of {b} cards ({f}).": "Mostrando {a} de {b} cartas ({f}).", "Show all": "Mostrar todas", "inkable ones": "tintáveis", "uninkable ones": "não tintáveis", "No inkable card in this deck.": "Nenhuma carta tintável neste deck.", "No uninkable card in this deck.": "Nenhuma carta não tintável neste deck.",
     "Change inks": "Mudar tintas", "1 card of another ink stays in the deck.": "1 carta de outra tinta continua no deck.", "{n} cards of other inks stay in the deck.": "{n} cartas de outras tintas continuam no deck.", "Only the deck's inks": "Só as tintas do deck", "Show every ink": "Mostrar todas as tintas", "Legal in Core": "Legais no Core",
     "Only the ones I have": "Só as que tenho", "More filters": "Mais filtros", "Set": "Coleção", "Any set": "Qualquer coleção", "Inkable or not": "Tintável ou não", "Inkable only": "Tintáveis", "Not inkable only": "Não tintáveis", "Items": "Itens", "Locations": "Locais",
     "Builder": "Montar deck", "My deck": "Meu deck", "Name or ability": "Nome ou habilidade", "Clear filters": "Limpar filtros", "Loading abilities…": "Carregando habilidades…",
@@ -1192,10 +1198,23 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     if (editing) return `<div id="bldSlot" data-testid="builder-slot"></div>`;   // the builder (bMount) takes its place
     return deckRows(d, m);
   }
+  // Todas / Tintáveis / Não tintáveis: what the list SHOWS, per deck, for this visit (the list and the builder share
+  // it). Only a view: no card leaves the deck, and counts, analysis, overview and prices always use the whole deck.
+  // c.inkable is the catalog's (the audited inkable tag, the same for every printing of a card).
+  const INKW_KEY = (id) => `inkwell-inkw:${id}`;
+  const inkwGet = (id) => { try { const v = sessionStorage.getItem(INKW_KEY(id)) || ""; return v === "yes" || v === "no" ? v : ""; } catch { return ""; } };
+  const inkwSet = (id, v) => { try { v ? sessionStorage.setItem(INKW_KEY(id), v) : sessionStorage.removeItem(INKW_KEY(id)); } catch { /* this page only */ } };
+  const inkwOk = (c, v) => !v || (v === "yes") === !!c.inkable;
+  // the three buttons; counts (copies in the whole deck) only where they are the deck's
+  const inkwSeg = (v, n) => `<div class="seg inkw" role="group" aria-label="${esc(Tx("Inkable or not"))}" data-testid="inkw">${[["", "All cards"], ["yes", "Inkable only"], ["no", "Not inkable only"]].map(([k, l]) =>
+    `<button type="button" data-inkw="${k}" aria-pressed="${v === k}">${esc(Tx(l))}${n ? ` <span class="count quiet">${n[k || "all"]}</span>` : ""}</button>`).join("")}</div>`;
   function deckRows(d, m) {
     const unknown = m.entries.filter((e) => !e.c);
+    const v = inkwGet(d.id), cnt = { all: 0, yes: 0, no: 0 };
+    for (const e of m.known) { cnt.all += e.q; cnt[e.c.inkable ? "yes" : "no"] += e.q; }
+    const shownN = v ? cnt[v] : cnt.all;
     const missingBy = new Map(m.missing.map((x) => [x.c.key, x.n]));
-    const groups = GROUPS.map(([k, label]) => [label, m.known.filter((e) => kind(e.c) === k).sort((a, b) => a.c.cost - b.c.cost || a.c.name.localeCompare(b.c.name))]).filter(([, rows]) => rows.length);
+    const groups = GROUPS.map(([k, label]) => [label, m.known.filter((e) => kind(e.c) === k && inkwOk(e.c, v)).sort((a, b) => a.c.cost - b.c.cost || a.c.name.localeCompare(b.c.name))]).filter(([, rows]) => rows.length);
     const row = (e) => {
       const [a, b] = split(e.c.name), miss = missingBy.get(e.c.key);
       const trail = editing
@@ -1204,9 +1223,11 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
       return `<div class="dl-row${editing ? " edit" : ""}${m.bad.has(e.id) ? " bad" : ""}">${editing ? "" : `<span class="q">${e.q}×</span>`}<span class="cost${e.c.inkable ? " ink" : ""}" title="${esc(Tx("cost {c}", { c: e.c.cost }) + (e.c.inkable ? " · " + Tx("inkable") : ""))}">${e.c.cost}</span>${thumb(e.c)}<span class="t">${esc(a)}<small>${esc(b || typeName(e.c))}</small></span>${trail}</div>`;
     };
     return `${m.issues.length ? `<div class="notice warn" style="margin-bottom:var(--sp-3)"><i class="ic i-alert"></i><span class="t"><b>${esc(m.issues[0].text)}</b>${m.issues.length > 1 ? esc(m.issues.slice(1, 3).map((i) => i.text).join(" ")) : ""}</span></div>` : ""}
+      ${m.known.length && (!editing || v) ? `<div class="inkw-bar">${editing ? "" : inkwSeg(v, cnt)}${v ? `<p class="small muted" data-testid="inkw-shown" aria-live="polite">${esc(Tx("Showing {a} of {b} cards ({f}).", { a: shownN, b: cnt.all, f: Tx(v === "yes" ? "inkable ones" : "uninkable ones") }))} <button type="button" class="linkbtn" data-inkw="">${Tx("Show all")}</button></p>` : ""}</div>` : ""}
+      ${v && !shownN ? `<p class="small faint" data-testid="inkw-none">${esc(Tx(v === "yes" ? "No inkable card in this deck." : "No uninkable card in this deck."))}</p>` : ""}
       ${groups.length ? groups.map(([label, rows]) => `<div class="group-head"><h3>${Tx(label)}</h3><span class="small muted">${rows.reduce((s, e) => s + e.q, 0)}</span></div>
         <div class="card" style="padding:var(--sp-1) var(--sp-4)"><div class="dl" data-testid="dl">${rows.map(row).join("")}</div></div>`).join("")
-        : emptyBox("decks", Tx("This deck is empty."), editing ? "" : Tx("Tap Edit list to add cards."), "")}
+        : m.known.length ? "" : emptyBox("decks", Tx("This deck is empty."), editing ? "" : Tx("Tap Edit list to add cards."), "")}
       ${unknown.length ? `<p class="small faint" style="margin-top:var(--sp-3)">${esc(unknown.map((e) => `${e.q}× ${e.id}`).join(", "))}</p>` : ""}
       ${editing ? `<p class="small faint" style="margin-top:var(--sp-3)">${Tx("Changes save right away.")}</p>` : ""}`;
   }
@@ -1235,7 +1256,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     if (B?.el) B.el.remove();
     B = bFresh(d.id);
     try { const kept = JSON.parse(sessionStorage.getItem(bKey(d.id)) || "{}"); for (const k of Object.keys(B)) if (k !== "id" && k in kept) B[k] = kept[k]; } catch { /* the filters only start blank */ }
-    B.shown = B_STEP; addQ = B.q;
+    B.shown = B_STEP; addQ = B.q; B.inkw = inkwGet(d.id);
     return B;
   }
   const bSave = () => { try { const { id, el, shown, ...keep } = B; sessionStorage.setItem(bKey(id), JSON.stringify(keep)); } catch { /* kept only on this page */ } };
@@ -1339,13 +1360,12 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     const types = B_TYPES.map(([k, l]) => `<button type="button" class="chipbtn" data-btype="${k}" aria-pressed="${on(B.type, k)}">${Tx(l)}</button>`).join("");
     const flags = `${d.format !== "infinity" ? `<button type="button" class="chipbtn" data-blegal aria-pressed="${B.legal}">${Tx("Legal in Core")}</button>` : ""}
       <button type="button" class="chipbtn" data-bowned aria-pressed="${B.owned}">${Tx("Only the ones I have")}</button>
-      <button type="button" class="chipbtn" data-bmore aria-expanded="${B.more}"><i class="ic i-filter"></i>${Tx("More filters")}${B.set || B.inkw || B.mech.length ? ` <span class="count quiet">${(B.set ? 1 : 0) + (B.inkw ? 1 : 0) + B.mech.length}</span>` : ""}</button>`;
+      <button type="button" class="chipbtn" data-bmore aria-expanded="${B.more}"><i class="ic i-filter"></i>${Tx("More filters")}${B.set || B.mech.length ? ` <span class="count quiet">${(B.set ? 1 : 0) + B.mech.length}</span>` : ""}</button>`;
     const sets = (CARD_INDEX.sets || []).filter((s) => s.code && bPool().some((g) => g.sets.has(s.code))).sort((a, b) => setNo(b.code) - setNo(a.code));
     const more = !B.more ? "" : `<div class="bld-more" data-testid="more-filters">
       <label class="small">${Tx("Set")} <select class="inline" data-bset><option value="">${Tx("Any set")}</option>${sets.map((s) => `<option value="${esc(s.code)}" ${B.set === s.code ? "selected" : ""}>${esc((lang === "pt" && s.name_pt) || s.name_en || s.code)}</option>`).join("")}</select></label>
-      <div class="chips">${[["", "Inkable or not"], ["yes", "Inkable only"], ["no", "Not inkable only"]].map(([v, l]) => `<button type="button" class="chipbtn" data-binkw="${v}" aria-pressed="${B.inkw === v}">${Tx(l)}</button>`).join("")}</div>
       <div class="chips" data-testid="mechanics">${B_MECH.map((x) => `<button type="button" class="chipbtn" data-bmech="${x}" aria-pressed="${on(B.mech, x)}">${esc(x)}</button>`).join("")}</div></div>`;
-    return `<div class="chips scroll" data-testid="cost-filter">${costs}</div><div class="chips scroll">${types}</div><div class="chips">${flags}</div>${more}`;
+    return `<div class="chips scroll" data-testid="cost-filter">${costs}</div><div class="chips scroll">${types}</div>${inkwSeg(B.inkw)}<div class="chips">${flags}</div>${more}`;
   }
   // build the builder once per deck; later renders only move it back in and refresh what changed
   function bMount(d, m) {
@@ -1455,9 +1475,9 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
       if ("blegal" in ds) { B.legal = !B.legal; return changed(); }
       if ("bowned" in ds) { B.owned = !B.owned; return changed(); }
       if ("bmore" in ds) { B.more = !B.more; bSave(); el.querySelector("[data-bfilt]").innerHTML = bFiltBox(bDeck()); return; }
-      if ("binkw" in ds) { B.inkw = ds.binkw; return changed(); }
+      if ("inkw" in ds) { B.inkw = ds.inkw; inkwSet(B.id, B.inkw); return changed(); }
       if (ds.bmech) { B.mech = toggle(B.mech, ds.bmech); if (!BTEXT) bLoadText(); return changed(); }
-      if ("bclear" in ds) { Object.assign(B, { q: "", ink: [], cost: [], type: [], legal: true, owned: false, set: "", inkw: "", mech: [] }); addQ = ""; el.querySelector("#addQ").value = ""; return changed(); }
+      if ("bclear" in ds) { Object.assign(B, { q: "", ink: [], cost: [], type: [], legal: true, owned: false, set: "", inkw: "", mech: [] }); inkwSet(B.id, ""); addQ = ""; el.querySelector("#addQ").value = ""; return changed(); }
     });
     el.addEventListener("change", (e) => { if (e.target.matches("[data-bset]")) { B.set = e.target.value; changed(); } });
   }
@@ -1780,6 +1800,7 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
 
   function wireTab(d, m, tab) {
     if (tab === "list" && editing) bMount(d, m);
+    if (tab === "list" && !editing) $("tabBody").querySelectorAll("[data-inkw]").forEach((b) => b.onclick = () => { inkwSet(d.id, b.dataset.inkw); render(); document.querySelector(`#tabBody [data-inkw="${b.dataset.inkw || ""}"]`)?.focus({ preventScroll: true }); });
     if (tab === "gala") wireGala();
     if (tab === "missing") { document.querySelectorAll("[data-post]").forEach((b) => b.onclick = () => postMissing(d, b.dataset.post));
       // the missing copies as a deck list ("2 Name (LOR1-1)", as Copiar lista): Importar reads it back
