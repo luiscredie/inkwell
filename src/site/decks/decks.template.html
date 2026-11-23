@@ -46,6 +46,24 @@
 .bld-bar { position: sticky; top: var(--bar-h); z-index: 6; display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) 0; background: var(--bg); }
 .bld-bar .seg { flex: 1 1 auto; }
 .bld-bar .seg button { flex: 1 1 0; }
+/* Fase 2: the deck while it is built — one compact line under the tabs (phone), a panel atop "Meu deck" */
+.bld-bar { flex-wrap: wrap; row-gap: 0; }
+.bld-sum { flex: 1 0 100%; display: flex; align-items: stretch; gap: var(--sp-2); height: 28px; min-width: 0; font-size: 12px; line-height: 1; font-variant-numeric: tabular-nums; }
+.bld-sum button { display: flex; align-items: center; gap: 6px; min-width: 0; height: 28px; padding: 0 2px; border: 0; background: none; color: var(--text); font: inherit; cursor: pointer; white-space: nowrap; }
+.bld-sum .bs-open { flex: 1 1 auto; overflow: hidden; }
+.bld-sum .bs-val { flex: 0 0 auto; margin-left: auto; color: var(--money); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.bld-sum b { font-weight: 800; } .bld-sum .warn, .bld-panel .warn { color: var(--warn, var(--loss)); }
+.bs-curve { flex: none; width: 56px; height: 18px; } .bs-curve rect, .bp-curve i { fill: var(--text-2); background: var(--text-2); }
+@media (max-width: 359px) { .bld-sum .bs-l { display: none; } }   /* 320 px: "38 tint." → "38", "faltam 6" → "−6" */
+@media (min-width: 360px) { .bld-sum .bs-s { display: none; } }
+.bld-panel { display: grid; gap: var(--sp-3); padding: var(--sp-3); margin-bottom: var(--sp-3); border-radius: var(--r-md); background: var(--surface-1); box-shadow: var(--e1); }
+.bp-nums { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2) var(--sp-3); margin: 0; }
+.bp-nums dt { font-size: var(--fs-small); color: var(--text-2); } .bp-nums dd { margin: 0; font-weight: 800; font-variant-numeric: tabular-nums; }
+.bp-nums .linkbtn { font-weight: 800; color: var(--money); }
+.bp-curve { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; align-items: end; height: 72px; }
+.bp-curve > div { display: grid; grid-template-rows: auto 1fr auto; height: 100%; text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; }
+.bp-curve i { align-self: end; display: block; height: var(--v); min-height: 2px; border-radius: 3px 3px 0 0; }
+.bp-curve small { color: var(--text-2); }
 .bld-count { margin-left: auto; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .bld-count.short { color: var(--warn, var(--text)); }
 .bld-main { display: grid; gap: var(--sp-4); }
@@ -89,7 +107,7 @@
   .bld[data-pane="cards"] .bld-deck, .bld[data-pane="deck"] .bld-pool { display: none; }
 }
 @media (min-width: 960px) {
-  .bld-bar .seg { display: none; }
+  .bld-bar .seg, .bld-sum { display: none; }
   .bld-main { grid-template-columns: minmax(0, 1fr) 340px; align-items: start; }
   .bld-deck { position: sticky; top: calc(var(--bar-h) + 56px); max-height: calc(100vh - var(--bar-h) - 72px); overflow: auto; scrollbar-width: thin; }
 }
@@ -275,6 +293,9 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     "Every ink, to look around. Only cards of the deck's inks can be added.": "Todas as tintas, para explorar. Só entram no deck as cartas das tintas dele.",
     "Choose up to 2 inks": "Escolha até 2 tintas", "Choose the second ink": "Escolha a segunda tinta", "Tap an ink to take it out, then choose another": "Toque numa tinta para tirá-la e escolha outra",
     "All cards": "Todas", "Showing {a} of {b} cards ({f}).": "Mostrando {a} de {b} cartas ({f}).", "Show all": "Mostrar todas", "inkable ones": "tintáveis", "uninkable ones": "não tintáveis", "No inkable card in this deck.": "Nenhuma carta tintável neste deck.", "No uninkable card in this deck.": "Nenhuma carta não tintável neste deck.",
+    "Deck summary": "Resumo do deck", "price unavailable": "preço indisponível", "{v} + {n} with no price": "{v} + {n} sem preço",
+    "{a} of {b} cards": "{a} de {b} cartas", "{n} inkable": "{n} tintáveis", "partial estimate": "estimativa parcial", "ink.": "tint.", "Missing copies": "Faltam",
+    "Market price of every missing card, without friends' offers or the board.": "Preço de mercado de todas as cartas que faltam, sem descontar ofertas de amigos nem do mural.", "Partial estimate: {n} with no price are not in it.": "Estimativa parcial: {n} sem preço ficam fora.", "{s}, {d}.": "{s}, {d}.",
     "Change inks": "Mudar tintas", "1 card of another ink stays in the deck.": "1 carta de outra tinta continua no deck.", "{n} cards of other inks stay in the deck.": "{n} cartas de outras tintas continuam no deck.", "Only the deck's inks": "Só as tintas do deck", "Show every ink": "Mostrar todas as tintas", "Legal in Core": "Legais no Core",
     "Only the ones I have": "Só as que tenho", "More filters": "Mais filtros", "Set": "Coleção", "Any set": "Qualquer coleção", "Inkable or not": "Tintável ou não", "Inkable only": "Tintáveis", "Not inkable only": "Não tintáveis", "Items": "Itens", "Locations": "Locais",
     "Builder": "Montar deck", "My deck": "Meu deck", "Name or ability": "Nome ou habilidade", "Clear filters": "Limpar filtros", "Loading abilities…": "Carregando habilidades…",
@@ -1367,6 +1388,59 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
       <div class="chips" data-testid="mechanics">${B_MECH.map((x) => `<button type="button" class="chipbtn" data-bmech="${x}" aria-pressed="${on(B.mech, x)}">${esc(x)}</button>`).join("")}</div></div>`;
     return `<div class="chips scroll" data-testid="cost-filter">${costs}</div><div class="chips scroll">${types}</div>${inkwSeg(B.inkw)}<div class="chips">${flags}</div>${more}`;
   }
+  // ---------- Fase 2: the deck while it is built (spec "Deck builder · Fase 2", Conselho 23/11) ----------
+  // Every number is one the site already has: measure() (count, missing, the value of what is missing at market
+  // price — priceOf, the same price as everywhere on the site) and DV.summary() (inkable, the 7-column curve, the
+  // same as the deck overview). No new request: prices and the collection are the ones loaded with the page.
+  // Curve columns: ≤1, 2, 3, 4, 5, 6, 7+ — a cost-0 card counts in "≤1" (DV.summary: min(7, max(1, cost))), so the
+  // columns always add up to the known cards. Missing and value: only for your own deck, as the Missing tab.
+  function bSum(d, m) {
+    const s = DV.summary(m.known), ink = s.total - s.nonInk, owner = !!(me && prof() && !prof().shared);
+    let noPrice = 0; for (const x of m.missing) if (priceOf(x.c) == null) noPrice += x.n;
+    return { total: m.total, known: s.total, ink, pct: s.total ? Math.round((ink / s.total) * 100) : 0, lowInk: s.total > 0 && ink < s.total * 0.6, curve: s.curve, avg: s.avg,
+      owner, miss: m.missingN, value: m.missingValue, noPrice, prices: havePrices(), d };
+  }
+  const B_COLS = ["≤1", "2", "3", "4", "5", "6", "7+"];
+  const bMoney0 = (v) => ((v ?? 0) >= 100 ? (v ?? 0).toLocaleString(LOC, { style: "currency", currency: "BRL", maximumFractionDigits: 0 }) : money(v));   // short: no cents from R$ 100 up
+  // "R$ 84", "R$ 84 + 2 sem preço", "preço indisponível", "Você tem todas"
+  function bValText(S, short) {
+    if (!S.miss) return Tx("You have them all");
+    if (!S.prices) return Tx("price unavailable");
+    const v = short ? bMoney0(S.value) : money(S.value);
+    return S.noPrice ? (short ? `${v} +${S.noPrice}` : Tx("{v} + {n} with no price", { v, n: S.noPrice })) : v;
+  }
+  function bSay(S) {
+    const parts = [Tx("{a} of {b} cards", { a: S.total, b: MIN }), Tx("{n} inkable", { n: S.ink })];
+    if (S.owner && S.known) parts.push(S.miss ? Tx("{n} missing", { n: S.miss }) + ", " + bValText(S) + (S.noPrice ? ", " + Tx("partial estimate") : "") : Tx("You have them all"));
+    return parts.join(", ");
+  }
+  function bSumLine(S) {
+    const top = Math.max(1, ...S.curve), bw = 6, gap = 2;
+    const curve = `<svg class="bs-curve" viewBox="0 0 ${7 * bw + 6 * gap} 18" aria-hidden="true">${S.curve.map((v, i) => { const h = v ? Math.max(2, Math.round((v / top) * 18)) : 1; return `<rect x="${i * (bw + gap)}" y="${18 - h}" width="${bw}" height="${h}" rx="1"></rect>`; }).join("")}</svg>`;
+    const val = S.owner && S.known ? `<button type="button" class="bs-val" data-bmiss data-testid="bs-val" aria-label="${esc(Tx("See what's missing") + ": " + (S.miss ? Tx("{n} missing", { n: S.miss }) + ", " + bValText(S) : Tx("You have them all")))}">${S.miss ? `<span class="bs-l">${esc(Tx("{n} missing", { n: S.miss }))} · </span><span class="bs-s">−${S.miss} · </span>` : ""}${esc(bValText(S, true))}</button>` : "";
+    return `<button type="button" class="bs-open" data-bsheet data-testid="bs-open" aria-haspopup="dialog" aria-label="${esc(Tx("Deck summary") + ": " + bSay(S))}"><b class="${S.total < MIN ? "warn" : ""}">${S.total}/${MIN}</b><span class="${S.lowInk ? "warn" : ""}">${S.ink}<span class="bs-l"> ${esc(Tx("ink."))}</span></span>${curve}</button>${val}`;
+  }
+  function bPanel(S) {
+    const top = Math.max(1, ...S.curve);
+    const curve = `<div class="bp-curve" role="img" data-testid="bp-curve" aria-label="${esc(Tx("Cost curve") + ": " + S.curve.map((v, i) => `${B_COLS[i]}: ${v}`).join(", ") + " · " + Tx("average {a}", { a: S.avg.toLocaleString(LOC, { maximumFractionDigits: 1 }) }))}">${S.curve.map((v, i) => `<div><b>${v}</b><i style="--v:${Math.round((v / top) * 100)}%"></i><small>${B_COLS[i]}</small></div>`).join("")}</div>`;
+    const missRow = S.owner && S.known ? `<div><dt>${Tx("To complete")}</dt><dd>${S.miss ? `<button type="button" class="linkbtn" data-bmiss data-testid="bp-val">${esc(bValText(S))}</button>` : esc(Tx("You have them all"))}</dd></div><div><dt>${Tx("Missing copies")}</dt><dd data-testid="bp-miss">${S.miss}</dd></div>` : "";
+    return `<dl class="bp-nums"><div><dt>${Tx("Cards")}</dt><dd class="${S.total < MIN ? "warn" : ""}" data-testid="bp-count">${S.total}/${MIN}</dd></div><div><dt>${Tx("Inkable only")}</dt><dd class="${S.lowInk ? "warn" : ""}" data-testid="bp-ink">${S.ink} · ${S.pct}%</dd></div>${missRow}</dl>
+      <div><div class="row between small muted"><span>${Tx("Cost curve")}</span><span>${esc(Tx("average {a}", { a: S.avg.toLocaleString(LOC, { maximumFractionDigits: 1 }) }))}</span></div>${curve}</div>
+      ${S.owner && S.miss ? `<p class="small faint" style="margin:0" data-testid="bp-note">${esc(Tx("Market price of every missing card, without friends' offers or the board."))}${S.noPrice ? " " + esc(Tx("Partial estimate: {n} with no price are not in it.", { n: S.noPrice })) : ""}${S.prices && pricesDate ? " " + esc(Tx("{s}, {d}.", { s: PRICE_SOURCE || priceSrc, d: dateFmt(pricesDate).replace(/\.$/, "") })) : ""}</p>` : ""}`;
+  }
+  function bOpenSheet(from) {
+    const d = bDeck(); if (!d) return; const S = bSum(d, measure(d)), sh = $("sheet");
+    sh.dataset.bsheet = d.id;
+    sh.innerHTML = `<div class="sheet-head"><h2 id="shT">${Tx("Deck summary")}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-x"></i></button></div>
+      <div class="sheet-body"><section class="bld-panel" data-bpanel style="box-shadow:none">${bPanel(S)}</section>
+      ${S.owner && S.known ? `<button type="button" class="btn" data-bmiss data-testid="sheet-miss" style="width:100%">${Tx("See what's missing")}</button>` : ""}</div>`;
+    sh.addEventListener("close", () => { delete sh.dataset.bsheet; }, { once: true });
+    sh.onclick = null; openSheet(from);
+    sh.addEventListener("click", (e) => { if (e.target.closest("[data-bmiss]")) { sh.close(); bToMissing(); } });
+  }
+  // the value opens the Missing tab (leaving the builder; the list and its filters stay for when you come back)
+  function bToMissing() { const d = bDeck(); if (!d) return; editing = false; go(d.id, "missing"); }
+
   // build the builder once per deck; later renders only move it back in and refresh what changed
   function bMount(d, m) {
     const slot = $("bldSlot"); if (!slot) return;
@@ -1374,14 +1448,14 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     const focused = B.el?.contains(document.activeElement) ? (document.activeElement.dataset.bq || document.activeElement.id || "") : "";
     if (!B.el) {
       const el = document.createElement("div"); el.className = "bld"; el.id = "bld"; el.dataset.testid = "builder"; B.el = el;
-      el.innerHTML = `<div class="bld-bar"><div class="seg" role="group" aria-label="${Tx("Builder")}"><button type="button" data-bpane="cards">${Tx("Cards")}</button><button type="button" data-bpane="deck">${Tx("My deck")} <b data-bcount></b></button></div><span class="bld-count" data-bcount2 data-testid="bld-count"></span></div>
+      el.innerHTML = `<div class="bld-bar"><div class="seg" role="group" aria-label="${Tx("Builder")}"><button type="button" data-bpane="cards">${Tx("Cards")}</button><button type="button" data-bpane="deck">${Tx("My deck")} <b data-bcount></b></button></div><span class="bld-count" data-bcount2 data-testid="bld-count"></span><div class="bld-sum" data-bsum data-testid="bld-sum"></div></div>
         <div class="bld-main"><div class="bld-pool">
           <div class="bld-inks" data-binks></div>
           <span class="search"><i class="ic i-search"></i><input type="search" id="addQ" placeholder="${Tx("Name or ability")}" aria-label="${Tx("Search a card to add")}" autocomplete="off"></span>
           <div class="bld-filt" data-bfilt></div>
           <div class="bld-res"><span class="small muted" data-bres aria-live="polite"></span><button type="button" class="bld-alt" data-bclear hidden>${Tx("Clear filters")}</button></div>
           <div class="bgrid" data-bgrid data-testid="bgrid"></div><div class="bld-sent" data-bsent></div>
-        </div><aside class="bld-deck" data-bdeck data-testid="bld-deck" aria-label="${Tx("My deck")}"></aside></div>
+        </div><aside class="bld-deck" aria-label="${Tx("My deck")}"><section class="bld-panel" data-bpanel data-testid="bld-panel" aria-label="${Tx("Deck summary")}"></section><div data-bdeck data-testid="bld-deck"></div><p class="sr-only" data-bsay aria-live="polite"></p></aside></div>
         <p class="small faint">${Tx("Changes save right away.")}</p>`;
       el.querySelector("#addQ").value = B.q;
       bWire(el);
@@ -1401,6 +1475,9 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     el.querySelector("[data-bcount]").textContent = cnt;
     const c2 = el.querySelector("[data-bcount2]"); c2.textContent = Tx("{n} cards", { n: cnt }); c2.classList.toggle("short", m.total < MIN);
     el.querySelector("[data-bdeck]").innerHTML = deckRows(d, m);
+    const S = bSum(d, m); el.querySelector("[data-bsum]").innerHTML = bSumLine(S); el.querySelector("[data-bpanel]").innerHTML = bPanel(S);
+    const say = el.querySelector("[data-bsay]"), said = bSay(S); if (say.textContent !== said) say.textContent = said;
+    if ($("sheet")?.dataset.bsheet === d.id && $("sheet").open) $("sheet").querySelector("[data-bpanel]").innerHTML = bPanel(S);
     const sig = JSON.stringify([sel, B.all, B.swap, B.ink]);
     if (full || el.dataset.bsig !== sig) { el.dataset.bsig = sig; el.querySelector("[data-binks]").innerHTML = bInkBox(d, m); full = true; }
     if (full) {
@@ -1464,6 +1541,8 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
       const ds = t.dataset;
       if (ds.bq) { const i = ds.bq.lastIndexOf(":"); bStep(ds.bq.slice(0, i), +ds.bq.slice(i + 1)); return; }
       if (ds.q) { const d = bDeck(), i = ds.q.lastIndexOf(":"); if (d) { setQty(d, ds.q.slice(0, i), +ds.q.slice(i + 1)); bRedraw(false); el.querySelector(`[data-q="${CSS.escape(ds.q)}"]`)?.focus({ preventScroll: true }); } return; }
+      if ("bmiss" in ds) return bToMissing();
+      if ("bsheet" in ds) return bOpenSheet(t);
       if ("bzoom" in ds) { t.closest(".bt")?.querySelector(".bt-img img")?.click(); return; }
       if (ds.bpane) { B.pane = ds.bpane; bSave(); bRedraw(false); el.querySelector(".bld-bar")?.scrollIntoView({ block: "nearest" }); return; }
       if (ds.bink) return bSetInk(ds.bink);
