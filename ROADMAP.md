@@ -1899,3 +1899,38 @@ Ficam para depois, sem data:
 - notificações de campeonatos e alertas aos membros;
 - estatísticas para lojas e ferramentas avançadas para organizadores;
 - personalização comercial das páginas, patrocínios, parcerias e monetização.
+
+## Decks · Montar — evolução do editor de decks (aprovada pelo Conselho em 21/11/2026)
+
+Hoje, ao editar a lista, a busca mostra cartas de outras tintas bloqueadas com "Outra tinta".
+A direção aprovada: o editor mostra as cartas que cabem nas tintas do deck, em grade visual,
+como Dreamborn, lorcana.gg e duels.ink. Quatro fases, nesta ordem:
+
+1. **Grade com filtros (Fase 1 — em implementação).** Ao tocar em "Editar lista":
+   - tintas: sem tinta, escolha até duas; com uma, as cartas dela e a escolha da segunda; com duas,
+     só cartas compatíveis (as de duas tintas só quando as duas são do deck); "Mostrar todas as
+     tintas" para explorar. O editor nunca tira cartas nem muda as tintas sozinho;
+   - grade de cartas com imagem, custo, tintável, `− n/4 +`, quantas você tem e quantas faltam,
+     ampliar pelo botão do olho; uma entrada por carta (as impressões juntas); não ter a carta não
+     impede de pôr no deck;
+   - filtros: tintas, custo, tipo, legais no formato, "Só as que tenho"; em "Mais filtros", coleção,
+     tintável ou não e mecânicas (Evasive, Bodyguard, Challenger, Shift, Singer…);
+   - busca por nome e por texto de habilidade; o texto vem de `site/data/card-text.json`, buscado só
+     quando usado;
+   - celular primeiro (320–430 px): duas colunas, abas "Cartas" e "Meu deck 52/60", busca, filtros
+     e rolagem mantidos ao pôr e tirar cartas.
+2. **Painel do deck sempre visível.** O deck e seus números ao lado da grade enquanto se monta.
+3. **Mão de teste e mulligan.** Comprar uma mão inicial e treinar o mulligan com o deck.
+4. **Exportar para jogar.** Levar a lista para os simuladores onde se joga.
+
+As fases 2 a 4 são detalhadas e aprovadas antes de começar.
+
+Melhoria futura (registrada na aprovação da Fase 1, 23/11/2026): quando alguém tira a última tinta
+de um deck que tem cartas, essa escolha fica guardada só no navegador onde foi feita. Em outro
+aparelho, o deck volta a mostrar as tintas das cartas. Para valer em todos os aparelhos, o deck
+precisa guardar no banco que ficou sem tintas de propósito; isso exige uma mudança no banco, a ser
+aprovada à parte.
+
+Regras que valem para todas: legalidade, limite de cópias, coleção, desfazer, importação e as abas
+Análise, Faltando, Jogos, Plano, Fada Madrinha, preparo para evento e compartilhamento continuam
+as mesmas.

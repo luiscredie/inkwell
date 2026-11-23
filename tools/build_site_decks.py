@@ -45,6 +45,48 @@ def card_index(catalog: dict) -> dict:
     return {"generated_at": catalog.get("generated_at") or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "sets": sets, "cards": cards}
 
 
+MECHANICS = ["Evasive", "Bodyguard", "Challenger", "Shift", "Singer", "Rush", "Resist", "Ward", "Support", "Reckless", "Boost", "Vanish"]
+
+
+def _norm(text: str) -> str:
+    """The page's norm(): no accents, lower case, letters and digits separated by one space."""
+    import re
+    import unicodedata
+    s = unicodedata.normalize("NFD", str(text or ""))
+    s = "".join(ch for ch in s if not unicodedata.combining(ch)).lower()
+    return re.sub(r"[^a-z0-9]+", " ", s).strip()
+
+
+def _name_key(name: str) -> str:
+    """The page's nameKey(): the card's name without a parenthetical, as norm()."""
+    import re
+    return _norm(re.sub(r"\s*\(.*?\)\s*", " ", str(name or "")))
+
+
+def card_text(catalog: dict) -> dict:
+    """site/data/card-text.json: abilities and keywords per card (one row per name, any printing's id), for the
+    Montar grid's search by ability and its mechanics filter. Fetched only when used, so the page stays light.
+    [id, text (as norm()), [mechanics]]"""
+    import re
+    rows, seen = [], set()
+    for c in catalog.get("cards", []):
+        if c.get("card_type") in SKIP_TYPES or not c.get("card_id"):
+            continue
+        key = _name_key(c.get("name_en"))
+        text = str(c.get("ability_text") or "")
+        if not key or key in seen or not (text or c.get("classification")):
+            continue
+        seen.add(key)
+        mech = [m for m in MECHANICS if re.search(rf"\b{m}\b", text)]
+        rows.append([c["card_id"], _norm(" ".join([text, str(c.get("classification") or "")])), mech])
+    return {"generated_at": catalog.get("generated_at") or "", "cards": rows}
+
+
+def write_card_text(catalog: dict, out: Path = SITE / "data" / "card-text.json") -> Path:
+    out.write_text(json.dumps(card_text(catalog), ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
+    return out
+
+
 def portfolio_function(app_html: str) -> str:
     """The Inkwell app's deck-portfolio optimizer (static computeDeckPortfolioPlan), copied verbatim
     so the Plano tab and the old Consultor always give the same answer. tools/deck-portfolio-v4.test.mjs tests it."""
