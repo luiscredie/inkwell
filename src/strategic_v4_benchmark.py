@@ -6,9 +6,11 @@ from pathlib import Path
 from zipfile import BadZipFile
 
 if __package__:
+    from .strategic_v4_impact import board_impact, observed_followup, undo_equivalence
     from .strategic_v4_outs import STRENGTH_CARD_ID, ready_ink, visible_character
     from .strategic_v4_replay import analyze, board_evidence, disruption_counts, read_replays, replay_frames, undo_target
 else:
+    from strategic_v4_impact import board_impact, observed_followup, undo_equivalence
     from strategic_v4_outs import STRENGTH_CARD_ID, ready_ink, visible_character
     from strategic_v4_replay import analyze, board_evidence, disruption_counts, read_replays, replay_frames, undo_target
 
@@ -121,11 +123,13 @@ def benchmark_game(replay, selections):
         action = frame.get("takenAction") or {"type": frame["actionType"]}
         impacts = disruption_counts(entries, seat, board_evidence(before), board_evidence(after))
         result = {"lore_after": [after["myPlayer"]["lore"], after["opponent"]["lore"]],
-                  "disruption": dict(impacts)}
+                  "disruption": dict(impacts), "board_impact": board_impact(before, after)}
         case = {
             "focus": focus, "before_frame": seq - 1, "action_frame": seq,
             "position": position(before), "actual": action, "immediate_result": result,
-            "alternatives": [], "confidence": {"observation": "high", "ranking": "inconclusive"},
+            "alternatives": [],
+            "followup": observed_followup(seq, seat, snapshots, entries_by_seq, invalidated),
+            "confidence": {"observation": "high", "followup": "retained_line_only", "ranking": "inconclusive"},
             "resources": None,
             "opportunity_cost": None,
             "missing_evidence": ["complete legal action enumeration", "simulated counterfactual and opponent response"],
@@ -153,7 +157,14 @@ def benchmark_game(replay, selections):
                     reverted = strength_choice(entries_by_seq[other], include_undone=True)
                     undone = choice_outcome(entries_by_seq[other], reverted, include_undone=True) if reverted else None
                     if undone:
-                        abandoned[undone["target"]] = {"frame": other, "undo_frame": undo, **undone}
+                        restored = undo_equivalence(snapshots[other - 1], snapshots[undo])
+                        same_choice_state = undo_equivalence(snapshots[other - 1], before)
+                        abandoned[undone["target"]] = {
+                            "frame": other, "undo_frame": undo, **undone,
+                            "undo_equivalence": restored, "choice_equivalence": same_choice_state,
+                            "board_impact": board_impact(snapshots[other - 1], snapshots[other]),
+                            "followup": "unobserved_after_undo",
+                        }
                 case["alternatives"] = strength_alternatives(prompt, observed, abandoned)
                 case["resources"] = cast_resources(snapshots, entries_by_seq, prompt, seq, invalidated)
                 case["opportunity_cost"] = "card and payment committed; targeting skips the effect on other targets"

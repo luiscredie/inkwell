@@ -16,3 +16,11 @@ O JSON de seleção associa cada ID de jogo a pares `[frame_da_acao, foco]`. Os 
 - O subtipo Detective é evidência sobre cartas reveladas. O benchmark conserva a classificação do arquétipo como inconclusiva sem uma lista adversária ou evidência equivalente.
 
 Seleções feitas após assistir ao replay servem para revisar casos, com viés de seleção. Os controles sintéticos não validam a instalação do motor no WSL nem substituem alternativas simuladas até o próximo estado de decisão.
+
+## Impacto e resposta observada
+
+Para o mesmo prompt após undo, o benchmark compara o snapshot anterior à primeira escolha com o estado restaurado e com o snapshot anterior à escolha mantida. Registra campos diferentes ou faltantes. A igualdade cobre a representação gravada, que inclui zonas visíveis, identidades, dano, tinta, informação de mão disponível, prompts, efeitos e contadores. Estados internos ou ocultos do motor ficam fora da verificação.
+
+O impacto imediato registra saídas da mesa, banimentos corroborados pela passagem ao descarte, soma do lore dessas cartas no snapshot e os recursos próprios antes e depois. O lore removido da mesa é um indicador da ameaça imediata. Ele não é uma estimativa de lore efetivamente impedido, pois a carta pode retornar ou o turno pode se desenvolver de outra forma.
+
+A continuação acompanha a linha mantida até o início do turno adversário, o início do turno próprio seguinte e o fim desse turno, ou até o fim da partida. Marca se a mesma instância banida retorna à mesa e lista eventos selecionados do replay. Os campos de confiança mantêm a observação, a continuação e a avaliação comparativa separadas. Uma escolha desfeita tem efeito imediato registrado, mas sua continuação fica desconhecida.
