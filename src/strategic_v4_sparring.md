@@ -43,3 +43,17 @@ node tools/strategic_v4_sparring_scenario.mjs /caminho/simulador/dist/index.mjs
 ```
 
 O teste executa duas linhas a partir de uma posição sintética idêntica, até o fim do turno seguinte ou até vitória. No motor público testado, a linha Circle → Phillip deixa Simba ileso e pronto para o lore final. Na outra linha, Malicious marca Simba, Circle é cantada e Phillip bane Simba, evitando aquela vitória imediata. O teste não enumera todas as defesas. O catálogo público usado não oferece Don Karnage — Debonair Pirate, e a linha específica fica explicitamente indisponível para simulação nessa revisão. A ferramenta registra o resultado da terceira linha quando a impressão exata estiver disponível. O resultado sintético não estabelece a melhor linha da partida original.
+
+## Sessão em mensagens com checkpoint
+
+`src/strategic_v4_sparring_chat.py` inicia ou retoma a mesma partida em processos independentes. O checkpoint registra seed, listas exatas, identificação da partida, hashes do bundle e da ponte, versão do Node, respostas humanas e hash cumulativo da saída do motor. A retomada reaplica as decisões gravadas pelo mesmo motor determinístico e confere o hash até a próxima decisão. Divergências interrompem a retomada. A operação `act` exige o hash atual e aplica uma resposta nova. A escrita do checkpoint é atômica e protegida por um lock. Requer um ambiente Linux ou WSL para o lock do arquivo.
+
+```sh
+python3 src/strategic_v4_sparring_chat.py --checkpoint partida.local.json --engine /caminho/dist/index.mjs \
+  start --seed 20261123 --human humano.deck --bot bot.deck --printings impressoes.json
+python3 src/strategic_v4_sparring_chat.py --checkpoint partida.local.json --engine /caminho/dist/index.mjs show
+python3 src/strategic_v4_sparring_chat.py --checkpoint partida.local.json --engine /caminho/dist/index.mjs \
+  act --expected HASH_ATUAL --answer '{"type":"Action","option":0}'
+```
+
+Para mulligan em chat, apresente as instâncias da mão própria numeradas e mapeie a seleção de cartas ao `Alter Hand` com a mesma combinação de instâncias. Há até 128 combinações no motor. Devem ser oferecidas em forma compacta como seleção dos números das cartas, incluindo manter todas. Envie ao humano apenas a projeção própria e os eventos do modo treinador que o motor já liberou. O comando `feedback` salva uma anotação provisória da última revisão disponível, sem avançar a partida.

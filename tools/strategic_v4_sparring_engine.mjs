@@ -8,7 +8,7 @@ import { parseArgs } from "node:util";
 
 const { values } = parseArgs({ options: {
     engine: { type: "string" }, human: { type: "string" }, bot: { type: "string" },
-    seed: { type: "string", default: "1" }, turns: { type: "string" },
+    seed: { type: "string", default: "1" }, turns: { type: "string" }, "game-id": { type: "string" },
 }});
 const human = 1;
 const bot = 2;
@@ -89,7 +89,7 @@ async function main() {
     const humanDeck = loadDeck(values.human);
     const botDeck = loadDeck(values.bot);
     const controller = engine.createBot({ player: bot, deck: botDeck, settings: { seed, search: { nodes: 0, samples: 1 } } });
-    const gameId = randomUUID();
+    const gameId = values["game-id"] ?? randomUUID();
     let turn = null;
     let humanEndSubmitted = false;
     let pendingBotInput = null;
