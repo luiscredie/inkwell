@@ -16,7 +16,7 @@ def sample_replay():
     for seq, own, opp, action in (
         (1, 2, 5, "END_TURN"),
         (2, 8, 5, "QUEST"),
-        (3, 2, 5, "FREE_UNDO:1"),
+        (3, 2, 5, "FREE_UNDO:2"),
         (4, 5, 5, "END_TURN"),
         (5, 5, 20, "GAME_FINISH"),
     ):
@@ -77,10 +77,10 @@ class ReplayTests(unittest.TestCase):
 
     def test_disruption_uses_target_seat_and_excludes_undone_and_other_zones(self):
         rows = [
-            {"type": "CARD_DISCARDED", "player": 2, "data": {"fromZone": "hand"}},
+            {"type": "CARD_DISCARDED", "affectedPlayer": 2, "data": {"fromZone": "hand"}},
             {"type": "CARD_DISCARDED", "player": 2, "data": {"fromZone": "deck"}},
             {"type": "CARD_DESTROYED", "player": 1, "undone": True},
-            {"type": "CARD_PUT_INTO_INKWELL", "player": 1, "data": {"fromZone": "field"}},
+            {"type": "CARD_PUT_INTO_INKWELL", "affectedPlayer": 1, "data": {"fromZone": "field"}},
         ]
         self.assertEqual(disruption_counts(rows, 2), {"own.hand_discard": 1, "opponent.board_to_ink": 1})
 
