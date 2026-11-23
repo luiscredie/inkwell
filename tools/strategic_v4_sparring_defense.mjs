@@ -1,10 +1,12 @@
 // Bounded, public-information pilot. Inputs must be main-phase positions in a two-player game.
+import { createHash } from "node:crypto";
+
 const hiddenName = "Sparring Hidden Card";
 const hiddenCard = { type: "Item", fullName: hiddenName, names: [hiddenName], colors: [], cost: 99, inkwell: false, subtypes: [] };
-const defenderActions = new Set(["Challenge", "Quest", "Play", "Sing"]);
+const defenderActions = new Set(["Challenge", "Quest", "Play", "Sing", "Ink"]);
 
 // Decisions with multiple targets and non-ink costs remain unresolved.
-function decisionAnswers(live) {
+function decisionAnswers(live, line) {
     const request = live.request;
     const { type } = request;
     switch (type) {
@@ -19,6 +21,9 @@ function decisionAnswers(live) {
             if (request.min === 0) choices.push([]);
             return choices.map((cards) => ({ type, cards }));
         }
+        case "Choose Amount":
+            if (request.max - request.min > 12) return undefined;
+            return Array.from({ length: request.max - request.min + 1 }, (_, i) => ({ type, amount: request.min + i }));
         case "Choose Player":
             return request.players.map((player) => ({ type, player }));
         case "Choose Mode":
@@ -26,6 +31,17 @@ function decisionAnswers(live) {
         case "Choose Trigger":
             return request.options.map(({ reference: trigger }) => ({ type, trigger }));
         case "Pay Cost": {
+            // An activated card can pay a unique self-banish cost. Submit the
+            // activating instance and let the engine validate that payment.
+            if (request.cost.length === 1 && request.cost[0].type === "Banish" && request.cost[0].cards?.cards?.length === 1) {
+                const step = line.at(-1);
+                const action = step?.action;
+                const card = action?.ability?.card ?? action?.card;
+                if (action?.type !== "Activate" || request.cost[0].cards.cards[0].i !== card?.i ||
+                    request.player !== action.player) return undefined;
+                const payment = [{ type: "Banish", player: request.player, cards: [card] }];
+                return [...(request.optional ? [{ type, pay: false }] : []), { type, pay: true, payment }];
+            }
             if (typeof request.player !== "number" ||
                 !request.cost.every((cost) => cost.type === "Ink" && Number.isSafeInteger(cost.amount) && cost.amount >= 0)) {
                 return undefined;
@@ -46,13 +62,17 @@ function decisionAnswers(live) {
     }
 }
 
-export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActions = 2 } = {}) {
+export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActions = 2, maxMs = 1500, rootAllowed = () => true, allowInk = true } = {}) {
     if (!Number.isSafeInteger(maxNodes) || maxNodes < 1 || maxNodes > 4096) {
         throw new RangeError("maxNodes must be between 1 and 4096");
     }
     if (!Number.isSafeInteger(maxActions) || maxActions < 1 || maxActions > 4) {
         throw new RangeError("maxActions must be between 1 and 4");
     }
+    if (!Number.isFinite(maxMs) || maxMs <= 0 || maxMs > 30000) {
+        throw new RangeError("maxMs must be positive and at most 30000");
+    }
+    const deadline = performance.now() + maxMs;
     const defender = view.turn.player;
     const seats = Object.keys(view.players).map(Number);
     if (seats.length !== 2 || !seats.includes(defender)) {
@@ -63,9 +83,11 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
     const options = { card: (name) => name === hiddenName ? hiddenCard : engine.getCard(name) };
     let nodes = 0;
     let budgetExhausted = false;
+    let cutoff = null;
 
     function descend(node, input) {
-        if (nodes >= maxNodes) {
+        if (node.line.length >= 48 || nodes >= maxNodes || performance.now() >= deadline) {
+            cutoff ??= node.line.length >= 48 ? "steps" : nodes >= maxNodes ? "nodes" : "time";
             budgetExhausted = true;
             return undefined;
         }
@@ -81,11 +103,12 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
             anchor: node.live.request.type === "Action" ? () => node.live.branch() : node.anchor,
             prefix: [...prefix, input],
             line: [...node.line, input],
+            actors: [...node.actors, node.live.request.player ?? null],
         };
     }
 
     const lore = (live) => live.position?.players[attacker]?.lore ?? null;
-    const incomplete = (node) => ({ status: "inconclusive", maxLore: lore(node.live), quests: [], line: node.line });
+    const incomplete = (node) => ({ status: "inconclusive", maxLore: lore(node.live), ownLore: node.live.position?.players[defender]?.lore ?? 0, quests: [], line: node.line, actors: node.actors });
 
     function terminal(node) {
         const { outcome } = node.live;
@@ -104,7 +127,8 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
             const child = descend(node, { type: "Random", outcome: { type: "Shuffle", cards } });
             return child ? visit(child) : incomplete(node);
         }
-        const answers = decisionAnswers(node.live);
+        if (request.cards?.some((card) => card.fullName === hiddenName)) return incomplete(node);
+        const answers = decisionAnswers(node.live, node.line);
         if (!answers?.length || typeof request.player !== "number") return incomplete(node);
         let best;
         for (const answer of answers) {
@@ -112,15 +136,24 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
             const result = child ? visit(child) : incomplete(node);
             if (!best || prefer(result, best)) best = result;
             if (result.status === (actor === defender ? "defender_wins" : "lethal")) break;
-            if (budgetExhausted) return actor === defender && best.status === "no_lethal_found" ? best : incomplete(node);
+            if (budgetExhausted) return incomplete(node);
         }
         return best;
     }
 
     const defensiveRank = { defender_wins: 3, no_lethal_found: 2, inconclusive: 1, lethal: 0 };
     const offensiveRank = { lethal: 3, inconclusive: 2, no_lethal_found: 1, defender_wins: 0 };
+    const expense = (entry) => {
+        const actions = entry.line.filter((step) => step.type === "Action");
+        return [actions.filter(({ action }) => ["Play", "Sing", "Ink"].includes(action.type)).length, actions.length];
+    };
+    const compareDefense = (a, b) => {
+        const [cardsA, actionsA] = expense(a);
+        const [cardsB, actionsB] = expense(b);
+        return cardsA - cardsB || b.ownLore - a.ownLore || actionsA - actionsB || a.maxLore - b.maxLore;
+    };
     const preferDefense = (a, b) => defensiveRank[a.status] > defensiveRank[b.status] ||
-        (a.status === b.status && a.maxLore !== null && b.maxLore !== null && a.maxLore < b.maxLore);
+        (a.status === b.status && compareDefense(a, b) < 0);
     const preferAttack = (a, b) => offensiveRank[a.status] > offensiveRank[b.status] ||
         (a.status === b.status && a.maxLore !== null && b.maxLore !== null && a.maxLore > b.maxLore);
 
@@ -133,18 +166,19 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
             return decide(node, checkReply, request.player, request.player === defender ? preferDefense : preferAttack);
         }
         if (request.player !== attacker) return incomplete(node);
-        const quests = request.actions.filter((action) => action.type === "Quest");
+        const replyTypes = ["Quest", "End Turn", "Challenge", "Activate"];
+        const responses = replyTypes.flatMap((type) => request.actions.filter((action) => action.type === type));
         let result = {
             ...incomplete(node),
-            status: request.actions.every((action) => ["Quest", "End Turn"].includes(action.type)) ? "no_lethal_found" : "inconclusive",
+            status: request.actions.every((action) => replyTypes.includes(action.type)) ? "no_lethal_found" : "inconclusive",
         };
-        for (const action of [...quests, ...request.actions.filter((option) => option.type === "End Turn")]) {
+        for (const action of responses) {
             const child = descend(node, { type: "Action", action });
             if (!child) return { ...result, status: "inconclusive" };
             let next;
-            if (action.type === "Quest") {
+            if (action.type !== "End Turn") {
                 next = checkReply(child);
-                next = { ...next, quests: [action.card, ...next.quests] };
+                if (action.type === "Quest") next = { ...next, quests: [action.card, ...next.quests] };
             } else {
                 next = finishReply(child);
             }
@@ -172,10 +206,12 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
         if (node.live.result?.turn.player !== attacker) return incomplete(node);
         const anchor = () => engine.startTurn(node.live.result, options);
         const live = anchor();
-        const start = { live, anchor, prefix: [], line: [] };
-        // Public non-main-phase openings can grant extra actions and are outside this pilot.
-        const reply = live.request?.type === "Action" || live.outcome ? checkReply(start) : incomplete(start);
-        return { ...reply, replyLine: reply.line, line: node.line };
+        const start = { live, anchor, prefix: [], line: [], actors: [] };
+        // Resolve visible opening choices adversarially, including Lilo's
+        // optional payment. Unsupported prompts still return inconclusive.
+        const reply = checkReply(start);
+        return { ...reply, status: reply.status === "defender_wins" ? "no_lethal_found" : reply.status,
+            replyLine: reply.line, line: node.line, actors: node.actors };
     }
 
     function pass(node) {
@@ -196,7 +232,7 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
         let best = pass(node);
         if (remaining === 0) return best;
         for (const action of request.actions) {
-            if (!defenderActions.has(action.type)) continue;
+            if (!defenderActions.has(action.type) || (action.type === "Ink" && !allowInk)) continue;
             const child = descend(node, { type: "Action", action });
             if (!child) break;
             const result = defend(child, remaining - 1);
@@ -207,23 +243,46 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
     }
 
     const anchor = () => engine.continueTurn(position, options);
-    const root = { live: anchor(), anchor, prefix: [], line: [] };
+    const root = { live: anchor(), anchor, prefix: [], line: [], actors: [] };
     if (root.live.request?.type !== "Action") throw new Error("a main-phase action menu is required");
-    const baseline = pass(root);
     const candidates = [];
+    // Reserve first access to the shared budget for a quest win before
+    // exploring defenses. Try one engine-offered quest order, up to 12 quests.
+    function questWin(node, depth) {
+        const done = terminal(node);
+        if (done) return done;
+        const request = node.live.request;
+        if (!request || budgetExhausted) return incomplete(node);
+        if (request.type !== "Action") {
+            const actor = request.player;
+            return decide(node, (child) => questWin(child, depth), actor, actor === defender ? preferDefense : preferAttack);
+        }
+        if (!depth) return incomplete(node);
+        const action = request.actions.find((a) => a.type === "Quest" && (node !== root || rootAllowed(a)));
+        const child = action && descend(node, { type: "Action", action });
+        return child ? questWin(child, depth - 1) : incomplete(node);
+    }
+    const win = questWin(root, 12);
+    const baseline = pass(root);
+    if (win.status === "defender_wins") {
+        const selected = { action: win.line[0].action, ...win };
+        return { baseline, candidates: [selected], selected, nodes, maxNodes, maxActions, budgetExhausted, cutoff };
+    }
     if (baseline.status === "lethal") {
-        for (const action of root.live.request.actions) {
-            if (!defenderActions.has(action.type)) continue;
+        const actions = root.live.request.actions.filter(rootAllowed);
+        const byUrgency = (action) => action.type === "Quest" ? 0 : 1;
+        for (const action of actions.sort((a, b) => byUrgency(a) - byUrgency(b))) {
+            if (!defenderActions.has(action.type) || (action.type === "Ink" && !allowInk)) continue;
             const child = descend(root, { type: "Action", action });
             if (!child) break;
             candidates.push({ action, ...defend(child, maxActions - 1) });
-            if (budgetExhausted) break;
+            if (candidates.at(-1).status === "defender_wins" || budgetExhausted) break;
         }
     }
     const selected = candidates.find((entry) => entry.status === "defender_wins")
-        ?? candidates.filter((entry) => entry.status === "no_lethal_found").sort((a, b) => a.maxLore - b.maxLore)[0]
+        ?? candidates.filter((entry) => entry.status === "no_lethal_found").sort(compareDefense)[0]
         ?? null;
-    return { baseline, candidates, selected, nodes, maxNodes, maxActions, budgetExhausted };
+    return { baseline, candidates, selected, nodes, maxNodes, maxActions, budgetExhausted, cutoff };
 }
 
 function publicPosition(view, defender) {
@@ -252,4 +311,35 @@ function publicPosition(view, defender) {
         }
     }
     return position;
+}
+
+// Canonical public state also guards continuations after an intervening draw or
+// other difference between the modeled board and the live runner.
+function projectionKey(view, player) {
+    const state = publicPosition(view, player);
+    const stable = (_, value) => value && typeof value === "object" && !Array.isArray(value)
+        ? Object.fromEntries(Object.keys(value).sort().map((key) => [key, value[key]])) : value;
+    return createHash("sha256").update(JSON.stringify(state, stable)).digest("hex");
+}
+
+export function ownPlan(engine, view, selected) {
+    const player = view.turn.player;
+    const live = engine.continueTurn(publicPosition(view, player), {
+        card: (name) => name === hiddenName ? hiddenCard : engine.getCard(name),
+    });
+    const plan = [];
+    for (const [index, step] of selected.line.entries()) {
+        if (!live.request || live.request.player !== player || selected.actors[index] !== player) break;
+        const trigger = step.answer?.type === "Choose Trigger"
+            ? live.request.options.find((o) => JSON.stringify(o.reference) === JSON.stringify(step.answer.trigger)) : null;
+        const entry = { step, position: projectionKey(live.position, player) };
+        if (trigger) entry.trigger = { player: trigger.player, source: trigger.source, effect: trigger.effect };
+        plan.push(entry);
+        live.submit(step);
+    }
+    return plan;
+}
+
+export function matchesPlanPosition(view, entry) {
+    return projectionKey(view, view.turn.player) === entry.position;
 }

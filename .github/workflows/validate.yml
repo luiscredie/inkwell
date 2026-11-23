@@ -14,6 +14,23 @@ jobs:
         with:
           node-version: '24'
           package-manager-cache: false
+      - name: Check out the pinned public Sparring rules engine
+        uses: actions/checkout@v5
+        with:
+          repository: dice2cu/simulator-for-lorcana
+          ref: 5765234bb94efd8fb86c6cb5140fde0bb9fd2708
+          path: .sparring-rules
+          persist-credentials: false
+      - name: Build the Sparring test engine
+        working-directory: .sparring-rules
+        run: npm ci --ignore-scripts && npm run build
+      - name: Compare competitive Sparring policies on the real engine
+        env:
+          INKWELL_SPAR_ENGINE: .sparring-rules/dist/index.mjs
+        run: |
+          test -s "$INKWELL_SPAR_ENGINE"
+          node --test tools/strategic_v4_sparring_{defense,policy}.test.mjs
+          python3 -m unittest discover -s src -p 'test_strategic_v4_sparring_defensive_chat.py' -v
       - name: Data-contract fixtures
         run: node tools/validate.test.mjs
       - name: Image-fallback identity regression

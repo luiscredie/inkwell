@@ -47,7 +47,7 @@ test("nonlethal board does not force a defensive challenge", { skip }, () => {
     assert.equal(result.selected, null);
 });
 
-test("a budget cutoff and an unresolved Lilo trigger remain inconclusive", { skip }, () => {
+test("node cutoff remains inconclusive, but a public Lilo opening can be resolved", { skip }, () => {
     const low = analyzeImmediateDefense(engine, position(), { maxNodes: 1 });
     assert.equal(low.baseline.status, "inconclusive");
     assert.equal(low.nodes, 1);
@@ -56,8 +56,8 @@ test("a budget cutoff and an unresolved Lilo trigger remain inconclusive", { ski
     state.players[1].discard.push(card(lilo, 3));
     state.players[1].inkwell = [4, 5].map((i) => ({ card: card(pegasus, i), exerted: false }));
     const result = analyzeImmediateDefense(engine, state);
-    assert.equal(result.baseline.status, "inconclusive");
-    assert.equal(result.selected, null);
+    assert.equal(result.baseline.status, "lethal");
+    assert.ok(result.baseline.replyLine.some((s) => s.answer?.type === "Optional"));
 });
 
 test("changing hidden names with fixed counts cannot affect the analysis", { skip }, () => {

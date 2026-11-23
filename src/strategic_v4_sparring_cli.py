@@ -101,9 +101,9 @@ def interactive_feedback(turn):
         print("Informe uma classificação válida e uma justificativa.")
 
 
-def run_session(command, feedback_file, answer, feedback, notify):
+def run_session(command, feedback_file, answer, feedback, notify, *, env=None):
     pending = None
-    with subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, encoding="utf-8") as engine:
+    with subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, encoding="utf-8", env=env) as engine:
         try:
             for line in engine.stdout:
                 message = json.loads(line)
@@ -148,12 +148,19 @@ def main(argv=None):
     parser.add_argument("--human", required=True, type=Path, help="human deck file")
     parser.add_argument("--bot", required=True, type=Path, help="bot deck file")
     parser.add_argument("--seed", type=int, default=1)
+    parser.add_argument("--policy", choices=("defense", "baseline"), default="defense")
     parser.add_argument("--turns", type=int, help="optional short run limit")
     parser.add_argument("--feedback", type=Path, default=Path("sparring-feedback.local.jsonl"))
     parser.add_argument("--smoke", action="store_true", help="automatic test controller, no human ratings")
     args = parser.parse_args(argv)
     bridge = Path(__file__).resolve().parents[1] / "tools" / "strategic_v4_sparring_engine.mjs"
-    command = ["node", str(bridge), "--engine", str(args.engine), "--human", str(args.human),
+    engine = args.engine
+    env = os.environ.copy()
+    if args.policy == "defense":
+        env["INKWELL_RULES_ENGINE"] = str(engine.resolve())
+        env.pop("INKWELL_DECISION_JOURNAL", None)
+        engine = bridge.with_name("strategic_v4_sparring_candidate.mjs")
+    command = ["node", str(bridge), "--engine", str(engine), "--human", str(args.human),
                "--bot", str(args.bot), "--seed", str(args.seed)]
     if args.turns is not None:
         command.extend(["--turns", str(args.turns)])
@@ -167,7 +174,7 @@ def main(argv=None):
     try:
         run_session(command, args.feedback, (lambda event: short_test_answer(event["request"])) if args.smoke
                     else interactive_answer, (lambda turn: print(json.dumps(turn, ensure_ascii=False))) if args.smoke
-                    else interactive_feedback, notify)
+                    else interactive_feedback, notify, env=env)
     except (ValueError, OSError, EOFError) as error:
         print(error, file=sys.stderr)
         return 1

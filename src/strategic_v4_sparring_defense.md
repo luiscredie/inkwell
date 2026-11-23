@@ -1,15 +1,15 @@
 # Sparring V4 · defesa contra vitória no próximo turno
 
-Piloto offline para revisar decisões no Coach. O módulo `tools/strategic_v4_sparring_defense.mjs` recebe o motor e uma posição da fase principal em jogo com dois jogadores. As cópias para simulação preservam cartas públicas e a mão do jogador que decide. A mão adversária, o baralho, a tinta e cartas viradas sob personagens usam marcadores sem habilidades. Os resultados dizem respeito ao cenário com essa informação pública.
+A política de defesa é o padrão das novas partidas do chat e do terminal. O mesmo analisador serve para revisar posições offline. O módulo `tools/strategic_v4_sparring_defense.mjs` recebe o motor e uma posição da fase principal em jogo com dois jogadores. As cópias para simulação preservam cartas públicas e a mão do jogador que decide. A mão adversária, o baralho, a tinta e cartas viradas sob personagens usam marcadores sem habilidades. Os resultados dizem respeito ao cenário com essa informação pública.
 
-O ponto de comparação é encerrar o turno na posição fornecida. O motor inicia a resposta e verifica quests e efeitos de encerramento. Se encontrar vitória por lore, testa sequências de desafio, quest, jogar e cantar. Por padrão, o defensor pode tomar até duas dessas ações antes de passar. O motor valida pagamentos simples em tinta e resolve escolhas de alvo único, efeitos opcionais e a resposta adversária ao Dark Dance. Uma vitória imediata do defensor tem prioridade. O resultado inclui as ações e decisões executadas, a resposta pública encontrada, o lore alcançado e o consumo do orçamento.
+O ponto de comparação é encerrar o turno na posição fornecida. O motor inicia a resposta e verifica quests e efeitos de encerramento. Se encontrar vitória por lore, testa sequências de desafio, quest, tinta, jogar e cantar. O analisador avulso usa duas ações por padrão. A política do Sparring usa três e testa primeiro uma sequência de até 12 quests para vencer. O motor valida pagamentos simples em tinta e resolve escolhas de alvo único, efeitos opcionais e a resposta adversária ao Dark Dance. Uma vitória imediata do defensor tem prioridade. O resultado inclui as ações e decisões executadas, a resposta pública encontrada, o lore alcançado e o consumo do orçamento.
 
 ## Casos usados para avaliação
 
 - Reproduziu-se o checkpoint final da partida do iPhone com o mesmo motor e histórico. O motor confirmou vitória por lore em 15 turnos de jogo, com as duas avaliações provisórias preservadas.
 - No turno 5 do bot, manter Lilo no descarte deixou 4 personagens no descarte e até 5 tintas após tintar. O motor ainda não ofereceu Chernabog.
 - No turno 6 do bot, manter Lilo no descarte deixou 5 personagens no descarte e 5 tintas. O motor ofereceu e executou Chernabog por 5. No turno 7, o mesmo desvio também o colocou em jogo por 5, sobrando 1 tinta. Chernabog entrou secando nos dois casos. No turno 7, uma segunda simulação continuou até o fim. O bot baixou Chernabog e encerrou, e os dois Pegasus ainda fizeram quest para vencer por 20–7. A ramificação do turno 6 terminou na entrada de Chernabog. O efeito dessa preparação antecipada e a tentativa de desafiar Elinor continuam em aberto.
-- As posições sintéticas verificam um desafio que impede uma vitória pública, uma mesa sem defesa de uma jogada no escopo, uma mesa com lore insuficiente, limite de busca, gatilho de Lilo sem resolução, sigilo da mão adversária, Evasive e vitória imediata do próprio defensor.
+- As posições sintéticas verificam um desafio que impede uma vitória pública, uma mesa sem defesa de uma jogada no escopo, uma mesa com lore insuficiente, limite de busca, gatilho público opcional de Lilo, sigilo da mão adversária, Evasive e vitória imediata do próprio defensor.
 
 ```sh
 INKWELL_SPAR_ENGINE=/caminho/simulador/dist/index.mjs \
@@ -27,4 +27,55 @@ INKWELL_SPAR_ENGINE=/caminho/simulador/dist/index.mjs \
 
 O simulador externo precisa expor `getCard`, `continueTurn` e `startTurn`. O bundle e os checkpoints privados ficam fora do GitHub. A checagem é local e requer esse bundle.
 
-A reconstrução da fase principal não restaura limites de uso dependentes de ações anteriores do mesmo turno. Ativações, Boost, compras identificadas, custos diferentes de tinta simples e escolhas de múltiplos alvos ficam fora do piloto. Embaralhamentos usam uma ordenação legal com a próxima compra opaca. Gatilhos na abertura, como a volta de Lilo, e o fim do orçamento podem deixar o resultado inconclusivo. `no_lethal_found` informa o que foi verificado no horizonte público. O piloto ainda não escolhe ações no Sparring do iPhone.
+A reconstrução da fase principal não restaura limites de uso dependentes de ações anteriores do mesmo turno. A resposta adversária explora quests, desafios, ativações e fim do turno. Boost, compras futuras identificadas, vários custos e escolhas de múltiplos alvos ficam fora da busca. Embaralhamentos usam uma ordenação legal com a próxima compra opaca. A busca resolve a volta opcional da Lilo adversária quando o motor oferece a escolha e o pagamento. A política ainda delega a volta da própria Lilo à política original. `no_lethal_found` informa o que foi verificado no horizonte público. O limite de tempo é cooperativo entre transições do motor.
+
+## Política usada na partida
+
+O chat e o terminal aceitam `--policy baseline` como controle. No chat a opção pertence ao comando `start`. Partidas novas usam `defense`. Checkpoints anteriores carregam a política e o bundle originais. A política nova fixa também os hashes dos três módulos de defesa e registra, no checkpoint privado, a conclusão e o plano de cada busca. Ao retomar, confere o hash da visão e do pedido e reutiliza o plano. Isso preserva inclusive as decisões tomadas quando acabou o tempo.
+
+O motor projeta a visão do jogador antes de chamar o controlador. A busca usa a mão própria, a mesa, o descarte público e as contagens das zonas ocultas. A projeção conservadora também oculta identidades de compras futuras possivelmente conhecidas. Cada passo do plano exige a mesma posição projetada e uma opção compatível no pedido atual. O pagamento usa os identificadores oferecidos naquele pedido. Uma escolha adversária encerra o prefixo que o bot pode executar. Na próxima ação principal ele reavalia. A busca recebe até 768 transições, três ações de defesa, 48 passos por ramo em cada turno e 1.200 ms por consulta. Uma operação síncrona do motor pode ultrapassar o prazo antes da próxima verificação. As cartas de custo alternativo com descrições ambíguas ficam a cargo da política original.
+
+A escolha defensiva exige uma vitória adversária executada ao passar e uma resposta que sobreviva no horizonte público modelado. Entre defesas que sobrevivem, a política prefere gastar menos cartas, depois mais lore próprio e menos ações. Se uma linha necessária exceder o orçamento ou depender de opções fora da busca, a política mantém o diagnóstico inconclusivo e devolve o controle ao bot original. O motor ainda valida a decisão real. A revisão humana continua provisória.
+
+## Comparação no motor
+
+Posições artificiais de dois turnos com a versão pública `5765234bb94efd8fb86c6cb5140fde0bb9fd2708`. Para cada posição, cada política recebeu a mesma seed, estado inicial, catálogo e configuração do bot. O oponente do ensaio prioriza quests legais e encerra o turno. Nos prompts usa o controlador original. A busca interna também examina respostas públicas alternativas. Os três casos inspirados no Duels usam reconstruções parciais. O benchmark mantém as zonas e compras sintéticas explícitas. Na reconstrução de Chart Topper o defensor já esgotou as ações relevantes. No T18 Guitar, Boost e cartas sob Ariel ficam fora da posição pareada.
+
+Cada uma das 17 posições foi repetida com as seeds 17, 309 e 20261123. A tabela usa a última seed. O número de nós soma as buscas do candidato no turno. Os milissegundos medem a execução dos dois turnos do ensaio, separadamente para original e candidato, em uma execução do Work. Todos os casos incluem passar como referência. A linha vencedora pode encerrar a busca antes de examinar o restante do menu.
+
+| Posição | Outras opções examinadas ou controle | Política original | Candidato e resultado até a resposta | Nós | ms original / candidato |
+|---|---|---|---|---:|---:|
+| Simba a 19 | Quest, tinta de música, canto de cada música, pagar Malicious | Quest com Mufasa, tinta Circle, paga Malicious. Perde a 20 | Paga 3 por Malicious, canta Circle com Mufasa, recupera Phillip. Simba é banido e o adversário fica a 19 | 90 | 5 / 16 |
+| Mesma mesa com Lilo adversária no descarte e 2 tintas | Mesmas aberturas, com aceitar ou recusar a volta na resposta | Mesma perda a 20 | Mesma defesa, sobrevive a 19 | 120 | 4 / 17 |
+| Duas tintas e Ursula na mão | Tinta de cada carta oferecida, jogar Ursula, cantar as músicas, quest | Quest, tinta Circle, joga Ursula. Perde | Tinta Ursula, paga Malicious, canta Circle para Phillip. Sobrevive a 19 | 230 | 2 / 49 |
+| Simba e Magic Golden Flower | Combo, quest e tintas, resposta da ativação com custo de banir o próprio item | Quest, tinta Circle, paga Malicious. Perde | Resolve o combo e sobrevive a 19. Uma execução dirigida independente confirmou o resultado da mesma linha | 98 | 4 / 17 |
+| Pegasus Evasive a 19 | Pagar Strength, cantar, tintar, quest. Desafio indisponível | Tinta Strength, quest. Perde | Quest com Elinor, paga 3 por Strength e bane Pegasus. Sobrevive a 19 | 44 | 3 / 14 |
+| Chernabog contra Bodyguard e Lady | Quest de Elinor, desafiar o Bodyguard, jogar Chernabog | Chernabog remove Woolter & Jesse, Elinor desafia Lady | Mesma defesa executada. Ambos sobrevivem a 19 | 93 | 40 / 58 |
+| Elinor com vitória de um quest | Quest vence imediatamente | Joga Chernabog antes do quest | Quest, vence a 20 com Chernabog na mão | 3 | 3 / 2 |
+| Vitória em dois quests | Sequência de quests | Chernabog, dois quests | Dois quests, vence | 4 | 4 / 2 |
+| Vitória em três quests | Sequência de quests | Chernabog, três quests | Três quests, vence | 5 | 3 / 4 |
+| Hercules e Lilo | Desafio, cantar Strength, tintar, quest | Desafia Lilo e tinta Strength | Desafia e mantém Strength. Em outro ramo, cantar gastou a carta com a mesma mesa própria, tinta e lore finais | 31 | 2 / 4 |
+| Lady e Chernabog na mão | Desafio de Elinor, jogar Chernabog, quest | Joga Chernabog e faz quest | Desafia, preserva Chernabog e as cinco tintas, ganha um lore a menos. Superioridade de longo prazo em aberto | 57 | 2 / 8 |
+| Pegasus sem resposta | Quest ou passar | Quest e passa. Perde | Mesma sequência, perde a 20. Nenhuma defesa encontrada no escopo | 8 | 1 / 2 |
+| Kuzco com Ward | Tinta, pagar/cantar Strength, quest | Tinta Strength, quest. Perde | Mesma sequência. A oferta da música não torna Kuzco um alvo elegível. Adversário chega a 22 | 40 | 2 / 6 |
+| Lady sem ameaça letal | Ponto de comparação ao passar | Chernabog e quest | Mesma sequência. Sem intervenção defensiva | 10 | 3 / 4 |
+| Final Elinor e Max | Passar. O novo Max seca no próximo turno | Passa | Passa. Ambos perdem a 20 | 3 | 1 / 1 |
+| Segundo Chart Topper | Passar. A cópia no descarte e a da mesa têm identidades distintas | Passa | Passa. Meilin, Vanessa e o Max restante chegam a 21 | 4 | 2 / 2 |
+| Mesa parcial do T18 com Bodyguard | Chernabog, quest de Ariel ou desafiar Woolter & Jesse | Chernabog em Vixey, quest com Ariel | Mesma linha. O adversário vence a 20. Desafiar primeiro também deixou letal no piloto | 288 | 9 / 138 |
+
+Há ainda controles separados de orçamento. Com apenas um nó por consulta, ou prazo efetivamente zero, o bot registra inconclusivo e executa a linha original que perde a 20. No teste de sigilo, substituímos a mão e o topo adversários mantendo suas contagens. As decisões, os menus, os ramos examinados e os veredictos foram idênticos. As seeds repetidas ajudam a detectar dependência de desempate, mas não aumentam a diversidade das posições estratégicas.
+
+O teste registra a posição e a seed, os menus projetados, os ramos pesquisados com pagamentos e alvos, e os passos aceitos pelo motor para cada política. Para ver o detalhe, execute com o bundle público compilado:
+
+```sh
+INKWELL_BENCH_TRACE=1 INKWELL_SPAR_ENGINE=/caminho/dist/index.mjs \
+  node --test tools/strategic_v4_sparring_policy.test.mjs
+```
+
+Na reprodução privada do checkpoint do iPhone, as duas políticas receberam a mesma primeira solicitação do turno 14. Ambas aceitaram voltar Lilo, pagaram o custo e encerraram. Os dois Pegasus terminaram a partida em 20–7. O checkpoint antigo também retomou até o fim, com as duas anotações provisórias. Essa partida usa Chernabog – Evildoer. O caso de Dark Dance usa Chernabog – Unnatural Force.
+
+## Proposta para a Etapa 3
+
+Começar pela decisão opcional de Lilo no turno anterior ao letal. A partir do mesmo checkpoint, executar a volta, a recusa com Chernabog e a recusa sem baixá-lo. Para cada ramo, registrar lore disponível agora, tinta restante, descarte necessário, mesa após a resposta e ações legais no próximo turno próprio. Testar também quest versus desenvolvimento e tinta versus preservação em posições onde essas decisões mudem a combinação disponível.
+
+Em uma segunda posição, comparar Circle para Don Karnage com guardar Circle para Malicious e Phillip no descarte. Registrar a impressão exata disponível no catálogo antes de executar. A versão pública fixada aqui não contém Don Karnage – Debonair Pirate. Repetir com e sem letal adversário e verificar se a política abandona a preparação a tempo. Aprovar a ampliação quando a nova política melhorar esses casos nos mesmos estados e preservar os resultados defensivos acima. A evidência atual sustenta um piloto de dois turnos. Treinamento e estimativa de taxa de vitória exigem validação posterior em posições independentes.

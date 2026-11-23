@@ -28,17 +28,27 @@ def file_hash(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def runtime_identity(engine, bridge):
-    return {
+CANDIDATE = BRIDGE.with_name("strategic_v4_sparring_candidate.mjs")
+
+
+def runtime_identity(engine, bridge, defensive=False):
+    identity = {
         "engine_sha256": file_hash(engine), "bridge_sha256": file_hash(bridge),
         "node": subprocess.check_output(["node", "--version"], text=True).strip(),
     }
+    if defensive:
+        identity["defense_modules"] = {
+            name: file_hash(CANDIDATE.with_name(f"strategic_v4_sparring_{name}.mjs"))
+            for name in ("candidate", "policy", "defense")
+        }
+    return identity
 
 
-def new_checkpoint(seed, human, bot, engine, bridge, printings=None):
+def new_checkpoint(seed, human, bot, engine, bridge, printings=None, *, defensive=False):
     return {"schema": SCHEMA, "game_id": str(uuid4()), "seed": seed,
             "human_deck": human, "bot_deck": bot, "printings": printings,
-            "runtime": runtime_identity(engine, bridge), "history": [], "feedback": [], "cursor": None}
+            **({"defense_journal": []} if defensive else {}),
+            "runtime": runtime_identity(engine, bridge, defensive), "history": [], "feedback": [], "cursor": None}
 
 
 def write_atomic(path, state):
@@ -65,9 +75,10 @@ def locked(path):
         yield
 
 
-def stream_checkpoint(state, engine, bridge, submitted=None):
+def stream_checkpoint(state, engine, bridge, submitted=None, *, new_records=None):
     """Replay only recorded inputs, check the prefix, then optionally apply one new answer."""
-    if state["schema"] != SCHEMA or state["runtime"] != runtime_identity(engine, bridge):
+    defensive = "defense_journal" in state
+    if state["schema"] != SCHEMA or state["runtime"] != runtime_identity(engine, bridge, defensive):
         raise ValueError("checkpoint runtime differs from the pinned engine, bridge or Node version")
     rolling = hashlib.sha256()
     index = 0
@@ -79,10 +90,22 @@ def stream_checkpoint(state, engine, bridge, submitted=None):
         decks = [root / "human.deck", root / "bot.deck"]
         for path, key in zip(decks, ("human_deck", "bot_deck")):
             path.write_text(state[key], encoding="utf-8")
-        command = ["node", str(bridge), "--engine", str(engine), "--human", str(decks[0]),
+        env = os.environ.copy()
+        journal = root / "defense.jsonl"
+        if defensive:
+            journal.write_text("".join(json.dumps(row) + "\n" for row in state["defense_journal"]))
+            env.update(INKWELL_RULES_ENGINE=str(engine.resolve()), INKWELL_DECISION_JOURNAL=str(journal))
+
+        def boundary(cursor, event):
+            if defensive and new_records is not None:
+                rows = journal.read_text().splitlines()
+                new_records.extend(json.loads(row) for row in rows[len(state["defense_journal"]):])
+            return cursor, event, reviews, hand_events
+
+        command = ["node", str(bridge), "--engine", str(CANDIDATE if defensive else engine), "--human", str(decks[0]),
                    "--bot", str(decks[1]), "--seed", str(state["seed"]), "--game-id", state["game_id"]]
         with subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                              stderr=subprocess.DEVNULL, text=True, encoding="utf-8") as process:
+                              stderr=subprocess.DEVNULL, env=env, text=True, encoding="utf-8") as process:
             try:
                 for line in process.stdout:
                     event = json.loads(line)
@@ -108,12 +131,12 @@ def stream_checkpoint(state, engine, bridge, submitted=None):
                             raise ValueError("saved decision boundary did not replay identically")
                         boundary_checked = True
                         if submitted is None:
-                            return cursor, event, reviews, hand_events
+                            return boundary(cursor, event)
                         if kind != "human_input":
                             raise ValueError("this game has finished")
                         reply = submitted
                     else:
-                        return cursor, event, reviews, hand_events
+                        return boundary(cursor, event)
                     process.stdin.write(json.dumps(reply) + "\n")
                     process.stdin.flush()
                     reviews.clear()
@@ -136,6 +159,7 @@ def main(argv=None):
     start.add_argument("--bot", type=Path, required=True)
     start.add_argument("--seed", type=int, required=True)
     start.add_argument("--printings", type=Path)
+    start.add_argument("--policy", choices=("defense", "baseline"), default="defense")
     sub.add_parser("show")
     action = sub.add_parser("act")
     action.add_argument("--expected", required=True)
@@ -152,15 +176,20 @@ def main(argv=None):
                     raise ValueError("checkpoint already exists; use show or act")
                 manifest = json.loads(args.printings.read_text(encoding="utf-8")) if args.printings else None
                 state = new_checkpoint(args.seed, args.human.read_text(encoding="utf-8"),
-                                       args.bot.read_text(encoding="utf-8"), args.engine, args.bridge, manifest)
+                                       args.bot.read_text(encoding="utf-8"), args.engine, args.bridge, manifest,
+                                       defensive=args.policy == "defense")
             else:
                 state = json.loads(args.checkpoint.read_text(encoding="utf-8"))
             submitted = args.answer if args.mode == "act" else None
             if args.mode == "act" and (not isinstance(submitted, dict)
                                       or state["cursor"]["digest"] != args.expected):
                 raise ValueError("stale decision or invalid answer")
-            cursor, event, reviews, hands = stream_checkpoint(state, args.engine, args.bridge, submitted)
+            new_records = []
+            cursor, event, reviews, hands = stream_checkpoint(state, args.engine, args.bridge, submitted,
+                                                              new_records=new_records)
             result = deepcopy(state)
+            if "defense_journal" in result:
+                result["defense_journal"].extend(new_records)
             if args.mode == "act":
                 result["history"].append({"before": state["cursor"]["digest"], "answer": submitted})
             result["cursor"] = cursor
