@@ -16,3 +16,30 @@ A exceção proposta pelo treinador — adversário humano com 19 lore, ameaça 
 - Revalidar contra os arquivos originais do Observer. O formato parcial de `.logs.gz` não fornece automaticamente a mão inteira do adversário.
 
 Testes isolados: `python3 -m unittest discover -s src -p 'test_strategic_v4_*.py' -v`.
+
+## Sessão local pelo terminal
+
+O cliente Python usa um processo Node separado e o bundle do motor. A mão inicial do bot usada na revisão é a mão exata **quando o bot recebe a primeira solicitação do próprio turno**, depois do processamento inicial do motor, inclusive compra se houver. O cliente humano recebe o estado projetado pelo motor com a mão adversária reduzida a contagem. A informação que as regras da partida revelam durante uma resolução continua disponível nas solicitações legais dessa resolução.
+
+Com o simulador já disponível, gere o bundle com `npm ci` e `npm run build` na raiz dele. Depois, na raiz do Inkwell, execute:
+
+```sh
+python3 src/strategic_v4_sparring_cli.py \
+  --engine /caminho/simulador/dist/index.mjs \
+  --human /caminho/seu-deck.deck --bot /caminho/deck-do-bot.deck \
+  --feedback sparring-feedback.local.jsonl
+```
+
+Escolha números de ação oferecidos pelo motor. Para selecionar cartas, use índices da lista separados por vírgula. Para pagar, escolha entre os pagamentos enumerados. Outros prompts aceitam a resposta JSON do motor. Em partidas sem resultado, `--turns N` limita a sessão de diagnóstico. `--smoke` usa respostas automáticas limitadas para verificar a sessão curta.
+
+Ao encerrar a ação **End Turn**, o motor precisa avançar para o turno do bot antes de a mão ser revelada. A revisão completa aparece antes do primeiro input próprio seguinte, ou no fim do jogo. O histórico registra todas as opções principais por etapa e os alvos/pagamentos selecionados nos prompts. O encerramento legal com tinta disponível é registrado como recusa se o bot não colocou carta naquele turno. Pagamentos e alvos mais complexos mantêm as restrições do prompt original. A presença de um alvo numa lista não certifica todas as combinações de seleção. A enumeração é local à posição de cada passo do bot.
+
+A revisão aceita as quatro classificações e registra justificativa e alternativa no JSONL local. O arquivo contém informações da partida e deve permanecer fora do controle de versão. Ele não é entrada do simulador, da busca ou de treinamento.
+
+## Cenário de defesa de 19 lore
+
+```sh
+node tools/strategic_v4_sparring_scenario.mjs /caminho/simulador/dist/index.mjs
+```
+
+O teste executa duas linhas a partir de uma posição sintética idêntica, até o fim do turno seguinte ou até vitória. No motor público testado, a linha Circle → Phillip deixa Simba ileso e pronto para o lore final. Na outra linha, Malicious marca Simba, Circle é cantada e Phillip bane Simba, evitando aquela vitória imediata. O teste não enumera todas as defesas. O catálogo público usado não oferece Don Karnage — Debonair Pirate, e a linha específica fica explicitamente indisponível para simulação nessa revisão. A ferramenta registra o resultado da terceira linha quando a impressão exata estiver disponível. O resultado sintético não estabelece a melhor linha da partida original.
