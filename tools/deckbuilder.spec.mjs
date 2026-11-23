@@ -459,6 +459,22 @@ test('phone: tapping the value opens Faltando; the rest of the line opens the su
   await expect(page).toHaveURL(/tab=missing/);
 });
 
+test('the summary sheet opened three times navigates once from "Ver o que falta"', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await pricesRoute(page);
+  await setup(page, { coll: P2_COLL });
+  await openBuilder(page);
+  const open = page.getByTestId('bs-open'), sheet = page.locator('#sheet');
+  for (let i = 0; i < 3; i++) { await open.click(); await expect(sheet).toBeVisible(); await page.keyboard.press('Escape'); await expect(sheet).toBeHidden(); }
+  await open.click();
+  await page.evaluate(() => { window.__nav = 0; const push = history.pushState.bind(history); history.pushState = (...a) => { window.__nav++; return push(...a); }; });
+  await sheet.getByTestId('sheet-miss').click();
+  await expect(page).toHaveURL(/tab=missing/);
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => window.__nav)).toBe(1);
+  await expect(page.getByRole('tab', { name: /Faltando/ })).toHaveAttribute('aria-selected', 'true');
+});
+
 test('desktop: the panel sits atop the deck column; its value opens Faltando', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await pricesRoute(page);

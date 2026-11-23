@@ -1435,8 +1435,11 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
       <div class="sheet-body"><section class="bld-panel" data-bpanel style="box-shadow:none">${bPanel(S)}</section>
       ${S.owner && S.known ? `<button type="button" class="btn" data-bmiss data-testid="sheet-miss" style="width:100%">${Tx("See what's missing")}</button>` : ""}</div>`;
     sh.addEventListener("close", () => { delete sh.dataset.bsheet; }, { once: true });
-    sh.onclick = null; openSheet(from);
-    sh.addEventListener("click", (e) => { if (e.target.closest("[data-bmiss]")) { sh.close(); bToMissing(); } });
+    openSheet(from);
+    // one handler, replaced on every open (openSheet sets onclick each time): never piles up, so "Ver o que falta"
+    // navigates once however many times the sheet was opened
+    const backdrop = sh.onclick;
+    sh.onclick = (e) => { if (e.target.closest?.("[data-bmiss]")) { sh.close(); bToMissing(); return; } backdrop?.(e); };
   }
   // the value opens the Missing tab (leaving the builder; the list and its filters stay for when you come back)
   function bToMissing() { const d = bDeck(); if (!d) return; editing = false; go(d.id, "missing"); }
