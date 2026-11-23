@@ -8,7 +8,7 @@ O ponto de comparação é encerrar o turno na posição fornecida. O motor inic
 
 - Reproduziu-se o checkpoint final da partida do iPhone com o mesmo motor e histórico. O motor confirmou vitória por lore em 15 turnos de jogo, com as duas avaliações provisórias preservadas.
 - No turno 5 do bot, manter Lilo no descarte deixou 4 personagens no descarte e até 5 tintas após tintar. O motor ainda não ofereceu Chernabog.
-- No turno 6 do bot, manter Lilo no descarte deixou 5 personagens no descarte e 5 tintas. O motor ofereceu e executou Chernabog por 5. No turno 7, o mesmo desvio também o colocou em jogo por 5, sobrando 1 tinta. Chernabog entrou secando nos dois casos. As ramificações terminaram na entrada de Chernabog, portanto não medem a remoção posterior de Elinor nem o desfecho da partida.
+- No turno 6 do bot, manter Lilo no descarte deixou 5 personagens no descarte e 5 tintas. O motor ofereceu e executou Chernabog por 5. No turno 7, o mesmo desvio também o colocou em jogo por 5, sobrando 1 tinta. Chernabog entrou secando nos dois casos. No turno 7, uma segunda simulação continuou até o fim. O bot baixou Chernabog e encerrou, e os dois Pegasus ainda fizeram quest para vencer por 20–7. A ramificação do turno 6 terminou na entrada de Chernabog. O efeito dessa preparação antecipada e a tentativa de desafiar Elinor continuam em aberto.
 - As posições sintéticas verificam um desafio que impede uma vitória pública, uma mesa sem defesa de uma jogada no escopo, uma mesa com lore insuficiente, limite de busca, gatilho de Lilo sem resolução, sigilo da mão adversária, Evasive e vitória imediata do próprio defensor.
 
 ```sh
