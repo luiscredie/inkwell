@@ -83,3 +83,100 @@ test("immediate victory takes precedence over a defensive challenge", { skip }, 
     assert.equal(result.selected?.action.type, "Quest");
     assert.equal(result.selected.status, "defender_wins");
 });
+
+const chernabog = "Chernabog - Unnatural Force";
+const bodyguard = "Woolter & Jesse - Bellwether's Henchmen";
+const giveInk = (player, amount) => {
+    player.inkwell = Array.from({ length: amount }, (_, i) => ({ card: card(pegasus, 100 + i), exerted: false }));
+};
+const darkDanceTargets = (line) => line.filter((step) => step.answer?.type === "Choose Cards")
+    .flatMap((step) => step.answer.cards.map(({ fullName }) => fullName));
+
+test("playing Chernabog to remove Bodyguard opens a second defensive action", { skip }, () => {
+    const state = position({ targets: [piece(bodyguard, 2, true), piece(lady, 3, true)] });
+    state.players[2].hand = [card(chernabog, 5)];
+    giveInk(state.players[2], 5);
+    assert.equal(analyzeImmediateDefense(engine, state, { maxActions: 1, maxNodes: 512 }).selected, null);
+    const result = analyzeImmediateDefense(engine, state, { maxNodes: 512 });
+    assert.equal(result.selected?.status, "no_lethal_found");
+    assert.deepEqual(result.selected.line.filter((step) => step.type === "Action").map((step) => step.action.type),
+        ["Play", "Challenge", "End Turn"]);
+    assert.deepEqual(darkDanceTargets(result.selected.line), [bodyguard]);
+});
+
+test("the opponent can accept Dark Dance and quest with the returned character", { skip }, () => {
+    const state = position({ targets: [piece(pegasus, 2, true)] });
+    state.players[2].hand = [card(chernabog, 5)];
+    giveInk(state.players[2], 5);
+    const options = { maxNodes: 512 };
+    const noReturn = analyzeImmediateDefense(engine, state, options);
+    assert.deepEqual(darkDanceTargets(noReturn.selected.line), [pegasus]);
+    state.players[1].discard = [card(lady, 3)];
+    const withReturn = analyzeImmediateDefense(engine, state, options);
+    assert.equal(withReturn.candidates.find((candidate) => candidate.action.type === "Play").status, "lethal");
+    assert.equal(withReturn.selected, null);
+});
+
+test("Duels turn 18 reconstruction: neither the challenge nor Chernabog stops public lethal", { skip }, () => {
+    const state = position({ lore: 15, targets: [
+        piece("Angela - Night Warrior", 2, true),
+        piece(elinor, 3, true),
+        { ...piece("Omnidroid - V.8", 4, true), damage: 1 },
+        piece("Vixey - Forest Friend", 5, true),
+        { ...piece(bodyguard, 6, true), drying: true },
+    ] });
+    state.players[1].discard = [
+        card("Ursula - Deceiver", 11), card(pegasus, 12), card("Tod - All Alone", 13),
+        card("Omnidroid - V.8", 14), card(pegasus, 15), card("Ursula - Deceiver", 16),
+    ];
+    // Guitar and Boost were observed. The pilot tests only the public challenge and play branches.
+    state.players[2].play = [piece("Ariel - Ethereal Voice", 7)];
+    state.players[2].play[0].under = [{ card: card(pegasus, 18), faceDown: true }];
+    state.players[2].hand = [card(chernabog, 9)];
+    giveInk(state.players[2], 6);
+    const result = analyzeImmediateDefense(engine, state, { maxNodes: 4096 });
+    assert.equal(result.baseline.status, "lethal");
+    assert.equal(result.selected, null);
+    assert.equal(result.budgetExhausted, false);
+    for (const type of ["Challenge", "Play"]) {
+        const candidate = result.candidates.find((entry) => entry.action.type === type);
+        assert.equal(candidate?.status, "lethal");
+        assert.equal(candidate?.maxLore, 20);
+    }
+});
+
+test("end-of-turn Elinor resolves a legal target and the last lore", { skip }, () => {
+    const state = position({ lore: 16, targets: [
+        piece(elinor, 2), piece(lady, 3), piece(lady, 4),
+    ] });
+    const result = analyzeImmediateDefense(engine, state, { maxNodes: 512 });
+    assert.equal(result.baseline.status, "lethal");
+    assert.equal(result.baseline.quests.length, 3);
+    assert.equal(result.baseline.maxLore, 20);
+    assert.ok(result.baseline.replyLine.some((step) => step.answer?.type === "Choose Cards"));
+});
+
+test("Duels first game: Elinor and the drying Max still win after the board clear", { skip }, () => {
+    const state = position({ lore: 18, targets: [
+        { ...piece(elinor, 2, true), damage: 3 },
+        { ...piece("Max Goof - Rebellious Teen", 3), drying: true },
+    ] });
+    state.players[2].play = [];
+    const result = analyzeImmediateDefense(engine, state);
+    assert.equal(result.baseline.status, "lethal");
+    assert.deepEqual(result.baseline.quests.map((entry) => entry.i), [2, 3]);
+});
+
+test("Duels second game: the surviving Chart Topper readies for lethal", { skip }, () => {
+    const state = position({ lore: 17, targets: [
+        { ...piece("Meilin Lee - Losing Control", 2, true), damage: 2 },
+        piece("Ursula - Vanessa", 3, true),
+        { ...piece("Max Goof - Chart Topper", 4), drying: true },
+    ] });
+    state.players[1].discard.push(card("Max Goof - Chart Topper", 5));
+    state.players[2].play = [{ ...piece("Angela - Night Warrior", 1, true), damage: 2 }];
+    const result = analyzeImmediateDefense(engine, state);
+    assert.equal(result.baseline.status, "lethal");
+    assert.ok(result.baseline.quests.some((entry) => entry.i === 4));
+    assert.ok(!result.baseline.quests.some((entry) => entry.i === 5));
+});

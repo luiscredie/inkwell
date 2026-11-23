@@ -2,7 +2,7 @@
 
 Piloto offline para revisar decisões no Coach. O módulo `tools/strategic_v4_sparring_defense.mjs` recebe o motor e uma posição da fase principal em jogo com dois jogadores. As cópias para simulação preservam cartas públicas e a mão do jogador que decide. A mão adversária, o baralho, a tinta e cartas viradas sob personagens usam marcadores sem habilidades. Os resultados dizem respeito ao cenário com essa informação pública.
 
-O ponto de comparação é encerrar o turno na posição fornecida. O motor inicia a resposta e verifica quests e os efeitos de encerramento. Se encontrar vitória por lore nessa linha, testa um desafio ou quest legal do defensor seguido de encerramento. Uma vitória imediata do defensor tem prioridade sobre um desafio que evita a linha de vitória. O retorno inclui o estado da comparação, o lore alcançado nas linhas visitadas, as ações candidatas e o consumo do orçamento.
+O ponto de comparação é encerrar o turno na posição fornecida. O motor inicia a resposta e verifica quests e efeitos de encerramento. Se encontrar vitória por lore, testa sequências de desafio, quest, jogar e cantar. Por padrão, o defensor pode tomar até duas dessas ações antes de passar. O motor valida pagamentos simples em tinta e resolve escolhas de alvo único, efeitos opcionais e a resposta adversária ao Dark Dance. Uma vitória imediata do defensor tem prioridade. O resultado inclui as ações e decisões executadas, a resposta pública encontrada, o lore alcançado e o consumo do orçamento.
 
 ## Casos usados para avaliação
 
@@ -16,8 +16,15 @@ INKWELL_SPAR_ENGINE=/caminho/simulador/dist/index.mjs \
   node --test tools/strategic_v4_sparring_defense.test.mjs
 ```
 
+## Regressões com as partidas do Duels
+
+- **20–0, primeiro jogo.** Após a defesa do bot ainda sobram Elinor e o novo Max. O motor confirma a vitória por quest quando Max deixa de estar secando.
+- **21–5.** O segundo Chart Topper está em jogo e seca ao começar o turno. Somado a Meilin e Vanessa, ele preserva o letal. A cópia banida fica no descarte.
+- **20–0, último jogo.** O motor confirma letal na reconstrução do turno 18, começando tanto com Ariel desafiando o Bodyguard quanto com Chernabog. A reconstrução usa a mesa relevante para desafio e lore. Guitar e Boost ficam fora do modelo, assim como compras com identidade desconhecida.
+- Uma posição sintética confirma que, quando a defesa existe, Chernabog pode remover o Bodyguard e liberar o desafio seguinte. Outra confirma que o adversário pode usar a reposição de Dark Dance para manter o letal. Um caso separado reproduz o ponto decisivo da Elinor no fim do turno.
+
 ## Limites do piloto
 
 O simulador externo precisa expor `getCard`, `continueTurn` e `startTurn`. O bundle e os checkpoints privados ficam fora do GitHub. A checagem é local e requer esse bundle.
 
-A reconstrução da fase principal não restaura limites de uso dependentes das ações anteriores do mesmo turno. Desafios e quests com decisões pendentes, como a volta de Lilo, o fim do orçamento e alternativas públicas fora do horizonte podem deixar o resultado inconclusivo. `no_lethal_found` informa o que foi verificado no horizonte público. Retomar a partida original continua a usar a ponte e o perfil do bot existentes. O piloto ainda não escolhe ações no Sparring do iPhone.
+A reconstrução da fase principal não restaura limites de uso dependentes de ações anteriores do mesmo turno. Ativações, Boost, compras identificadas, custos diferentes de tinta simples e escolhas de múltiplos alvos ficam fora do piloto. Embaralhamentos usam uma ordenação legal com a próxima compra opaca. Gatilhos na abertura, como a volta de Lilo, e o fim do orçamento podem deixar o resultado inconclusivo. `no_lethal_found` informa o que foi verificado no horizonte público. O piloto ainda não escolhe ações no Sparring do iPhone.
