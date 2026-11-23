@@ -88,6 +88,10 @@ for (const [label, viewport, touch] of [['phone', { width: 390, height: 844 }, t
     test.use({ viewport, hasTouch: touch, isMobile: touch });
 
     test('J1: home → "Testar um deck sem cadastro" → example deck → create account → the deck is saved and stays after logout/login', async ({ page }) => {
+      // J1 is the longest journey (five pages, two sign-ins, back/forward, logout): 9–27 s on its own in WebKit, so the
+      // 30 s default left no room when it shares the machine with other tests and it failed by timeout, not by a wrong
+      // step (#286). A budget that fits the journey; every step keeps its own expectations and waits.
+      test.setTimeout(75000);
       const db = await backend(page);
       await page.goto(at('index.html'));
       await expect(page).toHaveURL(/\/feed\/$/);
