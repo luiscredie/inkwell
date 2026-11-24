@@ -336,6 +336,10 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     "{a} of {b} cards": "{a} de {b} cartas", "{n} inkable": "{n} tintáveis", "partial estimate": "estimativa parcial", "ink.": "tint.", "Missing copies": "Faltam",
     "Market price of every missing card, without friends' offers or the board.": "Preço de mercado de todas as cartas que faltam, sem descontar ofertas de amigos nem do mural.", "Partial estimate: {n} with no price are not in it.": "Estimativa parcial: {n} sem preço ficam fora.", "{s}, {d}.": "{s}, {d}.",
     // Testar mão (Fase 3)
+    "Inkable cards to ink every turn to turn 4": "Tintáveis para pôr tinta todo turno até o turno 4",
+    "Every chance calculated here is 100%: these measures do not tell decisions apart in this hand. To review it, look at other things — which cards you want to play in the first turns, and what works against your opponent.": "Todas as chances calculadas aqui deram 100%: estas medidas não diferenciam as decisões nesta mão. Para revisá-la, olhe outros aspectos — quais cartas você quer jogar nos primeiros turnos e o que funciona contra o adversário.",
+    "\"Inkable cards to ink\" counts whether there is an inkable card, in hand or drawn, to put into the inkwell each turn. It does not play the turns: it does not choose what you would play or ink, and it does not count ink from effects (such as ink drops).": "\"Tintáveis para pôr tinta\" mede se há uma carta tintável, na mão ou comprada, para colocar no inkwell a cada turno. Não simula os turnos: não escolhe o que você jogaria ou usaria como tinta, e não conta tinta vinda de efeitos (como ink drops).",
+    "With {n} cards left in the deck, the swap had no chance in it: the whole rest of the deck came, then the first cards put back. The decision's expectation is that outcome.": "Com {n} cartas no resto do deck, a troca não teve sorteio: veio todo o resto do deck e depois as primeiras devolvidas. A expectativa da decisão é esse resultado.",
     "is inkable": "tintável", "is not inkable": "não tintável",
     "Test a hand": "Testar mão",
     "Who goes first": "Quem começa",
@@ -372,10 +376,10 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     "1 card not in the catalog (no cost or ink in the numbers)": "1 carta fora do catálogo (sem custo nem tinta nas contas)",
     "{n} cards not in the catalog (no cost or ink in the numbers)": "{n} cartas fora do catálogo (sem custo nem tinta nas contas)",
     "Heuristic analysis: general opening-hand rules and your deck's probabilities. Not a chance of winning; it does not yet use real games or the AI engine.": "Análise heurística: regras gerais de mão inicial e probabilidades do seu deck. Não é chance de vitória e ainda não usa partidas reais nem o motor de IA.",
-    "You kept all 7. Chance of ink every turn to turn 4: {p}.": "Você manteve as 7. Chance de ter tinta todo turno até o turno 4: {p}.",
-    "On average, your decision raised the chance of ink every turn to turn 4: {a} → {b}.": "Em média, sua decisão aumentou a chance de ter tinta todo turno até o turno 4: {a} → {b}.",
-    "On average, your decision lowered the chance of ink every turn to turn 4: {a} → {b}.": "Em média, sua decisão reduziu a chance de ter tinta todo turno até o turno 4: {a} → {b}.",
-    "On average, your decision left the chance of ink every turn to turn 4 about the same: {a} → {b}.": "Em média, sua decisão deixou praticamente igual a chance de ter tinta todo turno até o turno 4: {a} → {b}.",
+    "You kept all 7. Chance of inkable cards to ink every turn to turn 4: {p}.": "Você manteve as 7. Chance de ter tintáveis para pôr tinta todo turno até o turno 4: {p}.",
+    "On average, your decision raised the chance of inkable cards to ink every turn to turn 4: {a} → {b}.": "Em média, sua decisão aumentou a chance de ter tintáveis para pôr tinta todo turno até o turno 4: {a} → {b}.",
+    "On average, your decision lowered the chance of inkable cards to ink every turn to turn 4: {a} → {b}.": "Em média, sua decisão reduziu a chance de ter tintáveis para pôr tinta todo turno até o turno 4: {a} → {b}.",
+    "On average, your decision left the chance of inkable cards to ink every turn to turn 4 about the same: {a} → {b}.": "Em média, sua decisão deixou praticamente igual a chance de ter tintáveis para pôr tinta todo turno até o turno 4: {a} → {b}.",
     "The draw came above that ({c}).": "A compra veio acima disso ({c}).",
     "The draw came below that ({c}).": "A compra veio abaixo disso ({c}).",
     "The draw came close to that ({c}).": "A compra veio perto disso ({c}).",
@@ -394,7 +398,6 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     "exact chances from the cards left in the deck": "chances exatas, a partir das cartas que sobraram no deck",
     "Your decision (expected)": "Sua decisão (expectativa)",
     "What came": "O que veio",
-    "Ink every turn to turn 4": "Tinta todo turno até o turno 4",
     "A cost 1–2 card by turn 2": "Uma carta de custo 1–2 até o turno 2",
     "A cost 3 card by turn 3": "Uma carta de custo 3 até o turno 3",
     "Second player: you draw on turn 1.": "Segundo jogador: você compra no turno 1.",
@@ -1556,7 +1559,9 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     const backdrop = sh.onclick;
     sh.onclick = (e) => {
       if (e.target.closest?.("[data-bmiss]")) { sh.close(); bToMissing(); return; }
-      if (e.target.closest?.("[data-bhand]")) { sh.close(); labOpen(bDeck(), from); return; }   // the summary sheet makes way for the lab
+      // the summary makes way for the lab — only once its "close" has run: that event comes a moment after close(), and
+      // reaching an open lab it would undo the lab's full-screen layout and pull the focus back to the line
+      if (e.target.closest?.("[data-bhand]")) { sh.addEventListener("close", () => labOpen(bDeck(), from), { once: true }); sh.close(); return; }
       backdrop?.(e);
     };
   }
@@ -2178,7 +2183,10 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     LAB = { deckId: d.id, deck: d, order: LAB?.deckId === d.id ? LAB.order : "first", n: LAB?.deckId === d.id ? LAB.n : 0, st: null, sel: new Set(), res: null, an: null };
     const sh = $("sheet");
     sh.classList.add("wide", "lab"); sh.dataset.lab = d.id;
-    sh.addEventListener("close", () => { sh.classList.remove("wide", "lab"); delete sh.dataset.lab; }, { once: true });
+    // the button that opened the lab may have been redrawn while it was open (the builder's line, the deck page): give
+    // the focus back to the one that took its place
+    const tid = from?.dataset?.testid;
+    sh.addEventListener("close", () => { sh.classList.remove("wide", "lab"); delete sh.dataset.lab; if (from && !from.isConnected && tid) document.querySelector(`[data-testid="${tid}"]`)?.focus(); }, { once: true });
     labRender();
     openSheet(from);
     const base = sh.onclick;
@@ -2238,11 +2246,12 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
     const a = LAB.an; if (!a) return "";
     const P = a.probs, nm = (uid) => split(BY.get(uid.split("#")[0])?.name || uid)[0];
     const names = (uids) => [...new Set(uids.map(nm))].join(", ");
-    const q = [["ink", "Ink every turn to turn 4"], ["early", "A cost 1–2 card by turn 2"], ["three", "A cost 3 card by turn 3"]];
+    const q = [["ink", "Inkable cards to ink every turn to turn 4"], ["early", "A cost 1–2 card by turn 2"], ["three", "A cost 3 card by turn 3"]];
     let lead;
-    if (a.decision === "kept") lead = Tx("You kept all 7. Chance of ink every turn to turn 4: {p}.", { p: labPct(P.keep.ink) });
+    if (a.saturated) lead = Tx("Every chance calculated here is 100%: these measures do not tell decisions apart in this hand. To review it, look at other things — which cards you want to play in the first turns, and what works against your opponent.");
+    else if (a.decision === "kept") lead = Tx("You kept all 7. Chance of inkable cards to ink every turn to turn 4: {p}.", { p: labPct(P.keep.ink) });
     else {
-      lead = Tx(a.decision === "up" ? "On average, your decision raised the chance of ink every turn to turn 4: {a} → {b}." : a.decision === "down" ? "On average, your decision lowered the chance of ink every turn to turn 4: {a} → {b}." : "On average, your decision left the chance of ink every turn to turn 4 about the same: {a} → {b}.", { a: labPct(P.keep.ink), b: labPct(P.expect.ink) });
+      lead = Tx(a.decision === "up" ? "On average, your decision raised the chance of inkable cards to ink every turn to turn 4: {a} → {b}." : a.decision === "down" ? "On average, your decision lowered the chance of inkable cards to ink every turn to turn 4: {a} → {b}." : "On average, your decision left the chance of inkable cards to ink every turn to turn 4 about the same: {a} → {b}.", { a: labPct(P.keep.ink), b: labPct(P.expect.ink) });
       lead += " " + Tx(a.result === "up" ? "The draw came above that ({c})." : a.result === "down" ? "The draw came below that ({c})." : "The draw came close to that ({c}).", { c: labPct(P.final.ink) });
       if (a.decision === "up" && a.result === "down") lead += " " + Tx("A good decision can bring a bad hand.");
       if (a.decision === "down" && a.result === "up") lead += " " + Tx("A good hand does not prove the decision was the best.");
@@ -2255,7 +2264,9 @@ textarea.paste { width: 100%; min-height: 200px; font: inherit; font-size: var(-
       ${row("Cost 5+ not inkable (none)", F.original.highUninkable, F.final.highUninkable)}${row("Average cost (up to 4)", avg(F.original), avg(F.final))}</tbody></table>`;
     const probs = `<table class="lab-t" data-testid="lab-probs"><caption>${esc(Tx("Calculated"))} <small class="muted">· ${esc(Tx("exact chances from the cards left in the deck"))}</small></caption><thead><tr><th></th><th scope="col">${Tx("Keep all 7")}</th><th scope="col">${Tx("Your decision (expected)")}</th><th scope="col">${Tx("What came")}</th></tr></thead><tbody>
       ${q.map(([k, l]) => `<tr data-p="${k}"><th scope="row">${esc(Tx(l))}</th><td>${labPct(P.keep[k])}</td><td>${labPct(P.expect[k])}</td><td>${labPct(P.final[k])}</td></tr>`).join("")}</tbody></table>
-      <p class="small faint">${esc(Tx(a.order === "second" ? "Second player: you draw on turn 1." : "Going first: no draw on turn 1 (rule 3.2.3.1)."))} ${esc(Tx("\"Your decision (expected)\" is the chance before seeing the new cards; \"What came\" is the hand you got. Having a card is not the same as being able to play it."))}</p>`;
+      <p class="small faint">${esc(Tx(a.order === "second" ? "Second player: you draw on turn 1." : "Going first: no draw on turn 1 (rule 3.2.3.1)."))} ${esc(Tx("\"Your decision (expected)\" is the chance before seeing the new cards; \"What came\" is the hand you got. Having a card is not the same as being able to play it."))}</p>
+      <p class="small faint" data-testid="lab-inknote">${esc(Tx("\"Inkable cards to ink\" counts whether there is an inkable card, in hand or drawn, to put into the inkwell each turn. It does not play the turns: it does not choose what you would play or ink, and it does not count ink from effects (such as ink drops)."))}</p>
+      ${a.forced ? `<p class="small muted" data-testid="lab-forced">${esc(Tx("With {n} cards left in the deck, the swap had no chance in it: the whole rest of the deck came, then the first cards put back. The decision's expectation is that outcome.", { n: a.libraryBefore }))}</p>` : ""}`;
     const T = {
       returnedCheapInkable: (n) => Tx("You put back {cards}: inkable and cheap, and the hand you kept has fewer than 3 inkable cards. It may deserve another decision.", { cards: names(n.uids) }),
       keptHighUninkable: (n) => Tx("You kept {cards}: cost 5 or more and not inkable. It can slow the first turns.", { cards: names(n.uids) }),

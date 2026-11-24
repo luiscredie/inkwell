@@ -128,7 +128,8 @@ test('the analysis shows exactly what handlab.js computes; going first or second
   await expect(an).toContainText('Segundo jogador: você compra no turno 1.');
   // the three columns, labelled
   await expect(an.locator('thead th')).toContainText(['Manter as 7', 'Sua decisão (expectativa)', 'O que veio']);
-  await expect(page.getByTestId('lab-lead')).toHaveText(/^Em média, sua decisão (aumentou|reduziu|deixou praticamente igual) a chance de ter tinta todo turno até o turno 4: \d+% → \d+%\. A compra veio (acima|abaixo|perto) disso \(\d+%\)\./);
+  await expect(page.getByTestId('lab-lead')).toHaveText(/^(Em média, sua decisão (aumentou|reduziu|deixou praticamente igual) a chance de ter tintáveis para pôr tinta todo turno até o turno 4: \d+% → \d+%\. A compra veio (acima|abaixo|perto) disso \(\d+%\)\.|Todas as chances calculadas aqui deram 100%)/);
+  await expect(page.getByTestId('lab-inknote')).toContainText('Não simula os turnos');
 });
 
 test('two copies of one card are two cards: one goes back, the other stays', async ({ page }) => {
@@ -159,7 +160,7 @@ test('"Nova mão" again and again on the same deck; keeping all 7 says so', asyn
     await expect(page.getByTestId('lab-confirm')).toHaveText('Manter as 7');
     await page.getByTestId('lab-confirm').click();
     await expect(page.getByTestId('lab-returned')).toHaveText('Nenhuma: você manteve as 7.');
-    await expect(page.getByTestId('lab-lead')).toHaveText(/^Você manteve as 7\. Chance de ter tinta todo turno até o turno 4: \d+%\.$/);
+    await expect(page.getByTestId('lab-lead')).toHaveText(/^(Você manteve as 7\. Chance de ter tintáveis para pôr tinta todo turno até o turno 4: \d+%\.|Todas as chances calculadas aqui deram 100%: .*)$/);
     await page.getByTestId('lab-again').click();
   }
   expect(new Set(hands).size).toBe(3);
@@ -266,3 +267,58 @@ for (const w of [320, 360, 390, 430]) {
     expect(await page.evaluate(() => { const s = document.querySelector('#sheet'); return s.scrollWidth <= s.clientWidth + 1; })).toBe(true);
   });
 }
+
+test('every number at 100%: says these measures do not tell decisions apart, with no score', async ({ page }) => {
+  // only inkable cards of cost 1, 2 and 3 (practice deck): every chance is 100% whatever is kept
+  await setup(page, { decks: [{ ...SHORT, cards: { 'LOR10-5': 20, 'LOR10-3': 20, 'LOR10-12': 20 } }] });
+  await openLab(page);
+  await page.getByTestId('lab-deal').click();
+  await page.locator('[data-luid]').first().click();
+  await page.getByTestId('lab-confirm').click();
+  await expect(page.getByTestId('lab-lead')).toHaveText('Todas as chances calculadas aqui deram 100%: estas medidas não diferenciam as decisões nesta mão. Para revisá-la, olhe outros aspectos — quais cartas você quer jogar nos primeiros turnos e o que funciona contra o adversário.');
+  expect(await page.$$eval('[data-testid="lab-probs"] td', (td) => td.every((x) => x.textContent === '100%'))).toBe(true);
+  await expect(page.getByTestId('lab-analysis')).not.toContainText(/nota|ideal|vitória \d/i);
+});
+
+test('a practice deck of 9 cards: putting back more than is left draws the whole rest, then returned cards; said, not zeroed', async ({ page }) => {
+  await setup(page, { decks: [{ ...SHORT, cards: { 'LOR10-1': 5, 'LOR10-3': 4 } }] });   // 9 cards: 2 left after the hand
+  await openLab(page);
+  await expect(page.getByTestId('lab-warn')).toContainText('Com menos de 14 cartas, uma devolvida pode voltar');
+  await page.getByTestId('lab-deal').click();
+  const picks = page.locator('[data-luid]');
+  for (let i = 0; i < 4; i++) await picks.nth(i).click();
+  await page.getByTestId('lab-confirm').click();
+  await expect(page.getByTestId('lab-forced')).toHaveText('Com 2 cartas no resto do deck, a troca não teve sorteio: veio todo o resto do deck e depois as primeiras devolvidas. A expectativa da decisão é esse resultado.');
+  const cols = await page.$$eval('[data-testid="lab-probs"] tr[data-p] td', (td) => td.map((x) => x.textContent));
+  for (let r = 0; r < 3; r++) expect(cols[r * 3 + 1]).toBe(cols[r * 3 + 2]);   // expectation = what came
+  expect(cols.some((v) => v !== '0%')).toBe(true);
+  await expect(page.getByTestId('lab-final').locator('[data-card]')).toHaveCount(7);
+});
+
+test('phone: from the deck summary, open, close and reopen the lab three times — full screen each time, focus where it should be', async ({ page }) => {
+  test.setTimeout(90000);   // three full cycles, each with the sheets' animations
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setup(page);
+  await page.goto(BASE + '?deck=deck-a');
+  await page.getByRole('button', { name: 'Editar lista' }).click();
+  const line = page.getByTestId('bs-open'), sheet = page.locator('#sheet');
+  for (let i = 0; i < 3; i++) {
+    await line.click();
+    await expect(sheet.getByRole('heading', { name: 'Resumo do deck' })).toBeVisible();
+    expect(await sheet.evaluate((d) => d.classList.contains('lab'))).toBe(false);   // the summary keeps its own layout
+    await sheet.getByTestId('bp-hand').click();
+    await expect(lab(page)).toBeVisible();
+    await sheet.evaluate((d) => Promise.all(d.getAnimations().map((a) => a.finished)));   // after the rise-in animation
+    const box = await sheet.boundingBox();
+    expect([Math.round(box.x), Math.round(box.y), Math.round(box.width), Math.round(box.height)]).toEqual([0, 0, 390, 844]);   // full screen
+    await expect(page.locator('[data-lorder="first"]')).toBeFocused();   // the first control of the lab
+    await page.getByTestId('lab-deal').click();
+    await expect(page.locator('[data-luid]').first()).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(sheet).toBeHidden();
+    await expect(line).toBeFocused();   // back to the line that opened the summary
+    // the lab's layout is cleaned up by the dialog's "close" event, a moment after it hides
+    await expect.poll(() => sheet.evaluate((d) => [d.classList.contains('lab'), d.classList.contains('wide'), !!d.dataset.lab])).toEqual([false, false, false]);
+  }
+  await expect(page.getByTestId('builder')).toBeVisible();
+});

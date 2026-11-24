@@ -1,6 +1,6 @@
 // Mão de teste e mulligan (Decks › Testar mão). Rules and numbers only: no page, no network, no storage — the page draws
 // what these functions return, and tools/handlab.test.mjs checks them in Node.
-// Rules: Disney Lorcana Comprehensive Rules 2.2.0, 2.2.1–2.2.2 (shuffle, 7 cards, alter the hand once: chosen cards to
+// Rules: Disney Lorcana Comprehensive Rules 2.3.0 (16/10/2026; same as 2.2.0 for what is used here), 2.2.1–2.2.2 (shuffle, 7 cards, alter the hand once: chosen cards to
 // the bottom without revealing them, draw back up to 7, then — only if 1 or more were put back — shuffle the deck) and
 // 3.2.3.1 (the starting player skips the draw on the first turn of the game).
 // Every copy is its own instance: { uid: "LOR10-1#2", id: "LOR10-1" }. The deck list is only read.
@@ -61,6 +61,7 @@
   // ---------- probabilities (exact) ----------
   // d(t): cards drawn by turn t — the starting player skips the turn-1 draw (3.2.3.1)
   const drawsBy = (t, order) => (order === "second" ? t : t - 1);
+  const clamp01 = (p) => Math.min(1, Math.max(0, p));   // sums of floats can land at 1.0000000000000002
   // C(n, k) as a float (n stays below ~100 here)
   function choose(n, k) {
     if (k < 0 || k > n || n < 0) return 0;
@@ -86,7 +87,7 @@
       }
       for (const i of [...dist.keys()]) if (inkH + i < t) dist.delete(i);
     }
-    let s = 0; for (const p of dist.values()) s += p; return s;
+    let s = 0; for (const p of dist.values()) s += p; return clamp01(s);
   }
   // P2 / P3: at least one card of a kind by d draws — a in hand, A of that kind left among N
   function pAny(a, A, N, d) {
@@ -96,8 +97,11 @@
     return 1 - Math.max(0, none);
   }
   // the expectation of a decision: k cards go back (r of the kind), k come at random from the N left (A of the kind);
-  // the returned cards join what is left, so N stays the same
+  // the returned cards join what is left, so N stays the same. Only when k ≤ N: with k > N (a practice deck of 7 to 13
+  // cards) there is no draw at random — the whole rest of the deck comes, then returned cards from the bottom — so this
+  // returns null and analyze() takes the one possible outcome instead.
   function expectAfter(f, inHand, r, A, N, k) {
+    if (k > N) return null;
     let s = 0;
     for (let j = 0; j <= Math.min(k, A); j++) { const w = hyper(A, N, k, j); if (w) s += w * f(inHand - r + j, A - j + r, N); }
     return s;
@@ -145,9 +149,12 @@
       early: (h, A, n) => pAny(h, A, n, drawsBy(2, ord)),
       three: (h, A, n) => pAny(h, A, n, drawsBy(3, ord)),
     };
+    // k > N: the replacements are the whole rest of the deck and then the first returned cards — no chance involved, so
+    // the expectation is that one outcome (forced), said on the screen
+    const forced = k > before.length;
     for (const key of Object.keys(kinds)) {
       const kind = kinds[key];
-      expect[key] = k ? expectAfter(f[key], count(state.original, info, kind), count(state.returned, info, kind), count(before, info, kind), before.length, k) : keep[key];
+      expect[key] = !k ? keep[key] : forced ? fin[key] : clamp01(expectAfter(f[key], count(state.original, info, kind), count(state.returned, info, kind), count(before, info, kind), before.length, k));
     }
     // points to consider: only when the rule applies, naming the cards
     const kept = state.kept.map((x) => ({ ...info(x.id), id: x.id, uid: x.uid })), ret = state.returned.map((x) => ({ ...info(x.id), id: x.id, uid: x.uid }));
@@ -163,8 +170,11 @@
     if (k === 7) notes.push({ code: "returnedAll" });
     // decision (expectation vs keeping) and result (what came vs the expectation), separately; < 3 points = the same
     const cmp = (a, b) => (Math.abs(a - b) < 0.03 ? "same" : a > b ? "up" : "down");
+    // every number at (rounded) 100%: these measures cannot tell decisions apart in this hand
+    const all = ["keep", "expect", "final"].flatMap((s) => Object.keys(kinds).map((key) => ({ keep, expect, final: fin })[s][key]));
+    const saturated = all.every((p) => p >= 0.995);
     return {
-      order: ord, returnedN: k, size: state.size,
+      order: ord, returnedN: k, size: state.size, forced, saturated, libraryBefore: before.length,
       facts: { original: facts(state.original, info), final: facts(state.final, info) },
       probs: { keep, expect, final: fin },
       decision: k ? cmp(expect.ink, keep.ink) : "kept",

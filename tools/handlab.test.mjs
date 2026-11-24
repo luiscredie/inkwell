@@ -135,5 +135,53 @@ t('expectation by hand = 1.25', near(H.expectAfter((h) => h, 2, 1, 1, 4, 1), 1.2
   t('analysis is fast (< 5 ms here, 50 ms on a phone)', per < 5, `${per.toFixed(2)} ms`);
 }
 
+// ---------- practice decks of 7 to 13 cards (Conselho, review of #317) ----------
+// k ≤ N: the expectation must equal the exact average over every possible set of replacements (all k-subsets of the
+// library, equally likely). k > N: no chance involved — the expectation is the outcome, flagged as forced, never 0.
+{
+  const subsets = (arr, k, start = 0, cur = [], out = []) => { if (cur.length === k) { out.push(cur.slice()); return out; } for (let i = start; i < arr.length; i++) { cur.push(arr[i]); subsets(arr, k, i + 1, cur, out); cur.pop(); } return out; };
+  const probsOf = (hand, lib, ord) => {
+    const c = (l, f) => l.filter((x) => f(INFO(x.id))).length;
+    return { ink: H.pInkEachTurn(c(hand, (i) => i.inkable), c(lib, (i) => i.inkable), lib.length, ord),
+      early: H.pAny(c(hand, (i) => i.cost >= 1 && i.cost <= 2), c(lib, (i) => i.cost >= 1 && i.cost <= 2), lib.length, H.drawsBy(2, ord)),
+      three: H.pAny(c(hand, (i) => i.cost === 3), c(lib, (i) => i.cost === 3), lib.length, H.drawsBy(3, ord)) };
+  };
+  let checked = 0, forcedSeen = 0, zeroBefore = 0;
+  for (let size = 7; size <= 13; size++) {
+    // a mixed deck: C01..C13 (costs 1–8, every third not inkable), one copy each, the first `size`
+    const cards = Object.fromEntries(Array.from({ length: size }, (_, i) => [`C${String(i + 1).padStart(2, '0')}`, 1]));
+    for (const ord of ['first', 'second']) for (let k = 0; k <= 7; k++) for (const seed of [1, 2, 3]) {
+      const d = H.deal(cards, seed * 100 + size), back = uids(d.hand.slice(0, k)), m = H.mulligan(d, back), a = H.analyze(m, INFO, ord);
+      const N = d.library.length, vals = ['keep', 'expect', 'final'].flatMap((s) => Object.values(a.probs[s]));
+      t(`${size} cards, return ${k} (${ord}): every number is a probability`, vals.every((p) => Number.isFinite(p) && p >= 0 && p <= 1));
+      t(`${size} cards, return ${k}: 7 in hand, ${size} in all`, m.final.length === 7 && m.final.length + m.library.length === size);
+      if (k > N) {
+        forcedSeen++;
+        t(`${size} cards, return ${k} > ${N} left: forced, expectation = what came`, a.forced === true && JSON.stringify(a.probs.expect) === JSON.stringify(a.probs.final));
+        t(`${size} cards, return ${k}: the whole library comes, then the first returned`, JSON.stringify(uids(m.drawn)) === JSON.stringify(uids(d.library).concat(back.slice(0, k - N))));
+        // the old code gave 0 here whenever the hand still had chances
+        if (Object.values(a.probs.final).some((p) => p > 0)) { zeroBefore++; t(`${size} cards, return ${k}: not zeroed`, Object.values(a.probs.expect).some((p) => p > 0)); }
+      } else if (k > 0) {
+        const kept = d.hand.filter((c) => !back.includes(c.uid)), ret = d.hand.filter((c) => back.includes(c.uid));
+        const all = subsets(d.library, k), avg = { ink: 0, early: 0, three: 0 };
+        for (const s of all) { const rest = d.library.filter((c) => !s.includes(c)).concat(ret), p = probsOf(kept.concat(s), rest, ord); for (const key in avg) avg[key] += p[key] / all.length; }
+        t(`${size} cards, return ${k} ≤ ${N} (${ord}): expectation = exact average over ${all.length} swaps`, ['ink', 'early', 'three'].every((key) => near(a.probs.expect[key], avg[key], 1e-9)) && a.forced === false,
+          JSON.stringify([a.probs.expect, avg]));
+        checked++;
+      }
+    }
+  }
+  t('small decks: cases with k ≤ N were checked exhaustively', checked > 50, String(checked));
+  t('small decks: forced cases (k > N) were met', forcedSeen > 20 && zeroBefore > 0, `${forcedSeen} / ${zeroBefore}`);
+}
+// every number at 100% is flagged, so the screen can say these measures do not separate decisions
+{
+  const allInk = Object.fromEntries(Array.from({ length: 15 }, (_, i) => [`K${String(i + 1).padStart(2, '0')}`, 4]));
+  const INK = (id) => ({ known: true, cost: (+id.slice(1) % 3) + 1, inkable: true });   // every card inkable, costs 1–3
+  const a = H.analyze(H.mulligan(H.deal(allInk, 5), []), INK, 'first');
+  t('all at 100%: saturated', a.saturated === true);
+  t('a normal hand is not saturated', H.analyze(H.mulligan(H.deal(CARDS, 77), []), INFO, 'first').saturated === false);
+}
+
 console.log(`${ok} passed, ${bad} failed`);
 process.exit(bad ? 1 : 0);
