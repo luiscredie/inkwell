@@ -255,3 +255,13 @@ test('Início: a session no longer valid and a server error are told apart', asy
   await expect(homeWhy).toHaveAttribute('data-why', 'server');
   await expect(homeWhy).toHaveText('O servidor não respondeu (503).');
 });
+
+test('Início: with no "online" event at all (some WebViews), it still loads by itself once the network is back', async ({ page }) => {
+  let net = 'down';
+  await open(page, { decks: [DECK_A], collection: { 'LOR10-1': { n: 1, f: 0 } }, mode: () => net });
+  await expect(page.getByTestId('keep-error')).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId('keep-error').getByTestId('home-why')).toHaveAttribute('data-why', 'network');
+  net = 'ok';                                                        // the network is back, but nobody says so
+  await expect(page.getByTestId('keep-deck')).toContainText('Âmbar Aço', { timeout: 20000 });
+  await expect(page.getByTestId('keep-error')).toHaveCount(0);
+});

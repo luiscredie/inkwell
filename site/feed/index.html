@@ -1468,18 +1468,27 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   const go = async () => {
     colsP = null; colsFailed = false;   // "Try again" asks again
     FAIL.delete("feed");
-    renderForYou();
-    renderKeep();
-    renderEvents();
+    const parts = [renderForYou(), renderKeep(), renderEvents()].map((p) => Promise.resolve(p).catch(() => {}));
     try { await CLOUD.retrying(() => loadPeople()); renderLeft(); await CLOUD.retrying(() => Promise.all([loadPosts(), loadSocial()])); renderSide(); renderComposer(); renderFeed();
       if (!myDecks) myCols().then((r) => { myDecks = (r || []).flatMap((x) => (Array.isArray(x.decks) ? x.decks : [])).filter((d) => d?.cards && Object.keys(d.cards).length); renderComposer(); }).catch(() => {}); if (location.hash === "#amigos") { if (phone()) $("openFriends").click(); else $("findPeople")?.focus(); } }
     catch (e) { fail("feed", e); $("feed").innerHTML = `<div class="empty" data-testid="feed-error">\u003Cimg src="../ui/assets/empty/error.svg" alt=""><b>${Tx("Couldn't load the timeline.")}</b><p>${Tx("Check your connection and try again.")}</p>${whyLine("feed")}<button type="button" class="btn" id="retry"><i class="ic i-refresh"></i>${Tx("Try again")}</button></div>`; $("retry").onclick = go; }
+    await Promise.all(parts);   // every part has answered (or failed): watch() sees all failures
   };
-  go();
+  go().finally(() => setTimeout(watch, 0));
   // Back online (airplane mode off, Wi-Fi back), or back to the app with something that had failed: load again by itself.
-  let regoAt = 0;
-  const rego = () => { if (!FAIL.size || Date.now() - regoAt < 3000) return; regoAt = Date.now(); FAIL.clear(); go(); };
-  addEventListener("online", rego);
+  // The "online" event alone is not enough (an Android WebView may not send it, or the network takes a while after
+  // airplane mode): while a part failed for want of a connection, try again quietly at 5, 10, 20, then every 30 s.
+  let regoAt = 0, regoTimer = null, regoStep = 0;
+  const rego = () => { if (!FAIL.size || Date.now() - regoAt < 3000) return; regoAt = Date.now(); FAIL.clear(); go().finally(watch); };
+  function watch() {
+    clearTimeout(regoTimer); regoTimer = null;
+    const net = [...FAIL.values()].some((f) => f.why === "offline" || f.why === "network");
+    if (!net) { regoStep = 0; return; }
+    const wait = [5000, 10000, 20000][regoStep] || 30000; regoStep++;
+    regoTimer = setTimeout(() => { if (document.visibilityState !== "hidden") rego(); else watch(); }, wait);
+  }
+  window.__inkwellHomeWatch = () => watch();
+  addEventListener("online", () => { regoStep = 0; rego(); });
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && navigator.onLine !== false) rego(); });
   document.addEventListener("visibilitychange", async () => { if (document.visibilityState === "visible" && myProfile && !$("friendsSheet").open) { try { await loadPeople(); await loadPosts(); renderSide(); renderFeed(); } catch { /* keep what's shown */ } } });
 })();
