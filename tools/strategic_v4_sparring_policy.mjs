@@ -30,9 +30,9 @@ function bind(request, { step, trigger }) {
                 const payment = request.payments.find((offered) => equal(offered, answer.payment));
                 return payment && { type: "Decision", answer: { type: answer.type, pay: true, payment } };
             }
-            const shape = (payment) => payment.map((p) => [p.type, p.player, p.cards?.length, p.inkDrops ?? 0]);
-            const payment = request.payments.find((p) => p.every((part) => part.type === "Ink") &&
-                equal(shape(p), shape(answer.payment)));
+            const shape = (payment) => payment.map((p) => p.type === "Ink"
+                ? [p.type, p.player, p.cards?.length, p.inkDrops ?? 0] : p);
+            const payment = request.payments.find((p) => equal(shape(p), shape(answer.payment)));
             return payment && { type: "Decision", answer: { type: answer.type, pay: true, payment } };
         }
         case "Choose Cards":
@@ -109,6 +109,7 @@ export function createDefensiveController(engine, setup, {
                 return { verdict, cutoff: search.cutoff, nodes: search.nodes, plan,
                     ...(selected?.nextTurn ? { afterPublicPass: selected.nextTurn } : {}),
                     ...(selected?.publicReplies ? { publicReplies: selected.publicReplies } : {}),
+                    ...(selected?.boardRace ? { boardRace: selected.boardRace } : {}),
                     ...(selected?.conditionalProgress ? { conditionalProgress: selected.conditionalProgress } : {}),
                     ...(selected?.continuationCutoff ? { continuationCutoff: selected.continuationCutoff } : {}) };
             });

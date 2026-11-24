@@ -6,7 +6,7 @@ const hiddenCard = { type: "Item", fullName: hiddenName, names: [hiddenName], co
 const defenderActions = new Set(["Challenge", "Quest", "Play", "Sing", "Ink"]);
 
 // Unsupported cost and target shapes leave the branch inconclusive.
-function decisionAnswers(live, line, defender) {
+function decisionAnswers(live, line, defender, mixedActivation = false) {
     const request = live.request;
     const { type } = request;
     switch (type) {
@@ -53,6 +53,25 @@ function decisionAnswers(live, line, defender) {
                 const payment = [{ type: cost.type, player: request.player, cards: [card] }];
                 return [...(request.optional ? [{ type, pay: false }] : []), { type, pay: true, payment }];
             }
+            if (mixedActivation && request.player === defender && request.cost.length === 2 &&
+                cost.type === "Ink" && Number.isSafeInteger(cost.amount) && cost.amount > 0) {
+                const sacrifice = request.cost[1];
+                const action = line.at(-1)?.action;
+                const source = action?.ability?.card;
+                if (action?.type !== "Activate" || action.player !== defender || !source ||
+                    sacrifice.type !== "Banish" || sacrifice.cards?.cards?.length !== 1 ||
+                    sacrifice.cards.cards[0].i !== source.i) return undefined;
+                const payer = live.position.players[defender];
+                const inkDrops = Math.min(payer.inkDrops ?? 0, cost.amount);
+                const cards = payer.inkwell.filter((entry) => !entry.exerted)
+                    .slice(0, cost.amount - inkDrops).map((entry) => entry.card);
+                if (cards.length + inkDrops !== cost.amount) return undefined;
+                const payment = [
+                    { type: "Ink", player: defender, cards, ...(inkDrops ? {inkDrops} : {}) },
+                    { type: "Banish", player: defender, cards: [source] },
+                ];
+                return [...(request.optional ? [{ type, pay: false }] : []), { type, pay: true, payment }];
+            }
             if (typeof request.player !== "number" ||
                 !request.cost.every((cost) => cost.type === "Ink" && Number.isSafeInteger(cost.amount) && cost.amount >= 0)) {
                 return undefined;
@@ -73,7 +92,7 @@ function decisionAnswers(live, line, defender) {
     }
 }
 
-export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActions = 2, maxMs = 1500, rootAllowed = () => true, allowInk = true, planDiscardContinuation = true, planPublicReplies = true, planConditionalLore = true } = {}) {
+export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActions = 2, maxMs = 1500, rootAllowed = () => true, allowInk = true, planDiscardContinuation = true, planPublicReplies = true, planConditionalLore = true, planBoardRace = planConditionalLore && planPublicReplies && planDiscardContinuation, mixedActivation = true } = {}) {
     if (!Number.isSafeInteger(maxNodes) || maxNodes < 1 || maxNodes > 4096) {
         throw new RangeError("maxNodes must be between 1 and 4096");
     }
@@ -139,7 +158,7 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
             return child ? visit(child) : incomplete(node);
         }
         if (request.cards?.some((card) => card.fullName === hiddenName)) return incomplete(node);
-        const answers = decisionAnswers(node.live, node.line, defender);
+        const answers = decisionAnswers(node.live, node.line, defender, mixedActivation);
         if (!answers?.length || typeof request.player !== "number") return incomplete(node);
         let best;
         for (const answer of answers) {
@@ -515,8 +534,130 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
     const best = candidates.find((entry) => entry.status === "defender_wins")
         ?? candidates.filter((entry) => entry.status === "no_lethal_found").sort(compareDefense)[0]
         ?? null;
-    const selected = planDiscardContinuation ? refineDiscard(best) : best;
+    let selected = planDiscardContinuation ? refineDiscard(best) : best;
+    if (planBoardRace && selected && !budgetExhausted) {
+        const ceiling = Math.min(maxNodes, nodes + 176);
+        const stop = Symbol("board race budget");
+        try {
+            selected = planBoardDevelopment(selected, { anchor, start: (state) => engine.startTurn(state, options),
+                defender, attacker, held: position.players[defender].hand,
+                spend() {
+                    if (nodes >= ceiling || performance.now() >= deadline) throw stop;
+                    nodes++;
+                } });
+        } catch (err) {
+            selected = { ...selected, boardRaceCutoff: err === stop ? "budget" : "unsupported" };
+        }
+    }
     return { baseline, candidates, selected, nodes, maxNodes, maxActions, budgetExhausted, cutoff };
+}
+
+// Extend a resolved defense into a race using unspent ink. An opposing action
+// other than passing breaks this proof. Both sides' unknown draws remain masked.
+function planBoardDevelopment(selected, { anchor, start, spend, defender, attacker, held }) {
+    if (selected?.status !== "no_lethal_found" || selected.publicReplies || selected.conditionalProgress ||
+        selected.continuationCutoff || selected.line.at(-1)?.action?.type !== "End Turn" ||
+        selected.actors.some((actor) => actor !== defender) || held.length > 4) return selected;
+    const costs = selected.line.flatMap((s, i) => s.answer?.payment?.[0]?.type === "Discard" ? [i] : []);
+    if (costs.length !== 1) return selected;
+    const index = costs[0];
+    const unknown = Symbol("unresolved board race");
+    function step(live, input, line) {
+        spend();
+        live.submit(input);
+        line.push(input);
+    }
+    function action(live, move, line) {
+        step(live, {type: "Action", action: move}, line);
+        for (let i = 0; live.request && live.request.type !== "Action"; i++) {
+            if (i >= 4 || live.request.player !== defender || !["Pay Cost", "Choose Trigger"].includes(live.request.type)) throw unknown;
+            const answers = decisionAnswers(live, line, defender);
+            if (answers?.length !== 1) throw unknown;
+            step(live, {type: "Decision", answer: answers[0]}, line);
+        }
+    }
+    function end(live, player, line) {
+        const menu = live.request;
+        const pass = menu?.type === "Action" && menu.player === player && menu.actions.find((a) => a.type === "End Turn");
+        if (!pass) throw unknown;
+        step(live, {type: "Action", action: pass}, line);
+        if (live.request) throw unknown;
+    }
+    function from(state, player) {
+        if (state?.turn.player !== player) throw unknown;
+        spend();
+        return start(state);
+    }
+    function plays(live) {
+        if (live.request?.type !== "Action" || live.request.player !== defender) throw unknown;
+        return live.request.actions.filter((a) => a.type === "Play" && held.some((c) => c.i === a.card.i));
+    }
+    function finish(live, opening) {
+        const turns = [];
+        if (!live.outcome) end(live, defender, opening);
+        for (let n = 0; ; n++) {
+            if (live.outcome || n === 3) {
+                return { winOn: live.outcome?.winners.includes(defender) ? n : null, opening, turns };
+            }
+            const reply = from(live.result, attacker);
+            if (reply.request?.type !== "Action" || reply.request.actions.length !== 1) throw unknown;
+            const replyLine = [], own = [];
+            end(reply, attacker, replyLine);
+            if (reply.outcome) throw unknown;
+            live = from(reply.result, defender);
+            turns.push({ reply: replyLine, own });
+            for (let count = 0; !live.outcome; count++) {
+                if (live.request?.type !== "Action" || live.request.player !== defender) throw unknown;
+                const quest = live.request.actions.find((a) => a.type === "Quest");
+                if (!quest) break;
+                if (count === 4) throw unknown;
+                action(live, quest, own);
+            }
+            if (live.outcome) continue;
+            const affordable = plays(live);
+            // Multiple spending choices would need another comparison.
+            if (affordable.length > 1) throw unknown;
+            if (affordable.length) action(live, affordable[0], own);
+            if (!live.outcome) end(live, defender, own);
+        }
+    }
+    try {
+        spend();
+        const initial = anchor();
+        const prefix = [];
+        for (const input of selected.line.slice(0, index)) step(initial, input, prefix);
+        const payments = decisionAnswers(initial, prefix, defender);
+        if (!payments?.length || payments.length > 4) return selected;
+        const evaluated = [];
+        let incumbent, best;
+        const ordered = [selected.line[index].answer, ...payments.filter((a) =>
+            a.payment?.[0]?.cards?.[0]?.i !== selected.line[index].answer.payment[0].cards[0].i)];
+        for (const [i, answer] of ordered.entries()) {
+            if (!answer.payment) continue;
+            spend();
+            const live = anchor();
+            const line = [];
+            for (const input of selected.line.slice(0, -1).with(index, {type: "Decision", answer})) step(live, input, line);
+            if (!i) {
+                incumbent = finish(live.branch(), [...line]);
+                evaluated.push(incumbent);
+            }
+            for (const play of plays(live)) {
+                const branch = live.branch(), opening = [...line];
+                action(branch, play, opening);
+                const race = finish(branch, opening);
+                evaluated.push(race);
+                if (race.winOn !== null && race.winOn < (incumbent.winOn ?? Infinity) &&
+                    race.winOn < (best?.winOn ?? Infinity)) best = race;
+            }
+        }
+        if (!best) return selected;
+        return { ...selected, line: best.opening, actors: best.opening.map(() => defender),
+            boardRace: { winOn: best.winOn, priorWinOn: incumbent.winOn, evaluated } };
+    } catch (error) {
+        if (error === unknown || error?.name === "InvalidInput") return selected;
+        throw error;
+    }
 }
 
 function publicPosition(view, defender) {
@@ -527,7 +668,7 @@ function publicPosition(view, defender) {
         ...player.play.flatMap(({ card, under = [] }) => [
             card.i, ...under.filter((entry) => !entry.faceDown).map((entry) => entry.card.i),
         ]),
-        ...(Number(seat) === defender ? player.hand.map((card) => card.i) : []),
+        ...(Number(seat) === defender && Array.isArray(player.hand) ? player.hand.map((card) => card.i) : []),
     ]));
     const count = (zone) => typeof zone === "number" ? zone : zone.length;
     const hidden = () => {
@@ -537,7 +678,7 @@ function publicPosition(view, defender) {
     const mask = (zone) => Array.from({ length: count(zone) }, hidden);
     for (const [seat, player] of Object.entries(position.players)) {
         player.deck = mask(player.deck);
-        if (Number(seat) !== defender) player.hand = mask(player.hand);
+        if (Number(seat) !== defender || typeof player.hand === "number") player.hand = mask(player.hand);
         if (player.removed !== undefined) player.removed = mask(player.removed);
         player.inkwell = player.inkwell.map((ink) => ({ card: hidden(), exerted: ink.exerted }));
         for (const card of player.play) {

@@ -17,6 +17,7 @@ export async function trial(position, seed, candidate, limits = {}, script = [],
         onSearch(result, ms, request) {
             searches.push({ nodes: result.nodes, ms, cutoff: result.cutoff, pass: result.baseline.status,
                 chosen: result.selected?.status ?? null, afterPublicPass: result.selected?.nextTurn ?? null, publicReplies: result.selected?.publicReplies ?? null,
+                boardRace: result.selected?.boardRace ?? null, boardRaceCutoff: result.selected?.boardRaceCutoff ?? null,
                 conditionalProgress: result.selected?.conditionalProgress ?? null,
                 continuationCutoff: result.selected?.continuationCutoff ?? null, offered: request.actions,
                 examined: result.candidates.map(({ action, status, line, replyLine }) => ({ action, status, line, replyLine })) });
@@ -68,11 +69,11 @@ function evidence(run) {
     return { winner: run.winner, lore: run.lore, ownLore: run.ownLore, executed: run.executed };
 }
 
-export function captureLoss(directory, name, position, seed, run) {
+export function captureLoss(directory, name, position, seed, run, policy = "defense") {
     if (!directory || run.winner !== 1) return;
     // Only synthetic benchmark inputs enter this archive. Full positions belong
     // to the offline runner. The controller continues to receive a player view.
-    const record = { schema: 1, origin: "synthetic-benchmark", policy: "defense", horizon: 2,
+    const record = { schema: 1, origin: "synthetic-benchmark", policy, horizon: 2,
         opponent: "quest-first", name, seed, versions: fingerprint(), position, observed: evidence(run) };
     const data = JSON.stringify(record);
     mkdirSync(directory, { recursive: true, mode: 0o700 });
@@ -106,8 +107,9 @@ export async function reviewLoss(path) {
     assert.equal(basename(path), sha(raw) + ".json", "checkpoint checksum mismatch");
     const saved = JSON.parse(raw);
     assert.deepEqual(saved.versions, fingerprint(), "different rules engine or policy");
-    assert.ok(saved.origin === "synthetic-benchmark" && saved.schema === 1 && saved.policy === "defense" &&
+    assert.ok(saved.origin === "synthetic-benchmark" && saved.schema === 1 && ["defense", "v8-reference"].includes(saved.policy) &&
         saved.horizon === 2 && saved.opponent === "quest-first" && saved.observed.winner === 1);
+    const limits = saved.policy === "v8-reference" ? { mixedActivation: false, planBoardRace: false } : {};
     const maxBranches = 12, maxPrompts = 6, maxMs = 8000;
     const started = performance.now();
     const report = { checkpoint: basename(path), name: saved.name, seed: saved.seed,
@@ -116,7 +118,7 @@ export async function reviewLoss(path) {
     const queue = [], queued = new Set();
     async function run(prefix) {
         const prompts = [];
-        const result = await trial(saved.position, saved.seed, true, {}, [], (view, request, chosen) => {
+        const result = await trial(saved.position, saved.seed, true, limits, [], (view, request, chosen) => {
             if (view.turn.player !== 2 || request.player !== 2 || prompts.length >= maxPrompts) return chosen;
             const menu = sha(JSON.stringify(request));
             const forced = prefix[prompts.length];

@@ -203,13 +203,12 @@ test("restore a candidate loss and find a legal mixed-cost activation", { skip }
     try {
         const position = fixture({ allies: [["Merida's Bow"]], enemies: [[pegasus]], ink: 1 });
         const seed = 309;
-        const observed = await trial(position, seed, true);
+        const observed = await trial(position, seed, true, { mixedActivation: false, planBoardRace: false });
         assert.equal(observed.winner, 1);
         const name = "meridasBow19";
-        const path = captureLoss(directory, name, position, seed, observed);
-        captureLoss(process.env.INKWELL_LOSS_DIR, name, position, seed, observed);
+        const path = captureLoss(directory, name, position, seed, observed, "v8-reference");
         const review = await reviewLoss(path);
-        const stale = captureLoss(directory, name, position, seed, { ...observed, executed: [] });
+        const stale = captureLoss(directory, name, position, seed, { ...observed, executed: [] }, "v8-reference");
         const mismatch = await reviewLoss(stale);
         assert.equal(mismatch.status, "replay_mismatch");
         assert.equal(mismatch.branches.length, 0);
@@ -321,7 +320,10 @@ test("discard choice converts a verified defense on the next own turn", { skip }
                     s.action.card.fullName === reserve), name);
                 assert.equal(after.lore, 19, name);
             }
-            const current = await trial(position, seed, true, {}, [], undefined, 3);
+            const current = await trial(position, seed, true, {planBoardRace: false}, [], undefined, 3);
+            const latest = await trial(position, seed, true, {}, [], undefined, 3);
+            if (current.winner === 2) assert.equal(latest.winner, 2, name);
+            if (current.winner !== 1) assert.notEqual(latest.winner, 1, name);
             if (name === "nonForcedReply") {
                 assert.equal(current.winner, 2);
             } else {
@@ -548,4 +550,147 @@ test("a second public Trap keeps the conditional continuation unresolved", { ski
     assert.deepEqual(current.executed, old.executed);
     assert.equal(current.executed[1].filter((s) => s.action?.type === "Activate").length, 2);
     assert.equal(current.ownLore, 14);
+});
+
+const v8Limits = { mixedActivation: false, planBoardRace: false };
+const bow = "Merida's Bow", staff = "Rafiki's Bakora Staff", flynn = "Flynn Rider - Charming Rogue";
+
+function boardFixture(own, body = lady, extra = {}) {
+    const p = fixture({ own, ink: 2, allies: [[angel]], enemies: [[pegasus]], hand: [gathering], ...extra });
+    p.players[2].deck[0].fullName = body; // drawn before the decision, visible to its owner
+    return p;
+}
+const runEvidence = (r) => ({ winner: r.winner, ownLore: r.ownLore, opposingLore: r.lore, executed: r.executed,
+    board: r.board, nodes: r.searches.map((s) => s.nodes), ms: r.ms });
+
+test("board development and immediate lore across the same endgames and seeds", { skip }, async () => {
+    const variants = [
+        ["lady13", 13, lady, 7, {}, null, 2, lady],
+        ["lady15", 15, lady, 5, {}, null, 2, lady],
+        ["reserve16", 16, lady, 3, {}, 2, 2], ["win17", 17, lady, 1, {}, 2, 2],
+        ["flynn", 12, flynn, 7, {}, null, 2, flynn], ["lilo", 12, lilo, 7, {}, 2, 2],
+        ["tooFar", 10, lady, 7, {}, null, null], ["noInk", 13, lady, 7, {ink: 0}, null, null],
+        ["trap", 13, lady, 7, {enemies: [[pegasus], [trap]]}, null, null],
+    ];
+    for (const [name, own, body, horizon, extra, oldWinner, winner, play] of variants) for (const seed of seeds) {
+        const p = boardFixture(own, body, extra);
+        const run = (limits) => trial(p, seed, true, limits, [], undefined, horizon, activateFirst);
+        const before = await run(v8Limits), after = await run({});
+        assert.equal(before.winner, oldWinner, name);
+        assert.equal(after.winner, winner, name);
+        assert.ok(after.searches.every((s) => s.nodes <= 768), name);
+        const proof = after.searches[0].boardRace;
+        if (play) {
+            assert.ok(after.executed[0].some((s) => s.action?.type === "Play" && s.action.card.fullName === play));
+            assert.ok(after.executed.slice(1).flat().some((s) => s.action?.type === "Quest" && s.action.card.fullName === play), name);
+            assert.equal(1 + 2 * proof.winOn, after.executed.length);
+            assert.ok(proof.evaluated.some((r) => r.opening.some((s) => s.action?.card?.fullName === gathering)));
+            if (name === "lady13") assert.equal(proof.evaluated.find((r) =>
+                r.opening.some((s) => s.action?.card?.fullName === gathering)).winOn, null);
+        } else {
+            assert.equal(proof, null, name);
+            assert.deepEqual(after.executed, before.executed, name);
+        }
+        if (process.env.INKWELL_NIGHT_TRACE === "1") console.log(JSON.stringify({ boardCase: name, seed, horizon,
+            before: runEvidence(before), after: runEvidence(after), proof }));
+    }
+});
+
+test("pay ink and banish the actual source in a lethal position", { skip }, async () => {
+    const variants = [
+        ["bow", bow, 1, [[pegasus]], true], ["staff", staff, 1, [[pegasus]], true],
+        ["twoInk", bow, 2, [[pegasus]], true], ["woundedMax", bow, 1, [[max, false, 1]], true],
+        ["noInk", bow, 0, [[pegasus]], false], ["ward", bow, 1, [["Kuzco - Temperamental Emperor"]], false],
+        ["twoPegasus", bow, 1, [[pegasus], [pegasus]], false], ["healthyMax", bow, 1, [[max]], false],
+    ];
+    for (const [name, item, ink, enemies, saves] of variants) for (const seed of seeds) {
+        const p = fixture({ allies: [[item]], enemies, ink });
+        const before = await trial(p, seed, true, v8Limits), after = await trial(p, seed, true);
+        assert.equal(before.winner, 1, name);
+        assert.equal(after.winner, saves ? null : 1, name);
+        if (saves) {
+            const payment = after.executed[0].find((s) => s.answer?.payment?.some((part) => part.type === "Banish")).answer.payment;
+            assert.deepEqual(payment.map((part) => part.type), ["Ink", "Banish"]);
+            assert.equal(payment[0].cards.length, 1);
+            assert.ok(p.players[2].inkwell.some((r) => r.card.i === payment[0].cards[0].i));
+            assert.deepEqual(payment[1].cards, [p.players[2].play[0].card]);
+            assert.deepEqual(after.executed[0].find((s) => s.answer?.type === "Choose Cards").answer.cards, [p.players[1].play[0].card]);
+            assert.equal(after.lore, 19);
+            assert.equal(after.verdicts[0], "public_defense");
+        } else {
+            captureLoss(process.env.INKWELL_LOSS_DIR, "mixedCost-" + name, p, seed, after);
+            assert.equal(after.verdicts[0], "inconclusive");
+        }
+        if (process.env.INKWELL_NIGHT_TRACE === "1") console.log(JSON.stringify({ mixedCase: name, seed,
+            before: runEvidence(before), after: runEvidence(after) }));
+    }
+});
+
+test("a real Gathering line competes with developing Lady from the same decision", { skip }, async () => {
+    for (const seed of seeds) {
+        const p = boardFixture(13);
+        const development = await trial(p, seed, true, {}, [], undefined, 7);
+        let paid = false, played = false;
+        const race = await trial(p, seed, true, v8Limits, [], (view, req, chosen) => {
+            if (view.turn.number !== p.turn.number) return chosen;
+            if (chosen.answer?.payment?.[0]?.type === "Discard") {
+                const payment = req.payments.find((cost) => cost[0].cards[0].fullName === lady);
+                assert.ok(payment);
+                paid = true;
+                return { type: "Decision", answer: { type: "Pay Cost", pay: true, payment } };
+            }
+            if (paid && !played && req.type === "Action") {
+                const play = req.actions.find(({action}) => action.type === "Play" && action.card.fullName === gathering);
+                assert.ok(play);
+                played = true;
+                return { type: "Action", option: play.option };
+            }
+            return chosen;
+        }, 7);
+        assert.ok(played);
+        assert.equal(race.ownLore, 19);
+        assert.equal(race.winner, null);
+        assert.equal(development.winner, 2);
+        assert.equal(development.ownLore, 20);
+        if (process.env.INKWELL_NIGHT_TRACE === "1") console.log(JSON.stringify({ boardCounterfactual: seed,
+            develop: runEvidence(development), gather: runEvidence(race) }));
+    }
+});
+
+test("board plans preserve hidden information and the earlier defense on cutoff", { skip }, async () => {
+    const setup = (hidden) => boardFixture(13, lady, {hidden: [hidden], enemyInk: 2});
+    const reply = (_view, menu) => menu.actions.find(({action}) => action.type === "Play" && action.card.fullName === gathering);
+    const safe = await trial(setup(filler), 309, true, {}, [], undefined, 7, reply);
+    const danger = await trial(setup(gathering), 309, true, {}, [], undefined, 7, reply);
+    assert.deepEqual(safe.executed[0], danger.executed[0]);
+    assert.deepEqual(safe.searches[0].boardRace, danger.searches[0].boardRace);
+    assert.equal(safe.winner, 2);
+    assert.equal(danger.winner, 1);
+    assert.equal(danger.lore, 21);
+    const p = boardFixture(13);
+    const before = await trial(p, 17, true, v8Limits);
+    const maxNodes = before.searches[0].nodes + 1;
+    const cut = await trial(p, 17, true, {maxNodes});
+    assert.equal(cut.searches[0].nodes, maxNodes);
+    assert.equal(cut.searches[0].boardRaceCutoff, "budget");
+    assert.equal(cut.verdicts[0], "public_defense");
+    assert.deepEqual(cut.executed, before.executed);
+});
+
+test("fixed additional positions retain earlier wins with different printed characters", { skip }, async () => {
+    const bodies = ["Pinocchio - Star Attraction", "Minnie Mouse - Always Classy", "Simba - Protective Cub"];
+    for (const [i, body] of bodies.entries()) for (const ink of [1, 2]) for (const own of [11, 12, 13, 14]) {
+        const seed = 9000 + i * 100 + ink * 10 + own;
+        const p = boardFixture(own, body, {ink});
+        const before = await trial(p, seed, true, v8Limits, [], undefined, 7);
+        const after = await trial(p, seed, true, {}, [], undefined, 7);
+        if (before.winner === 2) {
+            assert.equal(after.winner, 2);
+            assert.ok(after.executed.length <= before.executed.length);
+        }
+        if (before.winner !== 1) assert.notEqual(after.winner, 1);
+        assert.ok(after.searches.every((s) => s.nodes <= 768));
+        if (process.env.INKWELL_NIGHT_TRACE === "1") console.log(JSON.stringify({
+            boardGrid: body, own, ink, seed, before: runEvidence(before), after: runEvidence(after) }));
+    }
 });
