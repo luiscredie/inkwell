@@ -306,6 +306,8 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     "Import a deck": "Importar um deck", "Paste a list and see what you're missing.": "Cole uma lista e veja o que falta.",
     "Find a tournament": "Procurar campeonato", "Official events and tables near you.": "Eventos oficiais e mesas perto de você.",
     "Couldn't load this part of your home.": "Não deu para carregar esta parte do seu Início.", "Couldn't load your decks and collection.": "Não deu para carregar seus decks e sua coleção.",
+    "No internet connection. It will load by itself when the connection is back.": "Sem conexão com a internet. Carrega sozinho quando a conexão voltar.", "The connection failed.": "A conexão falhou.",
+    "Your session is no longer valid. Sign in again.": "Sua sessão não vale mais. Entre de novo.", "The server didn't answer ({n}).": "O servidor não respondeu ({n}).", "Unexpected error.": "Erro inesperado.", "Sign in": "Entrar",
     "See my profile": "Ver meu perfil", "Shortcuts": "Atalhos", "Deck builder": "Construtor de decks", "Scan cards": "Escanear cartas", "Lore counter": "Contador de lore",
     "Trades and loans ": "Trocas e empréstimos", "Prices and wishlist": "Preços e lista de desejos", "Games and stats": "Jogos e estatísticas",
     "A kind, safe space": "Espaço gentil e seguro", "Communities and recados are for members 18+. Be kind at the table and online; report what isn't.": "Comunidades e recados são para membros 18+. Gentileza na mesa e aqui; denuncie o que não for.",
@@ -909,7 +911,15 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   let homeData = null;
   // one request for my collection and decks per opening, shared by the card on the left and the post composer
   let colsP = null, colsFailed = false;
-  const myCols = () => (colsP ||= CLOUD.collections("profile,collection:data->collection,decks:data->decks").catch(() => { colsFailed = true; return []; }));
+  // What failed and why (CLOUD.why): shown in each error box, kept for the phone tests, and the reason the page
+  // reloads by itself when the internet comes back.
+  const FAIL = new Map(); window.__inkwellHomeFail = () => Object.fromEntries(FAIL);
+  const fail = (part, e) => { const k = CLOUD.why(e); FAIL.set(part, { why: k, status: e?.status || null }); console.info("[inkwell] início", part, k, e?.status || "", String(e?.message || e).slice(0, 120)); return k; };
+  const whyLine = (part) => { const f = FAIL.get(part); if (!f) return "";
+    const t = f.why === "offline" ? Tx("No internet connection. It will load by itself when the connection is back.") : f.why === "network" ? Tx("The connection failed.")
+      : f.why === "session" ? Tx("Your session is no longer valid. Sign in again.") : f.why === "server" ? Tx("The server didn't answer ({n}).", { n: f.status }) : Tx("Unexpected error.");
+    return `<span class="small muted" data-testid="home-why" data-why="${f.why}">${esc(t)}${f.why === "session" ? ` <a href="../entrar/?next=${encodeURIComponent(location.pathname)}">${Tx("Sign in")}</a>` : ""}</span>`; };
+  const myCols = () => (colsP ||= CLOUD.retrying(() => CLOUD.collections("profile,collection:data->collection,decks:data->decks")).then((r) => { FAIL.delete("cols"); return r; }).catch((e) => { colsFailed = true; fail("cols", e); return []; }));
   // ---------- phones: "Continue" ----------
   // Up to 760px the left and right columns are hidden (shortcuts, my numbers, events), so the phone home had nothing to
   // pick up from. This block shows at most three things, each one tap from where the person left off; nothing is
@@ -918,7 +928,7 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
     const el = $("keep"); if (!el || !me) return;
     const [cols, marks] = await Promise.all([myCols(), rpcS("my_event_marks").catch(() => [])]);
     if (colsFailed) {   // say so and offer to ask again: the block must not just vanish
-      el.innerHTML = `<section aria-labelledby="hKeep"><h2 id="hKeep">${Tx("Continue")}</h2><div class="panel home-retry" role="alert" data-testid="keep-error"><span>${Tx("Couldn't load your decks and collection.")}</span><button type="button" class="btn small" id="keepRetry">${Tx("Try again")}</button></div></section>`;
+      el.innerHTML = `<section aria-labelledby="hKeep"><h2 id="hKeep">${Tx("Continue")}</h2><div class="panel home-retry" role="alert" data-testid="keep-error"><span>${Tx("Couldn't load your decks and collection.")}</span>${whyLine("cols")}<button type="button" class="btn small" id="keepRetry">${Tx("Try again")}</button></div></section>`;
       $("keepRetry").onclick = (e) => { e.currentTarget.disabled = true; colsP = null; colsFailed = false; renderKeep(); };
       return;
     }
@@ -991,11 +1001,11 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   }
   // ---------- "Para você": what is waiting, and what your communities are saying (supabase/my_account.sql my_home) ----------
   async function renderForYou() {
-    let h = null, failed = false; try { h = await CLOUD.shared("rpc/my_home"); } catch { h = null; failed = true; }
+    let h = null, failed = false; try { h = await CLOUD.retrying(() => CLOUD.shared("rpc/my_home")); FAIL.delete("home"); } catch (e) { h = null; failed = true; fail("home", e); }
     const box = $("forYou"); if (!box) return;
     homeData = h; renderComms(h);
     if (failed) {
-      box.innerHTML = `<section class="panel home-retry" role="alert" data-testid="home-error"><span>${Tx("Couldn't load this part of your home.")}</span><button type="button" class="btn small" id="homeRetry">${Tx("Try again")}</button></section>`;
+      box.innerHTML = `<section class="panel home-retry" role="alert" data-testid="home-error"><span>${Tx("Couldn't load this part of your home.")}</span>${whyLine("home")}<button type="button" class="btn small" id="homeRetry">${Tx("Try again")}</button></section>`;
       $("homeRetry").onclick = () => go();
       return;
     }
@@ -1023,14 +1033,20 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
 
   const go = async () => {
     colsP = null; colsFailed = false;   // "Try again" asks again
+    FAIL.delete("feed");
     renderForYou();
     renderKeep();
     renderEvents();
-    try { await loadPeople(); renderLeft(); await Promise.all([loadPosts(), loadSocial()]); renderSide(); renderComposer(); renderFeed();
+    try { await CLOUD.retrying(() => loadPeople()); renderLeft(); await CLOUD.retrying(() => Promise.all([loadPosts(), loadSocial()])); renderSide(); renderComposer(); renderFeed();
       if (!myDecks) myCols().then((r) => { myDecks = (r || []).flatMap((x) => (Array.isArray(x.decks) ? x.decks : [])).filter((d) => d?.cards && Object.keys(d.cards).length); renderComposer(); }).catch(() => {}); if (location.hash === "#amigos") { if (phone()) $("openFriends").click(); else $("findPeople")?.focus(); } }
-    catch { $("feed").innerHTML = `<div class="empty"><img src="../ui/assets/empty/error.svg" alt=""><b>${Tx("Couldn't load the timeline.")}</b><p>${Tx("Check your connection and try again.")}</p><button type="button" class="btn" id="retry"><i class="ic i-refresh"></i>${Tx("Try again")}</button></div>`; $("retry").onclick = go; }
+    catch (e) { fail("feed", e); $("feed").innerHTML = `<div class="empty" data-testid="feed-error"><img src="../ui/assets/empty/error.svg" alt=""><b>${Tx("Couldn't load the timeline.")}</b><p>${Tx("Check your connection and try again.")}</p>${whyLine("feed")}<button type="button" class="btn" id="retry"><i class="ic i-refresh"></i>${Tx("Try again")}</button></div>`; $("retry").onclick = go; }
   };
   go();
+  // Back online (airplane mode off, Wi-Fi back), or back to the app with something that had failed: load again by itself.
+  let regoAt = 0;
+  const rego = () => { if (!FAIL.size || Date.now() - regoAt < 3000) return; regoAt = Date.now(); FAIL.clear(); go(); };
+  addEventListener("online", rego);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && navigator.onLine !== false) rego(); });
   document.addEventListener("visibilitychange", async () => { if (document.visibilityState === "visible" && myProfile && !$("friendsSheet").open) { try { await loadPeople(); await loadPosts(); renderSide(); renderFeed(); } catch { /* keep what's shown */ } } });
 })();
 </script>
