@@ -2057,3 +2057,41 @@ Pendências conhecidas (sem duplicar as entradas já registradas em "Decks · Mo
   `main` (`50cf41f`), o que adiou o deploy até repetir o job. Localmente, o J1 passou 12/12 isolado
   e a suíte WebKit completa passou 85/85, o que indica falha sob carga e não defeito funcional.
   Prioridade: tratar a causa no #286 antes que os checks vermelhos virem rotina.
+
+## Ciclo de 24/11/2026 — Scanner 2.0 e Inkwell Mobile (prioridades do Conselho)
+
+O Inkwell Web continua sendo o produto principal até os apps serem validados. As duas frentes andam em
+branches e PRs separados; nenhuma delas altera banco, políticas de segurança ou o site publicado sem
+autorização.
+
+### Frente A — Scanner 2.0: reconhecer uma página de fichário inteira (prioridade principal)
+
+| Etapa | Entrega | Situação | Critério de conclusão |
+|---|---|---|---|
+| A1 — Auditoria e arquitetura (#319) | `docs/scanner-2.0.md` | Em revisão (PR #324) | Documento revisado pelo Conselho. |
+| A2 — Protótipo "Escanear página" 3×3 (#320) | Modo "Página 3×3" no scanner atual | PR draft #324 | Fotografar, ver contornos, conferir e corrigir as 9 posições, pôr na lista e confirmar numa única gravação. Nada gravado antes da confirmação (teste). Testes Chromium e WebKit. |
+| A3 — Medição com fotos reais (#321) | `tools/pagescan-bench.spec.mjs` com fotos reais | **Aberta** | ≥ 30 páginas reais de 3 aparelhos; precisão, tempo, taxa de correção, reflexo, inclinação, luz e foil medidos; tempo em Android e iPhone reais. **Meta inicial: 95% de identificação correta, só declarada com resultado medido.** |
+
+Medição atual: só em fotos **sintéticas** (`tools/pagescan_synth.py`; 64 páginas, 553 cartas, Chromium
+desktop). Resultados: 94,9% identificadas, 65,8% sem nenhuma ação, 0 erros confiantes, mediana de
+1,35 s por página. Pontos fracos: foil (87,1%) e a combinação difícil (73,2%). Esses números não
+valem como resultado do produto.
+
+Depois de A3: processamento em Web Worker, importação da galeria, layouts 2×2 e 4×4, cantos
+detectados automaticamente e um índice mais robusto a foil.
+
+### Frente B — Inkwell Mobile: apps para App Store e Google Play (em paralelo)
+
+| Etapa | Entrega | Situação | Critério de conclusão |
+|---|---|---|---|
+| B1 — Auditoria técnica e viabilidade do Capacitor (#322) | `mobile/README.md` | Em revisão (PR #325) | Diagnóstico revisado pelo Conselho, com decisão sobre conteúdo remoto ou embutido e sobre o risco de marca. |
+| B2 — Primeiro app experimental (#323) | `mobile/` (Capacitor 8, Android e iOS) | PR draft #325 | APK compilado e rodado num Android real; projeto iOS rodado no Xcode; inicialização, navegação, login e sessão, Coleção e Decks conferidos no aparelho; ponto de integração do Scanner 2.0. |
+
+Bloqueios conhecidos de B2:
+- O ambiente atual não baixa o Android SDK.
+- O iOS exige macOS/Xcode e uma conta Apple.
+- Link mágico e passkeys no app exigem publicar `/.well-known/` no site (autorização).
+- Push nativo exige FCM/APNs e mudanças no servidor (aprovação).
+
+Antes de qualquer envio às lojas: análise jurídica do uso da marca e das artes de Disney Lorcana
+(risco alto) e funcionalidade nativa suficiente (diretriz 4.2 da Apple).
