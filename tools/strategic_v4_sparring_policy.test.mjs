@@ -948,8 +948,14 @@ test("generate a synthetic variant and transfer the discovered prefix to a reser
         const run = await explore(folder, reviews, output);
         assert.equal(run.status, "validated_variant");
         assert.notEqual(run.seed, run.heldSeed);
-        assert.equal(run.discovery.winner, 2);
-        assert.equal(run.reserved.winner, 2);
+        // A transfer can prevent the next lethal without finishing the game.
+        assert.ok(run.discovery.winner === 2 || run.discovery.winner === null);
+        assert.equal(run.reserved.winner, run.discovery.winner);
+        if (run.discovery.winner === null) {
+            assert.equal(run.discovery.executed.length, 2);
+            assert.equal(run.reserved.executed.length, 2);
+            assert.ok(run.discovery.lore < 20);
+        }
         assert.ok(run.reserved.matched);
         assert.deepEqual(run.discovery.executed[0], run.reserved.executed[0]);
         assert.equal((await explore(folder, [], output)).status, "inconclusive");
@@ -989,4 +995,34 @@ test("keep ink for Merida's Bow or take the already-winning quest", { skip }, as
     const unpaid = await trial(fixture({...spec, own: 19, ink: 0, allies: [[aladdin]]}), 11, true);
     assert.equal(unpaid.winner, 1);
     assert.ok(!actions(unpaid).some(a => a.type === "Boost"));
+});
+
+test("Kanga buys the third quest lore only when the engine confirms the finish", {skip}, async () => {
+    const kanga = "Kanga - Peaceful Gatherer";
+    for (const [seed, exerted] of [[17, true], [1026, false]]) {
+        const spec = {own: 17, allies: [[kanga]], enemies: [[pegasus, exerted]], ink: 2, hidden: [circle]};
+        const position = fixture(spec);
+        const result = await trial(position, seed, true);
+        assert.equal(result.winner, 2);
+        assert.equal(result.ownLore, 20);
+        assert.deepEqual(actions(result).map(a => a.type), ["Boost", "Quest"]);
+        const payments = result.executed[0].flatMap(step => step.answer?.payment ?? []);
+        assert.deepEqual(payments.map(p => [p.type, p.cards.length]), [["Ink", 2]]);
+        const opaque = structuredClone(position);
+        opaque.players[1].hand[0].fullName = phillip;
+        opaque.players[2].deck[1].fullName = lady;
+        const other = await trial(opaque, seed, true);
+        assert.deepEqual(other.executed[0], result.executed[0]);
+    }
+    const spec = {own: 16, allies: [[kanga],[bow]], enemies: [[pegasus]], ink: 2};
+    const defense = await trial(fixture(spec), 901, true);
+    assert.equal(defense.winner, null);
+    assert.ok(actions(defense).some(a => a.ability?.card?.fullName === bow));
+    assert.ok(!actions(defense).some(a => a.type === "Boost"));
+    const free = await trial(fixture({...spec, own: 18}), 302, true);
+    assert.deepEqual(actions(free).map(a => a.type), ["Quest"]);
+    assert.equal(free.winner, 2);
+    const short = await trial(fixture({...spec, own: 17, ink: 1, allies: [[kanga]]}), 71, true);
+    assert.equal(short.winner, 1);
+    assert.ok(!actions(short).some(a => a.type === "Boost"));
 });

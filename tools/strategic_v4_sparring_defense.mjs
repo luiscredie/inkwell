@@ -324,7 +324,7 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
             if (result) return result;
         }
     }
-    if (win.status !== "defender_wins" && position.players[defender].lore >= 18) {
+    if (win.status !== "defender_wins") {
         for (const action of root.live.request.actions) {
             if (nodes >= boostCeiling || budgetExhausted) break;
             if (action.type !== "Boost" || !Number.isInteger(action.ability) || !rootAllowed(action)) continue;
