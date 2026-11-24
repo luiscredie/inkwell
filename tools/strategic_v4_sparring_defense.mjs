@@ -5,8 +5,8 @@ const hiddenName = "Sparring Hidden Card";
 const hiddenCard = { type: "Item", fullName: hiddenName, names: [hiddenName], colors: [], cost: 99, inkwell: false, subtypes: [] };
 const defenderActions = new Set(["Challenge", "Quest", "Play", "Sing", "Ink"]);
 
-// Multiple targets and non-ink costs other than single-source payments remain unresolved.
-function decisionAnswers(live, line) {
+// Unsupported cost and target shapes leave the branch inconclusive.
+function decisionAnswers(live, line, defender) {
     const request = live.request;
     const { type } = request;
     switch (type) {
@@ -33,6 +33,17 @@ function decisionAnswers(live, line) {
         case "Pay Cost": {
             // Only the activating instance can pay this single, public card cost.
             const [cost] = request.cost;
+            if (request.player === defender && request.cost.length === 1 && cost.type === "Choose Cards" &&
+                cost.count === 1 && cost.cost?.length === 1 && cost.cost[0].type === "Discard" &&
+                cost.cost[0].cards === "Selected Cards" && Array.isArray(cost.from?.cards)) {
+                // The resolved cost supplies the eligible instances. Simulated
+                // unknown draws cannot be bound to a real card in the hand.
+                const hand = live.position.players[defender].hand;
+                const answers = cost.from.cards.filter((card) => card.fullName !== hiddenName &&
+                    hand.some((held) => held.i === card.i && held.fullName === card.fullName))
+                    .map((card) => ({ type, pay: true, payment: [{ type: "Discard", player: defender, cards: [card] }] }));
+                return request.optional ? [{ type, pay: false }, ...answers] : answers;
+            }
             if (request.cost.length === 1 && ["Banish", "Exert"].includes(cost.type) && cost.cards?.cards?.length === 1) {
                 const step = line.at(-1);
                 const action = step?.action;
@@ -128,7 +139,7 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
             return child ? visit(child) : incomplete(node);
         }
         if (request.cards?.some((card) => card.fullName === hiddenName)) return incomplete(node);
-        const answers = decisionAnswers(node.live, node.line);
+        const answers = decisionAnswers(node.live, node.line, defender);
         if (!answers?.length || typeof request.player !== "number") return incomplete(node);
         let best;
         for (const answer of answers) {
@@ -146,8 +157,9 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
     const expense = (entry) => {
         const actions = entry.line.filter((step) => step.type === "Action");
         const spent = actions.filter(({ action }) => ["Play", "Sing", "Ink"].includes(action.type)).length;
-        const banished = entry.line.filter(({ answer }) => answer?.payment?.some((part) => part.type === "Banish" && part.player === defender)).length;
-        return [spent + banished, actions.length];
+        const paidCards = entry.line.filter(({ answer }) => answer?.payment?.some((part) =>
+            ["Banish", "Discard"].includes(part.type) && part.player === defender)).length;
+        return [spent + paidCards, actions.length];
     };
     const compareDefense = (a, b) => {
         const [cardsA, actionsA] = expense(a);

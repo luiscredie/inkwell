@@ -108,3 +108,11 @@ O revisor varia ações, escolhas opcionais e alvos únicos oferecidos ao defens
 A V4 do instalador salva os checkpoints em `perdas/` no histórico da execução, o índice em `revisoes.json` e as linhas simuladas em `reports/strategic-v4/memoria-perdas/<hash>.json`. Uma execução posterior reaproveita a revisão do mesmo checkpoint. Mudanças na posição, resultado, seed, motor ou módulos produzem outro identificador.
 
 Na validação do Work, houve 21 perdas do candidato nos 87 pares e mais uma posição diagnóstica com Angel – Experiment 624. As 22 reproduções coincidiram. A busca executou 82 alternativas. No diagnóstico, ativar Good Aim, descartar Lady e atingir Pegasus manteve o adversário a 19 após sua resposta. As demais revisões ficaram inconclusivas. O horizonte cobre a resposta de um oponente que prioriza quest. Esses resultados são hipóteses para revisar a política; o relatório não a modifica.
+
+## Descartar uma carta para impedir o letal
+
+A política do Sparring agora simula o custo de escolher uma carta da própria mão para descarte. O motor fornece as instâncias elegíveis. O controlador confere o pagamento completo no menu atual, assim como o alvo, e inclui a perda da carta ao comparar defesas. O piloto cobre um descarte simples em uma única parte de custo. Se várias cartas resolvem a ameaça com o mesmo placar e gasto, o desempate ainda depende da ordem de busca.
+
+No Work, com o mesmo motor, dez posições sintéticas e as seeds 17, 309 e 20261123, a política anterior do commit 89c0fc5 perdeu 18 das 30 respostas. A nova perdeu 9. As nove mudanças vêm de três posições: Good Aim eliminou Pegasus, Max Goof com 2 de vida ou, com dois alvos e 18 de lore adversário, Lilo que faria quest por 2. Em todas as três, o bot também fez quest com Angel. Em controles com um desafio ou Robin Hood disponíveis, Lady ficou na mão. A vitória própria imediata teve prioridade. Ward, dano insuficiente e um segundo Pegasus ainda deixaram letal. As escolhas permaneceram idênticas no controle de identidades ocultas adversárias.
+
+O caso de Angel integra a bateria pareada. Para continuar testando a memória de derrotas com uma falha real do candidato, o diagnóstico separado usa Merida's Bow e seu custo combinado de tinta e banimento do item. O revisor offline encontra essa alternativa. A política de partida ainda não a executa nessa posição.

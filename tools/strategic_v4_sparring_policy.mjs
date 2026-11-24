@@ -26,7 +26,7 @@ function bind(request, { step, trigger }) {
     switch (answer.type) {
         case "Pay Cost": {
             if (!answer.pay) return request.optional ? step : undefined;
-            if (answer.payment.length === 1 && ["Exert", "Banish"].includes(answer.payment[0].type)) {
+            if (answer.payment.length === 1 && ["Exert", "Banish", "Discard"].includes(answer.payment[0].type)) {
                 const payment = request.payments.find((offered) => equal(offered, answer.payment));
                 return payment && { type: "Decision", answer: { type: answer.type, pay: true, payment } };
             }

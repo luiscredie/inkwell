@@ -198,14 +198,14 @@ test("defensive activations across generated Pegasus endgames", { skip }, async 
     }
 });
 
-test("restore a natural candidate loss and find an engine-executed alternative with Good Aim", { skip }, async () => {
+test("restore a candidate loss and find a legal mixed-cost activation", { skip }, async () => {
     const directory = mkdtempSync(join(tmpdir(), "inkwell-loss-"));
     try {
-        const position = fixture({ allies: [["Angel - Experiment 624"]], enemies: [[pegasus]], hand: [lady] });
+        const position = fixture({ allies: [["Merida's Bow"]], enemies: [[pegasus]], ink: 1 });
         const seed = 309;
         const observed = await trial(position, seed, true);
         assert.equal(observed.winner, 1);
-        const name = "goodAim19";
+        const name = "meridasBow19";
         const path = captureLoss(directory, name, position, seed, observed);
         captureLoss(process.env.INKWELL_LOSS_DIR, name, position, seed, observed);
         const review = await reviewLoss(path);
@@ -219,10 +219,64 @@ test("restore a natural candidate loss and find an engine-executed alternative w
         const witness = review.branches.at(-1).result;
         assert.equal(witness.lore, 19);
         const steps = witness.executed[0];
-        assert.ok(steps.some((s) => s.action?.ability?.card.fullName === "Angel - Experiment 624"));
-        assert.ok(steps.some((s) => s.answer?.payment?.some((p) => p.type === "Discard" && p.cards[0].fullName === lady)));
+        assert.ok(steps.some((s) => s.action?.ability?.card.fullName === "Merida's Bow"));
+        assert.ok(steps.some((s) => s.answer?.payment?.some((p) => p.type === "Banish" && p.cards[0].fullName === "Merida's Bow")));
         assert.ok(steps.some((s) => s.answer?.cards?.[0]?.fullName === pegasus));
     } finally {
         rmSync(directory, { recursive: true, force: true });
     }
+});
+
+const angel = "Angel - Experiment 624";
+const lilo = "Lilo - Making a Wish";
+const aimCases = {
+    aimPegasus: { target: pegasus },
+    aimTwoDamage: { enemies: [[max]], target: max },
+    aimSecondTarget: { lore: 18, enemies: [[pegasus], [lilo]], target: lilo },
+    aimChallenge: { enemies: [[lilo, true]], action: "Challenge" },
+    aimFreePing: { allies: [[angel], ["Robin Hood - Capable Fighter"]], action: "Activate" },
+    aimSafe: { lore: 8, action: "Quest" },
+    aimOwnWin: { own: 19, action: "Quest", winner: 2 },
+    aimWard: { enemies: [["Kuzco - Temperamental Emperor"]], winner: 1 },
+    aimTwoPegasus: { enemies: [[pegasus], [pegasus]], winner: 1 },
+    aimInsufficient: { enemies: [["Meilin Lee - Losing Control"]], winner: 1 },
+};
+
+test("Good Aim is executed only when it buys a tested defense in these endgames", { skip }, async () => {
+    for (const [name, { target, action, winner = null, ...spec }] of Object.entries(aimCases)) {
+        const position = fixture({ allies: [[angel]], enemies: [[pegasus]], hand: [lady], ...spec });
+        for (const seed of seeds) {
+            const before = await trial(position, seed, false);
+            const after = await trial(position, seed, true);
+            captureLoss(process.env.INKWELL_LOSS_DIR, name, position, seed, after);
+            assert.equal(after.winner, winner, name);
+            const steps = after.executed[0];
+            const payments = steps.flatMap((s) => s.answer?.payment ?? []).filter((p) => p.type === "Discard");
+            assert.ok(after.searches.every((s) => s.cutoff === null && s.nodes <= 768), name);
+            if (target) {
+                assert.equal(before.winner, 1, name);
+                assert.equal(after.verdicts[0], "public_defense", name);
+                assert.equal(after.lore, 19, name);
+                assert.equal(payments.length, 1, name);
+                assert.deepEqual(payments[0].cards, [position.players[2].hand[0]], name);
+                assert.ok(steps.some((s) => s.action?.ability?.card.fullName === angel), name);
+                assert.ok(steps.some((s) => s.answer?.cards?.[0]?.fullName === target), name);
+            } else {
+                assert.equal(payments.length, 0, name);
+                assert.ok(after.hand.some((c) => c.fullName === lady), name);
+                if (action) assert.ok(steps.some((s) => s.action?.type === action), name);
+                if (winner === 1) assert.equal(after.verdicts[0], "inconclusive", name);
+            }
+            if (process.env.INKWELL_BENCH_TRACE) console.log(JSON.stringify({ name, seed, position, before, after }));
+        }
+    }
+});
+
+test("Good Aim choices stay identical when opposing hidden identities change", { skip }, async () => {
+    const position = { allies: [[angel]], enemies: [[pegasus]], hand: [lady] };
+    const a = await trial(fixture({ ...position, hidden: [circle], top: malicious }), 309, true);
+    const b = await trial(fixture({ ...position, hidden: [phillip], top: elinor }), 309, true);
+    assert.deepEqual(a.decisions, b.decisions);
+    assert.deepEqual(a.verdicts, b.verdicts);
+    assert.deepEqual(a.executed[0], b.executed[0]);
 });
