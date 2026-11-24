@@ -28,6 +28,8 @@ jobs:
         run: node tools/deckview-curve.test.mjs
       - name: Test a hand (mulligan rules and probabilities)
         run: node tools/handlab.test.mjs
+      - name: Scanner 2.0 page geometry (pagescan)
+        run: node tools/pagescan.test.mjs
       - name: Deck portfolio advisor
         run: node tools/deck-portfolio-v4.test.mjs
       - name: Match center
@@ -103,6 +105,8 @@ jobs:
         run: python tools/validate_release.py --root site --quick
       - name: Site pages match their sources (src/site)
         run: python tools/build_site_pages.py --check
+      - name: Scanner index covers the catalog (report only)
+        run: python tools/scan_index_check.py
   smoke:
     runs-on: ubuntu-latest
     steps:
@@ -116,7 +120,7 @@ jobs:
       - name: Serve site
         run: (cd site && python3 -m http.server 8080 &) && sleep 2
       - name: Browser smoke
-        run: INKWELL_URL=http://localhost:8080/index.html npx playwright test --project=chromium tools/smoke.spec.mjs tools/home.spec.mjs tools/journeys.spec.mjs tools/login.spec.mjs tools/decks.spec.mjs tools/colecao.spec.mjs tools/precos.spec.mjs tools/perfil.spec.mjs tools/comunidades.spec.mjs tools/trades.spec.mjs tools/coach.spec.mjs tools/coach-inks.spec.mjs tools/counter.spec.mjs tools/overview.spec.mjs tools/sharedeck.spec.mjs tools/deckbuilder.spec.mjs tools/precos-valor.spec.mjs tools/handlab.spec.mjs
+        run: INKWELL_URL=http://localhost:8080/index.html npx playwright test --project=chromium tools/smoke.spec.mjs tools/home.spec.mjs tools/journeys.spec.mjs tools/login.spec.mjs tools/decks.spec.mjs tools/colecao.spec.mjs tools/precos.spec.mjs tools/perfil.spec.mjs tools/comunidades.spec.mjs tools/trades.spec.mjs tools/coach.spec.mjs tools/coach-inks.spec.mjs tools/pagescan.spec.mjs tools/scan-session.spec.mjs tools/counter.spec.mjs tools/overview.spec.mjs tools/sharedeck.spec.mjs tools/deckbuilder.spec.mjs tools/precos-valor.spec.mjs tools/handlab.spec.mjs
 
   # issue #145, P0-A: the visitor journeys on an iPhone-like WebKit (Safari's engine)
   journeys-webkit:
