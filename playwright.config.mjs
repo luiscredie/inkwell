@@ -3,7 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 const chromium = { launchOptions: process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {} };
 export default defineConfig({
   testDir: 'tools',
-  testMatch: /(sweep|smoke|home|journeys|decks|trades|colecao|colecao-langs|precos|perfil|comunidades|coach|comecar|login|counter|eventos|security|overview|sharedeck|deckbuilder|precos-valor|handlab|coach-inks)\.spec\.mjs/,
+  testMatch: /(sweep|smoke|home|journeys|decks|trades|colecao|colecao-langs|precos|perfil|comunidades|coach|comecar|login|counter|eventos|security|overview|sharedeck|deckbuilder|precos-valor|handlab|coach-inks|scan-session)\.spec\.mjs/,
   timeout: 30000,
   use: {
     baseURL: process.env.INKWELL_URL || 'http://localhost:8080/index.html',

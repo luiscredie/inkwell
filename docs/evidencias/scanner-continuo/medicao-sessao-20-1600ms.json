@@ -1,0 +1,160 @@
+{
+ "passes": 20,
+ "added": 18,
+ "right": 18,
+ "wrong": 0,
+ "missed": 2,
+ "extra": 0,
+ "foil_right": "4/4",
+ "repeat_in_a_row_right": false,
+ "taps": 0,
+ "latency_ms_median": 1399,
+ "latency_ms_max": 1542,
+ "ocr": "simulated (correct reading)",
+ "session_s": 44,
+ "hold_ms": 1600,
+ "gap_ms": 600,
+ "detail": [
+  {
+   "k": 0,
+   "truth": "LOR2-115",
+   "foil": false,
+   "got": "LOR2-115",
+   "ms": 1456
+  },
+  {
+   "k": 1,
+   "truth": "LOR1-190",
+   "foil": false,
+   "got": "LOR1-190",
+   "ms": 1268
+  },
+  {
+   "k": 2,
+   "truth": "LOR13-143",
+   "foil": false,
+   "got": "LOR13-143",
+   "ms": 1414
+  },
+  {
+   "k": 3,
+   "truth": "LOR5-111",
+   "foil": true,
+   "got": "LOR5-111",
+   "ms": 1340
+  },
+  {
+   "k": 4,
+   "truth": "LOR11-93",
+   "foil": false,
+   "got": "LOR11-93",
+   "ms": 1352
+  },
+  {
+   "k": 5,
+   "truth": "LOR11-93",
+   "foil": false,
+   "got": null,
+   "ms": null
+  },
+  {
+   "k": 6,
+   "truth": "LOR14-57",
+   "foil": false,
+   "got": "LOR14-57",
+   "ms": 1399
+  },
+  {
+   "k": 7,
+   "truth": "LOR11-125",
+   "foil": false,
+   "got": "LOR11-125",
+   "ms": 1436
+  },
+  {
+   "k": 8,
+   "truth": "LOR13-86",
+   "foil": true,
+   "got": "LOR13-86",
+   "ms": 1343
+  },
+  {
+   "k": 9,
+   "truth": "LOR14-209",
+   "foil": false,
+   "got": null,
+   "ms": null
+  },
+  {
+   "k": 10,
+   "truth": "LOR8-48",
+   "foil": false,
+   "got": "LOR8-48",
+   "ms": 1416
+  },
+  {
+   "k": 11,
+   "truth": "LOR5-26",
+   "foil": false,
+   "got": "LOR5-26",
+   "ms": 1355
+  },
+  {
+   "k": 12,
+   "truth": "LOR13-143",
+   "foil": false,
+   "got": "LOR13-143",
+   "ms": 1542
+  },
+  {
+   "k": 13,
+   "truth": "LOR5-215",
+   "foil": false,
+   "got": "LOR5-215",
+   "ms": 1065
+  },
+  {
+   "k": 14,
+   "truth": "LOR9-107",
+   "foil": true,
+   "got": "LOR9-107",
+   "ms": 1377
+  },
+  {
+   "k": 15,
+   "truth": "LOR6-128",
+   "foil": false,
+   "got": "LOR6-128",
+   "ms": 1331
+  },
+  {
+   "k": 16,
+   "truth": "LOR3-89",
+   "foil": false,
+   "got": "LOR3-89",
+   "ms": 1412
+  },
+  {
+   "k": 17,
+   "truth": "LOR14-209",
+   "foil": false,
+   "got": "LOR14-209",
+   "ms": 1423
+  },
+  {
+   "k": 18,
+   "truth": "LOR1-31",
+   "foil": false,
+   "got": "LOR1-31",
+   "ms": 1335
+  },
+  {
+   "k": 19,
+   "truth": "LOR5-111",
+   "foil": true,
+   "got": "LOR5-111",
+   "ms": 1418
+  }
+ ],
+ "extra_ids": []
+}

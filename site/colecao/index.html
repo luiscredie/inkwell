@@ -372,6 +372,12 @@ button.stock-h.stock-empty .open-word .ic { width: 14px; height: 14px; }
 #scan .review .item .lang-line { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: var(--fs-small); }
 #scan .review select.lang-mini { width: auto; flex: none; min-height: 34px; padding: 0 26px 0 10px; background-position: right 8px center; }
 #scan .review .lang-all { display: flex; align-items: center; justify-content: center; gap: var(--sp-2); white-space: nowrap; }
+#scan .strip { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; padding: 2px 0; min-height: 0; }
+#scan .strip::-webkit-scrollbar { display: none; }
+#scan .strip .s-item { flex: none; width: 30px; }
+#scan .strip .s-item .thumb { width: 30px; }
+#scan .strip .s-item:first-child { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 4px; }
+#scan .strip .s-more { flex: none; align-self: center; padding: 0 4px; }
 #scan .review footer { display: grid; gap: 8px; padding: 12px 12px calc(env(safe-area-inset-bottom, 0px) + 12px); border-top: 1px solid var(--line); }
 .imp-list { display: grid; gap: 2px; max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: var(--r-md); padding: 6px 10px; }
 .imp-list > div { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: baseline; padding: 3px 0; border-bottom: 1px solid var(--line); }
@@ -2213,6 +2219,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const v = $("scanVideo"), k = Math.max(g.vw / v.videoWidth, g.vh / v.videoHeight), ox = (v.videoWidth * k - g.vw) / 2, oy = (v.videoHeight * k - g.vh) / 2;
     return { x: (g.x + ox) / k, y: (g.y + oy) / k, w: g.w / k, h: g.h / k };
   }
+  window.__inkwellScanSession = () => scan.added.map((a) => ({ id: a.id, foil: a.foil, at: a.at || null }));   // used by the browser test
   window.__inkwellScanGuide = () => ($("scan").open && $("scanVideo").videoWidth ? videoRect(guideRect()) : null);   // used by the browser test
   function scanSay(text, err) { const el = $("scanSay"); if (el) { el.textContent = text; el.className = `say${err ? " err" : ""}`; } }
   function drawScan() {   // the camera stage, built once per opening
@@ -2220,8 +2227,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     sh.innerHTML = `<div class="stage"><video id="scanVideo" playsinline muted autoplay></video><div class="guide" id="scanGuide" style="left:${g.x}px;top:${g.y}px;width:${g.w}px;height:${g.h}px"></div>
       <div class="top"><button type="button" class="btn icon" data-scan-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button><h2 id="scanT">${Tx("Scan cards")}</h2><button type="button" class="btn icon" id="scanTorch" hidden aria-pressed="false" aria-label="${Tx("Light")}"><i class="ic i-sparkle"></i></button>
         <div class="seg" role="group" aria-label="${Tx("Card")}"><button type="button" data-foil="0" aria-pressed="${!scan.foil}">${Tx("Normal")}</button><button type="button" class="is-foil" data-foil="1" aria-pressed="${scan.foil}">${Tx("Foil")}</button></div></div>
-      <div class="panel"><div class="say" id="scanSay" role="status" aria-live="polite">${Tx("Point the camera at one card inside the frame.")}</div><div id="scanPick"></div><div id="scanLast"></div>
-        <div class="row between"><span class="small" data-testid="scan-count" id="scanCount"></span><button type="button" class="btn primary" data-scan-done>${Tx("Done scanning")}</button></div></div></div>`;
+      <div class="panel"><div class="say" id="scanSay" role="status" aria-live="polite">${Tx("Point the camera at one card inside the frame.")}</div><div id="scanPick"></div><div id="scanLast"></div><div class="strip" id="scanStrip" data-testid="scan-strip" role="list" aria-label="${esc(P("Cartas desta leitura", "Cards in this scan"))}" hidden></div>
+        <div class="row between"><span class="small"><b data-testid="scan-count" id="scanCount"></b> <span id="scanValue" data-testid="scan-value-line"></span></span><button type="button" class="btn primary" data-scan-done>${Tx("Done scanning")}</button></div></div></div>`;
     sh.querySelectorAll("[data-scan-close], [data-scan-done]").forEach((b) => b.onclick = () => (scan.added.length ? showReview() : sh.close()));
     sh.querySelectorAll("[data-foil]").forEach((b) => b.onclick = () => { scan.foil = b.dataset.foil === "1"; sh.querySelectorAll("[data-foil]").forEach((x) => x.setAttribute("aria-pressed", String((x.dataset.foil === "1") === scan.foil))); });
     drawLast();
@@ -2232,13 +2239,41 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     box.innerHTML = lastC ? `<div class="last" data-testid="scan-last">${thumb(lastC, "xs", scan.last.foil)}</span><span class="t"><b>${esc(split(lastC.name).join(" · ").replace(/ · $/, ""))}</b><span class="small muted">${esc([setName(lastC.set), "nº " + lastC.num, Tx(scan.last.foil ? "foil" : "normal")].join(" · "))}</span></span>
       <button type="button" class="btn small" id="scanAgain">${Tx("+1 of this")}</button><button type="button" class="btn ghost small" id="scanUndo" aria-label="${Tx("Undo")}"><i class="ic i-undo"></i></button></div>` : "";
     $("scanCount").textContent = scan.added.length ? Tx("{n} in the list", { n: scan.added.length }) : "";
+    drawSession();
     $("scanAgain")?.addEventListener("click", () => addScanned(scan.last.id));   // uses the Normal/Foil choice shown at the top
     $("scanUndo")?.addEventListener("click", () => { const l = scan.added.pop(); if (!l) return; scan.last = scan.added[scan.added.length - 1] || null; drawLast(); const c = BY.get(l.id); scanSay(Tx("Removed: {c}", { c: c ? split(c.name)[0] : l.id })); });
+  }
+  // Continuous scanning (Evolens-style session view, Council 24/11): a quiet strip of the cards read so far, newest
+  // first, and the running count and estimated value with the prices already loaded on this page. Nothing to tap:
+  // the next card can follow at once. The value says when cards have no price, when a foil price is estimated from
+  // the normal one, and when the price file is old or missing (same rule as the rest of the site).
+  const STRIP_N = 12;
+  function sessionValue() {
+    let v = 0, missing = 0, foilEstN = 0;
+    for (const a of scan.added) { const p = priceOf(a.id, a.foil); if (p == null) missing++; else { v += p; if (a.foil && foilEst(a.id)) foilEstN++; } }
+    return { v, missing, foilEstN };
+  }
+  function drawSession() {
+    const strip = $("scanStrip"), cnt = $("scanValue"); if (!strip || !cnt) return;
+    const list = scan.added.slice(-STRIP_N).reverse();
+    strip.hidden = !list.length;
+    strip.innerHTML = list.map((a) => { const c = BY.get(a.id); return c ? `<span role="listitem" class="s-item" title="${esc(split(c.name)[0])}">${thumb(c, "xs", a.foil)}</span></span>` : ""; }).join("")
+      + (scan.added.length > STRIP_N ? `<span role="listitem" class="s-more small muted">+${scan.added.length - STRIP_N}</span>` : "");
+    if (!scan.added.length) { cnt.textContent = ""; return; }
+    const { v, missing, foilEstN } = sessionValue(), note = window.INKWELL_PRICE_NOTE?.(PRJ);
+    const flags = [];
+    if (!note?.ok) flags.push(P("preços indisponíveis", "prices unavailable"));
+    else {
+      if (missing) flags.push(P(`${missing} sem preço`, `${missing} without a price`));
+      if (foilEstN) flags.push(P(`${foilEstN} foil estimado${foilEstN > 1 ? "s" : ""}`, `${foilEstN} foil estimated`));
+      if (note.stale) flags.push(P(`preços de ${note.date}, desatualizados`, `prices from ${note.date}, out of date`));
+    }
+    cnt.innerHTML = `${note?.ok ? `· <span data-testid="scan-value">≈ ${esc(money(v))}</span>` : ""}${flags.length ? ` <span class="${note?.ok && !note.stale ? "muted" : "price-warn"}" data-testid="scan-value-note">(${esc(flags.join(" · "))})</span>` : ""}`;
   }
   function addScanned(id) {
     const c = BY.get(id); if (!c) return;
     const lg = scan.lang || addLangNow();   // the language of the last card in the list (default: the collection's)
-    scan.added.push({ id, foil: scan.foil, lang: lg }); scan.last = { id, foil: scan.foil }; scan.wait = true; scan.seen = null; scan.seenN = 0;
+    scan.added.push({ id, foil: scan.foil, lang: lg, at: performance.now() }); scan.last = { id, foil: scan.foil }; scan.wait = true; scan.seen = null; scan.seenN = 0;
     navigator.vibrate?.(40);
     drawLast();
     scanSay(Tx("In the list: {c}", { c: split(c.name)[0] }) + " · " + Tx("Remove the card and show the next one."));
