@@ -205,6 +205,10 @@ test('Escanear página: 4 pockets to settle, tapped on the photo, through to the
   await expect(ed.getByTestId('pocket-progress')).toHaveText('Pendência 3 de 4');
   await expect(ed.locator('img.crop')).toHaveCount(1);                            // the pocket from the photo, beside the suggestion
   await expect(ed.getByTestId('pocket-find')).toHaveText('Buscar outra carta');
+  // "same art" lists only printings of this art; look-alikes are listed apart
+  const st7 = await page.evaluate(() => window.__inkwellScanPageState().pockets[7]);
+  const same = await ed.getByTestId('pocket-same').locator('[data-use]').evaluateAll((b) => b.map((x) => x.dataset.use)).catch(() => []);
+  expect(same.every((id) => st7.group.includes(id))).toBe(true);
   // anterior / próxima pendência
   await ed.getByTestId('pocket-prev').click();
   await expect(ed).toHaveAttribute('data-edit-pocket', '6');
