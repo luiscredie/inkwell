@@ -213,8 +213,28 @@ window.INKWELL_CLOUD = (() => {
     return r.json();
   }
 
+  // Why a call failed, in words a page can show (and a phone log can tell apart): no internet, a connection that
+  // dropped, a session that is no longer valid, the server, or something else.
+  function why(e) {
+    if (typeof navigator !== "undefined" && navigator.onLine === false) return "offline";
+    if (e?.code === "auth" || e?.status === 401 || e?.status === 403 || e?.code === "permission") return "session";
+    if (e?.status >= 500) return "server";
+    if (e instanceof TypeError || (e && e.status == null && /fetch|network|load failed/i.test(String(e.message || e)))) return "network";
+    return "other";
+  }
+  // A read that may meet a phone's network still waking up (an app just opened, a WebView before the radio is ready):
+  // up to two more tries, 1 s and 3 s later, only for a dropped connection — never for a session or server answer.
+  async function retrying(fnc, waits = [1000, 3000]) {
+    for (let k = 0; ; k++) {
+      try { return await fnc(); } catch (e) {
+        if (k >= waits.length || why(e) !== "network") throw e;
+        await new Promise((ok) => setTimeout(ok, waits[k]));
+      }
+    }
+  }
+
   return {
-    api, shared, collections, fn, upload, signed, removeFiles,
+    api, shared, collections, fn, upload, signed, removeFiles, why, retrying,
     user: () => { sess = load(); return sess ? { id: sess.user?.id, email: sess.user?.email } : null; },
     status: () => { sess = load(); return sess ? { signedIn: true, email: sess.user?.email || "" } : { signedIn: false }; },
     async requestCode(email) {
