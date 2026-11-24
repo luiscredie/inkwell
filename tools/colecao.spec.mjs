@@ -150,18 +150,32 @@ test('scanner reads the collector line when two printings share the art', async 
   await expect.poll(() => deltas(calls).map((d) => d.card_id)).toEqual(['LOR9-7']);
 });
 
-test('scanner asks only when it cannot tell the printings apart', async ({ page }) => {
+test('scanner keeps a card whose printing it cannot tell, to be picked in the review (no question while scanning)', async ({ page }) => {
   const calls = await setup(page);
   await fakeCamera(page, { file: 'Under_the_Sea__LOR4-95.jpg', ocr: '' });
   await page.goto(BASE);
   await page.getByRole('button', { name: 'Escanear' }).click();
-  const pick = page.locator('[data-testid="scan-pick"]');
-  await expect(pick).toBeVisible({ timeout: 15000 });
-  await expect(pick.locator('[data-pick]')).toHaveCount(3);   // two printings + "Nenhuma destas"
-  await pick.locator('[data-pick="LOR9-97"]').click();
-  await expect(page.locator('[data-testid="scan-last"]')).toContainText('nº 97');
-  await confirmList(page, 1);
-  await expect.poll(() => deltas(calls).map((d) => d.card_id)).toEqual(['LOR9-97']);
+  await expect(page.getByTestId('scan-count')).toHaveText('1 na lista', { timeout: 15000 });   // not lost
+  await expect(page.locator('[data-testid="scan-pick"]')).toHaveCount(0);                     // nothing to tap now
+  await expect(page.locator('#scanSay')).toContainText('escolha a impressão na revisão');
+  await expect(page.getByTestId('scan-value-note')).toContainText('1 com impressão a escolher');
+  await page.getByRole('button', { name: 'Concluir' }).click();
+  const review = page.getByTestId('scan-review'), pend = review.getByTestId('scan-pending');
+  await expect(pend).toContainText('1 carta com impressão a escolher');
+  await expect(pend.locator('[data-choose]')).toHaveCount(2);
+  const add = review.locator('#revAdd');
+  await expect(add).toBeDisabled();
+  await expect(add).toHaveText('Escolha a impressão de 1 carta');
+  await page.waitForTimeout(600);
+  expect(deltas(calls)).toEqual([]);                                 // nothing saved while a printing is open
+  await pend.locator('[data-choose="LOR9-97"]').click();
+  await expect(review.getByTestId('scan-pending')).toHaveCount(0);
+  await expect(add).toHaveText('Adicionar 1 carta à coleção');
+  // foil fixed in the review
+  await review.locator('[data-rev] [data-rfoil]').click();
+  await expect(review.locator('[data-rev] [data-rfoil]')).toHaveAttribute('aria-pressed', 'true');
+  await add.click();
+  await expect.poll(() => deltas(calls).map((d) => `${d.card_id}:${d.foil}`)).toEqual(['LOR9-97:true']);
 });
 
 test('scanner explains a blocked camera', async ({ page }) => {

@@ -39,11 +39,22 @@ O OCR da linha de colecionador decide entre impressões com a mesma arte. Neste 
 - **Foil:** as 4 foram identificadas, mas **0 de 4 foram marcadas como foil**. O scanner não distingue foil de normal: a pessoa alterna "Normal/Foil" no topo ou corrige na revisão.
 - **Avisos de preço:** testados com um arquivo de preços antigo e uma carta sem preço. A tela mostra "1 sem preço" e "desatualizados" em cor de alerta.
 
-## Achados (sem mudança neste PR)
+## Segunda rodada (24/11, pedido do Conselho)
 
-1. **Reimpressões quando o OCR falha.** Com a mesma arte em duas impressões (por exemplo, Elsa LOR11-125 e LOR11-215), sem OCR a carta não entra. O scanner tenta 3 vezes, e a pergunta "qual destas?" só aparece se a carta continuar no quadro. Na sessão sem OCR, 5 cartas foram perdidas assim, e 1 pergunta exigiu toque. Isso também vale para celular com OCR lento, sem rede ou com a linha ilegível.
+- **Reimpressões não se perdem mais.** Quando o OCR não decide a impressão (linha borrada, OCR lento ou sem rede), a carta entra na lista na hora como **"impressão a escolher"**, com as impressões possíveis guardadas. A leitura segue sem nenhuma pergunta.
+  - A faixa marca essas cartas com "?".
+  - O valor acumulado avisa "N com impressão a escolher".
+  - Na revisão, essas cartas aparecem no topo com as opções (miniatura, coleção e número). **"Adicionar" fica bloqueado** ("Escolha a impressão de N cartas") até cada uma ser resolvida ou retirada.
+  - "+1 desta" sobre uma carta pendente cria outra pendente, sem usar o palpite.
+- **Foil na revisão:** o rótulo "normal/foil" de cada linha é um botão; um toque alterna a linha inteira.
+- Medido com câmera falsa, **sem OCR**: 20/20 cartas (antes 15/20), 5 delas como "impressão a escolher", 0 toques durante a leitura, 0 erradas e 0 duplicadas. A gravação final confere carta por carta com as cartas mostradas. Com o OCR simulado: 20/20 e 0 pendentes.
+- O teste "pergunta só quando não distingue as impressões" foi substituído por "guarda a carta para escolher na revisão": a pergunta saiu da leitura e foi para a revisão, por decisão do Conselho.
+
+## Achados da primeira rodada
+
+1. **Reimpressões quando o OCR falha** (resolvido na segunda rodada). Com a mesma arte em duas impressões (por exemplo, Elsa LOR11-125 e LOR11-215), sem OCR a carta não entra. O scanner tenta 3 vezes, e a pergunta "qual destas?" só aparece se a carta continuar no quadro. Na sessão sem OCR, 5 cartas foram perdidas assim, e 1 pergunta exigiu toque. Isso também vale para celular com OCR lento, sem rede ou com a linha ilegível.
    **Proposta:** pôr a carta na lista como "impressão a escolher" e resolver na revisão. Não exige toque durante a sessão e mantém a confirmação final.
-2. **Foil manual.** Proposta: lembrar o último estado de "Foil" por sessão (já acontece) e, na revisão, um atalho "marcar foils" por miniatura. Detecção automática de foil é pesquisa à parte.
+2. **Foil manual** (atalho na revisão feito na segunda rodada; a detecção automática continua em aberto). Proposta original: lembrar o último estado de "Foil" por sessão (já acontece) e, na revisão, um atalho "marcar foils" por miniatura. Detecção automática de foil é pesquisa à parte.
 3. **Ritmo.** Aceitar a carta com 2 leituras estáveis em vez de 3 cortaria ~0,35 s, mas aumenta o risco de pegar a carta em movimento. Só testar com medição em celular real.
 
 ## Comparação com a Página 3×3 (#324)

@@ -96,22 +96,24 @@ test('continuous scan: 20 consecutive cards, repeats and foils', async ({ page }
 
   // match each pass to what was added: in order, the first addition after it appeared and before the next pass ends
   const passes = SEQ.map((x, k) => ({ ...x, k, shownAt: res.shown[k] ?? null }));
-  const used = new Set(), out = [];
+  const used = new Set(), out = [], truthOf = new Map();   // truthOf: index in the list -> the card really shown
   for (const p of passes) {
     const until = p.shownAt + HOLD + GAP;
     const j = res.added.findIndex((a, i) => !used.has(i) && a.at >= p.shownAt && a.at <= until);
-    if (j >= 0) { used.add(j); out.push({ k: p.k, truth: p.id, foil: p.foil, got: res.added[j].id, gotFoil: res.added[j].foil, ms: Math.round(res.added[j].at - p.shownAt) }); }
+    if (j >= 0) { used.add(j); truthOf.set(j, p.id); const a = res.added[j]; out.push({ k: p.k, truth: p.id, foil: p.foil, got: a.id, pending: !!a.choose, inChoice: !!a.choose && a.choose.includes(p.id), gotFoil: a.foil, ms: Math.round(a.at - p.shownAt) }); }
     else out.push({ k: p.k, truth: p.id, foil: p.foil, got: null, ms: null });
   }
   const extra = res.added.filter((_, i) => !used.has(i)).map((a) => a.id);   // added but matching no pass: duplicates
-  const right = out.filter((o) => o.got === o.truth).length, wrong = out.filter((o) => o.got && o.got !== o.truth).length;
+  // a card kept as "printing to pick" is right when the true printing is among the choices offered in the review
+  const ok = (o) => (o.pending ? o.inChoice : o.got === o.truth);
+  const right = out.filter((o) => o.got && ok(o)).length, wrong = out.filter((o) => o.got && !ok(o)).length;
   const lat = out.filter((o) => o.ms != null).map((o) => o.ms).sort((a, b) => a - b);
   const m = {
-    passes: SEQ.length, added: res.added.length, right, wrong, missed: out.filter((o) => !o.got).length, extra: extra.length,
-    foil_right: out.filter((o) => o.foil && o.got === o.truth).length + '/' + SEQ.filter((x) => x.foil).length,
+    passes: SEQ.length, added: res.added.length, right, wrong, pending_printing: out.filter((o) => o.pending).length, missed: out.filter((o) => !o.got).length, extra: extra.length,
+    foil_right: out.filter((o) => o.foil && o.got && ok(o)).length + '/' + SEQ.filter((x) => x.foil).length,
     // the scanner does not tell foil from normal by itself: the Normal/Foil switch (top) or the review sets it
     foil_marked: out.filter((o) => o.foil && o.gotFoil).length + '/' + SEQ.filter((x) => x.foil).length,
-    repeat_in_a_row_right: out[4].got === out[4].truth && out[5].got === out[5].truth,
+    repeat_in_a_row_right: !!(out[4].got && ok(out[4]) && out[5].got && ok(out[5])),
     taps, latency_ms_median: lat[Math.floor(lat.length / 2)] ?? null, latency_ms_max: lat[lat.length - 1] ?? null,
     ocr: process.env.SESSION_OCR !== 'off' ? 'simulated (correct reading)' : 'off', session_s: Math.round(SEQ.length * (HOLD + GAP) / 100) / 10, hold_ms: HOLD, gap_ms: GAP, detail: out, extra_ids: extra,
   };
@@ -130,15 +132,27 @@ test('continuous scan: 20 consecutive cards, repeats and foils', async ({ page }
   // guarantees: no wrong card, no duplicate. Timing (e.g. both copies in a row read) is measured, not asserted:
   // on a loaded CI machine the second copy can be missed at this pace (seen once, 24/11).
   expect({ wrong: m.wrong, extra: m.extra }).toEqual({ wrong: 0, extra: 0 });
-  if (process.env.SESSION_OCR !== 'off') expect(m.right).toBeGreaterThanOrEqual(18);
+  expect(m.right).toBeGreaterThanOrEqual(18);   // with or without OCR: a card the OCR can't settle is kept, not lost
   await page.getByRole('button', { name: 'Concluir' }).click();
   const review = page.getByTestId('scan-review');
   await expect(review).toBeVisible();
+  // printings to pick: the person picks the true one in the review (Add stays blocked until then)
+  for (let n = 0; n < 40 && await review.locator('[data-pend]').count(); n++) {
+    const row = review.locator('[data-pend]').first(), i = +(await row.getAttribute('data-pend'));
+    const truth = truthOf.get(i);
+    const want = row.locator(`[data-choose="${truth}"]`);
+    await expect(review.locator('#revAdd')).toBeDisabled();
+    if (truth && await want.count()) await want.click(); else await row.locator('[data-choose]').first().click();
+  }
   await review.getByRole('button', { name: new RegExp(`Adicionar ${res.added.length} cartas`) }).click();
   await expect.poll(() => calls.filter((c) => c.path === 'rpc/apply_collection_delta').length).toBeGreaterThan(0);
   const net = {}; for (const d of calls.filter((c) => c.path === 'rpc/apply_collection_delta').flatMap((c) => c.body.p_delta)) net[d.card_id] = (net[d.card_id] || 0) + d.qty;
-  const want = {}; for (const a of res.added) want[a.id] = (want[a.id] || 0) + 1;
-  expect(net).toEqual(want);
+  // what was saved: one card per addition, with each pending card's printing as picked in the review
+  expect(Object.values(net).reduce((a, b) => a + b, 0)).toBe(res.added.length);
+  if (truthOf.size === res.added.length) {   // every addition matched a pass: the saved cards are exactly the cards shown
+    const want = {}; for (const id of truthOf.values()) want[id] = (want[id] || 0) + 1;
+    expect(net).toEqual(want);
+  }
 });
 
 test('continuous scan: the running value says when prices are missing or out of date', async ({ page }) => {
