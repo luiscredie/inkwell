@@ -139,21 +139,23 @@ const HARD = ['Rapunzel_-_Tower_Defender__LOR13-80', '4_Town_-_Hottest_Band_of_t
 const WORDS = { 'LOR10-66': 'woodchuck guidebook', 'LOR13-62': 'hunny mages', 'LOR11-125': 'elsa concerned', 'LOR13-40': 'hunny archmage', 'LOR13-80': 'tower defender', 'LOR13-17': 'hottest band', 'LOR13-185': 'hunny ranger', 'LOR13-154': 'mage apprentice', 'LOR13-5': 'hunny paladin' };
 const TRUTH = HARD.map((f) => f.split('|')[0].split('__')[1]);
 let timing = null;
+const shootHard = () => page.evaluate(async ({ IMG, files }) => {
+  const c = document.createElement('canvas'); c.width = 1080; c.height = 1440; const ctx = c.getContext('2d');
+  ctx.fillStyle = '#5c4634'; ctx.fillRect(0, 0, c.width, c.height);
+  const x0 = 140, y0 = 150, W = 800, H = W / 0.72; ctx.fillStyle = '#1c1d24'; ctx.fillRect(x0, y0, W, H);
+  await Promise.all(files.map(async (f, i) => { const [n, fx] = f.split('|'); const im = new Image(); im.crossOrigin = 'anonymous'; im.src = `${IMG}${n}.jpg`; await im.decode();
+    const cw = W / 3, ch = H / 3, x = x0 + (i % 3) * cw + cw * 0.04, y = y0 + Math.floor(i / 3) * ch + ch * 0.03;
+    if (fx === 'flip') { ctx.save(); ctx.translate(x + cw * 0.46, y + ch * 0.47); ctx.rotate(Math.PI); ctx.drawImage(im, -cw * 0.46, -ch * 0.47, cw * 0.92, ch * 0.94); ctx.restore(); }
+    else ctx.drawImage(im, x, y, cw * 0.92, ch * 0.94); }));
+  window.__inkwellScanPageFrom(c, [[x0 + 8, y0 - 6], [x0 + W - 4, y0 + 5], [x0 + W + 6, y0 + H - 3], [x0 - 5, y0 + H + 4]]);
+}, { IMG, files: HARD });
+const waitTiming = async () => { let t = null; for (let i = 0; i < 120; i++) { t = await page.evaluate(() => window.__inkwellScanPageTiming?.()).catch(() => null); if (t?.ocr != null) break; await new Promise((r) => setTimeout(r, 500)); } return t; };
 await step('scanner, 3×3 page: pockets to settle, tapped on the photo, through to the review (Web Workers)', async () => {
   await fakeCamera([null]);
   await page.getByRole('button', { name: 'Escanear' }).first().click();
   await page.getByTestId('scan-mode').getByRole('button', { name: 'Página 3×3' }).click();
   await new Promise((r) => setTimeout(r, 1500));   // a person framing the page: the Workers warm up meanwhile
-  await page.evaluate(async ({ IMG, files }) => {
-    const c = document.createElement('canvas'); c.width = 1080; c.height = 1440; const ctx = c.getContext('2d');
-    ctx.fillStyle = '#5c4634'; ctx.fillRect(0, 0, c.width, c.height);
-    const x0 = 140, y0 = 150, W = 800, H = W / 0.72; ctx.fillStyle = '#1c1d24'; ctx.fillRect(x0, y0, W, H);
-    await Promise.all(files.map(async (f, i) => { const [n, fx] = f.split('|'); const im = new Image(); im.crossOrigin = 'anonymous'; im.src = `${IMG}${n}.jpg`; await im.decode();
-      const cw = W / 3, ch = H / 3, x = x0 + (i % 3) * cw + cw * 0.04, y = y0 + Math.floor(i / 3) * ch + ch * 0.03;
-      if (fx === 'flip') { ctx.save(); ctx.translate(x + cw * 0.46, y + ch * 0.47); ctx.rotate(Math.PI); ctx.drawImage(im, -cw * 0.46, -ch * 0.47, cw * 0.92, ch * 0.94); ctx.restore(); }
-      else ctx.drawImage(im, x, y, cw * 0.92, ch * 0.94); }));
-    window.__inkwellScanPageFrom(c, [[x0 + 8, y0 - 6], [x0 + W - 4, y0 + 5], [x0 + W + 6, y0 + H - 3], [x0 - 5, y0 + H + 4]]);
-  }, { IMG, files: HARD });
+  await shootHard();
   await until(page, () => window.__inkwellScanPageState()?.busy === false, undefined, 120000);
   const st = await page.evaluate(() => window.__inkwellScanPageState());
   const wrong = st.pockets.filter((p, i) => p.status === 'ok' && p.id !== TRUTH[i]);
@@ -206,10 +208,26 @@ await step('scanner, 3×3 page: pockets to settle, tapped on the photo, through 
   const got = {}; for (const d of saved().slice(1)) got[d.card_id] = (got[d.card_id] || 0) + d.qty;
   if (JSON.stringify(Object.keys(got).sort()) !== JSON.stringify([...TRUTH].sort()) || Object.values(got).some((q) => q !== 1)) throw new Error('saved ' + JSON.stringify(got));
   // the reading of collector numbers (real OCR from the CDN here) may still be running: wait for its time, no longer than 60 s
-  for (let i = 0; i < 120; i++) { timing = await page.evaluate(() => window.__inkwellScanPageTiming?.()).catch(() => null); if (timing?.ocr != null) break; await new Promise((r) => setTimeout(r, 500)); }
+  timing = await waitTiming();
   fs.writeFileSync(`${OUT}/pagescan-timing.json`, JSON.stringify(timing, null, 1));
   console.log('TIMING ' + JSON.stringify(timing));
   return `${pend.length} pending at first (${st.pockets.map((p) => p.status).join(',')}), ${fixed} settled in the editor, 9 saved only after the review; ${scrolled}; ready ${timing?.ready} ms (engine ${timing?.engine} ms with ${timing?.workers} Worker(s)), OCR ${timing?.ocr ?? '?'} ms for ${timing?.ocrN ?? '?'} reprint(s)`;
+});
+
+// The same page again, the way a person goes through a binder: Workers and the number reader already started.
+await step('scanner, 3×3 page again (second page): timings only, nothing saved', async () => {
+  const before = saved().length;
+  await page.getByRole('button', { name: 'Escanear' }).first().click();
+  await page.getByTestId('scan-mode').getByRole('button', { name: 'Página 3×3' }).click();
+  await new Promise((r) => setTimeout(r, 1500));
+  await shootHard();
+  await until(page, () => window.__inkwellScanPageState()?.busy === false, undefined, 120000);
+  const t2 = await waitTiming();
+  fs.writeFileSync(`${OUT}/pagescan-timing-2.json`, JSON.stringify(t2, null, 1));
+  console.log('TIMING2 ' + JSON.stringify(t2));
+  await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
+  if (saved().length !== before) throw new Error('saved something');
+  return `ready ${t2?.ready} ms (engine ${t2?.engine} ms, ${t2?.workers} Worker(s), first pocket ${t2?.first} ms), OCR ${t2?.ocr} ms for ${t2?.ocrN} reprint(s)`;
 });
 
 // Airplane mode for real: Início says there is no internet; with the connection back it loads by itself, no tap.
@@ -224,9 +242,13 @@ await step('Início in airplane mode, then back online (loads by itself)', async
   await shot(page, '7a-inicio-modo-aviao');
   offline = false;
   await device.shell('cmd connectivity airplane-mode disable');
-  await until(page, () => !document.querySelector('[data-testid="keep-error"], [data-testid="home-error"]') && Object.keys(window.__inkwellHomeFail?.() || {}).length === 0, undefined, 60000);
+  const t0 = Date.now();
+  try { await until(page, () => !document.querySelector('[data-testid="keep-error"], [data-testid="home-error"]') && Object.keys(window.__inkwellHomeFail?.() || {}).length === 0, undefined, 75000); }
+  catch { const now = await page.evaluate(() => ({ online: navigator.onLine, fail: window.__inkwellHomeFail?.(), why: [...document.querySelectorAll('[data-testid=home-why]')].map((e) => e.dataset.why) })).catch((e) => String(e));
+    await shot(page, '7b-inicio-nao-voltou'); throw new Error(`offline shown (${JSON.stringify(why)}), but not back 75 s after airplane mode off: ${JSON.stringify(now)}`); }
+  const back = Math.round((Date.now() - t0) / 1000);
   await shot(page, '7b-inicio-de-volta');
-  return `offline: navigator.onLine=${why.online}, ${JSON.stringify(why.fail)}; back online: loaded by itself`;
+  return `offline: navigator.onLine=${why.online}, ${JSON.stringify(why.fail)}; airplane mode off: loaded by itself in ${back} s, no tap`;
 });
 
 await step('Android back button (recorded, not judged)', async () => {
