@@ -196,6 +196,7 @@ test('Escanear página: 4 pockets to settle, tapped on the photo, through to the
   if (process.env.SHOT_DIR) await page.screenshot({ path: `${process.env.SHOT_DIR}/page-4pend.png` });
 
   // the person taps the 3rd pending card straight on the photo
+  await rev.locator('#pgPhoto [data-pk="7"] polygon').scrollIntoViewIfNeeded();   // the bottom row may sit under the footer until scrolled
   const box = await rev.locator('#pgPhoto [data-pk="7"] polygon').boundingBox();
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   let ed = rev.getByTestId('pocket-edit');
@@ -347,4 +348,58 @@ test('Escanear página: a swipe that starts on the photo scrolls; a tap opens th
   expect(Math.abs((await scrolled()) - before)).toBeLessThan(5);
   await rev.getByTestId('page-adjust').click();
   await expect(rev.getByTestId('page-rerun')).toBeVisible();                     // moved corners: offer to recognise again
+});
+
+// Shared between 1, 2 or 3 Workers, the nine pockets come out exactly the same (statuses, cards, scores, suggestions).
+test('Escanear página: the same answers with 1 Worker or 3 in parallel', async ({ browser }) => {
+  test.setTimeout(120000);
+  const run = async (k) => {
+    const ctx = await browser.newContext(); const page = await ctx.newPage();
+    await page.addInitScript((n) => { window.INKWELL_SCAN_WORKERS = n; }, k);
+    await page.goto(BASE); await page.waitForFunction(() => typeof window.__inkwellScanPage === 'function');
+    const r = await page.evaluate(async (files) => {
+      const c = document.createElement('canvas'); c.width = 1080; c.height = 1440; const ctx = c.getContext('2d', { willReadFrequently: true });
+      ctx.fillStyle = '#5c4634'; ctx.fillRect(0, 0, c.width, c.height);
+      const x0 = 140, y0 = 150, W = 800, H = W / 0.72; ctx.fillStyle = '#1c1d24'; ctx.fillRect(x0, y0, W, H);
+      await Promise.all(files.map(async (f, i) => { const [n, fx] = f.split('|'); const im = new Image(); im.src = `../lorcana-card-images/images/${n}.jpg`; await im.decode();
+        const cw = W / 3, ch = H / 3, x = x0 + (i % 3) * cw + cw * 0.04, y = y0 + Math.floor(i / 3) * ch + ch * 0.03;
+        if (fx === 'flip') { ctx.save(); ctx.translate(x + cw * 0.46, y + ch * 0.47); ctx.rotate(Math.PI); ctx.drawImage(im, -cw * 0.46, -ch * 0.47, cw * 0.92, ch * 0.94); ctx.restore(); } else ctx.drawImage(im, x, y, cw * 0.92, ch * 0.94); }));
+      const a = await window.__inkwellScanPage(ctx.getImageData(0, 0, c.width, c.height), [[x0 + 8, y0 - 6], [x0 + W - 4, y0 + 5], [x0 + W + 6, y0 + H - 3], [x0 - 5, y0 + H + 4]]);
+      return { workers: window.__inkwellScanWorkers(), pockets: a.pockets.map((p) => [p.i, p.status, p.id, p.score, p.gap, p.group, p.top]) };
+    }, HARD);
+    await ctx.close(); return r;
+  };
+  const one = await run(1), three = await run(3);
+  expect(one.workers).toBe(1); expect(three.workers).toBe(3);
+  expect(three.pockets).toEqual(one.pockets);
+});
+
+// The collector numbers are read after the check screen is usable. While that happens the person scrolls and types:
+// the background updates must not move the screen, close the editor or steal the search box.
+test('Escanear página: the screen is usable while the numbers are read in the background', async ({ page }) => {
+  test.setTimeout(120000);
+  const calls = await setup(page);
+  await page.setViewportSize({ width: 360, height: 640 });
+  await page.addInitScript(() => { window.__ocrN = 0; window.INKWELL_SCAN_OCR = () => new Promise((ok) => setTimeout(() => { window.__ocrN++; ok(''); }, 700)); });
+  await openPageMode(page);
+  const rev = await hardPage(page);
+  await expect(rev.getByTestId('page-reading')).toBeVisible();                     // reading, and already usable
+  await expect(rev.getByTestId('page-add')).toBeEnabled();
+  await rev.locator('.items').evaluate((e) => { e.scrollTop = 300; });
+  const ed = await openPk(rev, 8);
+  await ed.getByTestId('pocket-find').click();
+  await ed.getByTestId('pocket-search').pressSequentially('hunny', { delay: 120 });
+  await expect(rev.getByTestId('page-reading')).toHaveCount(0, { timeout: 30000 }); // the reading finished meanwhile
+  expect(await page.evaluate(() => window.__ocrN)).toBeGreaterThan(0);
+  await expect(ed).toHaveAttribute('data-edit-pocket', '8');
+  await expect(ed.getByTestId('pocket-search')).toBeFocused();
+  await expect(ed.getByTestId('pocket-search')).toHaveValue('hunny');
+  await page.keyboard.type(' mages');
+  await expect(ed.getByTestId('pocket-search')).toHaveValue('hunny mages');
+  await rev.locator('#pgsClose').click();
+  expect(await rev.locator('.items').evaluate((e) => e.scrollTop)).toBeGreaterThan(250);
+  const t = await page.evaluate(() => window.__inkwellScanPageTiming());
+  expect(t.ready).toBeLessThan(t.ready + t.ocr);                                    // ready came before the numbers were read
+  expect(t.ocrN).toBe(2);
+  expect(deltas(calls)).toEqual([]);
 });
