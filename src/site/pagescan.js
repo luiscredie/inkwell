@@ -133,7 +133,9 @@
   }
 
   // Same page photographed twice in a row (or the same nine cards again): the recognised ids in order.
-  const signature = (pockets) => pockets.map((p) => (p.status === "empty" ? "-" : p.id || "?")).join(",");
+  // A pocket whose art is shared by several printings counts by that group, not by the printing picked: the OCR may
+  // settle it on one photo and not on the next (seen in CI, 24/11), and that must not hide a repeated page.
+  const signature = (pockets) => pockets.map((p) => (p.status === "empty" && !p.id ? "-" : p.group && p.group.length > 1 ? p.group.slice().sort().join("|") : p.id || "?")).join(",");
 
   // The collector line ("29/204 · EN · 11", bottom left of the card) of a recognised pocket, as 4 corners in the photo,
   // so it can be cut out of the full-resolution photo for OCR. pocket.box: the card inside the pocket crop (fractions).

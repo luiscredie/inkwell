@@ -101,6 +101,8 @@ const img = photo(Q);
 
 // --- signature: same cards, same signature; empty pockets count
 ok(PS.signature([{ id: 'A', status: 'ok' }, { status: 'empty' }, { id: null, status: 'unknown' }]) === 'A,-,?', 'signature');
+ok(PS.signature([{ id: 'B1', status: 'ok', group: ['B1', 'B2'] }]) === PS.signature([{ id: 'B2', status: 'choose', group: ['B2', 'B1'] }]), 'shared art: same signature whichever printing the OCR picked');
+ok(PS.signature([{ id: 'C', status: 'empty' }]) === 'C', 'an "empty" pocket the person filled counts as that card');
 
 // --- scanPage end to end with a fake identify: picks the pocket colour, reports empty pockets, times
 {
