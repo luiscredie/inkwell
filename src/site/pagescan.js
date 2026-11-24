@@ -10,6 +10,7 @@
 */
 (function (root) {
   "use strict";
+  function factory() {
 
   // Binder pages. Only 3×3 is offered for now; 2×2 and 4×4 are described so the rest of the code needs no change.
   // aspect: width / height of the area holding the pockets (a pocket is about a card, 63 × 88 mm, plus a seam).
@@ -182,6 +183,10 @@
   }
 
   const API = { LAYOUTS, homography, apply, validQuad, warp, cells, cellQuads, crop, texture, EMPTY_LUMA, classify, signature, frameQuad, stripQuad, scanPage, pending, toList };
+  return API;
+  }
+  const API = factory();
+  root.INKWELL_PAGESCAN_FACTORY = factory;   // the Escanear página Worker is built from this source
   root.INKWELL_PAGESCAN = API;
   if (typeof module !== "undefined" && module.exports) module.exports = API;
 })(typeof window !== "undefined" ? window : globalThis);

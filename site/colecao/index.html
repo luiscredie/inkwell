@@ -392,6 +392,8 @@ button.stock-h.stock-empty .open-word .ic { width: 14px; height: 14px; }
 #scan .pocket b { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; line-height: 1.2; }
 #scan .pocket .chip { color: var(--st); font-weight: 700; }
 #scan .pocket.skip { opacity: .45; }
+#scan .pocket .shot { width: 100%; aspect-ratio: 5 / 7; object-fit: cover; border-radius: 6px; }
+#scan .pagerev .pg-out { color: var(--text); }
 #scan .pocket .ph { aspect-ratio: 5 / 7; border-radius: 6px; background: rgba(160,160,180,.15); display: grid; place-items: center; font-size: 22px; }
 #scan .pedit { display: grid; gap: 10px; padding: 10px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); }
 #scan .pedit .crop { width: 96px; border-radius: 6px; flex: none; }
@@ -2132,102 +2134,71 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const dims = meta.dims, n = meta.ids.length, D = new Int8Array(buf), norm = new Float32Array(n);
     for (let i = 0; i < n; i++) { let q = 0; for (let k = i * dims, e = k + dims; k < e; k++) q += D[k] * D[k]; norm[i] = Math.sqrt(q) || 1; }
     SCAN = { ids: meta.ids, D, dims, n, norm };
+    SE().use(SCAN);
     return SCAN;
   }
-  const lin = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
-  const fl = (t) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
-  function lab(r, g, b) {
-    const R = lin(r), G = lin(g), B = lin(b);
-    const x = fl((R * 0.4124 + G * 0.3576 + B * 0.1805) / 0.95047), y = fl(R * 0.2126 + G * 0.7152 + B * 0.0722), z = fl((R * 0.0193 + G * 0.1192 + B * 0.9505) / 1.08883);
-    return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
-  }
-  function integral(img) {   // ImageData -> summed-area table, 3 channels
-    const { width: w, height: h, data } = img, W1 = w + 1, I = new Float64Array(W1 * (h + 1) * 3);
-    for (let y = 0; y < h; y++) { let r = 0, g = 0, b = 0;
-      for (let x = 0; x < w; x++) { const p = (y * w + x) * 4; r += data[p]; g += data[p + 1]; b += data[p + 2];
-        const o = ((y + 1) * W1 + x + 1) * 3, u = (y * W1 + x + 1) * 3; I[o] = I[u] + r; I[o + 1] = I[u + 1] + g; I[o + 2] = I[u + 2] + b; } }
-    return { I, w, h };
-  }
-  function fingerprint(T, ox, oy, s) {   // same steps as tools/build_scan_index.py: cell means -> Lab -> standardise -> unit length
-    const { I, w, h } = T, W1 = w + 1, n = SG.gx * SG.gy, v = new Float32Array(n * 3), cell = SG.cell * s, x0 = ox + SG.ax * s, y0 = oy + SG.ay * s;
-    for (let j = 0; j < SG.gy; j++) for (let i = 0; i < SG.gx; i++) {
-      let xa = Math.round(x0 + i * cell), xb = Math.round(x0 + (i + 1) * cell), ya = Math.round(y0 + j * cell), yb = Math.round(y0 + (j + 1) * cell);
-      xa = Math.max(0, xa); xb = Math.min(w, Math.max(xa + 1, xb)); ya = Math.max(0, ya); yb = Math.min(h, Math.max(ya + 1, yb));
-      const a = (yb * W1 + xb) * 3, b = (ya * W1 + xb) * 3, c = (yb * W1 + xa) * 3, d = (ya * W1 + xa) * 3, area = (xb - xa) * (yb - ya);
-      const L = lab((I[a] - I[b] - I[c] + I[d]) / area, (I[a + 1] - I[b + 1] - I[c + 1] + I[d + 1]) / area, (I[a + 2] - I[b + 2] - I[c + 2] + I[d + 2]) / area);
-      const k = (j * SG.gx + i) * 3; v[k] = L[0]; v[k + 1] = L[1]; v[k + 2] = L[2];
-    }
-    for (let ch = 0; ch < 3; ch++) { let m = 0, q = 0; for (let k = ch; k < v.length; k += 3) m += v[k]; m /= n; for (let k = ch; k < v.length; k += 3) q += (v[k] - m) ** 2;
-      const sd = Math.sqrt(q / n) + 1e-6; for (let k = ch; k < v.length; k += 3) v[k] = (v[k] - m) / sd; }
-    let q = 0; for (let k = 0; k < v.length; k++) q += v[k] * v[k]; q = Math.sqrt(q) || 1; for (let k = 0; k < v.length; k++) v[k] /= q;
-    return v;
-  }
-  // Card size in the frame: from 60% (a card held far away, or a picture on a screen) to 110% of the guide.
-  // Coarse pass over sizes and positions; the fine pass refines around the best coarse placements.
-  const COARSE = [];
-  for (const s of [0.62, 0.7, 0.78, 0.86, 0.94, 1, 1.07]) {
-    const d = Math.max(0.035, (1.04 - s) * 0.38);   // a smaller card can sit further from the centre
-    for (const dx of [-d, 0, d]) for (const dy of [-d, 0, d]) COARSE.push([s, dx, dy]);
-  }
-  const fineAround = ([s, dx, dy]) => { const g = [];
-    for (const ks of [0.95, 0.975, 1, 1.025, 1.05]) for (const ex of [-0.03, -0.015, 0, 0.015, 0.03]) for (const ey of [-0.03, -0.015, 0, 0.015, 0.03]) g.push([s * ks, dx + ex * s, dy + ey * s]);
-    return g; };
-  function variants(T, grid) {
-    return grid.map(([s, dx, dy]) => { const ox = T.w / 2 - (SG.W / 2) * s + dx * SG.W, oy = T.h / 2 - (SG.H / 2) * s + dy * SG.H; return { v: fingerprint(T, ox, oy, s), s, dx, dy }; });
-  }
-  const dot = (i, v) => { const { D, dims } = SCAN; let q = 0; for (let k = 0, o = i * dims; k < dims; k++) q += D[o + k] * v[k]; return q / SCAN.norm[i]; };
-  // Returns { id, score, group: [ids with the same art], confident }
-  // Escanear página: each pocket is already cut out of a straightened page, so the card sits near the middle at
-  // about the frame's size; a smaller search is enough there (36 placements instead of 63).
-  const POCKET = [];
-  for (const s of [0.86, 0.93, 1, 1.07]) for (const dx of [-0.04, 0, 0.04]) for (const dy of [-0.04, 0, 0.04]) POCKET.push([s, dx, dy]);
-  function identify(img, grid = COARSE) {
-    const T = integral(img), Q = variants(T, grid), n = SCAN.n, coarse = new Float32Array(n), where = new Int16Array(n);
-    for (let i = 0; i < n; i++) { let best = -1, bq = 0; for (let j = 0; j < Q.length; j++) { const d = dot(i, Q[j].v); if (d > best) { best = d; bq = j; } } coarse[i] = best; where[i] = bq; }
-    const order = [...coarse.keys()].sort((a, b) => coarse[b] - coarse[a]), top = order.slice(0, 15);
-    const seeds = [...new Set(top.slice(0, 6).map((i) => where[i]))].slice(0, 3);   // the placements the best candidates agree on
-    const F = variants(T, seeds.flatMap((j) => fineAround(grid[j])));
-    const fine = top.map((i) => { let best = -1, at = null; for (const q of F) { const d = dot(i, q.v); if (d > best) { best = d; at = q; } } return [i, best, at]; }).sort((a, b) => b[1] - a[1]);
-    const [bi, bs, at] = fine[0], group = fine.filter(([, s]) => s >= bs - 0.04).map(([i]) => SCAN.ids[i]);
-    const runner = (fine.find(([, s]) => s < bs - 0.04) || [0, coarse[order[15]]])[1];
-    // where the card sits in the analysed image (fractions), so the collector line can be cut out precisely
-    const box = { x: (T.w / 2 - (SG.W / 2) * at.s + at.dx * SG.W) / T.w, y: (T.h / 2 - (SG.H / 2) * at.s + at.dy * SG.H) / T.h, w: SG.W * at.s / T.w, h: SG.H * at.s / T.h };
-    const best = fine.slice(0, 8).map(([i, s]) => ({ id: SCAN.ids[i], s: Math.round(s * 1000) / 1000 }));   // suggestions when the person corrects a pocket
-    return { id: SCAN.ids[bi], score: bs, gap: bs - runner, group, confident: (bs >= 0.70 && bs - runner >= 0.15) || (bs >= 0.80 && bs - runner >= 0.08), box, top: best };   // a glare spot lowers the gap, not the match
-  }
+  // The engine itself is src/site/scanengine.js (shared with the Escanear página Worker).
+  const SE = () => window.INKWELL_SCANENGINE;
+  const identify = (img, grid) => SE().identify(img, grid || undefined);
+  // Lightness fallback without the slow gradient (foil shine): on by default since the 24/11 measurement;
+  // INKWELL_SCAN_EXP = "nodetrend" switches it off for comparisons (tools/pagescan-bench.spec.mjs, PAGESCAN_EXP).
+  const scanExp = () => ({ detrend: window.INKWELL_SCAN_EXP !== "nodetrend" });
+  const identifyPocket = (img) => SE().identifyPocket(img, scanExp());
   window.__inkwellScanIdentify = (img) => (SCAN ? identify(img) : null);   // used by the browser test
-  // Foil shine and a dim room change the colours more than the light-and-dark pattern of the art. When the colour match
-  // isn't sure, compare only the lightness (L) part of the fingerprint, over every card. Its answer is never taken as
-  // sure: at most the pocket says "Confira" with that card first.
-  let NORM_L = null;
-  function identifyLuma(img, grid) {
-    const { D, dims, n } = SCAN;
-    if (!NORM_L) { NORM_L = new Float32Array(n); for (let i = 0; i < n; i++) { let q = 0; for (let k = i * dims; k < (i + 1) * dims; k += 3) q += D[k] * D[k]; NORM_L[i] = Math.sqrt(q) || 1; } }
-    const Q = variants(integral(img), grid).map((q) => { let z = 0; for (let k = 0; k < q.v.length; k += 3) z += q.v[k] * q.v[k]; return { v: q.v, z: Math.sqrt(z) || 1 }; });
-    const sc = new Float32Array(n);
-    for (let i = 0; i < n; i++) { let best = -1; const o = i * dims; for (const q of Q) { let d = 0; for (let k = 0; k < dims; k += 3) d += D[o + k] * q.v[k]; d /= NORM_L[i] * q.z; if (d > best) best = d; } sc[i] = best; }
-    const order = [...sc.keys()].sort((a, b) => sc[b] - sc[a]), b0 = order[0];
-    const runner = order.find((i) => sc[i] < sc[b0] - 0.04);   // the same art in other printings scores alike: skip those
-    return { id: SCAN.ids[b0], score: sc[b0], gap: sc[b0] - (runner == null ? 0 : sc[runner]), top: order.slice(0, 6).map((i) => ({ id: SCAN.ids[i], s: Math.round(sc[i] * 1000) / 1000 })) };
-  }
-  function identifyPocket(img) {
-    const r = identify(img, POCKET); if (r.confident) return r;
-    const l = identifyLuma(img, POCKET);
-    if (l.score >= 0.72 && l.gap >= 0.06) {   // a good lightness match: suggest it, the person confirms
-      const top = [...l.top, ...r.top.filter((t) => !l.top.some((x) => x.id === t.id))];
-      return { ...r, id: l.id, score: Math.max(0.55, Math.min(r.score, 0.69)), confident: false, lumaOnly: true, top };
-    }
-    return r;
-  }
 
   // Escanear página on a still picture: the same engine, every pocket. Used by the page screen and by the measurements
   // (tools/pagescan-bench.spec.mjs). Loads the index on first use.
   const PS = () => window.INKWELL_PAGESCAN;   // src/site/pagescan.js, loaded after this script
+  // The page is recognised in a Web Worker so the screen never freezes (nine pockets take ~1 s on a computer and several
+  // on a phone). The Worker is built from the same two modules the page uses (pagescan.js, scanengine.js) and gets a
+  // copy of the index once. If a Worker can't be made, the same work runs here, yielding between pockets.
+  let PW = null, pwSeq = 0;
+  function pageWorker() {
+    if (PW !== null) return PW;
+    try {
+      const src = `"use strict";
+const PS = (${window.INKWELL_PAGESCAN_FACTORY.toString()})();
+const SE = (${window.INKWELL_SCANENGINE_FACTORY.toString()})();
+self.postMessage({ type: "ready" });
+self.onmessage = async (e) => {
+  const m = e.data;
+  if (m.type === "index") { SE.use(m.index); return; }
+  if (m.type !== "page") return;
+  try {
+    const r = await PS.scanPage({ image: m.image, quad: m.quad, layout: m.layout, identify: (img) => SE.identifyPocket(img, m.exp), card: m.card,
+      onPocket: (p, i) => self.postMessage({ type: "pocket", job: m.job, p, i }) });
+    self.postMessage({ type: "done", job: m.job, pockets: r.pockets, page: r.page, ms: r.ms }, [r.page.data.buffer]);
+  } catch (err) { self.postMessage({ type: "fail", job: m.job, error: String(err && err.message || err) }); }
+};`;
+      const url = URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+      PW = new Worker(url); PW.indexSent = false;
+      // WebKit reads the script after new Worker() returns: the blob URL may only go once the Worker has started
+      const ready = (e) => { if (e.data?.type !== "ready") return; URL.revokeObjectURL(url); PW?.removeEventListener?.("message", ready); };
+      PW.addEventListener("message", ready);
+    } catch { PW = false; }
+    return PW;
+  }
   async function scanPagePhoto(image, quad, layout = "3x3", onPocket) {
     await loadScan();
-    return PS().scanPage({ image, quad, layout, identify: identifyPocket, card: { W: SG.W, H: SG.H, M: SG.M }, onPocket, yieldFn: () => new Promise((ok) => setTimeout(ok, 0)) });
+    const card = { W: SG.W, H: SG.H, M: SG.M }, w = window.INKWELL_SCAN_NO_WORKER ? false : pageWorker();
+    if (w) {
+      if (!w.indexSent) { w.postMessage({ type: "index", index: { ids: SCAN.ids, D: SCAN.D, dims: SCAN.dims, n: SCAN.n, norm: SCAN.norm } }); w.indexSent = true; }
+      const job = ++pwSeq;
+      const res = await new Promise((ok, no) => {
+        const on = (e) => { const m = e.data; if (m.job !== job) return;
+          if (m.type === "pocket") onPocket?.(m.p, m.i);
+          else { w.removeEventListener("message", on); w.removeEventListener("error", bad); m.type === "done" ? ok(m) : no(new Error(m.error)); } };
+        const bad = (e) => { w.removeEventListener("message", on); w.removeEventListener("error", bad); no(e); };
+        w.addEventListener("message", on); w.addEventListener("error", bad);
+        w.postMessage({ type: "page", job, image: { width: image.width, height: image.height, data: image.data }, quad, layout, card, exp: scanExp() });
+      }).catch(() => null);
+      if (res) return { pockets: res.pockets, page: res.page, ms: { ...res.ms, worker: true } };
+      PW = false;   // the Worker failed: from now on, here
+    }
+    return PS().scanPage({ image, quad, layout, identify: identifyPocket, card, onPocket, yieldFn: () => new Promise((ok) => setTimeout(ok, 0)) });
   }
   window.__inkwellScanPage = async (image, quad, layout) => { const r = await scanPagePhoto(image, quad, layout); return { pockets: r.pockets, ms: r.ms }; };
+  window.__inkwellScanWorker = () => (PW ? "worker" : PW === false ? "main" : "unused");   // used by the browser test
 
   // Same art in several printings (reprints, promos): read the collector line "29/204 · EN · 11" to pick one.
   function pickByCollector(text, group) {
@@ -2538,6 +2509,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const label = (p) => { const c = p?.id && BY.get(p.id); return c ? split(c.name)[0] : ""; };
     const st = (p) => (p ? (p.skip ? "empty" : p.resolved && p.id ? "ok" : p.status) : "");
     const sel = pg.edit;
+    // pockets that will not go on the list, always said out loud: a card read as "empty" must not vanish quietly
+    const out = pg.pockets.map((p, i) => p && (p.skip || (p.status === "empty" && !p.id)) ? { i, why: p.skip ? "skip" : "empty" } : null).filter(Boolean);
     box.innerHTML = `<header><button type="button" class="btn icon" id="pgBack" aria-label="${esc(P("Refazer foto", "Retake"))}"><i class="ic i-chevron-left"></i></button>
         <h2>${esc(P("Confira a página", "Check the page"))}</h2><span class="small muted" data-testid="page-progress">${pg.busy ? esc(P(`Reconhecendo ${Math.min(done + 1, N)} de ${N}…`, `Recognising ${Math.min(done + 1, N)} of ${N}…`)) : pg.error ? esc(P("Não deu para ler a foto.", "Couldn't read the photo.")) : ""}</span></header>
       <div class="items">
@@ -2549,12 +2522,13 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         <div class="pockets" data-testid="page-pockets">${Array.from({ length: N }, (_, i) => {
           const p = pg.pockets[i], c = p?.id && BY.get(p.id), s = st(p);
           return `<button type="button" class="pocket${p?.skip ? " skip" : ""}" data-pocket="${i}" data-st="${s}" ${p ? "" : "disabled"} aria-pressed="${sel === i}" aria-label="${esc(`${P("Posição", "Pocket")} ${i + 1}: ${p ? (c ? label(p) + " · " : "") + stTxt(s || "unknown") : "…"}`)}">
-            ${c ? thumb(c, "", p.foil) + "</span>" : `<span class="ph">${p ? (s === "empty" ? "∅" : "?") : "…"}</span>`}
+            ${c ? thumb(c, "", p.foil) + "</span>" : p && pg.page ? `\u003Cimg class="shot" src="${pocketCrop(pg, i, 90)}" alt="">` : `<span class="ph">${p ? (s === "empty" ? "∅" : "?") : "…"}</span>`}
             <b>${i + 1}. ${esc(c ? label(p) : p ? stTxt(s) : "…")}</b><span class="chip">${p ? esc(stTxt(s)) : ""}${p && p.qty > 1 ? ` · ×${p.qty}` : ""}${p?.foil && c ? " · foil" : ""}</span></button>`; }).join("")}</div>
         ${sel != null && pg.pockets[sel] ? pocketEditor(pg, sel) : ""}
       </div>
       <footer><p class="small muted pg-note">${Tx("Nothing will be saved until you confirm.")}</p>
         <button type="button" class="btn primary" id="pgAdd" data-testid="page-add" ${pg.busy || pend || !list.length ? "disabled" : ""}>${esc(pg.busy ? P("Reconhecendo…", "Recognising…") : pend ? P(`Resolva ${pend === 1 ? "1 posição" : pend + " posições"}`, `Settle ${pend} pocket${pend === 1 ? "" : "s"}`) : pg.armDup ? P("Toque de novo para pôr na lista mesmo assim", "Tap again to add them anyway") : P(`Pôr ${list.length === 1 ? "1 carta" : list.length + " cartas"} na lista`, `Put ${list.length} card${list.length === 1 ? "" : "s"} on the list`))}</button>
+        ${!pg.busy && out.length ? `<p class="small pg-note pg-out" data-testid="page-out">${esc(outText(out))}</p>` : ""}
         ${pg.armDup ? `<p class="small pg-note pg-dup" data-testid="page-dup">${esc(P("Estas mesmas cartas já foram para a lista na foto anterior.", "These same cards went on the list with the last photo."))}</p>` : ""}
         <div class="row between"><button type="button" class="btn" id="pgRetake"><i class="ic i-camera"></i>${esc(P("Refazer foto", "Retake"))}</button>${pg.ms ? `<span class="small muted" data-testid="page-ms">${(pg.ms.total / 1000).toFixed(1)} s</span>` : ""}</div></footer>`;
     // the page's CSP allows no style="" in markup: sizes go through the DOM
@@ -2575,6 +2549,12 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     };
     wirePocketEditor(pg, box);
     wireCorners(pg, box);
+  }
+  function outText(out) {
+    const e = out.filter((o) => o.why === "empty").map((o) => o.i + 1), k = out.filter((o) => o.why === "skip").map((o) => o.i + 1);
+    const part = (list, one, many) => (list.length ? `${list.length === 1 ? one : many} (${list.join(", ")})` : "");
+    return P(`Ficam de fora: ${[part(e, "1 posição vazia", e.length + " posições vazias"), part(k, "1 deixada de fora", k.length + " deixadas de fora")].filter(Boolean).join(" · ")}. Se houver carta em alguma, toque nela para buscar.`,
+      `Left out: ${[part(e, "1 empty pocket", e.length + " empty pockets"), part(k, "1 left out", k.length + " left out")].filter(Boolean).join(" · ")}. If a card is there, tap the pocket to find it.`);
   }
   function pocketEditor(pg, i) {
     const p = pg.pockets[i], crop = pocketCrop(pg, i);
@@ -2680,6 +2660,134 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
 })();
 </script>
 
+<script>/* Coleção › Escanear: the card-recognition engine (one card, and every pocket of "Escanear página").
+   Moved out of colecao.template.html unchanged so the same code runs on the page and in a Web Worker
+   (Escanear página recognises a whole binder page off the main thread). Pure: no DOM, no fetch.
+
+     const E = INKWELL_SCANENGINE;   E.use(index)   // index: { ids, D: Int8Array, dims, n, norm }
+     E.identify(img, grid?)  E.identifyPocket(img)  E.identifyLuma(img, grid)   // img: { width, height, data } RGBA
+
+   Keep SG in step with tools/build_scan_index.py. The Worker gets this file's source through INKWELL_SCANENGINE_FACTORY.
+*/
+(function (root) {
+  "use strict";
+  function factory() {
+  const SG = { gx: 16, gy: 12, cell: 14, ax: 13, ay: 26, W: 250, H: 350, M: 0.10 };   // keep in step with tools/build_scan_index.py
+  let SCAN = null, NORM_L = null;
+  const use = (index) => { SCAN = index; NORM_L = null; DL = null; };
+  const lin = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+  const fl = (t) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+  function lab(r, g, b) {
+    const R = lin(r), G = lin(g), B = lin(b);
+    const x = fl((R * 0.4124 + G * 0.3576 + B * 0.1805) / 0.95047), y = fl(R * 0.2126 + G * 0.7152 + B * 0.0722), z = fl((R * 0.0193 + G * 0.1192 + B * 0.9505) / 1.08883);
+    return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
+  }
+  function integral(img) {   // ImageData -> summed-area table, 3 channels
+    const { width: w, height: h, data } = img, W1 = w + 1, I = new Float64Array(W1 * (h + 1) * 3);
+    for (let y = 0; y < h; y++) { let r = 0, g = 0, b = 0;
+      for (let x = 0; x < w; x++) { const p = (y * w + x) * 4; r += data[p]; g += data[p + 1]; b += data[p + 2];
+        const o = ((y + 1) * W1 + x + 1) * 3, u = (y * W1 + x + 1) * 3; I[o] = I[u] + r; I[o + 1] = I[u + 1] + g; I[o + 2] = I[u + 2] + b; } }
+    return { I, w, h };
+  }
+  function fingerprint(T, ox, oy, s) {   // same steps as tools/build_scan_index.py: cell means -> Lab -> standardise -> unit length
+    const { I, w, h } = T, W1 = w + 1, n = SG.gx * SG.gy, v = new Float32Array(n * 3), cell = SG.cell * s, x0 = ox + SG.ax * s, y0 = oy + SG.ay * s;
+    for (let j = 0; j < SG.gy; j++) for (let i = 0; i < SG.gx; i++) {
+      let xa = Math.round(x0 + i * cell), xb = Math.round(x0 + (i + 1) * cell), ya = Math.round(y0 + j * cell), yb = Math.round(y0 + (j + 1) * cell);
+      xa = Math.max(0, xa); xb = Math.min(w, Math.max(xa + 1, xb)); ya = Math.max(0, ya); yb = Math.min(h, Math.max(ya + 1, yb));
+      const a = (yb * W1 + xb) * 3, b = (ya * W1 + xb) * 3, c = (yb * W1 + xa) * 3, d = (ya * W1 + xa) * 3, area = (xb - xa) * (yb - ya);
+      const L = lab((I[a] - I[b] - I[c] + I[d]) / area, (I[a + 1] - I[b + 1] - I[c + 1] + I[d + 1]) / area, (I[a + 2] - I[b + 2] - I[c + 2] + I[d + 2]) / area);
+      const k = (j * SG.gx + i) * 3; v[k] = L[0]; v[k + 1] = L[1]; v[k + 2] = L[2];
+    }
+    for (let ch = 0; ch < 3; ch++) { let m = 0, q = 0; for (let k = ch; k < v.length; k += 3) m += v[k]; m /= n; for (let k = ch; k < v.length; k += 3) q += (v[k] - m) ** 2;
+      const sd = Math.sqrt(q / n) + 1e-6; for (let k = ch; k < v.length; k += 3) v[k] = (v[k] - m) / sd; }
+    let q = 0; for (let k = 0; k < v.length; k++) q += v[k] * v[k]; q = Math.sqrt(q) || 1; for (let k = 0; k < v.length; k++) v[k] /= q;
+    return v;
+  }
+  // Card size in the frame: from 60% (a card held far away, or a picture on a screen) to 110% of the guide.
+  // Coarse pass over sizes and positions; the fine pass refines around the best coarse placements.
+  const COARSE = [];
+  for (const s of [0.62, 0.7, 0.78, 0.86, 0.94, 1, 1.07]) {
+    const d = Math.max(0.035, (1.04 - s) * 0.38);   // a smaller card can sit further from the centre
+    for (const dx of [-d, 0, d]) for (const dy of [-d, 0, d]) COARSE.push([s, dx, dy]);
+  }
+  const fineAround = ([s, dx, dy]) => { const g = [];
+    for (const ks of [0.95, 0.975, 1, 1.025, 1.05]) for (const ex of [-0.03, -0.015, 0, 0.015, 0.03]) for (const ey of [-0.03, -0.015, 0, 0.015, 0.03]) g.push([s * ks, dx + ex * s, dy + ey * s]);
+    return g; };
+  function variants(T, grid) {
+    return grid.map(([s, dx, dy]) => { const ox = T.w / 2 - (SG.W / 2) * s + dx * SG.W, oy = T.h / 2 - (SG.H / 2) * s + dy * SG.H; return { v: fingerprint(T, ox, oy, s), s, dx, dy }; });
+  }
+  const dot = (i, v) => { const { D, dims } = SCAN; let q = 0; for (let k = 0, o = i * dims; k < dims; k++) q += D[o + k] * v[k]; return q / SCAN.norm[i]; };   // SCAN: see use()
+  // Returns { id, score, group: [ids with the same art], confident }
+  // Escanear página: each pocket is already cut out of a straightened page, so the card sits near the middle at
+  // about the frame's size; a smaller search is enough there (36 placements instead of 63).
+  const POCKET = [];
+  for (const s of [0.86, 0.93, 1, 1.07]) for (const dx of [-0.04, 0, 0.04]) for (const dy of [-0.04, 0, 0.04]) POCKET.push([s, dx, dy]);
+  function identify(img, grid = COARSE) {
+    const T = integral(img), Q = variants(T, grid), n = SCAN.n, coarse = new Float32Array(n), where = new Int16Array(n);
+    for (let i = 0; i < n; i++) { let best = -1, bq = 0; for (let j = 0; j < Q.length; j++) { const d = dot(i, Q[j].v); if (d > best) { best = d; bq = j; } } coarse[i] = best; where[i] = bq; }
+    const order = [...coarse.keys()].sort((a, b) => coarse[b] - coarse[a]), top = order.slice(0, 15);
+    const seeds = [...new Set(top.slice(0, 6).map((i) => where[i]))].slice(0, 3);   // the placements the best candidates agree on
+    const F = variants(T, seeds.flatMap((j) => fineAround(grid[j])));
+    const fine = top.map((i) => { let best = -1, at = null; for (const q of F) { const d = dot(i, q.v); if (d > best) { best = d; at = q; } } return [i, best, at]; }).sort((a, b) => b[1] - a[1]);
+    const [bi, bs, at] = fine[0], group = fine.filter(([, s]) => s >= bs - 0.04).map(([i]) => SCAN.ids[i]);
+    const runner = (fine.find(([, s]) => s < bs - 0.04) || [0, coarse[order[15]]])[1];
+    // where the card sits in the analysed image (fractions), so the collector line can be cut out precisely
+    const box = { x: (T.w / 2 - (SG.W / 2) * at.s + at.dx * SG.W) / T.w, y: (T.h / 2 - (SG.H / 2) * at.s + at.dy * SG.H) / T.h, w: SG.W * at.s / T.w, h: SG.H * at.s / T.h };
+    const best = fine.slice(0, 8).map(([i, s]) => ({ id: SCAN.ids[i], s: Math.round(s * 1000) / 1000 }));   // suggestions when the person corrects a pocket
+    return { id: SCAN.ids[bi], score: bs, gap: bs - runner, group, confident: (bs >= 0.70 && bs - runner >= 0.15) || (bs >= 0.80 && bs - runner >= 0.08), box, top: best };   // a glare spot lowers the gap, not the match
+  }
+  // Foil shine and a dim room change the colours more than the light-and-dark pattern of the art. When the colour match
+  // isn't sure, compare only the lightness (L) part of the fingerprint, over every card. Its answer is never taken as
+  // sure: at most the pocket says "Confira" with that card first.
+  // Foil shine and uneven light add a slow gradient over the art. "detrend" removes the best-fitting plane from the
+  // lightness grid of both the photo and every indexed card before comparing. Used by Escanear página's fallback
+  // (on by default there since the 24/11 measurement: foil / hard pages much better, nothing else changed).
+  let DL = null;
+  function detrendL(get, out) {   // get(k): lightness of cell k (row-major gx × gy); out: Float32Array(gx*gy), unit length
+    const gx = SG.gx, gy = SG.gy, n = gx * gy; let sx = 0, sy = 0, sxx = 0, syy = 0, sv = 0, sxv = 0, syv = 0;
+    for (let k = 0; k < n; k++) { const x = (k % gx) - (gx - 1) / 2, y = Math.floor(k / gx) - (gy - 1) / 2, v = get(k); sx += x; sy += y; sxx += x * x; syy += y * y; sv += v; sxv += x * v; syv += y * v; }
+    const a = sv / n, b = sxv / sxx, c = syv / syy; let q = 0;
+    for (let k = 0; k < n; k++) { const x = (k % gx) - (gx - 1) / 2, y = Math.floor(k / gx) - (gy - 1) / 2, r = get(k) - a - b * x - c * y; out[k] = r; q += r * r; }
+    q = Math.sqrt(q) || 1; for (let k = 0; k < n; k++) out[k] /= q;
+    return out;
+  }
+  function identifyLumaDetrend(img, grid) {
+    const { D, dims, n } = SCAN, m = dims / 3;
+    if (!DL) { DL = new Float32Array(n * m); const tmp = new Float32Array(m); for (let i = 0; i < n; i++) { detrendL((k) => D[i * dims + k * 3], tmp); DL.set(tmp, i * m); } }
+    const Q = variants(integral(img), grid).map((q) => detrendL((k) => q.v[k * 3], new Float32Array(m)));
+    const sc = new Float32Array(n);
+    for (let i = 0; i < n; i++) { let best = -1; const o = i * m; for (const v of Q) { let d = 0; for (let k = 0; k < m; k++) d += DL[o + k] * v[k]; if (d > best) best = d; } sc[i] = best; }
+    const order = [...sc.keys()].sort((a, b) => sc[b] - sc[a]), b0 = order[0];
+    const runner = order.find((i) => sc[i] < sc[b0] - 0.04);
+    return { id: SCAN.ids[b0], score: sc[b0], gap: sc[b0] - (runner == null ? 0 : sc[runner]), top: order.slice(0, 6).map((i) => ({ id: SCAN.ids[i], s: Math.round(sc[i] * 1000) / 1000 })) };
+  }
+  function identifyLuma(img, grid) {
+    const { D, dims, n } = SCAN;
+    if (!NORM_L) { NORM_L = new Float32Array(n); for (let i = 0; i < n; i++) { let q = 0; for (let k = i * dims; k < (i + 1) * dims; k += 3) q += D[k] * D[k]; NORM_L[i] = Math.sqrt(q) || 1; } }
+    const Q = variants(integral(img), grid).map((q) => { let z = 0; for (let k = 0; k < q.v.length; k += 3) z += q.v[k] * q.v[k]; return { v: q.v, z: Math.sqrt(z) || 1 }; });
+    const sc = new Float32Array(n);
+    for (let i = 0; i < n; i++) { let best = -1; const o = i * dims; for (const q of Q) { let d = 0; for (let k = 0; k < dims; k += 3) d += D[o + k] * q.v[k]; d /= NORM_L[i] * q.z; if (d > best) best = d; } sc[i] = best; }
+    const order = [...sc.keys()].sort((a, b) => sc[b] - sc[a]), b0 = order[0];
+    const runner = order.find((i) => sc[i] < sc[b0] - 0.04);   // the same art in other printings scores alike: skip those
+    return { id: SCAN.ids[b0], score: sc[b0], gap: sc[b0] - (runner == null ? 0 : sc[runner]), top: order.slice(0, 6).map((i) => ({ id: SCAN.ids[i], s: Math.round(sc[i] * 1000) / 1000 })) };
+  }
+  function identifyPocket(img, opts) {
+    const r = identify(img, POCKET); if (r.confident) return r;
+    const l = opts && opts.detrend ? identifyLumaDetrend(img, POCKET) : identifyLuma(img, POCKET);
+    if (l.score >= 0.72 && l.gap >= 0.06) {   // a good lightness match: suggest it, the person confirms
+      const top = [...l.top, ...r.top.filter((t) => !l.top.some((x) => x.id === t.id))];
+      return { ...r, id: l.id, score: Math.max(0.55, Math.min(r.score, 0.69)), confident: false, lumaOnly: true, top };
+    }
+    return r;
+  }
+
+  return { SG, COARSE, POCKET, use, ready: () => !!SCAN, integral, fingerprint, variants, identify, identifyLuma, identifyPocket };
+  }
+  root.INKWELL_SCANENGINE_FACTORY = factory;
+  root.INKWELL_SCANENGINE = factory();
+  if (typeof module !== "undefined" && module.exports) module.exports = root.INKWELL_SCANENGINE;
+})(typeof window !== "undefined" ? window : globalThis);
+</script>
 <script>/* Scanner 2.0 — "Escanear página": a binder page photographed at once, every pocket recognised on the phone.
    Pure functions (no DOM): geometry, cutting the page into pockets, empty pockets, the status of each pocket and the
    signature that stops the same page from being added twice. Recognition itself is the existing card fingerprint
@@ -2692,6 +2800,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
 */
 (function (root) {
   "use strict";
+  function factory() {
 
   // Binder pages. Only 3×3 is offered for now; 2×2 and 4×4 are described so the rest of the code needs no change.
   // aspect: width / height of the area holding the pockets (a pocket is about a card, 63 × 88 mm, plus a seam).
@@ -2864,6 +2973,10 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   }
 
   const API = { LAYOUTS, homography, apply, validQuad, warp, cells, cellQuads, crop, texture, EMPTY_LUMA, classify, signature, frameQuad, stripQuad, scanPage, pending, toList };
+  return API;
+  }
+  const API = factory();
+  root.INKWELL_PAGESCAN_FACTORY = factory;   // the Escanear página Worker is built from this source
   root.INKWELL_PAGESCAN = API;
   if (typeof module !== "undefined" && module.exports) module.exports = API;
 })(typeof window !== "undefined" ? window : globalThis);

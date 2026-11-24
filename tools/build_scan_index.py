@@ -52,7 +52,7 @@ def main() -> None:
     known = {c["card_id"] for c in catalog["cards"]}
     ids, rows = [], []
     for f in sorted(IMAGES.iterdir()):
-        m = re.search(r"__([A-Z0-9]+-[0-9A-Za-z-]+)\.(jpg|jpeg|png|webp)$", f.name)
+        m = re.search(r"__([A-Z0-9]+-[0-9A-Za-z-]+)\.(jpg|jpeg|png|webp|avif)$", f.name)
         if not m or m.group(1) not in known:
             continue
         try:

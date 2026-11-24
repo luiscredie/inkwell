@@ -78,12 +78,16 @@ test('Escanear página: nine pockets, corrections, nothing saved before confirmi
 
   const st = await page.evaluate(() => window.__inkwellScanPageState());
   expect(st.pockets).toHaveLength(9);
+  expect(await page.evaluate(() => window.__inkwellScanWorker())).toBe('worker');   // recognised off the main thread
   expect(st.pockets[8].status).toBe('empty');                                     // the empty pocket
   // every card identified (alone, or as the first suggestion, or among the printings to pick); most need nothing
   expect(st.pockets.slice(0, 8).map((p, i) => p.id === ID(PAGE[i]))).toEqual(Array(8).fill(true));
   expect(st.pockets.slice(0, 8).filter((p) => p.status === 'ok').length).toBeGreaterThanOrEqual(6);
   expect(st.pockets.slice(0, 8).filter((p, i) => p.status === 'ok' && p.id !== ID(PAGE[i]))).toEqual([]);   // never confident and wrong
   await expect(rev.locator('polygon')).toHaveCount(9);                             // the outlines over the photo
+  // the empty pocket is not dropped quietly: its photo is shown and the footer says it stays out
+  await expect(rev.locator('[data-pocket="8"] img.shot')).toHaveCount(1);
+  await expect(rev.getByTestId('page-out')).toHaveText('Ficam de fora: 1 posição vazia (9). Se houver carta em alguma, toque nela para buscar.');
   await expect(rev.locator('[data-pocket]')).toHaveCount(9);
   await page.screenshot({ path: process.env.SHOT_DIR ? `${process.env.SHOT_DIR}/page-review.png` : test.info().outputPath('page-review.png') });
 
@@ -107,6 +111,7 @@ test('Escanear página: nine pockets, corrections, nothing saved before confirmi
   await rev.locator('[data-pocket="3"]').click();
   await rev.getByTestId('pocket-skip').click();
   await expect(rev.locator('[data-pocket="3"]')).toHaveClass(/skip/);
+  await expect(rev.getByTestId('page-out')).toContainText('1 posição vazia (9) · 1 deixada de fora (4)');
 
   const add = rev.getByTestId('page-add');
   await expect(add).toHaveText('Pôr 8 cartas na lista');    // 7 cards + 1 extra copy; pocket 4 out, pocket 9 empty

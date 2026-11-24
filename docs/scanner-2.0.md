@@ -1,6 +1,6 @@
 # Scanner 2.0: Escanear página
 
-Status: **protótipo em PR draft**. Nada aqui está publicado. A meta de 95% ainda **não** foi atingida nem medida com fotos reais.
+Status: **protótipo em PR draft** (arquitetura aprovada pelo Conselho em 24/11 para continuar). Nada aqui está publicado. A meta de 95% ainda **não** foi medida com fotos reais: o protocolo está em `docs/scanner-2.0-avaliacao.md`.
 
 ## 1. Auditoria do scanner atual (A1)
 
@@ -58,7 +58,7 @@ colecao.template.html
 6. **Correção visível:** o editor mostra a posição como foi fotografada, ao lado das sugestões, e oferece busca por nome, foil, quantidade (0 = fora) e "Deixar de fora".
 7. **Esc ou voltar** sai da conferência sem adicionar nada.
 
-## 5. Medições (A3)
+## 5. Medições (A3), primeira rodada (substituída pela seção 7)
 
 Ferramentas: `tools/pagescan_synth.py`, que gera páginas sintéticas a partir das imagens reais das cartas, e `tools/pagescan-bench.spec.mjs`, que roda o código da página com os cantos "alinhados à mão" (desvio de até 2%), nunca os verdadeiros.
 
@@ -84,9 +84,62 @@ Conjunto medido em 24/11/2026: semente 11, 64 páginas (8 por condição), 553 c
 
 **O que esses números não dizem:** as fotos são sintéticas; o tempo é de desktop, não de celular; o foil é simulado. Antes de afirmar qualquer meta, é preciso um conjunto de fotos reais (sugestão: 30 páginas, de 3 aparelhos, com luz variada e foils reais), rodado com o mesmo `pagescan-bench.spec.mjs` e um `truth.json` preenchido à mão.
 
-## 6. Próximos passos
+## 7. Segunda rodada (24/11, após a revisão do Conselho)
 
-1. Conjunto de fotos reais e medição. Isso decide se B (detecção de bordas) é necessária.
-2. Processar em Web Worker (a tela já cede entre posições, mas o celular vai ser 3–6× mais lento) e medir em aparelhos.
-3. Melhorar foil: impressão digital mais robusta ao brilho (por exemplo, gradientes de luminância) e índice dedicado a foils.
+### Índice de reconhecimento
+- **Antes:** 3.521 de 3.767 cartas do catálogo (93,5%). O índice era de 19/10 e o catálogo de 08/11. O gerador ignorava as 79 imagens AVIF, e uma carta nova (LOR14-M01) ficou de fora.
+- **Agora:** 3.601 (95,6% do catálogo, **100% das cartas que têm imagem**). As 3.521 impressões antigas são idênticas byte a byte. As 166 cartas restantes não têm imagem nenhuma no site.
+- `tools/scan_index_check.py` compara índice, catálogo e imagens. No CI só emite aviso, para uma imagem nova na `main` não travar o deploy; `--strict` falha.
+
+### Motor num Web Worker
+- O motor saiu da página para `src/site/scanengine.js` (código idêntico). O scanner de uma carta usa o mesmo módulo e continua passando nos 73 testes de Coleção mais Escanear página.
+- O "Escanear página" roda num Worker montado com os mesmos módulos. Se o Worker falhar, a página faz o trabalho sozinha.
+- **Medido** (Chromium desktop, 4 páginas):
+
+| | Sem Worker | Com Worker |
+|---|---|---|
+| Tarefas longas na tela | 33 | 0 |
+| Maior travamento | 270 ms | 0 ms |
+| Tela travada no total | 4,6 s | 0 s |
+
+  O tempo total fica ~13% maior com o Worker (cópia da foto).
+- Bug achado pelo teste no WebKit e corrigido: a URL do Worker era revogada antes de o WebKit ler o script.
+
+### Bolsos vazios: nada sai em silêncio
+- Posição vazia ou não reconhecida mostra o **recorte da foto**, não um ícone.
+- O rodapé sempre diz o que fica de fora, por exemplo: "Ficam de fora: 1 posição vazia (9) · 1 deixada de fora (4). Se houver carta em alguma, toque nela para buscar." Isso é coberto por teste.
+- Medido no sintético: nenhuma carta foi tomada por vazio. O limiar ainda precisa ser validado em fotos reais.
+
+### Foil
+- Experimento: tirar o gradiente lento (ajuste de um plano) da luminância da foto e do índice, só no fallback, que nunca é automático.
+- Ficou ligado por padrão no modo página; `PAGESCAN_EXP=nodetrend` desliga para comparação.
+
+### Métricas novas (pedido do Conselho) e resultado sintético
+O "identificado" agora é estrito: automática certa + 1ª sugestão certa. Na primeira rodada contava também a carta certa em qualquer lugar da lista de impressões, por isso o **94,9% anterior não é comparável**.
+
+553 cartas, 64 páginas sintéticas, Chromium desktop:
+
+| | Sem o ajuste de foil | Com o ajuste (padrão) |
+|---|---|---|
+| Automática certa | 65,6% | 65,6% |
+| 1ª sugestão certa | 22,2% | 24,4% |
+| Certa nas alternativas | 8,9% | 8,7% |
+| Fora das sugestões | 3,3% | **1,3%** |
+| Falsos positivos | 0 | 0 |
+| Carta tomada por vazio | 0 | 0 |
+| **Identificação** | 87,9% | **90,1%** |
+| Ao alcance | 96,7% | 98,7% |
+
+Por condição, com o ajuste:
+- Foil: fora das sugestões caiu de 7,1% para 2,9%.
+- Difícil: fora das sugestões caiu de 18,3% para 7,0%, e a 1ª sugestão certa subiu de 32,4% para 46,5%.
+- As demais condições não mudaram.
+
+O foil sintético é um brilho arco-íris simulado; o efeito em foil real precisa ser medido.
+
+## 8. Próximos passos
+
+1. Fotos reais pelo protocolo (`docs/scanner-2.0-avaliacao.md`). Isso decide se B (detecção de bordas) é necessária e valida o limiar de vazio.
+2. ~~Web Worker~~ feito (seção 7). Falta medir o tempo em celulares reais.
+3. Foil: medir o ajuste em foils reais; se não bastar, um índice dedicado a foils.
 4. Importar da galeria (`pageFrom`), layouts 2×2 e 4×4, e cantos sugeridos automaticamente.
