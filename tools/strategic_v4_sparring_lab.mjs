@@ -17,6 +17,7 @@ export async function trial(position, seed, candidate, limits = {}, script = [],
         onSearch(result, ms, request) {
             searches.push({ nodes: result.nodes, ms, cutoff: result.cutoff, pass: result.baseline.status,
                 chosen: result.selected?.status ?? null, afterPublicPass: result.selected?.nextTurn ?? null, publicReplies: result.selected?.publicReplies ?? null,
+                conditionalProgress: result.selected?.conditionalProgress ?? null,
                 continuationCutoff: result.selected?.continuationCutoff ?? null, offered: request.actions,
                 examined: result.candidates.map(({ action, status, line, replyLine }) => ({ action, status, line, replyLine })) });
         },

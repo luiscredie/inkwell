@@ -73,7 +73,7 @@ function decisionAnswers(live, line, defender) {
     }
 }
 
-export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActions = 2, maxMs = 1500, rootAllowed = () => true, allowInk = true, planDiscardContinuation = true, planPublicReplies = true } = {}) {
+export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActions = 2, maxMs = 1500, rootAllowed = () => true, allowInk = true, planDiscardContinuation = true, planPublicReplies = true, planConditionalLore = true } = {}) {
     if (!Number.isSafeInteger(maxNodes) || maxNodes < 1 || maxNodes > 4096) {
         throw new RangeError("maxNodes must be between 1 and 4096");
     }
@@ -307,7 +307,7 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
         if (index < 0 || selected.actors.some((actor) => actor !== defender)) return selected;
         const paid = selected.line[index].answer.payment[0].cards[0];
         const stop = Symbol("continuation budget");
-        const ceiling = Math.min(nodes + (planPublicReplies ? 192 : 96), maxNodes);
+        let ceiling = Math.min(nodes + (planPublicReplies ? 192 : 96), maxNodes);
         function spend() {
             if (nodes >= ceiling || performance.now() >= deadline) throw stop;
             nodes++;
@@ -320,8 +320,38 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
             spend();
             return engine.startTurn(state, options);
         }
-        // At a leaf, witness a win with quests and an already known card.
-        function ownContinuation(state) {
+        function win(live, continuation) {
+            const lore = live.position.players[defender].lore;
+            return { won: true, lore, continuation };
+        }
+        // Score only a resolved end of turn. For a new nonwinning line, also
+        // require a quiet following public turn so we do not walk into lethal.
+        function completedScore(live, steps, guardReply) {
+            if (live.request?.type !== "Action" || live.request.player !== defender) return null;
+            const end = live.request.actions.find((action) => action.type === "End Turn");
+            if (!end) return null;
+            const branch = live.branch();
+            const step = { type: "Action", action: end };
+            submit(branch, step);
+            const continuation = [...steps, step];
+            if (branch.outcome?.winners.includes(defender)) return win(branch, continuation);
+            if (branch.outcome || branch.request || branch.result?.turn.player !== attacker) return null;
+            const lore = branch.result.players[defender].lore;
+            if (guardReply) {
+                const other = start(branch.result);
+                if (other.request?.type !== "Action" || other.request.player !== attacker ||
+                    other.request.actions.length !== 1 || other.request.actions[0].type !== "End Turn") return null;
+                const pass = { type: "Action", action: other.request.actions[0] };
+                submit(other, pass);
+                if (other.outcome || other.request || other.result?.turn.player !== defender ||
+                    other.result.players[defender].lore < lore) return null;
+                return { won: false, lore, continuation, followingReply: [pass] };
+            }
+            return { won: false, lore, continuation };
+        }
+        // Quests plus at most one play from the original hand. Grades apply
+        // to these executed continuations, not to every possible own policy.
+        function ownContinuation(state, grade, guardReply) {
             const next = start(state);
             const steps = [];
             for (let count = 0; count < 4 && next.request?.type === "Action"; count++) {
@@ -330,9 +360,10 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
                 const step = { type: "Action", action: quest };
                 submit(next, step);
                 steps.push(step);
-                if (next.outcome?.winners.includes(defender)) return steps;
+                if (next.outcome?.winners.includes(defender)) return win(next, steps);
             }
             if (next.request?.type !== "Action" || next.request.player !== defender) return null;
+            let best = grade ? completedScore(next, steps, guardReply) : null;
             const plays = next.request.actions.filter((a) => a.type === "Play" &&
                 position.players[defender].hand.some((c) => c.i === a.card.i));
             for (const action of plays.slice(0, 4)) {
@@ -349,13 +380,18 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
                     submit(branch, decision);
                     line.push(decision);
                 }
-                if (branch.outcome?.winners.includes(defender)) return line;
+                if (branch.outcome?.winners.includes(defender)) return win(branch, line);
+                if (grade) {
+                    const score = completedScore(branch, line, guardReply);
+                    if (score?.won) return score;
+                    if (score && (!best || !best.won && score.lore > best.lore)) best = score;
+                }
             }
-            return null;
+            return best;
         }
         // Cover every offered reply in the public projection. A partial tree
         // cannot justify changing the discard. Unknown hand and deck stay masked.
-        function witness(state) {
+        function witness(state, grade = false, guardReply = false) {
             const leaves = [];
             const root = start(state);
             if (root.request?.type !== "Action" || root.request.player !== attacker) return null;
@@ -366,9 +402,9 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
                 const menu = live.request;
                 if (!menu) {
                     if (live.result?.turn.player !== defender) return false;
-                    const continuation = ownContinuation(live.result);
-                    if (!continuation) return false;
-                    leaves.push({ reply: path, continuation });
+                    const score = ownContinuation(live.result, grade, guardReply);
+                    if (!score) return false;
+                    leaves.push(grade ? { reply: path, ...score } : { reply: path, continuation: score.continuation });
                     return true;
                 }
                 if ((!planPublicReplies && path.length) || path.length >= 8 || menu.player !== attacker) return false;
@@ -429,18 +465,43 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
             const atPayment = anchor();
             for (const step of selected.line.slice(0, index)) submit(atPayment, step);
             const answers = decisionAnswers(atPayment, selected.line.slice(0, index), defender) ?? [];
+            const payments = [];
             for (const answer of answers) {
                 const other = answer.payment?.[0]?.cards?.[0];
                 if (!other || other.i === paid.i) continue;
                 const line = selected.line.with(index, { type: "Decision", answer });
                 const state = endOfLine(line);
                 if (!state || !equivalent(original, state, other)) continue;
+                payments.push({ line, state });
                 const publicReplies = witness(state);
                 if (publicReplies) {
                     const pass = publicReplies.find(({ reply }) => reply.length === 1 && reply[0].action?.type === "End Turn");
                     return { ...selected, line, nextTurn: pass?.continuation, publicReplies };
                 }
             }
+            if (!planConditionalLore || !planPublicReplies || !payments.length) return selected;
+            // This second pass cannot consume the budget of an existing V7 win.
+            ceiling = Math.min(maxNodes, nodes + 128);
+            const baseline = witness(original, true);
+            if (!baseline || baseline.length < 2) return selected;
+            const byReply = new Map(baseline.map((leaf) => [JSON.stringify(leaf.reply), leaf]));
+            const priorFloor = Math.min(...baseline.map((leaf) => leaf.lore));
+            let bestFloor = priorFloor;
+            let choice = selected;
+            for (const { line, state } of payments) {
+                const leaves = witness(state, true, true);
+                if (!leaves || leaves.length !== byReply.size || !leaves.some((leaf) => leaf.won)) continue;
+                const keys = new Set(leaves.map((leaf) => JSON.stringify(leaf.reply)));
+                if (keys.size !== byReply.size || !leaves.every((leaf) => {
+                    const prior = byReply.get(JSON.stringify(leaf.reply));
+                    return prior && (!prior.won || leaf.won) && leaf.lore >= prior.lore;
+                })) continue;
+                const floor = Math.min(...leaves.map((leaf) => leaf.lore));
+                if (floor <= bestFloor) continue;
+                bestFloor = floor;
+                choice = { ...selected, line, conditionalProgress: { priorFloor, floor, baseline, leaves } };
+            }
+            return choice;
         } catch (err) {
             // Auxiliary probes must never displace the original legal defense.
             if (err !== stop && err?.name !== "InvalidInput") {

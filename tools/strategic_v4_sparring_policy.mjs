@@ -109,6 +109,7 @@ export function createDefensiveController(engine, setup, {
                 return { verdict, cutoff: search.cutoff, nodes: search.nodes, plan,
                     ...(selected?.nextTurn ? { afterPublicPass: selected.nextTurn } : {}),
                     ...(selected?.publicReplies ? { publicReplies: selected.publicReplies } : {}),
+                    ...(selected?.conditionalProgress ? { conditionalProgress: selected.conditionalProgress } : {}),
                     ...(selected?.continuationCutoff ? { continuationCutoff: selected.continuationCutoff } : {}) };
             });
             if (!plan.length) return original;

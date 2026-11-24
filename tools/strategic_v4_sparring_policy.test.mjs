@@ -366,7 +366,7 @@ test("conversion against pass and active replies on the same public boards", { s
     for (const [board, item, damage] of [["flower", flower, 0], ["wounded", flower, 1], ["trap", trap, 0]]) {
         for (const active of [false, true]) for (const seed of seeds) {
             const position = replyFixture(item, damage);
-            const run = (planPublicReplies) => trial(position, seed, true, { planPublicReplies }, [], undefined,
+            const run = (planPublicReplies) => trial(position, seed, true, { planPublicReplies, planConditionalLore: false }, [], undefined,
                 3, active ? activateFirst : undefined);
             const before = await run(false), after = await run(true);
             assert.equal(before.winner, null);
@@ -451,4 +451,101 @@ test("public branches ignore opposing hidden identities and keep the defense on 
     assert.equal(cut.searches[0].publicReplies, null);
     assert.equal(cut.verdicts[0], "public_defense");
     assert.deepEqual(cut.executed, control.executed);
+});
+
+const floorCases = [
+    ["trap", trap, {}], ["shortInk", trap, {ink: 1}], ["shortLore", trap, {own: 15}], ["flower", flower, {}],
+];
+
+test("conditional conversion improves the worst measured reply without claiming a forced win", { skip }, async () => {
+    for (const [name, item, extra] of floorCases) for (const active of [false, true]) for (const seed of seeds) {
+        const position = replyFixture(item, 0, extra);
+        const run = (planConditionalLore) => trial(position, seed, true, { planConditionalLore }, [], undefined,
+            3, active ? activateFirst : undefined);
+        const before = await run(false), after = await run(true);
+        const report = after.searches[0].conditionalProgress;
+        if (name === "trap") {
+            assert.equal(discardIn(before.executed[0]).fullName, gathering);
+            assert.equal(discardIn(after.executed[0]).fullName, lady);
+            assert.ok(before.board.some((p) => p.card.fullName === lady));
+            assert.ok(!after.board.some((p) => p.card.fullName === lady));
+            assert.equal(before.ownLore, active ? 16 : 18);
+            assert.equal(after.ownLore, active ? 18 : 20);
+            assert.equal(before.winner, null);
+            assert.equal(after.winner, active ? null : 2);
+            assert.ok(after.executed[2].some((s) => s.action?.card?.fullName === gathering));
+            assert.equal(after.searches[0].publicReplies, null);
+            assert.equal(after.searches[0].afterPublicPass, null);
+            assert.deepEqual([report.priorFloor, report.floor], [16, 18]);
+            assert.equal(report.leaves.length, 2);
+            for (const path of report.leaves) {
+                const activation = path.reply.some((s) => s.action?.type === "Activate");
+                assert.equal(path.won, !activation);
+                assert.equal(path.lore, activation ? 18 : 20);
+                if (activation) assert.equal(path.followingReply[0].action.type, "End Turn");
+            }
+        } else {
+            assert.equal(report, null);
+            assert.deepEqual(before.executed, after.executed, name);
+            assert.equal(after.winner, name === "flower" ? 2 : null);
+        }
+        assert.ok(after.searches.every((s) => s.nodes <= 768));
+        if (process.env.INKWELL_CONDITIONAL_TRACE === "1") {
+            const evidence = (g) => ({ winner: g.winner, lore: g.ownLore, board: g.board, executed: g.executed,
+                nodes: g.searches.map((s) => s.nodes), ms: g.ms });
+            console.log(JSON.stringify({ floorCase: name, seed, active, before: evidence(before), after: evidence(after), report }));
+        }
+    }
+});
+
+test("conditional conversion stays qualified beyond the next own turn and against hidden reach", { skip }, async () => {
+    for (const seed of seeds) {
+        const long = [];
+        for (const planConditionalLore of [false, true]) {
+            const r = await trial(replyFixture(trap), seed, true, { planConditionalLore }, [], undefined, 7, activateFirst);
+            assert.equal(r.winner, 2);
+            assert.equal(r.executed.length, 7);
+            long.push({ winner: r.winner, turns: r.executed.length, executed: r.executed });
+        }
+        const playKnownToOpponent = (_view, request) => request.actions.find(({action}) =>
+            action.type === "Play" && action.card.fullName === gathering) ?? activateFirst(_view, request);
+        const hidden = async (card, planConditionalLore) => trial(replyFixture(trap, 0, { hidden: [card], enemyInk: 2 }),
+            seed, true, { planConditionalLore }, [], undefined, 3, playKnownToOpponent);
+        const harmless = await hidden(filler, true), danger = await hidden(gathering, true), old = await hidden(gathering, false);
+        assert.deepEqual(harmless.executed[0], danger.executed[0]);
+        assert.deepEqual(harmless.searches[0].conditionalProgress, danger.searches[0].conditionalProgress);
+        assert.equal(danger.searches[0].conditionalProgress.floor, 18);
+        assert.equal(harmless.ownLore, 18);
+        assert.equal(danger.winner, 1);
+        assert.equal(old.winner, 1);
+        assert.equal(danger.lore, 21);
+        if (process.env.INKWELL_CONDITIONAL_TRACE === "1") console.log(JSON.stringify({
+            floorControl: seed, long, hiddenReply: { winner: danger.winner, lore: danger.lore, executed: danger.executed } }));
+    }
+});
+
+test("a partial floor comparison cannot displace the existing legal defense", { skip }, async () => {
+    const position = replyFixture(trap);
+    const previous = await trial(position, 17, true, { planConditionalLore: false });
+    const limit = previous.searches[0].nodes + 1;
+    const cut = await trial(position, 17, true, { maxNodes: limit });
+    assert.equal(cut.searches[0].nodes, limit);
+    assert.equal(cut.searches[0].conditionalProgress, null);
+    assert.equal(cut.searches[0].continuationCutoff, "budget");
+    assert.equal(cut.verdicts[0], "public_defense");
+    assert.deepEqual(cut.executed, previous.executed);
+});
+
+test("a second public Trap keeps the conditional continuation unresolved", { skip }, async () => {
+    const position = replyFixture(trap, 0, { enemies: [[pegasus], [trap], [trap]] });
+    // Diagnostic budget isolates the follow-up from the normal 768-node cutoff.
+    const run = (planConditionalLore) => trial(position, 17, true, { maxNodes: 4096, maxMs: 3000, planConditionalLore },
+        [], undefined, 3, activateFirst);
+    const old = await run(false), current = await run(true);
+    assert.equal(current.searches[0].cutoff, null);
+    assert.equal(current.searches[0].continuationCutoff, null);
+    assert.equal(current.searches[0].conditionalProgress, null);
+    assert.deepEqual(current.executed, old.executed);
+    assert.equal(current.executed[1].filter((s) => s.action?.type === "Activate").length, 2);
+    assert.equal(current.ownLore, 14);
 });
