@@ -372,6 +372,39 @@ button.stock-h.stock-empty .open-word .ic { width: 14px; height: 14px; }
 #scan .review .item .lang-line { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: var(--fs-small); }
 #scan .review select.lang-mini { width: auto; flex: none; min-height: 34px; padding: 0 26px 0 10px; background-position: right 8px center; }
 #scan .review .lang-all { display: flex; align-items: center; justify-content: center; gap: var(--sp-2); white-space: nowrap; }
+/* Scanner 2.0: Escanear página */
+#scan .modes { justify-self: center; }
+#scan .guide.page { background-image: linear-gradient(90deg, transparent calc(33.33% - 1px), rgba(255,255,255,.55) calc(33.33% - 1px), rgba(255,255,255,.55) calc(33.33% + 1px), transparent calc(33.33% + 1px), transparent calc(66.67% - 1px), rgba(255,255,255,.55) calc(66.67% - 1px), rgba(255,255,255,.55) calc(66.67% + 1px), transparent calc(66.67% + 1px)), linear-gradient(180deg, transparent calc(33.33% - 1px), rgba(255,255,255,.55) calc(33.33% - 1px), rgba(255,255,255,.55) calc(33.33% + 1px), transparent calc(33.33% + 1px), transparent calc(66.67% - 1px), rgba(255,255,255,.55) calc(66.67% - 1px), rgba(255,255,255,.55) calc(66.67% + 1px), transparent calc(66.67% + 1px)); }
+#scan .pagerev .items { gap: 12px; width: min(100%, 560px); margin-inline: auto; grid-auto-rows: max-content; }   /* an overflowing grid would squash auto rows to 0 */
+#scan .pagerev footer { width: min(100%, 560px); margin-inline: auto; }
+#scan .pagerev .photo { position: relative; width: 100%; max-width: 420px; justify-self: center; border-radius: 12px; overflow: clip; background: #000; touch-action: none; }
+#scan .pagerev .photo canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+#scan .pagerev .photo svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+#scan .pagerev .photo polygon { fill: none; stroke-width: 3; vector-effect: non-scaling-stroke; }
+#scan .pagerev .photo text { font: 700 13px system-ui, sans-serif; paint-order: stroke; stroke: #000; stroke-width: 3px; fill: #fff; }
+#scan .pagerev .photo circle { fill: var(--accent); stroke: #fff; stroke-width: 2; vector-effect: non-scaling-stroke; cursor: grab; }
+#scan .pagerev [data-st="ok"] { --st: var(--win); } #scan .pagerev [data-st="choose"], #scan .pagerev [data-st="check"] { --st: var(--accent); }
+#scan .pagerev [data-st="unknown"] { --st: var(--loss); } #scan .pagerev [data-st="empty"] { --st: rgba(160,160,180,.7); }
+#scan .pagerev polygon[data-st] { stroke: var(--st); }
+#scan .pockets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+#scan .pocket { display: grid; gap: 4px; align-content: start; min-width: 0; padding: 6px; border-radius: 10px; border: 2px solid var(--st, var(--line)); background: var(--surface-2); color: var(--text); text-align: left; font-size: var(--fs-micro); }
+#scan .pocket .thumb { width: 100%; }
+#scan .pocket b { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; line-height: 1.2; }
+#scan .pocket .chip { color: var(--st); font-weight: 700; }
+#scan .pocket.skip { opacity: .45; }
+#scan .pocket .shot { width: 100%; aspect-ratio: 5 / 7; object-fit: cover; border-radius: 6px; }
+#scan .pagerev .pg-out { color: var(--text); }
+#scan .pocket .ph { aspect-ratio: 5 / 7; border-radius: 6px; background: rgba(160,160,180,.15); display: grid; place-items: center; font-size: 22px; }
+#scan .pedit { display: grid; gap: 10px; padding: 10px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); }
+#scan .pedit .crop { width: 96px; border-radius: 6px; flex: none; }
+#scan .pagerev .pg-note { margin: 0; text-align: center; } #scan .pagerev .pg-dup { color: var(--accent); }
+#scan .pedit .pe-head { gap: 10px; align-items: flex-start; } #scan .pedit .pe-t { min-width: 0; } #scan .pedit .pe-t p { margin: 4px 0 0; }
+#scan .pedit .pe-find { display: grid; gap: 4px; } #scan .pedit .pe-row { flex-wrap: wrap; gap: 8px; } #scan .pedit .pe-foil { gap: 6px; }
+#scan .pedit .pe-qty { display: flex; align-items: center; gap: 6px; }
+#scan .pedit .cands { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; }
+#scan .pedit .cands button { display: grid; gap: 3px; padding: 4px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: var(--fs-micro); text-align: left; }
+#scan .pedit .cands button[aria-pressed="true"] { border-color: var(--win); box-shadow: 0 0 0 2px var(--win); }
+#scan .pedit .cands .thumb { width: 100%; }
 #scan .review footer { display: grid; gap: 8px; padding: 12px 12px calc(env(safe-area-inset-bottom, 0px) + 12px); border-top: 1px solid var(--line); }
 .imp-list { display: grid; gap: 2px; max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: var(--r-md); padding: 6px 10px; }
 .imp-list > div { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: baseline; padding: 3px 0; border-bottom: 1px solid var(--line); }
@@ -2101,65 +2134,71 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const dims = meta.dims, n = meta.ids.length, D = new Int8Array(buf), norm = new Float32Array(n);
     for (let i = 0; i < n; i++) { let q = 0; for (let k = i * dims, e = k + dims; k < e; k++) q += D[k] * D[k]; norm[i] = Math.sqrt(q) || 1; }
     SCAN = { ids: meta.ids, D, dims, n, norm };
+    SE().use(SCAN);
     return SCAN;
   }
-  const lin = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
-  const fl = (t) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
-  function lab(r, g, b) {
-    const R = lin(r), G = lin(g), B = lin(b);
-    const x = fl((R * 0.4124 + G * 0.3576 + B * 0.1805) / 0.95047), y = fl(R * 0.2126 + G * 0.7152 + B * 0.0722), z = fl((R * 0.0193 + G * 0.1192 + B * 0.9505) / 1.08883);
-    return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
-  }
-  function integral(img) {   // ImageData -> summed-area table, 3 channels
-    const { width: w, height: h, data } = img, W1 = w + 1, I = new Float64Array(W1 * (h + 1) * 3);
-    for (let y = 0; y < h; y++) { let r = 0, g = 0, b = 0;
-      for (let x = 0; x < w; x++) { const p = (y * w + x) * 4; r += data[p]; g += data[p + 1]; b += data[p + 2];
-        const o = ((y + 1) * W1 + x + 1) * 3, u = (y * W1 + x + 1) * 3; I[o] = I[u] + r; I[o + 1] = I[u + 1] + g; I[o + 2] = I[u + 2] + b; } }
-    return { I, w, h };
-  }
-  function fingerprint(T, ox, oy, s) {   // same steps as tools/build_scan_index.py: cell means -> Lab -> standardise -> unit length
-    const { I, w, h } = T, W1 = w + 1, n = SG.gx * SG.gy, v = new Float32Array(n * 3), cell = SG.cell * s, x0 = ox + SG.ax * s, y0 = oy + SG.ay * s;
-    for (let j = 0; j < SG.gy; j++) for (let i = 0; i < SG.gx; i++) {
-      let xa = Math.round(x0 + i * cell), xb = Math.round(x0 + (i + 1) * cell), ya = Math.round(y0 + j * cell), yb = Math.round(y0 + (j + 1) * cell);
-      xa = Math.max(0, xa); xb = Math.min(w, Math.max(xa + 1, xb)); ya = Math.max(0, ya); yb = Math.min(h, Math.max(ya + 1, yb));
-      const a = (yb * W1 + xb) * 3, b = (ya * W1 + xb) * 3, c = (yb * W1 + xa) * 3, d = (ya * W1 + xa) * 3, area = (xb - xa) * (yb - ya);
-      const L = lab((I[a] - I[b] - I[c] + I[d]) / area, (I[a + 1] - I[b + 1] - I[c + 1] + I[d + 1]) / area, (I[a + 2] - I[b + 2] - I[c + 2] + I[d + 2]) / area);
-      const k = (j * SG.gx + i) * 3; v[k] = L[0]; v[k + 1] = L[1]; v[k + 2] = L[2];
-    }
-    for (let ch = 0; ch < 3; ch++) { let m = 0, q = 0; for (let k = ch; k < v.length; k += 3) m += v[k]; m /= n; for (let k = ch; k < v.length; k += 3) q += (v[k] - m) ** 2;
-      const sd = Math.sqrt(q / n) + 1e-6; for (let k = ch; k < v.length; k += 3) v[k] = (v[k] - m) / sd; }
-    let q = 0; for (let k = 0; k < v.length; k++) q += v[k] * v[k]; q = Math.sqrt(q) || 1; for (let k = 0; k < v.length; k++) v[k] /= q;
-    return v;
-  }
-  // Card size in the frame: from 60% (a card held far away, or a picture on a screen) to 110% of the guide.
-  // Coarse pass over sizes and positions; the fine pass refines around the best coarse placements.
-  const COARSE = [];
-  for (const s of [0.62, 0.7, 0.78, 0.86, 0.94, 1, 1.07]) {
-    const d = Math.max(0.035, (1.04 - s) * 0.38);   // a smaller card can sit further from the centre
-    for (const dx of [-d, 0, d]) for (const dy of [-d, 0, d]) COARSE.push([s, dx, dy]);
-  }
-  const fineAround = ([s, dx, dy]) => { const g = [];
-    for (const ks of [0.95, 0.975, 1, 1.025, 1.05]) for (const ex of [-0.03, -0.015, 0, 0.015, 0.03]) for (const ey of [-0.03, -0.015, 0, 0.015, 0.03]) g.push([s * ks, dx + ex * s, dy + ey * s]);
-    return g; };
-  function variants(T, grid) {
-    return grid.map(([s, dx, dy]) => { const ox = T.w / 2 - (SG.W / 2) * s + dx * SG.W, oy = T.h / 2 - (SG.H / 2) * s + dy * SG.H; return { v: fingerprint(T, ox, oy, s), s, dx, dy }; });
-  }
-  const dot = (i, v) => { const { D, dims } = SCAN; let q = 0; for (let k = 0, o = i * dims; k < dims; k++) q += D[o + k] * v[k]; return q / SCAN.norm[i]; };
-  // Returns { id, score, group: [ids with the same art], confident }
-  function identify(img) {
-    const T = integral(img), Q = variants(T, COARSE), n = SCAN.n, coarse = new Float32Array(n), where = new Int16Array(n);
-    for (let i = 0; i < n; i++) { let best = -1, bq = 0; for (let j = 0; j < Q.length; j++) { const d = dot(i, Q[j].v); if (d > best) { best = d; bq = j; } } coarse[i] = best; where[i] = bq; }
-    const order = [...coarse.keys()].sort((a, b) => coarse[b] - coarse[a]), top = order.slice(0, 15);
-    const seeds = [...new Set(top.slice(0, 6).map((i) => where[i]))].slice(0, 3);   // the placements the best candidates agree on
-    const F = variants(T, seeds.flatMap((j) => fineAround(COARSE[j])));
-    const fine = top.map((i) => { let best = -1, at = null; for (const q of F) { const d = dot(i, q.v); if (d > best) { best = d; at = q; } } return [i, best, at]; }).sort((a, b) => b[1] - a[1]);
-    const [bi, bs, at] = fine[0], group = fine.filter(([, s]) => s >= bs - 0.04).map(([i]) => SCAN.ids[i]);
-    const runner = (fine.find(([, s]) => s < bs - 0.04) || [0, coarse[order[15]]])[1];
-    // where the card sits in the analysed image (fractions), so the collector line can be cut out precisely
-    const box = { x: (T.w / 2 - (SG.W / 2) * at.s + at.dx * SG.W) / T.w, y: (T.h / 2 - (SG.H / 2) * at.s + at.dy * SG.H) / T.h, w: SG.W * at.s / T.w, h: SG.H * at.s / T.h };
-    return { id: SCAN.ids[bi], score: bs, gap: bs - runner, group, confident: (bs >= 0.70 && bs - runner >= 0.15) || (bs >= 0.80 && bs - runner >= 0.08), box };   // a glare spot lowers the gap, not the match
-  }
+  // The engine itself is src/site/scanengine.js (shared with the Escanear página Worker).
+  const SE = () => window.INKWELL_SCANENGINE;
+  const identify = (img, grid) => SE().identify(img, grid || undefined);
+  // Lightness fallback without the slow gradient (foil shine): on by default since the 24/11 measurement;
+  // INKWELL_SCAN_EXP = "nodetrend" switches it off for comparisons (tools/pagescan-bench.spec.mjs, PAGESCAN_EXP).
+  const scanExp = () => ({ detrend: window.INKWELL_SCAN_EXP !== "nodetrend" });
+  const identifyPocket = (img) => SE().identifyPocket(img, scanExp());
   window.__inkwellScanIdentify = (img) => (SCAN ? identify(img) : null);   // used by the browser test
+
+  // Escanear página on a still picture: the same engine, every pocket. Used by the page screen and by the measurements
+  // (tools/pagescan-bench.spec.mjs). Loads the index on first use.
+  const PS = () => window.INKWELL_PAGESCAN;   // src/site/pagescan.js, loaded after this script
+  // The page is recognised in a Web Worker so the screen never freezes (nine pockets take ~1 s on a computer and several
+  // on a phone). The Worker is built from the same two modules the page uses (pagescan.js, scanengine.js) and gets a
+  // copy of the index once. If a Worker can't be made, the same work runs here, yielding between pockets.
+  let PW = null, pwSeq = 0;
+  function pageWorker() {
+    if (PW !== null) return PW;
+    try {
+      const src = `"use strict";
+const PS = (${window.INKWELL_PAGESCAN_FACTORY.toString()})();
+const SE = (${window.INKWELL_SCANENGINE_FACTORY.toString()})();
+self.postMessage({ type: "ready" });
+self.onmessage = async (e) => {
+  const m = e.data;
+  if (m.type === "index") { SE.use(m.index); return; }
+  if (m.type !== "page") return;
+  try {
+    const r = await PS.scanPage({ image: m.image, quad: m.quad, layout: m.layout, identify: (img) => SE.identifyPocket(img, m.exp), card: m.card,
+      onPocket: (p, i) => self.postMessage({ type: "pocket", job: m.job, p, i }) });
+    self.postMessage({ type: "done", job: m.job, pockets: r.pockets, page: r.page, ms: r.ms }, [r.page.data.buffer]);
+  } catch (err) { self.postMessage({ type: "fail", job: m.job, error: String(err && err.message || err) }); }
+};`;
+      const url = URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+      PW = new Worker(url); PW.indexSent = false;
+      // WebKit reads the script after new Worker() returns: the blob URL may only go once the Worker has started
+      const ready = (e) => { if (e.data?.type !== "ready") return; URL.revokeObjectURL(url); PW?.removeEventListener?.("message", ready); };
+      PW.addEventListener("message", ready);
+    } catch { PW = false; }
+    return PW;
+  }
+  async function scanPagePhoto(image, quad, layout = "3x3", onPocket) {
+    await loadScan();
+    const card = { W: SG.W, H: SG.H, M: SG.M }, w = window.INKWELL_SCAN_NO_WORKER ? false : pageWorker();
+    if (w) {
+      if (!w.indexSent) { w.postMessage({ type: "index", index: { ids: SCAN.ids, D: SCAN.D, dims: SCAN.dims, n: SCAN.n, norm: SCAN.norm } }); w.indexSent = true; }
+      const job = ++pwSeq;
+      const res = await new Promise((ok, no) => {
+        const on = (e) => { const m = e.data; if (m.job !== job) return;
+          if (m.type === "pocket") onPocket?.(m.p, m.i);
+          else { w.removeEventListener("message", on); w.removeEventListener("error", bad); m.type === "done" ? ok(m) : no(new Error(m.error)); } };
+        const bad = (e) => { w.removeEventListener("message", on); w.removeEventListener("error", bad); no(e); };
+        w.addEventListener("message", on); w.addEventListener("error", bad);
+        w.postMessage({ type: "page", job, image: { width: image.width, height: image.height, data: image.data }, quad, layout, card, exp: scanExp() });
+      }).catch(() => null);
+      if (res) return { pockets: res.pockets, page: res.page, ms: { ...res.ms, worker: true } };
+      PW = false;   // the Worker failed: from now on, here
+    }
+    return PS().scanPage({ image, quad, layout, identify: identifyPocket, card, onPocket, yieldFn: () => new Promise((ok) => setTimeout(ok, 0)) });
+  }
+  window.__inkwellScanPage = async (image, quad, layout) => { const r = await scanPagePhoto(image, quad, layout); return { pockets: r.pockets, ms: r.ms }; };
+  window.__inkwellScanWorker = () => (PW ? "worker" : PW === false ? "main" : "unused");   // used by the browser test
 
   // Same art in several printings (reprints, promos): read the collector line "29/204 · EN · 11" to pick one.
   function pickByCollector(text, group) {
@@ -2180,8 +2219,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   let ocrWorker = null;
   // The collector line is small white text on the dark border: cut it from the full-resolution video frame, enlarge it 3×,
   // stretch the contrast and try it inverted (dark on light, what OCR reads best), thresholded and as is.
-  function collectorImages(rect) {
-    const v = $("scanVideo"), W = Math.min(1200, Math.max(300, Math.round(rect.w * 3))), H = Math.max(40, Math.round(W * rect.h / rect.w));
+  function collectorImages(rect, v = $("scanVideo")) {   // v: the camera, or a canvas (Escanear página)
+    const W = Math.min(1200, Math.max(300, Math.round(rect.w * 3))), H = Math.max(40, Math.round(W * rect.h / rect.w));
     const base = document.createElement("canvas"); base.width = W; base.height = H;
     const ctx = base.getContext("2d", { willReadFrequently: true }); ctx.imageSmoothingQuality = "high";
     ctx.drawImage(v, rect.x, rect.y, rect.w, rect.h, 0, 0, W, H);
@@ -2202,9 +2241,15 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   }
 
   // ---------- scanner screen ----------
-  const scan = { stream: null, timer: null, busy: false, foil: false, added: [], last: null, wait: false, seen: null, seenN: 0, askOpen: false, misses: 0, reads: [], ocrTries: 0, torch: false };
-  function guideRect() {   // on-screen frame, card shaped
+  const scan = { stream: null, timer: null, busy: false, foil: false, added: [], last: null, wait: false, seen: null, seenN: 0, askOpen: false, misses: 0, reads: [], ocrTries: 0, torch: false,
+    mode: "card", layout: "3x3", pageSig: null };   // Scanner 2.0: "card" (one at a time) or "page" (a binder page at once)
+  function guideRect() {   // on-screen frame, card shaped (page shaped in "Página" mode)
     const st = $("scan").querySelector(".stage"), vw = st?.clientWidth || window.innerWidth, vh = st?.clientHeight || window.innerHeight;
+    if (scan.mode === "page") {   // a whole binder page: as large as the screen allows above the panel
+      const A = PS().LAYOUTS[scan.layout].aspect; let h = Math.min(vh * 0.66, 900), w = h * A;
+      if (w > vw * 0.92) { w = vw * 0.92; h = w / A; }
+      return { x: (vw - w) / 2, y: Math.max(56, (vh - h) / 2 - vh * 0.1), w, h, vw, vh };
+    }
     let h = Math.min(vh * 0.58, 560), w = h * SG.W / SG.H;
     if (w > vw * 0.8) { w = vw * 0.8; h = w * SG.H / SG.W; }
     return { x: (vw - w) / 2, y: Math.max(64, (vh - h) / 2 - vh * 0.06), w, h, vw, vh };
@@ -2220,10 +2265,15 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     sh.innerHTML = `<div class="stage"><video id="scanVideo" playsinline muted autoplay></video><div class="guide" id="scanGuide" style="left:${g.x}px;top:${g.y}px;width:${g.w}px;height:${g.h}px"></div>
       <div class="top"><button type="button" class="btn icon" data-scan-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button><h2 id="scanT">${Tx("Scan cards")}</h2><button type="button" class="btn icon" id="scanTorch" hidden aria-pressed="false" aria-label="${Tx("Light")}"><i class="ic i-sparkle"></i></button>
         <div class="seg" role="group" aria-label="${Tx("Card")}"><button type="button" data-foil="0" aria-pressed="${!scan.foil}">${Tx("Normal")}</button><button type="button" class="is-foil" data-foil="1" aria-pressed="${scan.foil}">${Tx("Foil")}</button></div></div>
-      <div class="panel"><div class="say" id="scanSay" role="status" aria-live="polite">${Tx("Point the camera at one card inside the frame.")}</div><div id="scanPick"></div><div id="scanLast"></div>
+      <div class="panel"><div class="seg modes" role="group" aria-label="${esc(P("Modo", "Mode"))}" data-testid="scan-mode"><button type="button" data-smode="card" aria-pressed="${scan.mode === "card"}">${esc(P("Uma carta", "One card"))}</button><button type="button" data-smode="page" aria-pressed="${scan.mode === "page"}">${esc(P("Página 3×3", "3×3 page"))}</button></div>
+        <div class="say" id="scanSay" role="status" aria-live="polite">${scan.mode === "page" ? esc(pageHint()) : Tx("Point the camera at one card inside the frame.")}</div><div id="scanPick"></div><div id="scanLast"></div>
+        ${scan.mode === "page" ? `<button type="button" class="btn primary" id="pageShoot" data-testid="page-shoot"><i class="ic i-camera"></i>${esc(P("Fotografar página", "Take the page photo"))}</button>` : ""}
         <div class="row between"><span class="small" data-testid="scan-count" id="scanCount"></span><button type="button" class="btn primary" data-scan-done>${Tx("Done scanning")}</button></div></div></div>`;
     sh.querySelectorAll("[data-scan-close], [data-scan-done]").forEach((b) => b.onclick = () => (scan.added.length ? showReview() : sh.close()));
     sh.querySelectorAll("[data-foil]").forEach((b) => b.onclick = () => { scan.foil = b.dataset.foil === "1"; sh.querySelectorAll("[data-foil]").forEach((x) => x.setAttribute("aria-pressed", String((x.dataset.foil === "1") === scan.foil))); });
+    sh.querySelectorAll("[data-smode]").forEach((b) => b.onclick = () => setScanMode(b.dataset.smode));
+    $("pageShoot")?.addEventListener("click", shootPage);
+    if (scan.mode === "page") $("scanGuide").classList.add("page");
     drawLast();
   }
   function placeGuide() { const g = guideRect(), el = $("scanGuide"); if (el) Object.assign(el.style, { left: g.x + "px", top: g.y + "px", width: g.w + "px", height: g.h + "px" }); }
@@ -2311,7 +2361,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
   }
   async function tick() {
     const v = $("scanVideo");
-    if (scan.busy || scan.askOpen || scan.review || !v || !v.videoWidth || !SCAN) return;
+    if (scan.busy || scan.askOpen || scan.review || scan.mode === "page" || !v || !v.videoWidth || !SCAN) return;
     scan.busy = true;
     try {
       const r = videoRect(guideRect()), m = SG.M;
@@ -2354,12 +2404,224 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       scan.reads = []; scan.ocrTries = 0; askWhich(res.group);
     } finally { scan.busy = false; }
   }
+  // ---------- Scanner 2.0: Escanear página (a whole binder page at once; src/site/pagescan.js) ----------
+  // Photo -> the page's corners (the frame, adjustable by dragging) -> nine pockets recognised -> the person checks and
+  // fixes each pocket -> the cards join the same list as the one-card scanner -> "Concluir" -> the same review -> saved.
+  // Nothing is saved before that last confirmation.
+  const pageHint = () => P("Enquadre a página inteira do fichário na moldura, com as 9 cartas, e fotografe.", "Fit the whole binder page in the frame, all 9 cards, and take the photo.");
+  const ST_TXT = { ok: ["Reconhecida", "Recognised"], choose: ["Escolha a impressão", "Pick the printing"], check: ["Confira", "Check it"], unknown: ["Não reconhecida", "Not recognised"], empty: ["Vazia", "Empty"] };
+  const stTxt = (k) => P(...ST_TXT[k]);
+  function setScanMode(m) {
+    if (scan.mode === m) return;
+    scan.mode = m; scan.seen = null; scan.seenN = 0; scan.wait = false;
+    const sh = $("scan");
+    sh.querySelectorAll("[data-smode]").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.smode === m)));
+    $("scanGuide")?.classList.toggle("page", m === "page"); placeGuide();
+    $("pageShoot")?.remove();
+    if (m === "page") {
+      const b = document.createElement("button"); b.type = "button"; b.className = "btn primary"; b.id = "pageShoot"; b.dataset.testid = "page-shoot"; b.setAttribute("data-testid", "page-shoot");
+      b.innerHTML = `<i class="ic i-camera"></i>${esc(P("Fotografar página", "Take the page photo"))}`; b.onclick = shootPage;
+      $("scanLast").after(b); scanSay(pageHint());
+    } else scanSay(Tx("Point the camera at one card inside the frame."));
+    window.INKWELL_TRACK?.(m === "page" ? "scan_page_mode" : "scan_card_mode");
+  }
+  async function shootPage() {
+    const v = $("scanVideo"); if (!v?.videoWidth) { scanSay(P("A câmera ainda não está pronta.", "The camera isn't ready yet."), true); return; }
+    // a still of the whole camera picture, at most 2400 px on the long side (enough for nine cards, quick to straighten)
+    const k = Math.min(1, 2400 / Math.max(v.videoWidth, v.videoHeight)), cv = document.createElement("canvas");
+    cv.width = Math.round(v.videoWidth * k); cv.height = Math.round(v.videoHeight * k);
+    const ctx = cv.getContext("2d", { willReadFrequently: true }); ctx.drawImage(v, 0, 0, cv.width, cv.height);
+    const r = videoRect(guideRect());
+    window.INKWELL_TRACK?.("scan_page_shot");
+    pageFrom(cv, PS().frameQuad({ x: r.x * k, y: r.y * k, w: r.w * k, h: r.h * k }));
+  }
+  // A still picture of a page with first-guess corners: the camera photo today; a photo from the gallery later.
+  function pageFrom(cv, quad) {
+    const ctx = cv.getContext("2d", { willReadFrequently: true });
+    scan.pg = { canvas: cv, image: ctx.getImageData(0, 0, cv.width, cv.height), quad, pockets: [], edit: null, armDup: false };
+    pageView(scan.pg);
+    showPage(); runPage();
+  }
+  window.__inkwellScanPageFrom = (cv, quad) => { if ($("scan").open && scan.mode === "page") pageFrom(cv, quad); };   // browser tests where no camera can run (WebKit)
+  async function runPage() {
+    const pg = scan.pg; if (!pg) return;
+    pg.busy = true; pg.pockets = []; pg.edit = null; drawPage();
+    try {
+      const res = await scanPagePhoto(pg.image, pg.quad, scan.layout, (pk, i) => { if (scan.pg !== pg) return; pg.pockets[i] = { ...pk, foil: scan.foil, qty: 1 }; drawPage(); });
+      if (scan.pg !== pg) return;
+      pg.page = res.page; pg.ms = res.ms;
+      await pickPrintings(pg);
+    } catch { if (scan.pg === pg) pg.error = true; }
+    if (scan.pg !== pg) return;
+    pg.busy = false; drawPage();
+  }
+  // Pockets whose art exists in several printings: read each one's collector line from the full photo, like the
+  // one-card scanner does. A clear reading settles the pocket; otherwise the person picks.
+  async function pickPrintings(pg) {
+    const L = PS().LAYOUTS[scan.layout], W = L.cols * SG.W, H = L.rows * SG.H;
+    for (const p of pg.pockets) {
+      if (scan.pg !== pg || p.status !== "choose") continue;
+      const q = PS().stripQuad(p, pg.quad, W, H, SG.M); if (!q) continue;
+      const sw = Math.hypot(q[1][0] - q[0][0], q[1][1] - q[0][1]), ow = Math.max(300, Math.min(1200, Math.round(sw * 3))), oh = Math.max(40, Math.round(ow * 0.05 / 0.34 * SG.H / SG.W));
+      let strip; try { strip = PS().warp(pg.image, q, ow, oh); } catch { continue; }
+      const cv = document.createElement("canvas"); cv.width = ow; cv.height = oh; cv.getContext("2d").putImageData(new ImageData(strip.data, ow, oh), 0, 0);
+      const reads = []; let pick = null;
+      for (const im of collectorImages({ x: 0, y: 0, w: ow, h: oh }, cv)) {
+        let text = ""; try { text = await readCollector(im); } catch { text = ""; }
+        reads.push(text); pick = pickByCollector(reads.join(" | "), p.group) || pickByCollector(text, p.group);
+        if (pick) break;
+      }
+      if (pick && scan.pg === pg) { p.id = pick; p.status = "ok"; p.ocr = true; drawPage(); }
+    }
+  }
+  // What the check screen shows: the page and a margin around it (room to drag the corners), not the whole camera picture.
+  function pageView(pg) {
+    const xs = pg.quad.map((p) => p[0]), ys = pg.quad.map((p) => p[1]), W = pg.canvas.width, H = pg.canvas.height;
+    const mx = (Math.max(...xs) - Math.min(...xs)) * 0.08, my = (Math.max(...ys) - Math.min(...ys)) * 0.06;
+    const x = Math.max(0, Math.min(...xs) - mx), y = Math.max(0, Math.min(...ys) - my), w = Math.min(W, Math.max(...xs) + mx) - x, h = Math.min(H, Math.max(...ys) + my) - y;
+    const k = Math.min(1, 900 / w), c = document.createElement("canvas"); c.width = Math.round(w * k); c.height = Math.round(h * k);
+    c.getContext("2d").drawImage(pg.canvas, x, y, w, h, 0, 0, c.width, c.height);
+    pg.view = { x, y, w, h, canvas: c };
+  }
+  function showPage() {
+    scan.review = true;
+    const stage = $("scan").querySelector(".stage"); let box = $("pageReview");
+    if (!box) { box = document.createElement("div"); box.className = "review pagerev"; box.id = "pageReview"; box.setAttribute("data-testid", "page-review"); stage.appendChild(box); }
+    drawPage();
+  }
+  function closePage(msg) {
+    scan.pg = null; scan.review = false; $("pageReview")?.remove(); drawLast(); scanSay(msg || pageHint());
+  }
+  const pocketCrop = (pg, i, w = 120) => {   // the pocket as photographed (straightened), for comparing
+    if (!pg.page) return "";
+    const L = PS().LAYOUTS[scan.layout], cw = pg.page.width / L.cols, ch = pg.page.height / L.rows, c = document.createElement("canvas");
+    c.width = w; c.height = Math.round(w * ch / cw);
+    if (!pg.pageCanvas) { pg.pageCanvas = document.createElement("canvas"); pg.pageCanvas.width = pg.page.width; pg.pageCanvas.height = pg.page.height; pg.pageCanvas.getContext("2d").putImageData(new ImageData(pg.page.data, pg.page.width, pg.page.height), 0, 0); }
+    c.getContext("2d").drawImage(pg.pageCanvas, (i % L.cols) * cw, Math.floor(i / L.cols) * ch, cw, ch, 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", 0.8);
+  };
+  function drawPage() {
+    const pg = scan.pg, box = $("pageReview"); if (!pg || !box) return;
+    const L = PS().LAYOUTS[scan.layout], N = L.rows * L.cols, done = pg.pockets.filter(Boolean).length;
+    const pend = pg.busy ? N : pg.pockets.filter(PS().pending).length;
+    const list = pg.busy || pend ? [] : PS().toList(pg.pockets);
+    const quads = PS().cellQuads(L, pg.quad), V = pg.view, W = V.w;
+    const label = (p) => { const c = p?.id && BY.get(p.id); return c ? split(c.name)[0] : ""; };
+    const st = (p) => (p ? (p.skip ? "empty" : p.resolved && p.id ? "ok" : p.status) : "");
+    const sel = pg.edit;
+    // pockets that will not go on the list, always said out loud: a card read as "empty" must not vanish quietly
+    const out = pg.pockets.map((p, i) => p && (p.skip || (p.status === "empty" && !p.id)) ? { i, why: p.skip ? "skip" : "empty" } : null).filter(Boolean);
+    box.innerHTML = `<header><button type="button" class="btn icon" id="pgBack" aria-label="${esc(P("Refazer foto", "Retake"))}"><i class="ic i-chevron-left"></i></button>
+        <h2>${esc(P("Confira a página", "Check the page"))}</h2><span class="small muted" data-testid="page-progress">${pg.busy ? esc(P(`Reconhecendo ${Math.min(done + 1, N)} de ${N}…`, `Recognising ${Math.min(done + 1, N)} of ${N}…`)) : pg.error ? esc(P("Não deu para ler a foto.", "Couldn't read the photo.")) : ""}</span></header>
+      <div class="items">
+        <div class="photo" id="pgPhoto"><div class="ratio"></div><svg viewBox="${V.x.toFixed(1)} ${V.y.toFixed(1)} ${V.w.toFixed(1)} ${V.h.toFixed(1)}" preserveAspectRatio="none" aria-hidden="true">
+          ${quads.map((q, i) => `<polygon data-st="${st(pg.pockets[i])}" points="${q.map((p) => p.map((v) => v.toFixed(1)).join(",")).join(" ")}"/><text x="${(q[0][0] + 6).toFixed(0)}" y="${(q[0][1] + 18).toFixed(0)}" font-size="${Math.round(W / 40)}">${i + 1}</text>`).join("")}
+          ${pg.busy ? "" : pg.quad.map((p, k) => `<circle data-corner="${k}" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${Math.round(W / 45)}"/>`).join("")}
+        </svg></div>
+        ${pg.busy ? "" : `<p class="small muted pg-note">${esc(P("Arraste os cantos se as linhas não estiverem sobre as cartas.", "Drag the corners if the lines aren't over the cards."))} <button type="button" class="btn small" id="pgRerun" data-testid="page-rerun" ${pg.moved ? "" : "hidden"}>${esc(P("Reconhecer de novo", "Recognise again"))}</button></p>`}
+        <div class="pockets" data-testid="page-pockets">${Array.from({ length: N }, (_, i) => {
+          const p = pg.pockets[i], c = p?.id && BY.get(p.id), s = st(p);
+          return `<button type="button" class="pocket${p?.skip ? " skip" : ""}" data-pocket="${i}" data-st="${s}" ${p ? "" : "disabled"} aria-pressed="${sel === i}" aria-label="${esc(`${P("Posição", "Pocket")} ${i + 1}: ${p ? (c ? label(p) + " · " : "") + stTxt(s || "unknown") : "…"}`)}">
+            ${c ? thumb(c, "", p.foil) + "</span>" : p && pg.page ? `\u003Cimg class="shot" src="${pocketCrop(pg, i, 90)}" alt="">` : `<span class="ph">${p ? (s === "empty" ? "∅" : "?") : "…"}</span>`}
+            <b>${i + 1}. ${esc(c ? label(p) : p ? stTxt(s) : "…")}</b><span class="chip">${p ? esc(stTxt(s)) : ""}${p && p.qty > 1 ? ` · ×${p.qty}` : ""}${p?.foil && c ? " · foil" : ""}</span></button>`; }).join("")}</div>
+        ${sel != null && pg.pockets[sel] ? pocketEditor(pg, sel) : ""}
+      </div>
+      <footer><p class="small muted pg-note">${Tx("Nothing will be saved until you confirm.")}</p>
+        <button type="button" class="btn primary" id="pgAdd" data-testid="page-add" ${pg.busy || pend || !list.length ? "disabled" : ""}>${esc(pg.busy ? P("Reconhecendo…", "Recognising…") : pend ? P(`Resolva ${pend === 1 ? "1 posição" : pend + " posições"}`, `Settle ${pend} pocket${pend === 1 ? "" : "s"}`) : pg.armDup ? P("Toque de novo para pôr na lista mesmo assim", "Tap again to add them anyway") : P(`Pôr ${list.length === 1 ? "1 carta" : list.length + " cartas"} na lista`, `Put ${list.length} card${list.length === 1 ? "" : "s"} on the list`))}</button>
+        ${!pg.busy && out.length ? `<p class="small pg-note pg-out" data-testid="page-out">${esc(outText(out))}</p>` : ""}
+        ${pg.armDup ? `<p class="small pg-note pg-dup" data-testid="page-dup">${esc(P("Estas mesmas cartas já foram para a lista na foto anterior.", "These same cards went on the list with the last photo."))}</p>` : ""}
+        <div class="row between"><button type="button" class="btn" id="pgRetake"><i class="ic i-camera"></i>${esc(P("Refazer foto", "Retake"))}</button>${pg.ms ? `<span class="small muted" data-testid="page-ms">${(pg.ms.total / 1000).toFixed(1)} s</span>` : ""}</div></footer>`;
+    // the page's CSP allows no style="" in markup: sizes go through the DOM
+    box.querySelector("#pgPhoto .ratio").style.paddingTop = `${(100 * V.h / V.w).toFixed(3)}%`;
+    box.querySelector("[data-testid=page-pockets]").style.gridTemplateColumns = `repeat(${L.cols}, minmax(0, 1fr))`;
+    $("pgBack").onclick = $("pgRetake").onclick = () => closePage();
+    box.querySelectorAll("[data-pocket]").forEach((b) => b.onclick = () => { pg.edit = pg.edit === +b.dataset.pocket ? null : +b.dataset.pocket; drawPage(); box.querySelector(".pedit")?.scrollIntoView({ block: "nearest" }); });
+    $("pgRerun")?.addEventListener("click", () => { pg.moved = false; runPage(); });
+    $("pgAdd").onclick = () => {
+      const sig = PS().signature(pg.pockets);
+      if (sig === scan.pageSig && !pg.armDup) { pg.armDup = true; drawPage(); return; }   // the same page twice in a row: ask once more
+      const items = PS().toList(pg.pockets);
+      for (const it of items) scan.added.push({ ...it, lang: scan.lang || addLangNow() });
+      scan.last = scan.added[scan.added.length - 1] || scan.last; scan.pageSig = sig;
+      window.INKWELL_TRACK?.("scan_page_added");
+      navigator.vibrate?.(40);
+      closePage(P(`${items.length === 1 ? "1 carta foi" : items.length + " cartas foram"} para a lista. Fotografe a próxima página ou toque em Concluir.`, `${items.length} card${items.length === 1 ? "" : "s"} on the list. Take the next page or tap Done.`));
+    };
+    wirePocketEditor(pg, box);
+    wireCorners(pg, box);
+  }
+  function outText(out) {
+    const e = out.filter((o) => o.why === "empty").map((o) => o.i + 1), k = out.filter((o) => o.why === "skip").map((o) => o.i + 1);
+    const part = (list, one, many) => (list.length ? `${list.length === 1 ? one : many} (${list.join(", ")})` : "");
+    return P(`Ficam de fora: ${[part(e, "1 posição vazia", e.length + " posições vazias"), part(k, "1 deixada de fora", k.length + " deixadas de fora")].filter(Boolean).join(" · ")}. Se houver carta em alguma, toque nela para buscar.`,
+      `Left out: ${[part(e, "1 empty pocket", e.length + " empty pockets"), part(k, "1 left out", k.length + " left out")].filter(Boolean).join(" · ")}. If a card is there, tap the pocket to find it.`);
+  }
+  function pocketEditor(pg, i) {
+    const p = pg.pockets[i], crop = pocketCrop(pg, i);
+    const cands = [...new Set([...(p.status === "choose" ? p.group : []), ...(p.top || []).map((t) => t.id)])].filter((id) => BY.has(id)).slice(0, 6);
+    return `<div class="pedit" data-testid="pocket-edit" data-edit-pocket="${i}">
+      <div class="row pe-head">${crop ? `\u003Cimg class="crop" src="${crop}" alt="${esc(P(`Posição ${i + 1} na foto`, `Pocket ${i + 1} in the photo`))}">` : ""}
+        <div class="pe-t"><b>${esc(P(`Posição ${i + 1}`, `Pocket ${i + 1}`))}</b><p class="small muted">${esc(p.status === "choose" ? P("A mesma arte existe em mais de uma impressão. Escolha a desta carta.", "This art exists in more than one printing. Pick this card's.")
+          : p.status === "check" ? P("Parece ser uma destas. Confirme ou busque outra.", "It looks like one of these. Confirm or search for another.")
+          : p.status === "unknown" ? P("Não reconhecemos esta carta. Busque pelo nome ou deixe de fora.", "We didn't recognise this card. Search by name or leave it out.")
+          : p.status === "empty" ? P("Parece vazia. Se houver uma carta aqui, busque pelo nome.", "It looks empty. If there's a card here, search by name.")
+          : P("Reconhecida. Você pode trocar se não for esta.", "Recognised. You can change it if it's not this one."))}</p></div></div>
+      ${cands.length ? `<div class="cands" role="group" aria-label="${esc(P("Sugestões", "Suggestions"))}">${cands.map((id) => { const c = BY.get(id); return `<button type="button" data-use="${esc(id)}" aria-pressed="${p.id === id && (p.resolved || p.status === "ok")}">${thumb(c, "", false)}</span><span>${esc(split(c.name)[0])}</span><span class="muted">${esc(setName(c.set))} · nº ${esc(c.num)}</span></button>`; }).join("")}</div>` : ""}
+      <label class="small pe-find">${esc(P("Buscar carta", "Search card"))}<input type="search" id="pgFind" data-testid="pocket-search" autocomplete="off" placeholder="${esc(P("Nome da carta", "Card name"))}" value="${esc(pg.find || "")}"></label>
+      <div class="cands" id="pgFound"></div>
+      <div class="row between pe-row">
+        <label class="row small pe-foil"><input type="checkbox" id="pgFoil" ${p.foil ? "checked" : ""}> Foil</label>
+        <div class="pe-qty"><button type="button" class="btn small" data-pq="-1" aria-label="${Tx("Remove one")}">−</button><output data-testid="pocket-qty">${p.skip ? 0 : p.qty}</output><button type="button" class="btn small" data-pq="1" aria-label="${Tx("Add one")}">+</button></div>
+        <button type="button" class="btn ghost small" id="pgSkip" data-testid="pocket-skip">${esc(p.skip ? P("Incluir de novo", "Include again") : P("Deixar de fora", "Leave out"))}</button>
+      </div></div>`;
+  }
+  function wirePocketEditor(pg, box) {
+    const ed = box.querySelector("[data-edit-pocket]"); if (!ed) return;
+    const p = pg.pockets[+ed.dataset.editPocket];
+    const use = (id) => { p.id = id; p.resolved = true; p.skip = false; if (p.qty < 1) p.qty = 1; pg.find = ""; window.INKWELL_TRACK?.("scan_page_fixed"); drawPage(); };
+    ed.querySelectorAll("[data-use]").forEach((b) => b.onclick = () => use(b.dataset.use));
+    const find = $("pgFind"), found = $("pgFound");
+    const search = () => {
+      const q = norm(find.value); pg.find = find.value;
+      const hits = q.length < 2 ? [] : CARDS.filter((c) => q.split(" ").every((w) => c.k.includes(w))).slice(0, 8);
+      found.innerHTML = hits.map((c) => `<button type="button" data-use="${esc(c.id)}">${thumb(c, "", false)}</span><span>${esc(split(c.name)[0])}</span><span class="muted">${esc(setName(c.set))} · nº ${esc(c.num)}</span></button>`).join("") || (q.length >= 2 ? `<p class="small muted">${esc(P("Nada encontrado.", "Nothing found."))}</p>` : "");
+      found.querySelectorAll("[data-use]").forEach((b) => b.onclick = () => use(b.dataset.use));
+    };
+    find.oninput = search; if (find.value) search();
+    $("pgFoil").onchange = (e) => { p.foil = e.target.checked; drawPage(); };
+    ed.querySelectorAll("[data-pq]").forEach((b) => b.onclick = () => {
+      const q = Math.max(0, (p.skip ? 0 : p.qty) + +b.dataset.pq);
+      if (q === 0) { p.skip = true; p.resolved = true; } else { p.qty = q; p.skip = false; if (p.id && p.status !== "ok") p.resolved = true; }
+      drawPage();
+    });
+    $("pgSkip").onclick = () => { p.skip = !p.skip; p.resolved = p.skip || (p.status === "ok" || p.resolved); if (!p.skip && !p.id) p.resolved = false; if (!p.skip && p.qty < 1) p.qty = 1; drawPage(); };
+  }
+  function wireCorners(pg, box) {   // drag a corner of the page; then "Reconhecer de novo"
+    const svg = box.querySelector("#pgPhoto svg"); if (!svg || pg.busy) return;
+    svg.parentElement.prepend(pg.view.canvas);
+    let k = -1; const V = pg.view;
+    const at = (e) => { const r = svg.getBoundingClientRect(); return [V.x + (e.clientX - r.left) * V.w / r.width, V.y + (e.clientY - r.top) * V.h / r.height]; };
+    svg.onpointerdown = (e) => { const t = e.target.closest("[data-corner]"); if (!t) return; k = +t.dataset.corner; svg.setPointerCapture(e.pointerId); e.preventDefault(); };
+    svg.onpointermove = (e) => {
+      if (k < 0) return; const q = pg.quad.map((p) => p.slice()); q[k] = at(e);
+      if (!PS().validQuad(q)) return;
+      pg.quad = q; const L = PS().LAYOUTS[scan.layout], quads = PS().cellQuads(L, q);
+      svg.querySelectorAll("polygon").forEach((pl, i) => pl.setAttribute("points", quads[i].map((p) => p.map((v) => v.toFixed(1)).join(",")).join(" ")));
+      svg.querySelectorAll("text").forEach((tx, i) => { tx.setAttribute("x", (quads[i][0][0] + 6).toFixed(0)); tx.setAttribute("y", (quads[i][0][1] + 18).toFixed(0)); });
+      const c = svg.querySelector(`[data-corner="${k}"]`); c.setAttribute("cx", q[k][0].toFixed(1)); c.setAttribute("cy", q[k][1].toFixed(1));
+    };
+    svg.onpointerup = svg.onpointercancel = () => { if (k < 0) return; k = -1; pg.moved = true; const b = $("pgRerun"); if (b) b.hidden = false; };
+  }
+  window.__inkwellScanPageState = () => (scan.pg ? { busy: !!scan.pg.busy, quad: scan.pg.quad, pockets: scan.pg.pockets.map((p) => p && { status: p.status, id: p.id, resolved: !!p.resolved, skip: !!p.skip, qty: p.qty, foil: !!p.foil }) } : null);   // used by the browser test
+
   async function openScanner(from) {
     window.INKWELL_TRACK?.("scan_open");
-    const sh = $("scan"); scan.added = []; scan.last = null; scan.wait = false; scan.askOpen = false; scan.seen = null; scan.review = false; scan.saved = 0; scan.prev = null;
+    const sh = $("scan"); scan.added = []; scan.last = null; scan.wait = false; scan.askOpen = false; scan.seen = null; scan.review = false; scan.saved = 0; scan.prev = null; scan.pg = null; scan.pageSig = null;
     drawScan(); sh.showModal(); scanSay(Tx("Starting the camera…"));
     sh.addEventListener("close", () => { clearInterval(scan.timer); scan.stream?.getTracks().forEach((t) => t.stop()); scan.stream = null; sh.innerHTML = ""; sh.oncancel = null; flush(true); renderAll(); from?.focus?.(); if (scan.saved) toast(Tx("{n} added", { n: scan.saved })); }, { once: true });
-    sh.oncancel = (e) => { if (scan.added.length && !scan.review) { e.preventDefault(); showReview(); } };   // Esc / back with cards in the list: review first
+    sh.oncancel = (e) => {   // Esc / back: leave the page check first; with cards in the list, review first
+      if (scan.pg) { e.preventDefault(); closePage(); return; }
+      if (scan.added.length && !scan.review) { e.preventDefault(); showReview(); } };
     try { await loadScan(); } catch { scanSay(Tx("Couldn't load the card scanner."), true); return; }
     try {
       scan.stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: "environment" }, width: { ideal: 3840 }, height: { ideal: 2160 } } });
@@ -2369,7 +2631,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const track = scan.stream.getVideoTracks()[0], caps = track?.getCapabilities?.() || {};
     if ((caps.focusMode || []).includes("continuous")) track.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(() => {});   // Android Chrome; iPhone focuses on its own
     if (caps.torch) { const b = $("scanTorch"); b.hidden = false; b.onclick = () => { scan.torch = !scan.torch; b.setAttribute("aria-pressed", String(scan.torch)); track.applyConstraints({ advanced: [{ torch: scan.torch }] }).catch(() => {}); }; }
-    scanSay(Tx("Point the camera at one card inside the frame."));
+    scanSay(scan.mode === "page" ? pageHint() : Tx("Point the camera at one card inside the frame."));
     scan.timer = setInterval(tick, 350);
     window.addEventListener("resize", () => sh.open && placeGuide(), { passive: true });
   }
@@ -2398,6 +2660,327 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
 })();
 </script>
 
+<script>/* Coleção › Escanear: the card-recognition engine (one card, and every pocket of "Escanear página").
+   Moved out of colecao.template.html unchanged so the same code runs on the page and in a Web Worker
+   (Escanear página recognises a whole binder page off the main thread). Pure: no DOM, no fetch.
+
+     const E = INKWELL_SCANENGINE;   E.use(index)   // index: { ids, D: Int8Array, dims, n, norm }
+     E.identify(img, grid?)  E.identifyPocket(img)  E.identifyLuma(img, grid)   // img: { width, height, data } RGBA
+
+   Keep SG in step with tools/build_scan_index.py. The Worker gets this file's source through INKWELL_SCANENGINE_FACTORY.
+*/
+(function (root) {
+  "use strict";
+  function factory() {
+  const SG = { gx: 16, gy: 12, cell: 14, ax: 13, ay: 26, W: 250, H: 350, M: 0.10 };   // keep in step with tools/build_scan_index.py
+  let SCAN = null, NORM_L = null;
+  const use = (index) => { SCAN = index; NORM_L = null; DL = null; };
+  const lin = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+  const fl = (t) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+  function lab(r, g, b) {
+    const R = lin(r), G = lin(g), B = lin(b);
+    const x = fl((R * 0.4124 + G * 0.3576 + B * 0.1805) / 0.95047), y = fl(R * 0.2126 + G * 0.7152 + B * 0.0722), z = fl((R * 0.0193 + G * 0.1192 + B * 0.9505) / 1.08883);
+    return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
+  }
+  function integral(img) {   // ImageData -> summed-area table, 3 channels
+    const { width: w, height: h, data } = img, W1 = w + 1, I = new Float64Array(W1 * (h + 1) * 3);
+    for (let y = 0; y < h; y++) { let r = 0, g = 0, b = 0;
+      for (let x = 0; x < w; x++) { const p = (y * w + x) * 4; r += data[p]; g += data[p + 1]; b += data[p + 2];
+        const o = ((y + 1) * W1 + x + 1) * 3, u = (y * W1 + x + 1) * 3; I[o] = I[u] + r; I[o + 1] = I[u + 1] + g; I[o + 2] = I[u + 2] + b; } }
+    return { I, w, h };
+  }
+  function fingerprint(T, ox, oy, s) {   // same steps as tools/build_scan_index.py: cell means -> Lab -> standardise -> unit length
+    const { I, w, h } = T, W1 = w + 1, n = SG.gx * SG.gy, v = new Float32Array(n * 3), cell = SG.cell * s, x0 = ox + SG.ax * s, y0 = oy + SG.ay * s;
+    for (let j = 0; j < SG.gy; j++) for (let i = 0; i < SG.gx; i++) {
+      let xa = Math.round(x0 + i * cell), xb = Math.round(x0 + (i + 1) * cell), ya = Math.round(y0 + j * cell), yb = Math.round(y0 + (j + 1) * cell);
+      xa = Math.max(0, xa); xb = Math.min(w, Math.max(xa + 1, xb)); ya = Math.max(0, ya); yb = Math.min(h, Math.max(ya + 1, yb));
+      const a = (yb * W1 + xb) * 3, b = (ya * W1 + xb) * 3, c = (yb * W1 + xa) * 3, d = (ya * W1 + xa) * 3, area = (xb - xa) * (yb - ya);
+      const L = lab((I[a] - I[b] - I[c] + I[d]) / area, (I[a + 1] - I[b + 1] - I[c + 1] + I[d + 1]) / area, (I[a + 2] - I[b + 2] - I[c + 2] + I[d + 2]) / area);
+      const k = (j * SG.gx + i) * 3; v[k] = L[0]; v[k + 1] = L[1]; v[k + 2] = L[2];
+    }
+    for (let ch = 0; ch < 3; ch++) { let m = 0, q = 0; for (let k = ch; k < v.length; k += 3) m += v[k]; m /= n; for (let k = ch; k < v.length; k += 3) q += (v[k] - m) ** 2;
+      const sd = Math.sqrt(q / n) + 1e-6; for (let k = ch; k < v.length; k += 3) v[k] = (v[k] - m) / sd; }
+    let q = 0; for (let k = 0; k < v.length; k++) q += v[k] * v[k]; q = Math.sqrt(q) || 1; for (let k = 0; k < v.length; k++) v[k] /= q;
+    return v;
+  }
+  // Card size in the frame: from 60% (a card held far away, or a picture on a screen) to 110% of the guide.
+  // Coarse pass over sizes and positions; the fine pass refines around the best coarse placements.
+  const COARSE = [];
+  for (const s of [0.62, 0.7, 0.78, 0.86, 0.94, 1, 1.07]) {
+    const d = Math.max(0.035, (1.04 - s) * 0.38);   // a smaller card can sit further from the centre
+    for (const dx of [-d, 0, d]) for (const dy of [-d, 0, d]) COARSE.push([s, dx, dy]);
+  }
+  const fineAround = ([s, dx, dy]) => { const g = [];
+    for (const ks of [0.95, 0.975, 1, 1.025, 1.05]) for (const ex of [-0.03, -0.015, 0, 0.015, 0.03]) for (const ey of [-0.03, -0.015, 0, 0.015, 0.03]) g.push([s * ks, dx + ex * s, dy + ey * s]);
+    return g; };
+  function variants(T, grid) {
+    return grid.map(([s, dx, dy]) => { const ox = T.w / 2 - (SG.W / 2) * s + dx * SG.W, oy = T.h / 2 - (SG.H / 2) * s + dy * SG.H; return { v: fingerprint(T, ox, oy, s), s, dx, dy }; });
+  }
+  const dot = (i, v) => { const { D, dims } = SCAN; let q = 0; for (let k = 0, o = i * dims; k < dims; k++) q += D[o + k] * v[k]; return q / SCAN.norm[i]; };   // SCAN: see use()
+  // Returns { id, score, group: [ids with the same art], confident }
+  // Escanear página: each pocket is already cut out of a straightened page, so the card sits near the middle at
+  // about the frame's size; a smaller search is enough there (36 placements instead of 63).
+  const POCKET = [];
+  for (const s of [0.86, 0.93, 1, 1.07]) for (const dx of [-0.04, 0, 0.04]) for (const dy of [-0.04, 0, 0.04]) POCKET.push([s, dx, dy]);
+  function identify(img, grid = COARSE) {
+    const T = integral(img), Q = variants(T, grid), n = SCAN.n, coarse = new Float32Array(n), where = new Int16Array(n);
+    for (let i = 0; i < n; i++) { let best = -1, bq = 0; for (let j = 0; j < Q.length; j++) { const d = dot(i, Q[j].v); if (d > best) { best = d; bq = j; } } coarse[i] = best; where[i] = bq; }
+    const order = [...coarse.keys()].sort((a, b) => coarse[b] - coarse[a]), top = order.slice(0, 15);
+    const seeds = [...new Set(top.slice(0, 6).map((i) => where[i]))].slice(0, 3);   // the placements the best candidates agree on
+    const F = variants(T, seeds.flatMap((j) => fineAround(grid[j])));
+    const fine = top.map((i) => { let best = -1, at = null; for (const q of F) { const d = dot(i, q.v); if (d > best) { best = d; at = q; } } return [i, best, at]; }).sort((a, b) => b[1] - a[1]);
+    const [bi, bs, at] = fine[0], group = fine.filter(([, s]) => s >= bs - 0.04).map(([i]) => SCAN.ids[i]);
+    const runner = (fine.find(([, s]) => s < bs - 0.04) || [0, coarse[order[15]]])[1];
+    // where the card sits in the analysed image (fractions), so the collector line can be cut out precisely
+    const box = { x: (T.w / 2 - (SG.W / 2) * at.s + at.dx * SG.W) / T.w, y: (T.h / 2 - (SG.H / 2) * at.s + at.dy * SG.H) / T.h, w: SG.W * at.s / T.w, h: SG.H * at.s / T.h };
+    const best = fine.slice(0, 8).map(([i, s]) => ({ id: SCAN.ids[i], s: Math.round(s * 1000) / 1000 }));   // suggestions when the person corrects a pocket
+    return { id: SCAN.ids[bi], score: bs, gap: bs - runner, group, confident: (bs >= 0.70 && bs - runner >= 0.15) || (bs >= 0.80 && bs - runner >= 0.08), box, top: best };   // a glare spot lowers the gap, not the match
+  }
+  // Foil shine and a dim room change the colours more than the light-and-dark pattern of the art. When the colour match
+  // isn't sure, compare only the lightness (L) part of the fingerprint, over every card. Its answer is never taken as
+  // sure: at most the pocket says "Confira" with that card first.
+  // Foil shine and uneven light add a slow gradient over the art. "detrend" removes the best-fitting plane from the
+  // lightness grid of both the photo and every indexed card before comparing. Used by Escanear página's fallback
+  // (on by default there since the 24/11 measurement: foil / hard pages much better, nothing else changed).
+  let DL = null;
+  function detrendL(get, out) {   // get(k): lightness of cell k (row-major gx × gy); out: Float32Array(gx*gy), unit length
+    const gx = SG.gx, gy = SG.gy, n = gx * gy; let sx = 0, sy = 0, sxx = 0, syy = 0, sv = 0, sxv = 0, syv = 0;
+    for (let k = 0; k < n; k++) { const x = (k % gx) - (gx - 1) / 2, y = Math.floor(k / gx) - (gy - 1) / 2, v = get(k); sx += x; sy += y; sxx += x * x; syy += y * y; sv += v; sxv += x * v; syv += y * v; }
+    const a = sv / n, b = sxv / sxx, c = syv / syy; let q = 0;
+    for (let k = 0; k < n; k++) { const x = (k % gx) - (gx - 1) / 2, y = Math.floor(k / gx) - (gy - 1) / 2, r = get(k) - a - b * x - c * y; out[k] = r; q += r * r; }
+    q = Math.sqrt(q) || 1; for (let k = 0; k < n; k++) out[k] /= q;
+    return out;
+  }
+  function identifyLumaDetrend(img, grid) {
+    const { D, dims, n } = SCAN, m = dims / 3;
+    if (!DL) { DL = new Float32Array(n * m); const tmp = new Float32Array(m); for (let i = 0; i < n; i++) { detrendL((k) => D[i * dims + k * 3], tmp); DL.set(tmp, i * m); } }
+    const Q = variants(integral(img), grid).map((q) => detrendL((k) => q.v[k * 3], new Float32Array(m)));
+    const sc = new Float32Array(n);
+    for (let i = 0; i < n; i++) { let best = -1; const o = i * m; for (const v of Q) { let d = 0; for (let k = 0; k < m; k++) d += DL[o + k] * v[k]; if (d > best) best = d; } sc[i] = best; }
+    const order = [...sc.keys()].sort((a, b) => sc[b] - sc[a]), b0 = order[0];
+    const runner = order.find((i) => sc[i] < sc[b0] - 0.04);
+    return { id: SCAN.ids[b0], score: sc[b0], gap: sc[b0] - (runner == null ? 0 : sc[runner]), top: order.slice(0, 6).map((i) => ({ id: SCAN.ids[i], s: Math.round(sc[i] * 1000) / 1000 })) };
+  }
+  function identifyLuma(img, grid) {
+    const { D, dims, n } = SCAN;
+    if (!NORM_L) { NORM_L = new Float32Array(n); for (let i = 0; i < n; i++) { let q = 0; for (let k = i * dims; k < (i + 1) * dims; k += 3) q += D[k] * D[k]; NORM_L[i] = Math.sqrt(q) || 1; } }
+    const Q = variants(integral(img), grid).map((q) => { let z = 0; for (let k = 0; k < q.v.length; k += 3) z += q.v[k] * q.v[k]; return { v: q.v, z: Math.sqrt(z) || 1 }; });
+    const sc = new Float32Array(n);
+    for (let i = 0; i < n; i++) { let best = -1; const o = i * dims; for (const q of Q) { let d = 0; for (let k = 0; k < dims; k += 3) d += D[o + k] * q.v[k]; d /= NORM_L[i] * q.z; if (d > best) best = d; } sc[i] = best; }
+    const order = [...sc.keys()].sort((a, b) => sc[b] - sc[a]), b0 = order[0];
+    const runner = order.find((i) => sc[i] < sc[b0] - 0.04);   // the same art in other printings scores alike: skip those
+    return { id: SCAN.ids[b0], score: sc[b0], gap: sc[b0] - (runner == null ? 0 : sc[runner]), top: order.slice(0, 6).map((i) => ({ id: SCAN.ids[i], s: Math.round(sc[i] * 1000) / 1000 })) };
+  }
+  function identifyPocket(img, opts) {
+    const r = identify(img, POCKET); if (r.confident) return r;
+    const l = opts && opts.detrend ? identifyLumaDetrend(img, POCKET) : identifyLuma(img, POCKET);
+    if (l.score >= 0.72 && l.gap >= 0.06) {   // a good lightness match: suggest it, the person confirms
+      const top = [...l.top, ...r.top.filter((t) => !l.top.some((x) => x.id === t.id))];
+      return { ...r, id: l.id, score: Math.max(0.55, Math.min(r.score, 0.69)), confident: false, lumaOnly: true, top };
+    }
+    return r;
+  }
+
+  return { SG, COARSE, POCKET, use, ready: () => !!SCAN, integral, fingerprint, variants, identify, identifyLuma, identifyPocket };
+  }
+  root.INKWELL_SCANENGINE_FACTORY = factory;
+  root.INKWELL_SCANENGINE = factory();
+  if (typeof module !== "undefined" && module.exports) module.exports = root.INKWELL_SCANENGINE;
+})(typeof window !== "undefined" ? window : globalThis);
+</script>
+<script>/* Scanner 2.0 — "Escanear página": a binder page photographed at once, every pocket recognised on the phone.
+   Pure functions (no DOM): geometry, cutting the page into pockets, empty pockets, the status of each pocket and the
+   signature that stops the same page from being added twice. Recognition itself is the existing card fingerprint
+   (`identify` in colecao.template.html), passed in, so the one-card scanner and this mode stay the same engine.
+
+   Exposed as window.INKWELL_PAGESCAN (browser) and module.exports (Node tests, tools/pagescan.test.mjs).
+
+   Flow: photo (ImageData) + the page's 4 corners in the photo -> page straightened (homography) -> rows × cols
+   pockets -> each pocket cut with a margin -> identify() -> status per pocket. Nothing is saved here.
+*/
+(function (root) {
+  "use strict";
+  function factory() {
+
+  // Binder pages. Only 3×3 is offered for now; 2×2 and 4×4 are described so the rest of the code needs no change.
+  // aspect: width / height of the area holding the pockets (a pocket is about a card, 63 × 88 mm, plus a seam).
+  const LAYOUTS = {
+    "3x3": { rows: 3, cols: 3, aspect: 0.72 },
+    "2x2": { rows: 2, cols: 2, aspect: 0.72 },
+    "4x4": { rows: 4, cols: 4, aspect: 0.72 },
+  };
+
+  // --- geometry -------------------------------------------------------------------------------------------------
+  // 3×3 homography H with H·(u,v,1) ~ (x,y,1) for the 4 point pairs src[i] -> dst[i]. Gaussian elimination on 8×8.
+  function homography(src, dst) {
+    const A = [], b = [];
+    for (let i = 0; i < 4; i++) {
+      const [u, v] = src[i], [x, y] = dst[i];
+      A.push([u, v, 1, 0, 0, 0, -u * x, -v * x]); b.push(x);
+      A.push([0, 0, 0, u, v, 1, -u * y, -v * y]); b.push(y);
+    }
+    for (let c = 0; c < 8; c++) {
+      let p = c; for (let r = c + 1; r < 8; r++) if (Math.abs(A[r][c]) > Math.abs(A[p][c])) p = r;
+      if (Math.abs(A[p][c]) < 1e-12) throw new Error("degenerate corners");
+      [A[c], A[p]] = [A[p], A[c]]; [b[c], b[p]] = [b[p], b[c]];
+      for (let r = 0; r < 8; r++) if (r !== c) { const f = A[r][c] / A[c][c]; if (f) { for (let k = c; k < 8; k++) A[r][k] -= f * A[c][k]; b[r] -= f * b[c]; } }
+    }
+    const h = b.map((v, i) => v / A[i][i]);
+    return [h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7], 1];
+  }
+  const apply = (H, u, v) => { const w = H[6] * u + H[7] * v + H[8]; return [(H[0] * u + H[1] * v + H[2]) / w, (H[3] * u + H[4] * v + H[5]) / w]; };
+
+  // corners: [top-left, top-right, bottom-right, bottom-left] in photo pixels.
+  function validQuad(q) {
+    if (!Array.isArray(q) || q.length !== 4 || q.some((p) => !Array.isArray(p) || !isFinite(p[0]) || !isFinite(p[1]))) return false;
+    let sign = 0;   // convex and in order: every turn the same way
+    for (let i = 0; i < 4; i++) {
+      const a = q[i], b = q[(i + 1) % 4], c = q[(i + 2) % 4];
+      const z = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]);
+      if (Math.abs(z) < 1e-6) return false;
+      if (!sign) sign = Math.sign(z); else if (Math.sign(z) !== sign) return false;
+    }
+    return true;
+  }
+
+  // Straighten the page: W × H output, each output pixel the average of 2×2 samples of the photo (less aliasing
+  // when a 12-megapixel photo becomes a 750-pixel page). img: {width, height, data} RGBA.
+  function warp(img, quad, W, H) {
+    if (!validQuad(quad)) throw new Error("bad corners");
+    const M = homography([[0, 0], [W, 0], [W, H], [0, H]], quad), out = new Uint8ClampedArray(W * H * 4);
+    const { width: w, height: h, data } = img, S = [0.25, 0.75];
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      let r = 0, g = 0, bl = 0;
+      for (const sy of S) for (const sx of S) {
+        const [px, py] = apply(M, x + sx, y + sy);
+        const fx = Math.min(w - 1.001, Math.max(0, px - 0.5)), fy = Math.min(h - 1.001, Math.max(0, py - 0.5));
+        const x0 = fx | 0, y0 = fy | 0, ax = fx - x0, ay = fy - y0, o = (y0 * w + x0) * 4, o2 = o + w * 4;
+        r += (data[o] * (1 - ax) + data[o + 4] * ax) * (1 - ay) + (data[o2] * (1 - ax) + data[o2 + 4] * ax) * ay;
+        g += (data[o + 1] * (1 - ax) + data[o + 5] * ax) * (1 - ay) + (data[o2 + 1] * (1 - ax) + data[o2 + 5] * ax) * ay;
+        bl += (data[o + 2] * (1 - ax) + data[o + 6] * ax) * (1 - ay) + (data[o2 + 2] * (1 - ax) + data[o2 + 6] * ax) * ay;
+      }
+      const p = (y * W + x) * 4; out[p] = r / 4; out[p + 1] = g / 4; out[p + 2] = bl / 4; out[p + 3] = 255;
+    }
+    return { width: W, height: H, data: out };
+  }
+
+  // Pockets of the straightened page, row by row. Each pocket is one cell of an even grid.
+  function cells(layout, W, H) {
+    const L = typeof layout === "string" ? LAYOUTS[layout] : layout, out = [];
+    for (let r = 0; r < L.rows; r++) for (let c = 0; c < L.cols; c++) out.push({ i: r * L.cols + c, r, c, x: (c * W) / L.cols, y: (r * H) / L.rows, w: W / L.cols, h: H / L.rows });
+    return out;
+  }
+  // Pocket corners back in the photo (to draw the outlines over the picture).
+  function cellQuads(layout, quad) {
+    const M = homography([[0, 0], [1, 0], [1, 1], [0, 1]], quad);
+    return cells(layout, 1, 1).map((c) => [[c.x, c.y], [c.x + c.w, c.y], [c.x + c.w, c.y + c.h], [c.x, c.y + c.h]].map(([u, v]) => apply(M, u, v)));
+  }
+
+  // Cut a rectangle (with `m` of its size as margin on each side) out of the page, as outW × outH.
+  // Outside the page the edge pixel is repeated. Box filter when shrinking.
+  function crop(page, rect, m, outW, outH) {
+    const { width: w, height: h, data } = page, out = new Uint8ClampedArray(outW * outH * 4);
+    const x0 = rect.x - rect.w * m, y0 = rect.y - rect.h * m, sx = (rect.w * (1 + 2 * m)) / outW, sy = (rect.h * (1 + 2 * m)) / outH;
+    const nx = Math.max(1, Math.round(sx)), ny = Math.max(1, Math.round(sy));
+    for (let y = 0; y < outH; y++) for (let x = 0; x < outW; x++) {
+      let r = 0, g = 0, b = 0;
+      for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+        const px = Math.min(w - 1, Math.max(0, Math.floor(x0 + (x + (i + 0.5) / nx) * sx))), py = Math.min(h - 1, Math.max(0, Math.floor(y0 + (y + (j + 0.5) / ny) * sy)));
+        const o = (py * w + px) * 4; r += data[o]; g += data[o + 1]; b += data[o + 2];
+      }
+      const p = (y * outW + x) * 4, k = nx * ny; out[p] = r / k; out[p + 1] = g / k; out[p + 2] = b / k; out[p + 3] = 255;
+    }
+    return { width: outW, height: outH, data: out };
+  }
+
+  // How much is going on inside the middle of a pocket: an empty pocket (sleeve over the binder page) is flat.
+  // Returns the standard deviation of brightness and of colour over the central 60%.
+  function texture(img) {
+    const { width: w, height: h, data } = img; let n = 0, s = 0, q = 0, cs = 0, cq = 0;
+    for (let y = Math.round(h * 0.2); y < Math.round(h * 0.8); y += 2) for (let x = Math.round(w * 0.2); x < Math.round(w * 0.8); x += 2) {
+      const o = (y * w + x) * 4, L = 0.299 * data[o] + 0.587 * data[o + 1] + 0.114 * data[o + 2], C = Math.max(data[o], data[o + 1], data[o + 2]) - Math.min(data[o], data[o + 1], data[o + 2]);
+      n++; s += L; q += L * L; cs += C; cq += C * C;
+    }
+    const sd = (a, b) => Math.sqrt(Math.max(0, b / n - (a / n) ** 2));
+    return { luma: sd(s, q), chroma: sd(cs, cq), mean: s / n };
+  }
+  // Below this the middle of the pocket is flat: nothing in it. Measured on synthetic pages (tools/pagescan_synth.py):
+  // empty pockets 0.7–0.9, cards 10+ even in a dim room. To be checked against real binder photos.
+  const EMPTY_LUMA = 5;
+
+  // What to show for a pocket.
+  //   ok      recognised and only one printing has this art: goes to the list as is (can still be changed)
+  //   choose  recognised, but several printings share the art: the person picks (or OCR picks, later)
+  //   check   a likely card, not sure enough: shown with suggestions, the person confirms or changes it
+  //   unknown nothing close enough: the person searches for it or leaves the pocket out
+  //   empty   no card in the pocket
+  function classify(res, tex) {
+    if (tex && tex.luma < EMPTY_LUMA) return "empty";
+    if (!res) return "unknown";
+    if (res.confident) return res.group.length > 1 ? "choose" : "ok";
+    if (res.score >= 0.55) return "check";
+    return "unknown";
+  }
+
+  // Same page photographed twice in a row (or the same nine cards again): the recognised ids in order.
+  const signature = (pockets) => pockets.map((p) => (p.status === "empty" ? "-" : p.id || "?")).join(",");
+
+  // The collector line ("29/204 · EN · 11", bottom left of the card) of a recognised pocket, as 4 corners in the photo,
+  // so it can be cut out of the full-resolution photo for OCR. pocket.box: the card inside the pocket crop (fractions).
+  function stripQuad(pocket, quad, pageW, pageH, M) {
+    const c = pocket.cell, b = pocket.box; if (!c || !b) return null;
+    const x0 = c.x - c.w * M, y0 = c.y - c.h * M, cw = c.w * (1 + 2 * M), ch = c.h * (1 + 2 * M);
+    const card = { x: x0 + b.x * cw, y: y0 + b.y * ch, w: b.w * cw, h: b.h * ch };
+    const s = { x: card.x + card.w * 0.01, y: card.y + card.h * 0.945, w: card.w * 0.34, h: card.h * 0.05 };
+    const Hm = homography([[0, 0], [pageW, 0], [pageW, pageH], [0, pageH]], quad);
+    return [[s.x, s.y], [s.x + s.w, s.y], [s.x + s.w, s.y + s.h], [s.x, s.y + s.h]].map(([u, v]) => apply(Hm, u, v));
+  }
+
+  // Default corners: the on-screen frame, in photo pixels.
+  const frameQuad = (r) => [[r.x, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h], [r.x, r.y + r.h]];
+
+  // The whole page. identify(img) -> {id, score, gap, group, confident, top}. Yields between pockets so the screen
+  // keeps drawing; onPocket(pocket, index) after each one. Returns { pockets, ms: {warp, recognise, total} }.
+  async function scanPage({ image, quad, layout = "3x3", identify, card = { W: 250, H: 350, M: 0.1 }, onPocket, yieldFn }) {
+    const L = LAYOUTS[layout], t0 = now();
+    const W = Math.round(L.cols * card.W), H = Math.round(L.rows * card.H);   // one pocket = one card at the fingerprint's size
+    const page = warp(image, quad, W, H), t1 = now(), pockets = [];
+    const oW = Math.round(card.W * (1 + 2 * card.M)), oH = Math.round(card.H * (1 + 2 * card.M));
+    for (const c of cells(L, W, H)) {
+      const img = crop(page, c, card.M, oW, oH), tex = texture(crop(page, c, 0, 60, 84));
+      const res = tex.luma < EMPTY_LUMA ? null : identify(img);
+      const status = classify(res, tex);
+      const p = { i: c.i, r: c.r, c: c.c, status, id: res && status !== "empty" && status !== "unknown" ? res.id : null, score: res ? res.score : 0, gap: res ? res.gap : 0,
+        group: res ? res.group : [], top: res ? res.top || [] : [], tex: Math.round(tex.luma * 10) / 10, box: res ? res.box || null : null, cell: c, luma: !!(res && res.lumaOnly) };
+      pockets.push(p);
+      onPocket?.(p, c.i);
+      if (yieldFn) await yieldFn();
+    }
+    const t2 = now();
+    return { pockets, page, ms: { warp: Math.round(t1 - t0), recognise: Math.round(t2 - t1), total: Math.round(t2 - t0) } };
+  }
+  const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
+
+  // A pocket still waiting for the person: a printing to pick, a guess to confirm, or a card to find (or leave out).
+  const pending = (p) => !p.resolved && (p.status === "choose" || p.status === "check" || p.status === "unknown");
+  // The cards a confirmed page adds: one entry per copy, as the one-card scanner's list keeps them.
+  // Only pockets recognised for sure ("ok") or settled by the person; a doubtful guess never goes in by default.
+  function toList(pockets) {
+    if (pockets.some(pending)) throw new Error("pending pockets");
+    const out = [];
+    for (const p of pockets) if (p.id && !p.skip && (p.status === "ok" || p.resolved)) for (let k = 0; k < (p.qty ?? 1); k++) out.push({ id: p.id, foil: !!p.foil, lang: p.lang || null });
+    return out;
+  }
+
+  const API = { LAYOUTS, homography, apply, validQuad, warp, cells, cellQuads, crop, texture, EMPTY_LUMA, classify, signature, frameQuad, stripQuad, scanPage, pending, toList };
+  return API;
+  }
+  const API = factory();
+  root.INKWELL_PAGESCAN_FACTORY = factory;   // the Escanear página Worker is built from this source
+  root.INKWELL_PAGESCAN = API;
+  if (typeof module !== "undefined" && module.exports) module.exports = API;
+})(typeof window !== "undefined" ? window : globalThis);
+</script>
 <script>/* Inkwell — "Importar coleção": reads a collection exported by another app without asking which one.
  *
  *   INKWELL_COLL_IMPORT.parse(text, fileName, cards, sets) -> { format, rows: [{ id, n, f, lang, line }], rejects: [{ line, raw, reason }], langs }
