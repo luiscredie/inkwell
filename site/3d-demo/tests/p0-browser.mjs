@@ -121,8 +121,19 @@ for(const width of [320,375,390,430,1280]){
     assert.equal(await page.evaluate(()=>binderTouchX===null&&binderTouchY===null&&binderGestureAt===0),true,'Cancelled touch left gesture state');
     // Dispatch a horizontal touch gesture through the DOM handlers, not by calling
     // the implementation functions directly. Verify page direction and position.
+    // P0 #171: measure synchronous gesture-to-state feedback, not animation completion.
+    // This is a browser-emulated latency guard; physical device frame timing is separate.
+    const gestureFeedback=await stage.evaluate(el=>{
+      const before=binderPage;
+      const start=performance.now();
+       return {before,start};
+    });
     await stage.dispatchEvent('touchstart',{touches:[{clientX:230,clientY:200}]});
+    const gestureStart=await page.evaluate(()=>performance.now());
     await stage.dispatchEvent('touchend',{changedTouches:[{clientX:140,clientY:202}]});
+    const feedback=await page.evaluate(()=>({now:performance.now(),page:binderPage}));
+    assert.notEqual(feedback.page,gestureFeedback.before,'Swipe did not update binder state immediately');
+    assert(feedback.now-gestureStart<150,'Swipe-to-state feedback exceeded 150ms in browser emulation');
     await page.waitForTimeout(210);
     const swipedLabel=await page.locator('.binder-page').first().getAttribute('aria-label');
     assert.notEqual(swipedLabel,stableLabel,'Horizontal touch swipe did not turn page');
