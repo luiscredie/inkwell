@@ -1,0 +1,26 @@
+name: Inkwell Mobile checks
+on:
+  pull_request:
+    paths: [ 'mobile/**', '.github/workflows/mobile.yml' ]
+  push:
+    branches: [ main ]
+    paths: [ 'mobile/**', '.github/workflows/mobile.yml' ]
+permissions:
+  contents: read
+jobs:
+  capacitor:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: npm ci
+      - name: Static checks of the Android and iOS projects
+        run: npm run check
+      - name: Capacitor sync (web folder and native projects stay consistent)
+        run: npx cap sync android && git diff --exit-code -- android

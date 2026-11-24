@@ -1,0 +1,19 @@
+{
+  "appId": "br.com.inkwell.app",
+  "appName": "Inkwell",
+  "webDir": "www",
+  "server": {
+    "url": "https://inkwell.com.br/feed/",
+    "errorPath": "offline.html",
+    "allowNavigation": ["inkwell.com.br", "*.supabase.co"]
+  },
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#0b192c"
+  },
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#0b192c",
+    "limitsNavigationsToAppBoundDomains": true
+  }
+}
