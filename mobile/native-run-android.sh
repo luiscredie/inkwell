@@ -39,7 +39,8 @@ fi
 # dev (remote site): its own "Sem conexão" page, or the page the WebView kept in its cache from the online run
 #   (both seen on the emulator, 24/11).
 # release (bundled pages): the app must still open its own pages.
-OFFLINE_EXPECT="Sem conex|Seu lugar|Testar um deck"; [ "${INKWELL_TARGET:-dev}" = release ] && OFFLINE_EXPECT="Seu lugar|Testar um deck|Entrar"
+# release after the flows is signed in: Início with its "couldn't load" boxes, which say why (seen 24/11).
+OFFLINE_EXPECT="Sem conex|Seu lugar|Testar um deck"; [ "${INKWELL_TARGET:-dev}" = release ] && OFFLINE_EXPECT="Seu lugar|Testar um deck|Entrar|Não deu para carregar|A conexão falhou|Sem conexão"
 adb shell svc wifi disable; adb shell svc data disable; sleep 3
 adb shell am force-stop $APP; adb shell am start -W -n $APP/br.com.inkwell.app.MainActivity >/dev/null
 OFFLINE_OK=0
@@ -52,7 +53,7 @@ python3 -m pip install --quiet pillow >/dev/null 2>&1 || true
 python3 - <<'PY' || true
 import base64, io
 from PIL import Image
-for n in ("android-online", "android-offline"):
+for n in ("android-online", "android-offline", "flow-6a-pagina-pendencias", "flow-6b-posicao", "flow-6c-pagina-resolvida", "flow-6d-revisao", "flow-7a-inicio-modo-aviao", "flow-7b-inicio-de-volta"):
     try:
         im = Image.open(f"evidence/{n}.png").convert("RGB"); im.thumbnail((270, 600)); b = io.BytesIO(); im.save(b, "JPEG", quality=60)
         print(f"=== {n} jpeg base64 ==="); print(base64.b64encode(b.getvalue()).decode()); print(f"=== end {n} ===")
