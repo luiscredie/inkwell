@@ -119,6 +119,7 @@ def build(out: Path = SITE / "decks" / "index.html") -> Path:
             .replace("/*@CARD_INDEX@*/", f"const CARD_INDEX = {script_json(card_index(catalog))};")
             .replace("/*@PORTFOLIO@*/", plan_fn)
             .replace("/*@DECKVIEW_JS@*/", (SRC / "deckview.js").read_text(encoding="utf-8"))
+            .replace("/*@HANDLAB_JS@*/", (SRC / "handlab.js").read_text(encoding="utf-8"))
             .replace("/*@SHELL@*/", f"window.INKWELL_SHELL = {json.dumps({'page': 'decks'})};\n{shell}"))
     html = site_security.add_head(html, "decks")
     html = site_html.hide_img_from_preloader(html)

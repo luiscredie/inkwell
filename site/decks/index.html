@@ -352,6 +352,186 @@ window.INKWELL_DECKVIEW = function ({ esc, Tx, split, inksOf, imgUrl, setNo, nam
   return { ALWAYS_FOIL, isFoil, summary, sorted, listText, printLabel, tile, head, foilNote, style };
 };
 </script>
+<script>// Mão de teste e mulligan (Decks › Testar mão). Rules and numbers only: no page, no network, no storage — the page draws
+// what these functions return, and tools/handlab.test.mjs checks them in Node.
+// Rules: Disney Lorcana Comprehensive Rules 2.2.0, 2.2.1–2.2.2 (shuffle, 7 cards, alter the hand once: chosen cards to
+// the bottom without revealing them, draw back up to 7, then — only if 1 or more were put back — shuffle the deck) and
+// 3.2.3.1 (the starting player skips the draw on the first turn of the game).
+// Every copy is its own instance: { uid: "LOR10-1#2", id: "LOR10-1" }. The deck list is only read.
+(function (root) {
+  "use strict";
+
+  // mulberry32: a small seeded generator, so a hand can be played again (tests, a shared seed)
+  function rng(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a = (a + 0x6d2b79f5) >>> 0;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function newSeed() {
+    try { const a = new Uint32Array(1); (root.crypto || globalThis.crypto).getRandomValues(a); return a[0]; } catch { return (Math.random() * 4294967296) >>> 0; }
+  }
+  // one instance per copy, in a fixed order (ids sorted), so a seed always means the same deck order
+  function instances(cards) {
+    const out = [];
+    for (const id of Object.keys(cards || {}).sort()) { const n = Math.max(0, Math.floor(+cards[id] || 0)); for (let i = 1; i <= n; i++) out.push({ uid: `${id}#${i}`, id }); }
+    return out;
+  }
+  // Fisher–Yates on a copy
+  function shuffle(list, rand) {
+    const a = list.slice();
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+  const HAND = 7;
+  // 2.2.1.2 + 2.2.1.4: shuffle, then the top 7 are the opening hand (the library's index 0 is its top)
+  function deal(cards, seed) {
+    const deck = instances(cards);
+    if (deck.length < HAND) return { error: "small", size: deck.length };
+    const s = seed == null ? newSeed() : seed >>> 0;
+    const order = shuffle(deck, rng(s));
+    return { seed: s, size: deck.length, hand: order.slice(0, HAND), library: order.slice(HAND), mulled: false };
+  }
+  // 2.2.2.1 + 2.2.2.3: the chosen instances go to the bottom, the same number is drawn from the top, and only then —
+  // if 1 or more went back — the deck is shuffled. Once per hand.
+  function mulligan(state, uids) {
+    if (!state || state.error) throw new Error("no hand");
+    if (state.mulled) throw new Error("already altered");
+    const want = new Set(uids || []);
+    if (want.size !== (uids || []).length) throw new Error("same card twice");
+    for (const u of want) if (!state.hand.some((c) => c.uid === u)) throw new Error("not in hand: " + u);
+    const returned = state.hand.filter((c) => want.has(c.uid)), kept = state.hand.filter((c) => !want.has(c.uid));
+    const lib = state.library.concat(returned);   // to the bottom
+    const k = returned.length, drawn = lib.slice(0, k);   // from the top: a returned card comes back only if the top ran out
+    let library = lib.slice(k);
+    if (k > 0) library = shuffle(library, rng((state.seed ^ 0x9e3779b9) >>> 0));
+    return { ...state, mulled: true, original: state.hand, before: state.library, returned, kept, drawn, final: kept.concat(drawn), library };
+  }
+
+  // ---------- probabilities (exact) ----------
+  // d(t): cards drawn by turn t — the starting player skips the turn-1 draw (3.2.3.1)
+  const drawsBy = (t, order) => (order === "second" ? t : t - 1);
+  // C(n, k) as a float (n stays below ~100 here)
+  function choose(n, k) {
+    if (k < 0 || k > n || n < 0) return 0;
+    k = Math.min(k, n - k); let r = 1;
+    for (let i = 1; i <= k; i++) r = (r * (n - k + i)) / i;
+    return r;
+  }
+  // P(j of the K "good" cards among k taken at random from N)
+  const hyper = (K, N, k, j) => (choose(N, k) ? (choose(K, j) * choose(N - K, k - j)) / choose(N, k) : 0);
+  // P1: inkable cards seen by turn t (hand + draws) are at least t, for every t = 1..T. inkH in hand; K inkable of N left.
+  function pInkEachTurn(inkH, K, N, order, T = 4) {
+    let dist = new Map([[0, 1]]), n = 0;   // inkables drawn → probability, after n draws
+    for (let t = 1; t <= T; t++) {
+      const target = Math.min(drawsBy(t, order), N);
+      while (n < target) {
+        const next = new Map();
+        for (const [i, p] of dist) {
+          const left = N - n, ink = K - i;
+          if (ink > 0) next.set(i + 1, (next.get(i + 1) || 0) + (p * ink) / left);
+          if (left - ink > 0) next.set(i, (next.get(i) || 0) + (p * (left - ink)) / left);
+        }
+        dist = next; n++;
+      }
+      for (const i of [...dist.keys()]) if (inkH + i < t) dist.delete(i);
+    }
+    let s = 0; for (const p of dist.values()) s += p; return s;
+  }
+  // P2 / P3: at least one card of a kind by d draws — a in hand, A of that kind left among N
+  function pAny(a, A, N, d) {
+    if (a >= 1) return 1;
+    d = Math.min(Math.max(0, d), N);
+    let none = 1; for (let x = 0; x < d; x++) none *= (N - A - x) / (N - x);
+    return 1 - Math.max(0, none);
+  }
+  // the expectation of a decision: k cards go back (r of the kind), k come at random from the N left (A of the kind);
+  // the returned cards join what is left, so N stays the same
+  function expectAfter(f, inHand, r, A, N, k) {
+    let s = 0;
+    for (let j = 0; j <= Math.min(k, A); j++) { const w = hyper(A, N, k, j); if (w) s += w * f(inHand - r + j, A - j + r, N); }
+    return s;
+  }
+
+  // ---------- analysis (after the decision only) ----------
+  // info(id) → { cost, inkable, known }. Unknown cards count as not inkable and with no cost (and are counted apart).
+  const HIGH = 5;   // "custo alto": 5 or more (Conselho 23/11) — an indicator, never "should go back"
+  const kinds = {
+    ink: (c) => c.known && c.inkable,
+    early: (c) => c.known && c.cost >= 1 && c.cost <= 2,
+    three: (c) => c.known && c.cost === 3,
+  };
+  function facts(list, info) {
+    const cs = list.map((x) => ({ ...info(x.id), uid: x.uid, id: x.id }));
+    const known = cs.filter((c) => c.known);
+    return {
+      inkable: cs.filter(kinds.ink).length,
+      cost1to3: known.filter((c) => c.cost >= 1 && c.cost <= 3).length,
+      byCost: [1, 2, 3].map((v) => known.filter((c) => c.cost === v).length),
+      high: known.filter((c) => c.cost >= HIGH).length,
+      highUninkable: known.filter((c) => c.cost >= HIGH && !c.inkable).length,
+      avg: known.length ? known.reduce((s, c) => s + c.cost, 0) / known.length : null,
+      unknown: cs.length - known.length,
+    };
+  }
+  const count = (list, info, kind) => list.filter((x) => kind(info(x.id))).length;
+  function probs(hand, library, info, order) {
+    const N = library.length;
+    return {
+      ink: pInkEachTurn(count(hand, info, kinds.ink), count(library, info, kinds.ink), N, order),
+      early: pAny(count(hand, info, kinds.early), count(library, info, kinds.early), N, drawsBy(2, order)),
+      three: pAny(count(hand, info, kinds.three), count(library, info, kinds.three), N, drawsBy(3, order)),
+    };
+  }
+  function analyze(state, info, order) {
+    if (!state || !state.mulled) throw new Error("analysis comes after the decision");
+    const ord = order === "second" ? "second" : "first", k = state.returned.length, N = state.library.length;
+    // "keep all 7": the original hand with the library as it was when the decision was made
+    const before = state.before;
+    const keep = probs(state.original, before, info, ord);
+    const expect = {}, fin = probs(state.final, state.library, info, ord);
+    const f = {
+      ink: (h, A, n) => pInkEachTurn(h, A, n, ord),
+      early: (h, A, n) => pAny(h, A, n, drawsBy(2, ord)),
+      three: (h, A, n) => pAny(h, A, n, drawsBy(3, ord)),
+    };
+    for (const key of Object.keys(kinds)) {
+      const kind = kinds[key];
+      expect[key] = k ? expectAfter(f[key], count(state.original, info, kind), count(state.returned, info, kind), count(before, info, kind), before.length, k) : keep[key];
+    }
+    // points to consider: only when the rule applies, naming the cards
+    const kept = state.kept.map((x) => ({ ...info(x.id), id: x.id, uid: x.uid })), ret = state.returned.map((x) => ({ ...info(x.id), id: x.id, uid: x.uid }));
+    const keptInk = kept.filter(kinds.ink).length, notes = [];
+    const cheapInkBack = ret.filter((c) => c.known && c.inkable && c.cost >= 1 && c.cost <= 3);
+    if (cheapInkBack.length && keptInk < 3) notes.push({ code: "returnedCheapInkable", uids: cheapInkBack.map((c) => c.uid) });
+    const highNoInk = kept.filter((c) => c.known && c.cost >= HIGH && !c.inkable);
+    if (highNoInk.length) notes.push({ code: "keptHighUninkable", uids: highNoInk.map((c) => c.uid) });
+    const highKept = kept.filter((c) => c.known && c.cost >= HIGH);
+    if (highKept.length >= 3) notes.push({ code: "keptManyHigh", uids: highKept.map((c) => c.uid) });
+    const finalInk = count(state.final, info, kinds.ink);
+    if (finalInk <= 1) notes.push({ code: "finalLowInk", n: finalInk });
+    if (k === 7) notes.push({ code: "returnedAll" });
+    // decision (expectation vs keeping) and result (what came vs the expectation), separately; < 3 points = the same
+    const cmp = (a, b) => (Math.abs(a - b) < 0.03 ? "same" : a > b ? "up" : "down");
+    return {
+      order: ord, returnedN: k, size: state.size,
+      facts: { original: facts(state.original, info), final: facts(state.final, info) },
+      probs: { keep, expect, final: fin },
+      decision: k ? cmp(expect.ink, keep.ink) : "kept",
+      result: k ? cmp(fin.ink, expect.ink) : cmp(fin.ink, keep.ink),
+      notes,
+    };
+  }
+
+  const api = { rng, newSeed, instances, shuffle, deal, mulligan, analyze, drawsBy, choose, hyper, pInkEachTurn, pAny, expectAfter, HAND, HIGH };
+  root.INKWELL_HANDLAB = api;
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+})(typeof window !== "undefined" ? window : globalThis);
+</script>
 <style>
 .buy-row { display: grid; gap: var(--sp-2); padding: var(--sp-3) 0 var(--sp-1); }
 .buy-row .buy-btns { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
@@ -419,6 +599,44 @@ window.INKWELL_DECKVIEW = function ({ esc, Tx, split, inksOf, imgUrl, setNo, nam
 .seg.inkw button { flex: 1 1 0; min-height: 40px; padding: 0 var(--sp-2); white-space: nowrap; }   /* tapped often, from a phone */
 @media (max-width: 400px) { .seg.inkw .count { display: none; } }   /* no room: the numbers are in the line under it */
 .bld .seg.inkw { margin: var(--sp-2) 0; }
+/* Fase 3: Testar mão — on a phone the sheet takes the whole screen, so seven cards fit to pick from */
+dialog.sheet.lab { max-height: 100dvh; }
+@media (max-width: 599px) { dialog.sheet.lab { height: 100dvh; max-height: 100dvh; border-radius: 0; } }
+.lab-body { display: grid; gap: var(--sp-3); }
+.lab .seg { display: flex; width: 100%; } .lab .seg button { flex: 1 1 0; min-height: 44px; white-space: normal; line-height: 1.2; }
+.lab-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-2); }
+@media (min-width: 600px) { .lab-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 760px) { .lab-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); } }
+.lab-grid.minis { gap: 6px; }
+.lab-card { position: relative; min-width: 0; }
+.lab-pick { display: grid; gap: 4px; width: 100%; min-height: 44px; padding: 4px; border: 2px solid transparent; border-radius: var(--r-md); background: var(--surface-2); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.lab-pick:focus-visible { outline: 3px solid var(--focus, var(--accent)); outline-offset: 2px; }
+.lab-pick[aria-pressed="true"] { border-color: var(--loss); background: var(--surface-3); }
+.lab-pick[aria-pressed="true"] .lab-img { opacity: .45; filter: grayscale(.6); }
+.lab-img { display: block; width: 100%; aspect-ratio: 5 / 7; border-radius: var(--r-sm); overflow: hidden; background: var(--surface-3); }
+.lab-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.lab-info { display: flex; align-items: center; gap: 4px; min-width: 0; font-size: 12px; line-height: 1.2; }
+.lab-nm { min-width: 0; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: break-word; hyphens: auto; font-weight: 700; }   /* two lines: the name, then the version */
+.lab-info { align-items: flex-start; }
+.lab-nm small { font-weight: 400; }
+.lab-tag { position: absolute; left: 50%; top: 38%; transform: translateX(-50%); padding: 3px 8px; border-radius: var(--r-sm); font-size: 12px; font-weight: 800; white-space: nowrap; pointer-events: none; }   /* on the picture, clear of the zoom button */
+.lab-pick { position: relative; }
+.lab-tag.ret { background: var(--loss); color: #2a0b0b; } .lab-tag.new { background: var(--win, var(--accent)); color: #08210f; }
+.lab-card .bt-zoom { top: 8px; right: 8px; }
+.lab-card.mini { display: grid; gap: 2px; padding: 3px; border-radius: var(--r-sm); background: var(--surface-2); }
+.lab-card.mini.returned .lab-img { opacity: .45; }
+.lab-card.mini .lab-info { font-size: 11px; } .lab-card.mini .cost { width: 20px; height: 20px; }
+.lab-card.mini .lab-tag { font-size: 11px; padding: 2px 5px; }
+.lab-bar { position: sticky; bottom: 0; z-index: 4; display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); flex-wrap: wrap;
+  padding: var(--sp-3) 0; background: var(--surface-1); box-shadow: 0 -1px 0 var(--line); font-weight: 700; }
+.lab .sheet-head > div { min-width: 0; } .lab .sheet-head .sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lab-bar .btn { min-height: 44px; }
+.lab-an { display: grid; gap: var(--sp-2); }
+.lab-t { width: 100%; border-collapse: collapse; font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
+.lab-t caption { text-align: left; font-weight: 800; padding-bottom: 4px; }
+.lab-t th, .lab-t td { padding: 6px 4px; border-bottom: 1px solid var(--line); text-align: right; vertical-align: top; }
+.lab-t th[scope="row"], .lab-t thead th:first-child { text-align: left; font-weight: 600; }
+.lab-t thead th { font-size: 12px; color: var(--text-2); font-weight: 700; }
 .bld-res { display: flex; align-items: center; gap: var(--sp-2); min-height: 32px; }
 .bgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); }
 @media (min-width: 600px) { .bgrid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } }
@@ -634,6 +852,79 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "Deck summary": "Resumo do deck", "price unavailable": "preço indisponível", "{v} + {n} with no price": "{v} + {n} sem preço",
     "{a} of {b} cards": "{a} de {b} cartas", "{n} inkable": "{n} tintáveis", "partial estimate": "estimativa parcial", "ink.": "tint.", "Missing copies": "Faltam",
     "Market price of every missing card, without friends' offers or the board.": "Preço de mercado de todas as cartas que faltam, sem descontar ofertas de amigos nem do mural.", "Partial estimate: {n} with no price are not in it.": "Estimativa parcial: {n} sem preço ficam fora.", "{s}, {d}.": "{s}, {d}.",
+    // Testar mão (Fase 3)
+    "is inkable": "tintável", "is not inkable": "não tintável",
+    "Test a hand": "Testar mão",
+    "Who goes first": "Quem começa",
+    "I go first": "Começo jogando",
+    "I'm the second player": "Sou o segundo jogador",
+    "Seven cards from your deck, at random. Tap the ones to put back, then confirm: the analysis comes only after.": "Sete cartas do seu deck, ao acaso. Toque nas que quer devolver e confirme: a análise só vem depois.",
+    "Draw 7": "Comprar 7",
+    "Not enough cards for a hand of 7 (this list has {n}).": "Faltam cartas para uma mão de 7 (esta lista tem {n}).",
+    "Keep {a} · Return {b}": "Manter {a} · Devolver {b}",
+    "Keep all 7": "Manter as 7",
+    "Return 1 and draw 1": "Devolver 1 e comprar 1",
+    "Return {n} and draw {n}": "Devolver {n} e comprar {n}",
+    "Return": "Devolver",
+    "Returned": "Devolvida",
+    "New": "Nova",
+    "returned": "devolvida",
+    "new": "nova",
+    "return": "devolver",
+    "keep": "manter",
+    "{name}, cost {c}, {ink}": "{name}, custo {c}, {ink}",
+    "Original hand": "Mão original",
+    "Returned ({n}) — to the bottom of the deck": "Devolvidas ({n}) — no fundo do deck",
+    "None: you kept all 7.": "Nenhuma: você manteve as 7.",
+    "Final hand": "Mão final",
+    "New hand": "Nova mão",
+    "1 hand this session": "1 mão nesta sessão",
+    "{n} hands this session": "{n} mãos nesta sessão",
+    "Practice only": "Treino experimental",
+    "this deck is not tournament-legal ({why}). The numbers hold for this list.": "este deck não é jogável em torneio ({why}). Os números valem para esta lista.",
+    "With fewer than 14 cards, a returned card can come back: the draw reaches the bottom.": "Com menos de 14 cartas, uma devolvida pode voltar: a compra chega ao fundo.",
+    "1 card short of {n}": "falta 1 carta para {n}",
+    "{k} cards short of {n}": "faltam {k} cartas para {n}",
+    "{n} more issues": "mais {n} problemas",
+    "1 card not in the catalog (no cost or ink in the numbers)": "1 carta fora do catálogo (sem custo nem tinta nas contas)",
+    "{n} cards not in the catalog (no cost or ink in the numbers)": "{n} cartas fora do catálogo (sem custo nem tinta nas contas)",
+    "Heuristic analysis: general opening-hand rules and your deck's probabilities. Not a chance of winning; it does not yet use real games or the AI engine.": "Análise heurística: regras gerais de mão inicial e probabilidades do seu deck. Não é chance de vitória e ainda não usa partidas reais nem o motor de IA.",
+    "You kept all 7. Chance of ink every turn to turn 4: {p}.": "Você manteve as 7. Chance de ter tinta todo turno até o turno 4: {p}.",
+    "On average, your decision raised the chance of ink every turn to turn 4: {a} → {b}.": "Em média, sua decisão aumentou a chance de ter tinta todo turno até o turno 4: {a} → {b}.",
+    "On average, your decision lowered the chance of ink every turn to turn 4: {a} → {b}.": "Em média, sua decisão reduziu a chance de ter tinta todo turno até o turno 4: {a} → {b}.",
+    "On average, your decision left the chance of ink every turn to turn 4 about the same: {a} → {b}.": "Em média, sua decisão deixou praticamente igual a chance de ter tinta todo turno até o turno 4: {a} → {b}.",
+    "The draw came above that ({c}).": "A compra veio acima disso ({c}).",
+    "The draw came below that ({c}).": "A compra veio abaixo disso ({c}).",
+    "The draw came close to that ({c}).": "A compra veio perto disso ({c}).",
+    "A good decision can bring a bad hand.": "Uma boa decisão pode dar uma mão ruim.",
+    "A good hand does not prove the decision was the best.": "Uma mão boa não prova que a decisão era a melhor.",
+    "Observed": "Observado",
+    "what is in the hands": "o que está nas mãos",
+    "Original": "Original",
+    "Final": "Final",
+    "Inkable (common reference: 3+)": "Tintáveis (referência comum: 3+)",
+    "Cost 1–3 (2+)": "Custo 1–3 (2+)",
+    "Cost 5+ (up to 1)": "Custo 5+ (até 1)",
+    "Cost 5+ not inkable (none)": "Custo 5+ não tintáveis (nenhuma)",
+    "Average cost (up to 4)": "Custo médio (até 4)",
+    "Calculated": "Calculado",
+    "exact chances from the cards left in the deck": "chances exatas, a partir das cartas que sobraram no deck",
+    "Your decision (expected)": "Sua decisão (expectativa)",
+    "What came": "O que veio",
+    "Ink every turn to turn 4": "Tinta todo turno até o turno 4",
+    "A cost 1–2 card by turn 2": "Uma carta de custo 1–2 até o turno 2",
+    "A cost 3 card by turn 3": "Uma carta de custo 3 até o turno 3",
+    "Second player: you draw on turn 1.": "Segundo jogador: você compra no turno 1.",
+    "Going first: no draw on turn 1 (rule 3.2.3.1).": "Começando jogando: sem compra no turno 1 (regra 3.2.3.1).",
+    "\"Your decision (expected)\" is the chance before seeing the new cards; \"What came\" is the hand you got. Having a card is not the same as being able to play it.": "\"Sua decisão (expectativa)\" é a chance antes de ver as cartas novas; \"O que veio\" é a mão que você recebeu. Ter a carta não é o mesmo que conseguir jogá-la.",
+    "Points to consider": "Pontos a considerar",
+    "Nothing to point out by the general rules.": "Nada a apontar pelas regras gerais.",
+    "You put back {cards}: inkable and cheap, and the hand you kept has fewer than 3 inkable cards. It may deserve another decision.": "Você devolveu {cards}: tintável e barata, e a mão mantida ficou com menos de 3 tintáveis. Pode merecer outra decisão.",
+    "You kept {cards}: cost 5 or more and not inkable. It can slow the first turns.": "Você manteve {cards}: custo 5 ou mais e sem tinta. Pode atrasar os primeiros turnos.",
+    "You kept {n} cards of cost 5 or more: the first turns may have nothing to play.": "Você manteve {n} cartas de custo 5 ou mais: os primeiros turnos podem ficar sem jogadas.",
+    "The final hand has 1 inkable card: the first turns may run out of ink.": "A mão final tem 1 carta tintável: os primeiros turnos podem ficar sem tinta.",
+    "The final hand has {n} inkable cards: the first turns may run out of ink.": "A mão final tem {n} cartas tintáveis: os primeiros turnos podem ficar sem tinta.",
+    "You put back all 7: the new hand is entirely random.": "Você devolveu as 7: a mão nova é totalmente aleatória.",
     "Change inks": "Mudar tintas", "1 card of another ink stays in the deck.": "1 carta de outra tinta continua no deck.", "{n} cards of other inks stay in the deck.": "{n} cartas de outras tintas continuam no deck.", "Only the deck's inks": "Só as tintas do deck", "Show every ink": "Mostrar todas as tintas", "Legal in Core": "Legais no Core",
     "Only the ones I have": "Só as que tenho", "More filters": "Mais filtros", "Set": "Coleção", "Any set": "Qualquer coleção", "Inkable or not": "Tintável ou não", "Inkable only": "Tintáveis", "Not inkable only": "Não tintáveis", "Items": "Itens", "Locations": "Locais",
     "Builder": "Montar deck", "My deck": "Meu deck", "Name or ability": "Nome ou habilidade", "Clear filters": "Limpar filtros", "Loading abilities…": "Carregando habilidades…",
@@ -1278,6 +1569,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
         <label class="small deckmeta">${Tx("Meta")} <select class="inline" id="metaSel" data-testid="deck-meta">${(() => { const top = Math.max(14, ...CARDS.map((c) => setNo(c.set))), chosen = d.meta || localMeta[d.id] || "", auto = autoMeta(d);
           return `<option value="" ${chosen ? "" : "selected"}>${esc(auto ? Tx("Automatic ({s})", { s: metaLabel(auto) }) : Tx("No meta"))}</option>` + Array.from({ length: top }, (_, i) => `LOR${top - i}`).map((x) => `<option value="${x}" ${chosen === x ? "selected" : ""}>${esc(metaLabel(x))}</option>`).join(""); })()}</select></label></div>
         <div class="actions"><span class="more-wrap"><button type="button" class="btn icon" id="more" aria-haspopup="menu" aria-expanded="false" aria-label="${Tx("More options")}"><i class="ic i-more"></i></button></span>
+        <button type="button" class="btn" id="handBtn" data-testid="hand-open"><i class="ic i-cards"></i>${Tx("Test a hand")}</button>
         <button type="button" class="btn ${editing ? "" : "primary"}" id="edit" aria-pressed="${editing}"><i class="ic ${editing ? "i-check" : "i-edit"}"></i>${Tx(editing ? "Done" : "Edit list")}</button></div></div>
       <div class="stats-row four" data-testid="deck-stats"><div class="stat"><b>${m.total}<small>/${MIN}</small></b><span>${Tx("Cards")}</span></div>
         <div class="stat"><b>${m.inColl != null ? m.inColl + "%" : "—"}</b><span>${Tx("In collection")}</span></div>
@@ -1297,6 +1589,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     $("app").querySelector("[data-to-coll]")?.addEventListener("click", (e) => openDeckToColl(d, e.currentTarget));   // Faltando, empty collection: "Já tenho este deck"
     $("app").querySelector("[data-tab-go]")?.addEventListener("click", (e) => go(d.id, e.currentTarget.dataset.tabGo));
     document.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => go(d.id, b.dataset.tab, true));
+    $("handBtn").onclick = (e) => labOpen(d, e.currentTarget);
     $("edit").onclick = () => {
       editing = !editing; if (editing && tab !== "list") go(d.id, "list", true); else render();
       // the builder is below the deck's summary: bring it up; the keyboard opens by itself only with a mouse (on a phone it would cover the grid)
@@ -1829,12 +2122,13 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     const missRow = S.owner && S.known ? `<div><dt>${Tx("To complete")}</dt><dd>${S.miss ? `<button type="button" class="linkbtn" data-bmiss data-testid="bp-val">${esc(bValText(S))}</button>` : esc(Tx("You have them all"))}</dd></div><div><dt>${Tx("Missing copies")}</dt><dd data-testid="bp-miss">${S.miss}</dd></div>` : "";
     return `<dl class="bp-nums"><div><dt>${Tx("Cards")}</dt><dd class="${S.total < MIN ? "warn" : ""}" data-testid="bp-count">${S.total}/${MIN}</dd></div><div><dt>${Tx("Inkable only")}</dt><dd class="${S.lowInk ? "warn" : ""}" data-testid="bp-ink">${S.ink} · ${S.pct}%</dd></div>${missRow}</dl>
       <div><div class="row between small muted"><span>${Tx("Cost curve")}</span><span>${esc(Tx("average {a}", { a: S.avg.toLocaleString(LOC, { maximumFractionDigits: 1 }) }))}</span></div>${curve}</div>
+      <button type="button" class="btn" data-bhand data-testid="bp-hand"><i class="ic i-cards"></i>${Tx("Test a hand")}</button>
       ${S.owner && S.miss ? `<p class="small faint" style="margin:0" data-testid="bp-note">${esc(Tx("Market price of every missing card, without friends' offers or the board."))}${S.noPrice ? " " + esc(Tx("Partial estimate: {n} with no price are not in it.", { n: S.noPrice })) : ""}${S.prices && pricesDate ? " " + esc(Tx("{s}, {d}.", { s: PRICE_SOURCE || priceSrc, d: dateFmt(pricesDate).replace(/\.$/, "") })) : ""}</p>` : ""}`;
   }
   function bOpenSheet(from) {
     const d = bDeck(); if (!d) return; const S = bSum(d, measure(d)), sh = $("sheet");
     sh.dataset.bsheet = d.id;
-    sh.innerHTML = `<div class="sheet-head"><h2 id="shT">${Tx("Deck summary")}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-x"></i></button></div>
+    sh.innerHTML = `<div class="sheet-head"><h2 id="shT">${Tx("Deck summary")}</h2><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
       <div class="sheet-body"><section class="bld-panel" data-bpanel style="box-shadow:none">${bPanel(S)}</section>
       ${S.owner && S.known ? `<button type="button" class="btn" data-bmiss data-testid="sheet-miss" style="width:100%">${Tx("See what's missing")}</button>` : ""}</div>`;
     sh.addEventListener("close", () => { delete sh.dataset.bsheet; }, { once: true });
@@ -1842,7 +2136,11 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     // one handler, replaced on every open (openSheet sets onclick each time): never piles up, so "Ver o que falta"
     // navigates once however many times the sheet was opened
     const backdrop = sh.onclick;
-    sh.onclick = (e) => { if (e.target.closest?.("[data-bmiss]")) { sh.close(); bToMissing(); return; } backdrop?.(e); };
+    sh.onclick = (e) => {
+      if (e.target.closest?.("[data-bmiss]")) { sh.close(); bToMissing(); return; }
+      if (e.target.closest?.("[data-bhand]")) { sh.close(); labOpen(bDeck(), from); return; }   // the summary sheet makes way for the lab
+      backdrop?.(e);
+    };
   }
   // the value opens the Missing tab (leaving the builder; the list and its filters stay for when you come back)
   function bToMissing() { const d = bDeck(); if (!d) return; editing = false; go(d.id, "missing"); }
@@ -1948,6 +2246,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       if (ds.bq) { const i = ds.bq.lastIndexOf(":"); bStep(ds.bq.slice(0, i), +ds.bq.slice(i + 1)); return; }
       if (ds.q) { const d = bDeck(), i = ds.q.lastIndexOf(":"); if (d) { setQty(d, ds.q.slice(0, i), +ds.q.slice(i + 1)); bRedraw(false); el.querySelector(`[data-q="${CSS.escape(ds.q)}"]`)?.focus({ preventScroll: true }); } return; }
       if ("bmiss" in ds) return bToMissing();
+      if ("bhand" in ds) return labOpen(bDeck(), t);
       if ("bsheet" in ds) return bOpenSheet(t);
       if ("bzoom" in ds) { t.closest(".bt")?.querySelector(".bt-img img")?.click(); return; }
       if (ds.bpane) { B.pane = ds.bpane; bSave(); bRedraw(false); el.querySelector(".bld-bar")?.scrollIntoView({ block: "nearest" }); return; }
@@ -2437,6 +2736,130 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     sh.addEventListener("close", () => from?.focus?.(), { once: true });
     sh.onclick = (e) => { if (e.target === sh) sh.close(); };
     sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = () => sh.close());
+  }
+
+  // ---------- Testar mão: opening hand and mulligan (spec "Deck builder · Fase 3", Conselho 23/11) ----------
+  // Rules and numbers come from handlab.js (INKWELL_HANDLAB): one instance per copy, Comprehensive Rules 2.2.2 (to the
+  // bottom, draw back to 7, shuffle only if 1+ went back, once per hand). The deck list is only read: nothing here
+  // saves, and nothing is kept after the page closes (the count of hands trained lives in this variable only).
+  // Tests fix the hands with window.INKWELL_HAND_SEED (each new hand uses that seed + its number).
+  const HL = window.INKWELL_HANDLAB;
+  let LAB = null;
+  const labInfo = (id) => { const c = BY.get(id); return c ? { known: true, cost: +c.cost || 0, inkable: !!c.inkable } : { known: false, cost: 0, inkable: false }; };
+  window.INKWELL_HAND_INFO = labInfo;   // read-only: lets the tests compute the same numbers the page shows
+  const labPct = (p) => `${Math.round(p * 100)}%`;
+  function labDeal() {
+    const d = decks().find((x) => x.id === LAB.deckId) || LAB.deck; if (!d) return;
+    const fixed = window.INKWELL_HAND_SEED;
+    LAB.st = HL.deal(d.cards || {}, fixed != null ? (+fixed + LAB.n) >>> 0 : null);
+    LAB.sel = new Set(); LAB.res = null; LAB.an = null;
+    if (!LAB.st.error) LAB.n++;
+  }
+  function labOpen(d, from) {
+    if (!d || !HL) return;
+    LAB = { deckId: d.id, deck: d, order: LAB?.deckId === d.id ? LAB.order : "first", n: LAB?.deckId === d.id ? LAB.n : 0, st: null, sel: new Set(), res: null, an: null };
+    const sh = $("sheet");
+    sh.classList.add("wide", "lab"); sh.dataset.lab = d.id;
+    sh.addEventListener("close", () => { sh.classList.remove("wide", "lab"); delete sh.dataset.lab; }, { once: true });
+    labRender();
+    openSheet(from);
+    const base = sh.onclick;
+    sh.onclick = (e) => { if (labClick(e)) return; base?.(e); };
+    sh.onkeydown = null;
+  }
+  // a card as shown in the lab: picture, cost, inkable mark, name; `mark` = "returned" | "new" | ""
+  function labCard(x, mark, opts = {}) {
+    const c = BY.get(x.id), [a, b] = split(c?.name || x.id), info = labInfo(x.id);
+    const label = c ? Tx("{name}, cost {c}, {ink}", { name: a, c: info.cost, ink: Tx(info.inkable ? "is inkable" : "is not inkable") }) : x.id;
+    const pic = `<span class="thumb lab-img" data-card="${esc(x.id)}">${c?.img ? `\u003Cimg src="${imgUrl(c)}" alt="" loading="${opts.toggle ? "eager" : "lazy"}" decoding="async" onerror="this.remove()">` : `<span class="bt-ph">${esc(a)}</span>`}</span>`;
+    const info2 = `<span class="lab-info"><span class="cost${info.inkable ? " ink" : ""}" aria-hidden="true">${c ? info.cost : "?"}</span><span class="lab-nm" title="${esc(c?.name || a)}">${esc(a)}${b && !opts.toggle ? `<small class="muted"> · ${esc(b)}</small>` : ""}</span></span>`;
+    const tag = mark === "returned" ? `<span class="lab-tag ret">${Tx("Returned")}</span>` : mark === "new" ? `<span class="lab-tag new">${Tx("New")}</span>` : "";
+    if (opts.toggle) {
+      const on = LAB.sel.has(x.uid);
+      return `<div class="lab-card${on ? " is-ret" : ""}" data-testid="lab-card"><button type="button" class="lab-pick" data-luid="${esc(x.uid)}" aria-pressed="${on}" aria-label="${esc(label + ": " + Tx(on ? "return" : "keep"))}">${pic}${info2}<span class="lab-tag ret"${on ? "" : " hidden"}>${Tx("Return")}</span></button>
+        ${c?.img ? `<button type="button" class="bt-zoom" data-lzoom aria-label="${esc(Tx("See the card") + " · " + a)}"><i class="ic i-eye"></i></button>` : ""}</div>`;
+    }
+    return `<div class="lab-card mini${mark ? " " + mark : ""}" role="listitem" aria-label="${esc(label + (mark === "returned" ? " · " + Tx("returned") : mark === "new" ? " · " + Tx("new") : ""))}">${pic}${info2}${tag}</div>`;
+  }
+  function labWarn(d) {
+    const m = measure(d), why = [];
+    if (m.total < MIN) why.push(Tx(MIN - m.total === 1 ? "1 card short of {n}" : "{k} cards short of {n}", { k: MIN - m.total, n: MIN }));
+    for (const i of m.issues.slice(0, 3)) why.push(i.text);
+    if (m.issues.length > 3) why.push(Tx("{n} more issues", { n: m.issues.length - 3 }));
+    const unknown = m.entries.filter((e) => !e.c).reduce((s, e) => s + e.q, 0);
+    if (unknown) why.push(Tx(unknown === 1 ? "1 card not in the catalog (no cost or ink in the numbers)" : "{n} cards not in the catalog (no cost or ink in the numbers)", { n: unknown }));
+    if (!why.length) return "";
+    const small = m.total < 14 ? " " + Tx("With fewer than 14 cards, a returned card can come back: the draw reaches the bottom.") : "";
+    return `<div class="notice warn" role="note" data-testid="lab-warn"><span class="t"><b>${Tx("Practice only")}:</b> ${esc(Tx("this deck is not tournament-legal ({why}). The numbers hold for this list.", { why: why.join("; ") }))}${esc(small)}</span></div>`;
+  }
+  function labRender() {
+    const sh = $("sheet"), d = decks().find((x) => x.id === LAB.deckId) || LAB.deck, st = LAB.st, done = !!LAB.res;
+    const orderSeg = `<div class="seg" role="group" aria-label="${Tx("Who goes first")}" data-testid="lab-order">${[["first", "I go first"], ["second", "I'm the second player"]].map(([k, l]) => `<button type="button" data-lorder="${k}" aria-pressed="${LAB.order === k}">${Tx(l)}</button>`).join("")}</div>`;
+    let body = "";
+    if (!st) body = `<p class="muted">${Tx("Seven cards from your deck, at random. Tap the ones to put back, then confirm: the analysis comes only after.")}</p><button type="button" class="btn primary" data-ldeal data-testid="lab-deal">${Tx("Draw 7")}</button>`;
+    else if (st.error) body = `<div class="notice warn" data-testid="lab-small"><span class="t">${esc(Tx("Not enough cards for a hand of 7 (this list has {n}).", { n: st.size }))}</span></div>`;
+    else if (!done) {
+      const k = LAB.sel.size;
+      body = `<div class="lab-grid" data-testid="lab-hand">${st.hand.map((x) => labCard(x, "", { toggle: true })).join("")}</div>
+        <div class="lab-bar"><span aria-live="polite" data-testid="lab-count">${esc(Tx("Keep {a} · Return {b}", { a: 7 - k, b: k }))}</span>
+          <button type="button" class="btn primary" data-lconfirm data-testid="lab-confirm">${esc(k ? Tx(k === 1 ? "Return 1 and draw 1" : "Return {n} and draw {n}", { n: k }) : Tx("Keep all 7"))}</button></div>`;
+    } else {
+      const r = LAB.res, back = new Set(r.returned.map((x) => x.uid)), fresh = new Set(r.drawn.map((x) => x.uid));
+      body = `<section aria-labelledby="labO"><h3 id="labO" class="small">${Tx("Original hand")}</h3><div class="lab-grid minis" role="list" data-testid="lab-original">${r.original.map((x) => labCard(x, back.has(x.uid) ? "returned" : "")).join("")}</div></section>
+        <section aria-labelledby="labR"><h3 id="labR" class="small">${esc(Tx("Returned ({n}) — to the bottom of the deck", { n: r.returned.length }))}</h3>${r.returned.length ? `<div class="lab-grid minis" role="list" data-testid="lab-returned">${r.returned.map((x) => labCard(x, "")).join("")}</div>` : `<p class="small muted" data-testid="lab-returned">${Tx("None: you kept all 7.")}</p>`}</section>
+        <section aria-labelledby="labF"><h3 id="labF" class="small">${Tx("Final hand")}</h3><div class="lab-grid minis" role="list" data-testid="lab-final">${r.final.map((x) => labCard(x, fresh.has(x.uid) ? "new" : "")).join("")}</div></section>
+        ${labAnalysis()}
+        <div class="row" style="gap:var(--sp-2);margin-top:var(--sp-3)"><button type="button" class="btn primary" data-ldeal data-testid="lab-again">${Tx("New hand")}</button></div>`;
+    }
+    sh.innerHTML = `<div class="sheet-head"><div><h2 id="shT">${esc(Tx("Test a hand"))}</h2><p class="sub">${esc(d?.name || "")}</p></div><button type="button" class="btn ghost icon" data-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button></div>
+      <div class="sheet-body lab-body" data-testid="lab">${labWarn(d)}${orderSeg}${body}${LAB.n ? `<p class="small faint" data-testid="lab-n">${esc(Tx(LAB.n === 1 ? "1 hand this session" : "{n} hands this session", { n: LAB.n }))}</p>` : ""}</div>`;
+    sh.setAttribute("aria-labelledby", "shT");
+    sh.querySelectorAll("[data-close]").forEach((b) => b.onclick = () => sh.close());
+  }
+  function labAnalysis() {
+    const a = LAB.an; if (!a) return "";
+    const P = a.probs, nm = (uid) => split(BY.get(uid.split("#")[0])?.name || uid)[0];
+    const names = (uids) => [...new Set(uids.map(nm))].join(", ");
+    const q = [["ink", "Ink every turn to turn 4"], ["early", "A cost 1–2 card by turn 2"], ["three", "A cost 3 card by turn 3"]];
+    let lead;
+    if (a.decision === "kept") lead = Tx("You kept all 7. Chance of ink every turn to turn 4: {p}.", { p: labPct(P.keep.ink) });
+    else {
+      lead = Tx(a.decision === "up" ? "On average, your decision raised the chance of ink every turn to turn 4: {a} → {b}." : a.decision === "down" ? "On average, your decision lowered the chance of ink every turn to turn 4: {a} → {b}." : "On average, your decision left the chance of ink every turn to turn 4 about the same: {a} → {b}.", { a: labPct(P.keep.ink), b: labPct(P.expect.ink) });
+      lead += " " + Tx(a.result === "up" ? "The draw came above that ({c})." : a.result === "down" ? "The draw came below that ({c})." : "The draw came close to that ({c}).", { c: labPct(P.final.ink) });
+      if (a.decision === "up" && a.result === "down") lead += " " + Tx("A good decision can bring a bad hand.");
+      if (a.decision === "down" && a.result === "up") lead += " " + Tx("A good hand does not prove the decision was the best.");
+    }
+    const F = a.facts, row = (label, o, f) => `<tr><th scope="row">${esc(Tx(label))}</th><td>${o}</td><td>${f}</td></tr>`;
+    const by = (x) => `${x.cost1to3} <small class="muted">(${x.byCost.map((v, i) => `${i + 1}: ${v}`).join(" · ")})</small>`;
+    const avg = (x) => (x.avg == null ? "—" : x.avg.toLocaleString(LOC, { maximumFractionDigits: 1 }));
+    const facts = `<table class="lab-t" data-testid="lab-facts"><caption>${esc(Tx("Observed"))} <small class="muted">· ${esc(Tx("what is in the hands"))}</small></caption><thead><tr><th></th><th scope="col">${Tx("Original")}</th><th scope="col">${Tx("Final")}</th></tr></thead><tbody>
+      ${row("Inkable (common reference: 3+)", F.original.inkable, F.final.inkable)}${row("Cost 1–3 (2+)", by(F.original), by(F.final))}${row("Cost 5+ (up to 1)", F.original.high, F.final.high)}
+      ${row("Cost 5+ not inkable (none)", F.original.highUninkable, F.final.highUninkable)}${row("Average cost (up to 4)", avg(F.original), avg(F.final))}</tbody></table>`;
+    const probs = `<table class="lab-t" data-testid="lab-probs"><caption>${esc(Tx("Calculated"))} <small class="muted">· ${esc(Tx("exact chances from the cards left in the deck"))}</small></caption><thead><tr><th></th><th scope="col">${Tx("Keep all 7")}</th><th scope="col">${Tx("Your decision (expected)")}</th><th scope="col">${Tx("What came")}</th></tr></thead><tbody>
+      ${q.map(([k, l]) => `<tr data-p="${k}"><th scope="row">${esc(Tx(l))}</th><td>${labPct(P.keep[k])}</td><td>${labPct(P.expect[k])}</td><td>${labPct(P.final[k])}</td></tr>`).join("")}</tbody></table>
+      <p class="small faint">${esc(Tx(a.order === "second" ? "Second player: you draw on turn 1." : "Going first: no draw on turn 1 (rule 3.2.3.1)."))} ${esc(Tx("\"Your decision (expected)\" is the chance before seeing the new cards; \"What came\" is the hand you got. Having a card is not the same as being able to play it."))}</p>`;
+    const T = {
+      returnedCheapInkable: (n) => Tx("You put back {cards}: inkable and cheap, and the hand you kept has fewer than 3 inkable cards. It may deserve another decision.", { cards: names(n.uids) }),
+      keptHighUninkable: (n) => Tx("You kept {cards}: cost 5 or more and not inkable. It can slow the first turns.", { cards: names(n.uids) }),
+      keptManyHigh: (n) => Tx("You kept {n} cards of cost 5 or more: the first turns may have nothing to play.", { n: n.uids.length }),
+      finalLowInk: (n) => Tx(n.n === 1 ? "The final hand has 1 inkable card: the first turns may run out of ink." : "The final hand has {n} inkable cards: the first turns may run out of ink.", { n: n.n }),
+      returnedAll: () => Tx("You put back all 7: the new hand is entirely random."),
+    };
+    const notes = a.notes.length ? `<ul data-testid="lab-notes">${a.notes.map((n) => `<li data-note="${n.code}">${esc(T[n.code](n))}</li>`).join("")}</ul>` : `<p class="small muted" data-testid="lab-notes">${Tx("Nothing to point out by the general rules.")}</p>`;
+    return `<section class="lab-an" aria-labelledby="labA" data-testid="lab-analysis"><h3 id="labA">${Tx("Analysis")}</h3>
+      <p class="small muted" data-testid="lab-label">${esc(Tx("Heuristic analysis: general opening-hand rules and your deck's probabilities. Not a chance of winning; it does not yet use real games or the AI engine."))}</p>
+      <p data-testid="lab-lead">${esc(lead)}</p>${probs}${facts}<h4 class="small">${Tx("Points to consider")}</h4>${notes}</section>`;
+  }
+  // clicks inside the lab sheet; true when handled
+  function labClick(e) {
+    const t = e.target.closest?.("button"); if (!t || !$("sheet").contains(t)) return false;
+    const ds = t.dataset;
+    if (ds.luid) { LAB.sel.has(ds.luid) ? LAB.sel.delete(ds.luid) : LAB.sel.add(ds.luid); labRender(); $("sheet").querySelector(`[data-luid="${CSS.escape(ds.luid)}"]`)?.focus(); return true; }
+    if ("lzoom" in ds) { t.closest(".lab-card")?.querySelector(".lab-img img")?.click(); return true; }
+    if (ds.lorder) { LAB.order = ds.lorder; if (LAB.res) LAB.an = HL.analyze(LAB.res, labInfo, LAB.order); labRender(); $("sheet").querySelector(`[data-lorder="${ds.lorder}"]`)?.focus(); return true; }
+    if ("ldeal" in ds) { labDeal(); labRender(); ($("sheet").querySelector("[data-luid]") || $("sheet").querySelector("[data-lconfirm]"))?.focus(); return true; }
+    if ("lconfirm" in ds) { LAB.res = HL.mulligan(LAB.st, [...LAB.sel]); LAB.an = HL.analyze(LAB.res, labInfo, LAB.order); labRender(); const h = $("sheet").querySelector("#labO"); h?.setAttribute("tabindex", "-1"); h?.focus(); return true; }   // the result starts at "Mão original"
+    return false;
   }
 
   // ---------- the whole deck into the collection (Pacote 1, item 5) ----------
