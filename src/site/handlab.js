@@ -167,7 +167,8 @@
     if (highKept.length >= 3) notes.push({ code: "keptManyHigh", uids: highKept.map((c) => c.uid) });
     const finalInk = count(state.final, info, kinds.ink);
     if (finalInk <= 1) notes.push({ code: "finalLowInk", n: finalInk });
-    if (k === 7) notes.push({ code: "returnedAll" });
+    // all 7 back: random only when the rest of the deck has 7 or more; otherwise say what really came
+    if (k === 7) notes.push(k > before.length ? { code: "returnedAllForced", n: before.length, back: k - before.length } : { code: "returnedAll" });
     // decision (expectation vs keeping) and result (what came vs the expectation), separately; < 3 points = the same
     const cmp = (a, b) => (Math.abs(a - b) < 0.03 ? "same" : a > b ? "up" : "down");
     // every number at (rounded) 100%: these measures cannot tell decisions apart in this hand

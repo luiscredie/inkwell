@@ -521,7 +521,8 @@ window.INKWELL_DECKVIEW = function ({ esc, Tx, split, inksOf, imgUrl, setNo, nam
     if (highKept.length >= 3) notes.push({ code: "keptManyHigh", uids: highKept.map((c) => c.uid) });
     const finalInk = count(state.final, info, kinds.ink);
     if (finalInk <= 1) notes.push({ code: "finalLowInk", n: finalInk });
-    if (k === 7) notes.push({ code: "returnedAll" });
+    // all 7 back: random only when the rest of the deck has 7 or more; otherwise say what really came
+    if (k === 7) notes.push(k > before.length ? { code: "returnedAllForced", n: before.length, back: k - before.length } : { code: "returnedAll" });
     // decision (expectation vs keeping) and result (what came vs the expectation), separately; < 3 points = the same
     const cmp = (a, b) => (Math.abs(a - b) < 0.03 ? "same" : a > b ? "up" : "down");
     // every number at (rounded) 100%: these measures cannot tell decisions apart in this hand
@@ -863,6 +864,8 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
     "{a} of {b} cards": "{a} de {b} cartas", "{n} inkable": "{n} tintáveis", "partial estimate": "estimativa parcial", "ink.": "tint.", "Missing copies": "Faltam",
     "Market price of every missing card, without friends' offers or the board.": "Preço de mercado de todas as cartas que faltam, sem descontar ofertas de amigos nem do mural.", "Partial estimate: {n} with no price are not in it.": "Estimativa parcial: {n} sem preço ficam fora.", "{s}, {d}.": "{s}, {d}.",
     // Testar mão (Fase 3)
+    "You put back all 7, but the swap had no chance in it: with {n} cards left in the deck, those {n} came, then {b} of the cards put back, from the bottom.": "Você devolveu as 7, mas a troca não teve sorteio: com {n} cartas no resto do deck, vieram essas {n} e depois {b} das devolvidas, do fundo.",
+    "You put back all 7, but the deck has only 7 cards: the same 7 came back, so the final hand is the original one.": "Você devolveu as 7, mas o deck só tem 7 cartas: as mesmas 7 voltaram, e a mão final é a original.",
     "Inkable cards to ink every turn to turn 4": "Tintáveis para pôr tinta todo turno até o turno 4",
     "Every chance calculated here is 100%: these measures do not tell decisions apart in this hand. To review it, look at other things — which cards you want to play in the first turns, and what works against your opponent.": "Todas as chances calculadas aqui deram 100%: estas medidas não diferenciam as decisões nesta mão. Para revisá-la, olhe outros aspectos — quais cartas você quer jogar nos primeiros turnos e o que funciona contra o adversário.",
     "\"Inkable cards to ink\" counts whether there is an inkable card, in hand or drawn, to put into the inkwell each turn. It does not play the turns: it does not choose what you would play or ink, and it does not count ink from effects (such as ink drops).": "\"Tintáveis para pôr tinta\" mede se há uma carta tintável, na mão ou comprada, para colocar no inkwell a cada turno. Não simula os turnos: não escolhe o que você jogaria ou usaria como tinta, e não conta tinta vinda de efeitos (como ink drops).",
@@ -2865,6 +2868,7 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","sets":[{"code":"D100"
       keptManyHigh: (n) => Tx("You kept {n} cards of cost 5 or more: the first turns may have nothing to play.", { n: n.uids.length }),
       finalLowInk: (n) => Tx(n.n === 1 ? "The final hand has 1 inkable card: the first turns may run out of ink." : "The final hand has {n} inkable cards: the first turns may run out of ink.", { n: n.n }),
       returnedAll: () => Tx("You put back all 7: the new hand is entirely random."),
+      returnedAllForced: (n) => (n.n ? Tx("You put back all 7, but the swap had no chance in it: with {n} cards left in the deck, those {n} came, then {b} of the cards put back, from the bottom.", { n: n.n, b: n.back }) : Tx("You put back all 7, but the deck has only 7 cards: the same 7 came back, so the final hand is the original one.")),
     };
     const notes = a.notes.length ? `<ul data-testid="lab-notes">${a.notes.map((n) => `<li data-note="${n.code}">${esc(T[n.code](n))}</li>`).join("")}</ul>` : `<p class="small muted" data-testid="lab-notes">${Tx("Nothing to point out by the general rules.")}</p>`;
     return `<section class="lab-an" aria-labelledby="labA" data-testid="lab-analysis"><h3 id="labA">${Tx("Analysis")}</h3>

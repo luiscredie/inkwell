@@ -322,3 +322,17 @@ test('phone: from the deck summary, open, close and reopen the lab three times �
   }
   await expect(page.getByTestId('builder')).toBeVisible();
 });
+
+test('all 7 back in a 7-card practice deck: says the same 7 came back — never "random"', async ({ page }) => {
+  await setup(page, { decks: [{ ...SHORT, cards: { 'LOR10-1': 4, 'LOR10-3': 3 } }] });
+  await openLab(page);
+  await page.getByTestId('lab-deal').click();
+  const picks = page.locator('[data-luid]');
+  for (let i = 0; i < 7; i++) await picks.nth(i).click();
+  await page.getByTestId('lab-confirm').click();
+  await expect(page.getByTestId('lab-notes')).toContainText('Você devolveu as 7, mas o deck só tem 7 cartas: as mesmas 7 voltaram, e a mão final é a original.');
+  await expect(page.getByTestId('lab-notes')).not.toContainText('aleatória');
+  await expect(page.getByTestId('lab-forced')).toContainText('Com 0 cartas no resto do deck');
+  const ids = (tid) => page.$$eval(`[data-testid="${tid}"] [data-card]`, (e) => e.map((x) => x.dataset.card).sort());
+  expect(await ids('lab-final')).toEqual(await ids('lab-original'));
+});

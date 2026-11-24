@@ -1,4 +1,4 @@
-// Mão de teste e mulligan (src/site/handlab.js): rules (Comprehensive Rules 2.2.0, 2.2.2) and exact probabilities.
+// Mão de teste e mulligan (src/site/handlab.js): rules (Comprehensive Rules 2.3.0, 2.2.2) and exact probabilities.
 // Run: node tools/handlab.test.mjs
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -173,6 +173,17 @@ t('expectation by hand = 1.25', near(H.expectAfter((h) => h, 2, 1, 1, 4, 1), 1.2
   }
   t('small decks: cases with k ≤ N were checked exhaustively', checked > 50, String(checked));
   t('small decks: forced cases (k > N) were met', forcedSeen > 20 && zeroBefore > 0, `${forcedSeen} / ${zeroBefore}`);
+}
+// all 7 put back: "random" only when the rest of the deck has 7 or more cards
+{
+  const seven = H.analyze(H.mulligan(H.deal({ C01: 4, C02: 3 }, 1), uids(H.deal({ C01: 4, C02: 3 }, 1).hand)), INFO, 'first');
+  const n7 = seven.notes.find((n) => n.code.startsWith('returnedAll'));
+  t('7-card deck, all 7 back: forced, nothing left to draw, the same hand back', n7?.code === 'returnedAllForced' && n7.n === 0 && n7.back === 7, JSON.stringify(n7));
+  const d9 = H.deal({ C01: 5, C02: 4 }, 2), nine = H.analyze(H.mulligan(d9, uids(d9.hand)), INFO, 'first'), n9 = nine.notes.find((n) => n.code.startsWith('returnedAll'));
+  t('9-card deck, all 7 back: the 2 left, then 5 of the returned', n9?.code === 'returnedAllForced' && n9.n === 2 && n9.back === 5, JSON.stringify(n9));
+  t('never "random" for a forced swap', !seven.notes.concat(nine.notes).some((n) => n.code === 'returnedAll'));
+  const d14 = H.deal(Object.fromEntries(Array.from({ length: 14 }, (_, i) => [`C${String(i + 1).padStart(2, '0')}`, 1])), 3);
+  t('14-card deck, all 7 back: random (7 left)', H.analyze(H.mulligan(d14, uids(d14.hand)), INFO, 'first').notes.some((n) => n.code === 'returnedAll'));
 }
 // every number at 100% is flagged, so the screen can say these measures do not separate decisions
 {
