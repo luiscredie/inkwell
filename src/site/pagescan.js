@@ -153,12 +153,14 @@
 
   // The whole page. identify(img) -> {id, score, gap, group, confident, top}. Yields between pockets so the screen
   // keeps drawing; onPocket(pocket, index) after each one. Returns { pockets, ms: {warp, recognise, total} }.
-  async function scanPage({ image, quad, layout = "3x3", identify, card = { W: 250, H: 350, M: 0.1 }, onPocket, yieldFn }) {
+  // only: the pocket numbers to recognise (Escanear página shares the nine pockets between 2–3 Workers); the others are skipped.
+  async function scanPage({ image, quad, layout = "3x3", identify, card = { W: 250, H: 350, M: 0.1 }, onPocket, yieldFn, only }) {
     const L = LAYOUTS[layout], t0 = now();
     const W = Math.round(L.cols * card.W), H = Math.round(L.rows * card.H);   // one pocket = one card at the fingerprint's size
     const page = warp(image, quad, W, H), t1 = now(), pockets = [];
     const oW = Math.round(card.W * (1 + 2 * card.M)), oH = Math.round(card.H * (1 + 2 * card.M));
     for (const c of cells(L, W, H)) {
+      if (only && !only.includes(c.i)) continue;
       const img = crop(page, c, card.M, oW, oH), tex = texture(crop(page, c, 0, 60, 84));
       const res = tex.luma < EMPTY_LUMA ? null : identify(img);
       const status = classify(res, tex);
