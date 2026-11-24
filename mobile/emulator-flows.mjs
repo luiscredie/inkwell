@@ -99,6 +99,18 @@ await step('Decks opens from the tab bar', async () => {
   await shot(page, '4-decks');
 });
 
+await step('Android back button after Decks (recorded, not judged)', async () => {
+  if (!device) return 'browser mode: skipped';
+  const before = new URL(page.url()).pathname;
+  await device.shell('input keyevent 4');
+  await new Promise((r) => setTimeout(r, 2500));
+  const top = String(await device.shell('dumpsys activity activities | grep topResumedActivity')).trim();
+  let after = '(page gone)'; try { after = new URL(page.url()).pathname; } catch { /* */ }
+  const inApp = top.includes(PKG);
+  if (!inApp) { await device.shell(`am start -n ${PKG}/br.com.inkwell.app.MainActivity`); await new Promise((r) => setTimeout(r, 4000)); }
+  return `from ${before}: ${inApp ? 'stayed in the app at ' + after : 'the app went to the background'}`;
+});
+
 const fakeCamera = async (draw) => page.evaluate(({ IMG, draw }) => {
   navigator.mediaDevices.getUserMedia = async () => {
     const c = document.createElement('canvas'); c.width = 720; c.height = 1280; const ctx = c.getContext('2d');
