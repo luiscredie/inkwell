@@ -1,0 +1,176 @@
+{
+ "passes": 20,
+ "added": 15,
+ "right": 15,
+ "wrong": 0,
+ "missed": 5,
+ "extra": 0,
+ "foil_right": "3/4",
+ "foil_marked": "0/4",
+ "repeat_in_a_row_right": true,
+ "taps": 1,
+ "latency_ms_median": 1410,
+ "latency_ms_max": 1753,
+ "ocr": "off",
+ "session_s": 56,
+ "hold_ms": 2200,
+ "gap_ms": 600,
+ "detail": [
+  {
+   "k": 0,
+   "truth": "LOR2-115",
+   "foil": false,
+   "got": "LOR2-115",
+   "gotFoil": false,
+   "ms": 1407
+  },
+  {
+   "k": 1,
+   "truth": "LOR1-190",
+   "foil": false,
+   "got": "LOR1-190",
+   "gotFoil": false,
+   "ms": 1469
+  },
+  {
+   "k": 2,
+   "truth": "LOR13-143",
+   "foil": false,
+   "got": "LOR13-143",
+   "gotFoil": false,
+   "ms": 1402
+  },
+  {
+   "k": 3,
+   "truth": "LOR5-111",
+   "foil": true,
+   "got": "LOR5-111",
+   "gotFoil": false,
+   "ms": 1456
+  },
+  {
+   "k": 4,
+   "truth": "LOR11-93",
+   "foil": false,
+   "got": "LOR11-93",
+   "gotFoil": false,
+   "ms": 1286
+  },
+  {
+   "k": 5,
+   "truth": "LOR11-93",
+   "foil": false,
+   "got": "LOR11-93",
+   "gotFoil": false,
+   "ms": 1410
+  },
+  {
+   "k": 6,
+   "truth": "LOR14-57",
+   "foil": false,
+   "got": "LOR14-57",
+   "gotFoil": false,
+   "ms": 1412
+  },
+  {
+   "k": 7,
+   "truth": "LOR11-125",
+   "foil": false,
+   "got": null,
+   "ms": null
+  },
+  {
+   "k": 8,
+   "truth": "LOR13-86",
+   "foil": true,
+   "got": "LOR13-86",
+   "gotFoil": false,
+   "ms": 1489
+  },
+  {
+   "k": 9,
+   "truth": "LOR14-209",
+   "foil": false,
+   "got": null,
+   "ms": null
+  },
+  {
+   "k": 10,
+   "truth": "LOR8-48",
+   "foil": false,
+   "got": "LOR8-48",
+   "gotFoil": false,
+   "ms": 1377
+  },
+  {
+   "k": 11,
+   "truth": "LOR5-26",
+   "foil": false,
+   "got": "LOR5-26",
+   "gotFoil": false,
+   "ms": 1437
+  },
+  {
+   "k": 12,
+   "truth": "LOR13-143",
+   "foil": false,
+   "got": "LOR13-143",
+   "gotFoil": false,
+   "ms": 1511
+  },
+  {
+   "k": 13,
+   "truth": "LOR5-215",
+   "foil": false,
+   "got": "LOR5-215",
+   "gotFoil": false,
+   "ms": 951
+  },
+  {
+   "k": 14,
+   "truth": "LOR9-107",
+   "foil": true,
+   "got": null,
+   "ms": null
+  },
+  {
+   "k": 15,
+   "truth": "LOR6-128",
+   "foil": false,
+   "got": "LOR6-128",
+   "gotFoil": false,
+   "ms": 1753
+  },
+  {
+   "k": 16,
+   "truth": "LOR3-89",
+   "foil": false,
+   "got": null,
+   "ms": null
+  },
+  {
+   "k": 17,
+   "truth": "LOR14-209",
+   "foil": false,
+   "got": null,
+   "ms": null
+  },
+  {
+   "k": 18,
+   "truth": "LOR1-31",
+   "foil": false,
+   "got": "LOR1-31",
+   "gotFoil": false,
+   "ms": 1391
+  },
+  {
+   "k": 19,
+   "truth": "LOR5-111",
+   "foil": true,
+   "got": "LOR5-111",
+   "gotFoil": false,
+   "ms": 1377
+  }
+ ],
+ "extra_ids": []
+}

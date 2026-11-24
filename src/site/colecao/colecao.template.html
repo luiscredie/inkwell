@@ -150,6 +150,21 @@ button.stock-h.stock-empty .open-word .ic { width: 14px; height: 14px; }
 #scan .pedit .cands button { display: grid; gap: 3px; padding: 4px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: var(--fs-micro); text-align: left; }
 #scan .pedit .cands button[aria-pressed="true"] { border-color: var(--win); box-shadow: 0 0 0 2px var(--win); }
 #scan .pedit .cands .thumb { width: 100%; }
+#scan .strip { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; padding: 2px 0; min-height: 0; }
+#scan .strip::-webkit-scrollbar { display: none; }
+#scan .strip .s-item { flex: none; width: 30px; }
+#scan .strip .s-item .thumb { width: 30px; }
+#scan .strip .s-item:first-child { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 4px; }
+#scan .strip .s-item { position: relative; }
+#scan .strip .s-q { position: absolute; right: -3px; top: -3px; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); color: #1b1405; font: 700 10px/14px system-ui, sans-serif; text-align: center; }
+#scan .review .pending { display: grid; gap: 8px; padding: 10px; border-radius: 12px; border: 2px solid var(--accent); }
+#scan .review .pending p { margin: 0; }
+#scan .review .item.pend { display: grid; gap: 6px; }
+#scan .review .item.pend .opts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+#scan .review .item.pend .opts [data-choose] { display: grid; justify-items: center; gap: 2px; padding: 4px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); max-width: 96px; }
+#scan .review .foilbtn { font: inherit; color: var(--text); background: none; border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; min-height: 24px; cursor: pointer; }
+#scan .review .foilbtn[aria-pressed="true"] { background: linear-gradient(120deg, #f6d36540, #c3a6ff40, #7fe0d440); border-color: var(--accent); }
+#scan .strip .s-more { flex: none; align-self: center; padding: 0 4px; }
 #scan .review footer { display: grid; gap: 8px; padding: 12px 12px calc(env(safe-area-inset-bottom, 0px) + 12px); border-top: 1px solid var(--line); }
 .imp-list { display: grid; gap: 2px; max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: var(--r-md); padding: 6px 10px; }
 .imp-list > div { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: baseline; padding: 3px 0; border-bottom: 1px solid var(--line); }
@@ -1839,6 +1854,7 @@ self.onmessage = async (e) => {
     const v = $("scanVideo"), k = Math.max(g.vw / v.videoWidth, g.vh / v.videoHeight), ox = (v.videoWidth * k - g.vw) / 2, oy = (v.videoHeight * k - g.vh) / 2;
     return { x: (g.x + ox) / k, y: (g.y + oy) / k, w: g.w / k, h: g.h / k };
   }
+  window.__inkwellScanSession = () => scan.added.map((a) => ({ id: a.id, foil: a.foil, at: a.at || null, choose: a.choose || null }));   // used by the browser test
   window.__inkwellScanGuide = () => ($("scan").open && $("scanVideo").videoWidth ? videoRect(guideRect()) : null);   // used by the browser test
   function scanSay(text, err) { const el = $("scanSay"); if (el) { el.textContent = text; el.className = `say${err ? " err" : ""}`; } }
   function drawScan() {   // the camera stage, built once per opening
@@ -1847,9 +1863,9 @@ self.onmessage = async (e) => {
       <div class="top"><button type="button" class="btn icon" data-scan-close aria-label="${Tx("Close")}"><i class="ic i-close"></i></button><h2 id="scanT">${Tx("Scan cards")}</h2><button type="button" class="btn icon" id="scanTorch" hidden aria-pressed="false" aria-label="${Tx("Light")}"><i class="ic i-sparkle"></i></button>
         <div class="seg" role="group" aria-label="${Tx("Card")}"><button type="button" data-foil="0" aria-pressed="${!scan.foil}">${Tx("Normal")}</button><button type="button" class="is-foil" data-foil="1" aria-pressed="${scan.foil}">${Tx("Foil")}</button></div></div>
       <div class="panel"><div class="seg modes" role="group" aria-label="${esc(P("Modo", "Mode"))}" data-testid="scan-mode"><button type="button" data-smode="card" aria-pressed="${scan.mode === "card"}">${esc(P("Uma carta", "One card"))}</button><button type="button" data-smode="page" aria-pressed="${scan.mode === "page"}">${esc(P("Página 3×3", "3×3 page"))}</button></div>
-        <div class="say" id="scanSay" role="status" aria-live="polite">${scan.mode === "page" ? esc(pageHint()) : Tx("Point the camera at one card inside the frame.")}</div><div id="scanPick"></div><div id="scanLast"></div>
+        <div class="say" id="scanSay" role="status" aria-live="polite">${scan.mode === "page" ? esc(pageHint()) : Tx("Point the camera at one card inside the frame.")}</div><div id="scanPick"></div><div id="scanLast"></div><div class="strip" id="scanStrip" data-testid="scan-strip" role="list" aria-label="${esc(P("Cartas desta leitura", "Cards in this scan"))}" hidden></div>
         ${scan.mode === "page" ? `<button type="button" class="btn primary" id="pageShoot" data-testid="page-shoot"><i class="ic i-camera"></i>${esc(P("Fotografar página", "Take the page photo"))}</button>` : ""}
-        <div class="row between"><span class="small" data-testid="scan-count" id="scanCount"></span><button type="button" class="btn primary" data-scan-done>${Tx("Done scanning")}</button></div></div></div>`;
+        <div class="row between"><span class="small"><b data-testid="scan-count" id="scanCount"></b> <span id="scanValue" data-testid="scan-value-line"></span></span><button type="button" class="btn primary" data-scan-done>${Tx("Done scanning")}</button></div></div></div>`;
     sh.querySelectorAll("[data-scan-close], [data-scan-done]").forEach((b) => b.onclick = () => (scan.added.length ? showReview() : sh.close()));
     sh.querySelectorAll("[data-foil]").forEach((b) => b.onclick = () => { scan.foil = b.dataset.foil === "1"; sh.querySelectorAll("[data-foil]").forEach((x) => x.setAttribute("aria-pressed", String((x.dataset.foil === "1") === scan.foil))); });
     sh.querySelectorAll("[data-smode]").forEach((b) => b.onclick = () => setScanMode(b.dataset.smode));
@@ -1863,21 +1879,54 @@ self.onmessage = async (e) => {
     box.innerHTML = lastC ? `<div class="last" data-testid="scan-last">${thumb(lastC, "xs", scan.last.foil)}</span><span class="t"><b>${esc(split(lastC.name).join(" · ").replace(/ · $/, ""))}</b><span class="small muted">${esc([setName(lastC.set), "nº " + lastC.num, Tx(scan.last.foil ? "foil" : "normal")].join(" · "))}</span></span>
       <button type="button" class="btn small" id="scanAgain">${Tx("+1 of this")}</button><button type="button" class="btn ghost small" id="scanUndo" aria-label="${Tx("Undo")}"><i class="ic i-undo"></i></button></div>` : "";
     $("scanCount").textContent = scan.added.length ? Tx("{n} in the list", { n: scan.added.length }) : "";
-    $("scanAgain")?.addEventListener("click", () => addScanned(scan.last.id));   // uses the Normal/Foil choice shown at the top
+    drawSession();
+    $("scanAgain")?.addEventListener("click", () => { const l = scan.added[scan.added.length - 1]; addScanned(scan.last.id, l?.choose); });   // uses the Normal/Foil choice shown at the top; a printing still to pick stays to pick
     $("scanUndo")?.addEventListener("click", () => { const l = scan.added.pop(); if (!l) return; scan.last = scan.added[scan.added.length - 1] || null; drawLast(); const c = BY.get(l.id); scanSay(Tx("Removed: {c}", { c: c ? split(c.name)[0] : l.id })); });
   }
-  function addScanned(id) {
+  // Continuous scanning (Evolens-style session view, Council 24/11): a quiet strip of the cards read so far, newest
+  // first, and the running count and estimated value with the prices already loaded on this page. Nothing to tap:
+  // the next card can follow at once. The value says when cards have no price, when a foil price is estimated from
+  // the normal one, and when the price file is old or missing (same rule as the rest of the site).
+  const STRIP_N = 12;
+  function sessionValue() {
+    let v = 0, missing = 0, foilEstN = 0;
+    for (const a of scan.added) { const p = priceOf(a.id, a.foil); if (p == null) missing++; else { v += p; if (a.foil && foilEst(a.id)) foilEstN++; } }
+    return { v, missing, foilEstN };
+  }
+  function drawSession() {
+    const strip = $("scanStrip"), cnt = $("scanValue"); if (!strip || !cnt) return;
+    const list = scan.added.slice(-STRIP_N).reverse();
+    strip.hidden = !list.length;
+    strip.innerHTML = list.map((a) => { const c = BY.get(a.id); return c ? `<span role="listitem" class="s-item${a.choose ? " pend" : ""}" title="${esc(split(c.name)[0] + (a.choose ? " · " + P("impressão a escolher", "printing to pick") : ""))}">${thumb(c, "xs", a.foil)}</span>${a.choose ? '<span class="s-q" aria-hidden="true">?</span>' : ""}</span>` : ""; }).join("")
+      + (scan.added.length > STRIP_N ? `<span role="listitem" class="s-more small muted">+${scan.added.length - STRIP_N}</span>` : "");
+    if (!scan.added.length) { cnt.textContent = ""; return; }
+    const { v, missing, foilEstN } = sessionValue(), note = window.INKWELL_PRICE_NOTE?.(PRJ);
+    const flags = [];
+    if (!note?.ok) flags.push(P("preços indisponíveis", "prices unavailable"));
+    else {
+      if (missing) flags.push(P(`${missing} sem preço`, `${missing} without a price`));
+      const pendN = scan.added.filter((a) => a.choose).length;
+      if (pendN) flags.push(P(`${pendN} com impressão a escolher`, `${pendN} with a printing to pick`));
+      if (foilEstN) flags.push(P(`${foilEstN} foil estimado${foilEstN > 1 ? "s" : ""}`, `${foilEstN} foil estimated`));
+      if (note.stale) flags.push(P(`preços de ${note.date}, desatualizados`, `prices from ${note.date}, out of date`));
+    }
+    cnt.innerHTML = `${note?.ok ? `· <span data-testid="scan-value">≈ ${esc(money(v))}</span>` : ""}${flags.length ? ` <span class="${note?.ok && !note.stale ? "muted" : "price-warn"}" data-testid="scan-value-note">(${esc(flags.join(" · "))})</span>` : ""}`;
+  }
+  function addScanned(id, choose) {
     const c = BY.get(id); if (!c) return;
     const lg = scan.lang || addLangNow();   // the language of the last card in the list (default: the collection's)
-    scan.added.push({ id, foil: scan.foil, lang: lg }); scan.last = { id, foil: scan.foil }; scan.wait = true; scan.seen = null; scan.seenN = 0;
+    const opts = choose && choose.length > 1 ? choose.filter((x) => BY.has(x)) : null;
+    scan.added.push({ id, foil: scan.foil, lang: lg, at: performance.now(), ...(opts && opts.length > 1 ? { choose: opts } : {}) });
+    scan.last = { id, foil: scan.foil }; scan.wait = true; scan.seen = null; scan.seenN = 0;
     navigator.vibrate?.(40);
     drawLast();
-    scanSay(Tx("In the list: {c}", { c: split(c.name)[0] }) + " · " + Tx("Remove the card and show the next one."));
+    scanSay(Tx("In the list: {c}", { c: split(c.name)[0] }) + " · " + (opts && opts.length > 1 ? P("escolha a impressão na revisão", "pick the printing in the review") : Tx("Remove the card and show the next one.")));
+    window.INKWELL_TRACK?.(opts && opts.length > 1 ? "scan_pending_printing" : "scan_added");
     $("scanGuide")?.classList.add("ok"); setTimeout(() => $("scanGuide")?.classList.remove("ok"), 700);
   }
   // Nothing reaches the collection until the list is confirmed here.
   function reviewGroups() {
-    const m = new Map(); for (const a of scan.added) { const k = `${a.id}:${a.foil ? 1 : 0}:${a.lang || ""}`; m.set(k, (m.get(k) || 0) + 1); }
+    const m = new Map(); for (const a of scan.added) { if (a.choose) continue; const k = `${a.id}:${a.foil ? 1 : 0}:${a.lang || ""}`; m.set(k, (m.get(k) || 0) + 1); }
     return [...m].map(([k, n]) => { const [id, f, lg] = k.split(":"); return { id, foil: f === "1", lang: lg || null, n }; });
   }
   const scanPlace = () => { let x = "binder"; try { x = localStorage.getItem("inkwell-scan-place") || "binder"; } catch { /* */ } return x === "home" || (x === "trade" && tradeReady) ? x : "binder"; };
@@ -1885,17 +1934,21 @@ self.onmessage = async (e) => {
     scan.review = true; scan.discardArmed = false;
     const stage = $("scan").querySelector(".stage"); let box = $("scanReview");
     if (!box) { box = document.createElement("div"); box.className = "review"; box.id = "scanReview"; box.setAttribute("data-testid", "scan-review"); stage.appendChild(box); }
-    const g = reviewGroups(), total = scan.added.length;
+    const g = reviewGroups(), total = scan.added.length, pend = scan.added.map((a, i) => (a.choose ? i : -1)).filter((i) => i >= 0);
+    const pendHtml = pend.length ? `<div class="pending" data-testid="scan-pending"><p class="small"><b>${esc(P(pend.length === 1 ? "1 carta com impressão a escolher" : `${pend.length} cartas com impressão a escolher`, `${pend.length} card${pend.length === 1 ? "" : "s"} with a printing to pick`))}</b> · ${esc(P("a mesma arte existe em mais de uma impressão; confira o número no canto da carta.", "the same art exists in more than one printing; check the number at the bottom of the card."))}</p>
+      ${pend.map((i) => { const a = scan.added[i], c0 = BY.get(a.id); return `<div class="item pend" data-pend="${i}"><span class="t"><b>${esc(split(c0.name)[0])}</b><span class="small muted">${esc(Tx(a.foil ? "foil" : "normal"))}</span></span>
+        <div class="opts" role="group" aria-label="${esc(P(`Impressão de ${split(c0.name)[0]}`, `Printing of ${split(c0.name)[0]}`))}">${a.choose.map((id) => { const c = BY.get(id); return `<button type="button" data-choose="${esc(id)}">${thumb(c, "xs", a.foil)}</span><span class="small">${esc(setName(c.set))} · nº ${esc(c.num)}</span></button>`; }).join("")}
+        <button type="button" class="btn ghost small" data-unpend aria-label="${esc(P("Tirar da lista", "Take off the list"))}">${esc(P("Tirar", "Remove"))}</button></div></div>`; }).join("")}</div>` : "";
     box.innerHTML = `<header><button type="button" class="btn icon" id="revBack" aria-label="${Tx("Keep scanning")}"><i class="ic i-chevron-left"></i></button><h2>${Tx("Check before adding")}</h2></header>
-      <div class="items">${g.length ? g.map((x) => { const c = BY.get(x.id); return c ? `<div class="item" data-rev="${esc(x.id)}:${x.foil ? 1 : 0}${x.lang ? `:${x.lang}` : ""}">${thumb(c, "xs", x.foil)}</span>
-        <span class="t"><b>${esc(split(c.name).join(" · ").replace(/ · $/, ""))}</b><span class="small muted">${esc([setName(c.set), "nº " + c.num, Tx(x.foil ? "foil" : "normal")].join(" · "))}</span>
+      <div class="items">${pendHtml}${g.length ? g.map((x) => { const c = BY.get(x.id); return c ? `<div class="item" data-rev="${esc(x.id)}:${x.foil ? 1 : 0}${x.lang ? `:${x.lang}` : ""}">${thumb(c, "xs", x.foil)}</span>
+        <span class="t"><b>${esc(split(c.name).join(" · ").replace(/ · $/, ""))}</b><span class="small muted">${esc([setName(c.set), "nº " + c.num].join(" · "))} · <button type="button" class="foilbtn" data-rfoil aria-pressed="${x.foil}" aria-label="${esc(P(`Foil: ${split(c.name)[0]}`, `Foil: ${split(c.name)[0]}`))}" title="${esc(P("Tocar para alternar normal / foil", "Tap to switch normal / foil"))}">${esc(Tx(x.foil ? "foil" : "normal"))}</button></span>
         ${langsOn() ? `<span class="lang-line"><span class="muted">${esc(P("Idioma", "Language"))}</span><select class="inline lang-mini" data-rlang aria-label="${esc(P(`Idioma de ${split(c.name)[0]}`, `Language of ${split(c.name)[0]}`))}">${LANGS.map((l2) => `<option value="${l2}" ${x.lang === l2 ? "selected" : ""}>${l2.toUpperCase()}</option>`).join("")}</select></span>` : ""}</span>
         <div class="qty"><button type="button" data-rq="-1" aria-label="${Tx("Remove one")}">−</button><output>${x.n}</output><button type="button" data-rq="1" aria-label="${Tx("Add one")}">+</button></div></div>` : ""; }).join("")
-        : `<p class="muted" style="text-align:center">${Tx("The list is empty.")}</p>`}</div>
+        : pend.length ? "" : `<p class="muted" style="text-align:center">${Tx("The list is empty.")}</p>`}</div>
       <footer>${homeReady ? `<div class="seg" role="group" aria-label="${Tx("Add to")}" data-testid="scan-place" style="justify-self:center"><span class="small muted" style="align-self:center;padding:0 6px">${Tx("Add to")}</span>${[["binder", "Binder"], ["home", "Home"], ...(tradeReady ? [["trade", "Trades"]] : [])].map(([k, l]) => `<button type="button" data-splace="${k}" aria-pressed="${scanPlace() === k}">${Tx(l)}</button>`).join("")}</div>` : ""}
         ${langsOn() && g.length > 1 ? `<label class="lang-all small" data-testid="scan-lang-all">${esc(P("Idioma de todas:", "Language of all:"))} <select class="inline lang-mini" id="revLangAll"><option value="">—</option>${LANGS.map((l2) => `<option value="${l2}" label="${l2.toUpperCase()}" title="${esc(langName(l2))}">${l2.toUpperCase()}</option>`).join("")}</select></label>` : ""}
         <p class="small muted" style="margin:0;text-align:center">${Tx("Nothing will be saved until you confirm.")}</p>
-        <button type="button" class="btn primary" id="revAdd" ${total ? "" : "disabled"}>${Tx("Add {n} cards to the collection", { n: total })}</button>
+        <button type="button" class="btn primary" id="revAdd" ${total && !pend.length ? "" : "disabled"}>${pend.length ? esc(P(`Escolha a impressão de ${pend.length === 1 ? "1 carta" : pend.length + " cartas"}`, `Pick the printing of ${pend.length} card${pend.length === 1 ? "" : "s"}`)) : Tx("Add {n} cards to the collection", { n: total })}</button>
         <div class="row between"><button type="button" class="btn" id="revMore"><i class="ic i-camera"></i>${Tx("Keep scanning")}</button><button type="button" class="btn ghost" id="revDrop">${Tx("Discard the list")}</button></div></footer>`;
     const back = () => { scan.review = false; box.remove(); scan.wait = false; drawLast(); scanSay(Tx("Point the camera at one card inside the frame.")); };
     $("revBack").onclick = back; $("revMore").onclick = back;
@@ -1905,6 +1958,16 @@ self.onmessage = async (e) => {
       const [id, f, lg = ""] = sel.closest("[data-rev]").dataset.rev.split(":");
       for (const a of scan.added) if (same(a, id, f === "1", lg)) a.lang = sel.value;
       scan.lang = sel.value; showReview(); box.querySelector(`[data-rev="${CSS.escape(`${id}:${f}:${sel.value}`)}"] [data-rlang]`)?.focus();
+    });
+    box.querySelectorAll("[data-choose]").forEach((b) => b.onclick = () => {   // the person picks the printing
+      const a = scan.added[+b.closest("[data-pend]").dataset.pend]; if (!a) return;
+      a.id = b.dataset.choose; delete a.choose; window.INKWELL_TRACK?.("scan_printing_picked"); showReview();
+    });
+    box.querySelectorAll("[data-unpend]").forEach((b) => b.onclick = () => { scan.added.splice(+b.closest("[data-pend]").dataset.pend, 1); scan.last = scan.added[scan.added.length - 1] || null; showReview(); });
+    box.querySelectorAll("[data-rfoil]").forEach((b) => b.onclick = () => {   // foil is set by hand: fix it here for this row
+      const [id, f, lg = ""] = b.closest("[data-rev]").dataset.rev.split(":"), foil = f === "1";
+      for (const a of scan.added) if (same(a, id, foil, lg)) a.foil = !foil;
+      window.INKWELL_TRACK?.("scan_foil_fixed"); showReview(); box.querySelector(`[data-rev="${CSS.escape(`${id}:${foil ? 0 : 1}${lg ? `:${lg}` : ""}`)}"] [data-rfoil]`)?.focus();
     });
     $("revLangAll")?.addEventListener("change", (e) => { if (!e.target.value) return; for (const a of scan.added) a.lang = e.target.value; scan.lang = e.target.value; showReview(); });
     box.querySelectorAll("[data-rq]").forEach((b) => b.onclick = () => {
@@ -1919,6 +1982,7 @@ self.onmessage = async (e) => {
       scan.added = []; scan.last = null; $("scan").close();
     };
     $("revAdd").onclick = () => {
+      if (scan.added.some((a) => a.choose)) return;   // a printing still to pick: nothing is saved
       for (const x of reviewGroups()) change(x.id, x.foil ? "f" : "n", x.n, true, homeReady ? scanPlace() : "binder", x.lang || addLangNow());
       if (scan.lang) lastLang = scan.lang;
       scan.saved = scan.added.length; scan.added = []; scan.last = null;
@@ -1980,9 +2044,11 @@ self.onmessage = async (e) => {
         pick = pickByCollector(scan.reads.join(" | "), res.group) || pickByCollector(text, res.group);
         if (pick) break;
       }
-      if (pick) { scan.reads = []; scan.ocrTries = 0; return addScanned(pick); }
-      if (++scan.ocrTries < 3) { scan.seenN = 1; scanSay(Tx("Bring the phone a little closer so the number is sharp.")); return; }   // try again on the next frames
-      scan.reads = []; scan.ocrTries = 0; askWhich(res.group);
+      scan.reads = []; scan.ocrTries = 0;
+      if (pick) return addScanned(pick);
+      // The number couldn't settle which printing it is (blurred line, no OCR offline): keep the card anyway, as
+      // "printing to choose", and let the person pick in the review. No question now, so the next card can follow.
+      return addScanned(res.id, res.group);
     } finally { scan.busy = false; }
   }
   // ---------- Scanner 2.0: Escanear página (a whole binder page at once; src/site/pagescan.js) ----------
@@ -2002,7 +2068,7 @@ self.onmessage = async (e) => {
     if (m === "page") {
       const b = document.createElement("button"); b.type = "button"; b.className = "btn primary"; b.id = "pageShoot"; b.dataset.testid = "page-shoot"; b.setAttribute("data-testid", "page-shoot");
       b.innerHTML = `<i class="ic i-camera"></i>${esc(P("Fotografar página", "Take the page photo"))}`; b.onclick = shootPage;
-      $("scanLast").after(b); scanSay(pageHint());
+      ($("scanStrip") || $("scanLast")).after(b); scanSay(pageHint());
     } else scanSay(Tx("Point the camera at one card inside the frame."));
     window.INKWELL_TRACK?.(m === "page" ? "scan_page_mode" : "scan_card_mode");
   }
