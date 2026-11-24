@@ -190,3 +190,22 @@ for (const w of [320, 390, 430]) {
     expect(over).toEqual([]);
   });
 }
+
+test('Escanear página: recognising a page does not block the screen (Web Worker)', async ({ page }) => {
+  test.skip(STILL(page), 'long-task timing is measured in Chromium (WebKit has no Long Tasks API)');
+  test.setTimeout(120000);
+  await setup(page);
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Escanear' }).click();
+  await page.getByTestId('scan-mode').getByRole('button', { name: 'Página 3×3' }).click();
+  await page.waitForFunction(() => document.getElementById('scanVideo')?.videoWidth > 0);
+  await page.waitForTimeout(400);
+  await page.evaluate(() => { window.__long = []; new PerformanceObserver((l) => l.getEntries().forEach((e) => window.__long.push(e.duration))).observe({ type: 'longtask' }); });
+  await pagePhoto(page);
+  const r = await page.evaluate(() => ({ engine: window.__inkwellScanWorker(), longest: Math.round(Math.max(0, ...window.__long)), total: Math.round(window.__long.reduce((a, b) => a + b, 0)) }));
+  console.log('LONGTASKS', JSON.stringify(r));
+  expect(r.engine).toBe('worker');
+  // the photo is copied to the Worker and the result drawn back: short tasks only (no pocket is recognised here)
+  expect(r.longest).toBeLessThan(250);
+  expect(r.total).toBeLessThan(600);   // on the main thread the nine pockets alone block > 1 s (measured 24/11)
+});
