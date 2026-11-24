@@ -92,3 +92,19 @@ A política examina ativações impressas oferecidas pelo motor. Confere jogador
 | Pares que sobreviveram à resposta | 15 | 30 |
 
 Quinze perdas evitadas se distribuem por cinco posições distintas. A 19 contra um Pegasus, Robin Hood deixa de fazer quest e vira para causar 1 dano. Contra dois Pegasus a 19, banir apenas um ainda deixa vitória por quest. A armadilha pode se banir para reduzir o lore adversário em 2 e sobreviver aos dois quests. Nas posições sem ameaça, a candidata repetiu a sequência original. No Work, a primeira consulta explorou de 4 a 28 transições. O teste usa o motor com entrada sintética e não estima vitória na partida completa. A bateria instalada no WSL continua fixada à sua versão até atualização explícita.
+
+## Memória de derrotas do laboratório
+
+A bateria pode gravar as perdas do candidato com a posição sintética completa anterior à decisão, seed, horizonte, política adversária, hashes dos módulos e do motor, placar e ações aceitas. A reprodução usa o mesmo bot e o adversário do ensaio. Exige que ambos os turnos reproduzam a sequência e o resultado salvos antes de abrir alternativas. A posição completa pertence ao executor offline; cada controlador continua recebendo a visão projetada pelo motor.
+
+Para capturar perdas, defina `INKWELL_LOSS_DIR` ao executar a suíte acima. Para reabrir uma posição em outro processo com o mesmo bundle:
+
+```sh
+INKWELL_SPAR_ENGINE=/caminho/engine.mjs node tools/strategic_v4_sparring_lab.mjs /caminho/perdas/<hash>.json
+```
+
+O revisor varia ações, escolhas opcionais e alvos únicos oferecidos ao defensor nos seis primeiros pedidos do turno. As demais decisões seguem a política instalada. Cada alternativa vincula o prefixo à solicitação projetada e é executada no motor sem novas tentativas em caso de ação inválida. São até doze ramificações, com limite cooperativo de oito segundos por posição. O executor diário aplica ainda dezoito segundos por subprocesso e noventa por lote.
+
+A V4 do instalador salva os checkpoints em `perdas/` no histórico da execução, o índice em `revisoes.json` e as linhas simuladas em `reports/strategic-v4/memoria-perdas/<hash>.json`. Uma execução posterior reaproveita a revisão do mesmo checkpoint. Mudanças na posição, resultado, seed, motor ou módulos produzem outro identificador.
+
+Na validação do Work, houve 21 perdas do candidato nos 87 pares e mais uma posição diagnóstica com Angel – Experiment 624. As 22 reproduções coincidiram. A busca executou 82 alternativas. No diagnóstico, ativar Good Aim, descartar Lady e atingir Pegasus manteve o adversário a 19 após sua resposta. As demais revisões ficaram inconclusivas. O horizonte cobre a resposta de um oponente que prioriza quest. Esses resultados são hipóteses para revisar a política; o relatório não a modifica.

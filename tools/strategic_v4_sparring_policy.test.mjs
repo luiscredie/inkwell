@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
-import { createDefensiveController } from "./strategic_v4_sparring_policy.mjs";
+import { captureLoss, reviewLoss, trial } from "./strategic_v4_sparring_lab.mjs";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const path = process.env.INKWELL_SPAR_ENGINE;
-const engine = path && await import(pathToFileURL(resolve(path)));
-const skip = !engine && "supply the real engine bundle";
+const skip = !path && "supply the real engine bundle";
 const lady = "Lady - Elegant Spaniel", elinor = "Elinor - Renowned Diplomat", pegasus = "Pegasus - Gift for Hercules";
 const chernabog = "Chernabog - Unnatural Force", guard = "Woolter & Jesse - Bellwether's Henchmen";
 const circle = "Circle of Life", malicious = "Malicious, Mean, and Scary", phillip = "Prince Phillip - Vanquisher of Foes";
@@ -55,50 +55,6 @@ const cases = {
         enemyDiscard: ["Ursula - Deceiver", pegasus, "Tod - All Alone", "Omnidroid - V.8", pegasus, "Ursula - Deceiver"] },
 };
 
-async function trial(position, seed, candidate, limits = {}, script = []) {
-    const setup = { player: 2, deck: [], settings: { seed, search: { nodes: 0, samples: 1 } } };
-    const searches = [], decisions = [], verdicts = [];
-    const remaining = [...script];
-    const started = performance.now();
-    const controller = candidate ? createDefensiveController(engine, setup, { limits,
-        memoize(_view, _request, compute) { const decision = compute(); verdicts.push(decision.verdict); return decision; },
-        onSearch(result, ms, request) {
-            searches.push({ nodes: result.nodes, ms, cutoff: result.cutoff, pass: result.baseline.status,
-                chosen: result.selected?.status ?? null, offered: request.actions,
-                examined: result.candidates.map(({ action, status, line, replyLine }) => ({ action, status, line, replyLine })) });
-        },
-    }) : engine.createBot(setup);
-    const human = engine.createBot({ ...setup, player: 1 });
-    const seats = [
-        { player: 1, deck: [], controller: { observe: (u) => human.observe(u),
-            decide(view, request) {
-                if (request.type !== "Action") return human.decide(view, request);
-                const action = request.actions.find((a) => a.action.type === "Quest") ??
-                    request.actions.find((a) => a.action.type === "End Turn");
-                return { type: "Action", option: action.option };
-            } } },
-        { player: 2, deck: [], controller: { observe: (u) => controller.observe(u),
-            async decide(view, request, error) {
-                assert.ifError(error);
-                let answer = await controller.decide(view, request);
-                if (remaining.length && request.type === "Action") {
-                    const [type, name] = remaining.shift();
-                    const action = request.actions.find(({ action }) => action.type === type &&
-                        (!name || (action.card ?? action.song)?.fullName === name));
-                    assert.ok(action, "scripted counterfactual requires a real menu option");
-                    answer = { type: "Action", option: action.option };
-                }
-                decisions.push({ request, answer });
-                return answer;
-            } } },
-    ];
-    const game = await engine.playGameAsync(seats, { seed, from: structuredClone(position), turns: 2, audit: true, retry: false });
-    assert.equal(remaining.length, 0);
-    return { winner: game.outcome?.winners[0] ?? null, lore: game.final.players[1].lore,
-        ownLore: game.final.players[2].lore, hand: game.final.players[2].hand, ink: game.final.players[2].inkwell,
-        ms: performance.now() - started, searches, decisions, verdicts, board: game.final.players[2].play, executed: game.turns.map(({ turn }) => turn.steps) };
-}
-
 const actions = (run) => run.executed[0].filter((s) => s.type === "Action").map((s) => s.action);
 const compact = (run) => ({ winner: run.winner, lore: run.lore, ownLore: run.ownLore,
     actions: actions(run).map((a) => [a.type, (a.card ?? a.song ?? a.defender)?.fullName]),
@@ -118,6 +74,7 @@ for (const [name, spec] of Object.entries(cases)) {
         for (const seed of seeds) {
             const before = await trial(pos, seed, false);
             const after = await trial(pos, seed, true);
+            captureLoss(process.env.INKWELL_LOSS_DIR, name, pos, seed, after);
             assert.deepEqual([before.winner, after.winner], expected[name]);
             assert.ok(after.searches.every((s) => s.cutoff === null && s.nodes <= 768));
             if (["bodyguard", "combo19", "evasiveStrength", "reserveSong"].includes(name)) {
@@ -203,6 +160,7 @@ test("defensive activations across generated Pegasus endgames", { skip }, async 
             for (const seed of seeds) {
                 const before = await trial(position, seed, false);
                 const after = await trial(position, seed, true);
+                captureLoss(process.env.INKWELL_LOSS_DIR, source + "/" + lore + "/" + copies, position, seed, after);
                 const label = JSON.stringify({ source, lore, copies, seed });
                 if (process.env.INKWELL_ACTIVATION_TRACE === "1") {
                     console.log(JSON.stringify({ source, lore, copies, seed,
@@ -237,5 +195,34 @@ test("defensive activations across generated Pegasus endgames", { skip }, async 
                 assert.equal(after.lore, lore + copies - (trap ? 2 : 1), label);
             }
         }
+    }
+});
+
+test("restore a natural candidate loss and find an engine-executed alternative with Good Aim", { skip }, async () => {
+    const directory = mkdtempSync(join(tmpdir(), "inkwell-loss-"));
+    try {
+        const position = fixture({ allies: [["Angel - Experiment 624"]], enemies: [[pegasus]], hand: [lady] });
+        const seed = 309;
+        const observed = await trial(position, seed, true);
+        assert.equal(observed.winner, 1);
+        const name = "goodAim19";
+        const path = captureLoss(directory, name, position, seed, observed);
+        captureLoss(process.env.INKWELL_LOSS_DIR, name, position, seed, observed);
+        const review = await reviewLoss(path);
+        const stale = captureLoss(directory, name, position, seed, { ...observed, executed: [] });
+        const mismatch = await reviewLoss(stale);
+        assert.equal(mismatch.status, "replay_mismatch");
+        assert.equal(mismatch.branches.length, 0);
+        assert.equal(review.reproduced, true);
+        assert.equal(review.status, "survived_reply");
+        assert.ok(review.branches.length <= review.limits.maxBranches);
+        const witness = review.branches.at(-1).result;
+        assert.equal(witness.lore, 19);
+        const steps = witness.executed[0];
+        assert.ok(steps.some((s) => s.action?.ability?.card.fullName === "Angel - Experiment 624"));
+        assert.ok(steps.some((s) => s.answer?.payment?.some((p) => p.type === "Discard" && p.cards[0].fullName === lady)));
+        assert.ok(steps.some((s) => s.answer?.cards?.[0]?.fullName === pegasus));
+    } finally {
+        rmSync(directory, { recursive: true, force: true });
     }
 });
