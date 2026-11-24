@@ -1,5 +1,5 @@
 import { isDeepStrictEqual as equal } from "node:util";
-import { analyzeImmediateDefense, matchesPlanPosition, ownPlan } from "./strategic_v4_sparring_defense.mjs";
+import { analyzeImmediateDefense, compareLiloOpening, matchesPlanPosition, ownPlan } from "./strategic_v4_sparring_defense.mjs";
 
 function actionOption(request, action) {
     if (request.type !== "Action") return undefined;
@@ -65,15 +65,31 @@ export function createDefensiveController(engine, setup, {
 } = {}) {
     const baseline = engine.createBot(setup);
     let pending = [];
+    let opening = false;
     let turn;
     return {
-        observe(update) { baseline.observe(update); },
+        observe(update) {
+            baseline.observe(update);
+            opening = update.turn?.steps?.length === 0;
+        },
         async decide(view, request) {
             // Keep the original controller's RNG and memory in sync even on overrides.
             const original = await baseline.decide(view, request);
             if (turn !== view.turn.number || view.turn.player !== setup.player) pending = [];
             turn = view.turn.number;
             if (view.turn.player !== setup.player) return original;
+            if (opening && limits.planOpening !== false && request.type === "Optional" && original?.answer?.accept) {
+                const decision = memoize(view, request, () => {
+                    try {
+                        return compareLiloOpening(engine, view, request, limits) ?? {verdict: "keep_optional"};
+                    } catch {
+                        return {verdict: "inconclusive"};
+                    }
+                });
+                if (decision.verdict === "reserve_opening_ink") {
+                    return {type: "Decision", answer: {type: "Optional", accept: false}};
+                }
+            }
             if (pending.length && matchesPlanPosition(view, pending[0])) {
                 const answer = bind(request, pending.shift());
                 if (answer) return answer;

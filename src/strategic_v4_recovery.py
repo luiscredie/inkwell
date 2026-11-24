@@ -53,7 +53,7 @@ def threat_persistence(seq, card, seat, snapshots, entries_by_seq, invalidated):
         previous = next_player
     origin, last = (snapshot_position(snapshots[index]) for index in (seq, last_absent))
     return {
-        "card": named_character(card), "status": status, "observed_through_frame": end,
+        "card": named_character(card), "instance_id": uid, "status": status, "observed_through_frame": end,
         "last_observed_absent_frame": last_absent, "change_while_absent": position_change(origin, last),
         "handoffs_while_absent": handoffs, "complete_opponent_turns_while_absent": complete_turns,
         "lore_value_at_removal": card.get("lore"), "actual_lore_prevented": None,

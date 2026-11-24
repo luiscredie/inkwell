@@ -788,3 +788,74 @@ test("cross the early and late controllers using the engine's actual midgame pos
         if (process.env.INKWELL_PREVENTION_TRACE === "1") console.log(JSON.stringify({ preventionCross: name, seed, crossover }));
     }
 });
+
+test("opening Lilo can spend the ink needed for Chernabog or the Phillip song sequence", {skip}, async () => {
+    const escape = "Lilo - Escape Artist";
+    const controls = [
+        ["chernabog", {}, {}, true, null],
+        ["combo", {enemies: [["Simba - Protective Cub"]], hand: [circle, malicious],
+            allies: [[filler]], discard: [escape, phillip], ink: 3}, {}, true, null],
+        ["enoughInk", {ink: 7}, {}, false, null],
+        ["quiet", {lore: 2}, {}, false, null],
+        ["ward", {enemies: [["Kuzco - Temperamental Emperor"]]}, {}, false, 1],
+        ["ownWin", {own: 19, allies: [[lady]]}, {}, false, 2],
+        ["cutoff", {}, {maxNodes: 1}, false, 1],
+        ["hiddenHand", {hidden: [circle], top: malicious}, {}, true, null],
+    ];
+    for (const [name, spec, limits, changed, winner] of controls) {
+        const position = fixture({lore: 19, enemies: [[pegasus]], allies: [], hand: [chernabog],
+            discard: [escape], ink: 5, ...spec});
+        for (const seed of seeds) {
+            const run = flag => trial(position, seed, true, {...limits, planOpening: flag});
+            const before = await run(false), after = await run(true);
+            assert.equal(before.decisions[0].answer.answer.accept, true, name);
+            assert.equal(after.decisions[0].answer.answer.accept, !changed, name);
+            assert.equal(before.winner, changed ? 1 : winner, name);
+            assert.equal(after.winner, winner, name);
+            if (changed) assert.equal(after.lore, 19);
+            if (name === "combo") {
+                assert.deepEqual(actions(after).map(a => a.card?.fullName ?? a.song?.fullName ?? a.type),
+                    [malicious, circle, "End Turn"]);
+                assert.ok(after.board.some(p => p.card.fullName === phillip));
+            }
+            if (name === "chernabog" || name === "hiddenHand") assert.ok(after.board.some(p => p.card.fullName === chernabog));
+            if (process.env.INKWELL_OPENING_TRACE) {
+                const report = r => ({winner: r.winner, ms: Math.round(r.ms), accepted: r.decisions[0].answer.answer.accept,
+                    moves: r.decisions.map(({request, answer}) => ({offered: request, chosen: answer}))});
+                console.log(JSON.stringify({openingCase: name, seed, before: report(before), after: report(after)}));
+            }
+        }
+    }
+});
+
+test("weighted one-draw outs are conditional on the actual payment, target and reply", {skip}, async () => {
+    const strength = "Strength of a Raging Fire";
+    const variants = [
+        ["pay", {allies: [[lady]], ink: 3}, "Play", 1],
+        ["sing", {allies: [["Hercules - Divine Hero"]]}, "Sing", 1],
+        ["ward", {allies: [[lady]], ink: 3, enemies: [["Kuzco - Temperamental Emperor"]]}, null, 0],
+        ["shortDamage", {allies: [[lady]], ink: 3, enemies: [["Ursula - Vanessa"]]}, null, 0],
+        ["noResource", {allies: [[lady]], ink: 2}, null, 0],
+        ["ownLethal", {allies: [[lady]], ink: 3, own: 19}, null, 4],
+    ];
+    for (const [name, spec, route, expected] of variants) {
+        const position = fixture({lore: 19, enemies: [[pegasus]], ...spec});
+        const deck = position.players[2].deck.slice(0, 4);
+        deck[0].fullName = strength;
+        let survived = 0;
+        const branches = [];
+        for (const [top, copies] of [[0, 1], [1, 3]]) {
+            position.players[2].deck = [...deck];
+            [position.players[2].deck[0], position.players[2].deck[top]] = [deck[top], deck[0]];
+            const r = await trial(position, 309, true);
+            const used = actions(r).find(a => (a.type === "Play" && a.card.fullName === strength) ||
+                (a.type === "Sing" && a.song.fullName === strength));
+            assert.equal(used?.type ?? null, !top ? route : null, name);
+            if (r.winner !== 1) survived += copies;
+            branches.push({top: deck[top].fullName, copies, route: used?.type ?? null, winner: r.winner,
+                lore: [r.ownLore, r.lore], executed: r.executed});
+        }
+        assert.equal(survived, expected);
+        if (process.env.INKWELL_OPENING_TRACE) console.log(JSON.stringify({outCase: name, size: 4, copies: 1, survived, branches}));
+    }
+});

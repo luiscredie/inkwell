@@ -859,3 +859,50 @@ export function ownPlan(engine, view, selected) {
 export function matchesPlanPosition(view, entry) {
     return projectionKey(view, view.turn.player) === entry.position;
 }
+
+// Recreate only a unique Lilo opening prompt. Advance both branches with an
+// anonymous draw, then ask the ordinary defensive search about each main phase.
+export function compareLiloOpening(engine, view, prompt, limits = {}) {
+    const seat = view.turn.player;
+    const own = view.players[seat];
+    if (prompt.type !== "Optional" || prompt.player !== seat || prompt.effect?.type !== "Play" ||
+        prompt.effect.cards !== "Self" || prompt.effect.exerted !== true ||
+        own.discard.filter(c => c.fullName === "Lilo - Escape Artist").length !== 1) return;
+    const position = publicPosition(view, seat);
+    const options = { card: name => name === hiddenName ? hiddenCard : engine.getCard(name) };
+    const maxNodes = Math.min(limits.maxNodes ?? 768, 384);
+    const deadline = performance.now() + Math.min(limits.maxMs ?? 1200, 350);
+    let nodes = 0;
+    const branches = [];
+    for (const accept of [true, false]) {
+        if (nodes >= maxNodes || performance.now() >= deadline) return;
+        const live = engine.startTurn(position, options);
+        const r = live.request;
+        if (r?.type !== "Optional" || JSON.stringify(r.effect) !== JSON.stringify(prompt.effect) ||
+            r.player !== seat || projectionKey(live.position, seat) !== projectionKey(view, seat)) return;
+        live.submit({type: "Decision", answer: {type: "Optional", accept}});
+        nodes++;
+        if (accept) {
+            if (nodes >= maxNodes || performance.now() >= deadline) return;
+            const pay = live.request;
+            if (pay?.type !== "Pay Cost" || pay.player !== seat || pay.cost.length !== 1 ||
+                pay.cost[0].type !== "Ink" || pay.cost[0].amount !== 2) return;
+            const cards = live.position.players[seat].inkwell.filter(i => !i.exerted).slice(0, 2).map(i => i.card);
+            if (cards.length !== 2 || live.position.players[seat].inkDrops) return;
+            live.submit({type: "Decision", answer: {type: "Pay Cost", pay: true,
+                payment: [{type: "Ink", player: seat, cards}]}});
+            nodes++;
+            if (!live.position.players[seat].play.some(p => p.card.i === own.discard.find(c => c.fullName === "Lilo - Escape Artist").i)) return;
+        }
+        const ms = deadline - performance.now();
+        if (live.request?.type !== "Action" || ms <= 0 || nodes >= maxNodes) return;
+        const result = analyzeImmediateDefense(engine, live.position, {...limits, maxNodes: maxNodes - nodes,
+            maxActions: Math.min(limits.maxActions ?? 3, 3), maxMs: ms, preventNextCycle: false});
+        nodes += result.nodes;
+        if (result.budgetExhausted || performance.now() > deadline) return;
+        branches.push({pass: result.baseline.status, selected: result.selected?.status ?? null});
+        if (accept && (result.baseline.status !== "lethal" || result.selected)) return;
+    }
+    if (!["no_lethal_found", "defender_wins"].includes(branches[1].selected)) return;
+    return {verdict: "reserve_opening_ink", branches, nodes};
+}
