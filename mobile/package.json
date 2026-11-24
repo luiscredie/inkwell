@@ -1,0 +1,23 @@
+{
+  "name": "inkwell-mobile",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Inkwell Mobile (experimental): Android and iOS apps wrapping the Inkwell site with Capacitor. See mobile/README.md.",
+  "scripts": {
+    "check": "node check.mjs",
+    "sync": "cap sync",
+    "android": "cap open android",
+    "ios": "cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.6.2",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/core": "8.6.2",
+    "@capacitor/ios": "8.6.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.2",
+    "@playwright/test": "^1.62.0",
+    "typescript": "^5.9.3"
+  }
+}
