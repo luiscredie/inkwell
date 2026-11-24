@@ -2101,7 +2101,6 @@ self.onmessage = async (e) => {
         if (scan.pg !== pg) return;
         if (pg.t.first == null) pg.t.first = since(pg);
         pg.pockets[i] = { ...pk, foil: scan.foil, qty: 1 }; pg.stage = null;
-        if (pk.status === "choose") ocrWarm();   // a pocket will need its number read: start the reader now, in parallel
         if (!pg.drawSoon) { pg.drawSoon = true; requestAnimationFrame(() => { pg.drawSoon = false; if (scan.pg === pg && pg.busy) drawPage(); }); }   // pockets arriving together: one redraw
       });
       if (scan.pg !== pg) return;
@@ -2114,6 +2113,8 @@ self.onmessage = async (e) => {
     LAST_TIMING = { ...pg.t }; delete LAST_TIMING.shot;
     if (pg.error) return;
     // reprints: read the collector numbers in the background; a clear reading settles the pocket unless the person did
+    // The reader (Tesseract, ~MBs from a CDN the first time) starts only now: started during the recognition, it took the
+    // CPU from it on a 2-core device (Android emulator, 24/11). The person is checking pockets meanwhile.
     const choose = pg.pockets.filter((p) => p.status === "choose").length;
     if (!choose) { LAST_TIMING.ocr = 0; console.info("[inkwell] escanear página", JSON.stringify(LAST_TIMING)); return; }
     setReading(pg, true);
@@ -2170,13 +2171,14 @@ self.onmessage = async (e) => {
   function closePage(msg) {
     scan.pg = null; scan.review = false; $("pageReview")?.remove(); drawLast(); scanSay(msg || pageHint());
   }
-  const pocketCrop = (pg, i, w = 120) => {   // the pocket as photographed (straightened), for comparing
+  const pocketCrop = (pg, i, w = 120) => {   // the pocket as photographed (straightened), for comparing; made once per size
     if (!pg.page) return "";
+    const key = `${i}:${w}`; pg.crops ||= new Map(); if (pg.crops.has(key)) return pg.crops.get(key);
     const L = PS().LAYOUTS[scan.layout], cw = pg.page.width / L.cols, ch = pg.page.height / L.rows, c = document.createElement("canvas");
     c.width = w; c.height = Math.round(w * ch / cw);
     if (!pg.pageCanvas) { pg.pageCanvas = document.createElement("canvas"); pg.pageCanvas.width = pg.page.width; pg.pageCanvas.height = pg.page.height; pg.pageCanvas.getContext("2d").putImageData(new ImageData(pg.page.data, pg.page.width, pg.page.height), 0, 0); }
     c.getContext("2d").drawImage(pg.pageCanvas, (i % L.cols) * cw, Math.floor(i / L.cols) * ch, cw, ch, 0, 0, c.width, c.height);
-    return c.toDataURL("image/jpeg", 0.8);
+    const url = c.toDataURL("image/jpeg", 0.8); pg.crops.set(key, url); return url;
   };
   // ---- Check screen ("Confira a página"). The photo is the way in: tap any pocket (on the photo or in the grid) and
   // its editor opens. Pending pockets are walked one after another ("Resolver N posições" opens the first); each decision
