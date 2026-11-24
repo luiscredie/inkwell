@@ -106,7 +106,9 @@ export function createDefensiveController(engine, setup, {
                 } else if (search.budgetExhausted || search.baseline.status === "lethal") {
                     verdict = "inconclusive";
                 }
-                return { verdict, cutoff: search.cutoff, nodes: search.nodes, plan };
+                return { verdict, cutoff: search.cutoff, nodes: search.nodes, plan,
+                    ...(selected?.nextTurn ? { afterPublicPass: selected.nextTurn } : {}),
+                    ...(selected?.continuationCutoff ? { continuationCutoff: selected.continuationCutoff } : {}) };
             });
             if (!plan.length) return original;
             const answer = bind(request, plan[0]);

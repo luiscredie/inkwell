@@ -7,7 +7,7 @@ import { createDefensiveController } from "./strategic_v4_sparring_policy.mjs";
 
 const enginePath = process.env.INKWELL_SPAR_ENGINE;
 const engine = enginePath && await import(pathToFileURL(resolve(enginePath)));
-export async function trial(position, seed, candidate, limits = {}, script = [], onDecision) {
+export async function trial(position, seed, candidate, limits = {}, script = [], onDecision, turns = 2) {
     const setup = { player: 2, deck: [], settings: { seed, search: { nodes: 0, samples: 1 } } };
     const searches = [], decisions = [], verdicts = [];
     const remaining = [...script];
@@ -16,7 +16,7 @@ export async function trial(position, seed, candidate, limits = {}, script = [],
         memoize(_view, _request, compute) { const decision = compute(); verdicts.push(decision.verdict); return decision; },
         onSearch(result, ms, request) {
             searches.push({ nodes: result.nodes, ms, cutoff: result.cutoff, pass: result.baseline.status,
-                chosen: result.selected?.status ?? null, offered: request.actions,
+                chosen: result.selected?.status ?? null, afterPublicPass: result.selected?.nextTurn ?? null, offered: request.actions,
                 examined: result.candidates.map(({ action, status, line, replyLine }) => ({ action, status, line, replyLine })) });
         },
     }) : engine.createBot(setup);
@@ -45,7 +45,7 @@ export async function trial(position, seed, candidate, limits = {}, script = [],
                 return answer;
             } } },
     ];
-    const game = await engine.playGameAsync(seats, { seed, from: structuredClone(position), turns: 2, audit: true, retry: false });
+    const game = await engine.playGameAsync(seats, { seed, from: structuredClone(position), turns, audit: true, retry: false });
     assert.equal(remaining.length, 0);
     return { winner: game.outcome?.winners[0] ?? null, lore: game.final.players[1].lore,
         ownLore: game.final.players[2].lore, hand: game.final.players[2].hand, ink: game.final.players[2].inkwell,

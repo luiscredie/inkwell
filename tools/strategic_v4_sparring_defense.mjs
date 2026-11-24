@@ -73,7 +73,7 @@ function decisionAnswers(live, line, defender) {
     }
 }
 
-export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActions = 2, maxMs = 1500, rootAllowed = () => true, allowInk = true } = {}) {
+export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActions = 2, maxMs = 1500, rootAllowed = () => true, allowInk = true, planDiscardContinuation = true } = {}) {
     if (!Number.isSafeInteger(maxNodes) || maxNodes < 1 || maxNodes > 4096) {
         throw new RangeError("maxNodes must be between 1 and 4096");
     }
@@ -299,9 +299,114 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
             if (candidates.at(-1).status === "defender_wins" || budgetExhausted) break;
         }
     }
-    const selected = candidates.find((entry) => entry.status === "defender_wins")
+    // Reopen only a proved defense. Change one payment and require the same
+    // post-turn state (modulo the two cards exchanged between hand and discard).
+    function refineDiscard(selected) {
+        if (selected?.status !== "no_lethal_found" || selected.ownLore < 15 || budgetExhausted) return selected;
+        const index = selected.line.findIndex((step) => step.answer?.payment?.[0]?.type === "Discard");
+        if (index < 0 || selected.actors.some((actor) => actor !== defender)) return selected;
+        const paid = selected.line[index].answer.payment[0].cards[0];
+        const stop = Symbol("continuation budget");
+        const ceiling = Math.min(nodes + 96, maxNodes);
+        function spend() {
+            if (nodes >= ceiling || performance.now() >= deadline) throw stop;
+            nodes++;
+        }
+        function submit(live, step) {
+            spend();
+            live.submit(step);
+        }
+        function start(state) {
+            spend();
+            return engine.startTurn(state, options);
+        }
+        // One deterministic quest sequence and one known play. Unhandled
+        // prompts, unknown draws and additional opponent options are inconclusive.
+        function witness(state) {
+            const reply = start(state);
+            const menu = reply.request;
+            if (menu?.type !== "Action" || menu.player !== attacker || menu.actions.length !== 1 ||
+                menu.actions[0].type !== "End Turn") return null;
+            submit(reply, { type: "Action", action: menu.actions[0] });
+            if (reply.outcome || reply.request || reply.result?.turn.player !== defender) return null;
+            const next = start(reply.result);
+            const steps = [];
+            for (let count = 0; count < 4 && next.request?.type === "Action"; count++) {
+                const quest = next.request.actions.find((a) => a.type === "Quest");
+                if (!quest) break;
+                const step = { type: "Action", action: quest };
+                submit(next, step);
+                steps.push(step);
+                if (next.outcome?.winners.includes(defender)) return steps;
+            }
+            if (next.request?.type !== "Action" || next.request.player !== defender) return null;
+            const plays = next.request.actions.filter((a) => a.type === "Play" &&
+                position.players[defender].hand.some((c) => c.i === a.card.i));
+            for (const action of plays.slice(0, 4)) {
+                const branch = next.branch();
+                const step = { type: "Action", action };
+                const line = [...steps, step];
+                submit(branch, step);
+                // Only forced payments and triggers are covered in this pilot.
+                for (let count = 0; count < 4 && branch.request?.player === defender &&
+                    ["Pay Cost", "Choose Trigger"].includes(branch.request.type); count++) {
+                    const answers = decisionAnswers(branch, line, defender);
+                    if (answers?.length !== 1) break;
+                    const decision = { type: "Decision", answer: answers[0] };
+                    submit(branch, decision);
+                    line.push(decision);
+                }
+                if (branch.outcome?.winners.includes(defender)) return line;
+            }
+            return null;
+        }
+        function endOfLine(line) {
+            spend();
+            const live = anchor();
+            for (const step of line) submit(live, step);
+            if (!live.outcome && !live.request && live.result?.turn.player === attacker) return live.result;
+        }
+        function equivalent(original, alternative, other) {
+            const canonical = structuredClone(alternative);
+            const seat = canonical.players[defender];
+            if (!seat.hand.some((c) => c.i === paid.i) || !seat.discard.some((c) => c.i === other.i)) return false;
+            seat.hand = seat.hand.map((c) => c.i === paid.i ? other : c);
+            seat.discard = seat.discard.map((c) => c.i === other.i ? paid : c);
+            // Hand ordering carries no strategic information. Discard order may.
+            const ordered = structuredClone(original);
+            for (const state of [ordered, canonical]) state.players[defender].hand.sort((a, b) => a.i - b.i);
+            return JSON.stringify(ordered) === JSON.stringify(canonical);
+        }
+        try {
+            const original = endOfLine(selected.line);
+            if (!original || witness(original)) return selected;
+            spend();
+            const atPayment = anchor();
+            for (const step of selected.line.slice(0, index)) submit(atPayment, step);
+            const answers = decisionAnswers(atPayment, selected.line.slice(0, index), defender) ?? [];
+            for (const answer of answers) {
+                const other = answer.payment?.[0]?.cards?.[0];
+                if (!other || other.i === paid.i) continue;
+                const line = selected.line.with(index, { type: "Decision", answer });
+                const state = endOfLine(line);
+                if (!state || !equivalent(original, state, other)) continue;
+                const nextTurn = witness(state);
+                if (nextTurn) return { ...selected, line, nextTurn };
+            }
+        } catch (err) {
+            // Auxiliary probes must never displace the original legal defense.
+            if (err !== stop && err?.name !== "InvalidInput") {
+                return { ...selected, continuationCutoff: "unsupported" };
+            }
+            if (err === stop) return { ...selected, continuationCutoff: "budget" };
+        }
+        return selected;
+    }
+
+    const best = candidates.find((entry) => entry.status === "defender_wins")
         ?? candidates.filter((entry) => entry.status === "no_lethal_found").sort(compareDefense)[0]
         ?? null;
+    const selected = planDiscardContinuation ? refineDiscard(best) : best;
     return { baseline, candidates, selected, nodes, maxNodes, maxActions, budgetExhausted, cutoff };
 }
 

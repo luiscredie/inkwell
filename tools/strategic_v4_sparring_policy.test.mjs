@@ -280,3 +280,67 @@ test("Good Aim choices stay identical when opposing hidden identities change", {
     assert.deepEqual(a.verdicts, b.verdicts);
     assert.deepEqual(a.executed[0], b.executed[0]);
 });
+
+test("discard choice converts a verified defense on the next own turn", { skip }, async () => {
+    const knowledge = "Gathering Knowledge and Wisdom";
+    const krei = "Alistair Krei - Ambitious Entrepreneur";
+    const item = "Weight Set";
+    const setups = [
+        { name: "knowledge", reserve: knowledge, flip: false },
+        { name: "knowledgeReverse", reserve: knowledge, flip: true },
+        { name: "krei", reserve: krei, ink: 3, own: 17, items: [[item]] },
+        { name: "kreiReverse", reserve: krei, ink: 3, own: 17, items: [[item]], flip: true },
+        { name: "notEnoughInk", reserve: knowledge, ink: 1, control: true },
+        { name: "noItem", reserve: krei, ink: 3, own: 17, control: true },
+        { name: "nonForcedReply", reserve: knowledge, items: [["Magic Golden Flower"]], control: true },
+        { name: "insufficientLore", reserve: knowledge, own: 15, control: true },
+        { name: "ownWinNow", reserve: knowledge, own: 19, control: true },
+        { name: "lethalRemains", reserve: knowledge, items: [[pegasus]], control: true },
+    ];
+    for (const { name, reserve, ink = 2, own = 16, items = [], flip, control } of setups) {
+        const position = fixture({ own, ink, allies: [[angel]], enemies: [[pegasus], ...items],
+            hand: flip ? [lady, reserve] : [reserve, lady] });
+        for (const seed of seeds) {
+            const before = await trial(position, seed, true, { planDiscardContinuation: false }, [], undefined, 3);
+            const after = await trial(position, seed, true, {}, [], undefined, 3);
+            assert.ok(after.searches.every((s) => s.nodes <= 768), name);
+            if (control) {
+                assert.equal(after.searches[0].afterPublicPass, null, name);
+                assert.deepEqual(after.executed, before.executed, name);
+            } else {
+                assert.equal(before.winner, null, name);
+                assert.equal(after.winner, 2, name);
+                assert.equal(after.ownLore, 20, name);
+                assert.equal(after.executed.length, 3, name);
+                assert.ok(after.searches[0].afterPublicPass.some((s) => s.action?.card?.fullName === reserve), name);
+                const paid = (run) => run.executed[0].flatMap((s) => s.answer?.payment ?? [])
+                    .find((p) => p.type === "Discard").cards[0].fullName;
+                assert.equal(paid(before), reserve, name);
+                assert.equal(paid(after), lady, name);
+                assert.ok(after.executed[2].some((s) => s.action?.type === "Play" &&
+                    s.action.card.fullName === reserve), name);
+                assert.equal(after.lore, 19, name);
+            }
+            if (process.env.INKWELL_RESERVE_TRACE === "1") {
+                const side = (r) => ({ winner: r.winner, ownLore: r.ownLore, lore: r.lore, ms: r.ms, executed: r.executed });
+                console.log(JSON.stringify({ reserveCase: name, seed, before: side(before), after: side(after),
+                    witness: after.searches[0].afterPublicPass }));
+            }
+        }
+    }
+});
+
+test("reserve planning honors the public view and preserves defense on a late cutoff", { skip }, async () => {
+    const spec = { own: 16, ink: 2, allies: [[angel]], enemies: [[pegasus]],
+        hand: ["Gathering Knowledge and Wisdom", lady] };
+    const a = await trial(fixture({ ...spec, hidden: [lady], top: malicious }), 309, true);
+    const b = await trial(fixture({ ...spec, hidden: [circle], top: lady }), 309, true);
+    assert.deepEqual(a.decisions, b.decisions);
+    assert.ok(a.searches[0].afterPublicPass);
+    assert.deepEqual(a.searches[0].afterPublicPass, b.searches[0].afterPublicPass);
+    const control = await trial(fixture(spec), 309, true, { planDiscardContinuation: false });
+    const limited = await trial(fixture(spec), 309, true, { maxNodes: control.searches[0].nodes + 1 });
+    assert.deepEqual(limited.executed, control.executed);
+    assert.equal(limited.verdicts[0], "public_defense");
+    assert.equal(limited.searches[0].afterPublicPass, null);
+});
