@@ -931,3 +931,29 @@ test("use a paid or free location move to win before the opposing quest", { skip
     assert.equal(loss.winner, 1);
     assert.ok(!loss.verdicts.includes("own_win"));
 });
+
+test("generate a synthetic variant and transfer the discovered prefix to a reserved board", { skip }, async () => {
+    const { explore } = await import("./strategic_v4_sparring_variants.mjs");
+    const { basename } = await import("node:path");
+    const folder = mkdtempSync(join(tmpdir(), "inkwell-variants-"));
+    try {
+        const p = fixture(cases.noDefense), seed = 17;
+        const baseline = await trial(p, seed, true);
+        const file = captureLoss(folder, "source", p, seed, baseline);
+        const reviews = [{checkpoint: basename(file), status:"inconclusive"}];
+        const output = join(folder, "variants");
+        const capped = await explore(folder, reviews, output, {maxVariants:0});
+        assert.equal(capped.tested, 0);
+        assert.equal(capped.cutoff, "budget");
+        const run = await explore(folder, reviews, output);
+        assert.equal(run.status, "validated_variant");
+        assert.notEqual(run.seed, run.heldSeed);
+        assert.equal(run.discovery.winner, 2);
+        assert.equal(run.reserved.winner, 2);
+        assert.ok(run.reserved.matched);
+        assert.deepEqual(run.discovery.executed[0], run.reserved.executed[0]);
+        assert.equal((await explore(folder, [], output)).status, "inconclusive");
+    } finally {
+        rmSync(folder, {recursive:true, force:true});
+    }
+});
