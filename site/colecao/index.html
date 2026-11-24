@@ -2224,7 +2224,15 @@ const SE = (${window.INKWELL_SCANENGINE_FACTORY.toString()})();
 self.postMessage({ type: "ready" });
 self.onmessage = async (e) => {
   const m = e.data;
-  if (m.type === "index") { SE.use(m.index); return; }
+  if (m.type === "index") {
+    SE.use(m.index);
+    // warm-up while the person frames the page: one pocket of grey noise runs every path once (the code gets compiled,
+    // the lightness table gets built). Android emulator 24/11: first page 9.7 s, second 5.0 s. Answers are unchanged.
+    try { const w = 300, h = 420, d = new Uint8ClampedArray(w * h * 4); let s = 7;
+      for (let i = 0; i < w * h; i++) { s = (s * 1103515245 + 12345) >>> 0; const g = 60 + (s >>> 25); d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = g; d[i * 4 + 3] = 255; }
+      const t = Date.now(); SE.identifyPocket({ width: w, height: h, data: d }, m.exp); self.postMessage({ type: "warm", ms: Date.now() - t }); } catch { /* the page still works, just slower the first time */ }
+    return;
+  }
   if (m.type !== "page") return;
   try {
     const r = await PS.scanPage({ image: m.image, quad: m.quad, layout: m.layout, identify: (img) => SE.identifyPocket(img, m.exp), card: m.card, only: m.only,
@@ -2245,7 +2253,10 @@ self.onmessage = async (e) => {
     try { PW = Array.from({ length: POOL_N() }, makeWorker); } catch { PW = false; }
     return PW;
   }
-  const sendIndex = (w) => { if (!w.indexSent) { w.postMessage({ type: "index", index: { ids: SCAN.ids, D: SCAN.D, dims: SCAN.dims, n: SCAN.n, norm: SCAN.norm } }); w.indexSent = true; } };
+  let WARM_MS = null;
+  const sendIndex = (w) => { if (w.indexSent) return;
+    w.addEventListener("message", (e) => { if (e.data?.type === "warm") WARM_MS = Math.max(WARM_MS || 0, e.data.ms); });
+    w.postMessage({ type: "index", index: { ids: SCAN.ids, D: SCAN.D, dims: SCAN.dims, n: SCAN.n, norm: SCAN.norm }, exp: scanExp() }); w.indexSent = true; };
   function workerJob(w, msg, onPocket) {
     const job = ++pwSeq;
     return new Promise((ok, no) => {
@@ -2610,7 +2621,7 @@ self.onmessage = async (e) => {
       });
       if (scan.pg !== pg) return;
       pg.page = res.page; pg.ms = res.ms;
-      pg.t.engine = res.ms.total; pg.t.warp = res.ms.warp; pg.t.recognise = res.ms.recognise; pg.t.worker = !!res.ms.worker; pg.t.workers = res.ms.workers || 0;
+      pg.t.warmup = WARM_MS; pg.t.engine = res.ms.total; pg.t.warp = res.ms.warp; pg.t.recognise = res.ms.recognise; pg.t.worker = !!res.ms.worker; pg.t.workers = res.ms.workers || 0;
       pg.t.handoff = Math.max(0, Math.round(performance.now() - te) - res.ms.total);
     } catch { if (scan.pg === pg) pg.error = true; }
     if (scan.pg !== pg) return;
