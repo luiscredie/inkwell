@@ -4,6 +4,12 @@ import { analyzeImmediateDefense, compareLiloOpening, reserveRemoval, matchesPla
 function actionOption(request, action) {
     if (request.type !== "Action") return undefined;
     const matches = request.actions.filter(({ action: offered }) => {
+        // The player's menu omits the engine's alternate movement-cost reference.
+        // A move with two matching public routes stays ambiguous.
+        if (action.type === "Move" && action.alternateCost) {
+            const { alternateCost, ...visible } = action;
+            return equal(offered, visible);
+        }
         if (action.type !== "Activate") return equal(offered, action);
         // The public menu describes printed abilities by source and index.
         // A granted ability has no stable printed index across projections.

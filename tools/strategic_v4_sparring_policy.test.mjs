@@ -905,3 +905,29 @@ test("the end-turn ink probe abstains with Ward or enough singers for Circle", {
         assert.ok(checked);
     }
 });
+
+test("use a paid or free location move to win before the opposing quest", { skip }, async () => {
+    const ring = "Ring of Stones - Place of Legends";
+    for (const [character, ink, seed] of [[elinor, 3, 17], [lady, 0, 101]]) {
+        const position = fixture({ own: 17, allies: [[character], [ring]], enemies: [[pegasus, true]], ink });
+        const run = await trial(position, seed, true);
+        assert.equal(run.winner, 2);
+        assert.equal(run.ownLore, 20);
+        assert.deepEqual(actions(run).map(a => a.type), ink ? ["Move", "Quest"] : ["Quest", "Move"]);
+        const move = actions(run).find(a => a.type === "Move");
+        assert.equal(move.location.fullName, ring);
+        assert.equal(move.card.fullName, character);
+        const paid = run.executed[0].flatMap(s => s.answer?.payment ?? []);
+        assert.deepEqual(paid.map(part => [part.type, part.cards.length]), ink ? [["Ink", 3]] : []);
+        assert.ok(run.searches.every(s => s.nodes <= 768 && !s.cutoff));
+
+        const unseen = structuredClone(position);
+        unseen.players[1].deck[0].fullName = chernabog;
+        const hidden = await trial(unseen, seed, true);
+        assert.deepEqual(hidden.executed[0], run.executed[0]);
+    }
+    const short = fixture({ own: 16, allies: [[lady], [ring]], enemies: [[pegasus, true]] });
+    const loss = await trial(short, 101, true);
+    assert.equal(loss.winner, 1);
+    assert.ok(!loss.verdicts.includes("own_win"));
+});

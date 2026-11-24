@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 
 const hiddenName = "Sparring Hidden Card";
 const hiddenCard = { type: "Item", fullName: hiddenName, names: [hiddenName], colors: [], cost: 99, inkwell: false, subtypes: [] };
-const defenderActions = new Set(["Challenge", "Quest", "Play", "Sing", "Ink"]);
+const defenderActions = new Set(["Challenge", "Quest", "Play", "Sing", "Ink", "Move"]);
 
 // Unsupported cost and target shapes leave the branch inconclusive.
 function decisionAnswers(live, line, defender, mixedActivation = false) {
@@ -309,7 +309,9 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
     }
     if (baseline.status === "lethal") {
         const actions = root.live.request.actions.filter(rootAllowed);
-        const byUrgency = (action) => action.type === "Quest" ? 0 : 1;
+        // Pure quest wins were tested above. Moving first can preserve a
+        // uniquely bindable payment before a quest grants another move route.
+        const byUrgency = (action) => action.type === "Move" ? -1 : action.type === "Quest" ? 0 : 1;
         for (const action of actions.sort((a, b) => byUrgency(a) - byUrgency(b))) {
             if (!supportedDefense(action)) continue;
             const child = descend(root, { type: "Action", action });
