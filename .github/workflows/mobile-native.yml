@@ -12,8 +12,15 @@ concurrency:
   cancel-in-progress: true
 jobs:
   android:
+    name: android (${{ matrix.target }})
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [dev, release]
+    env:
+      INKWELL_TARGET: ${{ matrix.target }}
     defaults:
       run:
         working-directory: mobile
@@ -28,13 +35,16 @@ jobs:
           distribution: temurin
           java-version: '21'
       - run: npm ci
+      - name: Release web bundle (release target only)
+        if: matrix.target == 'release'
+        run: node build-release.mjs
       - run: npx cap sync android
       - name: Build debug APK
         working-directory: mobile/android
         run: ./gradlew --no-daemon assembleDebug && ls -la app/build/outputs/apk/debug/
       - uses: actions/upload-artifact@v4
         with:
-          name: inkwell-debug-apk
+          name: inkwell-debug-apk-${{ matrix.target }}
           path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
       - name: Enable KVM for the emulator
         run: |
@@ -52,12 +62,19 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: android-evidence
+          name: android-evidence-${{ matrix.target }}
           path: mobile/evidence/
 
   ios:
+    name: ios (${{ matrix.target }})
     runs-on: macos-15
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [dev, release]
+    env:
+      INKWELL_TARGET: ${{ matrix.target }}
     defaults:
       run:
         working-directory: mobile
@@ -68,6 +85,9 @@ jobs:
           node-version: '24'
           package-manager-cache: false
       - run: npm ci
+      - name: Release web bundle (release target only)
+        if: matrix.target == 'release'
+        run: node build-release.mjs
       - run: npx cap sync ios
       - name: Build for the iOS simulator (no signing)
         run: |
@@ -80,5 +100,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ios-evidence
+          name: ios-evidence-${{ matrix.target }}
           path: mobile/evidence/

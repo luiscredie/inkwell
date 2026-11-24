@@ -20,6 +20,8 @@ jobs:
           node-version: '24'
           package-manager-cache: false
       - run: npm ci
+      - name: Release web bundle
+        run: node build-release.mjs
       - name: Static checks of the Android and iOS projects
         run: npm run check
       - name: Capacitor sync (web folder and native projects stay consistent)

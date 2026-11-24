@@ -8,15 +8,26 @@ const ok = (c, m) => { n++; if (!c) { bad++; console.error('FAIL', m); } };
 const read = (p) => fs.readFileSync(new URL(p, import.meta.url), 'utf8');
 const exists = (p) => fs.existsSync(new URL(p, import.meta.url));
 
-// capacitor.config.json
-const cfg = JSON.parse(read('./capacitor.config.json'));
-ok(cfg.appId === 'br.com.inkwell.app', 'appId');
+// capacitor.config.ts, as the Capacitor CLI resolves it, for both targets
+import { execSync } from 'node:child_process';
+const conf = (target) => JSON.parse(execSync('npx cap config --json', { cwd: new URL('.', import.meta.url), env: { ...process.env, INKWELL_TARGET: target }, stdio: ['ignore', 'pipe', 'ignore'] }).toString()).app.extConfig;
+const cfg = conf('dev'), rel = conf('release');
+ok(cfg.appId === 'br.com.inkwell.app' && rel.appId === cfg.appId, 'appId (both targets)');
 ok(cfg.appName === 'Inkwell', 'appName');
-ok(/^https:\/\/inkwell\.com\.br\//.test(cfg.server?.url || ''), 'server.url is the published site over https');
-ok(!cfg.server?.cleartext, 'no cleartext traffic');
-ok(exists(`./${cfg.webDir}/${cfg.server.errorPath}`), 'offline page exists');
-ok(exists(`./${cfg.webDir}/index.html`), 'web folder has index.html');
-ok((cfg.server.allowNavigation || []).every((h) => /inkwell\.com\.br$|supabase\.co$/.test(h)), 'only Inkwell and Supabase open inside the app (other links go to the browser)');
+ok(/^https:\/\/inkwell\.com\.br\//.test(cfg.server?.url || ''), 'dev: opens the published site over https');
+ok(!cfg.server?.cleartext && !rel.server?.cleartext, 'no cleartext traffic');
+ok(exists(`./${cfg.webDir}/${cfg.server.errorPath}`), 'dev: offline page exists');
+ok(exists(`./${cfg.webDir}/index.html`), 'dev: web folder has index.html');
+ok((cfg.server.allowNavigation || []).every((h) => /inkwell\.com\.br$|supabase\.co$/.test(h)), 'dev: only Inkwell and Supabase open inside the app (other links go to the browser)');
+ok(!rel.server?.url && rel.webDir === 'build/release', 'release: the app opens its own bundled copy, not the remote site');
+if (exists('./build/release/app-build.json')) {   // node build-release.mjs has run
+  const meta = JSON.parse(read('./build/release/app-build.json'));
+  ok(!exists('./build/release/lorcana-card-images'), 'release: card images are not bundled');
+  ok(meta.bytes < 50 * 1048576, `release: bundle under 50 MB (${(meta.bytes / 1048576).toFixed(1)} MB)`);
+  const html = fs.readdirSync(new URL('./build/release/', import.meta.url), { recursive: true }).filter((f) => f.endsWith('.html')).map((f) => read(`./build/release/${f}`)).join('\n');
+  ok(!html.includes('../lorcana-card-images/'), 'release: card images point to inkwell.com.br');
+  ok(exists('./build/release/data/cards.json') && exists('./build/release/data/scan-index.bin') && !exists('./build/release/data/prices.json'), 'release: catalog bundled, prices from the network');
+}
 
 // versions: core, cli and the platforms move together
 const pkg = JSON.parse(read('./package.json')), v = (k) => (pkg.dependencies[k] || pkg.devDependencies[k] || '').replace(/^\^/, '');
@@ -37,7 +48,7 @@ for (const d of ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi']) ok(exists(`./and
 const plist = read('./ios/App/App/Info.plist');
 ok(/NSCameraUsageDescription<\/key>\s*<string>[^<]{20,}/.test(plist), 'iOS: camera usage text');
 ok(/WKAppBoundDomains<\/key>\s*<array>\s*<string>inkwell\.com\.br<\/string>/.test(plist), 'iOS: inkwell.com.br is an app-bound domain');
-ok(cfg.ios?.limitsNavigationsToAppBoundDomains === true, 'iOS: navigation limited to app-bound domains');
+ok(cfg.ios?.limitsNavigationsToAppBoundDomains === true && rel.ios?.limitsNavigationsToAppBoundDomains === true, 'iOS: navigation limited to app-bound domains');
 const pbx = read('./ios/App/App.xcodeproj/project.pbxproj');
 ok(pbx.includes('PRODUCT_BUNDLE_IDENTIFIER = br.com.inkwell.app;'), 'iOS: bundle id');
 ok(exists('./ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png'), 'iOS: app icon');

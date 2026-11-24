@@ -20,15 +20,17 @@ if wait_for "Seu lugar|Testar um deck|Cole..o|Entrar" 90 > evidence/android-onli
 sleep 3; adb exec-out screencap -p > evidence/android-online.png
 adb logcat -d | grep -iE "Capacitor|Loading app" | head -40 > evidence/android-logcat.txt
 
-# no connection: the app must show its own "Sem conexão" page, not a blank screen
+# no connection. dev (remote site): the app must show its own "Sem conexão" page, not a blank screen.
+# release (bundled pages): the app must still open its pages.
+OFFLINE_EXPECT="Sem conex"; [ "${INKWELL_TARGET:-dev}" = release ] && OFFLINE_EXPECT="Seu lugar|Testar um deck|Entrar"
 adb shell svc wifi disable; adb shell svc data disable; sleep 3
 adb shell am force-stop $APP; adb shell am start -W -n $APP/.MainActivity >/dev/null
 OFFLINE_OK=0
-if wait_for "Sem conex" 60 > evidence/android-offline-ui.txt; then OFFLINE_OK=1; fi
+if wait_for "$OFFLINE_EXPECT" 60 > evidence/android-offline-ui.txt; then OFFLINE_OK=1; fi
 adb exec-out screencap -p > evidence/android-offline.png
 adb shell svc wifi enable; adb shell svc data enable
 
-echo "online_page=$ONLINE_OK offline_page=$OFFLINE_OK" | tee evidence/android-result.txt
+echo "target=${INKWELL_TARGET:-dev} online_page=$ONLINE_OK offline_page=$OFFLINE_OK" | tee evidence/android-result.txt
 python3 -m pip install --quiet pillow >/dev/null 2>&1 || true
 python3 - <<'PY' || true
 import base64, io
