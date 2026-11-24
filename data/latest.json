@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-24T04:28:27+00:00",
+  "updated_at": "2026-11-24T23:28:48+00:00",
   "source": "inkwell-ai-lab-local-sanitized",
   "status": "reported",
   "summary": {
@@ -15,9 +15,9 @@
     "invalid_rows": 0
   },
   "data_quality": {
-    "history_games": 1164,
-    "logs_archived": 1161,
-    "observer_eligible": 1119
+    "history_games": 1178,
+    "logs_archived": 1175,
+    "observer_eligible": 1133
   },
   "daily": [
     {
