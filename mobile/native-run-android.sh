@@ -20,9 +20,11 @@ if wait_for "Seu lugar|Testar um deck|Cole..o|Entrar" 90 > evidence/android-onli
 sleep 3; adb exec-out screencap -p > evidence/android-online.png
 adb logcat -d | grep -iE "Capacitor|Loading app" | head -40 > evidence/android-logcat.txt
 
-# no connection. dev (remote site): the app must show its own "Sem conexão" page, not a blank screen.
-# release (bundled pages): the app must still open its pages.
-OFFLINE_EXPECT="Sem conex"; [ "${INKWELL_TARGET:-dev}" = release ] && OFFLINE_EXPECT="Seu lugar|Testar um deck|Entrar"
+# no connection: never a blank screen.
+# dev (remote site): its own "Sem conexão" page, or the page the WebView kept in its cache from the online run
+#   (both seen on the emulator, 24/11).
+# release (bundled pages): the app must still open its own pages.
+OFFLINE_EXPECT="Sem conex|Seu lugar|Testar um deck"; [ "${INKWELL_TARGET:-dev}" = release ] && OFFLINE_EXPECT="Seu lugar|Testar um deck|Entrar"
 adb shell svc wifi disable; adb shell svc data disable; sleep 3
 adb shell am force-stop $APP; adb shell am start -W -n $APP/.MainActivity >/dev/null
 OFFLINE_OK=0

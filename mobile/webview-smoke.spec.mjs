@@ -4,6 +4,8 @@
 import { test, expect } from '@playwright/test';
 
 const ROOT = process.env.INKWELL_URL || 'http://localhost:8080/';
+// INKWELL_BUNDLE=1: testing the release bundle behind capserve.mjs (Capacitor-like server, no folder index)
+const page_ = (p) => (process.env.INKWELL_BUNDLE ? p + 'index.html' : p);
 const ME = '11111111-1111-4111-8111-111111111111';
 async function signedIn(page) {
   await page.addInitScript((me) => {
@@ -32,7 +34,7 @@ for (const [name, path, auth] of SCREENS) {
   test(`${name}: loads, fits the phone, tab bar in reach`, async ({ page }) => {
     const errors = []; page.on('pageerror', (e) => errors.push(String(e)));
     if (auth) await signedIn(page); else await page.addInitScript(() => localStorage.setItem('inkwell-lang', 'pt'));
-    await page.goto(new URL(path, ROOT).href);
+    await page.goto(new URL(page_(path), ROOT).href);
     await page.waitForLoadState('networkidle').catch(() => {});
     await fits(page);
     const vp = page.viewportSize();
@@ -49,9 +51,16 @@ for (const [name, path, auth] of SCREENS) {
 
 test('navigation between Coleção and Decks by the tab bar (signed in)', async ({ page }) => {
   await signedIn(page);
-  await page.goto(new URL('colecao/', ROOT).href);
+  await page.goto(new URL(page_('colecao/'), ROOT).href);
   const nav = page.locator('nav').filter({ has: page.locator('a[href*="decks"]') }).last();
   await nav.locator('a[href*="decks"]').first().click();
   await expect(page).toHaveURL(/\/decks\//);
   await fits(page);
+});
+
+test('release bundle: the start page reaches the feed (no folder index in the app)', async ({ page }) => {
+  test.skip(!process.env.INKWELL_BUNDLE, 'release bundle only');
+  await page.goto(new URL('/', ROOT).href);
+  await expect(page).toHaveURL(/\/feed\/index\.html$/);
+  await expect(page.getByText('Seu lugar no mundo de Lorcana.').first()).toBeVisible();
 });

@@ -40,6 +40,15 @@ function walk(dir, rel = '') {
 walk(SITE);
 for (const f of DATA_IN) copy(path.join(SITE, 'data', f), path.join(OUT, 'data', f));
 
+// The app's local server (Capacitor, Android and iOS) has no directory index: "../colecao/" would get the root
+// index.html (single-page-app fallback), which redirects back: the app sticks on "Abrir o Inkwell" (seen on the
+// Android emulator, 24/11). In the copies, every link to a page folder points at its index.html.
+const PAGES = fs.readdirSync(OUT, { withFileTypes: true }).filter((e) => e.isDirectory() && fs.existsSync(path.join(OUT, e.name, 'index.html'))).map((e) => e.name);
+const Q = '"\'`';   // a link starts after a quote, "(" or "=", and the folder ends before a quote, "?", "#" or ")"
+const DIR_LINK = new RegExp('([' + Q + '(=])((?:\\.\\.?)?/)(' + PAGES.join('|') + ')/(?=[' + Q + '?#)])', 'g');
+let dirLinks = 0;
+const fixDirs = (h) => h.replace(DIR_LINK, (_, a, b, c) => { dirLinks++; return `${a}${b}${c}/index.html`; });
+
 // rewrite the copied pages
 const unknown = new Set();
 let pages = 0;
@@ -49,6 +58,8 @@ for (const f of fs.readdirSync(OUT, { recursive: true })) {
   let h = fs.readFileSync(p, 'utf8');
   const before = h;
   h = h.replaceAll('../lorcana-card-images/', `${REMOTE}lorcana-card-images/`);
+  h = fixDirs(h);
+  if (f === 'index.html') h = h.replace("+ '/' + location.search", "+ '/index.html' + location.search");   // the start page's redirect
   for (const d of DATA_REMOTE) h = h.replaceAll(`../data/${d}`, `${REMOTE}data/${d}`);
   // the prices come from inkwell.com.br now: allow that origin to be fetched
   h = h.replace(/(connect-src [^;"]*)/, (m) => (m.includes(REMOTE.slice(0, -1)) ? m : `${m} ${REMOTE.slice(0, -1)}`));
@@ -59,6 +70,6 @@ if (unknown.size) { console.error('Data file neither bundled nor remote:\n  ' + 
 
 let commit = 'unknown';
 try { commit = execSync('git rev-parse --short HEAD', { cwd: SITE }).toString().trim(); } catch {}
-const meta = { built_at: new Date().toISOString(), site_commit: commit, files, bytes, rewritten_pages: pages, remote: REMOTE, data_bundled: DATA_IN, data_remote: DATA_REMOTE, skipped: [...SKIP_DIRS] };
+const meta = { built_at: new Date().toISOString(), site_commit: commit, files, bytes, rewritten_pages: pages, page_links_to_index_html: dirLinks, remote: REMOTE, data_bundled: DATA_IN, data_remote: DATA_REMOTE, skipped: [...SKIP_DIRS] };
 fs.writeFileSync(path.join(OUT, 'app-build.json'), JSON.stringify(meta, null, 1));
-console.log(`release bundle: ${files} files, ${(bytes / 1048576).toFixed(1)} MB, ${pages} pages rewritten, site ${commit} -> ${path.relative(process.cwd(), OUT)}`);
+console.log(`release bundle: ${files} files, ${(bytes / 1048576).toFixed(1)} MB, ${pages} pages rewritten, ${dirLinks} page links -> index.html, site ${commit} -> ${path.relative(process.cwd(), OUT)}`);
