@@ -1,7 +1,7 @@
 import { isDeepStrictEqual as equal } from "node:util";
 import { analyzeImmediateDefense, compareLiloOpening, reserveRemoval, matchesPlanPosition, ownPlan } from "./strategic_v4_sparring_defense.mjs";
 
-function actionOption(request, action) {
+function actionOption(request, action, grant) {
     if (request.type !== "Action") return undefined;
     const matches = request.actions.filter(({ action: offered }) => {
         // The player's menu omits the engine's alternate movement-cost reference.
@@ -9,6 +9,15 @@ function actionOption(request, action) {
         if (action.type === "Move" && action.alternateCost) {
             const { alternateCost, ...visible } = action;
             return equal(offered, visible);
+        }
+        if (action.type === "Boost") {
+            const {definition, ...visible} = offered;
+            return Number.isInteger(action.ability) && equal(visible, action);
+        }
+        if (grant && action.type === "Activate") {
+            return offered.type === "Activate" && offered.ability === undefined &&
+                offered.player === action.player && equal(offered.card, action.card) &&
+                Boolean(offered.free) === Boolean(action.free) && equal(offered.definition, grant);
         }
         if (action.type !== "Activate") return equal(offered, action);
         // The public menu describes printed abilities by source and index.
@@ -22,9 +31,9 @@ function actionOption(request, action) {
 
 // Bind a simulated choice to THIS engine prompt. Hidden handles and option
 // numbers are request-local. Never submit the IDs of simulated ink.
-function bind(request, { step, trigger }) {
+function bind(request, { step, trigger, grant }) {
     if (step.type === "Action") {
-        const entry = actionOption(request, step.action);
+        const entry = actionOption(request, step.action, grant);
         return entry && { type: "Action", option: entry.option };
     }
     const answer = step.answer;

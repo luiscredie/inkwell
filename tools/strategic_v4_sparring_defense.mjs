@@ -301,7 +301,38 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
         const child = action && descend(node, { type: "Action", action });
         return child ? questWin(child, depth - 1) : incomplete(node);
     }
-    const win = questWin(root, 12);
+    let win = questWin(root, 12);
+    // Only promote Boost if the public projection actually reaches an own win
+    // this turn. Keep the ordinary defensive search's budget for other lines.
+    const boostCeiling = Math.min(maxNodes - 1, nodes + 32);
+    function finishBoost(node, remaining) {
+        if (node.live.outcome?.reason === "Lore" && node.live.outcome.winners.includes(defender)) return terminal(node);
+        const menu = node.live.request;
+        if (!menu || menu.player !== defender || nodes >= boostCeiling || budgetExhausted) return;
+        if (menu.type === "Pay Cost") {
+            const payments = decisionAnswers(node.live, node.line, defender);
+            const pay = payments?.find(answer => answer.pay);
+            const child = pay && descend(node, {type:"Decision", answer:pay});
+            return child && finishBoost(child, remaining);
+        }
+        if (menu.type !== "Action" || !remaining) return;
+        for (const action of menu.actions) {
+            if (nodes >= boostCeiling || budgetExhausted) break;
+            if (action.type !== "Quest" && !grantedLore(node.live, action)) continue;
+            const child = descend(node, {type:"Action", action});
+            const result = child && finishBoost(child, remaining - 1);
+            if (result) return result;
+        }
+    }
+    if (win.status !== "defender_wins" && position.players[defender].lore >= 18) {
+        for (const action of root.live.request.actions) {
+            if (nodes >= boostCeiling || budgetExhausted) break;
+            if (action.type !== "Boost" || !Number.isInteger(action.ability) || !rootAllowed(action)) continue;
+            const child = descend(root, {type:"Action", action});
+            const result = child && finishBoost(child, maxActions - 1);
+            if (result) { win = result; break; }
+        }
+    }
     const baseline = pass(root);
     if (win.status === "defender_wins") {
         const selected = { action: win.line[0].action, ...win };
@@ -840,6 +871,18 @@ function projectionKey(view, player) {
     return createHash("sha256").update(JSON.stringify(state, stable)).digest("hex");
 }
 
+// Registry slots are local to a resolution. Match the grant by source
+// and carry its public definition into the real player's action menu.
+function grantedLore(live, action) {
+    if (action.type !== "Activate" || !Number.isInteger(action.rule)) return;
+    const rule = live.rules.registeredRules().find(entry =>
+        entry.slot === action.rule && entry.source.card.i === action.card.i);
+    const granted = live.rules.grants(action.card).filter(g => g.ability.type === "Activated");
+    const ability = rule?.ability ?? (granted.length === 1 ? granted[0].ability : undefined);
+    if (ability?.type === "Activated" && ability.effect.type === "Gain Lore" &&
+        ability.effect.player === "You") return ability;
+}
+
 export function ownPlan(engine, view, selected) {
     const player = view.turn.player;
     const live = engine.continueTurn(publicPosition(view, player), {
@@ -851,6 +894,8 @@ export function ownPlan(engine, view, selected) {
         const trigger = step.answer?.type === "Choose Trigger"
             ? live.request.options.find((o) => JSON.stringify(o.reference) === JSON.stringify(step.answer.trigger)) : null;
         const entry = { step, position: projectionKey(live.position, player) };
+        if (step.type === "Action" && step.action.type === "Activate" && step.action.rule !== undefined)
+            entry.grant = grantedLore(live, step.action);
         if (trigger) entry.trigger = { player: trigger.player, source: trigger.source, effect: trigger.effect };
         plan.push(entry);
         live.submit(step);

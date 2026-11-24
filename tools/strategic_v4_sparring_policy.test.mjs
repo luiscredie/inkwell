@@ -957,3 +957,36 @@ test("generate a synthetic variant and transfer the discovered prefix to a reser
         rmSync(folder, {recursive:true, force:true});
     }
 });
+
+test("finish with Boost and the granted lore ability using the actual player menu", { skip }, async () => {
+    const aladdin = "Aladdin - Barreling Through";
+    for (const [seed, exerted] of [[17, true], [1026, false]]) {
+        const spec = {own: 19, allies: [[aladdin]], enemies: [[pegasus, exerted]], ink: 1, hidden: [lady]};
+        const run = await trial(fixture(spec), seed, true);
+        assert.equal(run.winner, 2);
+        assert.equal(run.ownLore, 20);
+        assert.deepEqual(actions(run).map(a => a.type), ["Boost", "Activate"]);
+        assert.deepEqual(run.executed[0].flatMap(s => s.answer?.payment ?? []).map(p => p.type), ["Ink", "Exert"]);
+        assert.deepEqual(run.verdicts, ["own_win"]);
+        const hidden = await trial(fixture({...spec, hidden: [circle], top: phillip}), seed, true);
+        assert.deepEqual(hidden.executed[0], run.executed[0]);
+        const capped = await trial(fixture(spec), seed, true, { maxNodes: 1 });
+        assert.ok(!capped.verdicts.includes("own_win"));
+    }
+});
+
+test("keep ink for Merida's Bow or take the already-winning quest", { skip }, async () => {
+    const aladdin = "Aladdin - Barreling Through";
+    const spec = {own: 18, allies: [[aladdin], [bow]], enemies: [[pegasus]], ink: 1};
+    const defense = await trial(fixture(spec), 71, true);
+    assert.equal(defense.winner, null);
+    assert.equal(defense.lore, 19);
+    assert.equal(actions(defense)[0].ability.card.fullName, bow);
+    assert.ok(!actions(defense).some(a => a.type === "Boost"));
+    const free = await trial(fixture({...spec, own: 19, allies: [[aladdin], [lady]]}), 302, true);
+    assert.equal(free.winner, 2);
+    assert.deepEqual(actions(free).map(a => a.type), ["Quest"]);
+    const unpaid = await trial(fixture({...spec, own: 19, ink: 0, allies: [[aladdin]]}), 11, true);
+    assert.equal(unpaid.winner, 1);
+    assert.ok(!actions(unpaid).some(a => a.type === "Boost"));
+});
