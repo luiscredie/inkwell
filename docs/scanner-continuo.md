@@ -34,6 +34,7 @@ O OCR da linha de colecionador decide entre impressões com a mesma arte. Neste 
 | Carta 1,6 s no quadro, OCR simulado | 18/20 | 0 | 0 | 2 | 0 | 1,40 s (1,54 s) |
 | Carta 2,2 s no quadro, **sem OCR** | 15/20 | 0 | 0 | 5 | 1 | 1,41 s (1,75 s) |
 
+- **No CI** (máquina compartilhada, 24/11): 19/20 na mesma sessão de 2,2 s. A segunda de duas cópias seguidas não foi lida, nenhuma errada, nenhuma duplicada. Por isso o teste exige só as garantias (0 erradas, 0 duplicadas, ≥ 18/20) e registra o ritmo como medição.
 - **Ritmo:** cada carta leva ~1,4 s para entrar (3 leituras estáveis a cada 350 ms, mais o processamento). Com 2,2 s por carta mais 0,6 s de troca, 20 cartas levam 56 s. Com 1,6 s, a segunda de duas cópias seguidas às vezes não é lida, porque o scanner primeiro espera a anterior sair do quadro.
 - **Foil:** as 4 foram identificadas, mas **0 de 4 foram marcadas como foil**. O scanner não distingue foil de normal: a pessoa alterna "Normal/Foil" no topo ou corrige na revisão.
 - **Avisos de preço:** testados com um arquivo de preços antigo e uma carta sem preço. A tela mostra "1 sem preço" e "desatualizados" em cor de alerta.
