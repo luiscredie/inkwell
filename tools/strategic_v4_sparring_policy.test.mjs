@@ -190,3 +190,52 @@ for (const [reason, limits] of [["nodes", { maxNodes: 1 }], ["time", { maxMs: 0.
         console.log(reason, JSON.stringify([compact(before), compact(after)]));
     });
 }
+
+// Vary public lethal, number of targets and available activation independently.
+test("defensive activations across generated Pegasus endgames", { skip }, async () => {
+    for (const source of ["Robin Hood - Capable Fighter", "Steel Chromicon", "Ratigan's Marvelous Trap"]) {
+        const trap = source === "Ratigan's Marvelous Trap";
+        for (const lore of [18, 19]) for (const copies of [1, 2]) {
+            const enemies = Array.from({ length: copies }, () => [pegasus]);
+            const position = fixture({ lore, enemies, allies: [[source]] });
+            const threatened = lore + copies >= 20;
+            const canSave = trap || lore + copies - 1 < 20;
+            for (const seed of seeds) {
+                const before = await trial(position, seed, false);
+                const after = await trial(position, seed, true);
+                const label = JSON.stringify({ source, lore, copies, seed });
+                if (process.env.INKWELL_ACTIVATION_TRACE === "1") {
+                    console.log(JSON.stringify({ source, lore, copies, seed,
+                        before: compact(before), after: compact(after),
+                        executed: after.executed, verdicts: after.verdicts }));
+                }
+                const baselineLoss = threatened && (source !== "Steel Chromicon" || !canSave);
+                assert.equal(before.winner, baselineLoss ? 1 : null, label);
+                assert.equal(after.winner, threatened && !canSave ? 1 : null, label);
+                assert.ok(after.searches.every((s) => !s.cutoff && s.nodes <= 768), label);
+                if (!threatened) {
+                    assert.deepEqual(after.executed, before.executed, label);
+                    continue;
+                }
+                if (!canSave) {
+                    assert.equal(after.verdicts[0], "inconclusive", label);
+                    continue;
+                }
+                assert.equal(after.verdicts[0], "public_defense", label);
+                const steps = after.executed[0];
+                const activation = actions(after)[0];
+                assert.equal(activation.type, "Activate", label);
+                assert.equal(activation.ability.card.fullName, source, label);
+                const payment = steps.find((s) => s.answer?.type === "Pay Cost").answer.payment;
+                assert.deepEqual(payment, [{ type: trap ? "Banish" : "Exert", player: 2,
+                    cards: [activation.ability.card] }], label);
+                if (!trap) {
+                    const target = steps.find((s) => s.answer?.type === "Choose Cards").answer.cards;
+                    assert.equal(target.length, 1, label);
+                    assert.ok(position.players[1].play.some((p) => p.card.i === target[0].i), label);
+                }
+                assert.equal(after.lore, lore + copies - (trap ? 2 : 1), label);
+            }
+        }
+    }
+});

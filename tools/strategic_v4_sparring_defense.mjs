@@ -5,7 +5,7 @@ const hiddenName = "Sparring Hidden Card";
 const hiddenCard = { type: "Item", fullName: hiddenName, names: [hiddenName], colors: [], cost: 99, inkwell: false, subtypes: [] };
 const defenderActions = new Set(["Challenge", "Quest", "Play", "Sing", "Ink"]);
 
-// Decisions with multiple targets and non-ink costs remain unresolved.
+// Multiple targets and non-ink costs other than single-source payments remain unresolved.
 function decisionAnswers(live, line) {
     const request = live.request;
     const { type } = request;
@@ -31,15 +31,15 @@ function decisionAnswers(live, line) {
         case "Choose Trigger":
             return request.options.map(({ reference: trigger }) => ({ type, trigger }));
         case "Pay Cost": {
-            // An activated card can pay a unique self-banish cost. Submit the
-            // activating instance and let the engine validate that payment.
-            if (request.cost.length === 1 && request.cost[0].type === "Banish" && request.cost[0].cards?.cards?.length === 1) {
+            // Only the activating instance can pay this single, public card cost.
+            const [cost] = request.cost;
+            if (request.cost.length === 1 && ["Banish", "Exert"].includes(cost.type) && cost.cards?.cards?.length === 1) {
                 const step = line.at(-1);
                 const action = step?.action;
                 const card = action?.ability?.card ?? action?.card;
-                if (action?.type !== "Activate" || request.cost[0].cards.cards[0].i !== card?.i ||
+                if (action?.type !== "Activate" || cost.cards.cards[0].i !== card?.i ||
                     request.player !== action.player) return undefined;
-                const payment = [{ type: "Banish", player: request.player, cards: [card] }];
+                const payment = [{ type: cost.type, player: request.player, cards: [card] }];
                 return [...(request.optional ? [{ type, pay: false }] : []), { type, pay: true, payment }];
             }
             if (typeof request.player !== "number" ||
@@ -145,7 +145,9 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
     const offensiveRank = { lethal: 3, inconclusive: 2, no_lethal_found: 1, defender_wins: 0 };
     const expense = (entry) => {
         const actions = entry.line.filter((step) => step.type === "Action");
-        return [actions.filter(({ action }) => ["Play", "Sing", "Ink"].includes(action.type)).length, actions.length];
+        const spent = actions.filter(({ action }) => ["Play", "Sing", "Ink"].includes(action.type)).length;
+        const banished = entry.line.filter(({ answer }) => answer?.payment?.some((part) => part.type === "Banish" && part.player === defender)).length;
+        return [spent + banished, actions.length];
     };
     const compareDefense = (a, b) => {
         const [cardsA, actionsA] = expense(a);
@@ -220,6 +222,12 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
         return child ? endDefense(child) : incomplete(node);
     }
 
+    function supportedDefense(action) {
+        if (action.type === "Ink" && !allowInk) return false;
+        if (action.type === "Activate") return Number.isInteger(action.ability?.i);
+        return defenderActions.has(action.type);
+    }
+
     function defend(node, remaining) {
         const outcome = terminal(node);
         if (outcome) return outcome;
@@ -232,7 +240,7 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
         let best = pass(node);
         if (remaining === 0) return best;
         for (const action of request.actions) {
-            if (!defenderActions.has(action.type) || (action.type === "Ink" && !allowInk)) continue;
+            if (!supportedDefense(action)) continue;
             const child = descend(node, { type: "Action", action });
             if (!child) break;
             const result = defend(child, remaining - 1);
@@ -272,7 +280,7 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
         const actions = root.live.request.actions.filter(rootAllowed);
         const byUrgency = (action) => action.type === "Quest" ? 0 : 1;
         for (const action of actions.sort((a, b) => byUrgency(a) - byUrgency(b))) {
-            if (!defenderActions.has(action.type) || (action.type === "Ink" && !allowInk)) continue;
+            if (!supportedDefense(action)) continue;
             const child = descend(root, { type: "Action", action });
             if (!child) break;
             candidates.push({ action, ...defend(child, maxActions - 1) });

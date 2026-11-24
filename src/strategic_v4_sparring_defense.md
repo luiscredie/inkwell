@@ -79,3 +79,16 @@ Na reprodução privada do checkpoint do iPhone, as duas políticas receberam a 
 Começar pela decisão opcional de Lilo no turno anterior ao letal. A partir do mesmo checkpoint, executar a volta, a recusa com Chernabog e a recusa sem baixá-lo. Para cada ramo, registrar lore disponível agora, tinta restante, descarte necessário, mesa após a resposta e ações legais no próximo turno próprio. Testar também quest versus desenvolvimento e tinta versus preservação em posições onde essas decisões mudem a combinação disponível.
 
 Em uma segunda posição, comparar Circle para Don Karnage com guardar Circle para Malicious e Phillip no descarte. Registrar a impressão exata disponível no catálogo antes de executar. A versão pública fixada aqui não contém Don Karnage – Debonair Pirate. Repetir com e sem letal adversário e verificar se a política abandona a preparação a tempo. Aprovar a ampliação quando a nova política melhorar esses casos nos mesmos estados e preservar os resultados defensivos acima. A evidência atual sustenta um piloto de dois turnos. Treinamento e estimativa de taxa de vitória exigem validação posterior em posições independentes.
+
+## Variações automáticas de um final com Pegasus
+
+O teste gera doze posições sintéticas combinando 18 ou 19 de lore adversário, um ou dois Pegasus e três recursos próprios: Robin Hood – Capable Fighter, Steel Chromicon ou Ratigan's Marvelous Trap. Cada posição roda nas mesmas três seeds da bateria. O adversário do ensaio faz quests legais até vencer ou passar. Para imprimir as escolhas e linhas executadas, use `INKWELL_ACTIVATION_TRACE=1` no comando de testes do motor.
+
+A política examina ativações impressas oferecidas pelo motor. Confere jogador, instância, índice da habilidade e modalidade de custo antes da execução. Para pagar virando ou banindo a própria carta, exige a opção de pagamento correspondente no pedido real. A busca mantém os limites anteriores.
+
+| Resultado até o fim da resposta | Política do commit 142a454 | Candidata |
+|---|---:|---:|
+| Derrotas imediatas em 36 pares | 21 | 6 |
+| Pares que sobreviveram à resposta | 15 | 30 |
+
+Quinze perdas evitadas se distribuem por cinco posições distintas. A 19 contra um Pegasus, Robin Hood deixa de fazer quest e vira para causar 1 dano. Contra dois Pegasus a 19, banir apenas um ainda deixa vitória por quest. A armadilha pode se banir para reduzir o lore adversário em 2 e sobreviver aos dois quests. Nas posições sem ameaça, a candidata repetiu a sequência original. No Work, a primeira consulta explorou de 4 a 28 transições. O teste usa o motor com entrada sintética e não estima vitória na partida completa. A bateria instalada no WSL continua fixada à sua versão até atualização explícita.

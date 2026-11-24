@@ -3,7 +3,14 @@ import { analyzeImmediateDefense, matchesPlanPosition, ownPlan } from "./strateg
 
 function actionOption(request, action) {
     if (request.type !== "Action") return undefined;
-    const matches = request.actions.filter((entry) => equal(entry.action, action));
+    const matches = request.actions.filter(({ action: offered }) => {
+        if (action.type !== "Activate") return equal(offered, action);
+        // The public menu describes printed abilities by source and index.
+        // A granted ability has no stable printed index across projections.
+        return offered.type === "Activate" && Number.isInteger(action.ability?.i) &&
+            offered.player === action.player && offered.ability === action.ability.i &&
+            equal(offered.card, action.ability.card) && Boolean(offered.free) === Boolean(action.free);
+    });
     return matches.length === 1 ? matches[0] : undefined;
 }
 
@@ -19,6 +26,10 @@ function bind(request, { step, trigger }) {
     switch (answer.type) {
         case "Pay Cost": {
             if (!answer.pay) return request.optional ? step : undefined;
+            if (answer.payment.length === 1 && ["Exert", "Banish"].includes(answer.payment[0].type)) {
+                const payment = request.payments.find((offered) => equal(offered, answer.payment));
+                return payment && { type: "Decision", answer: { type: answer.type, pay: true, payment } };
+            }
             const shape = (payment) => payment.map((p) => [p.type, p.player, p.cards?.length, p.inkDrops ?? 0]);
             const payment = request.payments.find((p) => p.every((part) => part.type === "Ink") &&
                 equal(shape(p), shape(answer.payment)));
