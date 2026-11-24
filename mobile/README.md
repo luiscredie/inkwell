@@ -48,6 +48,17 @@ Primeira execução (24/11, alvo dev):
 - **Android:** `BUILD SUCCESSFUL`; APK de 5,2 MB (targetSdk 36, minSdk 24); o app abriu e mostrou "Seu lugar no mundo de Lorcana."; sem rede, mostrou "Sem conexão".
 - **iOS:** `BUILD SUCCEEDED` (Xcode 16.4); o app abriu no simulador iPhone 17 Pro com a página carregada.
 
+Execução de 24/11 com as correções (commit f377c0b), **as 4 combinações passaram**:
+
+| | Compilação | Online | Sem conexão |
+|---|---|---|---|
+| Android dev | APK 5,2 MB | página do Inkwell | tela "Sem conexão" (com estilo) |
+| Android release | APK 11,4 MB (com o pacote embarcado) | página do Inkwell | **abre normalmente** (páginas no aparelho) |
+| iOS dev | Xcode 16.4, simulador | página do Inkwell | não testado (o simulador não desliga a rede pelo script) |
+| iOS release | Xcode 16.4, simulador | página do Inkwell, a partir da cópia embarcada | não testado |
+
+Evidência: `docs/evidencias/mobile/nativo-dev-release-2026-11-24.jpg`.
+
 Dois bugs que só apareceram na execução nativa, ambos já corrigidos:
 1. A página "Sem conexão" saía sem estilo, porque seus arquivos eram pedidos ao site fora do ar; agora ela é autocontida.
 2. O release ficava preso na página inicial (índice de pasta, acima).
