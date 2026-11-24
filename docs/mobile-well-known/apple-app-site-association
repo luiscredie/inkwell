@@ -1,0 +1,18 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["TEAMID.br.com.inkwell.app"],
+        "components": [
+          { "/": "/entrar/*", "comment": "e-mail sign-in link" },
+          { "/": "/decks/*", "comment": "shared decks" },
+          { "/": "/perfil/*", "comment": "profiles" },
+          { "/": "/comunidades/*", "comment": "community invites" }
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["TEAMID.br.com.inkwell.app"]
+  }
+}

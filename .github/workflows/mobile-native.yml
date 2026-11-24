@@ -51,6 +51,7 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
       - name: Install and run on an Android emulator (API 34)
+        timeout-minutes: 15
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -96,6 +97,7 @@ jobs:
             -destination 'generic/platform=iOS Simulator' -derivedDataPath build CODE_SIGNING_ALLOWED=NO build | tail -n 30
           ls build/Build/Products/Debug-iphonesimulator/
       - name: Install and run on the iOS simulator
+        timeout-minutes: 12
         run: bash native-run-ios.sh
       - uses: actions/upload-artifact@v4
         if: always()
