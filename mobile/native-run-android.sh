@@ -17,6 +17,11 @@ wait_for() {   # $1 regex, $2 seconds
 
 adb logcat -c
 adb shell am start -W -n $APP/br.com.inkwell.app.MainActivity | tee evidence/android-start.txt
+sleep 8
+echo "--- foreground after start ---"; adb shell dumpsys activity activities | grep -E "topResumedActivity|mResumedActivity" | head -3
+echo "--- app process ---"; adb shell pidof $APP || echo "(no process: the app is not running)"
+echo "--- crash buffer ---"; adb logcat -d -b crash | tail -60
+echo "--- AndroidRuntime / chromium errors ---"; adb logcat -d -v brief AndroidRuntime:E chromium:E cr_*:E Capacitor:* *:S | tail -60
 ONLINE_OK=0
 if wait_for "Seu lugar|Testar um deck|Cole..o|Entrar" 90 > evidence/android-online-ui.txt; then ONLINE_OK=1; fi
 sleep 3; adb exec-out screencap -p > evidence/android-online.png
