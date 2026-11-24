@@ -1053,6 +1053,8 @@ table.mt th { text-align: left; font-weight: 600; color: var(--text-2); font-siz
 table.mt td { padding: var(--sp-3); border-bottom: 1px solid var(--line); vertical-align: middle; }
 table.mt tr:last-child td { border-bottom: 0; }
 table.mt th.n, table.mt td.n { text-align: right; }
+table.mt td.n { white-space: nowrap; }
+table.mt td.dk { overflow-wrap: anywhere; }
 table.mt tr.few td { color: var(--text-3); }
 table.mt tr[data-opp] { cursor: pointer; }
 table.mt tr[data-opp]:hover td, table.mt tr[data-opp]:focus-visible td { background: var(--surface-2); }
@@ -1633,6 +1635,9 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
   const noInks = (k) => !k || k === "Unknown" || k === "Physical game";
   const deckLabel = (k) => (noInks(k) ? Tx("Inks not given") : k);
   const dotsOf = (k) => (noInks(k) ? "" : inkDots(k));
+  // "Amber/Amethyst/…/Steel" has no space: without a break point after each "/" the cell is as wide as the whole
+  // name and pushes the numbers out of the card. <wbr> lets it wrap there; the text (and copy/paste) stays the same.
+  const inkName = (k) => esc(k).replace(/\//g, "/<wbr>");
   // Conselho (#243): games without inks stay in every total, but an analysis by ink combination says how much it covers,
   // and the "Tintas não informadas" line comes last, set apart, so it never reads as one more archetype.
   const unknownLast = (list) => [...list.filter((x) => !noInks(x.k)), ...list.filter((x) => noInks(x.k))];
@@ -1786,10 +1791,12 @@ const CARD_INDEX = {"generated_at":"2026-10-19T12:50:22Z","cards":[["D100-18","M
     const chip = (group, v, l) => `<button type="button" class="chipbtn" data-sv="${group}" data-v="${esc(v)}" aria-pressed="${String(sv[group]) === String(v)}">${esc(l)}</button>`;
     const sel = (id, label, cur, opts) => `<label class="small svsel">${label} <select id="${id}">${opts.map(([v, l]) => `<option value="${esc(v)}" ${v === cur ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></label>`;
     const row = (x, isOpp) => `<tr class="${x.t.n < 5 ? "few" : ""}${noInks(x.k) ? " noinks" : ""}" ${isOpp ? `data-opp="${esc(x.k)}" tabindex="0" aria-label="${esc(Tx("Show games against {deck}", { deck: deckLabel(x.k) }))}"` : ""}>
-      <td>${dotsOf(x.k)}${esc(deckLabel(x.k))}</td><td class="n">${x.t.n}</td>
+      <td class="dk">${dotsOf(x.k)}${inkName(deckLabel(x.k))}</td><td class="n">${x.t.n}</td>
       <td class="n">${pct(x.t.w, x.t.n)}<span class="wbar" aria-hidden="true"><i style="width:${x.t.n ? (100 * x.t.w / x.t.n).toFixed(0) : 0}%"></i></span></td>
       <td class="n">${pct(x.t.fw, x.t.fn)} <span class="muted small">(${x.t.fn})</span></td><td class="n">${pct(x.t.dw, x.t.dn)} <span class="muted small">(${x.t.dn})</span></td></tr>`;
-    const head = (first) => `<tr><th>${first}</th><th class="n">${Tx("Games")}</th><th class="n">${Tx("Won")}</th><th class="n">${Tx("Going first")}</th><th class="n">${Tx("Going second")}</th></tr>`;
+    // Soft hyphens: at 320 px "Começando" and "Comprando" alone take half the row; they break only if they must.
+    const shy = (k) => ({ "Começando": "Come&shy;çando", "Comprando": "Com&shy;prando", "Vitórias": "Vitó&shy;rias" })[Tx(k)] || Tx(k);
+    const head = (first) => `<tr><th>${first}</th><th class="n">${Tx("Games")}</th><th class="n">${shy("Won")}</th><th class="n">${shy("Going first")}</th><th class="n">${shy("Going second")}</th></tr>`;
     const tile = (label, value, sub, cls = "") => `<div class="tile ${cls}"><span class="lb">${label}</span><b>${value}</b><span>${sub || "&nbsp;"}</span></div>`;
     const fd = T.fn + T.dn, perDay = perDaySvg(rows, sv.perDay);
     el.innerHTML = `<div class="sv"><button type="button" class="back" id="back">${Tx("Games")}</button>
