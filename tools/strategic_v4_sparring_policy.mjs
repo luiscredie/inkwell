@@ -1,5 +1,5 @@
 import { isDeepStrictEqual as equal } from "node:util";
-import { analyzeImmediateDefense, compareLiloOpening, matchesPlanPosition, ownPlan } from "./strategic_v4_sparring_defense.mjs";
+import { analyzeImmediateDefense, compareLiloOpening, reserveRemoval, matchesPlanPosition, ownPlan } from "./strategic_v4_sparring_defense.mjs";
 
 function actionOption(request, action) {
     if (request.type !== "Action") return undefined;
@@ -122,6 +122,20 @@ export function createDefensiveController(engine, setup, {
                     verdict = selected.prevention ? "preventive_defense" : selected.status === "defender_wins" ? "own_win" : "public_defense";
                 } else if (search.budgetExhausted || search.baseline.status === "lethal") {
                     verdict = "inconclusive";
+                }
+                if (!plan.length && !search.budgetExhausted && limits.planInkReserve !== false &&
+                    search.nodes + 10 <= (limits.maxNodes ?? 768) &&
+                    request.actions.find(a => a.option === original.option)?.action.type === "End Turn") {
+                    try {
+                        // At most ten engine transitions across the two fixed-board projections.
+                        const ink = reserveRemoval(engine, view, request, start + (limits.maxMs ?? 1200));
+                        if (ink) {
+                            plan = [{step: {type: "Action", action: ink}}];
+                            verdict = "reserve_removal";
+                        }
+                    } catch {
+                        // An unsupported projection leaves the original decision intact.
+                    }
                 }
                 return { verdict, cutoff: search.cutoff, nodes: search.nodes, plan,
                     ...(selected?.nextTurn ? { afterPublicPass: selected.nextTurn } : {}),

@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { reserveRemoval } from "./strategic_v4_sparring_defense.mjs";
+import { pathToFileURL } from "node:url";
+import { resolve } from "node:path";
 import { captureLoss, reviewLoss, trial } from "./strategic_v4_sparring_lab.mjs";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -857,5 +860,48 @@ test("weighted one-draw outs are conditional on the actual payment, target and r
         }
         assert.equal(survived, expected);
         if (process.env.INKWELL_OPENING_TRACE) console.log(JSON.stringify({outCase: name, size: 4, copies: 1, survived, branches}));
+    }
+});
+
+test("ink Circle to retain an engine-targetable removal for the following turn", {skip}, async () => {
+    const above = "Above the Crowd", item = "Inkrunner", vanessa = "Ursula - Vanessa";
+    for (const [threat, seed] of [["Vixey - Forest Friend", 17], ["Pinocchio - Star Attraction", 101]]) {
+        const position = fixture({lore: 6, own: 0, enemies: [["Angela - Night Warrior", true], [elinor, true],
+            ["Omnidroid - V.8"]], allies: [[vanessa]], ink: 4, hand: [above], enemyInk: 4,
+            discard: ["Angel - Siren Singer", "Alan-a-Dale - Loyal Bard", "Meilin Lee - Losing Control"]});
+        const cards = [item, circle, "Strike a Good Match", "Ariel - Ethereal Voice", "Akood et Emuti",
+            "Strike a Good Match", "Meilin Lee - Losing Control", chernabog];
+        cards.forEach((name, index) => position.players[2].deck[index].fullName = name);
+        position.players[1].deck[0].fullName = threat;
+        position.players[1].deck[1].fullName = guard;
+        const enemy = (_, r) => r.actions.find(a => a.action.type === "Play" &&
+            [threat, guard].includes(a.action.card.fullName)) ?? r.actions.find(a => a.action.type === "Quest");
+        const run = enabled => trial(position, seed, true, {planInkReserve: enabled}, [["Play", item]], undefined, 6, enemy);
+        const before = await run(false), after = await run(true);
+        assert.equal(before.winner, 1);
+        assert.equal(after.winner, null);
+        assert.ok(after.verdicts.includes("reserve_removal"));
+        assert.ok(actions(after).some(a => a.type === "Ink" && a.card.fullName === circle));
+    }
+});
+
+test("the end-turn ink probe abstains with Ward or enough singers for Circle", {skip}, async () => {
+    const engine = await import(pathToFileURL(resolve(path)));
+    for (const [enemies, allies] of [
+        [[["Kuzco - Temperamental Emperor"]], [["Ursula - Vanessa"]]],
+        [[[lady]], [["Ursula - Vanessa"], ["Ursula - Vanessa"]]],
+    ]) {
+        const p = fixture({lore: 6, enemies, allies, ink: 4, hand: ["Above the Crowd"], discard: [phillip]});
+        p.players[2].deck[0].fullName = circle;
+        let checked = false;
+        await trial(p, 309, false, {}, [], (view, request, answer) => {
+            if (!checked && request.type === "Action") {
+                assert.equal(request.actions.filter(a => a.action.type === "Ink").length, 2);
+                assert.equal(reserveRemoval(engine, view, request, Infinity), undefined);
+                checked = true;
+            }
+            return answer;
+        });
+        assert.ok(checked);
     }
 });

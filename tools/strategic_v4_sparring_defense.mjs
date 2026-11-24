@@ -906,3 +906,38 @@ export function compareLiloOpening(engine, view, prompt, limits = {}) {
     if (!["no_lethal_found", "defender_wins"].includes(branches[1].selected)) return;
     return {verdict: "reserve_opening_ink", branches, nodes};
 }
+
+// Fixed-board probe for spending the last ink opportunity before passing.
+// The readied projection asks the rules engine which plays and targets exist.
+export function reserveRemoval(engine, view, request, deadline) {
+    const seat = view.turn.player;
+    const inks = request.actions.filter(x => x.action.type === "Ink");
+    if (inks.length !== 2 || view.players[seat].hand.length !== 2) return;
+    const keep = inks.find(x => x.action.card.fullName === "Above the Crowd");
+    const spend = inks.find(x => x.action.card.fullName === "Circle of Life");
+    if (!keep || !spend || view.players[seat].inkwell.length !== 4) return;
+    const options = {card: name => name === hiddenName ? hiddenCard : engine.getCard(name)};
+    for (const [ink, held] of [[keep, spend],[spend, keep]]) {
+        if (performance.now() >= deadline) return;
+        const current = engine.continueTurn(publicPosition(view, seat), options);
+        const move = current.request.actions.find(a => a.type === "Ink" && a.card.i === ink.action.card.i);
+        if (!move) return;
+        current.submit({type:"Action",action:move});
+        if (current.request?.type !== "Action") return;
+        const state = structuredClone(current.position);
+        for (const entry of state.players[seat].inkwell) entry.exerted = false;
+        for (const entry of state.players[seat].play) {entry.exerted = false; entry.drying = false;}
+        const next = engine.continueTurn(state, options);
+        const plays = next.request.actions.filter(a => (a.type === "Play" && a.card.i === held.action.card.i) ||
+            a.type === "Sing" && a.song.i === held.action.card.i);
+        if (ink === keep) { if (plays.length) return; continue; }
+        const paid = plays.find(a => a.type === "Play");
+        if (!paid) return;
+        next.submit({type:"Action",action:paid});
+        if (next.request?.type !== "Pay Cost") return;
+        const payments = decisionAnswers(next, [], seat);
+        if (!payments?.length) return;
+        next.submit({type:"Decision",answer:payments[0]});
+        if (performance.now() < deadline && next.request?.type === "Choose Cards" && next.request.cards.length) return spend.action;
+    }
+}
