@@ -7,7 +7,7 @@ import { createDefensiveController } from "./strategic_v4_sparring_policy.mjs";
 
 const enginePath = process.env.INKWELL_SPAR_ENGINE;
 const engine = enginePath && await import(pathToFileURL(resolve(enginePath)));
-export async function trial(position, seed, candidate, limits = {}, script = [], onDecision, turns = 2) {
+export async function trial(position, seed, candidate, limits = {}, script = [], onDecision, turns = 2, opponentAction) {
     const setup = { player: 2, deck: [], settings: { seed, search: { nodes: 0, samples: 1 } } };
     const searches = [], decisions = [], verdicts = [];
     const remaining = [...script];
@@ -16,7 +16,8 @@ export async function trial(position, seed, candidate, limits = {}, script = [],
         memoize(_view, _request, compute) { const decision = compute(); verdicts.push(decision.verdict); return decision; },
         onSearch(result, ms, request) {
             searches.push({ nodes: result.nodes, ms, cutoff: result.cutoff, pass: result.baseline.status,
-                chosen: result.selected?.status ?? null, afterPublicPass: result.selected?.nextTurn ?? null, offered: request.actions,
+                chosen: result.selected?.status ?? null, afterPublicPass: result.selected?.nextTurn ?? null, publicReplies: result.selected?.publicReplies ?? null,
+                continuationCutoff: result.selected?.continuationCutoff ?? null, offered: request.actions,
                 examined: result.candidates.map(({ action, status, line, replyLine }) => ({ action, status, line, replyLine })) });
         },
     }) : engine.createBot(setup);
@@ -25,7 +26,7 @@ export async function trial(position, seed, candidate, limits = {}, script = [],
         { player: 1, deck: [], controller: { observe: (u) => human.observe(u),
             decide(view, request) {
                 if (request.type !== "Action") return human.decide(view, request);
-                const action = request.actions.find((a) => a.action.type === "Quest") ??
+                const action = opponentAction?.(view, request) ?? request.actions.find((a) => a.action.type === "Quest") ??
                     request.actions.find((a) => a.action.type === "End Turn");
                 return { type: "Action", option: action.option };
             } } },

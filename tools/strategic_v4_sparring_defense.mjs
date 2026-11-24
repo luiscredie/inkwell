@@ -73,7 +73,7 @@ function decisionAnswers(live, line, defender) {
     }
 }
 
-export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActions = 2, maxMs = 1500, rootAllowed = () => true, allowInk = true, planDiscardContinuation = true } = {}) {
+export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActions = 2, maxMs = 1500, rootAllowed = () => true, allowInk = true, planDiscardContinuation = true, planPublicReplies = true } = {}) {
     if (!Number.isSafeInteger(maxNodes) || maxNodes < 1 || maxNodes > 4096) {
         throw new RangeError("maxNodes must be between 1 and 4096");
     }
@@ -307,7 +307,7 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
         if (index < 0 || selected.actors.some((actor) => actor !== defender)) return selected;
         const paid = selected.line[index].answer.payment[0].cards[0];
         const stop = Symbol("continuation budget");
-        const ceiling = Math.min(nodes + 96, maxNodes);
+        const ceiling = Math.min(nodes + (planPublicReplies ? 192 : 96), maxNodes);
         function spend() {
             if (nodes >= ceiling || performance.now() >= deadline) throw stop;
             nodes++;
@@ -320,16 +320,9 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
             spend();
             return engine.startTurn(state, options);
         }
-        // One deterministic quest sequence and one known play. Unhandled
-        // prompts, unknown draws and additional opponent options are inconclusive.
-        function witness(state) {
-            const reply = start(state);
-            const menu = reply.request;
-            if (menu?.type !== "Action" || menu.player !== attacker || menu.actions.length !== 1 ||
-                menu.actions[0].type !== "End Turn") return null;
-            submit(reply, { type: "Action", action: menu.actions[0] });
-            if (reply.outcome || reply.request || reply.result?.turn.player !== defender) return null;
-            const next = start(reply.result);
+        // At a leaf, witness a win with quests and an already known card.
+        function ownContinuation(state) {
+            const next = start(state);
             const steps = [];
             for (let count = 0; count < 4 && next.request?.type === "Action"; count++) {
                 const quest = next.request.actions.find((a) => a.type === "Quest");
@@ -359,6 +352,58 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
                 if (branch.outcome?.winners.includes(defender)) return line;
             }
             return null;
+        }
+        // Cover every offered reply in the public projection. A partial tree
+        // cannot justify changing the discard. Unknown hand and deck stay masked.
+        function witness(state) {
+            const leaves = [];
+            const root = start(state);
+            if (root.request?.type !== "Action" || root.request.player !== attacker) return null;
+            if (!planPublicReplies && (root.request.actions.length !== 1 ||
+                root.request.actions[0].type !== "End Turn")) return null;
+            function cover(live, path) {
+                if (live.outcome || leaves.length >= 12) return false;
+                const menu = live.request;
+                if (!menu) {
+                    if (live.result?.turn.player !== defender) return false;
+                    const continuation = ownContinuation(live.result);
+                    if (!continuation) return false;
+                    leaves.push({ reply: path, continuation });
+                    return true;
+                }
+                if ((!planPublicReplies && path.length) || path.length >= 8 || menu.player !== attacker) return false;
+                let choices;
+                if (menu.type === "Action") {
+                    if (!menu.actions.every((action) => ["End Turn", "Activate", "Challenge", "Quest"].includes(action.type))) return false;
+                    choices = menu.actions.map((action) => ({ type: "Action", action }));
+                } else {
+                    // Supports one public target, a bounded amount, or a self-cost. Leave
+                    // composite or fungible payments unresolved in this proof.
+                    const selfCost = menu.type === "Pay Cost" && menu.cost.length === 1 &&
+                        ["Exert", "Banish"].includes(menu.cost[0].type);
+                    const target = menu.type === "Choose Cards" && menu.min === 1 && menu.max === 1 &&
+                        !menu.total && menu.cards.every((card) => seats.some((seat) =>
+                            live.position.players[seat].play.some((entry) => entry.card.i === card.i)));
+                    const amount = menu.type === "Choose Amount" && Number.isSafeInteger(menu.min) &&
+                        Number.isSafeInteger(menu.max) && menu.max - menu.min < 8;
+                    if (!selfCost && !target && !amount) return false;
+                    choices = decisionAnswers(live, path, defender)?.map((answer) => ({ type: "Decision", answer }));
+                }
+                if (!choices?.length || choices.length > 8) return false;
+                return choices.every((step) => {
+                    let child = live;
+                    if (choices.length > 1) {
+                        child = live.branch();
+                        if (!child) {
+                            child = start(state);
+                            for (const previous of path) submit(child, previous);
+                        }
+                    }
+                    submit(child, step);
+                    return cover(child, [...path, step]);
+                });
+            }
+            return cover(root, []) ? leaves : null;
         }
         function endOfLine(line) {
             spend();
@@ -390,8 +435,11 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
                 const line = selected.line.with(index, { type: "Decision", answer });
                 const state = endOfLine(line);
                 if (!state || !equivalent(original, state, other)) continue;
-                const nextTurn = witness(state);
-                if (nextTurn) return { ...selected, line, nextTurn };
+                const publicReplies = witness(state);
+                if (publicReplies) {
+                    const pass = publicReplies.find(({ reply }) => reply.length === 1 && reply[0].action?.type === "End Turn");
+                    return { ...selected, line, nextTurn: pass?.continuation, publicReplies };
+                }
             }
         } catch (err) {
             // Auxiliary probes must never displace the original legal defense.

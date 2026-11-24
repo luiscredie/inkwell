@@ -302,7 +302,7 @@ test("discard choice converts a verified defense on the next own turn", { skip }
             hand: flip ? [lady, reserve] : [reserve, lady] });
         for (const seed of seeds) {
             const before = await trial(position, seed, true, { planDiscardContinuation: false }, [], undefined, 3);
-            const after = await trial(position, seed, true, {}, [], undefined, 3);
+            const after = await trial(position, seed, true, { planPublicReplies: false }, [], undefined, 3);
             assert.ok(after.searches.every((s) => s.nodes <= 768), name);
             if (control) {
                 assert.equal(after.searches[0].afterPublicPass, null, name);
@@ -320,6 +320,12 @@ test("discard choice converts a verified defense on the next own turn", { skip }
                 assert.ok(after.executed[2].some((s) => s.action?.type === "Play" &&
                     s.action.card.fullName === reserve), name);
                 assert.equal(after.lore, 19, name);
+            }
+            const current = await trial(position, seed, true, {}, [], undefined, 3);
+            if (name === "nonForcedReply") {
+                assert.equal(current.winner, 2);
+            } else {
+                assert.deepEqual(current.executed, after.executed, name);
             }
             if (process.env.INKWELL_RESERVE_TRACE === "1") {
                 const side = (r) => ({ winner: r.winner, ownLore: r.ownLore, lore: r.lore, ms: r.ms, executed: r.executed });
@@ -343,4 +349,106 @@ test("reserve planning honors the public view and preserves defense on a late cu
     assert.deepEqual(limited.executed, control.executed);
     assert.equal(limited.verdicts[0], "public_defense");
     assert.equal(limited.searches[0].afterPublicPass, null);
+});
+
+const flower = "Magic Golden Flower", trap = "Ratigan's Marvelous Trap";
+const gathering = "Gathering Knowledge and Wisdom";
+const activateFirst = (_view, menu) => menu.actions.find((entry) => entry.action.type === "Activate");
+function replyFixture(item, damage = 0, extra = {}) {
+    return fixture({ own: 16, ink: 2, allies: [[angel, false, damage]], enemies: [[pegasus], [item]],
+        hand: [gathering, lady], ...extra });
+}
+function discardIn(turn) {
+    return turn.flatMap((step) => step.answer?.payment ?? []).find((cost) => cost.type === "Discard")?.cards[0];
+}
+
+test("conversion against pass and active replies on the same public boards", { skip }, async () => {
+    for (const [board, item, damage] of [["flower", flower, 0], ["wounded", flower, 1], ["trap", trap, 0]]) {
+        for (const active of [false, true]) for (const seed of seeds) {
+            const position = replyFixture(item, damage);
+            const run = (planPublicReplies) => trial(position, seed, true, { planPublicReplies }, [], undefined,
+                3, active ? activateFirst : undefined);
+            const before = await run(false), after = await run(true);
+            assert.equal(before.winner, null);
+            for (const game of [before, after]) {
+                assert.equal(game.executed.length, 3);
+                assert.equal(game.executed[1].some((s) => s.action?.type === "Activate"), active);
+                assert.ok(game.searches.every((s) => s.nodes <= 768));
+            }
+            const proof = after.searches[0].publicReplies;
+            if (item === flower) {
+                assert.equal(before.ownLore, 18);
+                assert.equal(after.winner, 2);
+                assert.equal(after.ownLore, 20);
+                assert.equal(discardIn(before.executed[0]).fullName, gathering);
+                assert.equal(discardIn(after.executed[0]).fullName, lady);
+                assert.ok(after.executed[2].some((s) => s.action?.card?.fullName === gathering));
+                assert.equal(proof.length, damage ? 3 : 2);
+                assert.ok(proof.some((leaf) => leaf.reply.length === 1 && leaf.reply[0].action.type === "End Turn"));
+                assert.deepEqual(proof.flatMap(({reply}) => reply.filter((s) => s.answer?.type === "Choose Amount")
+                    .map((s) => s.answer.amount)).sort(), damage ? [0, 1] : [0]);
+                assert.ok(proof.every((leaf) => leaf.continuation.some((s) => s.action?.card?.fullName === gathering)));
+            } else {
+                assert.equal(proof, null);
+                assert.deepEqual(before.executed, after.executed);
+                assert.equal(after.ownLore, active ? 16 : 18);
+            }
+            if (process.env.INKWELL_PUBLIC_REPLY_TRACE === "1") {
+                const evidence = (g) => ({ winner: g.winner, ownLore: g.ownLore, executed: g.executed,
+                    nodes: g.searches.map((s) => s.nodes), ms: g.ms });
+                console.log(JSON.stringify({ replyCase: board, active, seed, before: evidence(before), after: evidence(after), proof }));
+            }
+        }
+    }
+});
+
+test("the same reserved card loses its winning continuation when the Trap fires", { skip }, async () => {
+    for (const seed of seeds) {
+        async function counterfactual(active) {
+            let paid = false;
+            return trial(replyFixture(trap), seed, true, {}, [], (view, request, answer) => {
+                if (view.turn.number !== 8) return answer;
+                if (answer.answer?.payment?.[0]?.type === "Discard") {
+                    const payment = request.payments.find((p) => p[0].cards[0].fullName === lady);
+                    assert.ok(payment);
+                    paid = true;
+                    return { type: "Decision", answer: { type: "Pay Cost", pay: true, payment } };
+                }
+                if (paid && request.type === "Action") {
+                    const end = request.actions.find((r) => r.action.type === "End Turn");
+                    return { type: "Action", option: end.option };
+                }
+                return answer;
+            }, 3, active ? activateFirst : undefined);
+        }
+        const pass = await counterfactual(false), defended = await counterfactual(true);
+        assert.deepEqual(pass.executed[0], defended.executed[0]);
+        assert.equal(discardIn(pass.executed[0]).fullName, lady);
+        assert.equal(pass.winner, 2);
+        assert.equal(defended.winner, null);
+        assert.equal(defended.ownLore, 18);
+        assert.ok(defended.executed[1].some((s) => s.action?.ability?.card.fullName === trap));
+        assert.ok(defended.executed[2].some((s) => s.action?.card?.fullName === gathering));
+        if (process.env.INKWELL_PUBLIC_REPLY_TRACE === "1") {
+            console.log(JSON.stringify({ trapCounterfactual: seed,
+                pass: { lore: pass.ownLore, executed: pass.executed },
+                active: { lore: defended.ownLore, executed: defended.executed } }));
+        }
+    }
+});
+
+test("public branches ignore opposing hidden identities and keep the defense on cutoff", { skip }, async () => {
+    const run = (extra, limits = {}) => trial(replyFixture(flower, 1, extra), 309, true, limits);
+    const a = await run({ hidden: [circle], top: malicious }), b = await run({ hidden: [phillip], top: lady });
+    assert.deepEqual(a.decisions, b.decisions);
+    assert.deepEqual(a.searches[0].publicReplies, b.searches[0].publicReplies);
+    assert.equal(a.searches[0].publicReplies.length, 3);
+    const control = await run({}, { planDiscardContinuation: false });
+    const limit = control.searches[0].nodes + 1;
+    const cut = await run({}, { maxNodes: limit });
+    assert.equal(cut.searches[0].nodes, limit);
+    assert.equal(cut.searches[0].continuationCutoff, "budget");
+    assert.equal(cut.searches[0].publicReplies, null);
+    assert.equal(cut.verdicts[0], "public_defense");
+    assert.deepEqual(cut.executed, control.executed);
 });
