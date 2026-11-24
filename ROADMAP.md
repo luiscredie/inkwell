@@ -2060,38 +2060,48 @@ Pendências conhecidas (sem duplicar as entradas já registradas em "Decks · Mo
 
 ## Ciclo de 24/11/2026 — Scanner 2.0 e Inkwell Mobile (prioridades do Conselho)
 
-O Inkwell Web continua sendo o produto principal até os apps serem validados. As duas frentes andam em
-branches e PRs separados; nenhuma delas altera banco, políticas de segurança ou o site publicado sem
-autorização.
+O Inkwell Web continua sendo o produto principal até os apps serem validados. As frentes andam em branches e
+PRs separados; nenhuma altera banco, políticas de segurança ou o site publicado sem autorização.
 
-### Frente A — Scanner 2.0: reconhecer uma página de fichário inteira (prioridade principal)
+### Estágios (vale para as três frentes)
+
+| Estágio | Significa | Quem usa | Exige |
+|---|---|---|---|
+| **Protótipo** | Funciona em testes automatizados e em dados sintéticos ou emulação; arquitetura ainda pode mudar | Equipe | PR draft, testes Chromium/WebKit, evidências |
+| **Beta** | Medido em aparelhos e dados reais, com os critérios cumpridos; publicado para um grupo fechado | Testadores convidados | Medição real, revisão do Conselho, autorização de publicação |
+| **Publicação** | Disponível a todos (site ou lojas) | Todos | Beta aprovado, autorização expressa; para as lojas, PI resolvida e builds assinados |
+
+Situação em 24/11: **as três frentes estão em protótipo.**
+
+### Frente A — Scanner 2.0: página de fichário inteira (prioridade principal)
 
 | Etapa | Entrega | Situação | Critério de conclusão |
 |---|---|---|---|
-| A1 — Auditoria e arquitetura (#319) | `docs/scanner-2.0.md` | Em revisão (PR #324) | Documento revisado pelo Conselho. |
-| A2 — Protótipo "Escanear página" 3×3 (#320) | Modo "Página 3×3" no scanner atual | PR draft #324 | Fotografar, ver contornos, conferir e corrigir as 9 posições, pôr na lista e confirmar numa única gravação. Nada gravado antes da confirmação (teste). Testes Chromium e WebKit. |
-| A3 — Medição com fotos reais (#321) | `tools/pagescan-bench.spec.mjs` com fotos reais | **Aberta** | ≥ 30 páginas reais de 3 aparelhos; precisão, tempo, taxa de correção, reflexo, inclinação, luz e foil medidos; tempo em Android e iPhone reais. **Meta inicial: 95% de identificação correta, só declarada com resultado medido.** |
+| A1 — Auditoria e arquitetura (#319) | `docs/scanner-2.0.md` | **Aprovada** pelo Conselho (24/11) | — |
+| A2 — Protótipo "Escanear página" 3×3 (#320) | PR draft #324 | Protótipo; segunda rodada entregue | Fluxo completo, nada gravado antes da confirmação, Chromium e WebKit (feito). Motor num Web Worker (feito). Bolsos vazios nunca excluídos em silêncio (feito). Índice cobrindo 100% das cartas com imagem (feito). |
+| A3 — Medição com fotos reais (#321) | `docs/scanner-2.0-avaliacao.md` + `tools/pagescan-annotate.html` | **Aberta: aguarda as fotos** | ≥ 30 páginas reais, de 3 aparelhos. Métricas separadas (automática, 1ª sugestão, alternativas, falsos positivos, carta tomada por vazio). Tempo em celulares reais. **Meta: 95% de identificação; falso positivo 0.** |
 
-Medição atual: só em fotos **sintéticas** (`tools/pagescan_synth.py`; 64 páginas, 553 cartas, Chromium
-desktop). Resultados: 94,9% identificadas, 65,8% sem nenhuma ação, 0 erros confiantes, mediana de
-1,35 s por página. Pontos fracos: foil (87,1%) e a combinação difícil (73,2%). Esses números não
-valem como resultado do produto.
+Sintético (não vale como resultado do produto): 90,1% de identificação (automática + 1ª sugestão), 98,7% ao
+alcance, 0 falsos positivos. O número anterior de 94,9% usava uma definição mais ampla e não é comparável.
 
-Depois de A3: processamento em Web Worker, importação da galeria, layouts 2×2 e 4×4, cantos
-detectados automaticamente e um índice mais robusto a foil.
+Para chegar a beta: A3 cumprida, tempo medido em aparelhos e o scanner de uma carta intacto.
+
+### Frente A′ — Scanner contínuo: melhoria de experiência (#327, PR draft #328)
+
+Pedido do Conselho a partir do modo Single do Evolens. É **independente** do Escanear página. Traz faixa de
+miniaturas, contador e valor acumulado com avisos de preço, sem toques entre cartas, e mantém a confirmação final e a
+proteção contra duplicação. Medido com câmera falsa: 20/20 cartas com OCR simulado, 0 toques, 1,4 s por carta; 15/20
+sem OCR. Achados: reimpressões quando o OCR falha, e foil não detectado. Para chegar a beta: sessão de 20 cartas
+medida em celular real e decisão sobre as reimpressões.
 
 ### Frente B — Inkwell Mobile: apps para App Store e Google Play (em paralelo)
 
 | Etapa | Entrega | Situação | Critério de conclusão |
 |---|---|---|---|
-| B1 — Auditoria técnica e viabilidade do Capacitor (#322) | `mobile/README.md` | Em revisão (PR #325) | Diagnóstico revisado pelo Conselho, com decisão sobre conteúdo remoto ou embutido e sobre o risco de marca. |
-| B2 — Primeiro app experimental (#323) | `mobile/` (Capacitor 8, Android e iOS) | PR draft #325 | APK compilado e rodado num Android real; projeto iOS rodado no Xcode; inicialização, navegação, login e sessão, Coleção e Decks conferidos no aparelho; ponto de integração do Scanner 2.0. |
+| B1 — Auditoria técnica (#322) | `mobile/README.md`, `docs/mobile-dominios.md`, `docs/mobile-pi-lojas.md` | Protótipo técnico **aprovado** (24/11), não como arquitetura de publicação | — |
+| B2 — Primeiro app (#323) | PR draft #325 | Protótipo. Builds nativos no CI: APK no emulador Android, app no simulador iOS. | Dev (site remoto) **só para desenvolvimento**. Release embarca o essencial (17,4 MB, sem o catálogo de imagens). Faltam APK no Android real e iPhone real via TestFlight. |
+| B3 — Domínios, links e passkeys | `docs/mobile-dominios.md`, `docs/mobile-well-known/` | Arquivos preparados, **não publicados** | Publicar `assetlinks.json` e AASA (autorização), Associated Domains com a conta Apple, tratamento de `appUrlOpen`. Até lá, o app usa login por código. |
+| B4 — PI para as lojas | `docs/mobile-pi-lojas.md` | **Risco alto**; decisão do titular | Autorização documentada de Ravensburger/Disney (ou decisão de não enviar às lojas) antes de qualquer envio. |
 
-Bloqueios conhecidos de B2:
-- O ambiente atual não baixa o Android SDK.
-- O iOS exige macOS/Xcode e uma conta Apple.
-- Link mágico e passkeys no app exigem publicar `/.well-known/` no site (autorização).
-- Push nativo exige FCM/APNs e mudanças no servidor (aprovação).
-
-Antes de qualquer envio às lojas: análise jurídica do uso da marca e das artes de Disney Lorcana
-(risco alto) e funcionalidade nativa suficiente (diretriz 4.2 da Apple).
+Para chegar a beta: APK de release instalado em Android real e TestFlight interno, com login, Coleção, Decks e
+scanner conferidos no aparelho. Para publicação: B4 resolvida, builds assinados, fichas de privacidade das lojas.
