@@ -2352,7 +2352,9 @@ self.onmessage = async (e) => {
   function pocketSheet(pg, i, pendList) {
     const p = pg.pockets[i], N = pg.pockets.length, crop = pocketCrop(pg, i, 240), c = p.id && !p.skip ? BY.get(p.id) : null;
     const isPend = PS().pending(p), k = pendList.indexOf(i);
-    const alts = [...new Set([...(p.group || []), ...(p.top || []).map((t) => t.id)])].filter((id) => BY.has(id) && id !== p.id).slice(0, 6);
+    // other printings of the same art first (the collector number tells them apart), then cards that only look alike
+    const same = [...new Set(p.group || [])].filter((id) => BY.has(id) && id !== p.id).slice(0, 6);
+    const alts = [...new Set((p.top || []).map((t) => t.id))].filter((id) => BY.has(id) && id !== p.id && !same.includes(id)).slice(0, 6 - Math.min(3, same.length));
     const why = p.skip ? P("Esta posição está fora da lista.", "This pocket is left out.") : p.status === "choose" && !p.resolved ? P("A mesma arte existe em mais de uma impressão. Confira o número no canto da carta.", "This art exists in more than one printing. Check the number at the bottom of the card.")
       : p.status === "check" && !p.resolved ? P("Parece ser esta. Confirme ou escolha outra.", "It looks like this one. Confirm or pick another.")
       : p.status === "unknown" && !p.resolved ? P("Não reconhecemos esta carta. Busque pelo nome ou deixe de fora.", "We didn't recognise this card. Search by name or leave it out.")
@@ -2374,7 +2376,8 @@ self.onmessage = async (e) => {
         ${p.status === "empty" && !p.id ? "" : `<button type="button" class="btn ghost" id="pgsSkip" data-testid="pocket-skip">${esc(p.skip ? P("Incluir de novo", "Include again") : P("Deixar de fora", "Leave out"))}</button>`}
       </div>
       ${pg.find != null ? `<div class="pgs-find"><label class="small">${esc(P("Nome da carta", "Card name"))}<input type="search" id="pgFind" data-testid="pocket-search" autocomplete="off" enterkeyhint="search" value="${esc(pg.find)}"></label><div class="cands" id="pgFound"></div></div>` : ""}
-      ${alts.length ? `<div class="pgs-alts"><p class="small muted">${esc(p.status === "choose" ? P("Outras impressões com a mesma arte", "Other printings with the same art") : P("Outras possibilidades", "Other possibilities"))}</p><div class="cands" role="group">${alts.map((id) => cardBtn(id, "data-use")).join("")}</div></div>` : ""}
+      ${same.length ? `<div class="pgs-alts" data-testid="pocket-same"><p class="small muted">${esc(P("Mesma arte, outra impressão", "Same art, another printing"))}</p><div class="cands" role="group">${same.map((id) => cardBtn(id, "data-use")).join("")}</div></div>` : ""}
+      ${alts.length ? `<div class="pgs-alts" data-testid="pocket-alts"><p class="small muted">${esc(P("Outras possibilidades", "Other possibilities"))}</p><div class="cands" role="group">${alts.map((id) => cardBtn(id, "data-use")).join("")}</div></div>` : ""}
       ${c ? `<div class="row between pe-row"><label class="row small pe-foil"><input type="checkbox" id="pgFoil" ${p.foil ? "checked" : ""}> Foil</label>
         <div class="pe-qty"><button type="button" class="btn small" data-pq="-1" aria-label="${Tx("Remove one")}">−</button><output data-testid="pocket-qty">${p.skip ? 0 : p.qty}</output><button type="button" class="btn small" data-pq="1" aria-label="${Tx("Add one")}">+</button></div></div>` : ""}
       <div class="row between pgs-nav">
@@ -2431,7 +2434,7 @@ self.onmessage = async (e) => {
     };
     svg.onpointerup = svg.onpointercancel = () => { if (k < 0) return; k = -1; pg.moved = true; };
   }
-  window.__inkwellScanPageState = () => (scan.pg ? { busy: !!scan.pg.busy, sheet: scan.pg.sheet ?? null, adjust: !!scan.pg.adjust, quad: scan.pg.quad, pockets: scan.pg.pockets.map((p) => p && { status: p.status, id: p.id, resolved: !!p.resolved, skip: !!p.skip, qty: p.qty, foil: !!p.foil }) } : null);   // used by the browser test
+  window.__inkwellScanPageState = () => (scan.pg ? { busy: !!scan.pg.busy, sheet: scan.pg.sheet ?? null, adjust: !!scan.pg.adjust, quad: scan.pg.quad, pockets: scan.pg.pockets.map((p) => p && { status: p.status, id: p.id, resolved: !!p.resolved, skip: !!p.skip, qty: p.qty, foil: !!p.foil, group: p.group || [] }) } : null);   // used by the browser test
 
   async function openScanner(from) {
     window.INKWELL_TRACK?.("scan_open");
