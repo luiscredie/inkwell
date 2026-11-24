@@ -42,10 +42,18 @@ jobs:
       - name: Build debug APK
         working-directory: mobile/android
         run: ./gradlew --no-daemon assembleDebug && ls -la app/build/outputs/apk/debug/
+      - name: Name the APK (integrated test build)
+        run: |
+          SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          N="Inkwell-Android-Teste-Integrado-${SHA::7}-${{ matrix.target }}.apk"
+          cp android/app/build/outputs/apk/debug/app-debug.apk "$N"
+          echo "APK_NAME=$N" >> "$GITHUB_ENV"
+          echo "APK $N  commit $SHA  branch ${{ github.head_ref || github.ref_name }}"
+          sha256sum "$N"
       - uses: actions/upload-artifact@v4
         with:
-          name: inkwell-debug-apk-${{ matrix.target }}
-          path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          name: ${{ env.APK_NAME }}
+          path: mobile/${{ env.APK_NAME }}
       - name: Enable KVM for the emulator
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
