@@ -65,6 +65,28 @@ async function pagePhoto(page) {
   return rev;
 }
 
+// the pocket editor sits over the page; to tap another pocket, back to the photo first
+async function openPk(rev, i) {
+  const ed = rev.getByTestId('pocket-edit');
+  if (await ed.count() && (await ed.getAttribute('data-edit-pocket')) === String(i)) return ed;
+  if (await ed.count()) { await rev.locator('#pgsClose').click(); await expect(ed).toHaveCount(0); }
+  await rev.locator(`#pgPhoto [data-pk="${i}"]`).click();                      // tapping the card on the photo opens it
+  await expect(ed).toHaveAttribute('data-edit-pocket', String(i));
+  return ed;
+}
+const closeSheet = async (rev) => { if (await rev.getByTestId('pocket-edit').count()) { await rev.locator('#pgsClose').click(); await expect(rev.getByTestId('pocket-edit')).toHaveCount(0); } };
+// settle one pocket to the right card: confirm the suggestion, pick an alternative, or search by name
+async function settleTo(rev, ed, id, words) {
+  const best = await ed.getByTestId('pocket-best').count() ? (await ed.getAttribute('data-edit-pocket')) : null;
+  const st = await rev.page().evaluate((i) => window.__inkwellScanPageState().pockets[i], +(await ed.getAttribute('data-edit-pocket')));
+  if (best != null && st.id === id) return ed.getByTestId('pocket-confirm').click();
+  const alt = ed.locator(`.pgs-alts [data-use="${id}"]`);
+  if (await alt.count()) return alt.first().click();
+  await ed.getByTestId('pocket-find').click();
+  await ed.getByTestId('pocket-search').fill(words);
+  await ed.locator(`#pgFound [data-use="${id}"]`).click();
+}
+
 test('Escanear página: nine pockets, corrections, nothing saved before confirming', async ({ page }) => {
   test.setTimeout(120000);
   const calls = await setup(page);
@@ -80,102 +102,168 @@ test('Escanear página: nine pockets, corrections, nothing saved before confirmi
   expect(st.pockets).toHaveLength(9);
   expect(await page.evaluate(() => window.__inkwellScanWorker())).toBe('worker');   // recognised off the main thread
   expect(st.pockets[8].status).toBe('empty');                                     // the empty pocket
-  // every card identified (alone, or as the first suggestion, or among the printings to pick); most need nothing
   expect(st.pockets.slice(0, 8).map((p, i) => p.id === ID(PAGE[i]))).toEqual(Array(8).fill(true));
   expect(st.pockets.slice(0, 8).filter((p) => p.status === 'ok').length).toBeGreaterThanOrEqual(6);
   expect(st.pockets.slice(0, 8).filter((p, i) => p.status === 'ok' && p.id !== ID(PAGE[i]))).toEqual([]);   // never confident and wrong
-  await expect(rev.locator('polygon')).toHaveCount(9);                             // the outlines over the photo
-  // the empty pocket is not dropped quietly: its photo is shown and the footer says it stays out
+  await expect(rev.locator('#pgPhoto [data-pk]')).toHaveCount(9);                 // the nine pockets on the photo, each tappable
   await expect(rev.locator('[data-pocket="8"] img.shot')).toHaveCount(1);
   await expect(rev.getByTestId('page-out')).toHaveText('Ficam de fora: 1 posição vazia (9). Se houver carta em alguma, toque nela para buscar.');
   await expect(rev.locator('[data-pocket]')).toHaveCount(9);
   await page.screenshot({ path: process.env.SHOT_DIR ? `${process.env.SHOT_DIR}/page-review.png` : test.info().outputPath('page-review.png') });
 
-  // settle anything the scanner wasn't sure about (search by the right name)
-  for (let i = 0; i < 8; i++) {
-    const p = (await page.evaluate(() => window.__inkwellScanPageState())).pockets[i];
-    if (p.status === 'ok') continue;
-    await rev.locator(`[data-pocket="${i}"]`).click();
-    await rev.getByTestId('pocket-edit').locator(`.cands [data-use="${ID(PAGE[i])}"]`).first().click();   // the right card is among the suggestions
+  // "Resolver N posições" opens the first pending pocket; each decision moves on to the next one
+  const pend = st.pockets.map((p, i) => (['check', 'choose', 'unknown'].includes(p.status) ? i : -1)).filter((i) => i >= 0);
+  if (pend.length) {
+    await expect(rev.getByTestId('page-add')).toHaveText(`Resolver ${pend.length === 1 ? '1 posição' : pend.length + ' posições'}`);
+    await rev.getByTestId('page-add').click();
+    for (const i of pend) { const ed = rev.getByTestId('pocket-edit'); await expect(ed).toHaveAttribute('data-edit-pocket', String(i)); await settleTo(rev, ed, ID(PAGE[i]), ''); }
+    await expect(rev.getByTestId('pocket-edit')).toHaveCount(0);
   }
   // corrections: pocket 1 is changed to another card, pocket 2 gets 2 copies, pocket 3 is foil, pocket 4 left out
-  await rev.locator('[data-pocket="0"]').click();
-  await expect(rev.getByTestId('pocket-edit')).toBeVisible();
-  await rev.getByTestId('pocket-search').fill('fru fru');
-  await rev.locator('#pgFound [data-use="LOR14-1"]').click();
-  await rev.locator('[data-pocket="1"]').click();
-  await rev.getByRole('button', { name: 'Mais uma' }).click();
-  await expect(rev.getByTestId('pocket-qty')).toHaveText('2');
-  await rev.locator('[data-pocket="2"]').click();
-  await rev.locator('#pgFoil').check();
-  await rev.locator('[data-pocket="3"]').click();
-  await rev.getByTestId('pocket-skip').click();
+  let ed = await openPk(rev, 0);
+  await expect(ed.locator('h3')).toHaveText('Posição 1 de 9');
+  await ed.getByTestId('pocket-find').click();
+  await ed.getByTestId('pocket-search').fill('fru fru');
+  await ed.locator('#pgFound [data-use="LOR14-1"]').click();
+  ed = await openPk(rev, 1);
+  await ed.getByRole('button', { name: 'Mais uma' }).click();
+  await expect(ed.getByTestId('pocket-qty')).toHaveText('2');
+  ed = await openPk(rev, 2);
+  await ed.locator('#pgFoil').check();
+  ed = await openPk(rev, 3);
+  await ed.getByTestId('pocket-skip').click();
+  await closeSheet(rev);
   await expect(rev.locator('[data-pocket="3"]')).toHaveClass(/skip/);
   await expect(rev.getByTestId('page-out')).toContainText('1 posição vazia (9) · 1 deixada de fora (4)');
 
   const add = rev.getByTestId('page-add');
-  await expect(add).toHaveText('Pôr 8 cartas na lista');    // 7 cards + 1 extra copy; pocket 4 out, pocket 9 empty
+  await expect(add).toHaveText('Continuar para revisão (8 cartas)');    // 7 cards + 1 extra copy; pocket 4 out, pocket 9 empty
   await page.waitForTimeout(900);
-  expect(deltas(calls)).toEqual([]);                          // nothing saved yet
+  expect(deltas(calls)).toEqual([]);                                     // nothing saved yet
   await add.click();
   await expect(rev).toBeHidden();
-  await expect(page.locator('#scanSay')).toContainText('8 cartas foram para a lista');
-  await expect(page.getByTestId('scan-count')).toHaveText('8 na lista');
-
-  // the same page again: asked once more before adding it twice; here the person retakes instead
-  const rev2 = await pagePhoto(page);
-  for (let i = 0; i < 8; i++) {
-    const p = (await page.evaluate(() => window.__inkwellScanPageState())).pockets[i];
-    if (p.status === 'ok') continue;
-    await rev2.locator(`[data-pocket="${i}"]`).click(); await rev2.getByTestId('pocket-skip').click();
-  }
-  const st2 = await page.evaluate(() => window.__inkwellScanPageState());
-  if (st2.pockets.every((p, i) => p.status === 'empty' || p.id === ID(PAGE[i]))) {   // same ids as a plain page: different from the corrected one, no warning
-    await expect(rev2.getByTestId('page-dup')).toHaveCount(0);
-  }
-  await page.keyboard.press('Escape');                                             // Esc leaves the page check, adds nothing
-  await expect(rev2).toBeHidden();
-  await expect(page.getByTestId('scan-count')).toHaveText('8 na lista');
-  await page.waitForTimeout(700);
-  expect(deltas(calls)).toEqual([]);
-
-  // Concluir -> the usual review -> confirm: one save with exactly the corrected page
-  await page.getByRole('button', { name: 'Concluir' }).click();
-  const review = page.getByTestId('scan-review');
+  const review = page.getByTestId('scan-review');                        // straight to the usual review
   await expect(review).toBeVisible();
+  await page.waitForTimeout(500);
+  expect(deltas(calls)).toEqual([]);
   await review.getByRole('button', { name: 'Adicionar 8 cartas à coleção' }).click();
   await expect.poll(() => deltas(calls).length).toBeGreaterThan(0);
   const net = {}; for (const d of deltas(calls)) { const k = `${d.card_id}${d.foil ? '*' : ''}`; net[k] = (net[k] || 0) + d.qty; }
   expect(net).toEqual({ 'LOR14-1': 1, 'LOR13-17': 2, 'LOR13-185*': 1, 'LOR13-5': 1, 'LOR13-83': 1, 'LOR13-126': 1, 'LOR13-40': 1 });
 });
 
-test('Escanear página: the same page twice asks before adding it again', async ({ page }) => {
-  test.setTimeout(120000);
-  const calls = await setup(page);
+// The block seen on a real Android (24/11): a page with 4 pockets to settle. The person taps the cards on the photo,
+// walks the pending ones (suggestion, alternatives or search), and reaches the final review; nothing saved before.
+const HARD = ['Rapunzel_-_Tower_Defender__LOR13-80', '4_Town_-_Hottest_Band_of_the_Year__LOR13-17', 'Owl_-_Hunny_Ranger__LOR13-185', 'Piglet_-_Hunny_Mage_Apprentice__LOR13-154',
+  'Rabbit_-_Hunny_Paladin__LOR13-5', 'Elsa_-_Concerned_Sister__LOR11-125', 'Junior_Woodchuck_Guidebook__LOR10-66|flip', 'Winnie_the_Pooh_-_Hunny_Archmage__LOR13-40', 'Winnie_the_Pooh_&_Piglet_-_Hunny_Mages__LOR13-62|flip'];
+const WORDS = { 'LOR10-66': 'woodchuck guidebook', 'LOR13-62': 'hunny mages', 'LOR11-125': 'elsa concerned', 'LOR13-40': 'hunny archmage' };
+async function hardPage(page) {   // two cards upside down in their pockets, as happens in a binder
+  await page.evaluate(async (files) => {
+    const c = document.createElement('canvas'); c.width = 1080; c.height = 1440; const ctx = c.getContext('2d');
+    ctx.fillStyle = '#5c4634'; ctx.fillRect(0, 0, c.width, c.height);
+    const x0 = 140, y0 = 150, W = 800, H = W / 0.72; ctx.fillStyle = '#1c1d24'; ctx.fillRect(x0, y0, W, H);
+    await Promise.all(files.map(async (f, i) => { const [n, fx] = f.split('|'); const im = new Image(); im.src = `../lorcana-card-images/images/${n}.jpg`; await im.decode();
+      const cw = W / 3, ch = H / 3, x = x0 + (i % 3) * cw + cw * 0.04, y = y0 + Math.floor(i / 3) * ch + ch * 0.03;
+      if (fx === 'flip') { ctx.save(); ctx.translate(x + cw * 0.46, y + ch * 0.47); ctx.rotate(Math.PI); ctx.drawImage(im, -cw * 0.46, -ch * 0.47, cw * 0.92, ch * 0.94); ctx.restore(); }
+      else ctx.drawImage(im, x, y, cw * 0.92, ch * 0.94); }));
+    window.__inkwellScanPageFrom(c, [[x0 + 8, y0 - 6], [x0 + W - 4, y0 + 5], [x0 + W + 6, y0 + H - 3], [x0 - 5, y0 + H + 4]]);
+  }, HARD);
+  const rev = page.getByTestId('page-review');
+  await expect(rev).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.__inkwellScanPageState()?.busy), { timeout: 60000 }).toBe(false);
+  return rev;
+}
+async function openPageMode(page) {
   await page.goto(BASE);
   await page.getByRole('button', { name: 'Escanear' }).click();
   await page.getByTestId('scan-mode').getByRole('button', { name: 'Página 3×3' }).click();
+}
+
+test('Escanear página: 4 pockets to settle, tapped on the photo, through to the final review', async ({ page }) => {
+  test.setTimeout(150000);
+  const calls = await setup(page);
+  await openPageMode(page);
+  const rev = await hardPage(page);
+  const st = await page.evaluate(() => window.__inkwellScanPageState());
+  const truth = HARD.map((f) => ID(f.split('|')[0]));
+  const pend = st.pockets.map((p, i) => (['check', 'choose', 'unknown'].includes(p.status) ? i : -1)).filter((i) => i >= 0);
+  console.log('HARD', JSON.stringify(st.pockets.map((p) => [p.status, p.id])));
+  expect(pend).toEqual([5, 6, 7, 8]);                                               // 4 to settle, as on the phone
+  expect(st.pockets.filter((p, i) => p.status === 'ok' && p.id !== truth[i])).toEqual([]);   // never confident and wrong
+  const add = rev.getByTestId('page-add');
+  await expect(add).toHaveText('Resolver 4 posições');
+  await expect(add).toBeEnabled();
+  if (process.env.SHOT_DIR) await page.screenshot({ path: `${process.env.SHOT_DIR}/page-4pend.png` });
+
+  // the person taps the 3rd pending card straight on the photo
+  const box = await rev.locator('#pgPhoto [data-pk="7"] polygon').boundingBox();
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  let ed = rev.getByTestId('pocket-edit');
+  await expect(ed).toHaveAttribute('data-edit-pocket', '7');
+  await expect(ed.locator('h3')).toHaveText('Posição 8 de 9');
+  await expect(ed.getByTestId('pocket-progress')).toHaveText('Pendência 3 de 4');
+  await expect(ed.locator('img.crop')).toHaveCount(1);                            // the pocket from the photo, beside the suggestion
+  await expect(ed.getByTestId('pocket-find')).toHaveText('Buscar outra carta');
+  // anterior / próxima pendência
+  await ed.getByTestId('pocket-prev').click();
+  await expect(ed).toHaveAttribute('data-edit-pocket', '6');
+  await ed.getByTestId('pocket-next').click(); await ed.getByTestId('pocket-next').click();
+  await expect(ed).toHaveAttribute('data-edit-pocket', '8');
+  if (process.env.SHOT_DIR) await page.screenshot({ path: `${process.env.SHOT_DIR}/pocket-edit.png` });
+  await settleTo(rev, ed, truth[8], WORDS[truth[8]]);                             // settled -> moves on by itself (wraps to the first pending)
+  for (const i of [5, 6, 7]) {
+    await expect(ed).toHaveAttribute('data-edit-pocket', String(i));
+    await expect(ed.getByTestId('pocket-find')).toBeVisible();
+    expect(deltas(calls)).toEqual([]);
+    await settleTo(rev, ed, truth[i], WORDS[truth[i]]);
+  }
+  await expect(ed).toHaveCount(0);                                                 // all settled: back to the page
+  await expect(rev.getByTestId('page-note')).toContainText('Tudo resolvido');
+  await expect(add).toHaveText('Continuar para revisão (9 cartas)');
+  await expect(add).toBeFocused();
+  await page.waitForTimeout(600);
+  expect(deltas(calls)).toEqual([]);
+  await add.click();
+  const review = page.getByTestId('scan-review');
+  await expect(review).toBeVisible();
+  expect(deltas(calls)).toEqual([]);
+  await review.getByRole('button', { name: 'Adicionar 9 cartas à coleção' }).click();
+  await expect.poll(() => deltas(calls).length).toBeGreaterThan(0);
+  const net = {}; for (const d of deltas(calls)) net[d.card_id] = (net[d.card_id] || 0) + d.qty;
+  expect(net).toEqual(Object.fromEntries(truth.map((t) => [t, 1])));
+});
+
+test('Escanear página: the same page twice asks before adding it again; Esc steps back', async ({ page }) => {
+  test.setTimeout(120000);
+  const calls = await setup(page);
+  await openPageMode(page);
   if (!STILL(page)) { await page.waitForFunction(() => document.getElementById('scanVideo')?.videoWidth > 0); await page.waitForTimeout(400); }
   const settle = async (rev) => { const s = await page.evaluate(() => window.__inkwellScanPageState());
-    for (let i = 0; i < 9; i++) if (['check', 'choose', 'unknown'].includes(s.pockets[i].status)) { await rev.locator(`[data-pocket="${i}"]`).click(); await rev.getByTestId('pocket-skip').click(); } };
+    for (let i = 0; i < 9; i++) if (['check', 'choose', 'unknown'].includes(s.pockets[i].status)) { const ed = await openPk(rev, i); await ed.getByTestId('pocket-skip').click(); }
+    await closeSheet(rev); };
   let rev = await pagePhoto(page); await settle(rev);
-  await rev.getByTestId('page-add').click();
+  await rev.getByTestId('page-add-more').click();
   await expect(rev).toBeHidden();
   const n1 = await page.evaluate(() => document.querySelector('[data-testid="scan-count"]').textContent);
   rev = await pagePhoto(page); await settle(rev);
-  await rev.getByTestId('page-add').click();
+  // Esc closes the pocket editor first, then the corner mode, then the page
+  await openPk(rev, 0); await page.keyboard.press('Escape');
+  await expect(rev.getByTestId('pocket-edit')).toHaveCount(0); await expect(rev).toBeVisible();
+  await rev.getByTestId('page-adjust').click(); await expect(rev.locator('circle.corner')).toHaveCount(4);
+  await page.keyboard.press('Escape'); await expect(rev.locator('circle.corner')).toHaveCount(0); await expect(rev).toBeVisible();
+  await rev.getByTestId('page-add-more').click();
   await expect(rev.getByTestId('page-dup')).toBeVisible();                        // asked first
   await expect(page.getByTestId('scan-count')).toHaveText(n1);                    // nothing added yet
-  await rev.getByTestId('page-add').click();                                      // the person insists: a second copy of each
+  await rev.getByTestId('page-add-more').click();                                 // the person insists: a second copy of each
   await expect(rev).toBeHidden();
   await expect(page.getByTestId('scan-count')).not.toHaveText(n1);
   expect(deltas(calls)).toEqual([]);
 });
 
-for (const w of [320, 390, 430]) {
+for (const [w, h] of [[320, 568], [360, 640], [390, 844], [430, 932]]) {
   test(`Escanear página fits a ${w}px phone`, async ({ page }) => {
     test.setTimeout(120000);
-    await page.setViewportSize({ width: w, height: 844 });
+    await page.setViewportSize({ width: w, height: h });
     await setup(page);
     await page.goto(BASE);
     await page.getByRole('button', { name: 'Escanear' }).click();
@@ -184,7 +272,11 @@ for (const w of [320, 390, 430]) {
     const g = await page.locator('#scanGuide').boundingBox();
     expect(g.x).toBeGreaterThanOrEqual(0); expect(g.x + g.width).toBeLessThanOrEqual(w + 0.5);
     const rev = await pagePhoto(page);
-    await rev.locator('[data-pocket="0"]').click();
+    const add = await rev.getByTestId('page-add').boundingBox();
+    expect(add.y + add.height).toBeLessThanOrEqual(h + 0.5);                     // the footer action is on screen, not below the fold
+    await rev.locator('#pgPhoto [data-pk="0"]').click();
+    const ed = rev.getByTestId('pocket-edit'); await expect(ed).toBeVisible();
+    for (const t of ['pocket-confirm', 'pocket-find']) { const b = ed.getByTestId(t); if (await b.count()) { await b.scrollIntoViewIfNeeded(); const r = await b.boundingBox(); expect(r.height).toBeGreaterThanOrEqual(44); } }
     if (process.env.SHOT_DIR) await page.screenshot({ path: `${process.env.SHOT_DIR}/page-${w}.png` });
     const over = await page.evaluate((vw) => [...document.querySelectorAll('#pageReview *')].filter((e) => { const r = e.getBoundingClientRect(); return r.width && (r.right > vw + 0.5 || r.left < -0.5); }).map((e) => e.tagName + '.' + e.className).slice(0, 5), w);
     expect(over).toEqual([]);
@@ -208,4 +300,51 @@ test('Escanear página: recognising a page does not block the screen (Web Worker
   // the photo is copied to the Worker and the result drawn back: short tasks only (no pocket is recognised here)
   expect(r.longest).toBeLessThan(250);
   expect(r.total).toBeLessThan(600);   // on the main thread the nine pockets alone block > 1 s (measured 24/11)
+});
+
+// Android: a finger that lands on the photo must still scroll the check screen (the photo fills most of a small phone).
+// Real touch events through CDP (Chromium); corners only move in "Ajustar cantos", where the photo stops scrolling.
+test('Escanear página: a swipe that starts on the photo scrolls; a tap opens the card; corners only in adjust mode', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'touch input via CDP');
+  test.setTimeout(120000);
+  await page.setViewportSize({ width: 360, height: 640 });
+  await setup(page);
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+  await openPageMode(page);
+  const rev = await hardPage(page);
+  const scrolled = () => page.evaluate(() => Math.max(window.scrollY, ...[...document.querySelectorAll('#pageReview, #pageReview *')].map((e) => e.scrollTop)));
+  const swipe = async (x, y0, y1) => {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y: y0 }] });
+    for (let k = 1; k <= 8; k++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: y0 + (y1 - y0) * k / 8 }] });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await page.waitForTimeout(400);
+  };
+  const ph = await rev.locator('#pgPhoto').boundingBox();
+  const cx = ph.x + ph.width / 2, cy = Math.min(ph.y + ph.height * 0.6, 600);
+  expect(await scrolled()).toBe(0);
+  await swipe(cx, cy, cy - 250);                                                  // the gesture starts on a card of the photo
+  const s1 = await scrolled();
+  console.log('SCROLL after swipe on photo', s1);
+  expect(s1).toBeGreaterThan(80);
+  await expect(rev.getByTestId('pocket-edit')).toHaveCount(0);                    // a swipe is not a tap
+  await expect.poll(() => page.evaluate(() => JSON.stringify(window.__inkwellScanPageState().quad))).toBeTruthy();
+  const q0 = await page.evaluate(() => JSON.stringify(window.__inkwellScanPageState().quad));
+  // a tap on a card opens its editor
+  await rev.locator('#pgPhoto [data-pk="4"] polygon').scrollIntoViewIfNeeded();
+  const pk = await rev.locator('#pgPhoto [data-pk="4"] polygon').boundingBox();
+  const tp = [{ x: pk.x + pk.width / 2, y: pk.y + pk.height / 2 }];
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: tp }); await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await expect(rev.getByTestId('pocket-edit')).toHaveAttribute('data-edit-pocket', '4');
+  await rev.locator('#pgsClose').click();
+  expect(await page.evaluate(() => JSON.stringify(window.__inkwellScanPageState().quad))).toBe(q0);   // the corners never moved
+  // adjust mode: dragging a corner moves it, the screen stays put
+  await rev.getByTestId('page-adjust').click();
+  const c = rev.locator('circle.corner[data-corner="0"]'); await c.scrollIntoViewIfNeeded();
+  const cb = await c.boundingBox(), before = await scrolled();
+  await swipe(cb.x + cb.width / 2, cb.y + cb.height / 2, cb.y + cb.height / 2 + 30);
+  expect(await page.evaluate(() => JSON.stringify(window.__inkwellScanPageState().quad))).not.toBe(q0);
+  expect(Math.abs((await scrolled()) - before)).toBeLessThan(5);
+  await rev.getByTestId('page-adjust').click();
+  await expect(rev.getByTestId('page-rerun')).toBeVisible();                     // moved corners: offer to recognise again
 });
