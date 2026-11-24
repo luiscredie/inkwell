@@ -7,7 +7,7 @@ import { createDefensiveController } from "./strategic_v4_sparring_policy.mjs";
 
 const enginePath = process.env.INKWELL_SPAR_ENGINE;
 const engine = enginePath && await import(pathToFileURL(resolve(enginePath)));
-export async function trial(position, seed, candidate, limits = {}, script = [], onDecision, turns = 2, opponentAction) {
+export async function trial(position, seed, candidate, limits = {}, script = [], onDecision, turns = 2, opponentAction, capturePosition = false) {
     const setup = { player: 2, deck: [], settings: { seed, search: { nodes: 0, samples: 1 } } };
     const searches = [], decisions = [], verdicts = [];
     const remaining = [...script];
@@ -17,6 +17,7 @@ export async function trial(position, seed, candidate, limits = {}, script = [],
         onSearch(result, ms, request) {
             searches.push({ nodes: result.nodes, ms, cutoff: result.cutoff, pass: result.baseline.status,
                 chosen: result.selected?.status ?? null, afterPublicPass: result.selected?.nextTurn ?? null, publicReplies: result.selected?.publicReplies ?? null,
+                prevention: result.selected?.prevention ?? null, preventionCutoff: result.preventionCutoff ?? null,
                 boardRace: result.selected?.boardRace ?? null, boardRaceCutoff: result.selected?.boardRaceCutoff ?? null,
                 conditionalProgress: result.selected?.conditionalProgress ?? null,
                 continuationCutoff: result.selected?.continuationCutoff ?? null, offered: request.actions,
@@ -50,7 +51,8 @@ export async function trial(position, seed, candidate, limits = {}, script = [],
     ];
     const game = await engine.playGameAsync(seats, { seed, from: structuredClone(position), turns, audit: true, retry: false });
     assert.equal(remaining.length, 0);
-    return { winner: game.outcome?.winners[0] ?? null, lore: game.final.players[1].lore,
+    return { ...(capturePosition ? {checkpoint: structuredClone(game.final)} : {}),
+        winner: game.outcome?.winners[0] ?? null, lore: game.final.players[1].lore,
         ownLore: game.final.players[2].lore, hand: game.final.players[2].hand, ink: game.final.players[2].inkwell,
         ms: performance.now() - started, searches, decisions, verdicts, board: game.final.players[2].play, executed: game.turns.map(({ turn }) => turn.steps) };
 }

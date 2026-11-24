@@ -92,7 +92,7 @@ function decisionAnswers(live, line, defender, mixedActivation = false) {
     }
 }
 
-export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActions = 2, maxMs = 1500, rootAllowed = () => true, allowInk = true, planDiscardContinuation = true, planPublicReplies = true, planConditionalLore = true, planBoardRace = planConditionalLore && planPublicReplies && planDiscardContinuation, mixedActivation = true } = {}) {
+export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActions = 2, maxMs = 1500, rootAllowed = () => true, allowInk = true, planDiscardContinuation = true, planPublicReplies = true, planConditionalLore = true, planBoardRace = planConditionalLore && planPublicReplies && planDiscardContinuation, mixedActivation = true, preventNextCycle = true, originalChoice } = {}) {
     if (!Number.isSafeInteger(maxNodes) || maxNodes < 1 || maxNodes > 4096) {
         throw new RangeError("maxNodes must be between 1 and 4096");
     }
@@ -549,7 +549,148 @@ export function analyzeImmediateDefense(engine, view, { maxNodes = 128, maxActio
             selected = { ...selected, boardRaceCutoff: err === stop ? "budget" : "unsupported" };
         }
     }
-    return { baseline, candidates, selected, nodes, maxNodes, maxActions, budgetExhausted, cutoff };
+    let preventionCutoff = null;
+    if (!selected && preventNextCycle && originalChoice && baseline.status === "no_lethal_found" && !budgetExhausted) {
+        const ceiling = Math.min(maxNodes, nodes + 384);
+        const stop = Symbol("preventive search budget");
+        try {
+            selected = preventiveActivation(root, originalChoice, { defender, attacker, allowed: rootAllowed,
+                start: (state) => engine.startTurn(state, options),
+                spend() {
+                    if (nodes >= ceiling || performance.now() >= deadline) throw stop;
+                    nodes++;
+                } });
+        } catch (err) {
+            preventionCutoff = err === stop ? "budget" : "unsupported";
+        }
+    }
+    return { baseline, candidates, selected, preventionCutoff, nodes, maxNodes, maxActions, budgetExhausted, cutoff };
+}
+
+// Four half-turns, starting in the defender's current main phase. Refute the
+// original choice even after allowing subsequent defensive choices, then seek
+// a line that survives every covered public reply. Unsupported branches carry
+// "unknown" through the quantifiers. Traces are examples, not the whole tree.
+function preventiveActivation(root, original, { defender, attacker, start, spend, allowed }) {
+    const actions = root.live.request.actions;
+    const attempts = actions.filter((a) => a.type === "Activate" && Number.isInteger(a.ability?.i) && allowed(a));
+    const initial = actions.find(original);
+    if (!attempts.length || !["End Turn", "Quest"].includes(initial?.type) ||
+        actions.some((a) => ["Play", "Sing", "Shift"].includes(a.type))) return null;
+    const unknown = { status: "unknown", trace: [] };
+    const safe = { status: "safe", trace: [] }, loss = { status: "loss", trace: [] };
+    function submit(live, step) {
+        spend();
+        live.submit(step);
+    }
+    function open(state) {
+        spend();
+        return start(state);
+    }
+    // Cheap trigger: execute two quest-first replies separated by a pass. The
+    // game tree below separately tests what happens if the defender fights back.
+    function looming() {
+        let live = root.live.branch();
+        for (let phase = 0; phase < 4; phase++) {
+            const actor = phase % 2 ? attacker : defender;
+            for (let i = 0; ; i++) {
+                const menu = live.request;
+                if (i >= 8 || menu?.type !== "Action" || menu.player !== actor) return false;
+                const action = (actor === attacker && menu.actions.find((a) => a.type === "Quest")) ||
+                    menu.actions.find((a) => a.type === "End Turn");
+                if (!action) return false;
+                submit(live, { type: "Action", action });
+                if (live.outcome) return phase === 3 && live.outcome.reason === "Lore" && live.outcome.winners.includes(attacker);
+                if (action.type === "End Turn") break;
+            }
+            if (live.request || !live.result) return false;
+            if (phase !== 3) live = open(live.result);
+        }
+        return false;
+    }
+    if (!looming()) return null;
+    let leaves = 0;
+    function visit(node, phase, depth) {
+        const live = node.live;
+        if (live.outcome) {
+            leaves++;
+            return live.outcome.winners.includes(defender) ? safe : live.outcome.winners.includes(attacker) ? loss : unknown;
+        }
+        const menu = live.request;
+        if (!menu) {
+            const next = phase % 2 ? defender : attacker;
+            if (live.result?.turn.player !== next) return unknown;
+            if (phase === 3) { leaves++; return safe; }
+            const anchor = () => open(live.result);
+            return visit({live: anchor(), anchor, prefix: []}, phase + 1, depth);
+        }
+        if (depth >= 32 || ![defender, attacker].includes(menu.player)) return unknown;
+        let steps, incomplete = false;
+        if (menu.type === "Action") {
+            if (menu.player !== (phase % 2 ? attacker : defender)) return unknown;
+            const order = menu.player === defender ? ["Activate", "Challenge", "Quest", "End Turn"]
+                : ["Quest", "Challenge", "Activate", "End Turn"];
+            const moves = order.flatMap((type) => menu.actions.filter((a) => a.type === type));
+            incomplete = moves.length !== menu.actions.length;
+            steps = moves.map((action) => ({type: "Action", action}));
+        } else {
+            const target = menu.type === "Choose Cards" && menu.min === 1 && menu.max === 1 && !menu.total &&
+                menu.cards.every((c) => [defender, attacker].some((p) => live.position.players[p].play.some((t) => t.card.i === c.i)));
+            const selfCost = menu.type === "Pay Cost" && menu.cost.length === 1 && ["Banish", "Exert"].includes(menu.cost[0].type);
+            const answers = decisionAnswers(live, node.prefix, defender);
+            const discard = menu.player === defender && menu.type === "Pay Cost" &&
+                menu.cost.length === 1 && menu.cost[0].type === "Choose Cards" &&
+                answers?.some((a) => a.payment?.[0]?.type === "Discard");
+            if (!target && !selfCost && !discard) return unknown;
+            steps = answers?.map((answer) => ({type: "Decision", answer}));
+            // The unknown future draw is never used to establish a safe plan.
+            // While refuting a choice, include its legal generic discard too.
+            if (discard) {
+                for (const card of menu.cost[0].from.cards.filter((c) => c.fullName === hiddenName)) {
+                    steps.push({type: "Decision", answer: {type: "Pay Cost", pay: true,
+                        payment: [{type: "Discard", player: defender, cards: [card]}]}});
+                }
+            }
+        }
+        if (!steps?.length || steps.length > 12) return unknown;
+        const desired = menu.player === defender ? "safe" : "loss";
+        let representative;
+        for (const step of steps) {
+            const branch = descend(node, step, phase, depth);
+            const opaque = step.answer?.payment?.some((p) => p.cards?.some((c) => c.fullName === hiddenName));
+            if (opaque && branch.status === "safe") { incomplete = true; continue; }
+            if (branch.status === desired) return branch;
+            if (branch.status === "unknown") incomplete = true;
+            else representative ??= branch;
+        }
+        return incomplete ? unknown : representative;
+    }
+    function descend(node, step, phase, depth) {
+        const atAction = node.live.request.type === "Action";
+        const anchor = atAction ? () => node.live.branch() : node.anchor;
+        const prefix = atAction ? [] : node.prefix;
+        const live = anchor();
+        for (const previous of prefix) submit(live, previous);
+        submit(live, step);
+        const child = visit({live, anchor, prefix: [...prefix, step]}, phase, depth + 1);
+        return child.status === "unknown" ? child : {
+            status: child.status, trace: [{ phase, player: node.live.request.player, step }, ...child.trace],
+        };
+    }
+    const prior = descend(root, {type: "Action", action: initial}, 0, 0);
+    if (prior.status !== "loss") return null;
+    for (const action of attempts) {
+        const branch = descend(root, {type: "Action", action}, 0, 0);
+        if (branch.status !== "safe") continue;
+        const opening = [];
+        for (const entry of branch.trace) {
+            if (entry.phase !== 0 || entry.player !== defender) break;
+            opening.push(entry.step);
+        }
+        return {action, status: "no_lethal_found", line: opening, actors: opening.map(() => defender),
+            prevention: { before: prior.trace, after: branch.trace, terminalLeaves: leaves } };
+    }
+    return null;
 }
 
 // Extend a resolved defense into a race using unspent ink. An opposing action

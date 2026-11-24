@@ -86,6 +86,7 @@ export function createDefensiveController(engine, setup, {
                 try {
                     search = analyzeImmediateDefense(engine, view, {
                         maxNodes: 768, maxActions: 3, maxMs: 1200, ...limits,
+                        originalChoice: (action) => original?.type === "Action" && actionOption(request, action)?.option === original.option,
                         allowInk: request.actions.some((r) => r.action.type === "Ink"),
                         rootAllowed: (action) => Boolean(actionOption(request, action)),
                     });
@@ -102,13 +103,15 @@ export function createDefensiveController(engine, setup, {
                 let plan = [];
                 if (selected && (!search.budgetExhausted || selected.status === "defender_wins")) {
                     plan = ownPlan(engine, view, selected);
-                    verdict = selected.status === "defender_wins" ? "own_win" : "public_defense";
+                    verdict = selected.prevention ? "preventive_defense" : selected.status === "defender_wins" ? "own_win" : "public_defense";
                 } else if (search.budgetExhausted || search.baseline.status === "lethal") {
                     verdict = "inconclusive";
                 }
                 return { verdict, cutoff: search.cutoff, nodes: search.nodes, plan,
                     ...(selected?.nextTurn ? { afterPublicPass: selected.nextTurn } : {}),
                     ...(selected?.publicReplies ? { publicReplies: selected.publicReplies } : {}),
+                    ...(search.preventionCutoff ? { preventionCutoff: search.preventionCutoff } : {}),
+                    ...(selected?.prevention ? { prevention: selected.prevention } : {}),
                     ...(selected?.boardRace ? { boardRace: selected.boardRace } : {}),
                     ...(selected?.conditionalProgress ? { conditionalProgress: selected.conditionalProgress } : {}),
                     ...(selected?.continuationCutoff ? { continuationCutoff: selected.continuationCutoff } : {}) };

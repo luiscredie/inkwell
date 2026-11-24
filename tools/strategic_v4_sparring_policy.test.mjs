@@ -694,3 +694,97 @@ test("fixed additional positions retain earlier wins with different printed char
             boardGrid: body, own, ink, seed, before: runEvidence(before), after: runEvidence(after) }));
     }
 });
+
+const robin = "Robin Hood - Capable Fighter", lena = "Lena Sabrewing - Pure Energy";
+const challengeFirst = (_view, menu) => menu.actions.find(({action}) => action.type === "Challenge");
+const preventionPositions = [
+    ["twoPegasus", robin, 17, [[pegasus], [pegasus]], true],
+    ["healthyMax", robin, 18, [[max]], true],
+    ["woundedVanessa", robin, 18, [["Ursula - Vanessa", false, 2]], true],
+    ["mixedLore", robin, 16, [[lilo], [pegasus]], true],
+    ["threePegasus", robin, 16, [[pegasus], [pegasus], [pegasus]], true],
+    ["lena", lena, 17, [[pegasus], [pegasus]], true],
+    ["goodAim", angel, 17, [[pegasus], [pegasus]], true, {hand: [lady, lady]}],
+    ["wait", robin, 16, [[pegasus], [pegasus]], false],
+    ["alreadyLate", robin, 19, [[pegasus], [pegasus]], false],
+    ["ward", robin, 17, [["Kuzco - Temperamental Emperor"]], false],
+    ["existingActivation", "Steel Chromicon", 17, [[pegasus], [pegasus]], false],
+    ["winNow", robin, 17, [[pegasus], [pegasus]], false, {own: 19}],
+    ["winNext", robin, 17, [[pegasus], [pegasus]], false, {own: 18}],
+];
+
+test("intervene before two public replies when waiting loses the second race", {skip}, async () => {
+    for (const [name, source, lore, enemies, intervenes, extra] of preventionPositions) {
+        const p = fixture({lore, enemies, allies: [[source]], ...extra});
+        for (const seed of seeds) for (const challenge of [false, true]) {
+            const run = (preventNextCycle) => trial(p, seed, true, {preventNextCycle}, [], undefined, 4,
+                challenge ? challengeFirst : undefined);
+            const before = await run(false), after = await run(true);
+            const proof = after.searches.find((s) => s.prevention)?.prevention;
+            if (intervenes) {
+                assert.equal(before.winner, challenge ? null : 1, name);
+                assert.equal(after.winner, null, name);
+                assert.equal(after.executed.length, 4);
+                assert.ok(after.executed[0].some((s) => s.action?.ability?.card.fullName === source));
+                assert.ok(proof.terminalLeaves > 0, name);
+                assert.ok(proof.before.some((entry) => entry.phase === 3 && entry.step.action?.type === "Quest"));
+                assert.ok(proof.after.some((entry) => entry.phase === 3));
+                if (name === "goodAim") {
+                    assert.equal(after.executed[0][0].action.type, "Quest");
+                    assert.ok(discardIn(after.executed[0]));
+                }
+            } else {
+                assert.equal(after.searches[0].prevention, null, name);
+                assert.deepEqual(after.executed, before.executed, name);
+                if (name.startsWith("win")) assert.equal(after.winner, 2);
+            }
+            assert.ok(after.searches.every((s) => s.nodes <= 768));
+            if (process.env.INKWELL_PREVENTION_TRACE === "1") console.log(JSON.stringify({
+                preventionCase: name, seed, challenge, before: runEvidence(before), after: runEvidence(after), proof }));
+        }
+    }
+});
+
+test("preventive decisions respect hidden reach, the original legal choice and the shared node cap", {skip}, async () => {
+    const spec = {lore: 17, allies: [[robin]], enemies: [[pegasus], [pegasus]], enemyInk: 2};
+    const opposing = (_v, menu) => menu.actions.find(({action}) => action.type === "Quest") ??
+        menu.actions.find(({action}) => action.type === "Play" && action.card.fullName === gathering);
+    const run = (hidden, limits = {}) => trial(fixture({...spec, hidden: [hidden]}), 309, true, limits, [], undefined, 4, opposing);
+    const quiet = await run(filler), danger = await run(gathering);
+    assert.ok(quiet.searches[0].prevention);
+    assert.deepEqual(quiet.searches[0].prevention, danger.searches[0].prevention);
+    assert.deepEqual(quiet.executed[0], danger.executed[0]);
+    assert.equal(quiet.winner, null);
+    assert.equal(danger.winner, 1);
+    assert.equal(danger.executed.length, 2);
+    const prior = await run(filler, {preventNextCycle: false});
+    const maxNodes = prior.searches[0].nodes + 2;
+    const limited = await run(filler, {maxNodes});
+    assert.equal(limited.searches[0].preventionCutoff, "budget");
+    assert.equal(limited.searches[0].nodes, maxNodes);
+    assert.equal(limited.searches[0].prevention, null);
+    assert.deepEqual(limited.executed[0], prior.executed[0]);
+});
+
+test("cross the early and late controllers using the engine's actual midgame positions", {skip}, async () => {
+    for (const [name, source, lore, enemies, , extra] of preventionPositions.filter(([key]) =>
+        ["twoPegasus", "healthyMax", "lena", "goodAim"].includes(key))) for (const seed of seeds) {
+        const p = fixture({lore, enemies, allies: [[source]], ...extra});
+        const crossover = [];
+        for (const early of [false, true]) {
+            const prefix = await trial(p, seed, true, {preventNextCycle: early}, [], undefined, 2, undefined, true);
+            assert.deepEqual(prefix.checkpoint.turn, {number: p.turn.number + 2, player: 2});
+            const uninterrupted = await trial(p, seed, true, {preventNextCycle: early}, [], undefined, 4);
+            for (const late of [false, true]) {
+                const resume = await trial(prefix.checkpoint, seed, true, {preventNextCycle: late});
+                if (early === late) {
+                    assert.deepEqual([...prefix.executed, ...resume.executed], uninterrupted.executed);
+                    assert.equal(resume.winner, uninterrupted.winner);
+                }
+                assert.equal(resume.winner, early ? null : 1, name);
+                crossover.push({early, late, winner: resume.winner, opposingLore: resume.lore, executed: resume.executed});
+            }
+        }
+        if (process.env.INKWELL_PREVENTION_TRACE === "1") console.log(JSON.stringify({ preventionCross: name, seed, crossover }));
+    }
+});
