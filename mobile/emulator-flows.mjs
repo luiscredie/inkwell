@@ -99,18 +99,6 @@ await step('Decks opens from the tab bar', async () => {
   await shot(page, '4-decks');
 });
 
-await step('Android back button after Decks (recorded, not judged)', async () => {
-  if (!device) return 'browser mode: skipped';
-  const before = new URL(page.url()).pathname;
-  await device.shell('input keyevent 4');
-  await new Promise((r) => setTimeout(r, 2500));
-  const top = String(await device.shell('dumpsys activity activities | grep topResumedActivity')).trim();
-  let after = '(page gone)'; try { after = new URL(page.url()).pathname; } catch { /* */ }
-  const inApp = top.includes(PKG);
-  if (!inApp) { await device.shell(`am start -n ${PKG}/br.com.inkwell.app.MainActivity`); await new Promise((r) => setTimeout(r, 4000)); }
-  return `from ${before}: ${inApp ? 'stayed in the app at ' + after : 'the app went to the background'}`;
-});
-
 const fakeCamera = async (draw) => page.evaluate(({ IMG, draw }) => {
   navigator.mediaDevices.getUserMedia = async () => {
     const c = document.createElement('canvas'); c.width = 720; c.height = 1280; const ctx = c.getContext('2d');
@@ -164,6 +152,18 @@ await step('scanner, 3×3 page: nine pockets checked on the phone (still photo, 
   if (saved().length !== 1) throw new Error('the page saved something without confirmation');
   await page.keyboard.press('Escape');
   return `${right}/8 identified, pocket 9 empty, engine=${st.engine}, ${st.ms || ''} shown on the check screen, ${Math.round((Date.now() - t0) / 1000)} s with drawing`;
+});
+
+await step('Android back button (recorded, not judged)', async () => {
+  if (!device) return 'browser mode: skipped';
+  const before = new URL(page.url()).pathname;
+  await device.shell('input keyevent 4');
+  await new Promise((r) => setTimeout(r, 2500));
+  const top = String(await device.shell('dumpsys activity activities | grep topResumedActivity')).trim();
+  let after = '(page gone)'; try { after = new URL(page.url()).pathname; } catch { /* */ }
+  const inApp = top.includes(PKG);
+  if (!inApp) { await device.shell(`am start -n ${PKG}/br.com.inkwell.app.MainActivity`); await new Promise((r) => setTimeout(r, 4000)); }
+  return `from ${before}: ${inApp ? 'stayed in the app at ' + after : 'the app went to the background'}`;
 });
 
 const real = calls.length;   // every one of them was answered here
