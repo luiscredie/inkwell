@@ -8,19 +8,30 @@ on:
     workflows: ["Inkwell release checks"]
     types: [completed]
     branches: [main]
-  # Deploy manual (quando o automático falha por problema do GitHub): só publica o commit informado, e só se esse
-  # commit estiver na main e tiver passado nos quatro checks obrigatórios.
+  # Deploy manual (quando o automático falha por problema do GitHub). Só a partir da main; publica exatamente o
+  # commit informado, e só se uma execução oficial de "Inkwell release checks" (push na main) desse commit concluiu
+  # com sucesso, com js, python, smoke e journeys-webkit. Um commit que não é o topo da main é um rollback e exige
+  # autorização escrita e o SHA redigitado. Regras em tools/verify-deploy-sha.sh.
   workflow_dispatch:
     inputs:
       sha:
-        description: "Commit da main a publicar (SHA completo, aprovado em js, python, smoke e journeys-webkit)"
+        description: "Commit a publicar (SHA completo). Deve ser o topo da main, salvo rollback autorizado."
         required: true
+      rollback_authorization:
+        description: "Só para rollback: quem autorizou e quando (ex.: Conselho, 25/11, mensagem X)"
+        required: false
+        default: ""
+      rollback_confirm:
+        description: "Só para rollback: redigite o SHA completo"
+        required: false
+        default: ""
 
 permissions:
   contents: read
   pages: write
   id-token: write
   checks: read
+  actions: read
 
 concurrency:
   group: pages
@@ -29,31 +40,33 @@ concurrency:
 jobs:
   deploy:
     if: >-
-      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
       github.event.workflow_run.conclusion == 'success'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
+      # the guard script comes from main's own tree, never from the commit being published
+      - name: Check out the guard (main)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          path: guard
+          sparse-checkout: tools/verify-deploy-sha.sh
+          sparse-checkout-cone-mode: false
+
       - name: Verify the commit asked for (manual deploy)
         if: github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ github.token }}
-          SHA: ${{ inputs.sha }}
           REPO: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "Informe o SHA completo (40 caracteres)."; exit 1; }
-          # na main: o commit é a própria main ou um antecessor dela (nunca uma branch)
-          st=$(gh api "repos/$REPO/compare/$SHA...main" --jq .status)
-          [[ "$st" == "identical" || "$st" == "ahead" ]] || { echo "$SHA não está na main (compare: $st)."; exit 1; }
-          # os quatro checks obrigatórios concluídos com sucesso neste commit
-          for c in js python smoke journeys-webkit; do
-            r=$(gh api "repos/$REPO/commits/$SHA/check-runs?check_name=$c&per_page=100" --jq '[.check_runs[] | select(.conclusion == "success")] | length')
-            [[ "$r" -ge 1 ]] || { echo "Check obrigatório '$c' sem sucesso em $SHA."; exit 1; }
-          done
-          echo "OK: $SHA está na main e passou em js, python, smoke e journeys-webkit."
+          REF: ${{ github.ref }}
+          SHA: ${{ inputs.sha }}
+          ROLLBACK_AUTH: ${{ inputs.rollback_authorization }}
+          ROLLBACK_CONFIRM: ${{ inputs.rollback_confirm }}
+        run: bash guard/tools/verify-deploy-sha.sh
 
       - name: Check out revision
         uses: actions/checkout@v5
