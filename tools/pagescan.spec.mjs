@@ -260,7 +260,8 @@ test('Escanear página: the same page twice asks before adding it again; Esc ste
     await expect(rev.getByTestId('page-reading')).toHaveCount(0, { timeout: 60000 });
     const s = await page.evaluate(() => window.__inkwellScanPageState());
     for (let i = 0; i < 9; i++) if (['check', 'choose', 'unknown'].includes(s.pockets[i].status)) { const ed = await openPk(rev, i); await ed.getByTestId('pocket-skip').click(); }
-    await closeSheet(rev); };
+    await closeSheet(rev);
+    console.log('DUPSTATE', JSON.stringify((await page.evaluate(() => window.__inkwellScanPageState())).pockets.map((p) => [p.status, p.id, p.skip ? 1 : 0, (p.group || []).length]))); };
   let rev = await pagePhoto(page); await settle(rev);
   await rev.getByTestId('page-add-more').click();
   await expect(rev).toBeHidden();
