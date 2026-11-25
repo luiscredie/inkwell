@@ -13,7 +13,7 @@ const DECK_B = { id: 'deck-b', name: 'Rubi Safira', format: 'core', cards: { 'LO
 const HOME = { profile: { handle: 'luis', is_public: true }, friend_requests: [], recados_waiting: 0, communities: [], community_posts: [], recados_new: [] };
 const soon = () => new Date(Date.now() + 3 * 86400e3).toISOString();
 
-async function open(page, { width = 390, collection = {}, decks = [], marks = [], home = HOME, homeFails = () => false, colsFail = () => false, lastDeck = null } = {}) {
+async function open(page, { width = 390, collection = {}, decks = [], marks = [], home = HOME, homeFails = () => false, colsFail = () => false, lastDeck = null, mode = () => 'ok' } = {}) {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.setViewportSize({ width, height: width < 700 ? 760 : 900 });
@@ -26,6 +26,10 @@ async function open(page, { width = 390, collection = {}, decks = [], marks = []
   await page.route('**/rest/v1/**', (route) => {
     const path = new URL(route.request().url()).pathname.replace(/.*\/rest\/v1\//, '');
     const json = (v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+    const m = mode(path);   // 'down': no network; '401': session refused; '503': the server
+    if (m === 'down') return route.abort('internetdisconnected');
+    if (m === '401') return route.fulfill({ status: 401, contentType: 'application/json', body: '{"message":"JWT expired"}' });
+    if (m === '503') return route.fulfill({ status: 503, contentType: 'application/json', body: '{"message":"down"}' });
     if (path === 'inkwell_profiles' && colsFail()) return route.fulfill({ status: 500, contentType: 'application/json', body: '{"message":"down"}' });
     if (path === 'inkwell_profiles') return json([{ profile: 'principal', updated_at: '2026-11-15T10:00:00Z', collection, decks, wishlist: {} }]);
     if (path === 'rpc/my_home') return homeFails() ? route.fulfill({ status: 500, contentType: 'application/json', body: '{"message":"down"}' }) : json(home);
@@ -212,4 +216,52 @@ test('phone, two accounts on one device: the last deck of another account (or th
   const keys = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('inkwell-last-deck')).sort());
   expect(keys).toEqual(['inkwell-last-deck:11111111-1111-4111-8111-111111111111', 'inkwell-last-deck:99999999-9999-4999-8999-999999999999']);
   expect(await page.evaluate(() => localStorage.getItem('inkwell-last-deck:11111111-1111-4111-8111-111111111111'))).toBe('deck-b');
+});
+
+
+// The real-Android round (24/11) showed Início with "couldn't load" boxes. The reason is now said (no internet, a
+// dropped connection, a session no longer valid, the server), and the page loads by itself when the internet is back.
+test('Início offline (airplane mode): says so, and loads by itself when the connection is back', async ({ page }) => {
+  // the page itself is installed (the app's bundle): here it loads, then the device reports no network
+  let net = 'down';
+  await page.addInitScript(() => { window.__off = true; Object.defineProperty(Navigator.prototype, 'onLine', { configurable: true, get: () => !window.__off }); });
+  await open(page, { decks: [DECK_A], collection: { 'LOR10-1': { n: 1, f: 0 } }, mode: () => net });
+  const keepErr = page.getByTestId('keep-error');
+  await expect(keepErr).toBeVisible({ timeout: 15000 });
+  await expect(keepErr.getByTestId('home-why')).toHaveAttribute('data-why', 'offline');
+  await expect(keepErr.getByTestId('home-why')).toHaveText('Sem conexão com a internet. Carrega sozinho quando a conexão voltar.');
+  await shot(page, 'offline');
+  net = 'ok'; await page.evaluate(() => { window.__off = false; dispatchEvent(new Event('online')); });   // airplane mode off: no tap needed
+  await expect(page.getByTestId('keep-deck')).toContainText('Âmbar Aço', { timeout: 15000 });
+  await expect(page.getByTestId('keep-error')).toHaveCount(0);
+  await expect(page.getByTestId('home-error')).toHaveCount(0);
+  expect(await page.evaluate(() => window.__inkwellHomeFail())).toEqual({});
+});
+
+test('Início: a connection that drops as the app opens is tried again quietly', async ({ page }) => {
+  let n = 0;
+  await open(page, { decks: [DECK_A], collection: { 'LOR10-1': { n: 1, f: 0 } }, mode: (path) => (path.startsWith('inkwell_profiles') && n++ < 1 ? 'down' : 'ok') });
+  await expect(page.getByTestId('keep-deck')).toContainText('Âmbar Aço', { timeout: 15000 });
+  await expect(page.getByTestId('keep-error')).toHaveCount(0);
+  expect(n).toBeGreaterThanOrEqual(2);
+});
+
+test('Início: a session no longer valid and a server error are told apart', async ({ page }) => {
+  await open(page, { mode: (path) => (path.startsWith('inkwell_profiles') ? '401' : path === 'rpc/my_home' ? '503' : 'ok') });
+  const keepWhy = page.getByTestId('keep-error').getByTestId('home-why');
+  await expect(keepWhy).toHaveAttribute('data-why', 'session', { timeout: 15000 });
+  await expect(keepWhy.getByRole('link', { name: 'Entrar' })).toHaveAttribute('href', /entrar\/\?next=/);
+  const homeWhy = page.getByTestId('home-error').getByTestId('home-why');
+  await expect(homeWhy).toHaveAttribute('data-why', 'server');
+  await expect(homeWhy).toHaveText('O servidor não respondeu (503).');
+});
+
+test('Início: with no "online" event at all (some WebViews), it still loads by itself once the network is back', async ({ page }) => {
+  let net = 'down';
+  await open(page, { decks: [DECK_A], collection: { 'LOR10-1': { n: 1, f: 0 } }, mode: () => net });
+  await expect(page.getByTestId('keep-error')).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId('keep-error').getByTestId('home-why')).toHaveAttribute('data-why', 'network');
+  net = 'ok';                                                        // the network is back, but nobody says so
+  await expect(page.getByTestId('keep-deck')).toContainText('Âmbar Aço', { timeout: 20000 });
+  await expect(page.getByTestId('keep-error')).toHaveCount(0);
 });
