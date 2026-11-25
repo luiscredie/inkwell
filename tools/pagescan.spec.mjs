@@ -423,3 +423,95 @@ test('Escanear página: the screen is usable while the numbers are read in the b
   expect(t.ocrN).toBe(2);
   expect(deltas(calls)).toEqual([]);
 });
+
+// #334 — a tap must not be lost when the background reading of collector numbers settles a pocket. The reading is held
+// behind a gate: the finger goes down, the reading settles pocket 6 (Elsa, a reprint), then the finger comes up.
+async function gatedReading(page) {
+  await page.addInitScript(() => {
+    window.__ocrGate = new Promise((ok) => { window.__ocrOpen = ok; });
+    window.INKWELL_SCAN_OCR = async () => { await window.__ocrGate; return '125/204 EN 11'; };   // Elsa, Concerned Sister: LOR11-125
+  });
+}
+const settledByReading = (page) => expect.poll(() => page.evaluate(() => window.__inkwellScanPageState().pockets[5].status), { timeout: 20000 }).toBe('ok');
+for (const target of ['photo', 'grid', 'footer']) {
+  test(`#334: a ${target} tap made while the reading settles a pocket is not lost (mouse)`, async ({ page }) => {
+    test.setTimeout(120000);
+    await setup(page); await gatedReading(page);
+    await openPageMode(page);
+    const rev = await hardPage(page);
+    await expect(rev.getByTestId('page-reading')).toBeVisible();
+    expect((await page.evaluate(() => window.__inkwellScanPageState())).pockets[5].status).toBe('choose');
+    const el = target === 'photo' ? rev.locator('#pgPhoto [data-pk="0"] polygon') : target === 'grid' ? rev.locator('[data-pocket="1"]') : rev.getByTestId('page-add');
+    await el.scrollIntoViewIfNeeded();
+    const b = await el.boundingBox();
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+    await page.mouse.down();
+    await page.evaluate(() => window.__ocrOpen());                                  // the reading lands while the finger is down
+    await settledByReading(page);
+    await page.waitForTimeout(150);
+    await page.mouse.up();
+    const ed = rev.getByTestId('pocket-edit');
+    await expect(ed).toBeVisible({ timeout: 3000 });
+    await expect(ed).toHaveAttribute('data-edit-pocket', target === 'photo' ? '0' : target === 'grid' ? '1' : '6');   // footer: first pending after pocket 6 settled
+    await expect(rev.getByTestId('page-add')).toHaveText('Resolver 3 posições');
+  });
+}
+
+test('#334: a real touch on the photo while the reading settles a pocket opens it (CDP touch)', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'touch input via CDP');
+  test.setTimeout(120000);
+  await page.setViewportSize({ width: 360, height: 640 });
+  await setup(page); await gatedReading(page);
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+  await openPageMode(page);
+  const rev = await hardPage(page);
+  const pk = rev.locator('#pgPhoto [data-pk="4"] polygon'); await pk.scrollIntoViewIfNeeded();
+  const b = await pk.boundingBox(), tp = [{ x: b.x + b.width / 2, y: b.y + b.height / 2 }];
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: tp });
+  await page.evaluate(() => window.__ocrOpen());
+  await settledByReading(page);
+  await page.waitForTimeout(150);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await expect(rev.getByTestId('pocket-edit')).toHaveAttribute('data-edit-pocket', '4', { timeout: 3000 });
+});
+
+test('#334: the reading never changes the pocket the person has open; it waits for the editor to close', async ({ page }) => {
+  test.setTimeout(120000);
+  await setup(page); await gatedReading(page);
+  await openPageMode(page);
+  const rev = await hardPage(page);
+  const ed = await openPk(rev, 5);
+  await ed.getByTestId('pocket-find').click();
+  await ed.getByTestId('pocket-search').fill('elsa');
+  await page.evaluate(() => window.__ocrOpen());
+  await expect(rev.getByTestId('page-reading')).toHaveCount(0, { timeout: 20000 });
+  await expect(ed).toHaveAttribute('data-edit-pocket', '5');                        // still the person's
+  await expect(ed.getByTestId('pocket-search')).toHaveValue('elsa');
+  await expect(ed.getByTestId('pocket-search')).toBeFocused();
+  expect((await page.evaluate(() => window.__inkwellScanPageState())).pockets[5].status).toBe('choose');
+  await rev.locator('#pgsClose').click();                                          // closed: the reading applies now
+  await settledByReading(page);
+  await expect(rev.locator('#pgPhoto [data-pk="5"]')).toHaveAttribute('data-st', 'ok');
+});
+
+test('#334: when the reading settles the last pending pocket, the screen updates in place and both footer actions work', async ({ page }) => {
+  test.setTimeout(120000);
+  const calls = await setup(page); await gatedReading(page);
+  await openPageMode(page);
+  const rev = await hardPage(page);
+  for (const i of [6, 7, 8]) { const ed = await openPk(rev, i); await ed.getByTestId('pocket-skip').click(); }
+  await closeSheet(rev);
+  await expect(rev.getByTestId('page-add')).toHaveText('Resolver 1 posição');
+  await page.evaluate(() => { for (const e of document.querySelectorAll('#pageReview [data-pocket], #pageReview [data-pk], #pgAdd')) e.__same = true; });
+  await page.evaluate(() => window.__ocrOpen());
+  await settledByReading(page);
+  await expect(rev.getByTestId('page-add')).toHaveText('Continuar para revisão (6 cartas)');
+  await expect(rev.locator('#pgPhoto [data-pk="5"] text')).toHaveText('✓');
+  await expect(rev.locator('[data-pocket="5"] .chip')).toHaveText(/Reconhecida|Confirmada|Certa/);
+  await expect(rev.getByTestId('page-progress')).toHaveText('Tudo resolvido');
+  expect(await page.evaluate(() => [...document.querySelectorAll('#pageReview [data-pocket], #pageReview [data-pk], #pgAdd')].every((e) => e.__same))).toBe(true);   // nothing replaced
+  await rev.getByTestId('page-add-more').click();                                  // inserted in place, and it works
+  await expect(rev).toBeHidden();
+  expect(deltas(calls)).toEqual([]);
+});
