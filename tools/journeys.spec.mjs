@@ -128,7 +128,10 @@ for (const [label, viewport, touch] of [['phone', { width: 390, height: 844 }, t
       await page.goto(at('decks/'));
       await expect(page.locator('.deck-row', { hasText: 'Meu deck de teste' })).toBeVisible();
       await shot(page, '5-deck-saved');
-      await page.goBack({ waitUntil: 'commit' }); await page.goForward({ waitUntil: 'commit' });   // #286 C1: WebKit may send no "load" for a page restored from back/forward; the content is awaited below
+      // #286 C1: WebKit may send no "load" for a page restored from back/forward, so wait for the address, not "load".
+      // Back must have landed before forward: Chromium otherwise swaps the page under goForward ("not attached").
+      await page.goBack({ waitUntil: 'commit' }); await expect(page).toHaveURL(/\/decks\/\?deck=/);
+      await page.goForward({ waitUntil: 'commit' }); await expect(page).toHaveURL(/\/decks\/$/);
       await expect(page.locator('.deck-row', { hasText: 'Meu deck de teste' })).toBeVisible({ timeout: 10000 });   // WebKit restores from back/forward more slowly
       await page.evaluate(() => localStorage.removeItem('inkwell-counter-auth'));   // logout (this browser)
       await page.reload();
