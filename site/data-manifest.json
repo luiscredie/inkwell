@@ -1,6 +1,6 @@
 {
   "manifest_version": 1,
-  "generated_at": "2026-11-22T17:56:20.268102+00:00",
+  "generated_at": "2026-11-25T20:00:08.349492+00:00",
   "min_app_version": "1.4.0",
   "schema": {
     "cards": 3,
@@ -26,8 +26,8 @@
     },
     "prices": {
       "path": "data/prices.json",
-      "sha256": "c2ecd623981c54cd3fa322e1eb0d1314f089899b7931acea32d02852d1631781",
-      "bytes": 998987
+      "sha256": "d6192711276d7290cf0b55f43c7198b30dc0444a77319eed783b15b3743b4023",
+      "bytes": 1001722
     },
     "aliases": {
       "path": "data/aliases.json",
@@ -36,7 +36,7 @@
     },
     "validation": {
       "path": "data/validation-report.json",
-      "sha256": "7164530c200fe5e965ae1e82e1b9ae61802b64d16948bcc60f7975cdf922d59a",
+      "sha256": "ca298a774dc831a85f75b2d4af5145a66cc924974980a9839903144a860cfd48",
       "bytes": 31017
     },
     "price_history": {
@@ -56,8 +56,8 @@
     },
     "price_history_tcg": {
       "path": "data/price-history-tcg.json",
-      "sha256": "9b1dcb36b4ff9928a72ac01ae6181a76b1483f8b36370b18f2817a5cff903193",
-      "bytes": 1985
+      "sha256": "d51946fb7a3e7db2a1b06efd5898f198708ea1e494575c7c6d8b136b1948bdb5",
+      "bytes": 2150
     }
   },
   "counts": {
