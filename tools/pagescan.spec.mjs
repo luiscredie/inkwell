@@ -215,6 +215,12 @@ test('Escanear página: 4 pockets to settle, tapped on the photo, through to the
   const st7 = await page.evaluate(() => window.__inkwellScanPageState().pockets[7]);
   const same = await ed.getByTestId('pocket-same').locator('[data-use]').evaluateAll((b) => b.map((x) => x.dataset.use)).catch(() => []);
   expect(same.every((id) => st7.group.includes(id))).toBe(true);
+  // a pocket not recognised has no "same art" list: its group is only the engine's rejected guess
+  await ed.getByTestId('pocket-next').click();
+  await expect(ed).toHaveAttribute('data-edit-pocket', '8');
+  await expect(ed.getByTestId('pocket-same')).toHaveCount(0);
+  await ed.getByTestId('pocket-prev').click();
+  await expect(ed).toHaveAttribute('data-edit-pocket', '7');
   // anterior / próxima pendência
   await ed.getByTestId('pocket-prev').click();
   await expect(ed).toHaveAttribute('data-edit-pocket', '6');
