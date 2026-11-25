@@ -23,7 +23,9 @@ Regras de captura:
 ## 2. Gabarito
 
 Abrir `tools/pagescan-annotate.html` localmente (instruções no topo do arquivo) e, para cada foto:
-1. Informar aparelho, luz, se está inclinada e se tem foil.
+1. Informar aparelho, luz, se está inclinada e se tem foil. Informar também o **tempo no aparelho** e **onde** foi medido
+   (app Android, app iOS ou navegador do celular): é o número no canto do rodapé da tela "Confira a página" quando
+   aquela mesma página foi escaneada no aparelho (passo 4). A lista marca ✓ quando a foto está completa.
 2. Clicar nos 4 cantos da área dos bolsos, na ordem pedida, e conferir a grade verde.
 3. Em cada posição, escolher a carta pelo nome (o código, por exemplo LOR13-80, fica no gabarito) ou "vazia".
 4. **Impressão exata:** se for promo ou reimpressão, escolher o código da impressão que está na foto (veja o número de colecionador).
@@ -46,18 +48,46 @@ Indicadores:
 - **Identificação** = automática certa + 1ª sugestão certa (a carta que o scanner põe em primeiro é a certa).
 - **Ao alcance** = identificação + certa nas alternativas.
 - **Precisa da pessoa** = tudo que não é automática.
+- **Correção manual** = certa nas alternativas + fora das sugestões (a pessoa escolhe outra opção ou busca pelo nome).
+
+O relatório separa, por aparelho e no total: **automática certa**, **1ª sugestão certa**, **correção manual**, **carta
+tomada por vazio** e **falsos positivos** (de cartas e de bolsos vazios), que somam todas as cartas; e o **tempo no
+aparelho** (mediana e máximo, digitado no gabarito), à parte do tempo no computador que mede.
 
 ## 4. Como medir
 
 ```bash
 cd site && python3 -m http.server 8080 &
-PAGESCAN_DIR=/caminho/das/fotos PAGESCAN_OUT=/caminho/das/fotos/relatorio.json PAGESCAN_JITTER=0.02 \
+PAGESCAN_DIR=/caminho/das/fotos PAGESCAN_OUT=/caminho/das/fotos/relatorio.json PAGESCAN_MD=/caminho/das/fotos/relatorio.md PAGESCAN_JITTER=0.02 \
   npx playwright test --project=chromium tools/pagescan-bench.spec.mjs
 ```
 
 - `PAGESCAN_JITTER=0.02` desloca os cantos anotados em até 2%, como um alinhamento feito à mão. Rodar também com `0` (cantos ajustados com cuidado) e com `0.04`.
 - O relatório traz o total, a quebra por aparelho e por condição, e o veredito de cada posição.
-- **Tempo em celular:** além do Chromium do computador, abrir a mesma página no celular (Coleção → Escanear → Página 3×3) com 5 fotos de cada aparelho e anotar o tempo exibido na tela de conferência. Também vale anotar se a tela travou ao arrastar e rolar durante o reconhecimento (com o Worker, não deveria).
+- **Tempo em celular:** cada página é também escaneada no próprio aparelho (Coleção → Escanear → Página 3×3, câmera ou galeria) e o tempo exibido no rodapé da tela de conferência vai para o gabarito. Anotar à parte se a tela travou ao rolar durante o reconhecimento.
+- O relatório (`relatorio.md`) primeiro diz se o conjunto cumpre a seção 1 (páginas, aparelhos, páginas por aparelho, bolsos vazios, páginas com foil, tempos preenchidos). **Com o conjunto incompleto ou com fotos sintéticas, nenhuma meta é julgada**: a coluna diz "não avaliável".
+
+## 4a. Validação do procedimento (feita em 25/11, sem fotos reais)
+
+`tools/pagescan-a3.spec.mjs` percorre o caminho inteiro como a pessoa fará: 6 fotos geradas de 3 "aparelhos" →
+anotadas na ferramenta (cantos clicados com rolagem, cartas digitadas, aparelho, tempo, luz) → `truth.json` exportado →
+o mesmo reconhecimento do benchmark → relatório. Confere que cada carta entra em exatamente uma categoria, que o tempo
+de cada foto chega ao relatório e que o conjunto é dito incompleto, sem meta julgada. A mesma pasta passou também pelo
+`pagescan-bench.spec.mjs`. `tools/pagescan-report.test.mjs` testa as regras do relatório (inclusive um conjunto completo
+em que a meta de tempo **não** é atingida). As duas verificações rodam no CI. Esses números **não** medem o produto.
+
+Achados da validação, já corrigidos: a marca ✓ da lista só aparecia ao trocar de foto; o benchmark carregava as fotos
+com `Image.decode()` (o mesmo problema da #333) e agora usa `createImageBitmap`, aplicando a orientação EXIF da foto.
+
+## 4b. Roteiro por aparelho (para quem fotografa)
+
+1. Separar 10 páginas reais (seção 1: luz boa, reflexo, luz fraca, inclinada; foils e bolsos vazios espalhados).
+2. Para cada página: fotografar com a câmera do aparelho (resolução normal, sem filtro) **e** escanear no Inkwell
+   (Página 3×3); anotar o tempo do rodapé. Não corrigir nada no Inkwell; descartar a lista ao final (nada é gravado).
+3. Passar as fotos para o computador, todas numa **única pasta**, sem editar, com o aparelho no início do nome do
+   arquivo (ex.: `iphone13-01.jpg`) para não haver nomes repetidos.
+4. Anotar as 30 fotos no gabarito (seção 2; a ferramenta abre várias de uma vez), exportar o `truth.json` para a mesma
+   pasta e rodar a seção 4.
 
 ## 5. Critérios de decisão
 
