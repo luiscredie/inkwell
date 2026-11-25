@@ -1,0 +1,13 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "br.com.inkwell.app",
+      "sha256_cert_fingerprints": ["SHA256:DA:CHAVE:DE:ASSINATURA:DE:RELEASE"]
+    }
+  }
+]
