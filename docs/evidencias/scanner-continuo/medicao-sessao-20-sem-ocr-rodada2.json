@@ -1,0 +1,222 @@
+{
+ "passes": 20,
+ "added": 20,
+ "right": 20,
+ "wrong": 0,
+ "pending_printing": 5,
+ "missed": 0,
+ "extra": 0,
+ "foil_right": "4/4",
+ "foil_marked": "0/4",
+ "repeat_in_a_row_right": true,
+ "taps": 0,
+ "latency_ms_median": 1396,
+ "latency_ms_max": 2197,
+ "ocr": "off",
+ "session_s": 56,
+ "hold_ms": 2200,
+ "gap_ms": 600,
+ "detail": [
+  {
+   "k": 0,
+   "truth": "LOR2-115",
+   "foil": false,
+   "got": "LOR2-115",
+   "pending": false,
+   "inChoice": false,
+   "gotFoil": false,
+   "ms": 1417
+  },
+  {
+   "k": 1,
+   "truth": "LOR1-190",
+   "foil": false,
+   "got": "LOR1-190",
+   "pending": false,
+   "inChoice": false,
+   "gotFoil": false,
+   "ms": 1419
+  },
+  {
+   "k": 2,
+   "truth": "LOR13-143",
+   "foil": false,
+   "got": "LOR13-143",
+   "pending": false,
+   "inChoice": false,
+   "gotFoil": false,
+   "ms": 1370
+  },
+  {
+   "k": 3,
+   "truth": "LOR5-111",
+   "foil": true,
+   "got": "LOR5-111",
+   "pending": false,
+   "inChoice": false,
+   "gotFoil": false,
+   "ms": 1495
+  },
+  {
+   "k": 4,
+   "truth": "LOR11-93",
+   "foil": false,
+   "got": "LOR11-93",
+   "pending": false,
+   "inChoice": false,
+   "gotFoil": false,
+   "ms": 1294
+  },
+  {
+   "k": 5,
+   "truth": "LOR11-93",
+   "foil": false,
+   "got": "LOR11-93",
+   "pending": false,
+   "inChoice": false,
+   "gotFoil": false,
+   "ms": 1396
+  },
+  {
+   "k": 6,
+   "truth": "LOR14-57",
+   "foil": false,
+   "got": "LOR14-57",
+   "pending": false,
+   "inChoice": false,
+   "gotFoil": false,
+   "ms": 1351
+  },
+  {
+   "k": 7,
+   "truth": "LOR11-125",
+   "foil": false,
+   "got": "LOR11-125",
+   "pending": true,
+   "inChoice": true,
+   "gotFoil": false,
+   "ms": 1705
+  },
+  {
+   "k": 8,
+   "truth": "LOR13-86",
+   "foil": true,
+   "got": "LOR13-86",
+   "pending": false,
+   "inChoice": false,
+   "gotFoil": false,
+   "ms": 1373
+  },
+  {
+   "k": 9,
+   "truth": "LOR14-209",
+   "foil": false,
+   "got": "LOR14-209",
+   "pending": true,
+   "inChoice": true,
+   "gotFoil": false,
+   "ms": 2164
+  },
+  {
+   "k": 10,
+   "truth": "LOR8-48",
+   "foil": false,
+   "got": "LOR8-48",
+   "pending": false,
+   "inChoice": false,
+   "gotFoil": false,
+   "ms": 1397
+  },
+  {
+   "k": 11,
+   "truth": "LOR5-26",
+   "foil": false,
+   "got": "LOR5-26",
+   "pending": false,
+   "inChoice": false,
+   "gotFoil": false,
+   "ms": 1371
+  },
+  {
+   "k": 12,
+   "truth": "LOR13-143",
+   "foil": false,
+   "got": "LOR13-143",
+   "pending": false,
+   "inChoice": false,
+   "gotFoil": false,
+   "ms": 1351
+  },
+  {
+   "k": 13,
+   "truth": "LOR5-215",
+   "foil": false,
+   "got": "LOR5-215",
+   "pending": false,
+   "inChoice": false,
+   "gotFoil": false,
+   "ms": 1049
+  },
+  {
+   "k": 14,
+   "truth": "LOR9-107",
+   "foil": true,
+   "got": "LOR3-103",
+   "pending": true,
+   "inChoice": true,
+   "gotFoil": false,
+   "ms": 2179
+  },
+  {
+   "k": 15,
+   "truth": "LOR6-128",
+   "foil": false,
+   "got": "LOR6-128",
+   "pending": false,
+   "inChoice": false,
+   "gotFoil": false,
+   "ms": 1353
+  },
+  {
+   "k": 16,
+   "truth": "LOR3-89",
+   "foil": false,
+   "got": "LOR3-89",
+   "pending": true,
+   "inChoice": true,
+   "gotFoil": false,
+   "ms": 2197
+  },
+  {
+   "k": 17,
+   "truth": "LOR14-209",
+   "foil": false,
+   "got": "LOR14-209",
+   "pending": true,
+   "inChoice": true,
+   "gotFoil": false,
+   "ms": 2166
+  },
+  {
+   "k": 18,
+   "truth": "LOR1-31",
+   "foil": false,
+   "got": "LOR1-31",
+   "pending": false,
+   "inChoice": false,
+   "gotFoil": false,
+   "ms": 1392
+  },
+  {
+   "k": 19,
+   "truth": "LOR5-111",
+   "foil": true,
+   "got": "LOR5-111",
+   "pending": false,
+   "inChoice": false,
+   "gotFoil": false,
+   "ms": 1390
+  }
+ ],
+ "extra_ids": []
+}
