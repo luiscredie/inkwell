@@ -30,6 +30,7 @@ async function setup(page) {
       const c = document.createElement('canvas'); c.width = 1080; c.height = 1920;
       const ctx = c.getContext('2d'), imgs = files.map((f) => { if (!f) return null; const i = new Image(); i.src = `../lorcana-card-images/images/${f}.jpg`; return i; });
       setInterval(() => {
+        window.__fakeCamFull = imgs.every((im) => !im || (im.complete && im.naturalWidth));   // every card drawn in this frame
         ctx.fillStyle = '#5c4634'; ctx.fillRect(0, 0, c.width, c.height);
         const g = window.__inkwellScanGuide?.(); if (!g) return;
         const k = 1.02, W = g.w * k, H = g.h * k, x0 = g.x - (W - g.w) / 2 + g.w * 0.01, y0 = g.y - (H - g.h) / 2;
@@ -58,7 +59,12 @@ async function stillPage(page) {
   }, PAGE);
 }
 async function pagePhoto(page) {
-  if (STILL(page)) await stillPage(page); else await page.getByTestId('page-shoot').click();
+  if (STILL(page)) await stillPage(page);
+  else {   // under load the fake camera may still be loading a card picture: shoot once every card is on screen
+    await page.waitForFunction(() => window.__fakeCamFull === true, null, { timeout: 30000 });
+    await page.waitForTimeout(250);
+    await page.getByTestId('page-shoot').click();
+  }
   const rev = page.getByTestId('page-review');
   await expect(rev).toBeVisible();
   await expect.poll(() => page.evaluate(() => window.__inkwellScanPageState()?.busy), { timeout: 60000 }).toBe(false);
