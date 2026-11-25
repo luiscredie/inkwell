@@ -239,13 +239,15 @@ for (const [label, opts, note] of [
   });
 }
 
-test('a deck with many different cards: more images, each one full size, every card once', async ({ page }) => {
+// One test per format (#286): both formats in one test took 21–24 s locally and hit the 30 s limit on CI (30.2–30.4 s,
+// 3 times in November) while generating, downloading and reading back the QR of 5 full-size PNGs.
+for (const fmt of ['v', 'h']) test(`a deck with many different cards (${fmt === 'v' ? 'vertical' : 'horizontal'}): more images, each one full size, every card once`, async ({ page }) => {
   const ids = await (async () => { const cat = JSON.parse(readFileSync(new URL('../site/data/cards.json', import.meta.url), 'utf8')).cards;
     return cat.filter((c) => c.image_file && c.ink_color === 'Amber' && c.card_type === 'Character' && /^LOR1[0-4]$/.test(c.set_code)).slice(0, 60).map((c) => c.card_id); })();
   const big = { id: 'deck-big', name: 'Sessenta diferentes', format: 'infinity', colors: ['Amber'], public: true, cards: Object.fromEntries(ids.map((id) => [id, 1])) };
   await setup(page, { deck: big });
   await open(page, 'deck-big');
-  for (const fmt of ['v', 'h']) {
+  {
     const sheet = await makeImage(page, fmt);
     const n = +(await sheet.locator('#ovOut').getAttribute('data-pages'));
     expect(n).toBeGreaterThan(1);

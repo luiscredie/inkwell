@@ -93,8 +93,9 @@ for (const [label, viewport, touch] of [['phone', { width: 390, height: 844 }, t
       // step (#286). A budget that fits the journey; every step keeps its own expectations and waits.
       test.setTimeout(75000);
       const db = await backend(page);
-      await page.goto(at('index.html'));
+      await page.goto(at('index.html'), { waitUntil: 'commit' });   // #286 C2: the root sends on to feed/ by itself; wait for that, not for the root's "load"
       await expect(page).toHaveURL(/\/feed\/$/);
+      await page.waitForLoadState('load');
       await fits(page);
       const cta = page.getByTestId('try-deck');
       await expect(cta).toBeInViewport();
@@ -118,11 +119,16 @@ for (const [label, viewport, touch] of [['phone', { width: 390, height: 844 }, t
       expect(db.rows[0].data.decks[0].name).toBe('Meu deck de teste');
       expect(Object.values(db.rows[0].data.decks[0].cards).reduce((a, b) => a + b, 0)).toBe(60);
       expect(db.verify).toEqual([7, CODE.length]);   // 7 digits refused by the server, then the 8 (only lengths are kept here)
+      // #286 C2: saving opens the deck (history.pushState to ?deck=…). A goto fired while that was under way made WebKit
+      // report an internal error or never answer (4 of 30 runs, 25/11): wait for the app's own navigation to finish first.
+      await expect(page).toHaveURL(/\/decks\/\?deck=/);
+      await expect(page.getByText('Meu deck de teste').first()).toBeVisible();
+      await page.waitForLoadState('load');
       // reload, back/forward, logout and login again: the deck is still there
-      await page.goto(at('decks/')).catch(() => page.goto(at('decks/')));   // WebKit sometimes reports an internal error on this navigation: once more
+      await page.goto(at('decks/'));
       await expect(page.locator('.deck-row', { hasText: 'Meu deck de teste' })).toBeVisible();
       await shot(page, '5-deck-saved');
-      await page.goBack(); await page.goForward();
+      await page.goBack({ waitUntil: 'commit' }); await page.goForward({ waitUntil: 'commit' });   // #286 C1: WebKit may send no "load" for a page restored from back/forward; the content is awaited below
       await expect(page.locator('.deck-row', { hasText: 'Meu deck de teste' })).toBeVisible({ timeout: 10000 });   // WebKit restores from back/forward more slowly
       await page.evaluate(() => localStorage.removeItem('inkwell-counter-auth'));   // logout (this browser)
       await page.reload();
