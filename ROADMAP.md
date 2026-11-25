@@ -2063,43 +2063,50 @@ Pendências conhecidas (sem duplicar as entradas já registradas em "Decks · Mo
 O Inkwell Web continua sendo o produto principal até os apps serem validados. As frentes andam em branches e
 PRs separados; nenhuma altera banco, políticas de segurança ou o site publicado sem autorização.
 
+**Publicado no site em 24/11/2026** (autorização do Conselho após a 2ª rodada no Android real): Escanear página 3×3
+em **beta** (#324), scanner contínuo (#328) e o Início que diz por que não carregou e se recupera sozinho (#331).
+O app (#325) e a versão de testes integrada (#329) continuam fora da `main`.
+
 ### Estágios (vale para as três frentes)
 
 | Estágio | Significa | Quem usa | Exige |
 |---|---|---|---|
 | **Protótipo** | Funciona em testes automatizados e em dados sintéticos ou emulação; arquitetura ainda pode mudar | Equipe | PR draft, testes Chromium/WebKit, evidências |
 | **Beta** | Medido em aparelhos e dados reais, com os critérios cumpridos; publicado para um grupo fechado | Testadores convidados | Medição real, revisão do Conselho, autorização de publicação |
+| **Beta público** | No site para todos, com o selo "beta" na tela; a precisão ainda não está comprovada com o conjunto completo de fotos reais | Todos | Autorização expressa do Conselho |
 | **Publicação** | Disponível a todos (site ou lojas) | Todos | Beta aprovado, autorização expressa; para as lojas, PI resolvida e builds assinados |
 
-Situação em 24/11: **as três frentes estão em protótipo.**
+Situação em 24/11 (fim do dia): **Escanear página em beta público; scanner contínuo publicado; Mobile em protótipo.**
 
 ### Frente A — Scanner 2.0: página de fichário inteira (prioridade principal)
 
 | Etapa | Entrega | Situação | Critério de conclusão |
 |---|---|---|---|
 | A1 — Auditoria e arquitetura (#319) | `docs/scanner-2.0.md` | **Aprovada** pelo Conselho (24/11) | — |
-| A2 — Protótipo "Escanear página" 3×3 (#320) | PR draft #324 | Protótipo; segunda rodada entregue | Fluxo completo, nada gravado antes da confirmação, Chromium e WebKit (feito). Motor num Web Worker (feito). Bolsos vazios nunca excluídos em silêncio (feito). Índice cobrindo 100% das cartas com imagem (feito). |
+| A2 — "Escanear página" 3×3 (#320) | #324 (na `main`) | **Publicado em beta público (24/11)** | Fluxo completo, nada gravado antes da confirmação, Chromium e WebKit. Motor em 1 a 3 Web Workers, aquecidos ao escolher o modo. Bolsos vazios nunca excluídos em silêncio. Índice com 100% das cartas com imagem. Correção tocando na foto, pendências em sequência, rolagem no Android, OCR das reimpressões fora do caminho crítico, tempos por etapa. 2 rodadas no Android real; a 2ª aprovada pelo Conselho. |
 | A3 — Medição com fotos reais (#321) | `docs/scanner-2.0-avaliacao.md` + `tools/pagescan-annotate.html` | **Aberta: aguarda as fotos** | ≥ 30 páginas reais, de 3 aparelhos. Métricas separadas (automática, 1ª sugestão, alternativas, falsos positivos, carta tomada por vazio). Tempo em celulares reais. **Meta: 95% de identificação; falso positivo 0.** |
 
-Sintético (não vale como resultado do produto): 90,1% de identificação (automática + 1ª sugestão), 98,7% ao
-alcance, 0 falsos positivos. O número anterior de 94,9% usava uma definição mais ampla e não é comparável.
+Os resultados com imagens sintéticas (`docs/scanner-2.0.md`) servem para comparar versões do motor; **não** são
+desempenho do produto e não aparecem no site. A tela distingue reconhecimento automático (✓), sugestão a confirmar e
+correção manual; nada disso vira número público até A3.
 
-Para chegar a beta: A3 cumprida, tempo medido em aparelhos e o scanner de uma carta intacto.
+Para sair do beta: A3 cumprida (meta de 95% de identificação, falso positivo 0) e tempos medidos em celulares reais.
 
-### Frente A′ — Scanner contínuo: melhoria de experiência (#327, PR draft #328)
+### Frente A′ — Scanner contínuo: melhoria de experiência (#327, #328 — publicado em 24/11)
 
 Pedido do Conselho a partir do modo Single do Evolens. É **independente** do Escanear página. Traz faixa de
 miniaturas, contador e valor acumulado com avisos de preço, sem toques entre cartas, e mantém a confirmação final e a
 proteção contra duplicação. Medido com câmera falsa: 20/20 cartas com OCR simulado, 0 toques, 1,4 s por carta; 15/20
-sem OCR. Achados: reimpressões quando o OCR falha, e foil não detectado. Para chegar a beta: sessão de 20 cartas
-medida em celular real e decisão sobre as reimpressões.
+sem OCR. Reimpressões que o OCR não decide ficam pendentes na revisão (a pessoa escolhe; "Adicionar" bloqueado até
+lá), e o foil se marca por linha na revisão. Usado no Android real nas duas rodadas. Falta: a sessão de 20 cartas
+medida em celular real.
 
 ### Frente B — Inkwell Mobile: apps para App Store e Google Play (em paralelo)
 
 | Etapa | Entrega | Situação | Critério de conclusão |
 |---|---|---|---|
 | B1 — Auditoria técnica (#322) | `mobile/README.md`, `docs/mobile-dominios.md`, `docs/mobile-pi-lojas.md` | Protótipo técnico **aprovado** (24/11), não como arquitetura de publicação | — |
-| B2 — Primeiro app (#323) | PR draft #325 | Protótipo. Builds nativos no CI: APK no emulador Android, app no simulador iOS. | Dev (site remoto) **só para desenvolvimento**. Release embarca o essencial (17,4 MB, sem o catálogo de imagens). Faltam APK no Android real e iPhone real via TestFlight. |
+| B2 — Primeiro app (#323) | PR draft #325; versão de testes #329 | Protótipo. APK de testes instalado no Android real (2 rodadas; a 2ª aprovada). App no simulador iOS. | Dev (site remoto) **só para desenvolvimento**. Release embarca o essencial (sem o catálogo de imagens). Falta iPhone real via TestFlight. Fica fora da `main`. |
 | B3 — Domínios, links e passkeys | `docs/mobile-dominios.md`, `docs/mobile-well-known/` | Arquivos preparados, **não publicados** | Publicar `assetlinks.json` e AASA (autorização), Associated Domains com a conta Apple, tratamento de `appUrlOpen`. Até lá, o app usa login por código. |
 | B4 — PI para as lojas | `docs/mobile-pi-lojas.md` | **Risco alto**; decisão do titular | Autorização documentada de Ravensburger/Disney (ou decisão de não enviar às lojas) antes de qualquer envio. |
 
