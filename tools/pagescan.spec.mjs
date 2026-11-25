@@ -215,6 +215,12 @@ test('Escanear página: 4 pockets to settle, tapped on the photo, through to the
   const st7 = await page.evaluate(() => window.__inkwellScanPageState().pockets[7]);
   const same = await ed.getByTestId('pocket-same').locator('[data-use]').evaluateAll((b) => b.map((x) => x.dataset.use)).catch(() => []);
   expect(same.every((id) => st7.group.includes(id))).toBe(true);
+  // a pocket not recognised has no "same art" list: its group is only the engine's rejected guess
+  await ed.getByTestId('pocket-next').click();
+  await expect(ed).toHaveAttribute('data-edit-pocket', '8');
+  await expect(ed.getByTestId('pocket-same')).toHaveCount(0);
+  await ed.getByTestId('pocket-prev').click();
+  await expect(ed).toHaveAttribute('data-edit-pocket', '7');
   // anterior / próxima pendência
   await ed.getByTestId('pocket-prev').click();
   await expect(ed).toHaveAttribute('data-edit-pocket', '6');
@@ -249,9 +255,13 @@ test('Escanear página: the same page twice asks before adding it again; Esc ste
   const calls = await setup(page);
   await openPageMode(page);
   if (!STILL(page)) { await page.waitForFunction(() => document.getElementById('scanVideo')?.videoWidth > 0); await page.waitForTimeout(400); }
-  const settle = async (rev) => { const s = await page.evaluate(() => window.__inkwellScanPageState());
+  const settle = async (rev) => {
+    // the collector numbers are read in the background (real OCR on CI): wait for it, so no redraw lands on a tap
+    await expect(rev.getByTestId('page-reading')).toHaveCount(0, { timeout: 60000 });
+    const s = await page.evaluate(() => window.__inkwellScanPageState());
     for (let i = 0; i < 9; i++) if (['check', 'choose', 'unknown'].includes(s.pockets[i].status)) { const ed = await openPk(rev, i); await ed.getByTestId('pocket-skip').click(); }
-    await closeSheet(rev); };
+    await closeSheet(rev);
+    console.log('DUPSTATE', JSON.stringify((await page.evaluate(() => window.__inkwellScanPageState())).pockets.map((p) => [p.status, p.id, p.skip ? 1 : 0, (p.group || []).length]))); };
   let rev = await pagePhoto(page); await settle(rev);
   await rev.getByTestId('page-add-more').click();
   await expect(rev).toBeHidden();

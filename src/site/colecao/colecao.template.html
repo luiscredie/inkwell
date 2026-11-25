@@ -2369,8 +2369,11 @@ self.onmessage = async (e) => {
     const p = pg.pockets[i], N = pg.pockets.length, crop = pocketCrop(pg, i, 240), c = p.id && !p.skip ? BY.get(p.id) : null;
     const isPend = PS().pending(p), k = pendList.indexOf(i);
     // other printings of the same art first (the collector number tells them apart), then cards that only look alike
-    const same = [...new Set(p.group || [])].filter((id) => BY.has(id) && id !== p.id).slice(0, 6);
-    const alts = [...new Set((p.top || []).map((t) => t.id))].filter((id) => BY.has(id) && id !== p.id && !same.includes(id)).slice(0, 6 - Math.min(3, same.length));
+    // "same art" only for a recognised card whose art group it is; for a pocket not recognised the group is the
+    // engine's rejected guess, so everything goes under "other possibilities" (seen on the live site, 24/11)
+    const ownGroup = !!p.id && (p.group || []).includes(p.id);
+    const same = ownGroup ? [...new Set(p.group)].filter((id) => BY.has(id) && id !== p.id).slice(0, 6) : [];
+    const alts = [...new Set([...(ownGroup ? [] : p.group || []), ...(p.top || []).map((t) => t.id)])].filter((id) => BY.has(id) && id !== p.id && !same.includes(id)).slice(0, 6 - Math.min(3, same.length));
     const why = p.skip ? P("Esta posição está fora da lista.", "This pocket is left out.") : p.status === "choose" && !p.resolved ? P("A mesma arte existe em mais de uma impressão. Confira o número no canto da carta.", "This art exists in more than one printing. Check the number at the bottom of the card.")
       : p.status === "check" && !p.resolved ? P("Parece ser esta. Confirme ou escolha outra.", "It looks like this one. Confirm or pick another.")
       : p.status === "unknown" && !p.resolved ? P("Não reconhecemos esta carta. Busque pelo nome ou deixe de fora.", "We didn't recognise this card. Search by name or leave it out.")
