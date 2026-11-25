@@ -255,7 +255,10 @@ test('Escanear página: the same page twice asks before adding it again; Esc ste
   const calls = await setup(page);
   await openPageMode(page);
   if (!STILL(page)) { await page.waitForFunction(() => document.getElementById('scanVideo')?.videoWidth > 0); await page.waitForTimeout(400); }
-  const settle = async (rev) => { const s = await page.evaluate(() => window.__inkwellScanPageState());
+  const settle = async (rev) => {
+    // the collector numbers are read in the background (real OCR on CI): wait for it, so no redraw lands on a tap
+    await expect(rev.getByTestId('page-reading')).toHaveCount(0, { timeout: 60000 });
+    const s = await page.evaluate(() => window.__inkwellScanPageState());
     for (let i = 0; i < 9; i++) if (['check', 'choose', 'unknown'].includes(s.pockets[i].status)) { const ed = await openPk(rev, i); await ed.getByTestId('pocket-skip').click(); }
     await closeSheet(rev); };
   let rev = await pagePhoto(page); await settle(rev);
