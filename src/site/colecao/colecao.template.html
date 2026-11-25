@@ -2091,8 +2091,9 @@ self.onmessage = async (e) => {
   function pageFrom(cv, quad, t0 = performance.now()) {
     const ctx = cv.getContext("2d", { willReadFrequently: true });
     scan.pg = { canvas: cv, image: ctx.getImageData(0, 0, cv.width, cv.height), quad, pockets: [], edit: null, armDup: false, t: { shot: t0, photo: Math.round(performance.now() - t0), px: `${cv.width}x${cv.height}` } };
-    pageView(scan.pg);
-    showPage(); runPage();
+    // the rest in its own tasks, so the screen keeps answering between them (long tasks measured 24/11)
+    const pg = scan.pg; pg.busy = true;
+    setTimeout(() => { if (scan.pg !== pg) return; pageView(pg); showPage(); runPage(); }, 0);
   }
   window.__inkwellScanPageFrom = (cv, quad) => { if ($("scan").open && scan.mode === "page") pageFrom(cv, quad); };   // browser tests where no camera can run (WebKit)
   // Timings of each stage, kept for the last page (window.__inkwellScanPageTiming, and the console for device logs):
@@ -2106,6 +2107,7 @@ self.onmessage = async (e) => {
     const pg = scan.pg; if (!pg) return;
     pg.t = { ...(pg.t || { shot: performance.now() }), ui: 0, ocr: null };
     pg.busy = true; pg.pockets = []; pg.edit = null; pg.sheet = null; pg.stage = P("Preparando o reconhecimento…", "Getting ready…"); drawPage();
+    await new Promise((ok) => setTimeout(ok, 0));   // let the screen paint before the photo is copied to the Workers
     try {
       const ti = performance.now(); await loadScan(); pg.t.index = Math.round(performance.now() - ti);
       const te = performance.now();
