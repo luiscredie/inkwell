@@ -2230,7 +2230,7 @@ self.onmessage = async (e) => {
         reads.push(text); pick = pickByCollector(reads.join(" | "), p.group) || pickByCollector(text, p.group);
         if (pick) break;
       }
-      if (pick && scan.pg === pg && !p.resolved && !p.skip) { p.id = pick; p.status = "ok"; p.ocr = true; drawPage(); }
+      if (pick) applyReading(pg, p, pick);
     }
   }
   // What the check screen shows: the page and a margin around it (room to drag the corners), not the whole camera picture.
@@ -2279,8 +2279,66 @@ self.onmessage = async (e) => {
   function drawPage() {   // redraw time counted in the page's timings
     const t = performance.now(); drawPageNow(); const pg = scan.pg; if (pg?.t) pg.t.ui = Math.round((pg.t.ui || 0) + performance.now() - t);
   }
+  // Texts of the check screen, shared by the full draw and by patchPage() (the in-place update, #334).
+  const pkName = (p) => { const c = p?.id && BY.get(p.id); return c ? split(c.name)[0] : ""; };
+  const pkAria = (p, i) => `${P("Posição", "Pocket")} ${i + 1}: ${p ? (pkName(p) ? pkName(p) + " · " : "") + stTxt(pkState(p) || "unknown") : "…"}`;
+  const pkBadge = (pg, p, i) => { const s = pkState(p); return p && !pg.busy ? (s === "ok" ? "✓" : s === "empty" ? "–" : "?") : String(i + 1); };
+  const pkChip = (p) => { const c = p?.id && BY.get(p.id); return p ? `${stTxt(pkState(p))}${p.qty > 1 ? ` · ×${p.qty}` : ""}${p.foil && c ? " · foil" : ""}` : ""; };
+  const progressTxt = (pg, pend, done, N) => pg.busy ? pg.stage || P(`Reconhecendo ${Math.min(done + 1, N)} de ${N}…`, `Recognising ${Math.min(done + 1, N)} of ${N}…`) : pg.error ? P("Não deu para ler a foto.", "Couldn't read the photo.") : pend ? P(`${pend} a resolver`, `${pend} to settle`) : P("Tudo resolvido", "All settled");
+  const leadTxt = (pg, pend) => pg.busy ? P("Reconhecendo as cartas. Você já pode rolar a tela.", "Recognising the cards. You can scroll meanwhile.") : pg.adjust ? P("Arraste os 4 cantos até as bordas da página. Depois toque em Pronto.", "Drag the 4 corners to the page's edges, then tap Done.") : pend ? P("Toque numa carta da foto para conferir. As marcadas em âmbar ou vermelho precisam de você.", "Tap a card on the photo to check it. Amber or red ones need you.") : P("Toque numa carta da foto se quiser trocar alguma.", "Tap a card on the photo to change one.");
+  const addTxt = (pg, pend, list) => pg.busy ? P("Reconhecendo…", "Recognising…") : pend ? P(`Resolver ${pend === 1 ? "1 posição" : pend + " posições"}`, `Settle ${pend} pocket${pend === 1 ? "" : "s"}`) : pg.armDup ? P("Toque de novo para continuar mesmo assim", "Tap again to go on anyway") : P(`Continuar para revisão (${list.length === 1 ? "1 carta" : list.length + " cartas"})`, `Continue to the review (${list.length} card${list.length === 1 ? "" : "s"})`);
+  const addMoreHtml = () => `<button type="button" class="btn ghost small" id="pgAddMore" data-testid="page-add-more">${esc(P("Pôr na lista e fotografar outra", "Add and take another"))}</button>`;
+  const pkThumb = (pg, p, i) => { const c = p?.id && BY.get(p.id); return c ? thumb(c, "", p.foil) + "</span>" : p && pg.page ? `<img class="shot" src="${pocketCrop(pg, i, 90)}" alt="">` : `<span class="ph">${p ? (pkState(p) === "empty" ? "∅" : "?") : "…"}</span>`; };
+  // A reading of the collector number that settles a pocket (#334). Never the pocket the person has open: it waits until
+  // the editor leaves it, and the person's own choice always wins. The screen is updated in place, never redrawn: a full
+  // redraw replaced the element under a finger and the tap was lost.
+  function applyReading(pg, p, pick) {
+    if (p.resolved || p.skip || scan.pg !== pg) return;
+    if (pg.sheet != null && pg.pockets[pg.sheet] === p) { p.ocrPick = pick; return; }
+    p.id = pick; p.status = "ok"; p.ocr = true; delete p.ocrPick;
+    patchPage(pg);
+  }
+  function flushReadings(pg) {   // readings that waited for an editor to close
+    for (const p of pg.pockets) if (p?.ocrPick && !(pg.sheet != null && pg.pockets[pg.sheet] === p)) { if (!p.resolved && !p.skip) { p.id = p.ocrPick; p.status = "ok"; p.ocr = true; } delete p.ocrPick; }
+  }
+  // Text changed without replacing its node: WebKit drops the click when the text node under a pressed button is
+  // replaced (textContent), Chromium does not (measured 25/11).
+  const setText = (e, txt) => { if (!e) return; const n = e.firstChild; if (n && n.nodeType === 3 && !n.nextSibling) { if (n.nodeValue !== txt) n.nodeValue = txt; } else if (e.textContent !== txt) e.textContent = txt; };
+  function patchPage(pg) {
+    const box = $("pageReview"); if (!box || scan.pg !== pg || pg.busy || !box.querySelector("#pgPhoto")) return drawPage();
+    const t0 = performance.now();
+    const L = PS().LAYOUTS[scan.layout], N = L.rows * L.cols, pendList = pendingIdx(pg), pend = pendList.length, list = pend ? [] : PS().toList(pg.pockets);
+    pg.pockets.forEach((p, i) => {
+      const s = pkState(p), g = box.querySelector(`#pgPhoto [data-pk="${i}"]`);
+      if (g && g.dataset.st !== s) { g.dataset.st = s; g.setAttribute("aria-label", pkAria(p, i)); setText(g.querySelector("text"), pkBadge(pg, p, i)); }
+      const b = box.querySelector(`[data-pocket="${i}"]`);
+      if (b && (b.dataset.st !== s || b.dataset.card !== (p?.id || ""))) {
+        const same = b.dataset.card === (p?.id || "");
+        b.dataset.st = s; b.setAttribute("aria-label", pkAria(p, i));
+        setText(b.querySelector("b"), `${i + 1}. ${pkName(p) || (p ? stTxt(s) : "…")}`);
+        setText(b.querySelector(".chip"), pkChip(p));
+        if (!same) { const img = b.querySelector("img"), c = p?.id && BY.get(p.id), tmp = document.createElement("div"); tmp.innerHTML = pkThumb(pg, p, i);
+          const nimg = tmp.querySelector("img"); if (img && nimg && c) { img.src = nimg.src; img.alt = nimg.alt; } b.dataset.card = p?.id || ""; }
+      }
+    });
+    const set = (sel, txt) => setText(box.querySelector(sel), txt);
+    set("[data-testid=page-progress]", progressTxt(pg, pend, N, N));
+    set("[data-testid=page-lead]", leadTxt(pg, pend));
+    const add = $("pgAdd"); if (add) { set("#pgAdd", addTxt(pg, pend, list)); add.disabled = !pend && !list.length; }
+    if (!pend && list.length && !$("pgAddMore")) { const row = $("pgRetake")?.parentElement; row?.querySelector("[data-testid=page-ms]")?.remove(); row?.insertAdjacentHTML("beforeend", addMoreHtml()); $("pgAddMore")?.addEventListener("click", () => pg.addMore?.()); }
+    if (!pend) { pg.note = P("Tudo resolvido. Confira e continue para a revisão.", "All settled. Check and continue to the review.");
+      let n = box.querySelector("[data-testid=page-note]"); if (!n) { const f = box.querySelector("footer > .pg-note:not([data-testid])"); if (f) { f.className = "small pg-note pg-ok"; f.dataset.testid = "page-note"; n = f; } } setText(n, pg.note); }
+    // an editor open on another pocket: its "Pendência k de n" and the previous/next buttons
+    const sh = box.querySelector("#pgSheet");
+    if (sh) { const i = +sh.dataset.editPocket, k = pendList.indexOf(i), pr = sh.querySelector("[data-testid=pocket-progress]");
+      if (pr) setText(pr, pend ? (k >= 0 ? P(`Pendência ${k + 1} de ${pend}`, `Pending ${k + 1} of ${pend}`) : P(`${pend} pendente${pend > 1 ? "s" : ""}`, `${pend} pending`)) : "");
+      const np = nextPending(pg, i, -1), nn = nextPending(pg, i, 1);
+      const pv = $("pgsPrev"), nx = $("pgsNext"); if (pv) pv.disabled = !(np != null && np !== i); if (nx) nx.disabled = !(nn != null && nn !== i); }
+    pg.t.ui = Math.round((pg.t.ui || 0) + performance.now() - t0);
+  }
   function drawPageNow() {
     const pg = scan.pg, box = $("pageReview"); if (!pg || !box) return;
+    flushReadings(pg);
     const L = PS().LAYOUTS[scan.layout], N = L.rows * L.cols, done = pg.pockets.filter(Boolean).length;
     const pendList = pg.busy ? [] : pendingIdx(pg), pend = pg.busy ? N : pendList.length;
     const list = pg.busy || pend ? [] : PS().toList(pg.pockets);
@@ -2294,32 +2352,32 @@ self.onmessage = async (e) => {
       focus: box.contains(ae) && ae.id ? ae.id : null, sel: ae && ae.id === "pgFind" ? [ae.selectionStart, ae.selectionEnd] : null };
     box.classList.toggle("adjusting", !!pg.adjust);
     box.innerHTML = `<header><button type="button" class="btn icon" id="pgBack" aria-label="${esc(P("Refazer foto", "Retake"))}"><i class="ic i-chevron-left"></i></button>
-        <h2>${esc(P("Confira a página", "Check the page"))} <span class="beta">beta</span></h2><span class="small muted" data-testid="page-progress">${pg.busy ? esc(pg.stage || P(`Reconhecendo ${Math.min(done + 1, N)} de ${N}…`, `Recognising ${Math.min(done + 1, N)} of ${N}…`)) : pg.error ? esc(P("Não deu para ler a foto.", "Couldn't read the photo.")) : pend ? esc(P(`${pend} a resolver`, `${pend} to settle`)) : esc(P("Tudo resolvido", "All settled"))}</span></header>
+        <h2>${esc(P("Confira a página", "Check the page"))} <span class="beta">beta</span></h2><span class="small muted" data-testid="page-progress">${esc(progressTxt(pg, pend, done, N))}</span></header>
       <div class="items">
         ${pg.busy ? `<div class="pg-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${N}" aria-valuenow="${done}"><span></span></div>` : ""}
-        <p class="small pg-note pg-lead" data-testid="page-lead">${esc(pg.busy ? P("Reconhecendo as cartas. Você já pode rolar a tela.", "Recognising the cards. You can scroll meanwhile.") : pg.adjust ? P("Arraste os 4 cantos até as bordas da página. Depois toque em Pronto.", "Drag the 4 corners to the page's edges, then tap Done.") : pend ? P("Toque numa carta da foto para conferir. As marcadas em âmbar ou vermelho precisam de você.", "Tap a card on the photo to check it. Amber or red ones need you.") : P("Toque numa carta da foto se quiser trocar alguma.", "Tap a card on the photo to change one."))}</p>
+        <p class="small pg-note pg-lead" data-testid="page-lead">${esc(leadTxt(pg, pend))}</p>
         <div class="photo" id="pgPhoto"><div class="ratio"></div><svg viewBox="${V.x.toFixed(1)} ${V.y.toFixed(1)} ${V.w.toFixed(1)} ${V.h.toFixed(1)}" preserveAspectRatio="none">
           ${quads.map((q, i) => { const p = pg.pockets[i], s = pkState(p), cx = q.reduce((a, b) => a + b[0], 0) / 4, cy = q.reduce((a, b) => a + b[1], 0) / 4;
-            return `<g class="pk" data-pk="${i}" data-st="${s}" role="button" tabindex="${pg.busy || pg.adjust || !p ? -1 : 0}" aria-label="${esc(`${P("Posição", "Pocket")} ${i + 1}: ${p ? (label(p) ? label(p) + " · " : "") + stTxt(s || "unknown") : "…"}`)}">
+            return `<g class="pk" data-pk="${i}" data-st="${s}" role="button" tabindex="${pg.busy || pg.adjust || !p ? -1 : 0}" aria-label="${esc(pkAria(p, i))}">
               <polygon points="${q.map((v) => v.map((n) => n.toFixed(1)).join(",")).join(" ")}"/>
-              <circle class="badge" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(fs * 0.75).toFixed(0)}"/><text x="${cx.toFixed(1)}" y="${(cy + fs * 0.32).toFixed(1)}" font-size="${fs}" text-anchor="middle">${p && !pg.busy ? (s === "ok" ? "✓" : s === "empty" ? "–" : "?") : i + 1}</text></g>`; }).join("")}
+              <circle class="badge" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(fs * 0.75).toFixed(0)}"/><text x="${cx.toFixed(1)}" y="${(cy + fs * 0.32).toFixed(1)}" font-size="${fs}" text-anchor="middle">${pkBadge(pg, p, i)}</text></g>`; }).join("")}
           ${pg.adjust ? pg.quad.map((p, k) => `<circle class="corner" data-corner="${k}" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${Math.round(W / 22)}"/>`).join("") : ""}
         </svg></div>
         ${pg.busy ? "" : `<div class="row between pg-tools"><button type="button" class="btn small" id="pgAdjust" data-testid="page-adjust" aria-pressed="${!!pg.adjust}">${esc(pg.adjust ? P("Pronto", "Done") : P("Ajustar cantos", "Adjust corners"))}</button>
           <button type="button" class="btn small" id="pgRerun" data-testid="page-rerun" ${pg.moved && !pg.adjust ? "" : "hidden"}>${esc(P("Reconhecer de novo", "Recognise again"))}</button></div>`}
         <div class="pockets" data-testid="page-pockets">${Array.from({ length: N }, (_, i) => {
           const p = pg.pockets[i], c = p?.id && BY.get(p.id), s = pkState(p);
-          return `<button type="button" class="pocket${p?.skip ? " skip" : ""}" data-pocket="${i}" data-st="${s}" ${p && !pg.busy ? "" : "disabled"} aria-label="${esc(`${P("Posição", "Pocket")} ${i + 1}: ${p ? (c ? label(p) + " · " : "") + stTxt(s || "unknown") : "…"}`)}">
-            ${c ? thumb(c, "", p.foil) + "</span>" : p && pg.page ? `<img class="shot" src="${pocketCrop(pg, i, 90)}" alt="">` : `<span class="ph">${p ? (s === "empty" ? "∅" : "?") : "…"}</span>`}
-            <b>${i + 1}. ${esc(c ? label(p) : p ? stTxt(s) : "…")}</b><span class="chip">${p ? esc(stTxt(s)) : ""}${p && p.qty > 1 ? ` · ×${p.qty}` : ""}${p?.foil && c ? " · foil" : ""}</span></button>`; }).join("")}</div>
+          return `<button type="button" class="pocket${p?.skip ? " skip" : ""}" data-pocket="${i}" data-st="${s}" data-card="${esc(p?.id || "")}" ${p && !pg.busy ? "" : "disabled"} aria-label="${esc(pkAria(p, i))}">
+            ${pkThumb(pg, p, i)}
+            <b>${i + 1}. ${esc(c ? label(p) : p ? stTxt(s) : "…")}</b><span class="chip">${esc(pkChip(p))}</span></button>`; }).join("")}</div>
       </div>
       <footer>${pg.note ? `<p class="small pg-note pg-ok" data-testid="page-note">${esc(pg.note)}</p>` : `<p class="small muted pg-note">${Tx("Nothing will be saved until you confirm.")}</p>`}
         ${pg.reading ? `<p class="small muted pg-note" data-testid="page-reading">${esc(P("Lendo o número das reimpressões… você já pode conferir.", "Reading the reprints' numbers… you can check meanwhile."))}</p>` : ""}
         ${!pg.busy && out.length ? `<p class="small pg-note pg-out" data-testid="page-out">${esc(outText(out))}</p>` : ""}
-        <button type="button" class="btn primary" id="pgAdd" data-testid="page-add" ${pg.busy || (!pend && !list.length) ? "disabled" : ""}>${esc(pg.busy ? P("Reconhecendo…", "Recognising…") : pend ? P(`Resolver ${pend === 1 ? "1 posição" : pend + " posições"}`, `Settle ${pend} pocket${pend === 1 ? "" : "s"}`) : pg.armDup ? P("Toque de novo para continuar mesmo assim", "Tap again to go on anyway") : P(`Continuar para revisão (${list.length === 1 ? "1 carta" : list.length + " cartas"})`, `Continue to the review (${list.length} card${list.length === 1 ? "" : "s"})`))}</button>
+        <button type="button" class="btn primary" id="pgAdd" data-testid="page-add" ${pg.busy || (!pend && !list.length) ? "disabled" : ""}>${esc(addTxt(pg, pend, list))}</button>
         ${pg.armDup ? `<p class="small pg-note pg-dup" data-testid="page-dup">${esc(P("Estas mesmas cartas já foram para a lista na foto anterior.", "These same cards went on the list with the last photo."))}</p>` : ""}
         <div class="row between"><button type="button" class="btn" id="pgRetake"><i class="ic i-camera"></i>${esc(P("Refazer foto", "Retake"))}</button>
-          ${!pg.busy && !pend && list.length ? `<button type="button" class="btn ghost small" id="pgAddMore" data-testid="page-add-more">${esc(P("Pôr na lista e fotografar outra", "Add and take another"))}</button>` : pg.t?.ready != null ? `<span class="small muted" data-testid="page-ms">${(pg.t.ready / 1000).toFixed(1)} s</span>` : ""}</div></footer>
+          ${!pg.busy && !pend && list.length ? addMoreHtml() : pg.t?.ready != null ? `<span class="small muted" data-testid="page-ms">${(pg.t.ready / 1000).toFixed(1)} s</span>` : ""}</div></footer>
       ${pg.sheet != null && pg.pockets[pg.sheet] ? pocketSheet(pg, pg.sheet, pendList) : ""}`;
     // the page's CSP allows no style="" in markup: sizes go through the DOM
     box.querySelector("#pgPhoto .ratio").style.paddingTop = `${(100 * V.h / V.w).toFixed(3)}%`;
@@ -2348,10 +2406,11 @@ self.onmessage = async (e) => {
       const items = addToList(); if (!items) return;
       closePage(); showReview();   // straight to the usual review: still nothing saved until "Adicionar N cartas"
     };
-    $("pgAddMore")?.addEventListener("click", () => {
+    pg.addMore = () => {
       const items = addToList(); if (!items) return;
       closePage(P(`${items.length === 1 ? "1 carta foi" : items.length + " cartas foram"} para a lista. Fotografe a próxima página ou toque em Concluir.`, `${items.length} card${items.length === 1 ? "" : "s"} on the list. Take the next page or tap Done.`));
-    });
+    };
+    $("pgAddMore")?.addEventListener("click", () => pg.addMore());
     pg.sheetFresh = pg.sheet != null && String(pg.sheet) !== keep.sheetOf;   // a pocket editor just opened (not a redraw)
     wireSheet(pg, box);
     wireCorners(pg, box);
