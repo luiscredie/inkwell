@@ -8,12 +8,19 @@ on:
     workflows: ["Inkwell release checks"]
     types: [completed]
     branches: [main]
+  # Deploy manual (quando o automático falha por problema do GitHub): só publica o commit informado, e só se esse
+  # commit estiver na main e tiver passado nos quatro checks obrigatórios.
   workflow_dispatch:
+    inputs:
+      sha:
+        description: "Commit da main a publicar (SHA completo, aprovado em js, python, smoke e journeys-webkit)"
+        required: true
 
 permissions:
   contents: read
   pages: write
   id-token: write
+  checks: read
 
 concurrency:
   group: pages
@@ -29,12 +36,31 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
+      - name: Verify the commit asked for (manual deploy)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ inputs.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "Informe o SHA completo (40 caracteres)."; exit 1; }
+          # na main: o commit é a própria main ou um antecessor dela (nunca uma branch)
+          st=$(gh api "repos/$REPO/compare/$SHA...main" --jq .status)
+          [[ "$st" == "identical" || "$st" == "ahead" ]] || { echo "$SHA não está na main (compare: $st)."; exit 1; }
+          # os quatro checks obrigatórios concluídos com sucesso neste commit
+          for c in js python smoke journeys-webkit; do
+            r=$(gh api "repos/$REPO/commits/$SHA/check-runs?check_name=$c&per_page=100" --jq '[.check_runs[] | select(.conclusion == "success")] | length')
+            [[ "$r" -ge 1 ]] || { echo "Check obrigatório '$c' sem sucesso em $SHA."; exit 1; }
+          done
+          echo "OK: $SHA está na main e passou em js, python, smoke e journeys-webkit."
+
       - name: Check out revision
         uses: actions/checkout@v5
         with:
           # Sem isto, o workflow_run publicaria o HEAD de main no momento do
           # deploy — que pode ja ser um commit posterior, ainda nao testado.
-          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+          ref: ${{ github.event.workflow_run.head_sha || inputs.sha }}
 
       - uses: actions/setup-python@v7
         with:
