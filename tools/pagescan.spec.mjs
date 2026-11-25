@@ -52,8 +52,10 @@ async function stillPage(page) {
     const c = document.createElement('canvas'); c.width = 1080; c.height = 1440; const ctx = c.getContext('2d');
     ctx.fillStyle = '#5c4634'; ctx.fillRect(0, 0, c.width, c.height);
     const x0 = 140, y0 = 150, W = 800, H = W / 0.72; ctx.fillStyle = '#1c1d24'; ctx.fillRect(x0, y0, W, H);
-    await Promise.all(files.map(async (f, i) => { if (!f) return; const im = new Image(); im.src = `../lorcana-card-images/images/${f}.jpg`; await im.decode();
+    await Promise.all(files.map(async (f, i) => { if (!f) return; const im = await createImageBitmap(await (await fetch(`../lorcana-card-images/images/${f}.jpg`)).blob());   /* #333: decode()+drawImage drew nothing at times in WebKit under load */
       const cw = W / 3, ch = H / 3; ctx.drawImage(im, x0 + (i % 3) * cw + cw * 0.04, y0 + Math.floor(i / 3) * ch + ch * 0.03, cw * 0.92, ch * 0.94); }));
+    for (let i = 0; i < 9; i++) { if (!files[i]) continue; const cw = W / 3, ch = H / 3, d = ctx.getImageData(Math.round(x0 + (i % 3) * cw + cw * 0.2), Math.round(y0 + Math.floor(i / 3) * ch + ch * 0.2), Math.round(cw * 0.6), Math.round(ch * 0.6)).data;
+      let lo = 255, hi = 0; for (let k = 0; k < d.length; k += 16) { const l = d[k]; if (l < lo) lo = l; if (l > hi) hi = l; } if (hi - lo < 20) throw new Error(`test photo: card ${i + 1} not drawn`); }
     const q = [[x0 + 8, y0 - 6], [x0 + W - 4, y0 + 5], [x0 + W + 6, y0 + H - 3], [x0 - 5, y0 + H + 4]];   // lined up by hand, a little off
     window.__inkwellScanPageFrom(c, q);
   }, PAGE);
@@ -168,10 +170,12 @@ async function hardPage(page) {   // two cards upside down in their pockets, as 
     const c = document.createElement('canvas'); c.width = 1080; c.height = 1440; const ctx = c.getContext('2d');
     ctx.fillStyle = '#5c4634'; ctx.fillRect(0, 0, c.width, c.height);
     const x0 = 140, y0 = 150, W = 800, H = W / 0.72; ctx.fillStyle = '#1c1d24'; ctx.fillRect(x0, y0, W, H);
-    await Promise.all(files.map(async (f, i) => { const [n, fx] = f.split('|'); const im = new Image(); im.src = `../lorcana-card-images/images/${n}.jpg`; await im.decode();
+    await Promise.all(files.map(async (f, i) => { const [n, fx] = f.split('|'); const im = await createImageBitmap(await (await fetch(`../lorcana-card-images/images/${n}.jpg`)).blob());   /* #333: decode()+drawImage drew nothing at times in WebKit under load */
       const cw = W / 3, ch = H / 3, x = x0 + (i % 3) * cw + cw * 0.04, y = y0 + Math.floor(i / 3) * ch + ch * 0.03;
       if (fx === 'flip') { ctx.save(); ctx.translate(x + cw * 0.46, y + ch * 0.47); ctx.rotate(Math.PI); ctx.drawImage(im, -cw * 0.46, -ch * 0.47, cw * 0.92, ch * 0.94); ctx.restore(); }
       else ctx.drawImage(im, x, y, cw * 0.92, ch * 0.94); }));
+    for (let i = 0; i < 9; i++) { if (!files[i]) continue; const cw = W / 3, ch = H / 3, d = ctx.getImageData(Math.round(x0 + (i % 3) * cw + cw * 0.2), Math.round(y0 + Math.floor(i / 3) * ch + ch * 0.2), Math.round(cw * 0.6), Math.round(ch * 0.6)).data;
+      let lo = 255, hi = 0; for (let k = 0; k < d.length; k += 16) { const l = d[k]; if (l < lo) lo = l; if (l > hi) hi = l; } if (hi - lo < 20) throw new Error(`test photo: card ${i + 1} not drawn`); }
     window.__inkwellScanPageFrom(c, [[x0 + 8, y0 - 6], [x0 + W - 4, y0 + 5], [x0 + W + 6, y0 + H - 3], [x0 - 5, y0 + H + 4]]);
   }, HARD);
   const rev = page.getByTestId('page-review');
@@ -381,7 +385,7 @@ test('Escanear página: the same answers with 1 Worker or 3 in parallel', async 
       const c = document.createElement('canvas'); c.width = 1080; c.height = 1440; const ctx = c.getContext('2d', { willReadFrequently: true });
       ctx.fillStyle = '#5c4634'; ctx.fillRect(0, 0, c.width, c.height);
       const x0 = 140, y0 = 150, W = 800, H = W / 0.72; ctx.fillStyle = '#1c1d24'; ctx.fillRect(x0, y0, W, H);
-      await Promise.all(files.map(async (f, i) => { const [n, fx] = f.split('|'); const im = new Image(); im.src = `../lorcana-card-images/images/${n}.jpg`; await im.decode();
+      await Promise.all(files.map(async (f, i) => { const [n, fx] = f.split('|'); const im = await createImageBitmap(await (await fetch(`../lorcana-card-images/images/${n}.jpg`)).blob());   /* #333: decode()+drawImage drew nothing at times in WebKit under load */
         const cw = W / 3, ch = H / 3, x = x0 + (i % 3) * cw + cw * 0.04, y = y0 + Math.floor(i / 3) * ch + ch * 0.03;
         if (fx === 'flip') { ctx.save(); ctx.translate(x + cw * 0.46, y + ch * 0.47); ctx.rotate(Math.PI); ctx.drawImage(im, -cw * 0.46, -ch * 0.47, cw * 0.92, ch * 0.94); ctx.restore(); } else ctx.drawImage(im, x, y, cw * 0.92, ch * 0.94); }));
       const a = await window.__inkwellScanPage(ctx.getImageData(0, 0, c.width, c.height), [[x0 + 8, y0 - 6], [x0 + W - 4, y0 + 5], [x0 + W + 6, y0 + H - 3], [x0 - 5, y0 + H + 4]]);
