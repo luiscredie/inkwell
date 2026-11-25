@@ -12,7 +12,7 @@ import { report as makeReport, markdown } from './pagescan-report.mjs';
 
 const REPO = new URL('..', import.meta.url).pathname;
 const SITE = new URL('colecao/', process.env.INKWELL_URL || 'http://localhost:8080/index.html').href;
-const DEVICES = [['iPhone teste', 'app-ios', 2.4], ['Android A', 'app-android', 3.1], ['Android B (antigo)', 'navegador', 6.8]];
+const DEVICES = [['iPhone teste', 'app-ios', 2.4, 'ios', false], ['Android A', 'app-android', 3.1, 'android', false], ['Android B (antigo)', 'navegador', 6.8, 'android', true]];
 const PAGE = ['Rapunzel_-_Tower_Defender__LOR13-80', '4_Town_-_Hottest_Band_of_the_Year__LOR13-17', 'Owl_-_Hunny_Ranger__LOR13-185', 'Piglet_-_Hunny_Mage_Apprentice__LOR13-154',
   'Rabbit_-_Hunny_Paladin__LOR13-5', 'Elsa_-_Concerned_Sister__LOR11-125', null, 'Winnie_the_Pooh_-_Hunny_Archmage__LOR13-40', 'Junior_Woodchuck_Guidebook__LOR10-66'];
 const ID = (f) => (f ? f.split('__')[1] : null);
@@ -47,10 +47,12 @@ test('A3 procedure: annotate → truth.json → scanner → report (generated ph
   const typed = {};
   for (const [k, p] of order.entries()) {
     await expect(page.locator(`#files li[data-k="${k}"]`)).toHaveText(p.file);
-    const [d, where, s] = DEVICES.find((x) => x[0] === p.device);
-    await page.locator('#device').fill(d); await page.locator('#where').selectOption(where); typed[p.file] = Math.round((s + k * 0.1) * 10) / 10; await page.locator('#devs').fill(String(typed[p.file]));
+    const [d, where, s, os, older] = DEVICES.find((x) => x[0] === p.device);
+    await page.locator('#device').fill(d); await page.locator('#where').selectOption(where);
+    await page.locator('#os').selectOption(os); await page.locator('#older').setChecked(older);
+    await page.locator('#binder').fill(k % 2 ? 'preto' : 'transparente'); await page.locator('#reprint').setChecked(k === 0); typed[p.file] = Math.round((s + k * 0.1) * 10) / 10; await page.locator('#devs').fill(String(typed[p.file]));
     if (k % 2) await page.locator('#tilt').check();
-    if (k === 0) await page.locator('#foil').check();
+    if (k === 0) { await page.locator('#pockets input.pf[data-k="0"]').check(); await page.locator('#pockets input.pf[data-k="2"]').check(); }
     // the 4 corners of the pocket area, clicked on the picture (image pixels → screen)
     const corners = [[180, 200], [1020, 200], [1020, 200 + 840 / 0.72], [180, 200 + 840 / 0.72]].map(([x, y]) => { const a = p.tilt, cx = 600, cy = 800, dx = x - cx, dy = y - cy; return [cx + dx * Math.cos(a) - dy * Math.sin(a), cy + dx * Math.sin(a) + dy * Math.cos(a)]; });
     for (const [x, y] of corners) {   // the photo is taller than the window: scroll to the corner, as a person does
@@ -59,7 +61,7 @@ test('A3 procedure: annotate → truth.json → scanner → report (generated ph
       const b = await cv.boundingBox(), H = await cv.evaluate((c) => c.height);
       await page.mouse.click(b.x + x * b.width / W, b.y + y * b.height / H); }
     expect(await page.evaluate(() => state.pages[state.i].corners.length)).toBe(4);
-    for (let i = 0; i < 9; i++) { const inp = page.locator(`#pockets input[data-k="${i}"]`); await inp.fill(ID(PAGE[i]) || 'vazia'); await inp.dispatchEvent('change'); }
+    for (let i = 0; i < 9; i++) { const inp = page.locator(`#pockets input[list][data-k="${i}"]`); await inp.fill(ID(PAGE[i]) || 'vazia'); await inp.dispatchEvent('change'); }
     await expect(page.locator(`#files li[data-k="${k}"]`)).toHaveClass(/done/);
     if (k < order.length - 1) await page.locator('#next').click();
   }
@@ -70,6 +72,8 @@ test('A3 procedure: annotate → truth.json → scanner → report (generated ph
   for (const [k, p] of truth.pages.entries()) {
     expect(p.cards).toEqual(PAGE.map(ID));
     expect(p.user).toHaveLength(4); expect(p.device).toBeTruthy(); expect(typeof p.device_s).toBe('number'); expect(p.where).toMatch(/app-|navegador/);
+    expect(p.os).toBe(DEVICES.find((x) => x[0] === p.device)[3]); expect(p.binder).toMatch(/preto|transparente/);
+    expect(p.foil).toHaveLength(9); expect(typeof p.reprint).toBe('boolean'); expect(typeof p.tilt).toBe('boolean'); expect(p.light).toBe('boa');
     expect(photos.map((x) => x.file)).toContain(p.file);
     expect(p.device_s).toBe(typed[p.file]);                                       // the time typed for that photo
     expect(p.device).toBe(photos.find((x) => x.file === p.file).device);
@@ -100,6 +104,9 @@ test('A3 procedure: annotate → truth.json → scanner → report (generated ph
   expect(rep.by_device['Android B (antigo)'].device_s_max).toBe(Math.max(...bTimes));
   expect(rep.coverage.complete).toBe(false);
   expect(rep.coverage.missing.join(' | ')).toMatch(/sintéticas.*6 de 30 páginas/);
+  const foils = truth.pages.reduce((a, p) => a + p.foil.filter(Boolean).length, 0);
+  expect(foils).toBe(2);                                                             // the two foil pockets ticked on the first photo
+  expect(rep.coverage.missing.join(' | ')).toContain(`2 de 15 cartas foil`);
   expect(Object.values(rep.targets).every((v) => v === 'não avaliável')).toBe(true);
   expect(markdown(rep)).toMatch(/Conjunto:\*\* incompleto/);
 });

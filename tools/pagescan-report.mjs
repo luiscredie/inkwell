@@ -52,24 +52,66 @@ export function summarise(rows) {
   };
 }
 
-// The set the protocol asks for (section 1), checked before any target is judged.
-export const PROTOCOL = { pages: 30, devices: 3, pagesPerDevice: 10, foilCards: 15, emptyPockets: 6 };
+// The set the protocol asks for (docs/scanner-2.0-avaliacao.md, section 1), checked item by item before any target is
+// judged. A field that was not registered never counts as met: an old truth.json without it is "incompleto".
+export const PROTOCOL = {
+  pages: 30, devices: 3, pagesPerDevice: 10,
+  perDevice: { good: 4, glare: 2, dark: 2, tilt: 2 },   // luz boa e de frente / reflexo / luz fraca / inclinada
+  foilCards: 15, foilPages: 6, emptyPockets: 6, emptyPages: 6, samePairPages: 3, reprintPages: 3, binders: 2,
+};
+const has = (p, k) => p[k] !== undefined && p[k] !== null && p[k] !== '';
 export function coverage(truth, rows) {
-  const pages = truth.pages || [], devs = {};
-  for (const p of pages) devs[p.device || '?'] = (devs[p.device || '?'] || 0) + 1;
-  const missing = [];
-  if (!truth.real) missing.push('fotos sintéticas: nenhuma meta vale como resultado do produto');
-  if (pages.length < PROTOCOL.pages) missing.push(`${pages.length} de ${PROTOCOL.pages} páginas`);
-  const named = Object.keys(devs).filter((d) => d !== '?');
-  if (named.length < PROTOCOL.devices) missing.push(`${named.length} de ${PROTOCOL.devices} aparelhos`);
-  for (const [d, k] of Object.entries(devs)) if (k < PROTOCOL.pagesPerDevice) missing.push(`${d}: ${k} de ${PROTOCOL.pagesPerDevice} páginas`);
-  const empties = rows.filter((x) => !x.truth).length;
-  if (empties < PROTOCOL.emptyPockets) missing.push(`${empties} de ${PROTOCOL.emptyPockets} bolsos vazios`);
-  const foilPages = pages.filter((p) => /foil/.test(p.cond || '')).length;
-  if (foilPages < 6) missing.push(`${foilPages} de 6 páginas com foil`);
-  const timed = pages.filter((p) => typeof p.device_s === 'number').length;
-  if (timed < pages.length) missing.push(`${pages.length - timed} página(s) sem o tempo no aparelho`);
-  return { complete: missing.length === 0, missing, pages_by_device: devs };
+  const pages = truth.pages || [], P = PROTOCOL, checks = [];
+  const add = (req, ok, detail) => checks.push({ req, ok: !!ok, detail });
+  const unregistered = (k, label) => { const n = pages.filter((p) => !has(p, k)).length; if (n) add(`${label} registrado em todas as páginas`, false, `${n} página(s) sem ${label}`); return n === 0; };
+  add('Fotos reais', truth.real === true, truth.real ? 'reais' : 'fotos sintéticas: nenhuma meta vale como resultado do produto');
+  add(`${P.pages} páginas`, pages.length >= P.pages, `${pages.length} de ${P.pages} páginas`);
+  // devices: how many, iPhone and Android, one entry-level or older than 3 years, 10 pages each
+  const devs = {}; for (const p of pages) if (has(p, 'device')) (devs[p.device] ||= []).push(p);
+  unregistered('device', 'o aparelho');
+  add(`${P.devices} aparelhos`, Object.keys(devs).length >= P.devices, `${Object.keys(devs).length} de ${P.devices} aparelhos`);
+  if (unregistered('os', 'o sistema (iOS/Android)')) {
+    const osOf = (d) => [...new Set(devs[d].map((p) => p.os))];
+    const mixed = Object.keys(devs).filter((d) => osOf(d).length > 1);
+    add('Sistema coerente por aparelho', !mixed.length, mixed.length ? `sistema diferente entre páginas de: ${mixed.join(', ')}` : 'ok');
+    add('Pelo menos 1 iPhone e 1 Android', ['ios', 'android'].every((o) => Object.keys(devs).some((d) => osOf(d).includes(o))),
+      `iOS: ${Object.keys(devs).filter((d) => osOf(d).includes('ios')).join(', ') || 'nenhum'}; Android: ${Object.keys(devs).filter((d) => osOf(d).includes('android')).join(', ') || 'nenhum'}`);
+  }
+  if (unregistered('device_older', 'a marcação de aparelho de entrada/antigo'))
+    add('Um aparelho de entrada ou com mais de 3 anos', Object.values(devs).some((l) => l.every((p) => p.device_older === true)), Object.keys(devs).filter((d) => devs[d].every((p) => p.device_older === true)).join(', ') || 'nenhum aparelho marcado como de entrada ou com mais de 3 anos');
+  for (const [d, l] of Object.entries(devs)) add(`${d}: ${P.pagesPerDevice} páginas`, l.length >= P.pagesPerDevice, `${d}: ${l.length} de ${P.pagesPerDevice} páginas`);
+  // conditions, per device
+  if (unregistered('light', 'a luz') & unregistered('tilt', 'a inclinação')) {
+    for (const [d, l] of Object.entries(devs)) {
+      const n = { good: l.filter((p) => p.light === 'boa' && p.tilt === false).length, glare: l.filter((p) => p.light === 'reflexo').length,
+        dark: l.filter((p) => p.light === 'fraca').length, tilt: l.filter((p) => p.tilt === true).length };
+      const lack = Object.entries(P.perDevice).filter(([k, v]) => n[k] < v);
+      add(`${d}: condições (4 boa e de frente, 2 reflexo, 2 luz fraca, 2 inclinadas)`, !lack.length,
+        `${d}: ${n.good} boa e de frente, ${n.glare} reflexo, ${n.dark} luz fraca, ${n.tilt} inclinadas`);
+    }
+  }
+  // foils: per pocket
+  if (unregistered('foil', 'o foil por posição')) {
+    const fc = pages.reduce((a, p) => a + p.foil.filter((f, i) => f && p.cards[i]).length, 0), fp = pages.filter((p) => p.foil.some((f, i) => f && p.cards[i])).length;
+    add(`${P.foilCards} cartas foil em ${P.foilPages}+ páginas`, fc >= P.foilCards && fp >= P.foilPages, `${fc} de ${P.foilCards} cartas foil, em ${fp} de ${P.foilPages} páginas`);
+  }
+  // empty pockets, spread over different pages
+  const ep = pages.filter((p) => (p.cards || []).some((c) => !c)).length, en = pages.reduce((a, p) => a + (p.cards || []).filter((c) => !c).length, 0);
+  add(`${P.emptyPockets} bolsos vazios em ${P.emptyPages} páginas diferentes`, en >= P.emptyPockets && ep >= P.emptyPages, `${en} de ${P.emptyPockets} bolsos vazios, em ${ep} de ${P.emptyPages} páginas diferentes`);
+  // repetitions: the same card twice on a page; reprints (registered by the person)
+  const twice = pages.filter((p) => { const c = (p.cards || []).filter(Boolean); return new Set(c).size < c.length; }).length;
+  add(`${P.samePairPages} páginas com a mesma carta em duas posições`, twice >= P.samePairPages, `${twice} de ${P.samePairPages} páginas com a mesma carta em duas posições`);
+  if (unregistered('reprint', 'a marcação de reimpressão'))
+    add(`${P.reprintPages} páginas com reimpressão`, pages.filter((p) => p.reprint === true).length >= P.reprintPages, `${pages.filter((p) => p.reprint === true).length} de ${P.reprintPages} páginas com reimpressão`);
+  // binders
+  if (unregistered('binder', 'o fichário'))
+    add(`${P.binders} modelos de fichário`, new Set(pages.map((p) => p.binder.toLowerCase())).size >= P.binders, `${new Set(pages.map((p) => p.binder.toLowerCase())).size} de ${P.binders} modelos de fichário`);
+  // the time on the phone, for every page
+  const timed = pages.filter((p) => typeof p.device_s === 'number' && isFinite(p.device_s)).length;
+  add('Tempo no aparelho em todas as páginas', timed === pages.length && pages.length > 0, `${timed} de ${pages.length} páginas com o tempo no aparelho`);
+  const missing = checks.filter((c) => !c.ok).map((c) => c.detail);
+  const byDev = Object.fromEntries(Object.entries(devs).map(([d, l]) => [d, l.length]));
+  return { complete: checks.length > 0 && missing.length === 0, missing, checks, pages_by_device: byDev };
 }
 
 // Targets (section 5). Judged only on a complete, real set; otherwise "não avaliável".

@@ -38,7 +38,15 @@
     <label>Aparelho <input id="device" placeholder="ex.: iPhone 13" size="14"></label>
     <label>Luz <select id="light"><option>boa</option><option>fraca</option><option>reflexo</option><option>mista</option></select></label>
   </div>
-  <div class="row"><label><input type="checkbox" id="tilt"> inclinada</label><label><input type="checkbox" id="foil"> tem foil</label></div>
+  <div class="row">
+    <label>Sistema <select id="os"><option value="">—</option><option value="ios">iOS (iPhone)</option><option value="android">Android</option></select></label>
+    <label><input type="checkbox" id="older"> aparelho de entrada ou com mais de 3 anos</label>
+  </div>
+  <div class="row">
+    <label>Fichário <input id="binder" placeholder="ex.: preto 9 bolsos" size="16"></label>
+    <label><input type="checkbox" id="tilt"> inclinada (~20–30°)</label>
+    <label><input type="checkbox" id="reprint"> tem reimpressão (mesma arte, outra coleção)</label>
+  </div>
   <div class="row">
     <label>Tempo no aparelho <input id="devs" type="number" min="0" step="0.1" inputmode="decimal" placeholder="ex.: 3.4" size="6"> s</label>
     <label>Onde <select id="where"><option value="">—</option><option value="app-android">app Android</option><option value="app-ios">app iOS</option><option value="navegador">navegador do celular</option></select></label>
@@ -61,25 +69,29 @@ fetch('../site/data/cards.json').then((r) => r.json()).then((j) => {
   $('status').textContent = `${CARDS.length} cartas no catálogo.`;
 }).catch(() => { $('status').innerHTML = '<span class="bad">Não carreguei o catálogo: sirva a pasta do repositório (veja o topo do arquivo).</span>'; });
 const IDS = () => new Set(CARDS.map((c) => c.id));
-$('pockets').innerHTML = Array.from({ length: 9 }, (_, k) => `<label>${k + 1}<input list="cards" data-k="${k}"></label>`).join('');
+$('pockets').innerHTML = Array.from({ length: 9 }, (_, k) => `<label>${k + 1}<input list="cards" data-k="${k}"><span><input type="checkbox" class="pf" data-k="${k}"> foil</span></label>`).join('');
 
 $('pick').onchange = (e) => {
-  state.pages = [...e.target.files].sort((a, b) => a.name.localeCompare(b.name)).map((f) => ({ file: f.name, blob: f, corners: [], cards: Array(9).fill(''), device: '', light: 'boa', tilt: false, foil: false, devs: '', where: '' }));
+  state.pages = [...e.target.files].sort((a, b) => a.name.localeCompare(b.name)).map((f) => ({ file: f.name, blob: f, corners: [], cards: Array(9).fill(''), foils: Array(9).fill(false), device: '', os: '', older: false, binder: '', light: 'boa', tilt: false, reprint: false, devs: '', where: '' }));
   drawList(); go(0);
 };
 function drawList() { $('files').innerHTML = state.pages.map((p, k) => `<li data-k="${k}" class="${k === state.i ? 'cur' : ''} ${complete(p) ? 'done' : ''}">${p.file}</li>`).join(''); $('files').querySelectorAll('li').forEach((li) => li.onclick = () => go(+li.dataset.k)); }
-const complete = (p) => p.corners.length === 4 && p.cards.every((c) => c === 'vazia' || IDS().has(c)) && p.device;
+// complete = everything the protocol needs is registered for this photo (an empty field is never assumed)
+const complete = (p) => p.corners.length === 4 && p.cards.every((c) => c === 'vazia' || IDS().has(c)) && p.device && p.os && p.binder && p.devs !== '' && !isNaN(+p.devs) && p.where;
 function save() {
   const p = state.pages[state.i]; if (!p) return;
-  p.device = $('device').value.trim(); p.light = $('light').value; p.tilt = $('tilt').checked; p.foil = $('foil').checked;
+  p.device = $('device').value.trim(); p.light = $('light').value; p.tilt = $('tilt').checked; p.os = $('os').value; p.older = $('older').checked; p.binder = $('binder').value.trim(); p.reprint = $('reprint').checked;
+  p.foils = [...document.querySelectorAll('#pockets input.pf')].map((x) => x.checked);
   p.devs = $('devs').value.trim(); p.where = $('where').value;
-  p.cards = [...document.querySelectorAll('#pockets input')].map((x) => x.value.trim());
+  p.cards = [...document.querySelectorAll('#pockets input[list]')].map((x) => x.value.trim());
 }
 async function go(k) {
   save(); if (k < 0 || k >= state.pages.length) return; state.i = k; const p = state.pages[k];
-  $('device').value = p.device || (state.pages[k - 1]?.device ?? ''); $('light').value = p.light; $('tilt').checked = p.tilt; $('foil').checked = p.foil;
+  $('device').value = p.device || (state.pages[k - 1]?.device ?? ''); $('light').value = p.light; $('tilt').checked = p.tilt; $('reprint').checked = p.reprint;
+  const prev = state.pages[k - 1]; $('os').value = p.os || (prev?.os ?? ''); $('older').checked = p.os ? p.older : !!prev?.older; $('binder').value = p.binder || (prev?.binder ?? '');
+  document.querySelectorAll('#pockets input.pf').forEach((x, j) => { x.checked = !!p.foils[j]; });
   $('devs').value = p.devs || ''; $('where').value = p.where || (state.pages[k - 1]?.where ?? '');
-  document.querySelectorAll('#pockets input').forEach((x, j) => { x.value = p.cards[j]; x.className = ''; });
+  document.querySelectorAll('#pockets input[list]').forEach((x, j) => { x.value = p.cards[j]; x.className = ''; });
   state.img = await createImageBitmap(p.blob); draw(); drawList(); check();
 }
 function draw() {
@@ -100,15 +112,18 @@ $('cv').onclick = (e) => {
 $('reset').onclick = () => { const p = state.pages[state.i]; if (p) { p.corners = []; draw(); check(); } };
 $('prev').onclick = () => go(state.i - 1); $('next').onclick = () => go(state.i + 1);
 // the photo's details count as soon as they are typed (the ✓ in the list says the photo is complete)
-for (const id of ['device', 'devs', 'where', 'light', 'tilt', 'foil']) $(id).addEventListener(id === 'device' || id === 'devs' ? 'input' : 'change', () => check());
-document.querySelectorAll('#pockets input').forEach((x) => x.onchange = () => { x.className = x.value === 'vazia' || IDS().has(x.value) ? 'ok' : 'bad'; save(); check(); });
+document.querySelectorAll('#pockets input.pf').forEach((x) => x.onchange = () => check());
+for (const id of ['device', 'devs', 'where', 'light', 'tilt', 'os', 'older', 'binder', 'reprint']) $(id).addEventListener(['device', 'devs', 'binder'].includes(id) ? 'input' : 'change', () => check());
+document.querySelectorAll('#pockets input[list]').forEach((x) => x.onchange = () => { x.className = x.value === 'vazia' || IDS().has(x.value) ? 'ok' : 'bad'; save(); check(); });
 function check() { const p = state.pages[state.i]; if (!p) return; save(); drawList(); $('cornersSay').textContent = p.corners.length < 4 ? `Canto ${p.corners.length + 1} de 4: ${['superior esquerdo', 'superior direito', 'inferior direito', 'inferior esquerdo'][p.corners.length]}.` : 'Cantos ok (confira a grade verde).'; drawList(); }
 $('export').onclick = () => {
   save();
   const bad = state.pages.filter((p) => !complete(p)).map((p) => p.file);
   if (bad.length && !confirm(`${bad.length} foto(s) incompletas ficam de fora:\n${bad.join('\n')}\nExportar assim mesmo?`)) return;
-  const pages = state.pages.filter(complete).map((p) => ({ file: p.file, cond: [p.light, p.tilt ? 'inclinada' : '', p.foil ? 'foil' : ''].filter(Boolean).join('+'), device: p.device, where: p.where || '', device_s: p.devs === '' || isNaN(+p.devs) ? null : +p.devs, real: true,
-    cards: p.cards.map((c) => (c === 'vazia' ? null : c)), corners: p.corners, user: p.corners }));
+  const pages = state.pages.filter(complete).map((p) => { const foil = p.cards.map((c, j) => c !== 'vazia' && !!p.foils[j]);
+    return { file: p.file, cond: [p.light, p.tilt ? 'inclinada' : '', foil.some(Boolean) ? 'foil' : ''].filter(Boolean).join('+'),
+      device: p.device, os: p.os, device_older: !!p.older, binder: p.binder, light: p.light, tilt: !!p.tilt, reprint: !!p.reprint, foil,
+      where: p.where || '', device_s: +p.devs, real: true, cards: p.cards.map((c) => (c === 'vazia' ? null : c)), corners: p.corners, user: p.corners }; });
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify({ real: true, created: new Date().toISOString(), pages }, null, 1)], { type: 'application/json' })); a.download = 'truth.json'; a.click();
 };
 </script>

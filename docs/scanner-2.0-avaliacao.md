@@ -23,7 +23,8 @@ Regras de captura:
 ## 2. Gabarito
 
 Abrir `tools/pagescan-annotate.html` localmente (instruções no topo do arquivo) e, para cada foto:
-1. Informar aparelho, luz, se está inclinada e se tem foil. Informar também o **tempo no aparelho** e **onde** foi medido
+1. Informar aparelho, **sistema** (iOS/Android), se o aparelho é **de entrada ou tem mais de 3 anos**, o **fichário**,
+   a luz, se está **inclinada**, se a página tem **reimpressão** e, em cada posição, se a carta é **foil**. Informar também o **tempo no aparelho** e **onde** foi medido
    (app Android, app iOS ou navegador do celular): é o número no canto do rodapé da tela "Confira a página" quando
    aquela mesma página foi escaneada no aparelho (passo 4). A lista marca ✓ quando a foto está completa.
 2. Clicar nos 4 cantos da área dos bolsos, na ordem pedida, e conferir a grade verde.
@@ -65,7 +66,7 @@ PAGESCAN_DIR=/caminho/das/fotos PAGESCAN_OUT=/caminho/das/fotos/relatorio.json P
 - `PAGESCAN_JITTER=0.02` desloca os cantos anotados em até 2%, como um alinhamento feito à mão. Rodar também com `0` (cantos ajustados com cuidado) e com `0.04`.
 - O relatório traz o total, a quebra por aparelho e por condição, e o veredito de cada posição.
 - **Tempo em celular:** cada página é também escaneada no próprio aparelho (Coleção → Escanear → Página 3×3, câmera ou galeria) e o tempo exibido no rodapé da tela de conferência vai para o gabarito. Anotar à parte se a tela travou ao rolar durante o reconhecimento.
-- O relatório (`relatorio.md`) primeiro diz se o conjunto cumpre a seção 1 (páginas, aparelhos, páginas por aparelho, bolsos vazios, páginas com foil, tempos preenchidos). **Com o conjunto incompleto ou com fotos sintéticas, nenhuma meta é julgada**: a coluna diz "não avaliável".
+- O relatório (`relatorio.md`) primeiro confere **cada item da seção 1**: fotos reais; 30 páginas; 3 aparelhos, com ao menos 1 iPhone e 1 Android e um de entrada ou com mais de 3 anos; 10 páginas por aparelho; por aparelho, 4 com luz boa e de frente, 2 com reflexo, 2 com luz fraca e 2 inclinadas; 15 cartas foil em pelo menos 6 páginas; 6 bolsos vazios em 6 páginas diferentes; 3 páginas com a mesma carta em duas posições; 3 com reimpressão; 2 modelos de fichário; o tempo no aparelho em todas as páginas. **Um dado não registrado conta como não cumprido.** **Com o conjunto incompleto ou com fotos sintéticas, nenhuma meta é julgada**: a coluna diz "não avaliável".
 
 ## 4a. Validação do procedimento (feita em 25/11, sem fotos reais)
 
