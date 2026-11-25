@@ -2065,7 +2065,8 @@ PRs separados; nenhuma altera banco, políticas de segurança ou o site publicad
 
 **Publicado no site em 24/11/2026** (autorização do Conselho após a 2ª rodada no Android real): Escanear página 3×3
 em **beta** (#324), scanner contínuo (#328) e o Início que diz por que não carregou e se recupera sozinho (#331).
-O app (#325) e a versão de testes integrada (#329) continuam fora da `main`.
+Em 25/11, a correção do rótulo "mesma arte" no editor de posição (#332). Smoke tests no site publicado nos dois dias.
+O app (#325) e a versão de testes integrada (#329) continuam fora da `main` neste ciclo.
 
 ### Estágios (vale para as três frentes)
 
@@ -2091,6 +2092,11 @@ desempenho do produto e não aparecem no site. A tela distingue reconhecimento a
 correção manual; nada disso vira número público até A3.
 
 Para sair do beta: A3 cumprida (meta de 95% de identificação, falso positivo 0) e tempos medidos em celulares reais.
+Até lá o modo segue com o selo **beta** no site.
+
+Abertos depois da publicação (sem funcionalidade nova):
+- #333: intermitência do teste de página duplicada no WebKit do CI (instabilidade do teste ou defeito real).
+- #334: toque perdido quando a leitura dos números (OCR) atualiza a tela de conferência.
 
 ### Frente A′ — Scanner contínuo: melhoria de experiência (#327, #328 — publicado em 24/11)
 
