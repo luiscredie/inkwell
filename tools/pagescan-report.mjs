@@ -153,3 +153,76 @@ export function markdown(r) {
     '| Meta | Situação |', '|---|---|', ...Object.entries(r.targets).map(([k, v]) => `| ${k} | ${v} |`),
   ].join('\n');
 }
+
+// ---- §6: video frame × photo, from the site's A3 records (?medicao=a3), scored with the same verdict and summary ----
+// recs: the a3-*.json records; truth: truth.json from the annotation tool (one page per record, file <name>-foto.jpg
+// or <name>-video.jpg). The same annotated set serves §4 (bench) and §6 (this): one annotation, one set of categories.
+const p90 = (a) => { const s = a.filter((v) => v != null).sort((x, y) => x - y); return s.length ? s[Math.min(s.length - 1, Math.ceil(s.length * 0.9) - 1)] : null; };
+// exact McNemar (two-sided binomial on the discordant pockets)
+export function mcnemar(k, n) { if (!n) return 1; let p = 0; const lo = Math.min(k, n - k); for (let i = 0; i <= lo; i++) { let c = 1; for (let j = 0; j < i; j++) c = (c * (n - j)) / (j + 1); p += c / 2 ** n; } return Math.min(1, Math.round(2 * p * 1000) / 1000); }
+export const uaInfo = (ua = '') => { const ios = /iPhone|iPad|iPod/.test(ua), m = ua.match(/OS (\d+)[_.](\d+)/); return { os: ios ? 'ios' : /Android/.test(ua) ? 'android' : '', ios_version: ios && m ? +`${m[1]}.${m[2]}` : null, chrome: /Chrome\//.test(ua) && !/Edg\//.test(ua) }; };
+
+export function a3Compare(recs, truth) {
+  const T = new Map((truth.pages || []).map((p) => [p.file.replace(/-(foto|video)\.jpg$/i, ''), p]));
+  const missing = recs.filter((r) => !T.has(r.name)).map((r) => r.name), pages = recs.filter((r) => T.has(r.name));
+  // what the site measured completes the annotation (the time the person saw, the system); typed values win
+  const tpages = pages.map((r) => { const t = T.get(r.name), u = uaInfo(r.ua);
+    return { ...t, os: t.os || u.os, device_s: typeof t.device_s === 'number' ? t.device_s : r.seen?.ready != null ? Math.round(r.seen.ready / 100) / 10 : null, ios_version: u.ios_version, chrome: u.chrome }; });
+  const captureMs = (r, k) => (k === 'video' ? r.times.frameMs : r.times.frameMs + (r.times.stillMs || 0) + (r.times.alignMs || 0));
+  const rows = [];
+  pages.forEach((r, n) => { const t = tpages[n];
+    for (const k of ['video', 'foto', 'site']) { const mk = k === 'site' ? r.used : k, m = r.modes[mk]; if (!m?.pockets) continue;
+      m.pockets.forEach((p, i) => { const x = { file: r.name, page: r.name, mode: k, device: t.device || '?', cond: t.cond || '', i, truth: t.cards[i] || null, ...p,
+        ms: captureMs(r, mk) + (m.engineMs || 0) + (m.ocrMs || 0), device_s: t.device_s }; x.v = verdict(x); rows.push(x); }); } });
+  const sum = (list) => { const perPage = [...new Map(list.map((x) => [x.page, x.ms])).values()]; return { ...summarise(list), total_ms_median: median(perPage), total_ms_p90: p90(perPage) }; };
+  const by = (mode) => rows.filter((x) => x.mode === mode), devices = [...new Set(rows.map((x) => x.device))];
+  const ident = (v) => v === 'auto-right' || v === 'first-right', key = (x) => `${x.page}#${x.i}`;
+  const V = new Map(by('video').map((x) => [key(x), x])), paired = by('foto').filter((x) => x.truth && V.has(key(x)));
+  const pair = { pockets: paired.length, foto_only: paired.filter((x) => ident(x.v) && !ident(V.get(key(x)).v)).length, video_only: paired.filter((x) => !ident(x.v) && ident(V.get(key(x)).v)).length,
+    fp_foto_only: by('foto').filter((x) => x.v === 'false-positive' && V.get(key(x))?.v !== 'false-positive').length,
+    fp_video_only: by('video').filter((x) => x.v === 'false-positive' && by('foto').find((y) => key(y) === key(x))?.v !== 'false-positive').length };
+  pair.mcnemar_p = mcnemar(pair.foto_only, pair.foto_only + pair.video_only);
+  const capture = { pages: pages.length, photo_taken: pages.filter((r) => r.modes.foto).length, aligned: pages.filter((r) => r.aligned).length,
+    used_photo: pages.filter((r) => r.used === 'foto').length, fallback: pages.filter((r) => r.used !== 'foto').length,
+    fallback_reasons: pages.filter((r) => r.used !== 'foto').reduce((o, r) => ({ ...o, [r.fallback || '?']: (o[r.fallback || '?'] || 0) + 1 }), {}),
+    align_median: median(pages.map((r) => r.align)), align_min: pages.reduce((m, r) => (r.align != null && (m == null || r.align < m) ? r.align : m), null),
+    video_px: [...new Set(pages.map((r) => r.modes.video?.px))], photo_px: [...new Set(pages.map((r) => r.modes.foto?.px).filter(Boolean))],
+    still_ms_median: median(pages.map((r) => r.times.stillMs)), align_ms_median: median(pages.map((r) => r.times.alignMs)) };
+  const all = { video: sum(by('video')), foto: sum(by('foto')), site: sum(by('site')) };
+  const by_device = Object.fromEntries(devices.map((d) => [d, Object.fromEntries(['video', 'foto', 'site'].map((k) => [k, sum(by(k).filter((x) => x.device === d))]))]));
+  // §1 coverage for the same pages, plus what §6.1 adds: a real iPhone on iOS ≥ 18.4 and a real Android with Chrome
+  const cov = coverage({ ...truth, pages: tpages }, rows.filter((x) => x.mode === 'site'));
+  const ios184 = tpages.some((p) => p.os === 'ios' && p.ios_version >= 18.4), androidChrome = tpages.some((p) => p.os === 'android' && p.chrome);
+  cov.checks.push({ req: 'iPhone com iOS ≥ 18.4', ok: ios184, detail: ios184 ? 'ok' : 'nenhuma página de iPhone com iOS ≥ 18.4' }, { req: 'Android com Chrome', ok: androidChrome, detail: androidChrome ? 'ok' : 'nenhuma página de Android com Chrome' });
+  if (!ios184) cov.missing.push('nenhuma página de iPhone com iOS ≥ 18.4'); if (!androidChrome) cov.missing.push('nenhuma página de Android com Chrome');
+  if (missing.length) { cov.missing.push(`${missing.length} registro(s) sem gabarito`); cov.checks.push({ req: 'Gabarito de todos os registros', ok: false, detail: `${missing.length} sem gabarito` }); }
+  cov.complete = cov.missing.length === 0;
+  // §6.4, judged only on a complete, real set; "interação" is checked by tests and by use on the phone, not here
+  const judge = (ok) => (cov.complete ? (ok ? 'atingido' : 'não atingido') : 'não avaliável');
+  const criteria = {
+    'Site não pior que Vídeo em nenhum aparelho': judge(Object.values(by_device).every((d) => (d.site.identified_pct ?? 0) >= (d.video.identified_pct ?? 0) && d.site.false_positive <= d.video.false_positive)),
+    'Fallback confiável (toda página sem foto ou sem alinhamento lida pelo vídeo)': judge(pages.filter((r) => r.used !== 'foto').every((r) => r.modes.video?.pockets?.length === 9)),
+    'Foto > Vídeo em identificação, McNemar p < 0,05': judge(pair.foto_only > pair.video_only && pair.mcnemar_p < 0.05),
+    'Falsos positivos da foto ≤ vídeo': judge(all.foto.false_positive <= all.video.false_positive),
+    'Nenhuma perda de interação': 'verificar nos testes e no uso no aparelho',
+  };
+  return { a3: 'video-vs-foto', created: new Date().toISOString(), photos: truth.real ? 'real' : 'synthetic', missing_truth: missing, coverage: cov, criteria, capture, pair, all, by_device,
+    verdicts: rows.map(({ page, mode, i, truth: t, status, id, v }) => ({ page, mode, i, truth: t, status, id, v })) };
+}
+
+export function a3Markdown(r) {
+  const c = r.capture, line = (label, f) => `| ${label} | ${['video', 'foto', 'site'].map((k) => f(r.all[k]) ?? '–').join(' | ')} |`;
+  return [
+    `## A3 — vídeo × foto (${c.pages} páginas${r.missing_truth.length ? `, ${r.missing_truth.length} sem gabarito` : ''})`, '',
+    `**Fotos:** ${r.photos === 'real' ? 'reais' : 'sintéticas (não valem como resultado do produto)'} · **Conjunto:** ${r.coverage.complete ? 'completo' : 'incompleto: ' + r.coverage.missing.join('; ')}`, '',
+    `Captura: foto tirada em ${c.photo_taken}/${c.pages}, alinhada em ${c.aligned}, usada em ${c.used_photo}; fallback ${c.fallback}${c.fallback ? ' (' + Object.entries(c.fallback_reasons).map(([k, n]) => `${k}: ${n}`).join(', ') + ')' : ''}.`,
+    `Resolução: vídeo ${c.video_px.join(', ')}; foto ${c.photo_px.join(', ') || '–'}. Alinhamento: mediana ${c.align_median ?? '–'}, mínimo ${c.align_min ?? '–'}.`, '',
+    '| Por posição | Vídeo | Foto | Site (o que foi usado) |', '|---|---|---|---|',
+    line('Identificação (%)', (s) => s.identified_pct), line('Automática certa (%)', (s) => s.auto_right_pct), line('1ª sugestão certa (%)', (s) => s.first_right_pct),
+    line('Correção manual (%)', (s) => s.manual_pct), line('Ao alcance (%)', (s) => s.within_reach_pct), line('**Falsos positivos**', (s) => s.false_positive),
+    line('Carta tomada por vazio', (s) => s.card_as_empty), line('Tempo total, mediana (ms)', (s) => s.total_ms_median), line('Tempo total, p90 (ms)', (s) => s.total_ms_p90), '',
+    `Pareado (${r.pair.pockets} posições com carta): só a foto acertou ${r.pair.foto_only}, só o vídeo ${r.pair.video_only} (McNemar exato p = ${r.pair.mcnemar_p}); falso positivo só na foto ${r.pair.fp_foto_only}, só no vídeo ${r.pair.fp_video_only}.`, '',
+    '| Critério (§6.4) | Situação |', '|---|---|', ...Object.entries(r.criteria).map(([k, v]) => `| ${k} | ${v} |`), '',
+    'Tempo total = captura (vídeo: quadro; foto: quadro + takePhoto + alinhamento) + motor + leitura dos números. Medido pelo site no aparelho.',
+  ].join('\n');
+}

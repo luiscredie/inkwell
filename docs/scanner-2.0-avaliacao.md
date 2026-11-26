@@ -116,15 +116,18 @@ O site, aberto com `?medicao=a3` (Coleção → Escanear → Página 3×3), guar
 - **Aparelhos reais** (pelo menos 1 iPhone com iOS ≥ 18.4 e 1 Android com Chrome). Emulador não vale para esta seção.
 - Num aparelho sem `takePhoto` (iOS < 18.4), a página registra o fallback com o motivo. Isso também é resultado.
 
-### 6.2 Gabarito e relatório
+### 6.2 Gabarito e relatório (a mesma anotação da §2, as mesmas regras da §3)
 
 ```bash
 node tools/a3_compare.mjs extract /caminho/das/medicoes     # gera <nome>-foto.jpg e <nome>-video.jpg
-# anotar as -foto.jpg em tools/pagescan-annotate.html (só as cartas e o aparelho; os cantos não são usados aqui)
+# anotar as -foto.jpg em tools/pagescan-annotate.html com todos os campos da §2 (aparelho, sistema, luz, inclinação,
+# fichário, reimpressão, foils por posição, cartas); os cantos não são usados aqui
 node tools/a3_compare.mjs report  /caminho/das/medicoes /caminho/das/medicoes/a3-relatorio.json
 ```
 
-O relatório (Markdown para o PR + JSON) usa as categorias da §3, separadas em **Vídeo**, **Foto** e **Site** (o que o site de fato usou: a foto quando alinhou, senão o vídeo).
+Não há uma segunda anotação nem uma segunda contagem: um único `truth.json` serve à bancada (§4) e a esta comparação, e o relatório usa o mesmo veredito e o mesmo resumo da §3 (`tools/pagescan-report.mjs`). Ele separa **Vídeo**, **Foto** e **Site** (o que o site de fato usou: a foto quando alinhou, senão o vídeo) e acrescenta só o que é próprio da comparação: tempo total por modo, o pareamento posição a posição com McNemar exato, e os números da captura (foto tirada, alinhamento, fallback).
+
+O tempo que a pessoa esperou (`device_s`) e o sistema vêm do próprio registro do site quando não forem digitados. A cobertura do conjunto é verificada pelos mesmos itens da §1, mais um iPhone com iOS ≥ 18.4 e um Android com Chrome (§6.1). Enquanto o conjunto não estiver completo e com fotos reais, os critérios da §6.4 aparecem como **não avaliável**; nenhum é dado como atingido.
 
 ### 6.3 O que é registrado
 

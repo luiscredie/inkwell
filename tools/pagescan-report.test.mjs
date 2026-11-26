@@ -119,3 +119,51 @@ test('a complete real set: targets judged as measured (met and not met)', () => 
   assert.match(md, /Fotos:\*\* reais · \*\*Conjunto:\*\* completo/);
   assert.match(md, /\| Moto G7 \(2019\) \| 10 \|/);
 });
+
+// §6: video × photo, from the site's A3 records, with the same verdict and summary as the bench
+import { a3Compare, a3Markdown, mcnemar, uaInfo } from './pagescan-report.mjs';
+const IOS = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Mobile/15E148 Safari/604.1';
+const AND = 'Mozilla/5.0 (Linux; Android 14; SM-A546B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Mobile Safari/537.36';
+// a record: video reads every card as the engine's first suggestion; the photo reads them automatically, except where told
+function rec(name, cards, { ua = AND, used = 'foto', fotoWrong = [], videoWrong = [], ready = 2400 } = {}) {
+  const pk = (wrong, auto) => cards.map((c, i) => (!c ? { status: 'empty', id: null, group: [], top: [] } : wrong.includes(i) ? { status: 'check', id: 'LOR1-1', group: [], top: ['LOR1-1', c] }
+    : { status: auto ? 'ok' : 'check', id: c, group: [], top: [c] }));
+  return { a3: 1, name, ua, used, fallback: used === 'foto' ? null : 'no-imagecapture', align: 0.9, aligned: used === 'foto', times: { frameMs: 40, stillMs: 900, alignMs: 300 }, seen: { ready },
+    modes: { video: { px: '1080x1920', engineMs: 1500, ocrMs: 200, pockets: pk(videoWrong, false) }, foto: used === 'foto' ? { px: '2160x3840', engineMs: 1700, ocrMs: 200, pockets: pk(fotoWrong, true) } : undefined } };
+}
+
+test('§6: mcnemar and the user agent', () => {
+  assert.equal(mcnemar(0, 0), 1); assert.equal(mcnemar(9, 10), 0.021); assert.equal(mcnemar(5, 10), 1);
+  assert.deepEqual(uaInfo(IOS), { os: 'ios', ios_version: 18.4, chrome: false });
+  assert.equal(uaInfo(AND).os, 'android'); assert.equal(uaInfo(AND).chrome, true);
+});
+
+test('§6: the same verdicts as the bench, per mode; the site column is what was used; time and system from the record', () => {
+  const cards = Array.from({ length: 9 }, (_, i) => (i === 8 ? null : `LOR13-${i + 1}`));
+  const recs = [rec('a3-p01', cards, { fotoWrong: [0] }), rec('a3-p02', cards, { used: 'video', ready: 3100 })];
+  const truth = { real: false, pages: [{ file: 'a3-p01-foto.jpg', device: 'A', cards }, { file: 'a3-p02-video.jpg', device: 'A', cards }] };
+  const r = a3Compare(recs, truth);
+  assert.equal(r.all.video.cards, 16); assert.equal(r.all.video.first_right_pct, 100); assert.equal(r.all.video.auto_right_pct, 0);
+  assert.equal(r.all.foto.cards, 8); assert.equal(r.all.foto.auto_right_pct, 87.5); assert.equal(r.all.foto.alt_right_pct, 12.5);   // the wrong one has the right card second
+  assert.equal(r.all.site.cards, 16);                                                            // photo where used, video where not
+  assert.equal(r.capture.fallback, 1); assert.deepEqual(r.capture.fallback_reasons, { 'no-imagecapture': 1 });
+  assert.equal(r.pair.pockets, 8); assert.equal(r.pair.video_only, 1); assert.equal(r.pair.foto_only, 0);
+  assert.ok(r.verdicts.every((x) => typeof x.v === 'string'));
+  assert.equal(r.coverage.complete, false);                                                       // 2 synthetic pages
+  assert.ok(r.coverage.missing.some((m) => /iOS ≥ 18.4/.test(m)));
+  assert.ok(Object.entries(r.criteria).filter(([k]) => !/interação/.test(k)).every(([, v]) => v === 'não avaliável'));
+  assert.match(a3Markdown(r), /Conjunto:\*\* incompleto/);
+});
+
+test('§6: a complete real set of 30 pages (iPhone iOS 18.4 + Androids with Chrome): criteria judged as measured', () => {
+  const t = fullSet();
+  const recs = t.pages.map((p, k) => rec(p.file.replace(/\.jpg$/, ''), p.cards, { ua: p.os === 'ios' ? IOS : AND, videoWrong: p.cards[2] && k % 2 ? [2] : [] }));
+  const truth = { real: true, pages: t.pages.map((p) => ({ ...p, file: p.file.replace(/\.jpg$/, '-foto.jpg') })) };
+  const r = a3Compare(recs, truth);
+  assert.equal(r.coverage.complete, true, r.coverage.missing.join('; '));
+  assert.ok(r.pair.foto_only >= 10 && r.pair.video_only === 0);
+  assert.equal(r.criteria['Foto > Vídeo em identificação, McNemar p < 0,05'], 'atingido');
+  assert.equal(r.criteria['Falsos positivos da foto ≤ vídeo'], 'atingido');
+  assert.equal(r.criteria['Site não pior que Vídeo em nenhum aparelho'], 'atingido');
+  assert.equal(r.criteria['Nenhuma perda de interação'], 'verificar nos testes e no uso no aparelho');
+});
