@@ -540,3 +540,54 @@ test('Escanear página: pocket search lists every match; the collector line name
   expect(r.hk[0]).toMatch(/^LOR13-/);                         // newest set first
   expect(r.ids.map((x) => x && x.id)).toEqual(['LOR4-206', 'LOR13-22', 'LOR13-22', null, null]);
 });
+
+// 26/11 — "Fotografar página" takes a real photo (ImageCapture.takePhoto) when the browser can, still inside the site, and
+// lines it up with the video frame the person framed. Here the "camera" returns a photo with twice the detail, a wider
+// 4:3 view around the 16:9-ish video and a small off-centre zoom (a lens switch): the nine cards must still come out right.
+test('Escanear página: a real photo, larger and framed differently from the video, is lined up and read', async ({ page }) => {
+  test.skip(STILL(page), 'needs the fake camera');
+  test.setTimeout(120000);
+  await setup(page);
+  await page.addInitScript(() => {
+    window.ImageCapture = class {
+      constructor(track) { this.track = track; }
+      async getPhotoCapabilities() { return { fillLightMode: ['auto', 'off', 'flash'] }; }
+      async takePhoto(opts) {
+        window.__photoOpts = opts;
+        const v = document.getElementById('scanVideo'), s = 2.1, ox = 140, oy = 260;
+        const c = document.createElement('canvas'); c.width = Math.round(v.videoWidth * 2.3); c.height = Math.round(c.width * 4 / 3) > v.videoHeight * s + oy ? Math.round(c.width * 4 / 3) : Math.round(v.videoHeight * s + oy + 200);
+        const x = c.getContext('2d'); x.fillStyle = '#4a3a2c'; x.fillRect(0, 0, c.width, c.height); x.drawImage(v, ox, oy, v.videoWidth * s, v.videoHeight * s);
+        window.__photoSize = [c.width, c.height];
+        return new Promise((ok) => c.toBlob(ok, 'image/jpeg', 0.92));
+      }
+    };
+  });
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Escanear' }).click();
+  await page.getByTestId('scan-mode').getByRole('button', { name: 'Página 3×3' }).click();
+  await page.waitForFunction(() => document.getElementById('scanVideo')?.videoWidth > 0); await page.waitForTimeout(400);
+  await pagePhoto(page);
+  const t = await page.evaluate(() => window.__inkwellScanPageTiming());
+  expect(t.still).toBe(true);
+  expect(t.align).toBeGreaterThan(0.9);
+  expect(await page.evaluate(() => window.__photoOpts)).toEqual({ fillLightMode: 'off' });   // no flash on the sleeves
+  const st = await page.evaluate(() => window.__inkwellScanPageState());
+  expect(st.pockets[8].status).toBe('empty');
+  expect(st.pockets.slice(0, 8).map((p, i) => p.id === ID(PAGE[i]))).toEqual(Array(8).fill(true));
+  expect(st.pockets.slice(0, 8).filter((p, i) => p.status === 'ok' && p.id !== ID(PAGE[i]))).toEqual([]);
+});
+
+test('Escanear página: no photo possible (takePhoto fails): the video frame, as before', async ({ page }) => {
+  test.skip(STILL(page), 'needs the fake camera');
+  test.setTimeout(120000);
+  await setup(page);
+  await page.addInitScript(() => { window.ImageCapture = class { async getPhotoCapabilities() { return {}; } async takePhoto() { throw new Error('not here'); } }; });
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Escanear' }).click();
+  await page.getByTestId('scan-mode').getByRole('button', { name: 'Página 3×3' }).click();
+  await page.waitForFunction(() => document.getElementById('scanVideo')?.videoWidth > 0); await page.waitForTimeout(400);
+  await pagePhoto(page);
+  expect((await page.evaluate(() => window.__inkwellScanPageTiming())).still).toBe(false);
+  const st = await page.evaluate(() => window.__inkwellScanPageState());
+  expect(st.pockets.slice(0, 8).map((p, i) => p.id === ID(PAGE[i]))).toEqual(Array(8).fill(true));
+});

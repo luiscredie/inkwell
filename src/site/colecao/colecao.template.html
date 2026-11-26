@@ -2157,27 +2157,59 @@ self.onmessage = async (e) => {
     } else scanSay(Tx("Point the camera at one card inside the frame."));
     window.INKWELL_TRACK?.(m === "page" ? "scan_page_mode" : "scan_card_mode");
   }
+  // Escanear página takes a real photo when the browser can (ImageCapture.takePhoto: Chrome on Android, Safari on iOS
+  // 18.4+), still inside the site: the camera's full resolution and its own processing instead of one frame of the video
+  // (on an iPhone the video is about 1080p; seen 26/11: "the photo quality is very low"). The photo is lined up with the
+  // video frame the person framed (PS().alignStill); if it doesn't line up, or no photo can be taken, the video frame as before.
+  const STILL_MAX = 3000;   // long side kept: ~1.6× the video's detail; the photo is copied to each Worker, so not the full 12 MP
+  let stillOff = false;     // takePhoto failed once on this device: don't make the person wait for it again
+  async function takeStill(track) {
+    if (stillOff || window.INKWELL_SCAN_NO_STILL || typeof ImageCapture === "undefined" || !track) return null;
+    try {
+      const ic = new ImageCapture(track); let opts = {};
+      try { const pc = await ic.getPhotoCapabilities(); if ((pc.fillLightMode || []).includes("off")) opts.fillLightMode = "off"; } catch { /* no capabilities: defaults */ }   // no flash: it glares on the sleeves
+      const blob = await Promise.race([ic.takePhoto(opts), new Promise((_, no) => setTimeout(() => no(new Error("slow")), 4000))]);
+      const bmp = await createImageBitmap(blob, { imageOrientation: "from-image" });
+      const k = Math.min(1, STILL_MAX / Math.max(bmp.width, bmp.height)), cv = document.createElement("canvas");
+      cv.width = Math.round(bmp.width * k); cv.height = Math.round(bmp.height * k);
+      const ctx = cv.getContext("2d", { willReadFrequently: true }); ctx.imageSmoothingQuality = "high"; ctx.drawImage(bmp, 0, 0, cv.width, cv.height); bmp.close?.();
+      return cv;
+    } catch { stillOff = true; return null; }
+  }
   async function shootPage() {
     const v = $("scanVideo"); if (!v?.videoWidth) { scanSay(P("A câmera ainda não está pronta.", "The camera isn't ready yet."), true); return; }
-    // a still of the whole camera picture, at most 2400 px on the long side (enough for nine cards, quick to straighten)
+    if (scan.shooting) return; scan.shooting = true;
+    // the video frame first: it is what the person framed, and the fallback
     const k = Math.min(1, 2400 / Math.max(v.videoWidth, v.videoHeight)), cv = document.createElement("canvas");
     cv.width = Math.round(v.videoWidth * k); cv.height = Math.round(v.videoHeight * k);
     const t0 = performance.now(), ctx = cv.getContext("2d", { willReadFrequently: true }); ctx.drawImage(v, 0, 0, cv.width, cv.height);
-    const r = videoRect(guideRect());
-    window.INKWELL_TRACK?.("scan_page_shot");
-    pageFrom(cv, PS().frameQuad({ x: r.x * k, y: r.y * k, w: r.w * k, h: r.h * k }), t0);
+    const r = videoRect(guideRect()), frameQ = PS().frameQuad({ x: r.x * k, y: r.y * k, w: r.w * k, h: r.h * k });
+    const b = $("pageShoot"); if (b) b.disabled = true;
+    scanSay(P("Fotografando… segure firme.", "Taking the photo… hold still."));
+    let shot = { canvas: cv, quad: frameQ, still: false, corr: null };
+    try {
+      const still = await takeStill(scan.stream?.getVideoTracks()[0]);
+      if (still) {
+        const fr = ctx.getImageData(0, 0, cv.width, cv.height), ph = still.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, still.width, still.height);
+        const a = PS().alignStill(fr, ph);
+        if (a.corr >= 0.6) shot = { canvas: still, quad: PS().mapQuad(frameQ, a), still: true, corr: Math.round(a.corr * 100) / 100 };
+      }
+    } catch { /* the video frame */ }
+    scan.shooting = false; if (b) b.disabled = false;
+    window.INKWELL_TRACK?.(shot.still ? "scan_page_shot_still" : "scan_page_shot");
+    pageFrom(shot.canvas, shot.quad, t0, { still: shot.still, align: shot.corr, video: `${v.videoWidth}x${v.videoHeight}` });
   }
   // A still picture of a page with first-guess corners: the camera photo today; a photo from the gallery later.
-  function pageFrom(cv, quad, t0 = performance.now()) {
+  function pageFrom(cv, quad, t0 = performance.now(), how = {}) {
     const ctx = cv.getContext("2d", { willReadFrequently: true });
-    scan.pg = { canvas: cv, image: ctx.getImageData(0, 0, cv.width, cv.height), quad, pockets: [], edit: null, armDup: false, t: { shot: t0, photo: Math.round(performance.now() - t0), px: `${cv.width}x${cv.height}` } };
+    scan.pg = { canvas: cv, image: ctx.getImageData(0, 0, cv.width, cv.height), quad, pockets: [], edit: null, armDup: false, t: { shot: t0, photo: Math.round(performance.now() - t0), px: `${cv.width}x${cv.height}`, ...how } };
     // the rest in its own tasks, so the screen keeps answering between them (long tasks measured 24/11)
     const pg = scan.pg; pg.busy = true;
     setTimeout(() => { if (scan.pg !== pg) return; pageView(pg); showPage(); runPage(); }, 0);
   }
   window.__inkwellScanPageFrom = (cv, quad) => { if ($("scan").open && scan.mode === "page") pageFrom(cv, quad); };   // browser tests where no camera can run (WebKit)
   // Timings of each stage, kept for the last page (window.__inkwellScanPageTiming, and the console for device logs):
-  // photo = still + pixels, index = card index ready, engine = straighten + nine pockets inside the Worker (or here),
+  // photo = still + pixels (still: a real photo was used, align: how well it lined up with the video, video: its size), index = card index ready, engine = straighten + nine pockets inside the Worker (or here),
   // handoff = copying the photo to the Worker and back, first = first pocket on screen, ready = the check screen usable,
   // ocr = reading the collector numbers (after "ready": the person is already checking), ui = time spent redrawing.
   let LAST_TIMING = null;
