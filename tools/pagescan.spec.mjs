@@ -2,6 +2,10 @@
 // (8 real card images in a 3×3 page, the last pocket empty). Checks the whole flow and that nothing is saved before
 // the final confirmation. Chromium, and WebKit (iPhone) with PW_WEBKIT=1.
 import { test, expect } from '@playwright/test';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 
 const BASE = new URL('colecao/', process.env.INKWELL_URL || 'http://localhost:8080/index.html').href;
 const ME = '11111111-1111-4111-8111-111111111111';
@@ -424,7 +428,7 @@ test('Escanear página: the screen is usable while the numbers are read in the b
   expect(await rev.locator('.items').evaluate((e) => e.scrollTop)).toBeGreaterThan(250);
   const t = await page.evaluate(() => window.__inkwellScanPageTiming());
   expect(t.ready).toBeLessThan(t.ready + t.ocr);                                    // ready came before the numbers were read
-  expect(t.ocrN).toBe(2);
+  expect(t.ocrN).toBeGreaterThanOrEqual(2);                                         // the 2 reprints, plus the pockets the art didn't settle (26/11)
   expect(deltas(calls)).toEqual([]);
 });
 
@@ -518,4 +522,125 @@ test('#334: when the reading settles the last pending pocket, the screen updates
   await rev.getByTestId('page-add-more').click();                                  // inserted in place, and it works
   await expect(rev).toBeHidden();
   expect(deltas(calls)).toEqual([]);
+});
+
+// 26/11 — a pocket's search used to stop at 12 cards ("Minnie Mouse": 38, the Enchanted never showed), and the
+// collector line names a card outright ("206/204 · EN · 4" is LOR4-206) even when the art is under gloss or foil.
+test('Escanear página: pocket search lists every match; the collector line names the card', async ({ page }) => {
+  await page.goto('colecao/');
+  await page.waitForFunction(() => typeof window.__inkwellFindCards === 'function');
+  const r = await page.evaluate(() => ({
+    minnie: window.__inkwellFindCards('minnie mouse'),
+    ench: window.__inkwellFindCards('minnie encantada'),
+    num: window.__inkwellFindCards('minnie 4/206'),
+    hk: window.__inkwellFindCards('horned king'),
+    ids: ['206/204 . EN . 4', '22/207 EN 13', '22 / 207 EN 13 | 2/207 EN 13', 'nothing here', '999/204 EN 4'].map((t) => window.__inkwellIdFromCollector(t)),
+  }));
+  expect(r.minnie.length).toBeGreaterThan(30);
+  expect(r.minnie).toContain('LOR4-206');                     // Musketeer Champion (Enchanted)
+  expect(r.ench).toEqual(expect.arrayContaining(['LOR4-206', 'LOR13-238']));
+  expect(r.ench.every((id) => ['LOR4-206', 'LOR13-238'].includes(id))).toBe(true);
+  expect(r.num).toEqual(['LOR4-206']);
+  expect(r.hk[0]).toMatch(/^LOR13-/);                         // newest set first
+  expect(r.ids.map((x) => x && x.id)).toEqual(['LOR4-206', 'LOR13-22', 'LOR13-22', null, null]);
+});
+
+// 26/11 — "Fotografar página" takes a real photo (ImageCapture.takePhoto) when the browser can, still inside the site, and
+// lines it up with the video frame the person framed. Here the "camera" returns a photo with twice the detail, a wider
+// 4:3 view around the 16:9-ish video and a small off-centre zoom (a lens switch): the nine cards must still come out right.
+test('Escanear página: a real photo, larger and framed differently from the video, is lined up and read', async ({ page }) => {
+  test.skip(STILL(page), 'needs the fake camera');
+  test.setTimeout(120000);
+  await setup(page);
+  await page.addInitScript(() => {
+    window.ImageCapture = class {
+      constructor(track) { this.track = track; }
+      async getPhotoCapabilities() { return { fillLightMode: ['auto', 'off', 'flash'] }; }
+      async takePhoto(opts) {
+        window.__photoOpts = opts;
+        const v = document.getElementById('scanVideo'), s = 2.1, ox = 140, oy = 260;
+        const c = document.createElement('canvas'); c.width = Math.round(v.videoWidth * 2.3); c.height = Math.round(c.width * 4 / 3) > v.videoHeight * s + oy ? Math.round(c.width * 4 / 3) : Math.round(v.videoHeight * s + oy + 200);
+        const x = c.getContext('2d'); x.fillStyle = '#4a3a2c'; x.fillRect(0, 0, c.width, c.height); x.drawImage(v, ox, oy, v.videoWidth * s, v.videoHeight * s);
+        window.__photoSize = [c.width, c.height];
+        return new Promise((ok) => c.toBlob(ok, 'image/jpeg', 0.92));
+      }
+    };
+  });
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Escanear' }).click();
+  await page.getByTestId('scan-mode').getByRole('button', { name: 'Página 3×3' }).click();
+  await page.waitForFunction(() => document.getElementById('scanVideo')?.videoWidth > 0); await page.waitForTimeout(400);
+  await pagePhoto(page);
+  const t = await page.evaluate(() => window.__inkwellScanPageTiming());
+  expect(t.still).toBe(true);
+  expect(t.align).toBeGreaterThan(0.9);
+  expect(await page.evaluate(() => window.__photoOpts)).toEqual({ fillLightMode: 'off' });   // no flash on the sleeves
+  const st = await page.evaluate(() => window.__inkwellScanPageState());
+  expect(st.pockets[8].status).toBe('empty');
+  expect(st.pockets.slice(0, 8).map((p, i) => p.id === ID(PAGE[i]))).toEqual(Array(8).fill(true));
+  expect(st.pockets.slice(0, 8).filter((p, i) => p.status === 'ok' && p.id !== ID(PAGE[i]))).toEqual([]);
+  await expect(page.getByTestId('a3-bar')).toHaveCount(0);                        // the A3 measurement only with ?medicao=a3
+});
+
+test('Escanear página: no photo possible (takePhoto fails): the video frame, as before', async ({ page }) => {
+  test.skip(STILL(page), 'needs the fake camera');
+  test.setTimeout(120000);
+  await setup(page);
+  await page.addInitScript(() => { window.ImageCapture = class { async getPhotoCapabilities() { return {}; } async takePhoto() { throw new Error('not here'); } }; });
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Escanear' }).click();
+  await page.getByTestId('scan-mode').getByRole('button', { name: 'Página 3×3' }).click();
+  await page.waitForFunction(() => document.getElementById('scanVideo')?.videoWidth > 0); await page.waitForTimeout(400);
+  await pagePhoto(page);
+  expect((await page.evaluate(() => window.__inkwellScanPageTiming())).still).toBe(false);
+  const st = await page.evaluate(() => window.__inkwellScanPageState());
+  expect(st.pockets.slice(0, 8).map((p, i) => p.id === ID(PAGE[i]))).toEqual(Array(8).fill(true));
+});
+
+// A3 (docs/scanner-2.0-avaliacao.md §6): with ?medicao=a3 each shot keeps the video frame and the photo of the same
+// instant, reads both after the person's page is ready, and offers one JSON; tools/a3_compare.mjs scores it.
+test('Escanear página: A3 measurement keeps video and photo, reads both, and the comparison script scores them', async ({ page }) => {
+  test.skip(STILL(page), 'needs the fake camera');
+  test.setTimeout(180000);
+  await setup(page);
+  await page.addInitScript(() => {
+    window.ImageCapture = class {
+      async getPhotoCapabilities() { return {}; }
+      async takePhoto() {
+        const v = document.getElementById('scanVideo'), c = document.createElement('canvas'); c.width = v.videoWidth * 2; c.height = v.videoHeight * 2;
+        c.getContext('2d').drawImage(v, 0, 0, c.width, c.height); return new Promise((ok) => c.toBlob(ok, 'image/jpeg', 0.92));
+      }
+    };
+  });
+  await page.goto(BASE + '?medicao=a3');
+  await page.getByRole('button', { name: 'Escanear' }).click();
+  await page.getByTestId('scan-mode').getByRole('button', { name: 'Página 3×3' }).click();
+  await page.waitForFunction(() => document.getElementById('scanVideo')?.videoWidth > 0); await page.waitForTimeout(400);
+  const rev = await pagePhoto(page);
+  const st = await page.evaluate(() => window.__inkwellScanPageState());   // the person's page, as without the measurement
+  expect(st.pockets.slice(0, 8).map((p, i) => p.id === ID(PAGE[i]))).toEqual(Array(8).fill(true));
+  await expect(rev.locator('#pgPhoto [data-pk]')).toHaveCount(9);
+  const dl = page.getByTestId('a3-download');
+  await expect(dl).toBeVisible({ timeout: 120000 });
+  const rec = await page.evaluate(() => { const r = window.__inkwellA3Last(); return { ...r, modes: Object.fromEntries(Object.entries(r.modes).map(([k, m]) => [k, m && { ...m, jpeg: m.jpeg.slice(0, 23) }])) }; });
+  expect(rec.used).toBe('foto'); expect(rec.aligned).toBe(true); expect(rec.fallback).toBeNull();
+  expect(rec.modes.video.px).toBe('1080x1920'); expect(rec.modes.foto.px).toBe('2160x3840'); expect(rec.modes.foto.kept).toBe('1688x3000');
+  for (const k of ['video', 'foto']) { expect(rec.modes[k].pockets).toHaveLength(9); expect(rec.modes[k].jpeg).toBe('data:image/jpeg;base64,'); expect(rec.modes[k].engineMs).toBeGreaterThan(0); }
+  expect(rec.times.stillMs).toBeGreaterThanOrEqual(0); expect(rec.times.alignMs).toBeGreaterThanOrEqual(0);
+  await expect(rev.locator('#pgPhoto [data-pk]')).toHaveCount(9);                 // the page is still there and usable
+  // download, annotate (here: the known page), compare
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'a3-'));
+  const [d] = await Promise.all([page.waitForEvent('download'), dl.click()]);
+  await d.saveAs(path.join(dir, d.suggestedFilename()));
+  expect(d.suggestedFilename()).toBe(`${rec.name}.json`);
+  execFileSync('node', ['tools/a3_compare.mjs', 'extract', dir]);
+  expect(fs.existsSync(path.join(dir, `${rec.name}-foto.jpg`)) && fs.existsSync(path.join(dir, `${rec.name}-video.jpg`))).toBe(true);
+  fs.writeFileSync(path.join(dir, 'truth.json'), JSON.stringify({ real: false, pages: [{ file: `${rec.name}-foto.jpg`, device: 'teste', cond: 'fake', cards: PAGE.map((f) => (f ? ID(f) : null)) }] }));
+  const md = execFileSync('node', ['tools/a3_compare.mjs', 'report', dir, path.join(dir, 'r.json')]).toString();
+  const r = JSON.parse(fs.readFileSync(path.join(dir, 'r.json'), 'utf8'));
+  expect(r.capture).toMatchObject({ pages: 1, photo_taken: 1, aligned: 1, used_photo: 1, fallback: 0 });
+  for (const k of ['video', 'foto', 'site']) { expect(r.all[k].cards).toBe(8); expect(r.all[k].empty_pockets).toBe(1); expect(r.all[k].false_positive).toBe(0); expect(r.all[k].total_ms_median).toBeGreaterThan(0); }
+  expect(r.all.site).toEqual(r.all.foto);
+  expect(md).toContain('## A3 — vídeo × foto (1 páginas)');
+  fs.rmSync(dir, { recursive: true, force: true });
 });
