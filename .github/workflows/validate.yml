@@ -30,6 +30,8 @@ jobs:
         run: node tools/handlab.test.mjs
       - name: Scanner 2.0 page geometry (pagescan)
         run: node tools/pagescan.test.mjs
+      - name: Escanear página with a real photo (stillcapture)
+        run: node tools/stillcapture.test.mjs
       - name: Deck portfolio advisor
         run: node tools/deck-portfolio-v4.test.mjs
       - name: Match center
