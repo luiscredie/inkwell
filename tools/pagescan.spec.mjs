@@ -52,8 +52,10 @@ async function stillPage(page) {
     const c = document.createElement('canvas'); c.width = 1080; c.height = 1440; const ctx = c.getContext('2d');
     ctx.fillStyle = '#5c4634'; ctx.fillRect(0, 0, c.width, c.height);
     const x0 = 140, y0 = 150, W = 800, H = W / 0.72; ctx.fillStyle = '#1c1d24'; ctx.fillRect(x0, y0, W, H);
-    await Promise.all(files.map(async (f, i) => { if (!f) return; const im = new Image(); im.src = `../lorcana-card-images/images/${f}.jpg`; await im.decode();
+    await Promise.all(files.map(async (f, i) => { if (!f) return; const im = await createImageBitmap(await (await fetch(`../lorcana-card-images/images/${f}.jpg`)).blob());   /* #333: decode()+drawImage drew nothing at times in WebKit under load */
       const cw = W / 3, ch = H / 3; ctx.drawImage(im, x0 + (i % 3) * cw + cw * 0.04, y0 + Math.floor(i / 3) * ch + ch * 0.03, cw * 0.92, ch * 0.94); }));
+    for (let i = 0; i < 9; i++) { if (!files[i]) continue; const cw = W / 3, ch = H / 3, d = ctx.getImageData(Math.round(x0 + (i % 3) * cw + cw * 0.2), Math.round(y0 + Math.floor(i / 3) * ch + ch * 0.2), Math.round(cw * 0.6), Math.round(ch * 0.6)).data;
+      let lo = 255, hi = 0; for (let k = 0; k < d.length; k += 16) { const l = d[k]; if (l < lo) lo = l; if (l > hi) hi = l; } if (hi - lo < 20) throw new Error(`test photo: card ${i + 1} not drawn`); }
     const q = [[x0 + 8, y0 - 6], [x0 + W - 4, y0 + 5], [x0 + W + 6, y0 + H - 3], [x0 - 5, y0 + H + 4]];   // lined up by hand, a little off
     window.__inkwellScanPageFrom(c, q);
   }, PAGE);
@@ -168,10 +170,12 @@ async function hardPage(page) {   // two cards upside down in their pockets, as 
     const c = document.createElement('canvas'); c.width = 1080; c.height = 1440; const ctx = c.getContext('2d');
     ctx.fillStyle = '#5c4634'; ctx.fillRect(0, 0, c.width, c.height);
     const x0 = 140, y0 = 150, W = 800, H = W / 0.72; ctx.fillStyle = '#1c1d24'; ctx.fillRect(x0, y0, W, H);
-    await Promise.all(files.map(async (f, i) => { const [n, fx] = f.split('|'); const im = new Image(); im.src = `../lorcana-card-images/images/${n}.jpg`; await im.decode();
+    await Promise.all(files.map(async (f, i) => { const [n, fx] = f.split('|'); const im = await createImageBitmap(await (await fetch(`../lorcana-card-images/images/${n}.jpg`)).blob());   /* #333: decode()+drawImage drew nothing at times in WebKit under load */
       const cw = W / 3, ch = H / 3, x = x0 + (i % 3) * cw + cw * 0.04, y = y0 + Math.floor(i / 3) * ch + ch * 0.03;
       if (fx === 'flip') { ctx.save(); ctx.translate(x + cw * 0.46, y + ch * 0.47); ctx.rotate(Math.PI); ctx.drawImage(im, -cw * 0.46, -ch * 0.47, cw * 0.92, ch * 0.94); ctx.restore(); }
       else ctx.drawImage(im, x, y, cw * 0.92, ch * 0.94); }));
+    for (let i = 0; i < 9; i++) { if (!files[i]) continue; const cw = W / 3, ch = H / 3, d = ctx.getImageData(Math.round(x0 + (i % 3) * cw + cw * 0.2), Math.round(y0 + Math.floor(i / 3) * ch + ch * 0.2), Math.round(cw * 0.6), Math.round(ch * 0.6)).data;
+      let lo = 255, hi = 0; for (let k = 0; k < d.length; k += 16) { const l = d[k]; if (l < lo) lo = l; if (l > hi) hi = l; } if (hi - lo < 20) throw new Error(`test photo: card ${i + 1} not drawn`); }
     window.__inkwellScanPageFrom(c, [[x0 + 8, y0 - 6], [x0 + W - 4, y0 + 5], [x0 + W + 6, y0 + H - 3], [x0 - 5, y0 + H + 4]]);
   }, HARD);
   const rev = page.getByTestId('page-review');
@@ -381,7 +385,7 @@ test('Escanear página: the same answers with 1 Worker or 3 in parallel', async 
       const c = document.createElement('canvas'); c.width = 1080; c.height = 1440; const ctx = c.getContext('2d', { willReadFrequently: true });
       ctx.fillStyle = '#5c4634'; ctx.fillRect(0, 0, c.width, c.height);
       const x0 = 140, y0 = 150, W = 800, H = W / 0.72; ctx.fillStyle = '#1c1d24'; ctx.fillRect(x0, y0, W, H);
-      await Promise.all(files.map(async (f, i) => { const [n, fx] = f.split('|'); const im = new Image(); im.src = `../lorcana-card-images/images/${n}.jpg`; await im.decode();
+      await Promise.all(files.map(async (f, i) => { const [n, fx] = f.split('|'); const im = await createImageBitmap(await (await fetch(`../lorcana-card-images/images/${n}.jpg`)).blob());   /* #333: decode()+drawImage drew nothing at times in WebKit under load */
         const cw = W / 3, ch = H / 3, x = x0 + (i % 3) * cw + cw * 0.04, y = y0 + Math.floor(i / 3) * ch + ch * 0.03;
         if (fx === 'flip') { ctx.save(); ctx.translate(x + cw * 0.46, y + ch * 0.47); ctx.rotate(Math.PI); ctx.drawImage(im, -cw * 0.46, -ch * 0.47, cw * 0.92, ch * 0.94); ctx.restore(); } else ctx.drawImage(im, x, y, cw * 0.92, ch * 0.94); }));
       const a = await window.__inkwellScanPage(ctx.getImageData(0, 0, c.width, c.height), [[x0 + 8, y0 - 6], [x0 + W - 4, y0 + 5], [x0 + W + 6, y0 + H - 3], [x0 - 5, y0 + H + 4]]);
@@ -421,5 +425,97 @@ test('Escanear página: the screen is usable while the numbers are read in the b
   const t = await page.evaluate(() => window.__inkwellScanPageTiming());
   expect(t.ready).toBeLessThan(t.ready + t.ocr);                                    // ready came before the numbers were read
   expect(t.ocrN).toBe(2);
+  expect(deltas(calls)).toEqual([]);
+});
+
+// #334 — a tap must not be lost when the background reading of collector numbers settles a pocket. The reading is held
+// behind a gate: the finger goes down, the reading settles pocket 6 (Elsa, a reprint), then the finger comes up.
+async function gatedReading(page) {
+  await page.addInitScript(() => {
+    window.__ocrGate = new Promise((ok) => { window.__ocrOpen = ok; });
+    window.INKWELL_SCAN_OCR = async () => { await window.__ocrGate; return '125/204 EN 11'; };   // Elsa, Concerned Sister: LOR11-125
+  });
+}
+const settledByReading = (page) => expect.poll(() => page.evaluate(() => window.__inkwellScanPageState().pockets[5].status), { timeout: 20000 }).toBe('ok');
+for (const target of ['photo', 'grid', 'footer']) {
+  test(`#334: a ${target} tap made while the reading settles a pocket is not lost (mouse)`, async ({ page }) => {
+    test.setTimeout(120000);
+    await setup(page); await gatedReading(page);
+    await openPageMode(page);
+    const rev = await hardPage(page);
+    await expect(rev.getByTestId('page-reading')).toBeVisible();
+    expect((await page.evaluate(() => window.__inkwellScanPageState())).pockets[5].status).toBe('choose');
+    const el = target === 'photo' ? rev.locator('#pgPhoto [data-pk="0"] polygon') : target === 'grid' ? rev.locator('[data-pocket="1"]') : rev.getByTestId('page-add');
+    await el.scrollIntoViewIfNeeded();
+    const b = await el.boundingBox();
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+    await page.mouse.down();
+    await page.evaluate(() => window.__ocrOpen());                                  // the reading lands while the finger is down
+    await settledByReading(page);
+    await page.waitForTimeout(150);
+    await page.mouse.up();
+    const ed = rev.getByTestId('pocket-edit');
+    await expect(ed).toBeVisible({ timeout: 3000 });
+    await expect(ed).toHaveAttribute('data-edit-pocket', target === 'photo' ? '0' : target === 'grid' ? '1' : '6');   // footer: first pending after pocket 6 settled
+    await expect(rev.getByTestId('page-add')).toHaveText('Resolver 3 posições');
+  });
+}
+
+test('#334: a real touch on the photo while the reading settles a pocket opens it (CDP touch)', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'touch input via CDP');
+  test.setTimeout(120000);
+  await page.setViewportSize({ width: 360, height: 640 });
+  await setup(page); await gatedReading(page);
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+  await openPageMode(page);
+  const rev = await hardPage(page);
+  const pk = rev.locator('#pgPhoto [data-pk="4"] polygon'); await pk.scrollIntoViewIfNeeded();
+  const b = await pk.boundingBox(), tp = [{ x: b.x + b.width / 2, y: b.y + b.height / 2 }];
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: tp });
+  await page.evaluate(() => window.__ocrOpen());
+  await settledByReading(page);
+  await page.waitForTimeout(150);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await expect(rev.getByTestId('pocket-edit')).toHaveAttribute('data-edit-pocket', '4', { timeout: 3000 });
+});
+
+test('#334: the reading never changes the pocket the person has open; it waits for the editor to close', async ({ page }) => {
+  test.setTimeout(120000);
+  await setup(page); await gatedReading(page);
+  await openPageMode(page);
+  const rev = await hardPage(page);
+  const ed = await openPk(rev, 5);
+  await ed.getByTestId('pocket-find').click();
+  await ed.getByTestId('pocket-search').fill('elsa');
+  await page.evaluate(() => window.__ocrOpen());
+  await expect(rev.getByTestId('page-reading')).toHaveCount(0, { timeout: 20000 });
+  await expect(ed).toHaveAttribute('data-edit-pocket', '5');                        // still the person's
+  await expect(ed.getByTestId('pocket-search')).toHaveValue('elsa');
+  await expect(ed.getByTestId('pocket-search')).toBeFocused();
+  expect((await page.evaluate(() => window.__inkwellScanPageState())).pockets[5].status).toBe('choose');
+  await rev.locator('#pgsClose').click();                                          // closed: the reading applies now
+  await settledByReading(page);
+  await expect(rev.locator('#pgPhoto [data-pk="5"]')).toHaveAttribute('data-st', 'ok');
+});
+
+test('#334: when the reading settles the last pending pocket, the screen updates in place and both footer actions work', async ({ page }) => {
+  test.setTimeout(120000);
+  const calls = await setup(page); await gatedReading(page);
+  await openPageMode(page);
+  const rev = await hardPage(page);
+  for (const i of [6, 7, 8]) { const ed = await openPk(rev, i); await ed.getByTestId('pocket-skip').click(); }
+  await closeSheet(rev);
+  await expect(rev.getByTestId('page-add')).toHaveText('Resolver 1 posição');
+  await page.evaluate(() => { for (const e of document.querySelectorAll('#pageReview [data-pocket], #pageReview [data-pk], #pgAdd')) e.__same = true; });
+  await page.evaluate(() => window.__ocrOpen());
+  await settledByReading(page);
+  await expect(rev.getByTestId('page-add')).toHaveText('Continuar para revisão (6 cartas)');
+  await expect(rev.locator('#pgPhoto [data-pk="5"] text')).toHaveText('✓');
+  await expect(rev.locator('[data-pocket="5"] .chip')).toHaveText(/Reconhecida|Confirmada|Certa/);
+  await expect(rev.getByTestId('page-progress')).toHaveText('Tudo resolvido');
+  expect(await page.evaluate(() => [...document.querySelectorAll('#pageReview [data-pocket], #pageReview [data-pk], #pgAdd')].every((e) => e.__same))).toBe(true);   // nothing replaced
+  await rev.getByTestId('page-add-more').click();                                  // inserted in place, and it works
+  await expect(rev).toBeHidden();
   expect(deltas(calls)).toEqual([]);
 });
