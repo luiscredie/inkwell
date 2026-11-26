@@ -8,7 +8,9 @@
 # Rules:
 #   1. started from main only;
 #   2. SHA is main's HEAD, or an ancestor of main with an explicit, written rollback authorisation;
-#   3. one official "Inkwell release checks" run for exactly that SHA (event push, branch main) concluded with
+#   3. a rollback also needs an independent approval in the protected environment "rollback" (a second job, see
+#      tools/verify-rollback-approval.sh): this script only says whether the request is a rollback (output rollback=);
+#   4. one official "Inkwell release checks" run for exactly that SHA (event push, branch main) concluded with
 #      success, and its js, python, smoke and journeys-webkit jobs all succeeded in that same run.
 set -euo pipefail
 say() { echo "$*"; [ -n "${GITHUB_STEP_SUMMARY:-}" ] && echo "$*" >> "$GITHUB_STEP_SUMMARY" || true; }
@@ -18,7 +20,9 @@ no() { say "RECUSADO: $*"; exit 1; }
 [[ "${SHA:-}" =~ ^[0-9a-f]{40}$ ]] || no "informe o SHA completo (40 caracteres hexadecimais)."
 
 head=$(gh api "repos/$REPO/commits/main" --jq .sha)
+rollback=false
 if [ "$SHA" != "$head" ]; then
+  rollback=true
   st=$(gh api "repos/$REPO/compare/$SHA...main" --jq .status)
   [ "$st" = "ahead" ] || no "$SHA não está na main (compare: $st)."
   [ -n "${ROLLBACK_AUTH// /}" ] || no "$SHA não é o topo da main ($head): rollback exige autorização escrita (campo rollback_authorization)."
@@ -37,3 +41,5 @@ for j in js python smoke journeys-webkit; do
 done
 [ "$attempt" -gt 1 ] && say "Atenção: a execução $run passou na tentativa $attempt (houve nova execução de jobs)."
 say "OK: $SHA aprovado na execução oficial $run ($url): js, python, smoke e journeys-webkit com sucesso."
+[ -n "${GITHUB_OUTPUT:-}" ] && echo "rollback=$rollback" >> "$GITHUB_OUTPUT"
+[ "$rollback" = true ] && say "Rollback: o deploy espera a aprovação independente no ambiente protegido \"rollback\"." || true

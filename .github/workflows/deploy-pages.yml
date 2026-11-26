@@ -10,8 +10,9 @@ on:
     branches: [main]
   # Deploy manual (quando o automático falha por problema do GitHub). Só a partir da main; publica exatamente o
   # commit informado, e só se uma execução oficial de "Inkwell release checks" (push na main) desse commit concluiu
-  # com sucesso, com js, python, smoke e journeys-webkit. Um commit que não é o topo da main é um rollback e exige
-  # autorização escrita e o SHA redigitado. Regras em tools/verify-deploy-sha.sh.
+  # com sucesso, com js, python, smoke e journeys-webkit. Um commit que não é o topo da main é um rollback: exige
+  # autorização escrita, o SHA redigitado e a aprovação de outra pessoa no ambiente protegido "rollback".
+  # Regras em tools/verify-deploy-sha.sh e tools/verify-rollback-approval.sh.
   workflow_dispatch:
     inputs:
       sha:
@@ -38,27 +39,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
-    if: >-
-      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
-      github.event.workflow_run.conclusion == 'success'
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  # Manual run: which commit, on main, approved by the official release run; is it a rollback?
+  guard:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    outputs:
+      rollback: ${{ steps.verify.outputs.rollback }}
     steps:
-      # the guard script comes from main's own tree, never from the commit being published
-      - name: Check out the guard (main)
-        if: github.event_name == 'workflow_dispatch'
-        uses: actions/checkout@v5
+      # the guard scripts come from main's own tree, never from the commit being published
+      - uses: actions/checkout@v5
         with:
           ref: main
-          path: guard
-          sparse-checkout: tools/verify-deploy-sha.sh
+          sparse-checkout: |
+            tools/verify-deploy-sha.sh
+            tools/verify-rollback-approval.sh
           sparse-checkout-cone-mode: false
-
-      - name: Verify the commit asked for (manual deploy)
-        if: github.event_name == 'workflow_dispatch'
+      - name: Verify the commit asked for
+        id: verify
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -66,8 +63,44 @@ jobs:
           SHA: ${{ inputs.sha }}
           ROLLBACK_AUTH: ${{ inputs.rollback_authorization }}
           ROLLBACK_CONFIRM: ${{ inputs.rollback_confirm }}
-        run: bash guard/tools/verify-deploy-sha.sh
+        run: bash tools/verify-deploy-sha.sh
 
+  # A rollback waits here for an independent approval: the environment "rollback" must require reviewers with
+  # self-review blocked (Settings → Environments). The script also checks that the approver is not who started the run.
+  rollback-approval:
+    needs: guard
+    if: needs.guard.outputs.rollback == 'true'
+    environment: rollback
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+          sparse-checkout: tools/verify-rollback-approval.sh
+          sparse-checkout-cone-mode: false
+      - name: Verify the approval was independent
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          ACTOR: ${{ github.triggering_actor }}
+        run: bash tools/verify-rollback-approval.sh
+
+  deploy:
+    needs: [guard, rollback-approval]
+    # automatic: the release checks of that commit passed. Manual: the guard passed and, for a rollback, the
+    # independent approval too. Never when anything before it failed or was cancelled.
+    if: >-
+      !cancelled() && (
+        (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && needs.guard.result == 'success' &&
+          (needs.guard.outputs.rollback != 'true' || needs.rollback-approval.result == 'success'))
+      )
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
       - name: Check out revision
         uses: actions/checkout@v5
         with:
