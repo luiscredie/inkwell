@@ -2602,18 +2602,21 @@ self.onmessage = async (e) => {
   // video frame the person framed (PS().alignStill); if it doesn't line up, or no photo can be taken, the video frame as before.
   const STILL_MAX = 3000;   // long side kept: ~1.6× the video's detail; the photo is copied to each Worker, so not the full 12 MP
   let stillOff = false;     // takePhoto failed once on this device: don't make the person wait for it again
-  async function takeStill(track) {
-    if (stillOff || window.INKWELL_SCAN_NO_STILL || typeof ImageCapture === "undefined" || !track) return null;
+  async function takeStill(track, why = {}) {
+    if (window.INKWELL_SCAN_NO_STILL) { why.no = "desligada"; return null; }
+    if (typeof ImageCapture === "undefined") { why.no = "sem ImageCapture"; return null; }
+    if (!track) { why.no = "sem câmera"; return null; }
+    if (stillOff) { why.no = "falhou antes"; return null; }
     try {
       const ic = new ImageCapture(track); let opts = {};
       try { const pc = await ic.getPhotoCapabilities(); if ((pc.fillLightMode || []).includes("off")) opts.fillLightMode = "off"; } catch { /* no capabilities: defaults */ }   // no flash: it glares on the sleeves
       const blob = await Promise.race([ic.takePhoto(opts), new Promise((_, no) => setTimeout(() => no(new Error("slow")), 4000))]);
-      const bmp = await createImageBitmap(blob, { imageOrientation: "from-image" });
+      const bmp = await createImageBitmap(blob, { imageOrientation: "from-image" }); why.photoPx = `${bmp.width}x${bmp.height}`;   // before close(): it zeroes the size
       const k = Math.min(1, STILL_MAX / Math.max(bmp.width, bmp.height)), cv = document.createElement("canvas");
       cv.width = Math.round(bmp.width * k); cv.height = Math.round(bmp.height * k);
       const ctx = cv.getContext("2d", { willReadFrequently: true }); ctx.imageSmoothingQuality = "high"; ctx.drawImage(bmp, 0, 0, cv.width, cv.height); bmp.close?.();
       return cv;
-    } catch { stillOff = true; return null; }
+    } catch (e) { stillOff = true; why.no = `takePhoto: ${String(e?.message || e).slice(0, 60)}`; return null; }
   }
   async function shootPage() {
     const v = $("scanVideo"); if (!v?.videoWidth) { scanSay(P("A câmera ainda não está pronta.", "The camera isn't ready yet."), true); return; }
@@ -2626,18 +2629,74 @@ self.onmessage = async (e) => {
     const b = $("pageShoot"); if (b) b.disabled = true;
     scanSay(P("Fotografando… segure firme.", "Taking the photo… hold still."));
     let shot = { canvas: cv, quad: frameQ, still: false, corr: null };
+    const tFrame = Math.round(performance.now() - t0), why = {}, m = { frameMs: tFrame };
+    let foto = null;
     try {
-      const still = await takeStill(scan.stream?.getVideoTracks()[0]);
+      const ts = performance.now(), still = await takeStill(scan.stream?.getVideoTracks()[0], why); m.stillMs = Math.round(performance.now() - ts);
       if (still) {
+        const ta = performance.now();
         const fr = ctx.getImageData(0, 0, cv.width, cv.height), ph = still.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, still.width, still.height);
-        const a = PS().alignStill(fr, ph);
-        if (a.corr >= 0.6) shot = { canvas: still, quad: PS().mapQuad(frameQ, a), still: true, corr: Math.round(a.corr * 100) / 100 };
+        const a = PS().alignStill(fr, ph); m.alignMs = Math.round(performance.now() - ta); m.corr = Math.round(a.corr * 100) / 100;
+        foto = { canvas: still, quad: PS().mapQuad(frameQ, a) };
+        if (a.corr >= 0.6) shot = { canvas: still, quad: foto.quad, still: true, corr: m.corr };
+        else why.no = `não alinhou (${m.corr})`;
       }
-    } catch { /* the video frame */ }
+    } catch (e) { why.no = why.no || `erro: ${String(e?.message || e).slice(0, 60)}`; }
     scan.shooting = false; if (b) b.disabled = false;
     window.INKWELL_TRACK?.(shot.still ? "scan_page_shot_still" : "scan_page_shot");
-    pageFrom(shot.canvas, shot.quad, t0, { still: shot.still, align: shot.corr, video: `${v.videoWidth}x${v.videoHeight}` });
+    pageFrom(shot.canvas, shot.quad, t0, { still: shot.still, align: shot.corr, video: `${v.videoWidth}x${v.videoHeight}`, ...(shot.still ? {} : { fallback: why.no || "?" }) });
+    if (A3.on) A3.capture(scan.pg, { video: { canvas: cv, quad: frameQ, px: `${v.videoWidth}x${v.videoHeight}`, kept: `${cv.width}x${cv.height}` },
+      foto: foto && { canvas: foto.canvas, quad: foto.quad, px: why.photoPx, kept: `${foto.canvas.width}x${foto.canvas.height}` }, used: shot.still ? "foto" : "video", fallback: shot.still ? null : why.no || "?", ...m });
   }
+
+  // A3 measurement (docs/scanner-2.0-avaliacao.md §6): with ?medicao=a3, every "Fotografar página" keeps the video frame
+  // and the photo of the same instant and framing, reads both with the same steps the site uses (engine + collector
+  // numbers), without touching the screen, after the page the person sees is ready, and offers one JSON per page to
+  // download (both pictures, the scanner's corners, resolutions, times, alignment, fallback, what each read in each pocket).
+  // Off by default; the normal flow is untouched (it only runs after "ready" and the OCR).
+  const A3 = (() => {
+    let on = false; try { on = new URLSearchParams(location.search).get("medicao") === "a3" || sessionStorage.getItem("inkwellA3") === "1"; if (on) sessionStorage.setItem("inkwellA3", "1"); } catch { /* private mode */ }
+    let n = 0, last = null;
+    const bar = (txt, rec) => {
+      let el = $("a3Bar"); const st = $("scan")?.querySelector(".stage"); if (!st) return;
+      if (!el) { el = document.createElement("div"); el.id = "a3Bar"; el.dataset.testid = "a3-bar"; el.className = "small"; el.style.cssText = "position:absolute;left:8px;right:8px;bottom:8px;z-index:50;background:#1b1530ee;color:#f3e7c4;padding:8px 10px;border-radius:10px;display:flex;gap:8px;align-items:center;justify-content:space-between"; st.appendChild(el); }
+      el.innerHTML = `<span>${esc(txt)}</span>` + (rec ? `<button type="button" class="btn small" data-testid="a3-download">${esc(P("Baixar medição", "Download measurement"))}</button>` : "");
+      el.querySelector("[data-testid=a3-download]")?.addEventListener("click", () => download(rec));
+    };
+    function download(rec) {
+      const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(rec)], { type: "application/json" }));
+      a.download = `${rec.name}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    }
+    // what the site would show in each pocket before the person acts: engine, then the collector numbers
+    async function readAs(image, quad) {
+      const t0 = performance.now(), r = await scanPagePhoto(image, quad, scan.layout), tE = Math.round(performance.now() - t0);
+      const L = PS().LAYOUTS[scan.layout], W = L.cols * SG.W, H = L.rows * SG.H, pockets = r.pockets.map((p) => ({ ...p }));
+      const t1 = performance.now(); let read = 0;
+      for (const p of pockets) { if (!needsReading(p)) continue; read++; const d = await decideByNumber(image, quad, p, W, H); if (!d) continue;
+        if (d.pick) { p.id = d.pick; p.status = "ok"; p.ocr = true; } else { p.top = [{ id: d.suggest, s: 1 }, ...(p.top || []).filter((t) => t.id !== d.suggest)]; p.id = d.suggest; p.status = "check"; p.ocr = true; } }
+      return { engineMs: tE, ocrMs: Math.round(performance.now() - t1), ocrN: read, worker: !!r.ms.worker,
+        pockets: pockets.map((p) => ({ status: p.status, id: p.id || null, group: p.group || [], top: (p.top || []).slice(0, 6).map((t) => t.id), score: p.score != null ? Math.round(p.score * 1000) / 1000 : null, ocr: !!p.ocr })) };
+    }
+    async function capture(pg, c) {
+      const name = `a3-p${String(++n).padStart(2, "0")}-${new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "")}`;
+      bar(P("Medição A3: aguardando a página ficar pronta…", "A3: waiting for the page…"));
+      while (scan.pg === pg && (pg.busy || pg.reading)) await new Promise((ok) => setTimeout(ok, 200));   // the person's page first
+      bar(P("Medição A3: lendo vídeo e foto…", "A3: reading video and photo…"));
+      const img = (x) => x.canvas.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, x.canvas.width, x.canvas.height);
+      const rec = { a3: 1, name, at: new Date().toISOString(), ua: navigator.userAgent, screen: `${screen.width}x${screen.height}@${devicePixelRatio}`, layout: scan.layout,
+        used: c.used, fallback: c.fallback, align: c.corr ?? null, aligned: c.corr != null && c.corr >= 0.6, times: { frameMs: c.frameMs, stillMs: c.stillMs ?? null, alignMs: c.alignMs ?? null },
+        seen: { ready: pg.t?.ready ?? null, ocr: pg.t?.ocr ?? null }, modes: {} };
+      for (const k of ["video", "foto"]) {
+        const x = c[k]; if (!x) { rec.modes[k] = null; continue; }
+        let r; try { r = await readAs(img(x), x.quad); } catch (e) { r = { error: String(e?.message || e) }; }
+        rec.modes[k] = { px: x.px || null, kept: x.kept, quad: x.quad.map((q) => q.map((v) => Math.round(v * 10) / 10)), jpeg: x.canvas.toDataURL("image/jpeg", 0.92), ...r };
+      }
+      last = rec; window.__inkwellA3Last = () => last;
+      bar(P(`Medição A3 ${name}: pronta (${c.used === "foto" ? "foto usada" : "fallback: " + c.fallback}).`, `A3 ${name}: ready.`), rec);
+      console.info("[inkwell] A3", JSON.stringify({ name, used: rec.used, fallback: rec.fallback, align: rec.align }));
+    }
+    return { get on() { return on; }, capture };
+  })();
   // A still picture of a page with first-guess corners: the camera photo today; a photo from the gallery later.
   function pageFrom(cv, quad, t0 = performance.now(), how = {}) {
     const ctx = cv.getContext("2d", { willReadFrequently: true });
@@ -2708,41 +2767,35 @@ self.onmessage = async (e) => {
     const L = PS().LAYOUTS[scan.layout], W = L.cols * SG.W, H = L.rows * SG.H;
     for (const p of pg.pockets) {
       if (scan.pg !== pg || !needsReading(p)) continue;
-      if (p.status !== "choose") { await readPocketNumber(pg, p, W, H); continue; }
-      const q = PS().stripQuad(p, pg.quad, W, H, SG.M); if (!q) continue;
-      const sw = Math.hypot(q[1][0] - q[0][0], q[1][1] - q[0][1]), ow = Math.max(300, Math.min(1200, Math.round(sw * 3))), oh = Math.max(40, Math.round(ow * 0.05 / 0.34 * SG.H / SG.W));
-      let strip; try { strip = PS().warp(pg.image, q, ow, oh); } catch { continue; }
-      const cv = document.createElement("canvas"); cv.width = ow; cv.height = oh; cv.getContext("2d").putImageData(new ImageData(strip.data, ow, oh), 0, 0);
-      const reads = []; let pick = null;
-      for (const im of collectorImages({ x: 0, y: 0, w: ow, h: oh }, cv)) {
-        let text = ""; try { text = await readCollector(im); } catch { text = ""; }
-        reads.push(text); pick = pickByCollector(reads.join(" | "), p.group) || pickByCollector(text, p.group);
-        if (pick) break;
-      }
-      if (pick) applyReading(pg, p, pick);
+      const d = await decideByNumber(pg.image, pg.quad, p, W, H);
+      if (!d || scan.pg !== pg || p.resolved || p.skip) continue;
+      if (d.pick) { applyReading(pg, p, d.pick); continue; }
+      if (pg.sheet != null && pg.pockets[pg.sheet] === p) continue;   // never under the person's finger
+      p.top = [{ id: d.suggest, s: 1 }, ...(p.top || []).filter((t) => t.id !== d.suggest)];
+      p.id = d.suggest; p.status = "check"; p.ocr = true;
+      patchPage(pg);
     }
   }
-  // A pocket the art didn't settle: the collector number decides. Sure (pocket "ok") only when the number names one of the
-  // cards the art pointed to (two independent clues agree); otherwise that card goes first, for the person to confirm.
-  // The three images of one strip are not independent readings (a smudged digit repeats), so votes alone never settle.
-  async function readPocketNumber(pg, p, W, H) {
-    const q = PS().stripQuad(p, pg.quad, W, H, SG.M); if (!q) return;
+  // What the collector line says about one pocket, without touching the screen (also used by the A3 measurement):
+  // { pick: id } settles it, { suggest: id } puts that card first for the person, null: nothing readable.
+  // Reprints ("choose"): the number picks one of the printings. A pocket the art didn't settle ("check"/"unknown"): sure
+  // only when the number names one of the cards the art pointed to (two independent clues agree); otherwise only a
+  // suggestion. The three images of one strip are not independent readings (a smudged digit repeats): votes never settle.
+  async function decideByNumber(image, quad, p, W, H) {
+    const q = PS().stripQuad(p, quad, W, H, SG.M); if (!q) return null;
     const sw = Math.hypot(q[1][0] - q[0][0], q[1][1] - q[0][1]), ow = Math.max(300, Math.min(1200, Math.round(sw * 3))), oh = Math.max(40, Math.round(ow * 0.05 / 0.34 * SG.H / SG.W));
-    let strip; try { strip = PS().warp(pg.image, q, ow, oh); } catch { return; }
+    let strip; try { strip = PS().warp(image, q, ow, oh); } catch { return null; }
     const cv = document.createElement("canvas"); cv.width = ow; cv.height = oh; cv.getContext("2d").putImageData(new ImageData(strip.data, ow, oh), 0, 0);
     const art = new Set([p.id, ...(p.group || []), ...(p.top || []).map((t) => t.id)].filter(Boolean)), reads = [];
     let found = null;
     for (const im of collectorImages({ x: 0, y: 0, w: ow, h: oh }, cv)) {
       let text = ""; try { text = await readCollector(im); } catch { text = ""; }
-      reads.push(text); found = idFromCollector(reads.join(" | "));
-      if (found && art.has(found.id)) break;
+      reads.push(text);
+      if (p.status === "choose") { const pick = pickByCollector(reads.join(" | "), p.group) || pickByCollector(text, p.group); if (pick) return { pick }; continue; }
+      found = idFromCollector(reads.join(" | "));
+      if (found && art.has(found.id)) return { pick: found.id };
     }
-    if (!found || scan.pg !== pg || p.resolved || p.skip) return;
-    if (art.has(found.id)) return applyReading(pg, p, found.id);
-    if (pg.sheet != null && pg.pockets[pg.sheet] === p) return;   // never under the person's finger
-    p.top = [{ id: found.id, s: 1 }, ...(p.top || []).filter((t) => t.id !== found.id)];
-    p.id = found.id; p.status = "check"; p.ocr = true;
-    patchPage(pg);
+    return found && p.status !== "choose" ? { suggest: found.id } : null;
   }
   // What the check screen shows: the page and a margin around it (room to drag the corners), not the whole camera picture.
   function pageView(pg) {

@@ -2085,7 +2085,7 @@ Situação em 24/11 (fim do dia): **Escanear página em beta público; scanner c
 |---|---|---|---|
 | A1 — Auditoria e arquitetura (#319) | `docs/scanner-2.0.md` | **Aprovada** pelo Conselho (24/11) | — |
 | A2 — "Escanear página" 3×3 (#320) | #324 (na `main`) | **Publicado em beta público (24/11)** | Fluxo completo, nada gravado antes da confirmação, Chromium e WebKit. Motor em 1 a 3 Web Workers, aquecidos ao escolher o modo. Bolsos vazios nunca excluídos em silêncio. Índice com 100% das cartas com imagem. Correção tocando na foto, pendências em sequência, rolagem no Android, OCR das reimpressões fora do caminho crítico, tempos por etapa. 2 rodadas no Android real; a 2ª aprovada pelo Conselho. |
-| A3 — Medição com fotos reais (#321) | `docs/scanner-2.0-avaliacao.md` + `tools/pagescan-annotate.html` | **Aberta: aguarda as fotos** | ≥ 30 páginas reais, de 3 aparelhos. Métricas separadas (automática, 1ª sugestão, alternativas, falsos positivos, carta tomada por vazio). Tempo em celulares reais. **Meta: 95% de identificação; falso positivo 0.** |
+| A3 — Medição com fotos reais (#321) | `docs/scanner-2.0-avaliacao.md` + `tools/pagescan-annotate.html` (+ §6 vídeo × foto: `?medicao=a3` + `tools/a3_compare.mjs`) | **Aberta: aguarda as fotos** | ≥ 30 páginas reais, de 3 aparelhos. Métricas separadas (automática, 1ª sugestão, alternativas, falsos positivos, carta tomada por vazio). Tempo em celulares reais. **Meta: 95% de identificação; falso positivo 0.** |
 
 Os resultados com imagens sintéticas (`docs/scanner-2.0.md`) servem para comparar versões do motor; **não** são
 desempenho do produto e não aparecem no site. A tela distingue reconhecimento automático (✓), sugestão a confirmar e

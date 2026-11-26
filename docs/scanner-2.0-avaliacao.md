@@ -71,3 +71,50 @@ PAGESCAN_DIR=/caminho/das/fotos PAGESCAN_OUT=/caminho/das/fotos/relatorio.json P
 | Tempo por página | ≤ 4 s no aparelho mais lento | Otimizar o motor no Worker (menos posições, SIMD). |
 
 Os resultados são publicados como medidos, inclusive quando não atingem a meta. A meta de 95% só é declarada atingida com este protocolo cumprido.
+
+## 6. Comparação controlada: vídeo × fotografia (captura de alta resolução)
+
+Objetivo: decidir, com medição, se a fotografia tirada pelo site (`ImageCapture.takePhoto`) reconhece melhor que o quadro do vídeo usado até agora. **Nenhum ganho de precisão é declarado antes desta medição.**
+
+### 6.1 Como a comparação é controlada
+
+O site, aberto com `?medicao=a3` (Coleção → Escanear → Página 3×3), guarda **no mesmo toque** o quadro do vídeo e a fotografia. É a mesma página, no mesmo instante, com o mesmo enquadramento, a mesma luz e o mesmo reflexo. A diferença medida vem só da captura, não da mão nem da luz. Depois que a página da pessoa fica pronta (e a leitura dos números termina), o site lê as duas imagens com os mesmos passos do uso normal (motor + número de colecionador), sem mexer na tela, e oferece **Baixar medição**: um JSON por página. Ele traz as duas imagens, os cantos do scanner em cada uma, resoluções, tempos, alinhamento, fallback e o que cada imagem leu em cada posição.
+
+- O modo fica ligado na aba até ela ser fechada. Sem `?medicao=a3`, nada muda no fluxo normal (teste automático garante).
+- As mesmas 30 páginas da §1, nos mesmos aparelhos e condições. Uma foto por página basta, porque vídeo e foto saem do mesmo toque.
+- **Aparelhos reais** (pelo menos 1 iPhone com iOS ≥ 18.4 e 1 Android com Chrome). Emulador não vale para esta seção.
+- Num aparelho sem `takePhoto` (iOS < 18.4), a página registra o fallback com o motivo. Isso também é resultado.
+
+### 6.2 Gabarito e relatório
+
+```bash
+node tools/a3_compare.mjs extract /caminho/das/medicoes     # gera <nome>-foto.jpg e <nome>-video.jpg
+# anotar as -foto.jpg em tools/pagescan-annotate.html (só as cartas e o aparelho; os cantos não são usados aqui)
+node tools/a3_compare.mjs report  /caminho/das/medicoes /caminho/das/medicoes/a3-relatorio.json
+```
+
+O relatório (Markdown para o PR + JSON) usa as categorias da §3, separadas em **Vídeo**, **Foto** e **Site** (o que o site de fato usou: a foto quando alinhou, senão o vídeo).
+
+### 6.3 O que é registrado
+
+| Item | Onde |
+|---|---|
+| Resolução | vídeo entregue pelo navegador; foto entregue pela câmera; tamanho mantido (foto ≤ 3000 px no lado maior) |
+| Tempo total por página | captura (vídeo: quadro; foto: quadro + `takePhoto` + alinhamento) + motor + leitura dos números. Também o tempo que a pessoa viu (`ready`, `ocr`) |
+| Sucesso do alinhamento | correlação da foto com o quadro (≥ 0,6 = alinhou); mediana e mínimo |
+| Reconhecimento correto | identificação, automática certa, 1ª sugestão, ao alcance, por modo e por aparelho |
+| Falsos positivos | por modo, e pareado (posições em que só um dos modos errou com certeza) |
+| Fallback | quantas páginas usaram o vídeo e por quê (sem ImageCapture, `takePhoto` falhou, não alinhou) |
+
+Pareado: para cada posição com carta, conta-se onde só a foto acertou e onde só o vídeo acertou (teste de McNemar exato). Diferença sem significância é registrada como "sem evidência de ganho".
+
+### 6.4 Critérios do Conselho (26/11) para publicar a captura por fotografia
+
+| Critério | Como se verifica |
+|---|---|
+| Nenhuma regressão na captura existente | suíte completa (Chromium + WebKit) verde; no A3, a coluna **Site** não fica pior que **Vídeo** em nenhum aparelho |
+| Nenhuma perda de interação | a página da pessoa fica pronta no mesmo tempo ou menos; tocar, arrastar cantos e resolver posições funciona durante a leitura (testes + uso no aparelho) |
+| Fallback confiável | 100% das páginas sem foto ou sem alinhamento caem no vídeo e são reconhecidas; nenhuma página perdida |
+| Evidência de melhoria real | **Foto > Vídeo** em identificação no total, com McNemar p < 0,05, e **falsos positivos da foto ≤ vídeo** (meta 0) |
+
+Se a foto não mostrar ganho medido, a captura por vídeo continua sendo a padrão, e a fotografia fica atrás do modo de medição.
