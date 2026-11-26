@@ -2311,6 +2311,20 @@ self.onmessage = async (e) => {
     const score = (id) => { const m = id.match(/^LOR(\d+)-(\d+)$/); if (!m) return 0; let s = 0; if (nums.has(m[2]) || toks.includes(m[2])) s += 2; if (last === m[1]) s += 2; else if (toks.length > 1 && last.endsWith(m[1])) s += 1; return s; };
     return group.map((id) => [id, score(id)]).sort((a, b) => b[1] - a[1]);
   }
+  // The collector line names the card outright: "22/207 · EN · 13" is LOR13-22, whatever the art looks like (a sleeve's
+  // gloss, an Enchanted foil). Readings separated by " | " vote; returns { id, votes } or null.
+  function idFromCollector(text) {
+    const votes = new Map();
+    for (const t of String(text || "").split(" | ")) {
+      const m = /(\d{1,3})\s*\/\s*(\d{2,3})\D{1,8}?(\d{1,2})(?!\d)/.exec(t.replace(/[^0-9/EN. -]/g, " "));
+      if (!m) continue;
+      const id = `LOR${+m[3]}-${+m[1]}`;
+      if (BY.has(id)) votes.set(id, (votes.get(id) || 0) + 1);
+    }
+    const best = [...votes].sort((a, b) => b[1] - a[1])[0];
+    return best ? { id: best[0], votes: best[1] } : null;
+  }
+  window.__inkwellIdFromCollector = idFromCollector;   // unit tests
   let ocrWorker = null;
   // The collector line is small white text on the dark border: cut it from the full-resolution video frame, enlarge it 3×,
   // stretch the contrast and try it inverted (dark on light, what OCR reads best), thresholded and as is.
@@ -2634,7 +2648,7 @@ self.onmessage = async (e) => {
     // reprints: read the collector numbers in the background; a clear reading settles the pocket unless the person did
     // The reader (Tesseract, ~MBs from a CDN the first time) starts only now: started during the recognition, it took the
     // CPU from it on a 2-core device (Android emulator, 24/11). The person is checking pockets meanwhile.
-    const choose = pg.pockets.filter((p) => p.status === "choose").length;
+    const choose = pg.pockets.filter(needsReading).length;
     if (!choose) { LAST_TIMING.ocr = 0; console.info("[inkwell] escanear página", JSON.stringify(LAST_TIMING)); return; }
     setReading(pg, true);
     const to = performance.now();
@@ -2650,15 +2664,19 @@ self.onmessage = async (e) => {
     if (!on) { el?.remove(); return; }
     if (el || !box) return;
     const n = document.createElement("p"); n.className = "small muted pg-note"; n.dataset.testid = "page-reading"; n.setAttribute("data-testid", "page-reading");
-    n.textContent = P("Lendo o número das reimpressões… você já pode conferir.", "Reading the reprints' numbers… you can check meanwhile.");
+    n.textContent = P("Lendo o número das cartas… você já pode conferir.", "Reading the cards' numbers… you can check meanwhile.");
     box.querySelector("footer")?.prepend(n);
   }
-  // Pockets whose art exists in several printings: read each one's collector line from the full photo, like the
-  // one-card scanner does. A clear reading settles the pocket; otherwise the person picks.
+  // Pockets worth reading the collector line of: reprints (same art, several printings) and, since 26/11, pockets the
+  // art alone didn't settle ("check" / "unknown": gloss on the sleeve, Enchanted foil).
+  const needsReading = (p) => p && !p.resolved && !p.skip && (p.status === "choose" || p.status === "check" || p.status === "unknown");
+  // Read each such pocket's collector line from the full photo, like the one-card scanner does. A clear reading settles
+  // the pocket; otherwise the person picks.
   async function pickPrintings(pg) {
     const L = PS().LAYOUTS[scan.layout], W = L.cols * SG.W, H = L.rows * SG.H;
     for (const p of pg.pockets) {
-      if (scan.pg !== pg || p.status !== "choose" || p.resolved || p.skip) continue;
+      if (scan.pg !== pg || !needsReading(p)) continue;
+      if (p.status !== "choose") { await readPocketNumber(pg, p, W, H); continue; }
       const q = PS().stripQuad(p, pg.quad, W, H, SG.M); if (!q) continue;
       const sw = Math.hypot(q[1][0] - q[0][0], q[1][1] - q[0][1]), ow = Math.max(300, Math.min(1200, Math.round(sw * 3))), oh = Math.max(40, Math.round(ow * 0.05 / 0.34 * SG.H / SG.W));
       let strip; try { strip = PS().warp(pg.image, q, ow, oh); } catch { continue; }
@@ -2671,6 +2689,28 @@ self.onmessage = async (e) => {
       }
       if (pick) applyReading(pg, p, pick);
     }
+  }
+  // A pocket the art didn't settle: the collector number decides. Sure (pocket "ok") only when the number names one of the
+  // cards the art pointed to (two independent clues agree); otherwise that card goes first, for the person to confirm.
+  // The three images of one strip are not independent readings (a smudged digit repeats), so votes alone never settle.
+  async function readPocketNumber(pg, p, W, H) {
+    const q = PS().stripQuad(p, pg.quad, W, H, SG.M); if (!q) return;
+    const sw = Math.hypot(q[1][0] - q[0][0], q[1][1] - q[0][1]), ow = Math.max(300, Math.min(1200, Math.round(sw * 3))), oh = Math.max(40, Math.round(ow * 0.05 / 0.34 * SG.H / SG.W));
+    let strip; try { strip = PS().warp(pg.image, q, ow, oh); } catch { return; }
+    const cv = document.createElement("canvas"); cv.width = ow; cv.height = oh; cv.getContext("2d").putImageData(new ImageData(strip.data, ow, oh), 0, 0);
+    const art = new Set([p.id, ...(p.group || []), ...(p.top || []).map((t) => t.id)].filter(Boolean)), reads = [];
+    let found = null;
+    for (const im of collectorImages({ x: 0, y: 0, w: ow, h: oh }, cv)) {
+      let text = ""; try { text = await readCollector(im); } catch { text = ""; }
+      reads.push(text); found = idFromCollector(reads.join(" | "));
+      if (found && art.has(found.id)) break;
+    }
+    if (!found || scan.pg !== pg || p.resolved || p.skip) return;
+    if (art.has(found.id)) return applyReading(pg, p, found.id);
+    if (pg.sheet != null && pg.pockets[pg.sheet] === p) return;   // never under the person's finger
+    p.top = [{ id: found.id, s: 1 }, ...(p.top || []).filter((t) => t.id !== found.id)];
+    p.id = found.id; p.status = "check"; p.ocr = true;
+    patchPage(pg);
   }
   // What the check screen shows: the page and a margin around it (room to drag the corners), not the whole camera picture.
   function pageView(pg) {
@@ -2811,7 +2851,7 @@ self.onmessage = async (e) => {
             <b>${i + 1}. ${esc(c ? label(p) : p ? stTxt(s) : "…")}</b><span class="chip">${esc(pkChip(p))}</span></button>`; }).join("")}</div>
       </div>
       <footer>${pg.note ? `<p class="small pg-note pg-ok" data-testid="page-note">${esc(pg.note)}</p>` : `<p class="small muted pg-note">${Tx("Nothing will be saved until you confirm.")}</p>`}
-        ${pg.reading ? `<p class="small muted pg-note" data-testid="page-reading">${esc(P("Lendo o número das reimpressões… você já pode conferir.", "Reading the reprints' numbers… you can check meanwhile."))}</p>` : ""}
+        ${pg.reading ? `<p class="small muted pg-note" data-testid="page-reading">${esc(P("Lendo o número das cartas… você já pode conferir.", "Reading the cards' numbers… you can check meanwhile."))}</p>` : ""}
         ${!pg.busy && out.length ? `<p class="small pg-note pg-out" data-testid="page-out">${esc(outText(out))}</p>` : ""}
         <button type="button" class="btn primary" id="pgAdd" data-testid="page-add" ${pg.busy || (!pend && !list.length) ? "disabled" : ""}>${esc(addTxt(pg, pend, list))}</button>
         ${pg.armDup ? `<p class="small pg-note pg-dup" data-testid="page-dup">${esc(P("Estas mesmas cartas já foram para a lista na foto anterior.", "These same cards went on the list with the last photo."))}</p>` : ""}
@@ -2863,6 +2903,24 @@ self.onmessage = async (e) => {
     return P(`Ficam de fora: ${[part(e, "1 posição vazia", e.length + " posições vazias"), part(k, "1 deixada de fora", k.length + " deixadas de fora")].filter(Boolean).join(" · ")}. Se houver carta em alguma, toque nela para buscar.`,
       `Left out: ${[part(e, "1 empty pocket", e.length + " empty pockets"), part(k, "1 left out", k.length + " left out")].filter(Boolean).join(" · ")}. If a card is there, tap the pocket to find it.`);
   }
+  // Search in a pocket's editor. Every card that matches (it used to stop at 12: "Minnie Mouse" has 38 and the Enchanted
+  // ones never showed, 26/11), the cards the art pointed to first, then names that start with the words, newest set first.
+  // Also understands "encantada"/"enchanted", "épica", "icônica" and a collector number ("206", or "4/206" for set 4).
+  const FIND_PAGE = 24;
+  const RAR_TAG = { E: ["Encantada", "Enchanted"], EP: ["Épica", "Epic"], I: ["Icônica", "Iconic"], P: ["Promo", "Promo"] };
+  const RAR_WORDS = { encantada: "E", encantadas: "E", enchanted: "E", epica: "EP", epic: "EP", iconica: "I", iconic: "I", promo: "P" };
+  function findCards(q, p) {
+    const words = q.split(" ").filter(Boolean), rar = new Set(), nums = [], text = [];
+    for (const w of words) { if (RAR_WORDS[w]) rar.add(RAR_WORDS[w]); else if (/^\d{1,3}$/.test(w)) nums.push(w); else text.push(w); }
+    const fromArt = new Map([p?.id, ...(p?.group || []), ...(p?.top || []).map((t) => t.id)].filter(Boolean).map((id, k) => [id, k]));
+    const setNum = (c) => (/^LOR(\d+)$/.exec(c.set) || [])[1];
+    const hits = CARDS.filter((c) => text.every((w) => c.k.includes(w)) && (!rar.size || rar.has(c.rarity))
+      && nums.every((n) => String(parseInt(c.num, 10)) === String(+n) || setNum(c) === String(+n)));
+    const starts = (c) => (text.length && norm(c.name).startsWith(text.join(" ")) ? 0 : 1);
+    const rank = (c) => { const m = /^LOR(\d+)$/.exec(c.set); return m ? +m[1] : 0; };
+    return hits.sort((a, b) => (fromArt.get(a.id) ?? 99) - (fromArt.get(b.id) ?? 99) || starts(a) - starts(b) || rank(b) - rank(a) || (parseInt(a.num, 10) || 0) - (parseInt(b.num, 10) || 0));
+  }
+  window.__inkwellFindCards = (q) => findCards(norm(q), null).map((c) => c.id);   // tests
   function pocketSheet(pg, i, pendList) {
     const p = pg.pockets[i], N = pg.pockets.length, crop = pocketCrop(pg, i, 240), c = p.id && !p.skip ? BY.get(p.id) : null;
     const isPend = PS().pending(p), k = pendList.indexOf(i);
@@ -2919,13 +2977,18 @@ self.onmessage = async (e) => {
     ed.querySelectorAll(".pgs-alts [data-use]").forEach((b) => b.onclick = () => use(b.dataset.use));
     const find = $("pgFind"), found = $("pgFound");
     if (find) {
-      const search = () => {
-        const q = norm(find.value); pg.find = find.value;
-        const hits = q.length < 2 ? [] : CARDS.filter((c) => q.split(" ").every((w) => c.k.includes(w))).slice(0, 12);
-        found.innerHTML = hits.map((c) => `<button type="button" data-use="${esc(c.id)}">${thumb(c, "", false)}</span><span>${esc(split(c.name)[0])}</span><span class="muted">${esc(setName(c.set))} · nº ${esc(c.num)}</span></button>`).join("") || (q.length >= 2 ? `<p class="small muted">${esc(P("Nada encontrado.", "Nothing found."))}</p>` : "");
+      let shown = FIND_PAGE;
+      const search = (more) => {
+        const q = norm(find.value); pg.find = find.value; if (!more) shown = FIND_PAGE;
+        const hits = q.length < 2 ? [] : findCards(q, p), list = hits.slice(0, shown);
+        found.innerHTML = list.map((c) => `<button type="button" data-use="${esc(c.id)}">${thumb(c, "", false)}</span><span>${esc(split(c.name)[0])}</span><span class="muted">${esc(split(c.name)[1] || "")}</span><span class="muted">${esc(setName(c.set))} · nº ${esc(c.num)}${RAR_TAG[c.rarity] ? " · " + esc(P(...RAR_TAG[c.rarity])) : ""}</span></button>`).join("")
+          + (hits.length > shown ? `<button type="button" class="btn small" id="pgFindMore" data-testid="pocket-search-more">${esc(P(`Mostrar mais (${hits.length - shown})`, `Show more (${hits.length - shown})`))}</button>` : "")
+          || (q.length >= 2 ? `<p class="small muted">${esc(P("Nada encontrado.", "Nothing found."))}</p>` : "");
+        if (hits.length) found.insertAdjacentHTML("afterbegin", `<p class="small muted" data-testid="pocket-search-count" style="grid-column:1/-1;margin:0">${esc(P(hits.length === 1 ? "1 carta" : `${hits.length} cartas`, hits.length === 1 ? "1 card" : `${hits.length} cards`))}</p>`);
         found.querySelectorAll("[data-use]").forEach((b) => b.onclick = () => use(b.dataset.use));
+        $("pgFindMore")?.addEventListener("click", () => { shown += FIND_PAGE; search(true); });
       };
-      find.oninput = search; if (find.value) search();
+      find.oninput = () => search(); if (find.value) search();
     }
     $("pgFoil")?.addEventListener("change", (e) => { p.foil = e.target.checked; drawPage(); });
     ed.querySelectorAll("[data-pq]").forEach((b) => b.onclick = () => {
@@ -3015,7 +3078,7 @@ self.onmessage = async (e) => {
   function factory() {
   const SG = { gx: 16, gy: 12, cell: 14, ax: 13, ay: 26, W: 250, H: 350, M: 0.10 };   // keep in step with tools/build_scan_index.py
   let SCAN = null, NORM_L = null;
-  const use = (index) => { SCAN = index; NORM_L = null; DL = null; };
+  const use = (index) => { SCAN = index; NORM_L = null; DL = null; CS = null; };
   const lin = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
   const fl = (t) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
   function lab(r, g, b) {
@@ -3030,7 +3093,7 @@ self.onmessage = async (e) => {
         const o = ((y + 1) * W1 + x + 1) * 3, u = (y * W1 + x + 1) * 3; I[o] = I[u] + r; I[o + 1] = I[u + 1] + g; I[o + 2] = I[u + 2] + b; } }
     return { I, w, h };
   }
-  function fingerprint(T, ox, oy, s) {   // same steps as tools/build_scan_index.py: cell means -> Lab -> standardise -> unit length
+  function fingerprint(T, ox, oy, s, raw) {   // same steps as tools/build_scan_index.py: cell means -> Lab -> standardise -> unit length
     const { I, w, h } = T, W1 = w + 1, n = SG.gx * SG.gy, v = new Float32Array(n * 3), cell = SG.cell * s, x0 = ox + SG.ax * s, y0 = oy + SG.ay * s;
     for (let j = 0; j < SG.gy; j++) for (let i = 0; i < SG.gx; i++) {
       let xa = Math.round(x0 + i * cell), xb = Math.round(x0 + (i + 1) * cell), ya = Math.round(y0 + j * cell), yb = Math.round(y0 + (j + 1) * cell);
@@ -3039,6 +3102,7 @@ self.onmessage = async (e) => {
       const L = lab((I[a] - I[b] - I[c] + I[d]) / area, (I[a + 1] - I[b + 1] - I[c + 1] + I[d + 1]) / area, (I[a + 2] - I[b + 2] - I[c + 2] + I[d + 2]) / area);
       const k = (j * SG.gx + i) * 3; v[k] = L[0]; v[k + 1] = L[1]; v[k + 2] = L[2];
     }
+    if (raw) raw.set(v);   // the cell colours before standardising (glare detection)
     for (let ch = 0; ch < 3; ch++) { let m = 0, q = 0; for (let k = ch; k < v.length; k += 3) m += v[k]; m /= n; for (let k = ch; k < v.length; k += 3) q += (v[k] - m) ** 2;
       const sd = Math.sqrt(q / n) + 1e-6; for (let k = ch; k < v.length; k += 3) v[k] = (v[k] - m) / sd; }
     let q = 0; for (let k = 0; k < v.length; k++) q += v[k] * v[k]; q = Math.sqrt(q) || 1; for (let k = 0; k < v.length; k++) v[k] /= q;
@@ -3054,10 +3118,55 @@ self.onmessage = async (e) => {
   const fineAround = ([s, dx, dy]) => { const g = [];
     for (const ks of [0.95, 0.975, 1, 1.025, 1.05]) for (const ex of [-0.03, -0.015, 0, 0.015, 0.03]) for (const ey of [-0.03, -0.015, 0, 0.015, 0.03]) g.push([s * ks, dx + ex * s, dy + ey * s]);
     return g; };
-  function variants(T, grid) {
-    return grid.map(([s, dx, dy]) => { const ox = T.w / 2 - (SG.W / 2) * s + dx * SG.W, oy = T.h / 2 - (SG.H / 2) * s + dy * SG.H; return { v: fingerprint(T, ox, oy, s), s, dx, dy }; });
+  // Glare. A gloss spot on the sleeve (or a foil highlight) is a bright, colourless blob. The fingerprint is
+  // standardised per card, so on dark art that blob dominates the vector and the photo matches whichever cards have a
+  // glowing blob on dark art (The Horned King – Merciless Master, Dragon Fire, So Be It!: "hub" cards, seen 26/11).
+  // Cells that look like glare (and the ring around them) are left out of the comparison on both sides.
+  const GLARE = { L: 70, C: 22, ring: 1, max: 0.4, ...(typeof globalThis !== "undefined" && globalThis.INKWELL_SCAN_GLARE) };
+  function glareMask(raw) {   // raw: Lab per cell (row-major gx × gy) -> Uint8Array(cells), 1 = left out; null if none
+    const gx = SG.gx, gy = SG.gy, n = gx * gy, hit = new Uint8Array(n); let any = 0;
+    for (let k = 0; k < n; k++) { const L = raw[k * 3], C = Math.hypot(raw[k * 3 + 1], raw[k * 3 + 2]); if (L >= GLARE.L && C <= GLARE.C) { hit[k] = 1; any++; } }
+    if (!any) return null;
+    const m = new Uint8Array(n); let cnt = 0;
+    for (let k = 0; k < n; k++) if (hit[k]) { const x = k % gx, y = (k / gx) | 0;
+      for (let dy = -GLARE.ring; dy <= GLARE.ring; dy++) for (let dx = -GLARE.ring; dx <= GLARE.ring; dx++) { const X = x + dx, Y = y + dy; if (X >= 0 && Y >= 0 && X < gx && Y < gy && !m[Y * gx + X]) { m[Y * gx + X] = 1; cnt++; } } }
+    return cnt > n * GLARE.max ? null : { m, cnt };   // most of the art washed out: nothing reliable to mask, compare as is
   }
-  const dot = (i, v) => { const { D, dims } = SCAN; let q = 0; for (let k = 0, o = i * dims; k < dims; k++) q += D[o + k] * v[k]; return q / SCAN.norm[i]; };   // SCAN: see use()
+  // Query restandardised over the cells kept (per channel: mean 0, sd 1, masked cells 0).
+  function maskQuery(raw, mask, chans) {
+    const n = SG.gx * SG.gy, keep = n - mask.cnt, v = new Float32Array(n * 3);
+    for (const ch of chans) { let s = 0, q = 0; for (let k = 0; k < n; k++) if (!mask.m[k]) { const x = raw[k * 3 + ch]; s += x; q += x * x; }
+      const mu = s / keep, sd = Math.sqrt(Math.max(1e-9, q / keep - mu * mu)); for (let k = 0; k < n; k++) v[k * 3 + ch] = mask.m[k] ? 0 : (raw[k * 3 + ch] - mu) / sd; }
+    return v;
+  }
+  // Per card and channel: sum and sum of squares of the stored vector (to restandardise it over any mask cheaply).
+  let CS = null;
+  function cardSums() {
+    if (CS) return CS; const { D, dims, n } = SCAN; CS = new Float64Array(n * 6);
+    for (let i = 0; i < n; i++) for (let k = 0; k < dims; k++) { const x = D[i * dims + k], ch = k % 3; CS[i * 6 + ch] += x; CS[i * 6 + 3 + ch] += x * x; }
+    return CS;
+  }
+  // Correlation of card i with the masked query q, over the kept cells, averaged over the channels used.
+  function maskedScore(i, q, mask, chans) {
+    const { D, dims } = SCAN, S = cardSums(), n = SG.gx * SG.gy, keep = n - mask.cnt, o = i * dims;
+    let total = 0;
+    for (const ch of chans) {
+      let s = S[i * 6 + ch], ss = S[i * 6 + 3 + ch];
+      for (let k = 0; k < n; k++) if (mask.m[k]) { const x = D[o + k * 3 + ch]; s -= x; ss -= x * x; }
+      let d = 0; for (let k = 0; k < n; k++) d += D[o + k * 3 + ch] * q[k * 3 + ch];   // q is 0 on masked cells and centred
+      const sd = Math.sqrt(Math.max(1e-9, ss / keep - (s / keep) ** 2));
+      total += d / (sd * keep);
+    }
+    return total / chans.length;
+  }
+  function variants(T, grid) {
+    return grid.map(([s, dx, dy]) => { const ox = T.w / 2 - (SG.W / 2) * s + dx * SG.W, oy = T.h / 2 - (SG.H / 2) * s + dy * SG.H, raw = new Float32Array(SG.gx * SG.gy * 3);
+      const v = fingerprint(T, ox, oy, s, raw), mask = glareMask(raw);
+      return { v, s, dx, dy, mask, q: mask ? maskQuery(raw, mask, [0, 1, 2]) : null, ql: mask ? maskQuery(raw, mask, [0]) : null }; });
+  }
+  const dotV = (i, v) => { const { D, dims } = SCAN; let q = 0; for (let k = 0, o = i * dims; k < dims; k++) q += D[o + k] * v[k]; return q / SCAN.norm[i]; };   // SCAN: see use()
+  const NOMASK = typeof globalThis !== "undefined" && globalThis.INKWELL_SCAN_NOGLARE;   // A/B switch for measurements
+  const dot = (i, Q) => (Q.mask && !NOMASK ? maskedScore(i, Q.q, Q.mask, [0, 1, 2]) : dotV(i, Q.v));
   // Returns { id, score, group: [ids with the same art], confident }
   // Escanear página: each pocket is already cut out of a straightened page, so the card sits near the middle at
   // about the frame's size; a smaller search is enough there (36 placements instead of 63).
@@ -3065,11 +3174,11 @@ self.onmessage = async (e) => {
   for (const s of [0.86, 0.93, 1, 1.07]) for (const dx of [-0.04, 0, 0.04]) for (const dy of [-0.04, 0, 0.04]) POCKET.push([s, dx, dy]);
   function identify(img, grid = COARSE) {
     const T = integral(img), Q = variants(T, grid), n = SCAN.n, coarse = new Float32Array(n), where = new Int16Array(n);
-    for (let i = 0; i < n; i++) { let best = -1, bq = 0; for (let j = 0; j < Q.length; j++) { const d = dot(i, Q[j].v); if (d > best) { best = d; bq = j; } } coarse[i] = best; where[i] = bq; }
+    for (let i = 0; i < n; i++) { let best = -1, bq = 0; for (let j = 0; j < Q.length; j++) { const d = dot(i, Q[j]); if (d > best) { best = d; bq = j; } } coarse[i] = best; where[i] = bq; }
     const order = [...coarse.keys()].sort((a, b) => coarse[b] - coarse[a]), top = order.slice(0, 15);
     const seeds = [...new Set(top.slice(0, 6).map((i) => where[i]))].slice(0, 3);   // the placements the best candidates agree on
     const F = variants(T, seeds.flatMap((j) => fineAround(grid[j])));
-    const fine = top.map((i) => { let best = -1, at = null; for (const q of F) { const d = dot(i, q.v); if (d > best) { best = d; at = q; } } return [i, best, at]; }).sort((a, b) => b[1] - a[1]);
+    const fine = top.map((i) => { let best = -1, at = null; for (const q of F) { const d = dot(i, q); if (d > best) { best = d; at = q; } } return [i, best, at]; }).sort((a, b) => b[1] - a[1]);
     const [bi, bs, at] = fine[0], group = fine.filter(([, s]) => s >= bs - 0.04).map(([i]) => SCAN.ids[i]);
     const runner = (fine.find(([, s]) => s < bs - 0.04) || [0, coarse[order[15]]])[1];
     // where the card sits in the analysed image (fractions), so the collector line can be cut out precisely
@@ -3095,9 +3204,11 @@ self.onmessage = async (e) => {
   function identifyLumaDetrend(img, grid) {
     const { D, dims, n } = SCAN, m = dims / 3;
     if (!DL) { DL = new Float32Array(n * m); const tmp = new Float32Array(m); for (let i = 0; i < n; i++) { detrendL((k) => D[i * dims + k * 3], tmp); DL.set(tmp, i * m); } }
-    const Q = variants(integral(img), grid).map((q) => detrendL((k) => q.v[k * 3], new Float32Array(m)));
+    const V = variants(integral(img), grid), Q = V.map((q) => detrendL((k) => q.v[k * 3], new Float32Array(m)));
     const sc = new Float32Array(n);
-    for (let i = 0; i < n; i++) { let best = -1; const o = i * m; for (const v of Q) { let d = 0; for (let k = 0; k < m; k++) d += DL[o + k] * v[k]; if (d > best) best = d; } sc[i] = best; }
+    for (let i = 0; i < n; i++) { let best = -1; const o = i * m; for (let j = 0; j < Q.length; j++) { let d;
+      if (V[j].mask && !NOMASK) d = maskedScore(i, V[j].ql, V[j].mask, [0]); else { const v = Q[j]; d = 0; for (let k = 0; k < m; k++) d += DL[o + k] * v[k]; }
+      if (d > best) best = d; } sc[i] = best; }
     const order = [...sc.keys()].sort((a, b) => sc[b] - sc[a]), b0 = order[0];
     const runner = order.find((i) => sc[i] < sc[b0] - 0.04);
     return { id: SCAN.ids[b0], score: sc[b0], gap: sc[b0] - (runner == null ? 0 : sc[runner]), top: order.slice(0, 6).map((i) => ({ id: SCAN.ids[i], s: Math.round(sc[i] * 1000) / 1000 })) };
@@ -3105,9 +3216,11 @@ self.onmessage = async (e) => {
   function identifyLuma(img, grid) {
     const { D, dims, n } = SCAN;
     if (!NORM_L) { NORM_L = new Float32Array(n); for (let i = 0; i < n; i++) { let q = 0; for (let k = i * dims; k < (i + 1) * dims; k += 3) q += D[k] * D[k]; NORM_L[i] = Math.sqrt(q) || 1; } }
-    const Q = variants(integral(img), grid).map((q) => { let z = 0; for (let k = 0; k < q.v.length; k += 3) z += q.v[k] * q.v[k]; return { v: q.v, z: Math.sqrt(z) || 1 }; });
+    const Q = variants(integral(img), grid).map((q) => { let z = 0; for (let k = 0; k < q.v.length; k += 3) z += q.v[k] * q.v[k]; return { ...q, z: Math.sqrt(z) || 1 }; });
     const sc = new Float32Array(n);
-    for (let i = 0; i < n; i++) { let best = -1; const o = i * dims; for (const q of Q) { let d = 0; for (let k = 0; k < dims; k += 3) d += D[o + k] * q.v[k]; d /= NORM_L[i] * q.z; if (d > best) best = d; } sc[i] = best; }
+    for (let i = 0; i < n; i++) { let best = -1; const o = i * dims; for (const q of Q) { let d;
+      if (q.mask && !NOMASK) d = maskedScore(i, q.ql, q.mask, [0]); else { d = 0; for (let k = 0; k < dims; k += 3) d += D[o + k] * q.v[k]; d /= NORM_L[i] * q.z; }
+      if (d > best) best = d; } sc[i] = best; }
     const order = [...sc.keys()].sort((a, b) => sc[b] - sc[a]), b0 = order[0];
     const runner = order.find((i) => sc[i] < sc[b0] - 0.04);   // the same art in other printings scores alike: skip those
     return { id: SCAN.ids[b0], score: sc[b0], gap: sc[b0] - (runner == null ? 0 : sc[runner]), top: order.slice(0, 6).map((i) => ({ id: SCAN.ids[i], s: Math.round(sc[i] * 1000) / 1000 })) };

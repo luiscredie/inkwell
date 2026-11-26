@@ -424,7 +424,7 @@ test('Escanear página: the screen is usable while the numbers are read in the b
   expect(await rev.locator('.items').evaluate((e) => e.scrollTop)).toBeGreaterThan(250);
   const t = await page.evaluate(() => window.__inkwellScanPageTiming());
   expect(t.ready).toBeLessThan(t.ready + t.ocr);                                    // ready came before the numbers were read
-  expect(t.ocrN).toBe(2);
+  expect(t.ocrN).toBeGreaterThanOrEqual(2);                                         // the 2 reprints, plus the pockets the art didn't settle (26/11)
   expect(deltas(calls)).toEqual([]);
 });
 
@@ -518,4 +518,25 @@ test('#334: when the reading settles the last pending pocket, the screen updates
   await rev.getByTestId('page-add-more').click();                                  // inserted in place, and it works
   await expect(rev).toBeHidden();
   expect(deltas(calls)).toEqual([]);
+});
+
+// 26/11 — a pocket's search used to stop at 12 cards ("Minnie Mouse": 38, the Enchanted never showed), and the
+// collector line names a card outright ("206/204 · EN · 4" is LOR4-206) even when the art is under gloss or foil.
+test('Escanear página: pocket search lists every match; the collector line names the card', async ({ page }) => {
+  await page.goto('colecao/');
+  await page.waitForFunction(() => typeof window.__inkwellFindCards === 'function');
+  const r = await page.evaluate(() => ({
+    minnie: window.__inkwellFindCards('minnie mouse'),
+    ench: window.__inkwellFindCards('minnie encantada'),
+    num: window.__inkwellFindCards('minnie 4/206'),
+    hk: window.__inkwellFindCards('horned king'),
+    ids: ['206/204 . EN . 4', '22/207 EN 13', '22 / 207 EN 13 | 2/207 EN 13', 'nothing here', '999/204 EN 4'].map((t) => window.__inkwellIdFromCollector(t)),
+  }));
+  expect(r.minnie.length).toBeGreaterThan(30);
+  expect(r.minnie).toContain('LOR4-206');                     // Musketeer Champion (Enchanted)
+  expect(r.ench).toEqual(expect.arrayContaining(['LOR4-206', 'LOR13-238']));
+  expect(r.ench.every((id) => ['LOR4-206', 'LOR13-238'].includes(id))).toBe(true);
+  expect(r.num).toEqual(['LOR4-206']);
+  expect(r.hk[0]).toMatch(/^LOR13-/);                         // newest set first
+  expect(r.ids.map((x) => x && x.id)).toEqual(['LOR4-206', 'LOR13-22', 'LOR13-22', null, null]);
 });
