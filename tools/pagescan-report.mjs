@@ -17,7 +17,8 @@ export function verdict(x) {
   if (x.status === 'empty') return 'card-as-empty';
   if (x.status === 'ok') return x.id === x.truth ? 'auto-right' : 'false-positive';
   if (x.id === x.truth) return 'first-right';
-  if ((x.group || []).includes(x.truth) || (x.top || []).some((t) => t.id === x.truth)) return 'alt-right';
+  // top: the engine's candidates, as objects {id, score} (bench) or as ids (the site's A3 record, §6)
+  if ((x.group || []).includes(x.truth) || (x.top || []).some((t) => (t && typeof t === 'object' ? t.id : t) === x.truth)) return 'alt-right';
   return 'not-offered';
 }
 

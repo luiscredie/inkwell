@@ -13,6 +13,8 @@ test('verdict: every case of the protocol', () => {
   assert.equal(verdict(R('X', 'check', 'X')), 'first-right');
   assert.equal(verdict(R('X', 'choose', 'Y', { group: ['Y', 'X'] })), 'alt-right');
   assert.equal(verdict(R('X', 'check', 'Y', { top: [{ id: 'Z' }, { id: 'X' }] })), 'alt-right');
+  assert.equal(verdict(R('X', 'check', 'Y', { top: ['Z', 'X'] })), 'alt-right');   // the site's A3 record keeps ids
+  assert.equal(verdict(R('X', 'check', 'Y', { top: ['Z'] })), 'not-offered');
   assert.equal(verdict(R('X', 'unknown', null)), 'not-offered');
   assert.equal(verdict(R('X', 'empty', null)), 'card-as-empty');
   assert.equal(verdict(R(null, 'empty', null)), 'empty-right');
