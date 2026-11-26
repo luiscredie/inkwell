@@ -2298,21 +2298,8 @@ self.onmessage = async (e) => {
   window.__inkwellScanWorkers = () => (PW ? PW.length : 0);   // used by the browser test
 
   // Same art in several printings (reprints, promos): read the collector line "29/204 · EN · 11" to pick one.
-  function pickByCollector(text, group) {
-    if (String(text).includes(" | ")) {   // several readings: add up each one's evidence
-      const total = new Map(); for (const t of String(text).split(" | ")) for (const [id, sc] of collectorScores(t, group)) total.set(id, (total.get(id) || 0) + sc);
-      const r = [...total].sort((a, b) => b[1] - a[1]); return r.length && r[0][1] >= 2 && r[0][1] >= (r[1]?.[1] ?? 0) + 2 ? r[0][0] : null;
-    }
-    const r = collectorScores(text, group);
-    return r.length && r[0][1] >= 2 && r[0][1] >= (r[1]?.[1] ?? 0) + 2 ? r[0][0] : null;
-  }
-  function collectorScores(text, group) {
-    const toks = String(text || "").match(/\d+/g) || [];
-    if (!toks.length) return [];
-    const first = toks[0], nums = new Set([first, first.length > 3 ? first.slice(0, -3) : first]), last = toks[toks.length - 1];
-    const score = (id) => { const m = id.match(/^LOR(\d+)-(\d+)$/); if (!m) return 0; let s = 0; if (nums.has(m[2]) || toks.includes(m[2])) s += 2; if (last === m[1]) s += 2; else if (toks.length > 1 && last.endsWith(m[1])) s += 1; return s; };
-    return group.map((id) => [id, score(id)]).sort((a, b) => b[1] - a[1]);
-  }
+  // Reprints in the one-card scanner: unchanged, now in pagescan.js (PS().pickByCollector) so it can be tested in Node.
+  const pickByCollector = (text, group) => PS().pickByCollector(text, group);
   let ocrWorker = null;
   // The collector line is small white text on the dark border: cut it from the full-resolution video frame, enlarge it 3×,
   // stretch the contrast and try it inverted (dark on light, what OCR reads best), thresholded and as is.
@@ -2636,7 +2623,7 @@ self.onmessage = async (e) => {
     // reprints: read the collector numbers in the background; a clear reading settles the pocket unless the person did
     // The reader (Tesseract, ~MBs from a CDN the first time) starts only now: started during the recognition, it took the
     // CPU from it on a 2-core device (Android emulator, 24/11). The person is checking pockets meanwhile.
-    const choose = pg.pockets.filter((p) => p.status === "choose").length;
+    const choose = pg.pockets.filter(needsReading).length;
     if (!choose) { LAST_TIMING.ocr = 0; console.info("[inkwell] escanear página", JSON.stringify(LAST_TIMING)); return; }
     setReading(pg, true);
     const to = performance.now();
@@ -2652,27 +2639,43 @@ self.onmessage = async (e) => {
     if (!on) { el?.remove(); return; }
     if (el || !box) return;
     const n = document.createElement("p"); n.className = "small muted pg-note"; n.dataset.testid = "page-reading"; n.setAttribute("data-testid", "page-reading");
-    n.textContent = P("Lendo o número das reimpressões… você já pode conferir.", "Reading the reprints' numbers… you can check meanwhile.");
+    n.textContent = P("Lendo o número das cartas… você já pode conferir.", "Reading the cards' numbers… you can check meanwhile.");
     box.querySelector("footer")?.prepend(n);
   }
   // Pockets whose art exists in several printings: read each one's collector line from the full photo, like the
   // one-card scanner does. A clear reading settles the pocket; otherwise the person picks.
+  // Pockets worth reading the collector line of: reprints (same art, several printings) and pockets the art alone didn't
+  // settle ("check" / "unknown": gloss on the sleeve, an Enchanted foil, a card the art confuses with another).
+  const needsReading = (p) => p && !p.resolved && !p.skip && (p.status === "choose" || p.status === "check" || p.status === "unknown");
+  // Read each such pocket's collector line from the full photo, like the one-card scanner does. What the readings settle is
+  // PS().decideNumber (pagescan.js): a clear number settles the pocket, a number naming another card only goes first as a
+  // suggestion, readings that disagree change nothing.
   async function pickPrintings(pg) {
     const L = PS().LAYOUTS[scan.layout], W = L.cols * SG.W, H = L.rows * SG.H;
     for (const p of pg.pockets) {
-      if (scan.pg !== pg || p.status !== "choose" || p.resolved || p.skip) continue;
-      const q = PS().stripQuad(p, pg.quad, W, H, SG.M); if (!q) continue;
-      const sw = Math.hypot(q[1][0] - q[0][0], q[1][1] - q[0][1]), ow = Math.max(300, Math.min(1200, Math.round(sw * 3))), oh = Math.max(40, Math.round(ow * 0.05 / 0.34 * SG.H / SG.W));
-      let strip; try { strip = PS().warp(pg.image, q, ow, oh); } catch { continue; }
-      const cv = document.createElement("canvas"); cv.width = ow; cv.height = oh; cv.getContext("2d").putImageData(new ImageData(strip.data, ow, oh), 0, 0);
-      const reads = []; let pick = null;
-      for (const im of collectorImages({ x: 0, y: 0, w: ow, h: oh }, cv)) {
-        let text = ""; try { text = await readCollector(im); } catch { text = ""; }
-        reads.push(text); pick = pickByCollector(reads.join(" | "), p.group) || pickByCollector(text, p.group);
-        if (pick) break;
-      }
-      if (pick) applyReading(pg, p, pick);
+      if (scan.pg !== pg || !needsReading(p)) continue;
+      const d = await decideByNumber(pg.image, pg.quad, p, W, H);
+      if (!d || scan.pg !== pg || p.resolved || p.skip) continue;
+      if (d.pick) { applyReading(pg, p, d.pick); continue; }
+      if (pg.sheet != null && pg.pockets[pg.sheet] === p) continue;   // never under the person's finger
+      p.top = [{ id: d.suggest, s: 1 }, ...(p.top || []).filter((t) => t.id !== d.suggest)];
+      p.id = d.suggest; p.status = "check"; p.ocr = true;
+      patchPage(pg);
     }
+  }
+  // The readings of one pocket's collector line and what they settle, without touching the screen.
+  async function decideByNumber(image, quad, p, W, H) {
+    const q = PS().stripQuad(p, quad, W, H, SG.M); if (!q) return null;
+    const sw = Math.hypot(q[1][0] - q[0][0], q[1][1] - q[0][1]), ow = Math.max(300, Math.min(1200, Math.round(sw * 3))), oh = Math.max(40, Math.round(ow * 0.05 / 0.34 * SG.H / SG.W));
+    let strip; try { strip = PS().warp(image, q, ow, oh); } catch { return null; }
+    const cv = document.createElement("canvas"); cv.width = ow; cv.height = oh; cv.getContext("2d").putImageData(new ImageData(strip.data, ow, oh), 0, 0);
+    const reads = []; let d = null;
+    for (const im of collectorImages({ x: 0, y: 0, w: ow, h: oh }, cv)) {
+      let text = ""; try { text = await readCollector(im); } catch { text = ""; }
+      reads.push(text); d = PS().decideNumber(p, reads, (id) => BY.has(id));
+      if (d && d.pick) break;
+    }
+    return d;   // a suggestion only after all three images: a later reading may disagree and cancel it
   }
   // What the check screen shows: the page and a margin around it (room to drag the corners), not the whole camera picture.
   function pageView(pg) {
@@ -2813,7 +2816,7 @@ self.onmessage = async (e) => {
             <b>${i + 1}. ${esc(c ? label(p) : p ? stTxt(s) : "…")}</b><span class="chip">${esc(pkChip(p))}</span></button>`; }).join("")}</div>
       </div>
       <footer>${pg.note ? `<p class="small pg-note pg-ok" data-testid="page-note">${esc(pg.note)}</p>` : `<p class="small muted pg-note">${Tx("Nothing will be saved until you confirm.")}</p>`}
-        ${pg.reading ? `<p class="small muted pg-note" data-testid="page-reading">${esc(P("Lendo o número das reimpressões… você já pode conferir.", "Reading the reprints' numbers… you can check meanwhile."))}</p>` : ""}
+        ${pg.reading ? `<p class="small muted pg-note" data-testid="page-reading">${esc(P("Lendo o número das cartas… você já pode conferir.", "Reading the cards' numbers… you can check meanwhile."))}</p>` : ""}
         ${!pg.busy && out.length ? `<p class="small pg-note pg-out" data-testid="page-out">${esc(outText(out))}</p>` : ""}
         <button type="button" class="btn primary" id="pgAdd" data-testid="page-add" ${pg.busy || (!pend && !list.length) ? "disabled" : ""}>${esc(addTxt(pg, pend, list))}</button>
         ${pg.armDup ? `<p class="small pg-note pg-dup" data-testid="page-dup">${esc(P("Estas mesmas cartas já foram para a lista na foto anterior.", "These same cards went on the list with the last photo."))}</p>` : ""}
@@ -3372,7 +3375,85 @@ self.onmessage = async (e) => {
     return out;
   }
 
-  const API = { LAYOUTS, homography, apply, validQuad, warp, cells, cellQuads, crop, texture, EMPTY_LUMA, classify, signature, frameQuad, stripQuad, scanPage, pending, toList };
+  // ---------- the collector line ("22/204 · EN · 13" = LOR13-22) ----------
+  // Reprints, as the one-card scanner has always decided them (moved here unchanged so they can be tested): each reading's
+  // numbers score the printings of the group; a printing is picked when it clearly leads.
+  function collectorScores(text, group) {
+    const toks = String(text || "").match(/\d+/g) || [];
+    if (!toks.length) return [];
+    const first = toks[0], nums = new Set([first, first.length > 3 ? first.slice(0, -3) : first]), last = toks[toks.length - 1];
+    const score = (id) => { const m = id.match(/^LOR(\d+)-(\d+)$/); if (!m) return 0; let s = 0; if (nums.has(m[2]) || toks.includes(m[2])) s += 2; if (last === m[1]) s += 2; else if (toks.length > 1 && last.endsWith(m[1])) s += 1; return s; };
+    return group.map((id) => [id, score(id)]).sort((a, b) => b[1] - a[1]);
+  }
+  function pickByCollector(text, group) {
+    if (String(text).includes(" | ")) {   // several readings: add up each one's evidence
+      const total = new Map(); for (const t of String(text).split(" | ")) for (const [id, sc] of collectorScores(t, group)) total.set(id, (total.get(id) || 0) + sc);
+      const r = [...total].sort((a, b) => b[1] - a[1]); return r.length && r[0][1] >= 2 && r[0][1] >= (r[1]?.[1] ?? 0) + 2 ? r[0][0] : null;
+    }
+    const r = collectorScores(text, group);
+    return r.length && r[0][1] >= 2 && r[0][1] >= (r[1]?.[1] ?? 0) + 2 ? r[0][0] : null;
+  }
+  // One reading, strictly: "number / printed total ... set". The total must be one a Lorcana set prints (200-210), the
+  // number at most 260, the set 1-30. Anything else is not a reading (foil sparkle, the art's edge, a smudge).
+  function parseCollector(text) {
+    const t = String(text || "");
+    // the number touches the "/" (spaces allowed), nothing but a separator before it: "12S/204" or "A125/204" is a corrupted
+    // reading, not the number 12 or 125
+    const m = /(?:^|[\s.·:;,|-])(\d{1,3})\s*\/\s*(\d{3})(?!\d)/.exec(t);
+    if (!m) return null;
+    const num = +m[1], total = +m[2];
+    if (num < 1 || num > 260 || total < 200 || total > 210) return null;
+    // the set: the next number after the total, past the language ("· EN ·"), within a few characters
+    const rest = t.slice(m.index + m[0].length), sm = /^[^0-9]{1,8}?(\d+)/.exec(rest);
+    if (sm && sm[1].length > 2) return null;   // "EN 113": a set number with three digits is a corrupted reading
+    const set = sm ? +sm[1] : null;
+    if (set != null && (set < 1 || set > 30)) return null;
+    return { num, total, set };
+  }
+  // Escanear página: what the collector readings of one pocket settle. p: { status, id, group }, reads: the texts read from
+  // the pocket's strip (up to three images of it), has(id): the card exists in the catalogue.
+  //   { pick: id }      the pocket is settled without the person
+  //   { suggest: id }   that card goes first; the person confirms
+  //   null              nothing usable, or the readings are ambiguous: the pocket stays as the art left it
+  // Conselho 26/11: an ambiguous reading must never settle a pocket.
+  //   - Every reading that names a card must name the same card; two readings naming different cards: nothing.
+  //   - The set must have been read: a number alone fits several printings ("163" is Let It Go in set 1 and in set 11).
+  //   - Near misses: when another card the art pointed to differs from the one read by a dropped digit ("EN 1" for "EN 11",
+  //     "63" for "163") or one easily confused digit (5↔6, 3↔8, 1↔7, 0↔8), the reading is ambiguous. Only the art's cards
+  //     count: every set has a number 55, but only a reprint of the same art can be in this pocket.
+  //   - Reprints ("choose"): the card named must be one of the printings the art pointed to; a real card outside them
+  //     means the art and the number disagree: nothing.
+  //   - A pocket the art didn't settle ("check" / "unknown"): settled only when the number names the very card the art put
+  //     first (two independent clues agree). A number naming another card, however clear, is only a suggestion: the three
+  //     images of one strip are not independent readings, a smudged digit (5↔6, 3↔8) repeats in all of them.
+  const CONFUSED = new Set(["56", "65", "38", "83", "17", "71", "08", "80", "69", "96"]);
+  function decideNumber(p, reads, has) {
+    const parsed = reads.map(parseCollector).filter(Boolean);
+    if (!parsed.length) return null;
+    const art = new Set([p.id, ...(p.group || []), ...(p.top || []).map((t) => (t && t.id) || t)].filter(Boolean));
+    const near = (a, b) => { a = String(a); b = String(b); if (a === b) return true;
+      if (Math.abs(a.length - b.length) === 1 && (a.length < b.length ? b.includes(a) : a.includes(b))) return true;   // a digit dropped or added
+      if (a.length !== b.length) return false; let d = 0, ok = true;
+      for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) { d++; ok = ok && CONFUSED.has(a[i] + b[i]); }
+      return d === 1 && ok; };
+    const ambiguous = (r, id) => [...art].some((c) => { if (c === id) return false; const m = /^LOR(\d+)-(\d+)$/.exec(c); return m && near(r.set, m[1]) && near(r.num, m[2]); });
+    const named = new Set();
+    for (const r of parsed) {
+      if (r.set == null) continue;                    // weighed below: it must not contradict the card named
+      const id = `LOR${r.set}-${r.num}`;
+      if (!has(id) || ambiguous(r, id)) return null;  // no such card, or a near miss of another card the art pointed to
+      named.add(id);
+    }
+    if (named.size !== 1) return null;                // none with its set, or readings naming different cards
+    const id = [...named][0], num = +id.split("-")[1];
+    if (parsed.some((r) => r.set == null && r.num !== num)) return null;   // a reading without set, with another number
+    if (p.status === "choose") return (p.group || []).includes(id) ? { pick: id } : null;
+    if (p.status !== "check" && p.status !== "unknown") return null;
+    return id === p.id ? { pick: id } : { suggest: id };
+  }
+
+  const API = { LAYOUTS, homography, apply, validQuad, warp, cells, cellQuads, crop, texture, EMPTY_LUMA, classify, signature, frameQuad, stripQuad, scanPage, pending, toList,
+    collectorScores, pickByCollector, parseCollector, decideNumber };
   return API;
   }
   const API = factory();

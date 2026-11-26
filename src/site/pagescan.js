@@ -186,7 +186,85 @@
     return out;
   }
 
-  const API = { LAYOUTS, homography, apply, validQuad, warp, cells, cellQuads, crop, texture, EMPTY_LUMA, classify, signature, frameQuad, stripQuad, scanPage, pending, toList };
+  // ---------- the collector line ("22/204 · EN · 13" = LOR13-22) ----------
+  // Reprints, as the one-card scanner has always decided them (moved here unchanged so they can be tested): each reading's
+  // numbers score the printings of the group; a printing is picked when it clearly leads.
+  function collectorScores(text, group) {
+    const toks = String(text || "").match(/\d+/g) || [];
+    if (!toks.length) return [];
+    const first = toks[0], nums = new Set([first, first.length > 3 ? first.slice(0, -3) : first]), last = toks[toks.length - 1];
+    const score = (id) => { const m = id.match(/^LOR(\d+)-(\d+)$/); if (!m) return 0; let s = 0; if (nums.has(m[2]) || toks.includes(m[2])) s += 2; if (last === m[1]) s += 2; else if (toks.length > 1 && last.endsWith(m[1])) s += 1; return s; };
+    return group.map((id) => [id, score(id)]).sort((a, b) => b[1] - a[1]);
+  }
+  function pickByCollector(text, group) {
+    if (String(text).includes(" | ")) {   // several readings: add up each one's evidence
+      const total = new Map(); for (const t of String(text).split(" | ")) for (const [id, sc] of collectorScores(t, group)) total.set(id, (total.get(id) || 0) + sc);
+      const r = [...total].sort((a, b) => b[1] - a[1]); return r.length && r[0][1] >= 2 && r[0][1] >= (r[1]?.[1] ?? 0) + 2 ? r[0][0] : null;
+    }
+    const r = collectorScores(text, group);
+    return r.length && r[0][1] >= 2 && r[0][1] >= (r[1]?.[1] ?? 0) + 2 ? r[0][0] : null;
+  }
+  // One reading, strictly: "number / printed total ... set". The total must be one a Lorcana set prints (200-210), the
+  // number at most 260, the set 1-30. Anything else is not a reading (foil sparkle, the art's edge, a smudge).
+  function parseCollector(text) {
+    const t = String(text || "");
+    // the number touches the "/" (spaces allowed), nothing but a separator before it: "12S/204" or "A125/204" is a corrupted
+    // reading, not the number 12 or 125
+    const m = /(?:^|[\s.·:;,|-])(\d{1,3})\s*\/\s*(\d{3})(?!\d)/.exec(t);
+    if (!m) return null;
+    const num = +m[1], total = +m[2];
+    if (num < 1 || num > 260 || total < 200 || total > 210) return null;
+    // the set: the next number after the total, past the language ("· EN ·"), within a few characters
+    const rest = t.slice(m.index + m[0].length), sm = /^[^0-9]{1,8}?(\d+)/.exec(rest);
+    if (sm && sm[1].length > 2) return null;   // "EN 113": a set number with three digits is a corrupted reading
+    const set = sm ? +sm[1] : null;
+    if (set != null && (set < 1 || set > 30)) return null;
+    return { num, total, set };
+  }
+  // Escanear página: what the collector readings of one pocket settle. p: { status, id, group }, reads: the texts read from
+  // the pocket's strip (up to three images of it), has(id): the card exists in the catalogue.
+  //   { pick: id }      the pocket is settled without the person
+  //   { suggest: id }   that card goes first; the person confirms
+  //   null              nothing usable, or the readings are ambiguous: the pocket stays as the art left it
+  // Conselho 26/11: an ambiguous reading must never settle a pocket.
+  //   - Every reading that names a card must name the same card; two readings naming different cards: nothing.
+  //   - The set must have been read: a number alone fits several printings ("163" is Let It Go in set 1 and in set 11).
+  //   - Near misses: when another card the art pointed to differs from the one read by a dropped digit ("EN 1" for "EN 11",
+  //     "63" for "163") or one easily confused digit (5↔6, 3↔8, 1↔7, 0↔8), the reading is ambiguous. Only the art's cards
+  //     count: every set has a number 55, but only a reprint of the same art can be in this pocket.
+  //   - Reprints ("choose"): the card named must be one of the printings the art pointed to; a real card outside them
+  //     means the art and the number disagree: nothing.
+  //   - A pocket the art didn't settle ("check" / "unknown"): settled only when the number names the very card the art put
+  //     first (two independent clues agree). A number naming another card, however clear, is only a suggestion: the three
+  //     images of one strip are not independent readings, a smudged digit (5↔6, 3↔8) repeats in all of them.
+  const CONFUSED = new Set(["56", "65", "38", "83", "17", "71", "08", "80", "69", "96"]);
+  function decideNumber(p, reads, has) {
+    const parsed = reads.map(parseCollector).filter(Boolean);
+    if (!parsed.length) return null;
+    const art = new Set([p.id, ...(p.group || []), ...(p.top || []).map((t) => (t && t.id) || t)].filter(Boolean));
+    const near = (a, b) => { a = String(a); b = String(b); if (a === b) return true;
+      if (Math.abs(a.length - b.length) === 1 && (a.length < b.length ? b.includes(a) : a.includes(b))) return true;   // a digit dropped or added
+      if (a.length !== b.length) return false; let d = 0, ok = true;
+      for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) { d++; ok = ok && CONFUSED.has(a[i] + b[i]); }
+      return d === 1 && ok; };
+    const ambiguous = (r, id) => [...art].some((c) => { if (c === id) return false; const m = /^LOR(\d+)-(\d+)$/.exec(c); return m && near(r.set, m[1]) && near(r.num, m[2]); });
+    const named = new Set();
+    for (const r of parsed) {
+      if (r.set == null) continue;                    // weighed below: it must not contradict the card named
+      const id = `LOR${r.set}-${r.num}`;
+      if (!has(id) || ambiguous(r, id)) return null;  // no such card, or a near miss of another card the art pointed to
+      named.add(id);
+    }
+    if (named.size !== 1) return null;                // none with its set, or readings naming different cards
+    const id = [...named][0], num = +id.split("-")[1];
+    if (parsed.some((r) => r.set == null && r.num !== num)) return null;   // a reading without set, with another number
+    if (p.status === "choose") return (p.group || []).includes(id) ? { pick: id } : null;
+    if (p.status !== "check" && p.status !== "unknown") return null;
+    return id === p.id ? { pick: id } : { suggest: id };
+  }
+
+  const API = { LAYOUTS, homography, apply, validQuad, warp, cells, cellQuads, crop, texture, EMPTY_LUMA, classify, signature, frameQuad, stripQuad, scanPage, pending, toList,
+    collectorScores, pickByCollector, parseCollector, decideNumber };
   return API;
   }
   const API = factory();
