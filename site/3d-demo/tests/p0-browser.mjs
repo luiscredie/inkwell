@@ -33,6 +33,19 @@ for(const width of [320,375,390,430,1280]){
     assert(hero.length>=3,'Missing featured cards');
     if(mobile){
       assert(hero.every(c=>!c.filter.includes('blur(')),'Blurred featured card');
+      // CSS filters on ancestors blur the entire card even when the card itself has filter:none.
+      const ancestorBlur=await page.locator('.hero-stories .fan .card3d').evaluateAll(cards=>cards.map(card=>{
+        const blurred=[];
+        for(let node=card;node&&node.nodeType===1;node=node.parentElement){
+          const style=getComputedStyle(node);
+          if(/blur\\s*\\(/i.test(style.filter)||/blur\\s*\\(/i.test(style.backdropFilter||'')){
+            blurred.push(node.className||node.tagName);
+          }
+        }
+        return blurred;
+      }));
+      assert(ancestorBlur.every(chain=>chain.length===0),
+        'Featured card blurred by ancestor or backdrop filter: '+JSON.stringify(ancestorBlur));
       // Verify that the central featured card is actually visible at its center,
       // rather than covered by an overlay or another transformed card.
       const visibility=await page.locator('.hero-stories .fan .card3d').nth(1).evaluate(card=>{
