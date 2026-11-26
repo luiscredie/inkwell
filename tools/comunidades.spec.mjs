@@ -347,6 +347,7 @@ test('store community, owner: choose the store by name (two with the same name),
   await expect(rows).toHaveCount(2);
   await expect(page.getByTestId('store-results')).toContainText('ID 99001');   // same name, told apart by city and id
   await page.locator('[data-pickstore="17617"]').click();
+  await expect.poll(() => rpcCalls(calls, 'request_community_store').length).toBeGreaterThan(0);   // the call is asynchronous (#286: failed once on CI, checked right after the click)
   expect(rpcCalls(calls, 'request_community_store')[0]).toEqual({ p_slug: 'loja-do-ze', p_store: { id: '17617', name: 'Muito Colecionaveis', city: 'Campinas', address: 'Av Brasil 1456, Campinas' } });
   await expect(page.getByTestId('store-badge')).toHaveText('Vínculo com a loja em análise');
   await expect(page.getByTestId('store-unverified')).toContainText('ainda não verificou');
