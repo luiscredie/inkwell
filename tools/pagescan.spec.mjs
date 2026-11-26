@@ -308,6 +308,15 @@ for (const [w, h] of [[320, 568], [360, 640], [390, 844], [430, 932]]) {
   });
 }
 
+// Conselho 26/11 — the glare filter (scanengine.js GLARE) stays experimental until real photos show a benefit.
+test('Escanear página: the glare filter is off unless asked for (?reflexo=1)', async ({ page }) => {
+  await setup(page);
+  await page.goto(BASE);
+  expect(await page.evaluate(() => window.__inkwellScanExp())).toEqual({ detrend: true, glare: false });
+  await page.goto(BASE + '?reflexo=1');
+  expect(await page.evaluate(() => window.__inkwellScanExp().glare)).toBe(true);
+});
+
 test('Escanear página: recognising a page does not block the screen (Web Worker)', async ({ page }) => {
   test.skip(STILL(page), 'long-task timing is measured in Chromium (WebKit has no Long Tasks API)');
   test.setTimeout(120000);

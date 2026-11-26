@@ -1765,7 +1765,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const identify = (img, grid) => SE().identify(img, grid || undefined);
   // Lightness fallback without the slow gradient (foil shine): on by default since the 24/11 measurement;
   // INKWELL_SCAN_EXP = "nodetrend" switches it off for comparisons (tools/pagescan-bench.spec.mjs, PAGESCAN_EXP).
-  const scanExp = () => ({ detrend: window.INKWELL_SCAN_EXP !== "nodetrend" });
+  // ?reflexo=1 (kept for the tab): the experimental glare filter (scanengine.js GLARE), off by default; only to be measured.
+  const GLARE_ON = (() => { try { const on = new URLSearchParams(location.search).get("reflexo") === "1" || sessionStorage.getItem("inkwellReflexo") === "1"; if (on) sessionStorage.setItem("inkwellReflexo", "1"); return on; } catch { return false; } })();
+  const scanExp = () => ({ detrend: window.INKWELL_SCAN_EXP !== "nodetrend", glare: GLARE_ON || window.INKWELL_SCAN_GLARE === true });
   const identifyPocket = (img) => SE().identifyPocket(img, scanExp());
   window.__inkwellScanIdentify = (img) => (SCAN ? identify(img) : null);   // used by the browser test
 
@@ -2512,6 +2514,7 @@ self.onmessage = async (e) => {
     };
     svg.onpointerup = svg.onpointercancel = () => { if (k < 0) return; k = -1; pg.moved = true; };
   }
+  window.__inkwellScanExp = () => scanExp();   // tests: the engine options in force (the glare filter must be off by default)
   window.__inkwellScanPageState = () => (scan.pg ? { busy: !!scan.pg.busy, sheet: scan.pg.sheet ?? null, adjust: !!scan.pg.adjust, quad: scan.pg.quad, pockets: scan.pg.pockets.map((p) => p && { status: p.status, id: p.id, resolved: !!p.resolved, skip: !!p.skip, qty: p.qty, foil: !!p.foil, group: p.group || [] }) } : null);   // used by the browser test
 
   async function openScanner(from) {
