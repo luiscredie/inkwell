@@ -2,6 +2,9 @@
 // (8 real card images in a 3×3 page, the last pocket empty). Checks the whole flow and that nothing is saved before
 // the final confirmation. Chromium, and WebKit (iPhone) with PW_WEBKIT=1.
 import { test, expect } from '@playwright/test';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 const BASE = new URL('colecao/', process.env.INKWELL_URL || 'http://localhost:8080/index.html').href;
 const ME = '11111111-1111-4111-8111-111111111111';
@@ -342,6 +345,29 @@ for (const [w, h] of [[320, 568], [360, 640], [390, 844], [430, 932]]) {
   });
 }
 
+// Conselho 26/11 — the collector number on the whole page: a clear number naming another card is only a suggestion (the
+// person confirms), never an automatic answer; a reprint is not settled by a number that names a card outside its printings.
+test('Escanear página: a number naming another card only suggests it; reprints are not settled by it', async ({ page }) => {
+  test.setTimeout(120000);
+  await setup(page);
+  await page.addInitScript(() => { window.INKWELL_SCAN_OCR = async () => '100/204 · EN · 7'; });   // LOR7-100, not on this page
+  await openPageMode(page);
+  await hardPage(page);
+  await expect.poll(() => page.evaluate(() => { const s = window.__inkwellScanPageState(); return s && !s.busy && !document.querySelector('[data-testid=page-reading]'); }), { timeout: 60000 }).toBe(true);
+  const st = await page.evaluate(() => window.__inkwellScanPageState());
+  expect(st.pockets.filter((p) => p && p.status === 'ok' && p.id === 'LOR7-100')).toEqual([]);          // never settled by the number alone
+  expect(st.pockets.some((p) => p && p.status === 'check' && p.id === 'LOR7-100')).toBe(true);            // offered first, for the person
+  expect(st.pockets.filter((p) => p && p.status === 'choose' && p.id === 'LOR7-100')).toEqual([]);        // a reprint keeps its printings
+});
+
+test('Escanear página: the glare filter is off unless asked for (?reflexo=1)', async ({ page }) => {
+  await setup(page);
+  await page.goto(BASE);
+  expect(await page.evaluate(() => window.__inkwellScanExp())).toEqual({ detrend: true, glare: false });
+  await page.goto(BASE + '?reflexo=1');
+  expect(await page.evaluate(() => window.__inkwellScanExp().glare)).toBe(true);
+});
+
 test('Escanear página: recognising a page does not block the screen (Web Worker)', async ({ page }) => {
   test.skip(STILL(page), 'long-task timing is measured in Chromium (WebKit has no Long Tasks API)');
   test.setTimeout(120000);
@@ -462,7 +488,7 @@ test('Escanear página: the screen is usable while the numbers are read in the b
   expect(await rev.locator('.items').evaluate((e) => e.scrollTop)).toBeGreaterThan(250);
   const t = await page.evaluate(() => window.__inkwellScanPageTiming());
   expect(t.ready).toBeLessThan(t.ready + t.ocr);                                    // ready came before the numbers were read
-  expect(t.ocrN).toBe(2);
+  expect(t.ocrN).toBe(4);                                                          // the 2 reprints and the 2 pockets the art didn't settle
   expect(deltas(calls)).toEqual([]);
 });
 
@@ -556,4 +582,110 @@ test('#334: when the reading settles the last pending pocket, the screen updates
   await rev.getByTestId('page-add-more').click();                                  // inserted in place, and it works
   await expect(rev).toBeHidden();
   expect(deltas(calls)).toEqual([]);
+});
+
+// ---- Captura por fotografia (26/11): off by default (Conselho), ?captura=foto to use it, ?medicao=a3 to measure it ----
+// A camera stand-in: takePhoto returns the video frame with twice the detail, a wider 4:3 view and a small off-centre zoom
+// (a lens switch), unless told to fail.
+async function fakePhoto(page, { fail = false } = {}) {
+  await page.addInitScript((fail) => {
+    window.__photoCalls = 0;
+    window.ImageCapture = class {
+      async getPhotoCapabilities() { return { fillLightMode: ['auto', 'off', 'flash'] }; }
+      async takePhoto(opts) {
+        window.__photoCalls++; window.__photoOpts = opts; if (fail) throw new Error('not here');
+        const v = document.getElementById('scanVideo'), s = 2.1, ox = 140, oy = 260, c = document.createElement('canvas');
+        c.width = Math.round(v.videoWidth * 2.3); c.height = Math.round(v.videoHeight * s + oy + 200);
+        const x = c.getContext('2d'); x.fillStyle = '#4a3a2c'; x.fillRect(0, 0, c.width, c.height); x.drawImage(v, ox, oy, v.videoWidth * s, v.videoHeight * s);
+        return new Promise((ok) => c.toBlob(ok, 'image/jpeg', 0.92));
+      }
+    };
+  }, fail);
+}
+async function shootPageWith(page, query) {
+  await page.goto(BASE + query);
+  await page.getByRole('button', { name: 'Escanear' }).click();
+  await page.getByTestId('scan-mode').getByRole('button', { name: 'Página 3×3' }).click();
+  await page.waitForFunction(() => document.getElementById('scanVideo')?.videoWidth > 0); await page.waitForTimeout(400);
+  return pagePhoto(page);
+}
+const eightRight = async (page) => { const st = await page.evaluate(() => window.__inkwellScanPageState());
+  expect(st.pockets.slice(0, 8).map((p, i) => p.id === ID(PAGE[i]))).toEqual(Array(8).fill(true));
+  expect(st.pockets.filter((p, i) => p.status === 'ok' && p.id !== ID(PAGE[i]))).toEqual([]); };
+
+test('Escanear página: by default the video frame, as always: no photo is taken even where the browser could', async ({ page }) => {
+  test.skip(STILL(page), 'needs the fake camera');
+  test.setTimeout(120000);
+  await setup(page); await fakePhoto(page);
+  await shootPageWith(page, '');
+  expect(await page.evaluate(() => window.__photoCalls)).toBe(0);
+  const t = await page.evaluate(() => window.__inkwellScanPageTiming());
+  expect(t.still).toBeUndefined();
+  await eightRight(page);
+  await expect(page.getByTestId('a3-bar')).toHaveCount(0);
+});
+
+test('Escanear página: ?captura=foto takes a real photo, larger and framed differently, lines it up and reads it', async ({ page }) => {
+  test.skip(STILL(page), 'needs the fake camera');
+  test.setTimeout(120000);
+  await setup(page); await fakePhoto(page);
+  await shootPageWith(page, '?captura=foto');
+  const t = await page.evaluate(() => window.__inkwellScanPageTiming());
+  expect(t.still).toBe(true); expect(t.align).toBeGreaterThan(0.9);
+  expect(await page.evaluate(() => window.__photoOpts)).toEqual({ fillLightMode: 'off' });   // no flash on the sleeves
+  await eightRight(page);
+});
+
+test('Escanear página: ?captura=foto but takePhoto fails: the video frame, and the reason is kept', async ({ page }) => {
+  test.skip(STILL(page), 'needs the fake camera');
+  test.setTimeout(120000);
+  await setup(page); await fakePhoto(page, { fail: true });
+  await shootPageWith(page, '?captura=foto');
+  const t = await page.evaluate(() => window.__inkwellScanPageTiming());
+  expect(t.still).toBe(false); expect(t.fallback).toMatch(/^takePhoto: not here/);
+  await eightRight(page);
+});
+
+// A3 (docs/scanner-2.0-avaliacao.md, comparação vídeo × foto): each shot keeps the video frame and the photo of the same
+// instant; both are read after the person's page is ready; one JSON is offered for download. Nothing of it leaves the phone:
+// no request carries it (the page's own requests are watched), nothing is stored, no new analytics event.
+test('Escanear página: A3 keeps video and photo, reads both, offers one local file, and sends nothing', async ({ page }) => {
+  test.skip(STILL(page), 'needs the fake camera');
+  test.setTimeout(180000);
+  await setup(page); await fakePhoto(page);
+  // every request from the shot on (the page's own loading before it is not the measurement)
+  const sent = []; let watching = false;
+  page.on('request', (r) => { if (!watching || /^(blob|data):/.test(r.url())) return; let body = ''; try { body = r.postData() || ''; } catch { body = '[binary]'; }
+    sent.push({ m: r.method(), u: r.url().slice(0, 140), n: body.length, img: /base64|image\/jpeg|a3-p\d|pictures/.test(body + r.url()) }); });
+  await page.addInitScript(() => { window.__tracked = []; const t = () => window.INKWELL_TRACK; Object.defineProperty(window, 'INKWELL_TRACK', { configurable: true, get: () => (n) => window.__tracked.push(n), set: () => {} }); });
+  await page.goto(BASE + '?medicao=a3');
+  await page.getByRole('button', { name: 'Escanear' }).click();
+  await page.getByTestId('scan-mode').getByRole('button', { name: 'Página 3×3' }).click();
+  await page.waitForFunction(() => document.getElementById('scanVideo')?.videoWidth > 0); await page.waitForTimeout(1500);
+  watching = true;
+  const rev = await pagePhoto(page);
+  await eightRight(page);                                                        // the person's page, as without the measurement
+  expect((await page.evaluate(() => window.__inkwellScanPageTiming())).still).toBe(false);   // photo off by default: the page used the video
+  const dl = page.getByTestId('a3-download');
+  await expect(dl).toBeVisible({ timeout: 120000 });
+  await expect(page.getByTestId('a3-bar')).toContainText('fica só neste aparelho');
+  const rec = await page.evaluate(() => { const r = window.__inkwellA3Last(); return { ...r, pictures: Object.fromEntries(Object.entries(r.pictures).map(([k, v]) => [k, v.slice(0, 23)])) }; });
+  expect(rec.a3).toBe(2); expect(rec.used).toBe('video'); expect(rec.fallback).toBe('foto desligada (padrão)'); expect(rec.aligned).toBe(true);
+  expect(rec.modes.video.px).toBe('1080x1920'); expect(rec.modes.foto.px).toBe('2484x4492'); expect(rec.modes.foto.kept).toBe('1659x3000');
+  for (const k of ['video', 'foto']) { expect(rec.modes[k].pockets).toHaveLength(9); expect(rec.modes[k].engineMs).toBeGreaterThan(0); expect(rec.pictures[k]).toBe('data:image/jpeg;base64,'); }
+  expect(rec.times.stillMs).toBeGreaterThanOrEqual(0); expect(rec.times.alignMs).toBeGreaterThanOrEqual(0);
+  await expect(rev.locator('#pgPhoto [data-pk]')).toHaveCount(9);                // the page is still there and usable
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'a3-'));
+  const [d] = await Promise.all([page.waitForEvent('download'), dl.click()]);
+  const file = path.join(dir, d.suggestedFilename()); await d.saveAs(file);
+  expect(d.suggestedFilename()).toBe(`${rec.name}.json`);
+  const saved = JSON.parse(fs.readFileSync(file, 'utf8'));
+  expect(Object.keys(saved.pictures)).toEqual(['video', 'foto']);
+  fs.rmSync(dir, { recursive: true, force: true });
+  // nothing left the phone, nothing was kept on it
+  expect(sent.filter((x) => x.img || x.n > 2000)).toEqual([]);                   // none carries a picture or the measurement
+  expect(sent.filter((x) => x.m !== 'GET')).toEqual([]);                          // nothing is sent anywhere
+  expect(await page.evaluate(() => window.__tracked)).toEqual(['scan_open', 'scan_page_mode', 'scan_page_shot']);   // the events as without A3 (names only)
+  const kept = await page.evaluate(() => JSON.stringify({ ...localStorage }) + JSON.stringify({ ...sessionStorage }));
+  expect(kept).not.toMatch(/base64|a3-p\d|pictures/);
 });

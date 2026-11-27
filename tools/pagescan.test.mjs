@@ -123,5 +123,54 @@ ok(PS.signature([{ id: 'C', status: 'empty' }]) === 'C', 'an "empty" pocket the 
   ok(r2.pockets.filter((p) => p.status !== 'empty').length >= 7, `textured pockets read as cards: ${r2.pockets.map((p) => p.status)}`);
 }
 
+
+// --- the collector line, adversarial (Conselho 26/11): an ambiguous reading must never settle a pocket
+{
+  const cat = new Set(JSON.parse(fs.readFileSync(new URL('../site/data/cards.json', import.meta.url), 'utf8').replace(/^﻿/, '')).cards.map((c) => c.card_id));
+  const has = (id) => cat.has(id), D = (p, reads) => PS.decideNumber(p, reads, has), J = (x) => JSON.stringify(x);
+  const eq = (got, want, msg) => ok(J(got) === J(want), `${msg}: got ${J(got)}, want ${J(want)}`);
+  // parsing: real formats, and what must not count as a reading
+  eq(PS.parseCollector('125/204 EN 11'), { num: 125, total: 204, set: 11 }, 'parse: plain');
+  eq(PS.parseCollector('7/204 · EN · 9'), { num: 7, total: 204, set: 9 }, 'parse: with the middle dots');
+  eq(PS.parseCollector('206/204 . EN . 4'), { num: 206, total: 204, set: 4 }, 'parse: Enchanted, number above the total');
+  eq(PS.parseCollector('125 / 204 EN 11'), { num: 125, total: 204, set: 11 }, 'parse: spaces around the slash');
+  eq(PS.parseCollector('125/204'), { num: 125, total: 204, set: null }, 'parse: set not read');
+  for (const bad of ['12S/204 EN 11', 'A125/204 EN 11', '125/2041 EN 1', '5/99 EN 3', '125/204 EN 113', '125/204 EN 0', '999/204 EN 4', '', 'EN 11', '|:/;.', '1/ 2O4 EN 1', '204', '/204 EN 4'])
+    eq(PS.parseCollector(bad), null, `parse: not a reading "${bad}"`);
+  // reprints, real groups of the catalogue
+  const letItGo = { status: 'choose', id: 'LOR1-163', group: ['LOR1-163', 'LOR11-163'] };          // same number, set 1 and set 11
+  eq(D(letItGo, ['163/204 EN 11']), null, 'reprint: "EN 11" could be "EN 1" with a separator read as 1: the person picks');
+  eq(D(letItGo, ['163/204 EN 1']), null, 'reprint: "EN 1" could be "EN 11" with a dropped digit');
+  eq(D(letItGo, ['163/204']), null, 'reprint: the number alone fits both printings');
+  eq(D(letItGo, ['163/204 EN 11', '163/204 EN 1']), null, 'reprint: readings disagree on the set');
+  const sven = { status: 'choose', id: 'LOR1-55', group: ['LOR1-55', 'LOR9-56'] };                // 55 vs 56: 5↔6
+  eq(D(sven, ['55/204 EN 1']), { pick: 'LOR1-55' }, 'reprint: number and set name one printing');
+  eq(D(sven, ['56/204 EN 9']), { pick: 'LOR9-56' }, 'reprint: the other printing');
+  eq(D(sven, ['56/204 EN 1']), null, 'reprint: a real card outside the group (LOR1-56): art and number disagree');
+  eq(D(sven, ['56/204']), null, 'reprint: no set, and 56 could be a misread 55');
+  eq(D(sven, ['55/204 EN 1', '56/204']), null, 'reprint: a reading without set names another number');
+  const julieta = { status: 'choose', id: 'LOR4-13', group: ['LOR4-13', 'LOR9-18'] };            // 13 vs 18: 3↔8
+  eq(D(julieta, ['13/204 EN 4']), { pick: 'LOR4-13' }, 'reprint: 3↔8 pair, set read');
+  eq(D(julieta, ['18/204 EN 4']), null, 'reprint: 18 with set 4 is not one of the printings');
+  // a pocket the art didn't settle: only the art's own first card can be settled by the number
+  const hk = { status: 'check', id: 'LOR13-22', top: [{ id: 'LOR13-22' }, { id: 'LOR1-130' }] };
+  eq(D(hk, ['22/204 EN 13']), { pick: 'LOR13-22' }, 'unsure: the number confirms the art');
+  eq(D(hk, ['80/204 EN 13']), { suggest: 'LOR13-80' }, 'unsure: the number names another card: only a suggestion');
+  eq(D(hk, ['80/204 EN 13', '80/204 EN 13', '80/204 EN 13']), { suggest: 'LOR13-80' }, 'unsure: three equal readings are still only a suggestion');
+  eq(D(hk, ['22/204 EN 13', '28/204 EN 13']), null, 'unsure: readings disagree (3↔8): nothing');
+  eq(D(hk, ['22/204 EN 13', '23/204']), null, 'unsure: a reading without set names another number');
+  eq(D({ ...hk, top: [{ id: 'LOR13-22' }, { id: 'LOR13-122' }] }, ['22/204 EN 13']), null, 'unsure: 22 vs 122 among the art\'s cards: a dropped digit');
+  eq(D({ status: 'check', id: 'LOR9-56', top: [{ id: 'LOR9-56' }, { id: 'LOR1-55' }] }, ['55/204 EN 9']), null, 'unsure: 55 read where the art says 56 (5↔6 among its cards)');
+  eq(D({ status: 'unknown', id: null, top: [] }, ['206/204 EN 4']), { suggest: 'LOR4-206' }, 'unknown pocket: never settled by the number alone');
+  eq(D(hk, ['999/204 EN 13']), null, 'unsure: no such card');
+  eq(D({ status: 'ok', id: 'LOR13-22' }, ['80/204 EN 13']), null, 'a settled pocket is not changed');
+  eq(D({ status: 'empty' }, ['80/204 EN 13']), null, 'an empty pocket is not changed');
+  // foil: sparkle read as text
+  for (const noise of [['', '', ''], ['|||', '2 0 4', 'EN'], ['1/ 2O4 EN 1', '8/8', '204/']]) eq(D(hk, noise), null, `foil noise ${J(noise)}`);
+  // the one-card scanner's reprint rule, moved unchanged
+  eq(PS.pickByCollector('7/204 · EN · 9', ['LOR1-7', 'LOR9-7']), 'LOR9-7', 'one-card scanner: unchanged rule');
+  eq(PS.pickByCollector('125/204 EN 11 | 125/204 EN 11', ['LOR2-125', 'LOR11-125']), 'LOR11-125', 'one-card scanner: several readings');
+}
+
 console.log(`${n - bad}/${n} pagescan checks passed`);
 if (bad) process.exit(1);

@@ -12,7 +12,7 @@
   function factory() {
   const SG = { gx: 16, gy: 12, cell: 14, ax: 13, ay: 26, W: 250, H: 350, M: 0.10 };   // keep in step with tools/build_scan_index.py
   let SCAN = null, NORM_L = null;
-  const use = (index) => { SCAN = index; NORM_L = null; DL = null; };
+  const use = (index) => { SCAN = index; NORM_L = null; DL = null; CS = null; };
   const lin = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
   const fl = (t) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
   function lab(r, g, b) {
@@ -27,7 +27,7 @@
         const o = ((y + 1) * W1 + x + 1) * 3, u = (y * W1 + x + 1) * 3; I[o] = I[u] + r; I[o + 1] = I[u + 1] + g; I[o + 2] = I[u + 2] + b; } }
     return { I, w, h };
   }
-  function fingerprint(T, ox, oy, s) {   // same steps as tools/build_scan_index.py: cell means -> Lab -> standardise -> unit length
+  function fingerprint(T, ox, oy, s, raw) {   // same steps as tools/build_scan_index.py: cell means -> Lab -> standardise -> unit length
     const { I, w, h } = T, W1 = w + 1, n = SG.gx * SG.gy, v = new Float32Array(n * 3), cell = SG.cell * s, x0 = ox + SG.ax * s, y0 = oy + SG.ay * s;
     for (let j = 0; j < SG.gy; j++) for (let i = 0; i < SG.gx; i++) {
       let xa = Math.round(x0 + i * cell), xb = Math.round(x0 + (i + 1) * cell), ya = Math.round(y0 + j * cell), yb = Math.round(y0 + (j + 1) * cell);
@@ -36,6 +36,7 @@
       const L = lab((I[a] - I[b] - I[c] + I[d]) / area, (I[a + 1] - I[b + 1] - I[c + 1] + I[d + 1]) / area, (I[a + 2] - I[b + 2] - I[c + 2] + I[d + 2]) / area);
       const k = (j * SG.gx + i) * 3; v[k] = L[0]; v[k + 1] = L[1]; v[k + 2] = L[2];
     }
+    if (raw) raw.set(v);   // the cell colours before standardising (glare detection)
     for (let ch = 0; ch < 3; ch++) { let m = 0, q = 0; for (let k = ch; k < v.length; k += 3) m += v[k]; m /= n; for (let k = ch; k < v.length; k += 3) q += (v[k] - m) ** 2;
       const sd = Math.sqrt(q / n) + 1e-6; for (let k = ch; k < v.length; k += 3) v[k] = (v[k] - m) / sd; }
     let q = 0; for (let k = 0; k < v.length; k++) q += v[k] * v[k]; q = Math.sqrt(q) || 1; for (let k = 0; k < v.length; k++) v[k] /= q;
@@ -51,22 +52,69 @@
   const fineAround = ([s, dx, dy]) => { const g = [];
     for (const ks of [0.95, 0.975, 1, 1.025, 1.05]) for (const ex of [-0.03, -0.015, 0, 0.015, 0.03]) for (const ey of [-0.03, -0.015, 0, 0.015, 0.03]) g.push([s * ks, dx + ex * s, dy + ey * s]);
     return g; };
-  function variants(T, grid) {
-    return grid.map(([s, dx, dy]) => { const ox = T.w / 2 - (SG.W / 2) * s + dx * SG.W, oy = T.h / 2 - (SG.H / 2) * s + dy * SG.H; return { v: fingerprint(T, ox, oy, s), s, dx, dy }; });
+  // Glare. A gloss spot on the sleeve (or a foil highlight) is a bright, colourless blob. The fingerprint is
+  // standardised per card, so on dark art that blob dominates the vector and the photo matches whichever cards have a
+  // glowing blob on dark art (The Horned King – Merciless Master, Dragon Fire, So Be It!: "hub" cards, seen 26/11).
+  // Cells that look like glare (and the ring around them) are left out of the comparison on both sides.
+  // EXPERIMENTAL, OFF unless opts.glare (Conselho 26/11): on synthetic pockets it gave more automatic answers but no more
+  // right ones, and 12 new wrong suggestions, all foils: a foil's bright, colourless sheen reads as "glare", the masked
+  // colour match then beats the lightness fallback that used to find the foil. Kept only to be measured on real photos (A3).
+  const GLARE = { L: 70, C: 22, ring: 1, max: 0.4 };
+  function glareMask(raw) {   // raw: Lab per cell (row-major gx × gy) -> Uint8Array(cells), 1 = left out; null if none
+    const gx = SG.gx, gy = SG.gy, n = gx * gy, hit = new Uint8Array(n); let any = 0;
+    for (let k = 0; k < n; k++) { const L = raw[k * 3], C = Math.hypot(raw[k * 3 + 1], raw[k * 3 + 2]); if (L >= GLARE.L && C <= GLARE.C) { hit[k] = 1; any++; } }
+    if (!any) return null;
+    const m = new Uint8Array(n); let cnt = 0;
+    for (let k = 0; k < n; k++) if (hit[k]) { const x = k % gx, y = (k / gx) | 0;
+      for (let dy = -GLARE.ring; dy <= GLARE.ring; dy++) for (let dx = -GLARE.ring; dx <= GLARE.ring; dx++) { const X = x + dx, Y = y + dy; if (X >= 0 && Y >= 0 && X < gx && Y < gy && !m[Y * gx + X]) { m[Y * gx + X] = 1; cnt++; } } }
+    return cnt > n * GLARE.max ? null : { m, cnt };   // most of the art washed out: nothing reliable to mask, compare as is
   }
-  const dot = (i, v) => { const { D, dims } = SCAN; let q = 0; for (let k = 0, o = i * dims; k < dims; k++) q += D[o + k] * v[k]; return q / SCAN.norm[i]; };   // SCAN: see use()
+  // Query restandardised over the cells kept (per channel: mean 0, sd 1, masked cells 0).
+  function maskQuery(raw, mask, chans) {
+    const n = SG.gx * SG.gy, keep = n - mask.cnt, v = new Float32Array(n * 3);
+    for (const ch of chans) { let s = 0, q = 0; for (let k = 0; k < n; k++) if (!mask.m[k]) { const x = raw[k * 3 + ch]; s += x; q += x * x; }
+      const mu = s / keep, sd = Math.sqrt(Math.max(1e-9, q / keep - mu * mu)); for (let k = 0; k < n; k++) v[k * 3 + ch] = mask.m[k] ? 0 : (raw[k * 3 + ch] - mu) / sd; }
+    return v;
+  }
+  // Per card and channel: sum and sum of squares of the stored vector (to restandardise it over any mask cheaply).
+  let CS = null;
+  function cardSums() {
+    if (CS) return CS; const { D, dims, n } = SCAN; CS = new Float64Array(n * 6);
+    for (let i = 0; i < n; i++) for (let k = 0; k < dims; k++) { const x = D[i * dims + k], ch = k % 3; CS[i * 6 + ch] += x; CS[i * 6 + 3 + ch] += x * x; }
+    return CS;
+  }
+  // Correlation of card i with the masked query q, over the kept cells, averaged over the channels used.
+  function maskedScore(i, q, mask, chans) {
+    const { D, dims } = SCAN, S = cardSums(), n = SG.gx * SG.gy, keep = n - mask.cnt, o = i * dims;
+    let total = 0;
+    for (const ch of chans) {
+      let s = S[i * 6 + ch], ss = S[i * 6 + 3 + ch];
+      for (let k = 0; k < n; k++) if (mask.m[k]) { const x = D[o + k * 3 + ch]; s -= x; ss -= x * x; }
+      let d = 0; for (let k = 0; k < n; k++) d += D[o + k * 3 + ch] * q[k * 3 + ch];   // q is 0 on masked cells and centred
+      const sd = Math.sqrt(Math.max(1e-9, ss / keep - (s / keep) ** 2));
+      total += d / (sd * keep);
+    }
+    return total / chans.length;
+  }
+  function variants(T, grid, glare = false) {
+    return grid.map(([s, dx, dy]) => { const ox = T.w / 2 - (SG.W / 2) * s + dx * SG.W, oy = T.h / 2 - (SG.H / 2) * s + dy * SG.H, raw = new Float32Array(SG.gx * SG.gy * 3);
+      const v = fingerprint(T, ox, oy, s, raw), mask = glare ? glareMask(raw) : null;
+      return { v, s, dx, dy, mask, q: mask ? maskQuery(raw, mask, [0, 1, 2]) : null, ql: mask ? maskQuery(raw, mask, [0]) : null }; });
+  }
+  const dotV = (i, v) => { const { D, dims } = SCAN; let q = 0; for (let k = 0, o = i * dims; k < dims; k++) q += D[o + k] * v[k]; return q / SCAN.norm[i]; };   // SCAN: see use()
+  const dot = (i, Q) => (Q.mask ? maskedScore(i, Q.q, Q.mask, [0, 1, 2]) : dotV(i, Q.v));   // a mask only with opts.glare
   // Returns { id, score, group: [ids with the same art], confident }
   // Escanear página: each pocket is already cut out of a straightened page, so the card sits near the middle at
   // about the frame's size; a smaller search is enough there (36 placements instead of 63).
   const POCKET = [];
   for (const s of [0.86, 0.93, 1, 1.07]) for (const dx of [-0.04, 0, 0.04]) for (const dy of [-0.04, 0, 0.04]) POCKET.push([s, dx, dy]);
-  function identify(img, grid = COARSE) {
-    const T = integral(img), Q = variants(T, grid), n = SCAN.n, coarse = new Float32Array(n), where = new Int16Array(n);
-    for (let i = 0; i < n; i++) { let best = -1, bq = 0; for (let j = 0; j < Q.length; j++) { const d = dot(i, Q[j].v); if (d > best) { best = d; bq = j; } } coarse[i] = best; where[i] = bq; }
+  function identify(img, grid = COARSE, glare = false) {
+    const T = integral(img), Q = variants(T, grid, glare), n = SCAN.n, coarse = new Float32Array(n), where = new Int16Array(n);
+    for (let i = 0; i < n; i++) { let best = -1, bq = 0; for (let j = 0; j < Q.length; j++) { const d = dot(i, Q[j]); if (d > best) { best = d; bq = j; } } coarse[i] = best; where[i] = bq; }
     const order = [...coarse.keys()].sort((a, b) => coarse[b] - coarse[a]), top = order.slice(0, 15);
     const seeds = [...new Set(top.slice(0, 6).map((i) => where[i]))].slice(0, 3);   // the placements the best candidates agree on
-    const F = variants(T, seeds.flatMap((j) => fineAround(grid[j])));
-    const fine = top.map((i) => { let best = -1, at = null; for (const q of F) { const d = dot(i, q.v); if (d > best) { best = d; at = q; } } return [i, best, at]; }).sort((a, b) => b[1] - a[1]);
+    const F = variants(T, seeds.flatMap((j) => fineAround(grid[j])), glare);
+    const fine = top.map((i) => { let best = -1, at = null; for (const q of F) { const d = dot(i, q); if (d > best) { best = d; at = q; } } return [i, best, at]; }).sort((a, b) => b[1] - a[1]);
     const [bi, bs, at] = fine[0], group = fine.filter(([, s]) => s >= bs - 0.04).map(([i]) => SCAN.ids[i]);
     const runner = (fine.find(([, s]) => s < bs - 0.04) || [0, coarse[order[15]]])[1];
     // where the card sits in the analysed image (fractions), so the collector line can be cut out precisely
@@ -89,29 +137,33 @@
     q = Math.sqrt(q) || 1; for (let k = 0; k < n; k++) out[k] /= q;
     return out;
   }
-  function identifyLumaDetrend(img, grid) {
+  function identifyLumaDetrend(img, grid, glare = false) {
     const { D, dims, n } = SCAN, m = dims / 3;
     if (!DL) { DL = new Float32Array(n * m); const tmp = new Float32Array(m); for (let i = 0; i < n; i++) { detrendL((k) => D[i * dims + k * 3], tmp); DL.set(tmp, i * m); } }
-    const Q = variants(integral(img), grid).map((q) => detrendL((k) => q.v[k * 3], new Float32Array(m)));
+    const V = variants(integral(img), grid, glare), Q = V.map((q) => detrendL((k) => q.v[k * 3], new Float32Array(m)));
     const sc = new Float32Array(n);
-    for (let i = 0; i < n; i++) { let best = -1; const o = i * m; for (const v of Q) { let d = 0; for (let k = 0; k < m; k++) d += DL[o + k] * v[k]; if (d > best) best = d; } sc[i] = best; }
+    for (let i = 0; i < n; i++) { let best = -1; const o = i * m; for (let j = 0; j < Q.length; j++) { let d;
+      if (V[j].mask) d = maskedScore(i, V[j].ql, V[j].mask, [0]); else { const v = Q[j]; d = 0; for (let k = 0; k < m; k++) d += DL[o + k] * v[k]; }
+      if (d > best) best = d; } sc[i] = best; }
     const order = [...sc.keys()].sort((a, b) => sc[b] - sc[a]), b0 = order[0];
     const runner = order.find((i) => sc[i] < sc[b0] - 0.04);
     return { id: SCAN.ids[b0], score: sc[b0], gap: sc[b0] - (runner == null ? 0 : sc[runner]), top: order.slice(0, 6).map((i) => ({ id: SCAN.ids[i], s: Math.round(sc[i] * 1000) / 1000 })) };
   }
-  function identifyLuma(img, grid) {
+  function identifyLuma(img, grid, glare = false) {
     const { D, dims, n } = SCAN;
     if (!NORM_L) { NORM_L = new Float32Array(n); for (let i = 0; i < n; i++) { let q = 0; for (let k = i * dims; k < (i + 1) * dims; k += 3) q += D[k] * D[k]; NORM_L[i] = Math.sqrt(q) || 1; } }
-    const Q = variants(integral(img), grid).map((q) => { let z = 0; for (let k = 0; k < q.v.length; k += 3) z += q.v[k] * q.v[k]; return { v: q.v, z: Math.sqrt(z) || 1 }; });
+    const Q = variants(integral(img), grid, glare).map((q) => { let z = 0; for (let k = 0; k < q.v.length; k += 3) z += q.v[k] * q.v[k]; return { ...q, z: Math.sqrt(z) || 1 }; });
     const sc = new Float32Array(n);
-    for (let i = 0; i < n; i++) { let best = -1; const o = i * dims; for (const q of Q) { let d = 0; for (let k = 0; k < dims; k += 3) d += D[o + k] * q.v[k]; d /= NORM_L[i] * q.z; if (d > best) best = d; } sc[i] = best; }
+    for (let i = 0; i < n; i++) { let best = -1; const o = i * dims; for (const q of Q) { let d;
+      if (q.mask) d = maskedScore(i, q.ql, q.mask, [0]); else { d = 0; for (let k = 0; k < dims; k += 3) d += D[o + k] * q.v[k]; d /= NORM_L[i] * q.z; }
+      if (d > best) best = d; } sc[i] = best; }
     const order = [...sc.keys()].sort((a, b) => sc[b] - sc[a]), b0 = order[0];
     const runner = order.find((i) => sc[i] < sc[b0] - 0.04);   // the same art in other printings scores alike: skip those
     return { id: SCAN.ids[b0], score: sc[b0], gap: sc[b0] - (runner == null ? 0 : sc[runner]), top: order.slice(0, 6).map((i) => ({ id: SCAN.ids[i], s: Math.round(sc[i] * 1000) / 1000 })) };
   }
-  function identifyPocket(img, opts) {
-    const r = identify(img, POCKET); if (r.confident) return r;
-    const l = opts && opts.detrend ? identifyLumaDetrend(img, POCKET) : identifyLuma(img, POCKET);
+  function identifyPocket(img, opts) {   // opts: { detrend, glare (experimental, see GLARE) }
+    const g = !!(opts && opts.glare), r = identify(img, POCKET, g); if (r.confident) return r;
+    const l = opts && opts.detrend ? identifyLumaDetrend(img, POCKET, g) : identifyLuma(img, POCKET, g);
     if (l.score >= 0.72 && l.gap >= 0.06) {   // a good lightness match: suggest it, the person confirms
       const top = [...l.top, ...r.top.filter((t) => !l.top.some((x) => x.id === t.id))];
       return { ...r, id: l.id, score: Math.max(0.55, Math.min(r.score, 0.69)), confident: false, lumaOnly: true, top };
