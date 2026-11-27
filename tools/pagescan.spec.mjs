@@ -392,9 +392,11 @@ test('Escanear página: recognising a page does not block the screen (Web Worker
 test('Escanear página: a swipe that starts on the photo scrolls; a tap opens the card; corners only in adjust mode', async ({ page, browserName }) => {
   test.skip(browserName !== 'chromium', 'touch input via CDP');
   test.setTimeout(120000);
-  // this test is about gestures; the number reader (Tesseract, downloaded and started from a CDN on the main thread)
-  // is fixed here: with it loading during the tap, 2 of 150 runs lost the tap, 0 of 120 without it (25/11). The reader
-  // during taps is covered by the #334 tests.
+  // this test is about gestures; the number reader (Tesseract, from a CDN) is fixed here so the test does not depend on
+  // that download. The reader during taps is covered by the #334 tests. #342: the taps this test used to lose (2 of 150)
+  // were taps made while the page was still scrolling from the swipe: the browser takes such a tap as "stop scrolling",
+  // not as a click, with or without the reader (1 of 150 lost in each case, 27/11, always with the page still moving).
+  // So the tap waits for the scroll to settle, measured, not by time.
   await page.addInitScript(() => { window.INKWELL_SCAN_OCR = async () => ''; });
   await page.setViewportSize({ width: 360, height: 640 });
   await setup(page);
@@ -409,6 +411,10 @@ test('Escanear página: a swipe that starts on the photo scrolls; a tap opens th
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     await page.waitForTimeout(400);
   };
+  // the page (or the review box) has stopped scrolling: the same position over 3 frames in a row
+  const settled = () => page.evaluate(() => new Promise((ok) => { let last = -1, same = 0; const tick = () => {
+    const y = Math.max(window.scrollY, ...[...document.querySelectorAll('#pageReview, #pageReview *')].map((e) => e.scrollTop));
+    same = y === last ? same + 1 : 0; last = y; if (same >= 3) ok(); else requestAnimationFrame(tick); }; tick(); }));
   const ph = await rev.locator('#pgPhoto').boundingBox();
   const cx = ph.x + ph.width / 2, cy = Math.min(ph.y + ph.height * 0.6, 600);
   expect(await scrolled()).toBe(0);
@@ -420,7 +426,9 @@ test('Escanear página: a swipe that starts on the photo scrolls; a tap opens th
   await expect.poll(() => page.evaluate(() => JSON.stringify(window.__inkwellScanPageState().quad))).toBeTruthy();
   const q0 = await page.evaluate(() => JSON.stringify(window.__inkwellScanPageState().quad));
   // a tap on a card opens its editor
+  await settled();                                                                 // a tap during the swipe's inertia only stops it
   await rev.locator('#pgPhoto [data-pk="4"] polygon').scrollIntoViewIfNeeded();
+  await settled();
   const pk = await rev.locator('#pgPhoto [data-pk="4"] polygon').boundingBox();
   const tp = [{ x: pk.x + pk.width / 2, y: pk.y + pk.height / 2 }];
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: tp }); await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
