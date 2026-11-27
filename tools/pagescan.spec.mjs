@@ -366,6 +366,10 @@ test('Escanear página: recognising a page does not block the screen (Web Worker
 test('Escanear página: a swipe that starts on the photo scrolls; a tap opens the card; corners only in adjust mode', async ({ page, browserName }) => {
   test.skip(browserName !== 'chromium', 'touch input via CDP');
   test.setTimeout(120000);
+  // this test is about gestures; the number reader (Tesseract, downloaded and started from a CDN on the main thread)
+  // is fixed here: with it loading during the tap, 2 of 150 runs lost the tap, 0 of 120 without it (25/11). The reader
+  // during taps is covered by the #334 tests.
+  await page.addInitScript(() => { window.INKWELL_SCAN_OCR = async () => ''; });
   await page.setViewportSize({ width: 360, height: 640 });
   await setup(page);
   const cdp = await page.context().newCDPSession(page);
