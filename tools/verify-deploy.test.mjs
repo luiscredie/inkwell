@@ -127,3 +127,27 @@ test('rollback approval: no actor or run id → refused (fails closed)', () => {
   assert.match(run('verify-rollback-approval.sh', { RUN_ID: '9', ACTOR: '' }, { ...ENV(reviewers), ...APPROVALS([by('outra-pessoa')]) }).text, /quem disparou/);
   assert.match(run('verify-rollback-approval.sh', { RUN_ID: 'x', ACTOR: 'luiscredie' }, { ...ENV(reviewers), ...APPROVALS([by('outra-pessoa')]) }).text, /execução inválida/);
 });
+
+// after a deploy: tools/verify-published-deploy.sh reads the run's own logs (read-only)
+const LOG = (perms, body) => `2026-11-27T01:34:06.0770970Z ##[group]GITHUB_TOKEN Permissions\n${perms.map((x) => `2026-11-27T01:34:06.0774082Z ${x}`).join('\n')}\n2026-11-27T01:34:06.0778211Z ##[endgroup]\n${body}\n`;
+const goodBuild = LOG(['Actions: read', 'Contents: read', 'Metadata: read'], `x OK: ${HEAD} aprovado na execução oficial 5 (push na main deste repositório): js, python, smoke e journeys-webkit com sucesso.\nx HEAD is now at aaaaaaa Some commit`);
+const goodDeploy = LOG(['Metadata: read', 'Pages: write'], 'x Created deployment for zzz\nx Reported success!');
+const pub = (over = {}, runOver = {}) => run('verify-published-deploy.sh', { RUN_ID: '8', SKIP_SITE: '1' }, {
+  'repos/o/r/actions/runs/8': { name: 'Deploy Inkwell to GitHub Pages', event: 'workflow_run', status: 'completed', conclusion: 'success', ...runOver },
+  'repos/o/r/actions/runs/8/jobs?filter=latest&per_page=20': { jobs: [{ name: 'guard', conclusion: 'skipped', id: 1 }, { name: 'rollback-approval', conclusion: 'skipped', id: 2 }, { name: 'build', conclusion: 'success', id: 3 }, { name: 'deploy', conclusion: 'success', id: 4 }] },
+  'repos/o/r/actions/jobs/3/logs': goodBuild, 'repos/o/r/actions/jobs/4/logs': goodDeploy, ...over });
+
+test('after a deploy: build without Pages, deploy with Pages, approved commit = published commit → ok', () => {
+  const r = pub(); assert.equal(r.code, 0, r.text); assert.match(r.text, /publicado: aaaaaaa/); assert.match(r.text, /commit publicado = commit aprovado/);
+});
+test('after a deploy: the build job could publish (today\'s configuration) → flagged', () => {
+  const r = pub({ 'repos/o/r/actions/jobs/3/logs': LOG(['Contents: read', 'Pages: write'], `x OK: ${HEAD} aprovado na execução oficial 5\nx HEAD is now at aaaaaaa c`) });
+  assert.equal(r.code, 1); assert.match(r.text, /FALHA build tinha permissão de Pages/);
+});
+test('after a deploy: no guard line, another commit checked out, no deploy success, failed run → flagged', () => {
+  assert.match(pub({ 'repos/o/r/actions/jobs/3/logs': LOG(['Contents: read'], 'x HEAD is now at aaaaaaa c') }).text, /FALHA build: a guarda/);
+  assert.match(pub({ 'repos/o/r/actions/jobs/3/logs': LOG(['Contents: read'], `x OK: ${HEAD} aprovado na execução oficial 5\nx HEAD is now at bbbbbbb c`) }).text, /FALHA commit publicado \(bbbbbbb\) ≠ aprovado/);
+  assert.match(pub({ 'repos/o/r/actions/jobs/4/logs': LOG(['Pages: write'], 'x nothing') }).text, /FALHA deploy-pages não reportou/);
+  assert.match(pub({ 'repos/o/r/actions/jobs/4/logs': LOG(['Metadata: read'], 'x Reported success!') }).text, /FALHA deploy sem Pages: write/);
+  assert.match(pub({}, { conclusion: 'failure' }).text, /FALHA não concluiu/);
+});

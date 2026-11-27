@@ -21,7 +21,22 @@ enquanto o repositório tiver **uma única pessoa com acesso** (luiscredie).
 Nada de PR, fork ou branch é publicado. Os testes `tools/deploy-workflow.test.mjs` (o encadeamento dos jobs) e
 `tools/verify-deploy.test.mjs` (os scripts, com a API do GitHub simulada) rodam em todo PR.
 
-**Conferir o que está no ar:**
+**Conferir um deploy (somente leitura):**
+
+```bash
+RUN_ID=<id do run "Deploy Inkwell to GitHub Pages"> REPO=luiscredie/inkwell bash tools/verify-published-deploy.sh
+```
+
+O script lê os logs do próprio run e confere:
+- os jobs `build` e `deploy` com sucesso (no automático, `guard` e `rollback-approval` pulados);
+- o `build` **sem** permissão de Pages e o `deploy` com `Pages: write`;
+- a guarda que aprovou o commit, e que o commit montado é esse mesmo;
+- o "Reported success!" do `deploy-pages`;
+- o site respondendo.
+
+No fim, mostra o commit publicado. Contra o deploy de 27/11 (c146e8d, configuração anterior) ele aponta dois problemas: o `build` tinha `Pages: write` e não havia a guarda do automático. Depois do merge deste PR, o primeiro deploy precisa passar sem nenhuma falha.
+
+**Conferir o que está no ar manualmente:**
 - no run de deploy, job **build**, passo "Check out revision": a linha `HEAD is now at <sha>` mostra o commit publicado;
 - o rótulo do run na lista do GitHub mostra o topo da main quando o run começou, que pode ser um commit mais novo, ainda não publicado.
 
@@ -57,8 +72,9 @@ o revisor.
 
 Quando uma versão publicada tem um problema:
 
-1. Abra uma branch a partir da main e reverta o(s) commit(s) com defeito:
-   `git revert <sha>` (para um merge: `git revert -m 1 <sha>`).
+1. Abra uma branch a partir da main e reverta o(s) commit(s) com defeito: `git revert <sha>`. Os PRs entram na main
+   por squash, então cada um é um commit de um único pai. Para um merge comum, seria `git revert -m 1 <sha>`.
+   A árvore resultante é idêntica à de antes do commit revertido (conferido em 27/11).
 2. Abra o PR. Ele passa pelos quatro checks como qualquer outro.
 3. Com autorização, faça o merge. O deploy automático publica o commit de reversão, que é o novo topo da main.
    Não é um rollback: é uma versão nova, testada.
