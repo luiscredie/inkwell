@@ -4,6 +4,10 @@ Atualizado em 2026-07-28. Raiz canônica de publicação: `site/`.
 Entrada canônica: `site/index.html`. `Inkwell.dc.html` é apenas um espelho
 byte a byte para desenvolvimento.
 
+**Direção competitiva de 26/11/2026 (proposta, ainda não publicada):**
+ver ao final o ciclo «Inteligência competitiva Core», que reconcilia M1.8,
+M1.9, M2.4, Match Center e Coach V4 sem substituir o histórico abaixo.
+
 ## M3V V5 — Match Center visual e coaching (DONE, code)
 
 O Match Center passa de histórico técnico para ciclo de melhoria do jogador,
@@ -2118,3 +2122,100 @@ medida em celular real.
 
 Para chegar a beta: APK de release instalado em Android real e TestFlight interno, com login, Coleção, Decks e
 scanner conferidos no aparelho. Para publicação: B4 resolvida, builds assinados, fichas de privacidade das lojas.
+
+## Ciclo de 26/11/2026 — Inteligência competitiva Core (plano, sem implementação)
+
+**Origem:** solicitação do titular em 26/11 e parecer **simulado** das seis
+perspectivas do Conselho de Coaches Lorcana (competidor, educador, designers de
+Lorcana e Magic, alto rendimento e estatística). Não constitui reunião real do
+Conselho nem aprovação de publicação. **Situação:** escopo e critérios
+documentados; cada implementação futura depende de PR separado, testes e
+revisão. Nenhuma mudança em produção é autorizada por este plano.
+
+**Objetivo:** transformar dados confiáveis do meta e do deck do jogador em
+orientações competitivas *explicáveis*, e testar hipóteses de alteração sem
+confundir popularidade, heurística, replay observado, vitória simulada e
+desempenho de torneio.
+
+**Formato deste ciclo:** Disney Lorcana **Core Constructed**, aplicando
+legalidade/rotação/banimentos vigentes **na data do evento e no formato
+selecionado**. Primeira referência de estudo: meta do Set 14, sem congelar o
+formato no Set 14 para atualizações futuras. **Fora do escopo:** Coconut,
+Infinity, multiplayer, novos modos de jogo e novo construtor independente.
+Nenhuma modalidade fora de Core deve receber selos de meta competitivo por
+inferência.
+
+### Reaproveitamento obrigatório
+
+- **M1.8 Meta Scout:** utilizar e validar o contrato opcional do artefato
+  site/data/meta-decks.json e seu manifesto; o estado histórico
+  SCOPED / blocked on data continua valendo até haver dados de torneio
+  verificáveis. Não inventar tier ou win rate com listas populares.
+- **M2.4 Meta-to-Collection Advisor + Decks:** manter posse, faltantes,
+  reimpressões, custos, wishlist e legalidade já existentes. Nunca criar ou
+  alterar decks automaticamente nem tratar substituto possuído como
+  equivalente competitivo sem evidência.
+- **M1.9 Player Academy e M2.5 Practice Loop:** aproveitar saúde do deck,
+  laboratório de mulligan, revisão guiada, caderno de confrontos e métricas
+  existentes; adicionar o contexto competitivo sem duplicar esses motores.
+- **Match Center / Coach Estratégico V4 (#309, ainda draft):** consumir
+  replays e decisões com perspectiva correta, distinguir linhas executadas,
+  alternativas **legais verificadas** e hipóteses humanas. Não usar conteúdo
+  da mão adversária oculta como se estivesse disponível ao jogador.
+
+### Etapas e ordem de implantação
+
+| Prioridade | Entrega | Incremento sobre o que já existe | Aceite verificável |
+|---|---|---|---|
+| **P0** | **Meta Scout competitivo** | Pipeline autorizado de resultados e decklists de torneios Core: arquétipo, lista canônica, evento, região, data, formato, colocação, registro, fonte, tamanho de amostra e origem. Classificar separadamente lista comprovada, lista popular e dado insuficiente. | Dataset datado/reproduzível com validação de schema, IDs, duplicatas, formato, rotação e manifesto (sha256 e bytes); tela exibe proveniência, amostra, data e ausências; nenhum scraping no navegador. |
+| **P1** | **Deck Fit competitivo e funções** | No analisador de Decks, mapear cartas por funções comprováveis: desenvolvimento, lore, compra/seleção, interação/remoção, proteção, recuperação, finalização. Mostrar curva, tintabilidade, redundância, respostas e lacunas, sem nota mágica. | Cada diagnóstico cita cartas/contagens e regra aplicada; adequação é heurística, não chance de vitória; casos sem dados exibem não avaliado; testes com reimpressões e cartas sem preço. |
+| **P1** | **Deck vs. referência do meta** | Comparação reversível do deck salvo com listas por arquétipo e data: inclusão/frequência nas amostras, cartas em comum, diferenças, curva, custos e faltantes. | Não modificar o deck sem ação explícita; mostrar origem e denominador da inclusão; separar frequência da eficácia; respeitar coleção e legalidade. |
+| **P2** | **Matchup Advisor + mulligan por confronto** | Para cada arquétipo com evidência suficiente, plano de jogo, ameaças, respostas, primeiros turnos e mãos iniciais; distinguir on the play/on the draw e Bo3 quando registrados. | Expor fundamento e grau de confiança; não classificar adversário apenas por cores; quando lista/mão não for conhecida, restringir recomendação à informação pública; comparar mãos sob o mesmo deck/seed. |
+| **P2** | **Coach e treino direcionado** | Integrar ao Match Center e Coach V4: decisões de tinta, quest, challenge, canto e remoção; preservar comeback, disruption, outs e recuperação como dimensões separadas. | Feedback "fiz X; alternativa Y" somente com legalidade/estado verificáveis; inconclusivo se faltarem logs; manter feedback humano provisório e não treinar diretamente com rótulos humanos. |
+| **P3** | **Otimizador competitivo experimental** | Estudar alterações de 1–4 slots e linhas de jogo no motor, com baseline pareado e mesma seed, política adversária, formato e ponto de partida. | Mostrar resultados por matchup, custo computacional, amostra, variabilidade, cobertura e limites do simulador; não recomendar alteração por um replay ou por score heurístico isolado. |
+
+### Contratos de dados, evidência e métricas
+
+1. **Hierarquia de evidência:** (a) resultado e decklist de torneio
+   identificáveis; (b) partidas/replays reais com cobertura conhecida;
+   (c) contrafactual executado pelo motor; (d) hipótese heurística/opinião
+   de coach. Toda tela informa categoria e data.
+2. **Meta:** participação por arquétipo exige numerador e denominador de
+   listas/eventos elegíveis; win rate exige jogos ou matches com resultados
+   atribuíveis e denominador explícito. Não inferir vantagem de matchup de
+   poucas partidas, listas populares, apenas cores ou ensaios sintéticos.
+   Informar recorte temporal, amostra e viés de cobertura.
+3. **Identidades e regras:** unificar artes/reimpressões por identidade
+   canônica da carta; preservar impressão, set, foil e preço para coleção.
+   Legalidade Core versionada por data, validando formato e banimentos.
+4. **Coach:** distinguir mão não vista, ação legal, ação observada,
+   ação desfeita, hipótese não simulada e resultado simulado. Comprar um out
+   não equivale a resposta jogável nem a vitória.
+5. **Fontes:** usar dados com acesso permitido e rastreabilidade; conferir
+   licença/termos antes de coleta e redistribuição. Dataset externo opcional,
+   versionado e não bloqueante. Sem leitura ou escrita de produção no piloto.
+6. **Qualidade:** isolamento por perfil, nenhuma alteração silenciosa da
+   coleção/decks/partidas, nenhuma revelação prematura da mão adversária,
+   interface PT/EN e verificação desktop/WebKit. Respeitar checks da main.
+
+### Marcos de validação e limites de execução
+
+- **Gate P0:** um lote rastreável de torneios Core validado por pipeline,
+  schema e legalidade antes da UI competitiva. Se faltar evidência, manter
+  listas populares com aviso explícito, sem títulos de melhores decks.
+- **Gate P1:** diagnóstico determinístico com revisão de casos reais de
+  tintabilidade, cartas redundantes, reimpressões e substituições legais
+  ou ilegais; os scores não prometem win rate.
+- **Gate P2:** planos e mulligans revisados em casos reais e alternativas
+  enumeradas pelo motor; hipóteses separadas de decisões verificadas.
+- **Gate P3:** piloto pequeno e pareado, seeds fixas e baseline imutável;
+  ampliar após validar o motor e observar sinais em posições independentes.
+  **Não reiniciar 100.000 Bo3 nem iniciar treinamentos pesados.**
+- **Governança:** PRs pequenos e separados (pipeline, Decks, Advisor, Coach,
+  otimizador). Submeter resultados a parecer **simulado** do Conselho antes
+  de propor merge; nenhuma publicação, deploy, alteração de banco ou merge
+  sem autorização explícita do titular.
+
+**Próximo passo:** auditar o estado real de M1.8/M2.4 e fontes permitidas;
+implementar primeiro contrato/testes do pipeline Core, sem tocar no site
+publicado. Só então avançar frontend e Coach.
