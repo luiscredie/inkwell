@@ -2118,3 +2118,73 @@ medida em celular real.
 
 Para chegar a beta: APK de release instalado em Android real e TestFlight interno, com login, Coleção, Decks e
 scanner conferidos no aparelho. Para publicação: B4 resolvida, builds assinados, fichas de privacidade das lojas.
+
+## Situação em 26/11/2026 — Scanner A3: PRs integrados, validação real pendente
+
+**Origem da atualização:** relatório entregue pelo Claude ao titular, confrontado com o
+estado dos PRs no GitHub. A integração na main foi verificada; a afirmação de
+que cada deploy está servido no site real vem do relatório do Claude, não de
+uma nova medição independente nesta revisão. **Não declarar ganho de precisão.**
+
+### Encerramento das partes do #344
+
+| PR | Conteúdo | Situação verificada |
+|---|---|---|
+| #339 | Protocolo e relatório de avaliação A3 | Integrado na main (7fb96c6) |
+| #341 | Gestos e OCR do Escanear página | Integrado na main (e47eb89) |
+| #349 | Busca completa no editor do bolso | Integrado na main (cd4ef46) |
+| #350 | Número de colecionador e filtro experimental de reflexo | Integrado na main (cc9ad19) |
+| #351 | Captura fotográfica opt-in e medição A3 | Integrado na main (8599c76) |
+| #352 | Comparação vídeo × foto e roteiro de aparelho | Integrado na main (e52400d) |
+
+O PR original #344 continua em rascunho e **não deve ser mesclado
+novamente** sem auditar se restou alguma alteração exclusiva; decidir fechamento
+por substituição apenas depois de comparar os diffs. A separação dos PRs
+evitou misturar revisão, publicação e medição, e preservou o modo-padrão.
+
+**Deploy e CI:** o relatório do Claude registra checks obrigatórios e
+deploys aprovados e revisão do site após cada merge. A política de deploy
+recebeu correções adicionais por #348 (build e deploy em jobs separados) e
+#340 (deploy manual limitado a SHA da main validado, rollback com autorização
+independente). Uma observação anterior de aparente deploy antes dos checks
+precisa ser reconciliada por IDs de execução e por SHA; não deduzir falha
+nem garantia apenas de timestamps de runs distintos.
+
+### Padrões de comportamento e evidência disponível
+
+- Sem parâmetros, o scanner usa quadro de vídeo; reflexo, captura fotográfica
+  e medição são experimentos **desligados**. As flags funcionam por aba.
+- `?medicao=a3` instrumenta vídeo e foto; `?captura=foto` seleciona a
+  foto quando o caminho estiver disponível e o alinhamento for válido.
+- Smoke no Chromium relatado pelo Claude: página sintética de nove posições,
+  seis reconhecimentos automáticos, uma sugestão, uma escolha de impressão e
+  um bolso vazio; zero falsos positivos na amostra artificial, cerca de 1,2 s.
+  **Essa bateria não mede acurácia real e não satisfaz o gate A3.**
+- Busca relatada: “minnie mouse” com 38 resultados, incluindo impressões que
+  eram cortadas pelo limite anterior; número de colecionador trata conflito
+  como sugestão em vez de sobrescrever uma identidade visual incerta.
+- O navegador sem login/câmera não cobriu a jornada completa de captura e
+  confirmação. Não inferir compatibilidade de todas as versões de iOS.
+
+### Próximo gate — A3 no iPhone real, sem modificar a coleção
+
+1. Testar captura normal, `?medicao=a3` e
+   `?medicao=a3&captura=foto` em abas novas, com conta e câmera;
+   registrar modelo/versão do iOS, luz, reflexo, foil, inclinação, falhas
+   de gesto/OCR, tempo e fallback, sem depender só de fotos sintéticas.
+2. Registrar manualmente a carta correta para cada uma das nove posições,
+   inclusive os bolsos vazios e as reimpressões, e comparar os resultados
+   do vídeo e da fotografia na mesma página.
+3. Atingir os critérios A3 já definidos em #321: pelo menos 30 páginas reais
+   de três aparelhos, taxa de identificação de 95% e nenhum falso positivo,
+   separando automático, primeira sugestão, correção manual e erro.
+4. **Não tocar em “Adicionar” durante a medição**; anotar e conferir o total
+   da coleção antes e depois. Armazenar JSONs/fotos de medição fora do GitHub
+   público, sem dados pessoais, coleção ou fotos no repositório.
+5. Produzir relatório por aparelho e condição; manter a opção fotográfica
+   desligada por padrão até evidência real suficiente e autorização.
+
+**Relação com outras frentes:** esta atualização é exclusivamente do
+Scanner 2.0. Não altera o escopo nem desbloqueia o ciclo **Inteligência
+competitiva Core** do PR #353, que depende de dados de torneios verificáveis.
+Nenhuma alteração de runtime, banco, coleções ou produção neste PR.
