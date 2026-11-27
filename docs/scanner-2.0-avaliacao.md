@@ -137,6 +137,8 @@ O relatório traz uma coluna por leitura (**video**, **foto**, **video+reflexo**
 
 **Pareado:** para cada posição com carta, conta-se onde só A identificou e onde só B identificou (McNemar exato). **"Evidência de ganho"** só quando A identifica mais, com p < 0,05, e não tem mais falsos positivos que B. Caso contrário, o relatório diz "sem evidência de ganho".
 
+**Só com o conjunto completo.** O ganho só é julgado com o conjunto das seções 1 e 6.1 completo e com fotos reais. São exigidos os itens da seção 1, mais um iPhone com iOS ≥ 18.4 e um Android com Chrome (o sistema e o tempo no aparelho são lidos do registro do site quando o gabarito não os traz), e todo registro precisa ter gabarito. Fora disso, o relatório diz **"Não avaliável"**, lista o que falta e deixa `gain` vazio, seja qual for a diferença medida (o resultado da regra continua visível em `meets_gain_rule`).
+
 ### 6.3 Critérios do Conselho (26/11) para ligar a fotografia por padrão
 
 | Critério | Verificação |
