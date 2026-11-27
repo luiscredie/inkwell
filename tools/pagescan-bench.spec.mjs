@@ -1,13 +1,15 @@
 // Scanner 2.0 measurements: run "Escanear página" on a folder of binder photos with known answers and report
-// accuracy, time and how many pockets need the person. Not part of CI (it needs a generated or real photo set):
+// accuracy, time and how many pockets need the person. Not part of CI (it needs a generated or real photo set).
+// The report (tools/pagescan-report.mjs) says whether the set covers the protocol before judging any target:
 //
 //   python3 tools/pagescan_synth.py /tmp/ps --pages 8          (or a folder of real photos with the same truth.json)
-//   PAGESCAN_DIR=/tmp/ps PAGESCAN_OUT=/tmp/ps/report.json [PAGESCAN_EXP=nodetrend] npx playwright test --project=chromium tools/pagescan-bench.spec.mjs
+//   PAGESCAN_DIR=/tmp/ps PAGESCAN_OUT=/tmp/ps/report.json PAGESCAN_MD=/tmp/ps/report.md [PAGESCAN_EXP=nodetrend] npx playwright test --project=chromium tools/pagescan-bench.spec.mjs
 //
 // The scanner gets truth.json's "user" corners (a page lined up by hand), never the true ones.
 import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
+import { report as makeReport, markdown } from './pagescan-report.mjs';
 
 const DIR = process.env.PAGESCAN_DIR;
 const ROOT = process.env.INKWELL_URL || 'http://localhost:8080/index.html';
@@ -28,56 +30,19 @@ test('Escanear página: accuracy and time on a photo set', async ({ page }) => {
   const rows = [];
   for (const p of truth.pages) {
     const r = await page.evaluate(async ({ file, quad }) => {
-      const img = new Image(); img.src = new URL('/__pagescan/' + encodeURIComponent(file), location.href).href; await img.decode();
-      const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+      // fetch + createImageBitmap: decoded for sure before drawing (Image.decode() sometimes drew nothing, #333);
+      // a phone photo's EXIF orientation is applied, as the annotation tool does
+      const img = await createImageBitmap(await (await fetch(new URL('/__pagescan/' + encodeURIComponent(file), location.href).href)).blob(), { imageOrientation: 'from-image' });
+      const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
       const ctx = c.getContext('2d', { willReadFrequently: true }); ctx.drawImage(img, 0, 0);
       return window.__inkwellScanPage(ctx.getImageData(0, 0, c.width, c.height), quad);
     }, { file: p.file, quad: jitter(p.user) });
-    r.pockets.forEach((k, i) => rows.push({ file: p.file, cond: p.cond, device: p.device || '', i, truth: p.cards[i], ...k, ms: r.ms }));
+    r.pockets.forEach((k, i) => rows.push({ file: p.file, cond: p.cond, device: p.device || '', where: p.where || '', i, truth: p.cards[i], ...k, desktop_ms: r.ms.total,
+      device_s: typeof p.device_s === 'number' ? p.device_s : null }));
   }
-  // one verdict per pocket (the categories the Council asked for, 24/11)
-  //   auto-right       recognised alone and right: nothing for the person to do
-  //   false-positive   recognised alone but wrong card, or a card "found" in an empty pocket: the dangerous case
-  //   first-right      the person is asked, and the first answer offered (suggestion / printing) is right
-  //   alt-right        the person is asked, the right card is among the other suggestions or printings
-  //   not-offered      the right card is not offered: the person must search by name
-  //   card-as-empty    a card read as an empty pocket: it would be left out unless the person looks
-  //   empty-right / empty-asked   an empty pocket read as empty / sent to the person
-  const verdict = (x) => {
-    if (!x.truth) return x.status === 'empty' ? 'empty-right' : x.status === 'ok' ? 'false-positive' : 'empty-asked';
-    if (x.status === 'empty') return 'card-as-empty';
-    if (x.status === 'ok') return x.id === x.truth ? 'auto-right' : 'false-positive';
-    if (x.id === x.truth) return 'first-right';
-    if (x.group.includes(x.truth) || x.top.some((t) => t.id === x.truth)) return 'alt-right';
-    return 'not-offered';
-  };
-  for (const x of rows) x.v = verdict(x);
-  const sum = (list) => {
-    const cards = list.filter((x) => x.truth), n = cards.length, empties = list.length - n, c = (v, l = list) => l.filter((x) => x.v === v).length;
-    const pct = (k, d = n) => (d ? Math.round((1000 * k) / d) / 10 : null);
-    const pages = [...new Set(list.map((x) => x.file))].map((f) => list.find((x) => x.file === f).ms);
-    const ms = pages.map((m) => m.total).sort((a, b) => a - b);
-    return {
-      pages: pages.length, cards: n, empty_pockets: empties,
-      auto_right_pct: pct(c('auto-right')),
-      first_right_pct: pct(c('first-right')),
-      alt_right_pct: pct(c('alt-right')),
-      not_offered_pct: pct(c('not-offered')),
-      card_as_empty: c('card-as-empty'),
-      false_positive: c('false-positive'),                          // cards + empty pockets
-      // "identified": the right card is what the scanner puts first (alone or as the first suggestion)
-      identified_pct: pct(c('auto-right') + c('first-right')),
-      // "within reach": identified, or one tap away among the suggestions
-      within_reach_pct: pct(c('auto-right') + c('first-right') + c('alt-right')),
-      needs_person_pct: pct(cards.filter((x) => x.status !== 'ok').length),
-      empty_right: c('empty-right'), empty_asked: c('empty-asked'),
-      ms_median: ms[Math.floor(ms.length / 2)], ms_max: ms[ms.length - 1],
-    };
-  };
-  const conds = [...new Set(rows.map((x) => x.cond))];
-  const devices = [...new Set(rows.map((x) => x.device).filter(Boolean))];
-  const report = { photos: truth.real ? 'real' : 'synthetic', jitter: J, all: sum(rows), by_device: Object.fromEntries(devices.map((d) => [d, sum(rows.filter((x) => x.device === d))])), by_cond: Object.fromEntries(conds.map((k) => [k, sum(rows.filter((x) => x.cond === k))])), verdicts: rows.map(({ file, i, truth, status, id, score, gap, tex, v }) => ({ file, i, truth, status, id, score: +score.toFixed(3), gap: +gap.toFixed(3), tex, v })) };
+  const report = makeReport(truth, rows, { jitter: J });
   if (process.env.PAGESCAN_OUT) fs.writeFileSync(process.env.PAGESCAN_OUT, JSON.stringify(report, null, 1));
-  console.log(JSON.stringify({ photos: report.photos, all: report.all, by_device: report.by_device, by_cond: report.by_cond }, null, 1));
+  if (process.env.PAGESCAN_MD) fs.writeFileSync(process.env.PAGESCAN_MD, markdown(report) + '\n');
+  console.log(markdown(report));
   expect(rows.length).toBe(truth.pages.length * 9);
 });
