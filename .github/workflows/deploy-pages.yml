@@ -20,13 +20,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  # Montagem e publicacao em jobs separados (o modelo oficial do GitHub Pages).
+  # Num job so, o deploy-pages consultava o artefato ~0,5 s depois do upload e,
+  # de forma intermitente, o GitHub ainda respondia "Found 0 artifact(s)"
+  # (725f3f8 em 25/11; e47eb89 em 26/11, tres tentativas). Separado, o artefato
+  # ja esta registrado quando o deploy comeca, e "Re-run failed jobs" refaz so
+  # o deploy, com o mesmo artefato, sem montar o site de novo.
+  build:
     if: >-
       github.event_name == 'workflow_dispatch' ||
       github.event.workflow_run.conclusion == 'success'
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Check out revision
@@ -71,6 +74,13 @@ jobs:
         with:
           path: _site
 
+  deploy:
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
