@@ -32,6 +32,8 @@ jobs:
         run: node tools/pagescan.test.mjs
       - name: Escanear página with a real photo (stillcapture)
         run: node tools/stillcapture.test.mjs
+      - name: Scanner 2.0, A3 evaluation report
+        run: node --test tools/pagescan-report.test.mjs
       - name: Deck portfolio advisor
         run: node tools/deck-portfolio-v4.test.mjs
       - name: Match center
@@ -122,7 +124,7 @@ jobs:
       - name: Serve site
         run: (cd site && python3 -m http.server 8080 &) && sleep 2
       - name: Browser smoke
-        run: INKWELL_URL=http://localhost:8080/index.html npx playwright test --project=chromium tools/smoke.spec.mjs tools/home.spec.mjs tools/journeys.spec.mjs tools/login.spec.mjs tools/decks.spec.mjs tools/colecao.spec.mjs tools/precos.spec.mjs tools/perfil.spec.mjs tools/comunidades.spec.mjs tools/trades.spec.mjs tools/coach.spec.mjs tools/coach-inks.spec.mjs tools/pagescan.spec.mjs tools/scan-session.spec.mjs tools/counter.spec.mjs tools/overview.spec.mjs tools/sharedeck.spec.mjs tools/deckbuilder.spec.mjs tools/precos-valor.spec.mjs tools/handlab.spec.mjs
+        run: INKWELL_URL=http://localhost:8080/index.html npx playwright test --project=chromium tools/smoke.spec.mjs tools/home.spec.mjs tools/journeys.spec.mjs tools/login.spec.mjs tools/decks.spec.mjs tools/colecao.spec.mjs tools/precos.spec.mjs tools/perfil.spec.mjs tools/comunidades.spec.mjs tools/trades.spec.mjs tools/coach.spec.mjs tools/coach-inks.spec.mjs tools/pagescan.spec.mjs tools/pagescan-a3.spec.mjs tools/scan-session.spec.mjs tools/counter.spec.mjs tools/overview.spec.mjs tools/sharedeck.spec.mjs tools/deckbuilder.spec.mjs tools/precos-valor.spec.mjs tools/handlab.spec.mjs
 
   # issue #145, P0-A: the visitor journeys on an iPhone-like WebKit (Safari's engine)
   journeys-webkit:

@@ -257,6 +257,40 @@ test('Escanear página: 4 pockets to settle, tapped on the photo, through to the
   expect(net).toEqual(Object.fromEntries(truth.map((t) => [t, 1])));
 });
 
+// 26/11 — a pocket's search stopped at 12 cards: "Minnie Mouse" has more than 30 and the Enchanted never showed.
+test('Escanear página: pocket search lists every match, art suggestions first, rarity words and numbers', async ({ page }) => {
+  await setup(page);
+  await page.goto(BASE);
+  await page.waitForFunction(() => typeof window.__inkwellFindCards === 'function');
+  const r = await page.evaluate(() => ({
+    minnie: window.__inkwellFindCards('minnie mouse'), ench: window.__inkwellFindCards('minnie encantada'),
+    num: window.__inkwellFindCards('minnie 4/206'), hk: window.__inkwellFindCards('horned king'), none: window.__inkwellFindCards('zzzz'),
+  }));
+  expect(r.minnie.length).toBeGreaterThan(30);
+  expect(r.minnie).toContain('LOR4-206');                                       // Musketeer Champion (Enchanted)
+  expect(r.ench).toEqual(expect.arrayContaining(['LOR4-206', 'LOR13-238']));
+  expect(r.ench.every((id) => ['LOR4-206', 'LOR13-238'].includes(id))).toBe(true);
+  expect(r.num).toEqual(['LOR4-206']);
+  expect(r.hk[0]).toMatch(/^LOR13-/);                                           // newest set first
+  expect(r.none).toEqual([]);
+});
+
+test('Escanear página: the pocket editor shows the count and "Mostrar mais"', async ({ page }) => {
+  test.setTimeout(120000);
+  await setup(page);
+  await openPageMode(page);
+  const rev = await hardPage(page);
+  const ed = await openPk(rev, 8);
+  await ed.getByTestId('pocket-find').click();
+  await ed.getByTestId('pocket-search').fill('minnie mouse');
+  const count = await ed.getByTestId('pocket-search-count').textContent();
+  expect(+count.match(/\d+/)[0]).toBeGreaterThan(30);
+  await expect(ed.locator('#pgFound [data-use]')).toHaveCount(24);
+  await ed.getByTestId('pocket-search-more').click();
+  await expect(ed.locator('#pgFound [data-use]')).toHaveCount(Math.min(48, +count.match(/\d+/)[0]));
+  await expect(ed.getByTestId('pocket-search')).toHaveValue('minnie mouse');
+});
+
 test('Escanear página: the same page twice asks before adding it again; Esc steps back', async ({ page }) => {
   test.setTimeout(120000);
   const calls = await setup(page);
@@ -311,6 +345,29 @@ for (const [w, h] of [[320, 568], [360, 640], [390, 844], [430, 932]]) {
   });
 }
 
+// Conselho 26/11 — the collector number on the whole page: a clear number naming another card is only a suggestion (the
+// person confirms), never an automatic answer; a reprint is not settled by a number that names a card outside its printings.
+test('Escanear página: a number naming another card only suggests it; reprints are not settled by it', async ({ page }) => {
+  test.setTimeout(120000);
+  await setup(page);
+  await page.addInitScript(() => { window.INKWELL_SCAN_OCR = async () => '100/204 · EN · 7'; });   // LOR7-100, not on this page
+  await openPageMode(page);
+  await hardPage(page);
+  await expect.poll(() => page.evaluate(() => { const s = window.__inkwellScanPageState(); return s && !s.busy && !document.querySelector('[data-testid=page-reading]'); }), { timeout: 60000 }).toBe(true);
+  const st = await page.evaluate(() => window.__inkwellScanPageState());
+  expect(st.pockets.filter((p) => p && p.status === 'ok' && p.id === 'LOR7-100')).toEqual([]);          // never settled by the number alone
+  expect(st.pockets.some((p) => p && p.status === 'check' && p.id === 'LOR7-100')).toBe(true);            // offered first, for the person
+  expect(st.pockets.filter((p) => p && p.status === 'choose' && p.id === 'LOR7-100')).toEqual([]);        // a reprint keeps its printings
+});
+
+test('Escanear página: the glare filter is off unless asked for (?reflexo=1)', async ({ page }) => {
+  await setup(page);
+  await page.goto(BASE);
+  expect(await page.evaluate(() => window.__inkwellScanExp())).toEqual({ detrend: true, glare: false });
+  await page.goto(BASE + '?reflexo=1');
+  expect(await page.evaluate(() => window.__inkwellScanExp().glare)).toBe(true);
+});
+
 test('Escanear página: recognising a page does not block the screen (Web Worker)', async ({ page }) => {
   test.skip(STILL(page), 'long-task timing is measured in Chromium (WebKit has no Long Tasks API)');
   test.setTimeout(120000);
@@ -335,6 +392,10 @@ test('Escanear página: recognising a page does not block the screen (Web Worker
 test('Escanear página: a swipe that starts on the photo scrolls; a tap opens the card; corners only in adjust mode', async ({ page, browserName }) => {
   test.skip(browserName !== 'chromium', 'touch input via CDP');
   test.setTimeout(120000);
+  // this test is about gestures; the number reader (Tesseract, downloaded and started from a CDN on the main thread)
+  // is fixed here: with it loading during the tap, 2 of 150 runs lost the tap, 0 of 120 without it (25/11). The reader
+  // during taps is covered by the #334 tests.
+  await page.addInitScript(() => { window.INKWELL_SCAN_OCR = async () => ''; });
   await page.setViewportSize({ width: 360, height: 640 });
   await setup(page);
   const cdp = await page.context().newCDPSession(page);
@@ -427,7 +488,7 @@ test('Escanear página: the screen is usable while the numbers are read in the b
   expect(await rev.locator('.items').evaluate((e) => e.scrollTop)).toBeGreaterThan(250);
   const t = await page.evaluate(() => window.__inkwellScanPageTiming());
   expect(t.ready).toBeLessThan(t.ready + t.ocr);                                    // ready came before the numbers were read
-  expect(t.ocrN).toBe(2);
+  expect(t.ocrN).toBe(4);                                                          // the 2 reprints and the 2 pockets the art didn't settle
   expect(deltas(calls)).toEqual([]);
 });
 
