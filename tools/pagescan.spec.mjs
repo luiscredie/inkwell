@@ -254,6 +254,40 @@ test('Escanear página: 4 pockets to settle, tapped on the photo, through to the
   expect(net).toEqual(Object.fromEntries(truth.map((t) => [t, 1])));
 });
 
+// 26/11 — a pocket's search stopped at 12 cards: "Minnie Mouse" has more than 30 and the Enchanted never showed.
+test('Escanear página: pocket search lists every match, art suggestions first, rarity words and numbers', async ({ page }) => {
+  await setup(page);
+  await page.goto(BASE);
+  await page.waitForFunction(() => typeof window.__inkwellFindCards === 'function');
+  const r = await page.evaluate(() => ({
+    minnie: window.__inkwellFindCards('minnie mouse'), ench: window.__inkwellFindCards('minnie encantada'),
+    num: window.__inkwellFindCards('minnie 4/206'), hk: window.__inkwellFindCards('horned king'), none: window.__inkwellFindCards('zzzz'),
+  }));
+  expect(r.minnie.length).toBeGreaterThan(30);
+  expect(r.minnie).toContain('LOR4-206');                                       // Musketeer Champion (Enchanted)
+  expect(r.ench).toEqual(expect.arrayContaining(['LOR4-206', 'LOR13-238']));
+  expect(r.ench.every((id) => ['LOR4-206', 'LOR13-238'].includes(id))).toBe(true);
+  expect(r.num).toEqual(['LOR4-206']);
+  expect(r.hk[0]).toMatch(/^LOR13-/);                                           // newest set first
+  expect(r.none).toEqual([]);
+});
+
+test('Escanear página: the pocket editor shows the count and "Mostrar mais"', async ({ page }) => {
+  test.setTimeout(120000);
+  await setup(page);
+  await openPageMode(page);
+  const rev = await hardPage(page);
+  const ed = await openPk(rev, 8);
+  await ed.getByTestId('pocket-find').click();
+  await ed.getByTestId('pocket-search').fill('minnie mouse');
+  const count = await ed.getByTestId('pocket-search-count').textContent();
+  expect(+count.match(/\d+/)[0]).toBeGreaterThan(30);
+  await expect(ed.locator('#pgFound [data-use]')).toHaveCount(24);
+  await ed.getByTestId('pocket-search-more').click();
+  await expect(ed.locator('#pgFound [data-use]')).toHaveCount(Math.min(48, +count.match(/\d+/)[0]));
+  await expect(ed.getByTestId('pocket-search')).toHaveValue('minnie mouse');
+});
+
 test('Escanear página: the same page twice asks before adding it again; Esc steps back', async ({ page }) => {
   test.setTimeout(120000);
   const calls = await setup(page);
