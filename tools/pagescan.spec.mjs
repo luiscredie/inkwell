@@ -2,6 +2,9 @@
 // (8 real card images in a 3×3 page, the last pocket empty). Checks the whole flow and that nothing is saved before
 // the final confirmation. Chromium, and WebKit (iPhone) with PW_WEBKIT=1.
 import { test, expect } from '@playwright/test';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 const BASE = new URL('colecao/', process.env.INKWELL_URL || 'http://localhost:8080/index.html').href;
 const ME = '11111111-1111-4111-8111-111111111111';
@@ -52,8 +55,10 @@ async function stillPage(page) {
     const c = document.createElement('canvas'); c.width = 1080; c.height = 1440; const ctx = c.getContext('2d');
     ctx.fillStyle = '#5c4634'; ctx.fillRect(0, 0, c.width, c.height);
     const x0 = 140, y0 = 150, W = 800, H = W / 0.72; ctx.fillStyle = '#1c1d24'; ctx.fillRect(x0, y0, W, H);
-    await Promise.all(files.map(async (f, i) => { if (!f) return; const im = new Image(); im.src = `../lorcana-card-images/images/${f}.jpg`; await im.decode();
+    await Promise.all(files.map(async (f, i) => { if (!f) return; const im = await createImageBitmap(await (await fetch(`../lorcana-card-images/images/${f}.jpg`)).blob());   /* #333: decode()+drawImage drew nothing at times in WebKit under load */
       const cw = W / 3, ch = H / 3; ctx.drawImage(im, x0 + (i % 3) * cw + cw * 0.04, y0 + Math.floor(i / 3) * ch + ch * 0.03, cw * 0.92, ch * 0.94); }));
+    for (let i = 0; i < 9; i++) { if (!files[i]) continue; const cw = W / 3, ch = H / 3, d = ctx.getImageData(Math.round(x0 + (i % 3) * cw + cw * 0.2), Math.round(y0 + Math.floor(i / 3) * ch + ch * 0.2), Math.round(cw * 0.6), Math.round(ch * 0.6)).data;
+      let lo = 255, hi = 0; for (let k = 0; k < d.length; k += 16) { const l = d[k]; if (l < lo) lo = l; if (l > hi) hi = l; } if (hi - lo < 20) throw new Error(`test photo: card ${i + 1} not drawn`); }
     const q = [[x0 + 8, y0 - 6], [x0 + W - 4, y0 + 5], [x0 + W + 6, y0 + H - 3], [x0 - 5, y0 + H + 4]];   // lined up by hand, a little off
     window.__inkwellScanPageFrom(c, q);
   }, PAGE);
@@ -168,10 +173,12 @@ async function hardPage(page) {   // two cards upside down in their pockets, as 
     const c = document.createElement('canvas'); c.width = 1080; c.height = 1440; const ctx = c.getContext('2d');
     ctx.fillStyle = '#5c4634'; ctx.fillRect(0, 0, c.width, c.height);
     const x0 = 140, y0 = 150, W = 800, H = W / 0.72; ctx.fillStyle = '#1c1d24'; ctx.fillRect(x0, y0, W, H);
-    await Promise.all(files.map(async (f, i) => { const [n, fx] = f.split('|'); const im = new Image(); im.src = `../lorcana-card-images/images/${n}.jpg`; await im.decode();
+    await Promise.all(files.map(async (f, i) => { const [n, fx] = f.split('|'); const im = await createImageBitmap(await (await fetch(`../lorcana-card-images/images/${n}.jpg`)).blob());   /* #333: decode()+drawImage drew nothing at times in WebKit under load */
       const cw = W / 3, ch = H / 3, x = x0 + (i % 3) * cw + cw * 0.04, y = y0 + Math.floor(i / 3) * ch + ch * 0.03;
       if (fx === 'flip') { ctx.save(); ctx.translate(x + cw * 0.46, y + ch * 0.47); ctx.rotate(Math.PI); ctx.drawImage(im, -cw * 0.46, -ch * 0.47, cw * 0.92, ch * 0.94); ctx.restore(); }
       else ctx.drawImage(im, x, y, cw * 0.92, ch * 0.94); }));
+    for (let i = 0; i < 9; i++) { if (!files[i]) continue; const cw = W / 3, ch = H / 3, d = ctx.getImageData(Math.round(x0 + (i % 3) * cw + cw * 0.2), Math.round(y0 + Math.floor(i / 3) * ch + ch * 0.2), Math.round(cw * 0.6), Math.round(ch * 0.6)).data;
+      let lo = 255, hi = 0; for (let k = 0; k < d.length; k += 16) { const l = d[k]; if (l < lo) lo = l; if (l > hi) hi = l; } if (hi - lo < 20) throw new Error(`test photo: card ${i + 1} not drawn`); }
     window.__inkwellScanPageFrom(c, [[x0 + 8, y0 - 6], [x0 + W - 4, y0 + 5], [x0 + W + 6, y0 + H - 3], [x0 - 5, y0 + H + 4]]);
   }, HARD);
   const rev = page.getByTestId('page-review');
@@ -250,6 +257,40 @@ test('Escanear página: 4 pockets to settle, tapped on the photo, through to the
   expect(net).toEqual(Object.fromEntries(truth.map((t) => [t, 1])));
 });
 
+// 26/11 — a pocket's search stopped at 12 cards: "Minnie Mouse" has more than 30 and the Enchanted never showed.
+test('Escanear página: pocket search lists every match, art suggestions first, rarity words and numbers', async ({ page }) => {
+  await setup(page);
+  await page.goto(BASE);
+  await page.waitForFunction(() => typeof window.__inkwellFindCards === 'function');
+  const r = await page.evaluate(() => ({
+    minnie: window.__inkwellFindCards('minnie mouse'), ench: window.__inkwellFindCards('minnie encantada'),
+    num: window.__inkwellFindCards('minnie 4/206'), hk: window.__inkwellFindCards('horned king'), none: window.__inkwellFindCards('zzzz'),
+  }));
+  expect(r.minnie.length).toBeGreaterThan(30);
+  expect(r.minnie).toContain('LOR4-206');                                       // Musketeer Champion (Enchanted)
+  expect(r.ench).toEqual(expect.arrayContaining(['LOR4-206', 'LOR13-238']));
+  expect(r.ench.every((id) => ['LOR4-206', 'LOR13-238'].includes(id))).toBe(true);
+  expect(r.num).toEqual(['LOR4-206']);
+  expect(r.hk[0]).toMatch(/^LOR13-/);                                           // newest set first
+  expect(r.none).toEqual([]);
+});
+
+test('Escanear página: the pocket editor shows the count and "Mostrar mais"', async ({ page }) => {
+  test.setTimeout(120000);
+  await setup(page);
+  await openPageMode(page);
+  const rev = await hardPage(page);
+  const ed = await openPk(rev, 8);
+  await ed.getByTestId('pocket-find').click();
+  await ed.getByTestId('pocket-search').fill('minnie mouse');
+  const count = await ed.getByTestId('pocket-search-count').textContent();
+  expect(+count.match(/\d+/)[0]).toBeGreaterThan(30);
+  await expect(ed.locator('#pgFound [data-use]')).toHaveCount(24);
+  await ed.getByTestId('pocket-search-more').click();
+  await expect(ed.locator('#pgFound [data-use]')).toHaveCount(Math.min(48, +count.match(/\d+/)[0]));
+  await expect(ed.getByTestId('pocket-search')).toHaveValue('minnie mouse');
+});
+
 test('Escanear página: the same page twice asks before adding it again; Esc steps back', async ({ page }) => {
   test.setTimeout(120000);
   const calls = await setup(page);
@@ -304,6 +345,29 @@ for (const [w, h] of [[320, 568], [360, 640], [390, 844], [430, 932]]) {
   });
 }
 
+// Conselho 26/11 — the collector number on the whole page: a clear number naming another card is only a suggestion (the
+// person confirms), never an automatic answer; a reprint is not settled by a number that names a card outside its printings.
+test('Escanear página: a number naming another card only suggests it; reprints are not settled by it', async ({ page }) => {
+  test.setTimeout(120000);
+  await setup(page);
+  await page.addInitScript(() => { window.INKWELL_SCAN_OCR = async () => '100/204 · EN · 7'; });   // LOR7-100, not on this page
+  await openPageMode(page);
+  await hardPage(page);
+  await expect.poll(() => page.evaluate(() => { const s = window.__inkwellScanPageState(); return s && !s.busy && !document.querySelector('[data-testid=page-reading]'); }), { timeout: 60000 }).toBe(true);
+  const st = await page.evaluate(() => window.__inkwellScanPageState());
+  expect(st.pockets.filter((p) => p && p.status === 'ok' && p.id === 'LOR7-100')).toEqual([]);          // never settled by the number alone
+  expect(st.pockets.some((p) => p && p.status === 'check' && p.id === 'LOR7-100')).toBe(true);            // offered first, for the person
+  expect(st.pockets.filter((p) => p && p.status === 'choose' && p.id === 'LOR7-100')).toEqual([]);        // a reprint keeps its printings
+});
+
+test('Escanear página: the glare filter is off unless asked for (?reflexo=1)', async ({ page }) => {
+  await setup(page);
+  await page.goto(BASE);
+  expect(await page.evaluate(() => window.__inkwellScanExp())).toEqual({ detrend: true, glare: false });
+  await page.goto(BASE + '?reflexo=1');
+  expect(await page.evaluate(() => window.__inkwellScanExp().glare)).toBe(true);
+});
+
 test('Escanear página: recognising a page does not block the screen (Web Worker)', async ({ page }) => {
   test.skip(STILL(page), 'long-task timing is measured in Chromium (WebKit has no Long Tasks API)');
   test.setTimeout(120000);
@@ -328,6 +392,10 @@ test('Escanear página: recognising a page does not block the screen (Web Worker
 test('Escanear página: a swipe that starts on the photo scrolls; a tap opens the card; corners only in adjust mode', async ({ page, browserName }) => {
   test.skip(browserName !== 'chromium', 'touch input via CDP');
   test.setTimeout(120000);
+  // this test is about gestures; the number reader (Tesseract, downloaded and started from a CDN on the main thread)
+  // is fixed here: with it loading during the tap, 2 of 150 runs lost the tap, 0 of 120 without it (25/11). The reader
+  // during taps is covered by the #334 tests.
+  await page.addInitScript(() => { window.INKWELL_SCAN_OCR = async () => ''; });
   await page.setViewportSize({ width: 360, height: 640 });
   await setup(page);
   const cdp = await page.context().newCDPSession(page);
@@ -381,7 +449,7 @@ test('Escanear página: the same answers with 1 Worker or 3 in parallel', async 
       const c = document.createElement('canvas'); c.width = 1080; c.height = 1440; const ctx = c.getContext('2d', { willReadFrequently: true });
       ctx.fillStyle = '#5c4634'; ctx.fillRect(0, 0, c.width, c.height);
       const x0 = 140, y0 = 150, W = 800, H = W / 0.72; ctx.fillStyle = '#1c1d24'; ctx.fillRect(x0, y0, W, H);
-      await Promise.all(files.map(async (f, i) => { const [n, fx] = f.split('|'); const im = new Image(); im.src = `../lorcana-card-images/images/${n}.jpg`; await im.decode();
+      await Promise.all(files.map(async (f, i) => { const [n, fx] = f.split('|'); const im = await createImageBitmap(await (await fetch(`../lorcana-card-images/images/${n}.jpg`)).blob());   /* #333: decode()+drawImage drew nothing at times in WebKit under load */
         const cw = W / 3, ch = H / 3, x = x0 + (i % 3) * cw + cw * 0.04, y = y0 + Math.floor(i / 3) * ch + ch * 0.03;
         if (fx === 'flip') { ctx.save(); ctx.translate(x + cw * 0.46, y + ch * 0.47); ctx.rotate(Math.PI); ctx.drawImage(im, -cw * 0.46, -ch * 0.47, cw * 0.92, ch * 0.94); ctx.restore(); } else ctx.drawImage(im, x, y, cw * 0.92, ch * 0.94); }));
       const a = await window.__inkwellScanPage(ctx.getImageData(0, 0, c.width, c.height), [[x0 + 8, y0 - 6], [x0 + W - 4, y0 + 5], [x0 + W + 6, y0 + H - 3], [x0 - 5, y0 + H + 4]]);
@@ -420,6 +488,204 @@ test('Escanear página: the screen is usable while the numbers are read in the b
   expect(await rev.locator('.items').evaluate((e) => e.scrollTop)).toBeGreaterThan(250);
   const t = await page.evaluate(() => window.__inkwellScanPageTiming());
   expect(t.ready).toBeLessThan(t.ready + t.ocr);                                    // ready came before the numbers were read
-  expect(t.ocrN).toBe(2);
+  expect(t.ocrN).toBe(4);                                                          // the 2 reprints and the 2 pockets the art didn't settle
   expect(deltas(calls)).toEqual([]);
+});
+
+// #334 — a tap must not be lost when the background reading of collector numbers settles a pocket. The reading is held
+// behind a gate: the finger goes down, the reading settles pocket 6 (Elsa, a reprint), then the finger comes up.
+async function gatedReading(page) {
+  await page.addInitScript(() => {
+    window.__ocrGate = new Promise((ok) => { window.__ocrOpen = ok; });
+    window.INKWELL_SCAN_OCR = async () => { await window.__ocrGate; return '125/204 EN 11'; };   // Elsa, Concerned Sister: LOR11-125
+  });
+}
+const settledByReading = (page) => expect.poll(() => page.evaluate(() => window.__inkwellScanPageState().pockets[5].status), { timeout: 20000 }).toBe('ok');
+for (const target of ['photo', 'grid', 'footer']) {
+  test(`#334: a ${target} tap made while the reading settles a pocket is not lost (mouse)`, async ({ page }) => {
+    test.setTimeout(120000);
+    await setup(page); await gatedReading(page);
+    await openPageMode(page);
+    const rev = await hardPage(page);
+    await expect(rev.getByTestId('page-reading')).toBeVisible();
+    expect((await page.evaluate(() => window.__inkwellScanPageState())).pockets[5].status).toBe('choose');
+    const el = target === 'photo' ? rev.locator('#pgPhoto [data-pk="0"] polygon') : target === 'grid' ? rev.locator('[data-pocket="1"]') : rev.getByTestId('page-add');
+    await el.scrollIntoViewIfNeeded();
+    const b = await el.boundingBox();
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+    await page.mouse.down();
+    await page.evaluate(() => window.__ocrOpen());                                  // the reading lands while the finger is down
+    await settledByReading(page);
+    await page.waitForTimeout(150);
+    await page.mouse.up();
+    const ed = rev.getByTestId('pocket-edit');
+    await expect(ed).toBeVisible({ timeout: 3000 });
+    await expect(ed).toHaveAttribute('data-edit-pocket', target === 'photo' ? '0' : target === 'grid' ? '1' : '6');   // footer: first pending after pocket 6 settled
+    await expect(rev.getByTestId('page-add')).toHaveText('Resolver 3 posições');
+  });
+}
+
+test('#334: a real touch on the photo while the reading settles a pocket opens it (CDP touch)', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'touch input via CDP');
+  test.setTimeout(120000);
+  await page.setViewportSize({ width: 360, height: 640 });
+  await setup(page); await gatedReading(page);
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+  await openPageMode(page);
+  const rev = await hardPage(page);
+  const pk = rev.locator('#pgPhoto [data-pk="4"] polygon'); await pk.scrollIntoViewIfNeeded();
+  const b = await pk.boundingBox(), tp = [{ x: b.x + b.width / 2, y: b.y + b.height / 2 }];
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: tp });
+  await page.evaluate(() => window.__ocrOpen());
+  await settledByReading(page);
+  await page.waitForTimeout(150);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await expect(rev.getByTestId('pocket-edit')).toHaveAttribute('data-edit-pocket', '4', { timeout: 3000 });
+});
+
+test('#334: the reading never changes the pocket the person has open; it waits for the editor to close', async ({ page }) => {
+  test.setTimeout(120000);
+  await setup(page); await gatedReading(page);
+  await openPageMode(page);
+  const rev = await hardPage(page);
+  const ed = await openPk(rev, 5);
+  await ed.getByTestId('pocket-find').click();
+  await ed.getByTestId('pocket-search').fill('elsa');
+  await page.evaluate(() => window.__ocrOpen());
+  await expect(rev.getByTestId('page-reading')).toHaveCount(0, { timeout: 20000 });
+  await expect(ed).toHaveAttribute('data-edit-pocket', '5');                        // still the person's
+  await expect(ed.getByTestId('pocket-search')).toHaveValue('elsa');
+  await expect(ed.getByTestId('pocket-search')).toBeFocused();
+  expect((await page.evaluate(() => window.__inkwellScanPageState())).pockets[5].status).toBe('choose');
+  await rev.locator('#pgsClose').click();                                          // closed: the reading applies now
+  await settledByReading(page);
+  await expect(rev.locator('#pgPhoto [data-pk="5"]')).toHaveAttribute('data-st', 'ok');
+});
+
+test('#334: when the reading settles the last pending pocket, the screen updates in place and both footer actions work', async ({ page }) => {
+  test.setTimeout(120000);
+  const calls = await setup(page); await gatedReading(page);
+  await openPageMode(page);
+  const rev = await hardPage(page);
+  for (const i of [6, 7, 8]) { const ed = await openPk(rev, i); await ed.getByTestId('pocket-skip').click(); }
+  await closeSheet(rev);
+  await expect(rev.getByTestId('page-add')).toHaveText('Resolver 1 posição');
+  await page.evaluate(() => { for (const e of document.querySelectorAll('#pageReview [data-pocket], #pageReview [data-pk], #pgAdd')) e.__same = true; });
+  await page.evaluate(() => window.__ocrOpen());
+  await settledByReading(page);
+  await expect(rev.getByTestId('page-add')).toHaveText('Continuar para revisão (6 cartas)');
+  await expect(rev.locator('#pgPhoto [data-pk="5"] text')).toHaveText('✓');
+  await expect(rev.locator('[data-pocket="5"] .chip')).toHaveText(/Reconhecida|Confirmada|Certa/);
+  await expect(rev.getByTestId('page-progress')).toHaveText('Tudo resolvido');
+  expect(await page.evaluate(() => [...document.querySelectorAll('#pageReview [data-pocket], #pageReview [data-pk], #pgAdd')].every((e) => e.__same))).toBe(true);   // nothing replaced
+  await rev.getByTestId('page-add-more').click();                                  // inserted in place, and it works
+  await expect(rev).toBeHidden();
+  expect(deltas(calls)).toEqual([]);
+});
+
+// ---- Captura por fotografia (26/11): off by default (Conselho), ?captura=foto to use it, ?medicao=a3 to measure it ----
+// A camera stand-in: takePhoto returns the video frame with twice the detail, a wider 4:3 view and a small off-centre zoom
+// (a lens switch), unless told to fail.
+async function fakePhoto(page, { fail = false } = {}) {
+  await page.addInitScript((fail) => {
+    window.__photoCalls = 0;
+    window.ImageCapture = class {
+      async getPhotoCapabilities() { return { fillLightMode: ['auto', 'off', 'flash'] }; }
+      async takePhoto(opts) {
+        window.__photoCalls++; window.__photoOpts = opts; if (fail) throw new Error('not here');
+        const v = document.getElementById('scanVideo'), s = 2.1, ox = 140, oy = 260, c = document.createElement('canvas');
+        c.width = Math.round(v.videoWidth * 2.3); c.height = Math.round(v.videoHeight * s + oy + 200);
+        const x = c.getContext('2d'); x.fillStyle = '#4a3a2c'; x.fillRect(0, 0, c.width, c.height); x.drawImage(v, ox, oy, v.videoWidth * s, v.videoHeight * s);
+        return new Promise((ok) => c.toBlob(ok, 'image/jpeg', 0.92));
+      }
+    };
+  }, fail);
+}
+async function shootPageWith(page, query) {
+  await page.goto(BASE + query);
+  await page.getByRole('button', { name: 'Escanear' }).click();
+  await page.getByTestId('scan-mode').getByRole('button', { name: 'Página 3×3' }).click();
+  await page.waitForFunction(() => document.getElementById('scanVideo')?.videoWidth > 0); await page.waitForTimeout(400);
+  return pagePhoto(page);
+}
+const eightRight = async (page) => { const st = await page.evaluate(() => window.__inkwellScanPageState());
+  expect(st.pockets.slice(0, 8).map((p, i) => p.id === ID(PAGE[i]))).toEqual(Array(8).fill(true));
+  expect(st.pockets.filter((p, i) => p.status === 'ok' && p.id !== ID(PAGE[i]))).toEqual([]); };
+
+test('Escanear página: by default the video frame, as always: no photo is taken even where the browser could', async ({ page }) => {
+  test.skip(STILL(page), 'needs the fake camera');
+  test.setTimeout(120000);
+  await setup(page); await fakePhoto(page);
+  await shootPageWith(page, '');
+  expect(await page.evaluate(() => window.__photoCalls)).toBe(0);
+  const t = await page.evaluate(() => window.__inkwellScanPageTiming());
+  expect(t.still).toBeUndefined();
+  await eightRight(page);
+  await expect(page.getByTestId('a3-bar')).toHaveCount(0);
+});
+
+test('Escanear página: ?captura=foto takes a real photo, larger and framed differently, lines it up and reads it', async ({ page }) => {
+  test.skip(STILL(page), 'needs the fake camera');
+  test.setTimeout(120000);
+  await setup(page); await fakePhoto(page);
+  await shootPageWith(page, '?captura=foto');
+  const t = await page.evaluate(() => window.__inkwellScanPageTiming());
+  expect(t.still).toBe(true); expect(t.align).toBeGreaterThan(0.9);
+  expect(await page.evaluate(() => window.__photoOpts)).toEqual({ fillLightMode: 'off' });   // no flash on the sleeves
+  await eightRight(page);
+});
+
+test('Escanear página: ?captura=foto but takePhoto fails: the video frame, and the reason is kept', async ({ page }) => {
+  test.skip(STILL(page), 'needs the fake camera');
+  test.setTimeout(120000);
+  await setup(page); await fakePhoto(page, { fail: true });
+  await shootPageWith(page, '?captura=foto');
+  const t = await page.evaluate(() => window.__inkwellScanPageTiming());
+  expect(t.still).toBe(false); expect(t.fallback).toMatch(/^takePhoto: not here/);
+  await eightRight(page);
+});
+
+// A3 (docs/scanner-2.0-avaliacao.md, comparação vídeo × foto): each shot keeps the video frame and the photo of the same
+// instant; both are read after the person's page is ready; one JSON is offered for download. Nothing of it leaves the phone:
+// no request carries it (the page's own requests are watched), nothing is stored, no new analytics event.
+test('Escanear página: A3 keeps video and photo, reads both, offers one local file, and sends nothing', async ({ page }) => {
+  test.skip(STILL(page), 'needs the fake camera');
+  test.setTimeout(180000);
+  await setup(page); await fakePhoto(page);
+  // every request from the shot on (the page's own loading before it is not the measurement)
+  const sent = []; let watching = false;
+  page.on('request', (r) => { if (!watching || /^(blob|data):/.test(r.url())) return; let body = ''; try { body = r.postData() || ''; } catch { body = '[binary]'; }
+    sent.push({ m: r.method(), u: r.url().slice(0, 140), n: body.length, img: /base64|image\/jpeg|a3-p\d|pictures/.test(body + r.url()) }); });
+  await page.addInitScript(() => { window.__tracked = []; const t = () => window.INKWELL_TRACK; Object.defineProperty(window, 'INKWELL_TRACK', { configurable: true, get: () => (n) => window.__tracked.push(n), set: () => {} }); });
+  await page.goto(BASE + '?medicao=a3');
+  await page.getByRole('button', { name: 'Escanear' }).click();
+  await page.getByTestId('scan-mode').getByRole('button', { name: 'Página 3×3' }).click();
+  await page.waitForFunction(() => document.getElementById('scanVideo')?.videoWidth > 0); await page.waitForTimeout(1500);
+  watching = true;
+  const rev = await pagePhoto(page);
+  await eightRight(page);                                                        // the person's page, as without the measurement
+  expect((await page.evaluate(() => window.__inkwellScanPageTiming())).still).toBe(false);   // photo off by default: the page used the video
+  const dl = page.getByTestId('a3-download');
+  await expect(dl).toBeVisible({ timeout: 120000 });
+  await expect(page.getByTestId('a3-bar')).toContainText('fica só neste aparelho');
+  const rec = await page.evaluate(() => { const r = window.__inkwellA3Last(); return { ...r, pictures: Object.fromEntries(Object.entries(r.pictures).map(([k, v]) => [k, v.slice(0, 23)])) }; });
+  expect(rec.a3).toBe(2); expect(rec.used).toBe('video'); expect(rec.fallback).toBe('foto desligada (padrão)'); expect(rec.aligned).toBe(true);
+  expect(rec.modes.video.px).toBe('1080x1920'); expect(rec.modes.foto.px).toBe('2484x4492'); expect(rec.modes.foto.kept).toBe('1659x3000');
+  for (const k of ['video', 'foto']) { expect(rec.modes[k].pockets).toHaveLength(9); expect(rec.modes[k].engineMs).toBeGreaterThan(0); expect(rec.pictures[k]).toBe('data:image/jpeg;base64,'); }
+  expect(rec.times.stillMs).toBeGreaterThanOrEqual(0); expect(rec.times.alignMs).toBeGreaterThanOrEqual(0);
+  await expect(rev.locator('#pgPhoto [data-pk]')).toHaveCount(9);                // the page is still there and usable
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'a3-'));
+  const [d] = await Promise.all([page.waitForEvent('download'), dl.click()]);
+  const file = path.join(dir, d.suggestedFilename()); await d.saveAs(file);
+  expect(d.suggestedFilename()).toBe(`${rec.name}.json`);
+  const saved = JSON.parse(fs.readFileSync(file, 'utf8'));
+  expect(Object.keys(saved.pictures)).toEqual(['video', 'foto']);
+  fs.rmSync(dir, { recursive: true, force: true });
+  // nothing left the phone, nothing was kept on it
+  expect(sent.filter((x) => x.img || x.n > 2000)).toEqual([]);                   // none carries a picture or the measurement
+  expect(sent.filter((x) => x.m !== 'GET')).toEqual([]);                          // nothing is sent anywhere
+  expect(await page.evaluate(() => window.__tracked)).toEqual(['scan_open', 'scan_page_mode', 'scan_page_shot']);   // the events as without A3 (names only)
+  const kept = await page.evaluate(() => JSON.stringify({ ...localStorage }) + JSON.stringify({ ...sessionStorage }));
+  expect(kept).not.toMatch(/base64|a3-p\d|pictures/);
 });

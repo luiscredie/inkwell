@@ -11,3 +11,10 @@ node_modules/
 site/data/*.before-*.json
 *-access-headers.txt
 .http-5xx.jsonl
+
+# A3 measurements (Escanear página ?medicao=a3): pictures of a person's own binder, never committed.
+# Keep them outside the repository (docs/scanner-2.0-avaliacao.md); these names are ignored in case they land here.
+a3-p[0-9]*.json
+a3-p[0-9]*-foto.jpg
+a3-p[0-9]*-video.jpg
+a3-relatorio*.json

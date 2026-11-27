@@ -16,6 +16,7 @@ Three markers are filled in at build time, so shared code lives in one place:
   /*@COLLIMPORT_JS@*/ src/site/collimport.js Coleção: import a collection exported by another app
   /*@PAGESCAN_JS@*/ src/site/pagescan.js Coleção: Escanear página (Scanner 2.0) geometry and pocket rules
   /*@SCANENGINE_JS@*/ src/site/scanengine.js Coleção: card-recognition engine (page and Worker)
+  /*@STILLCAPTURE_JS@*/ src/site/stillcapture.js Coleção: Escanear página with a real photo (lines it up with the video frame)
   /*@CARDLANG_JS@*/ src/site/cardlang.js     Coleção: the printing language of each copy (supabase/card_langs.sql)
   /*@CARD_INDEX@*/  compact card index from site/data/cards.json (re-run after a catalog update)
   /*@APP_STATIC:name@*/  a pure static method copied verbatim from the Inkwell app (legacy/site/index.html — the retired app, kept as source, not published), so both give the same answer
@@ -113,11 +114,12 @@ def render(name: str, catalog: dict) -> str:
     html = html.replace("/*@COLLIMPORT_JS@*/", (SRC / "collimport.js").read_text(encoding="utf-8"))
     html = html.replace("/*@PAGESCAN_JS@*/", (SRC / "pagescan.js").read_text(encoding="utf-8"))
     html = html.replace("/*@SCANENGINE_JS@*/", (SRC / "scanengine.js").read_text(encoding="utf-8"))
+    html = html.replace("/*@STILLCAPTURE_JS@*/", (SRC / "stillcapture.js").read_text(encoding="utf-8"))
     html = html.replace("/*@CARDLANG_JS@*/", (SRC / "cardlang.js").read_text(encoding="utf-8"))
     html = html.replace("/*@DECKVIEW_JS@*/", (SRC / "deckview.js").read_text(encoding="utf-8"))
     if PAGES[name]:
         html = html.replace("/*@CARD_INDEX@*/", json.dumps(PAGES[name](catalog), ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/"))
-    for marker in ("/*@CLOUD_JS@*/", "/*@SHELL_JS@*/", "/*@PICKER_JS@*/", "/*@AIPROMPT_JS@*/", "/*@COLLIMPORT_JS@*/", "/*@PAGESCAN_JS@*/", "/*@SCANENGINE_JS@*/", "/*@CARDLANG_JS@*/", "/*@DECKVIEW_JS@*/", "/*@CARD_INDEX@*/"):
+    for marker in ("/*@CLOUD_JS@*/", "/*@SHELL_JS@*/", "/*@PICKER_JS@*/", "/*@AIPROMPT_JS@*/", "/*@COLLIMPORT_JS@*/", "/*@PAGESCAN_JS@*/", "/*@SCANENGINE_JS@*/", "/*@STILLCAPTURE_JS@*/", "/*@CARDLANG_JS@*/", "/*@DECKVIEW_JS@*/", "/*@CARD_INDEX@*/"):
         if marker in html:
             raise SystemExit(f"{name}: marker {marker} left unfilled")
     return site_html.hide_img_from_preloader(html)

@@ -30,6 +30,8 @@ jobs:
         run: node tools/handlab.test.mjs
       - name: Scanner 2.0 page geometry (pagescan)
         run: node tools/pagescan.test.mjs
+      - name: Escanear página with a real photo (stillcapture)
+        run: node tools/stillcapture.test.mjs
       - name: Scanner 2.0, A3 evaluation report
         run: node --test tools/pagescan-report.test.mjs
       - name: Scanner 2.0, A3 video × photo comparison

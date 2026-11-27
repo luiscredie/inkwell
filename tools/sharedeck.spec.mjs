@@ -231,7 +231,9 @@ test('links and history: another deck in the address, no deck, back, reload', as
   // keeps no history entry for that same-page change (the address stays #deck-d-outro) — either way they must match.
   if (browserName === 'chromium') await expect(page).toHaveURL(/#deck-deck-ov$/);
   await expect(page.getByTestId('sd-name')).toHaveText(page.url().endsWith('#deck-d-outro') ? 'OUTRO-DECK-MARCADOR' : 'Âmbar Esmeralda');
-  if (!page.url().endsWith('#deck-deck-ov')) { await page.goto(deckUrl()); await expect(page.getByTestId('sd-name')).toHaveText('Âmbar Esmeralda'); }
+  // a same-document navigation (only the # changes) right after history moves: WebKit sends no "load" for it, and goto
+  // waited for one until the 30 s limit (#286, 2 of 20 runs). Wait for the address, then for the content.
+  if (!page.url().endsWith('#deck-deck-ov')) { await page.goto(deckUrl(), { waitUntil: 'commit' }); await expect(page.getByTestId('sd-name')).toHaveText('Âmbar Esmeralda'); }
   await page.reload();
   await expect(page.getByTestId('sd-name')).toHaveText('Âmbar Esmeralda');
   await expect(page.getByTestId('profile')).toHaveCount(0);
