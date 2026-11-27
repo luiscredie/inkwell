@@ -8,28 +8,97 @@ on:
     workflows: ["Inkwell release checks"]
     types: [completed]
     branches: [main]
+  # Deploy manual (quando o automático falha por problema do GitHub). Só a partir da main; publica exatamente o
+  # commit informado, e só se uma execução oficial de "Inkwell release checks" (push na main) desse commit concluiu
+  # com sucesso, com js, python, smoke e journeys-webkit. Um commit que não é o topo da main é um rollback: exige
+  # autorização escrita, o SHA redigitado e a aprovação de outra pessoa no ambiente protegido "rollback".
+  # Regras em tools/verify-deploy-sha.sh e tools/verify-rollback-approval.sh.
   workflow_dispatch:
+    inputs:
+      sha:
+        description: "Commit a publicar (SHA completo). Deve ser o topo da main, salvo rollback autorizado."
+        required: true
+      rollback_authorization:
+        description: "Só para rollback: quem autorizou e quando (ex.: Conselho, 25/11, mensagem X)"
+        required: false
+        default: ""
+      rollback_confirm:
+        description: "Só para rollback: redigite o SHA completo"
+        required: false
+        default: ""
 
 permissions:
   contents: read
   pages: write
   id-token: write
+  checks: read
+  actions: read
 
 concurrency:
   group: pages
   cancel-in-progress: true
 
 jobs:
-  # Montagem e publicacao em jobs separados (o modelo oficial do GitHub Pages).
-  # Num job so, o deploy-pages consultava o artefato ~0,5 s depois do upload e,
-  # de forma intermitente, o GitHub ainda respondia "Found 0 artifact(s)"
-  # (725f3f8 em 25/11; e47eb89 em 26/11, tres tentativas). Separado, o artefato
-  # ja esta registrado quando o deploy comeca, e "Re-run failed jobs" refaz so
-  # o deploy, com o mesmo artefato, sem montar o site de novo.
+  # Manual run: which commit, on main, approved by the official release run; is it a rollback?
+  guard:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      rollback: ${{ steps.verify.outputs.rollback }}
+    steps:
+      # the guard scripts come from main's own tree, never from the commit being published
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+          sparse-checkout: |
+            tools/verify-deploy-sha.sh
+            tools/verify-rollback-approval.sh
+          sparse-checkout-cone-mode: false
+      - name: Verify the commit asked for
+        id: verify
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          REF: ${{ github.ref }}
+          SHA: ${{ inputs.sha }}
+          ROLLBACK_AUTH: ${{ inputs.rollback_authorization }}
+          ROLLBACK_CONFIRM: ${{ inputs.rollback_confirm }}
+        run: bash tools/verify-deploy-sha.sh
+
+  # A rollback waits here for an independent approval: the environment "rollback" must require reviewers with
+  # self-review blocked (Settings → Environments). The script also checks that the approver is not who started the run.
+  rollback-approval:
+    needs: guard
+    if: needs.guard.outputs.rollback == 'true'
+    environment: rollback
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+          sparse-checkout: tools/verify-rollback-approval.sh
+          sparse-checkout-cone-mode: false
+      - name: Verify the approval was independent
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          ACTOR: ${{ github.triggering_actor }}
+        run: bash tools/verify-rollback-approval.sh
+
+  # Montagem e publicacao em jobs separados (#348): num job so, o deploy-pages consultava o artefato ~0,5 s
+  # depois do upload e o GitHub, de forma intermitente, respondia "Found 0 artifact(s)" (e47eb89, 26/11). Separado,
+  # o artefato ja esta registrado quando o deploy comeca, e "Re-run failed jobs" refaz so o deploy, com o mesmo artefato.
   build:
+    needs: [guard, rollback-approval]
+    # automatic: the release checks of that commit passed. Manual: the guard passed and, for a rollback, the
+    # independent approval too. Never when anything before it failed or was cancelled.
     if: >-
-      github.event_name == 'workflow_dispatch' ||
-      github.event.workflow_run.conclusion == 'success'
+      !cancelled() && (
+        (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && needs.guard.result == 'success' &&
+          (needs.guard.outputs.rollback != 'true' || needs.rollback-approval.result == 'success'))
+      )
     runs-on: ubuntu-latest
     steps:
       - name: Check out revision
@@ -37,7 +106,7 @@ jobs:
         with:
           # Sem isto, o workflow_run publicaria o HEAD de main no momento do
           # deploy — que pode ja ser um commit posterior, ainda nao testado.
-          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+          ref: ${{ github.event.workflow_run.head_sha || inputs.sha }}
 
       - uses: actions/setup-python@v7
         with:
@@ -74,8 +143,10 @@ jobs:
         with:
           path: _site
 
+  # only after the build of the approved commit (and, for a rollback, the independent approval) succeeded
   deploy:
     needs: build
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
