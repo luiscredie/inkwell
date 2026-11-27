@@ -2429,6 +2429,24 @@ self.onmessage = async (e) => {
     return P(`Ficam de fora: ${[part(e, "1 posição vazia", e.length + " posições vazias"), part(k, "1 deixada de fora", k.length + " deixadas de fora")].filter(Boolean).join(" · ")}. Se houver carta em alguma, toque nela para buscar.`,
       `Left out: ${[part(e, "1 empty pocket", e.length + " empty pockets"), part(k, "1 left out", k.length + " left out")].filter(Boolean).join(" · ")}. If a card is there, tap the pocket to find it.`);
   }
+  // Search in a pocket's editor. Every card that matches (it used to stop at 12: "Minnie Mouse" has 38 and the Enchanted
+  // ones never showed, 26/11), the cards the art pointed to first, then names that start with the words, newest set first.
+  // Also understands "encantada"/"enchanted", "épica", "icônica" and a collector number ("206", or "4/206" for set 4).
+  const FIND_PAGE = 24;
+  const RAR_TAG = { E: ["Encantada", "Enchanted"], EP: ["Épica", "Epic"], I: ["Icônica", "Iconic"], P: ["Promo", "Promo"] };
+  const RAR_WORDS = { encantada: "E", encantadas: "E", enchanted: "E", epica: "EP", epic: "EP", iconica: "I", iconic: "I", promo: "P" };
+  function findCards(q, p) {
+    const words = q.split(" ").filter(Boolean), rar = new Set(), nums = [], text = [];
+    for (const w of words) { if (RAR_WORDS[w]) rar.add(RAR_WORDS[w]); else if (/^\d{1,3}$/.test(w)) nums.push(w); else text.push(w); }
+    const fromArt = new Map([p?.id, ...(p?.group || []), ...(p?.top || []).map((t) => t.id)].filter(Boolean).map((id, k) => [id, k]));
+    const setNum = (c) => (/^LOR(\d+)$/.exec(c.set) || [])[1];
+    const hits = CARDS.filter((c) => text.every((w) => c.k.includes(w)) && (!rar.size || rar.has(c.rarity))
+      && nums.every((n) => String(parseInt(c.num, 10)) === String(+n) || setNum(c) === String(+n)));
+    const starts = (c) => (text.length && norm(c.name).startsWith(text.join(" ")) ? 0 : 1);
+    const rank = (c) => { const m = /^LOR(\d+)$/.exec(c.set); return m ? +m[1] : 0; };
+    return hits.sort((a, b) => (fromArt.get(a.id) ?? 99) - (fromArt.get(b.id) ?? 99) || starts(a) - starts(b) || rank(b) - rank(a) || (parseInt(a.num, 10) || 0) - (parseInt(b.num, 10) || 0));
+  }
+  window.__inkwellFindCards = (q) => findCards(norm(q), null).map((c) => c.id);   // tests
   function pocketSheet(pg, i, pendList) {
     const p = pg.pockets[i], N = pg.pockets.length, crop = pocketCrop(pg, i, 240), c = p.id && !p.skip ? BY.get(p.id) : null;
     const isPend = PS().pending(p), k = pendList.indexOf(i);
@@ -2485,13 +2503,18 @@ self.onmessage = async (e) => {
     ed.querySelectorAll(".pgs-alts [data-use]").forEach((b) => b.onclick = () => use(b.dataset.use));
     const find = $("pgFind"), found = $("pgFound");
     if (find) {
-      const search = () => {
-        const q = norm(find.value); pg.find = find.value;
-        const hits = q.length < 2 ? [] : CARDS.filter((c) => q.split(" ").every((w) => c.k.includes(w))).slice(0, 12);
-        found.innerHTML = hits.map((c) => `<button type="button" data-use="${esc(c.id)}">${thumb(c, "", false)}</span><span>${esc(split(c.name)[0])}</span><span class="muted">${esc(setName(c.set))} · nº ${esc(c.num)}</span></button>`).join("") || (q.length >= 2 ? `<p class="small muted">${esc(P("Nada encontrado.", "Nothing found."))}</p>` : "");
+      let shown = FIND_PAGE;
+      const search = (more) => {
+        const q = norm(find.value); pg.find = find.value; if (!more) shown = FIND_PAGE;
+        const hits = q.length < 2 ? [] : findCards(q, p), list = hits.slice(0, shown);
+        found.innerHTML = list.map((c) => `<button type="button" data-use="${esc(c.id)}">${thumb(c, "", false)}</span><span>${esc(split(c.name)[0])}</span><span class="muted">${esc(split(c.name)[1] || "")}</span><span class="muted">${esc(setName(c.set))} · nº ${esc(c.num)}${RAR_TAG[c.rarity] ? " · " + esc(P(...RAR_TAG[c.rarity])) : ""}</span></button>`).join("")
+          + (hits.length > shown ? `<button type="button" class="btn small" id="pgFindMore" data-testid="pocket-search-more">${esc(P(`Mostrar mais (${hits.length - shown})`, `Show more (${hits.length - shown})`))}</button>` : "")
+          || (q.length >= 2 ? `<p class="small muted">${esc(P("Nada encontrado.", "Nothing found."))}</p>` : "");
+        if (hits.length) found.insertAdjacentHTML("afterbegin", `<p class="small muted" data-testid="pocket-search-count" style="grid-column:1/-1;margin:0">${esc(P(hits.length === 1 ? "1 carta" : `${hits.length} cartas`, hits.length === 1 ? "1 card" : `${hits.length} cards`))}</p>`);
         found.querySelectorAll("[data-use]").forEach((b) => b.onclick = () => use(b.dataset.use));
+        $("pgFindMore")?.addEventListener("click", () => { shown += FIND_PAGE; search(true); });
       };
-      find.oninput = search; if (find.value) search();
+      find.oninput = () => search(); if (find.value) search();
     }
     $("pgFoil")?.addEventListener("change", (e) => { p.foil = e.target.checked; drawPage(); });
     ed.querySelectorAll("[data-pq]").forEach((b) => b.onclick = () => {
