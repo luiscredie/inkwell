@@ -53,7 +53,8 @@ test('paired: discordant pockets, McNemar, false positives and wrong suggestions
   assert.equal(p.b_only_identified, 0);
   assert.equal(p.false_positive_a_only, 2);   // H read as Z by the photo, on both pages
   assert.equal(p.wrong_suggestion_b_only, 2);
-  assert.equal(p.gain, false);                // more identified, but more false positives (and too few to be significant)
+  assert.equal(p.meets_gain_rule, false);     // more identified, but more false positives (and too few to be significant)
+  assert.equal(p.gain, null); assert.equal(p.judgement, 'não avaliável');   // and 2 synthetic pages are no set to judge
 });
 
 test('mcnemar: exact two-sided values', () => {
@@ -67,7 +68,10 @@ test('gain: only with more identified, p < 0.05 and no more false positives', ()
   const Vw = [P('check', 'X'), P('check', 'X'), P('check', 'X'), P('check', 'X'), P('check', 'X'), P('check', 'X'), P('check', 'X'), P('check', 'X'), P('empty', null)];
   const Fr = CARDS.map((c) => (c ? P('ok', c) : P('empty', null)));
   const r = compare([rec('a3-p01-x', Vw, Fr), rec('a3-p02-x', Vw, Fr)], truth), p = r.paired.find((x) => x.a === 'foto');
-  assert.equal(p.a_only_identified, 16); assert.equal(p.p, 0); assert.equal(p.gain, true);
+  assert.equal(p.a_only_identified, 16); assert.equal(p.p, 0); assert.equal(p.meets_gain_rule, true);
+  // the numbers meet the rule, but 2 synthetic pages are not the set of sections 1 and 6.1: no gain is declared
+  assert.equal(r.evaluable, false); assert.equal(p.gain, null); assert.equal(p.judgement, 'não avaliável');
+  assert.doesNotMatch(markdown(r), /Evidência de ganho/); assert.match(markdown(r), /\*\*Não avaliável:\*\*/);
 });
 
 test('fallback, missing gabarito, the glare runs, and a site without the numbers step', () => {
@@ -87,7 +91,7 @@ test('fallback, missing gabarito, the glare runs, and a site without the numbers
 test('markdown: synthetic sets are said to be synthetic; no gain claimed without evidence', () => {
   const md = markdown(compare([rec('a3-p01-x', V, F)], truth));
   assert.match(md, /sintéticas \(não valem como resultado do produto\)/);
-  assert.match(md, /Sem evidência de ganho/);
+  assert.match(md, /Não avaliável/);
   assert.doesNotMatch(md, /Evidência de ganho\b(?! )/);
 });
 
@@ -101,4 +105,43 @@ test('CLI: extract the pictures, report from truth.json', () => {
   assert.match(md, /2 páginas/);
   assert.equal(JSON.parse(fs.readFileSync(path.join(dir, 'a3-relatorio.json'), 'utf8')).modes.foto.false_positive, 2);
   fs.rmSync(dir, { recursive: true, force: true });
+});
+
+
+// the set of sections 1 and 6.1, as tools/pagescan-report.test.mjs builds it: 3 devices × 10 pages, with the site's records
+const IOS184 = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Mobile/15E148 Safari/604.1';
+const IOS17 = IOS184.replace('18_4', '17_5').replace('18.4', '17.5');
+const ANDROID = (m) => `Mozilla/5.0 (Linux; Android 14; ${m}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Mobile Safari/537.36`;
+function fullSet(iosUA = IOS184) {
+  const pages = [], recs = [], C = (i) => `LOR13-${i + 1}`;
+  for (const [d, os, older, ua] of [['iPhone 13', 'ios', false, iosUA], ['Galaxy A54', 'android', false, ANDROID('SM-A546B')], ['Moto G7 (2019)', 'android', true, ANDROID('moto g(7)')]]) {
+    for (let k = 0; k < 10; k++) {
+      const light = k < 6 ? 'boa' : k < 8 ? 'reflexo' : 'fraca', tilt = k === 4 || k === 5;
+      const cards = Array.from({ length: 9 }, (_, i) => C(i));
+      if (k === 0 && d !== 'Moto G7 (2019)') cards[8] = null; if (k === 1) cards[7] = null; if (k === 2 && d === 'iPhone 13') cards[6] = null;
+      if (k === 3) cards[1] = cards[0];
+      const foil = cards.map((c, i) => !!c && k < 2 && i < 3), name = `a3-p${d.replace(/\W/g, '')}${k}`;
+      pages.push({ file: `${name}-foto.jpg`, device: d, device_older: older, binder: k % 2 ? 'preto' : 'transparente', light, tilt, reprint: k === 9, foil, cards });
+      // video: every card only among the suggestions; photo: every card automatic and right
+      const vid = cards.map((c) => (c ? P('check', 'X', ['X', c]) : P('empty', null))), fot = cards.map((c) => (c ? P('ok', c) : P('empty', null)));
+      recs.push(rec(name, vid, fot, { ua, used: 'foto' }));
+    }
+  }
+  return { truth: { real: true, pages }, recs };
+}
+
+test('a complete, real set (sections 1 and 6.1): the gain is judged; OS and time on the phone come from the records', () => {
+  const { truth: t, recs } = fullSet(), r = compare(recs, t), p = r.paired.find((x) => x.a === 'foto');
+  assert.equal(r.evaluable, true, r.coverage.missing.join('; '));
+  assert.equal(p.meets_gain_rule, true); assert.equal(p.gain, true); assert.equal(p.judgement, 'ganho');
+  const md = markdown(r); assert.match(md, /Conjunto completo/); assert.match(md, /\*\*Evidência de ganho\.\*\*/);
+});
+test('not evaluable: synthetic photos, a missing item of section 1, no iPhone on iOS 18.4, a record without gabarito', () => {
+  const judge = (t, recs) => { const r = compare(recs, t); return [r.evaluable, r.paired.find((x) => x.a === 'foto').judgement, r.coverage.missing.join('; ')]; };
+  let s = fullSet(); s.truth.real = false; assert.deepEqual(judge(s.truth, s.recs).slice(0, 2), [false, 'não avaliável']);
+  s = fullSet(); s.truth.pages = s.truth.pages.slice(1); s.recs = s.recs.slice(1);
+  let [ev, j, why] = judge(s.truth, s.recs); assert.equal(ev, false); assert.equal(j, 'não avaliável'); assert.match(why, /29 de 30 páginas/);
+  s = fullSet(IOS17); [ev, j, why] = judge(s.truth, s.recs); assert.equal(ev, false); assert.match(why, /iOS ≥ 18\.4/);
+  s = fullSet(); s.recs.push(rec('a3-pextra', V, F)); [ev, j, why] = judge(s.truth, s.recs); assert.equal(ev, false); assert.match(why, /sem gabarito/);
+  s = fullSet(); s.recs.forEach((x) => { x.ua = 'Mozilla/5.0 (Windows NT 10.0)'; }); [ev, , why] = judge(s.truth, s.recs); assert.equal(ev, false); assert.match(why, /sistema/);
 });
