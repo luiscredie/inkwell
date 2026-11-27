@@ -75,3 +75,79 @@ test('rollback approval: approved by someone else → accepted', () => {
   const r = approve({ ...ENV(reviewers), ...APPROVALS([by('luiscredie'), by('outra-pessoa')]) });
   assert.equal(r.code, 0, r.text); assert.match(r.text, /independente por: outra-pessoa/);
 });
+
+// automatic deploy: the run that triggered it (tools/verify-workflow-run.sh)
+const RUN = (over = {}) => ({ name: 'Inkwell release checks', path: '.github/workflows/validate.yml', event: 'push', head_branch: 'main',
+  head_repository: { full_name: 'o/r' }, head_sha: HEAD, status: 'completed', conclusion: 'success', ...over });
+const JOBS = (bad = {}) => ({ jobs: ['js', 'python', 'smoke', 'journeys-webkit'].map((name) => ({ name, conclusion: bad[name] || 'success' })) });
+const auto = (runOver = {}, more = {}, env = {}) => run('verify-workflow-run.sh', { RUN_ID: '5', SHA: HEAD, ...env }, {
+  'repos/o/r/actions/runs/5': RUN(runOver), 'repos/o/r/actions/runs/5/jobs?filter=latest&per_page=50': JOBS(), [`repos/o/r/compare/${HEAD}...main`]: { status: 'identical' }, ...more });
+
+test('automatic deploy: the official run of a push to main of this repository → accepted', () => {
+  const r = auto(); assert.equal(r.code, 0, r.text); assert.match(r.text, /OK: .* execução oficial 5/);
+  const older = auto({}, { [`repos/o/r/compare/${HEAD}...main`]: { status: 'ahead' } }); assert.equal(older.code, 0, older.text);   // main moved on since
+});
+test('automatic deploy: a pull request from a fork whose branch is called "main" → refused', () => {
+  const r = auto({ event: 'pull_request', head_repository: { full_name: 'someone/inkwell' } });
+  assert.notEqual(r.code, 0); assert.match(r.text, /pull_request/);
+  assert.match(auto({ head_repository: { full_name: 'someone/inkwell' } }).text, /outro repositório/);
+  assert.match(auto({ head_repository: null }).text, /outro repositório/);
+});
+test('automatic deploy: another workflow, branch, commit, or a run that did not succeed → refused', () => {
+  assert.match(auto({ name: 'Other' }).text, /não é "Inkwell release checks"/);
+  assert.match(auto({ path: '.github/workflows/other.yml' }).text, /não é "Inkwell release checks"/);
+  assert.match(auto({ head_branch: 'feature' }).text, /não da main/);
+  assert.match(auto({ head_sha: OLD }).text, /testou/);
+  assert.match(auto({ conclusion: 'failure' }).text, /não concluiu com sucesso/);
+  assert.match(auto({ status: 'in_progress', conclusion: null }).text, /não concluiu com sucesso/);
+});
+test('automatic deploy: one of the four checks skipped or failed in that run → refused', () => {
+  for (const j of ['js', 'python', 'smoke', 'journeys-webkit']) for (const c of ['failure', 'skipped', 'cancelled']) {
+    const r = auto({}, { 'repos/o/r/actions/runs/5/jobs?filter=latest&per_page=50': JOBS({ [j]: c }) });
+    assert.notEqual(r.code, 0, `${j}=${c}`); assert.match(r.text, new RegExp(`job ${j} não concluiu`));
+  }
+});
+test('automatic deploy: a commit not on main, an unreadable run, or bad inputs → refused (fails closed)', () => {
+  assert.match(auto({}, { [`repos/o/r/compare/${HEAD}...main`]: { status: 'diverged' } }).text, /não está na main/);
+  assert.match(run('verify-workflow-run.sh', { RUN_ID: '5', SHA: HEAD }, {}).text, /não foi possível ler/);
+  assert.match(auto({}, {}, { RUN_ID: '5; rm -rf /' }).text, /execução de origem inválida/);
+  assert.match(auto({}, {}, { SHA: 'abc' }).text, /SHA de origem inválido/);
+});
+
+test('rollback approval: today\'s configuration (the only reviewer is the person who starts the run) → always refused', () => {
+  const only = { ...reviewers, reviewers: [{ type: 'User', reviewer: { login: 'luiscredie' } }] };
+  assert.match(approve({ ...ENV(only), ...APPROVALS([by('luiscredie')]) }).text, /não é independente/);
+  assert.match(approve({ ...ENV(only), ...APPROVALS([]) }).text, /nenhuma aprovação/);
+});
+test('rollback approval: the same person under another letter case is not independent (logins ignore case)', () => {
+  assert.match(approve({ ...ENV(reviewers), ...APPROVALS([by('LuisCredie')]) }).text, /não é independente/);
+  assert.match(run('verify-rollback-approval.sh', { RUN_ID: '9', ACTOR: 'LUISCREDIE' }, { ...ENV(reviewers), ...APPROVALS([by('luiscredie')]) }).text, /não é independente/);
+});
+test('rollback approval: no actor or run id → refused (fails closed)', () => {
+  assert.match(run('verify-rollback-approval.sh', { RUN_ID: '9', ACTOR: '' }, { ...ENV(reviewers), ...APPROVALS([by('outra-pessoa')]) }).text, /quem disparou/);
+  assert.match(run('verify-rollback-approval.sh', { RUN_ID: 'x', ACTOR: 'luiscredie' }, { ...ENV(reviewers), ...APPROVALS([by('outra-pessoa')]) }).text, /execução inválida/);
+});
+
+// after a deploy: tools/verify-published-deploy.sh reads the run's own logs (read-only)
+const LOG = (perms, body) => `2026-11-27T01:34:06.0770970Z ##[group]GITHUB_TOKEN Permissions\n${perms.map((x) => `2026-11-27T01:34:06.0774082Z ${x}`).join('\n')}\n2026-11-27T01:34:06.0778211Z ##[endgroup]\n${body}\n`;
+const goodBuild = LOG(['Actions: read', 'Contents: read', 'Metadata: read'], `x OK: ${HEAD} aprovado na execução oficial 5 (push na main deste repositório): js, python, smoke e journeys-webkit com sucesso.\nx HEAD is now at aaaaaaa Some commit`);
+const goodDeploy = LOG(['Metadata: read', 'Pages: write'], 'x Created deployment for zzz\nx Reported success!');
+const pub = (over = {}, runOver = {}) => run('verify-published-deploy.sh', { RUN_ID: '8', SKIP_SITE: '1' }, {
+  'repos/o/r/actions/runs/8': { name: 'Deploy Inkwell to GitHub Pages', event: 'workflow_run', status: 'completed', conclusion: 'success', ...runOver },
+  'repos/o/r/actions/runs/8/jobs?filter=latest&per_page=20': { jobs: [{ name: 'guard', conclusion: 'skipped', id: 1 }, { name: 'rollback-approval', conclusion: 'skipped', id: 2 }, { name: 'build', conclusion: 'success', id: 3 }, { name: 'deploy', conclusion: 'success', id: 4 }] },
+  'repos/o/r/actions/jobs/3/logs': goodBuild, 'repos/o/r/actions/jobs/4/logs': goodDeploy, ...over });
+
+test('after a deploy: build without Pages, deploy with Pages, approved commit = published commit → ok', () => {
+  const r = pub(); assert.equal(r.code, 0, r.text); assert.match(r.text, /publicado: aaaaaaa/); assert.match(r.text, /commit publicado = commit aprovado/);
+});
+test('after a deploy: the build job could publish (today\'s configuration) → flagged', () => {
+  const r = pub({ 'repos/o/r/actions/jobs/3/logs': LOG(['Contents: read', 'Pages: write'], `x OK: ${HEAD} aprovado na execução oficial 5\nx HEAD is now at aaaaaaa c`) });
+  assert.equal(r.code, 1); assert.match(r.text, /FALHA build tinha permissão de Pages/);
+});
+test('after a deploy: no guard line, another commit checked out, no deploy success, failed run → flagged', () => {
+  assert.match(pub({ 'repos/o/r/actions/jobs/3/logs': LOG(['Contents: read'], 'x HEAD is now at aaaaaaa c') }).text, /FALHA build: a guarda/);
+  assert.match(pub({ 'repos/o/r/actions/jobs/3/logs': LOG(['Contents: read'], `x OK: ${HEAD} aprovado na execução oficial 5\nx HEAD is now at bbbbbbb c`) }).text, /FALHA commit publicado \(bbbbbbb\) ≠ aprovado/);
+  assert.match(pub({ 'repos/o/r/actions/jobs/4/logs': LOG(['Pages: write'], 'x nothing') }).text, /FALHA deploy-pages não reportou/);
+  assert.match(pub({ 'repos/o/r/actions/jobs/4/logs': LOG(['Metadata: read'], 'x Reported success!') }).text, /FALHA deploy sem Pages: write/);
+  assert.match(pub({}, { conclusion: 'failure' }).text, /FALHA não concluiu/);
+});
