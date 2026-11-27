@@ -152,16 +152,12 @@ O filtro de reflexo segue o mesmo critério (**filtro × sem**, nas duas captura
 
 Objetivo: ver no aparelho real se a fotografia funciona, se o fallback funciona e se a interação continua boa, **sem cadastrar nenhuma carta**. Não substitui a seção 1: é a primeira verificação. Cerca de 15 minutos por aparelho.
 
-**Antes (no computador):** a versão com as três mudanças ainda não está publicada. Ela precisa ser servida a partir do computador, sem publicar:
+**Onde:** publicado em inkwell.com.br desde 26/11 (#349, #350, #351; autorização do proprietário). Nada precisa ser servido do computador.
 
-```bash
-git fetch origin scanner/teste-aparelho && git checkout scanner/teste-aparelho   # busca + número + fotografia, juntos
-python3 tools/build_site_pages.py && cd site && python3 -m http.server 8080
-```
-
-- **Android (Chrome):** ligar a depuração USB, conectar o cabo, abrir `chrome://inspect` no computador → *Port forwarding* `8080 → localhost:8080`. No celular, abrir `http://localhost:8080/colecao/?medicao=a3`. A câmera funciona porque `localhost` conta como endereço seguro.
-- **iPhone (Safari, iOS ≥ 18.4; ver em Ajustes → Geral → Sobre):** a câmera exige HTTPS. Sem publicar, é preciso um certificado local confiável no iPhone (por exemplo `mkcert`, com o perfil instalado e confiado em Ajustes) e servir `https://<IP-do-computador>:8443` na mesma rede Wi-Fi. A alternativa mais simples é uma URL temporária de pré-visualização, que **é uma publicação** e depende de autorização do Conselho.
-- Se o site pedir login, entrar com o código por e-mail. A chave de acesso (passkey) só funciona em inkwell.com.br.
+- Medição (página com o vídeo, como no padrão; guarda vídeo e foto): `https://inkwell.com.br/colecao/?medicao=a3`
+- Medição com a página usando a foto: `https://inkwell.com.br/colecao/?medicao=a3&captura=foto`
+- Os modos valem para a aba aberta: para voltar ao padrão, fechar a aba e abrir `https://inkwell.com.br/colecao/` numa aba nova.
+- iPhone: iOS ≥ 18.4 (Ajustes → Geral → Sobre) para haver foto; abaixo disso a medição registra "sem ImageCapture", o que também é resultado.
 
 **Antes (no celular):** abrir a Coleção e **anotar o total de cartas**, para conferir no fim que nada mudou.
 
