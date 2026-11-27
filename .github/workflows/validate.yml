@@ -30,8 +30,10 @@ jobs:
         run: node tools/handlab.test.mjs
       - name: Scanner 2.0 page geometry (pagescan)
         run: node tools/pagescan.test.mjs
-      - name: Manual deploy guards (fake GitHub API)
+      - name: Deploy guards (fake GitHub API)
         run: node --test tools/verify-deploy.test.mjs
+      - name: Deploy workflow job graph (who may publish)
+        run: node --test tools/deploy-workflow.test.mjs
       - name: Escanear página with a real photo (stillcapture)
         run: node tools/stillcapture.test.mjs
       - name: Scanner 2.0, A3 evaluation report

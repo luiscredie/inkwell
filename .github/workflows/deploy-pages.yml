@@ -27,12 +27,9 @@ on:
         required: false
         default: ""
 
+# Only the deploy job can publish (pages, id-token); the jobs that check out and run repository code cannot.
 permissions:
   contents: read
-  pages: write
-  id-token: write
-  checks: read
-  actions: read
 
 concurrency:
   group: pages
@@ -42,6 +39,10 @@ jobs:
   # Manual run: which commit, on main, approved by the official release run; is it a rollback?
   guard:
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      checks: read
+      actions: read
     runs-on: ubuntu-latest
     outputs:
       rollback: ${{ steps.verify.outputs.rollback }}
@@ -71,6 +72,9 @@ jobs:
     needs: guard
     if: needs.guard.outputs.rollback == 'true'
     environment: rollback
+    permissions:
+      contents: read
+      actions: read
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -91,16 +95,43 @@ jobs:
   # o artefato ja esta registrado quando o deploy comeca, e "Re-run failed jobs" refaz so o deploy, com o mesmo artefato.
   build:
     needs: [guard, rollback-approval]
-    # automatic: the release checks of that commit passed. Manual: the guard passed and, for a rollback, the
-    # independent approval too. Never when anything before it failed or was cancelled.
+    # automatic: the release checks of a push to main of this repository passed — "Inkwell release checks" also runs
+    # on pull requests, and the branch filter above matches only the branch name, so a fork's branch called "main"
+    # must not get here. Manual: the guard passed and, for a rollback, the independent approval too. Never when
+    # anything before it failed or was cancelled.
     if: >-
       !cancelled() && (
-        (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+        (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' &&
+          github.event.workflow_run.head_repository.full_name == github.repository) ||
         (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && needs.guard.result == 'success' &&
           (needs.guard.outputs.rollback != 'true' || needs.rollback-approval.result == 'success'))
       )
+    permissions:
+      contents: read
+      actions: read
     runs-on: ubuntu-latest
     steps:
+      # automatic deploy: the triggering run, checked through the API (tools/verify-workflow-run.sh, from main's tree)
+      - name: Fetch the automatic-deploy guard from main
+        if: github.event_name == 'workflow_run'
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          path: .deploy-guard
+          sparse-checkout: tools/verify-workflow-run.sh
+          sparse-checkout-cone-mode: false
+      - name: Verify the run that triggered this deploy
+        if: github.event_name == 'workflow_run'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          bash .deploy-guard/tools/verify-workflow-run.sh
+          rm -rf .deploy-guard
+
       - name: Check out revision
         uses: actions/checkout@v5
         with:
@@ -135,9 +166,6 @@ jobs:
           done
           test ! -f index.html
 
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
-
       - name: Upload site directory
         uses: actions/upload-pages-artifact@v3
         with:
@@ -147,11 +175,17 @@ jobs:
   deploy:
     needs: build
     if: ${{ !cancelled() && needs.build.result == 'success' }}
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4

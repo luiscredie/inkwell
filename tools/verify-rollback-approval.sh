@@ -9,6 +9,8 @@ set -euo pipefail
 say() { echo "$*"; [ -n "${GITHUB_STEP_SUMMARY:-}" ] && echo "$*" >> "$GITHUB_STEP_SUMMARY" || true; }
 no() { say "RECUSADO: $*"; exit 1; }
 
+[[ "${RUN_ID:-}" =~ ^[0-9]+$ ]] || no "execução inválida (${RUN_ID:-vazia})."
+[ -n "${ACTOR:-}" ] || no "não se sabe quem disparou o deploy: sem isso a aprovação não pode ser verificada como independente."
 env=$(gh api "repos/$REPO/environments/rollback" 2>/dev/null) || no "o ambiente protegido \"rollback\" não existe ou não pôde ser lido."
 rule=$(jq -c '[.protection_rules[]? | select(.type == "required_reviewers")][0] // empty' <<<"$env")
 [ -n "$rule" ] || no "o ambiente \"rollback\" não exige revisores: um rollback sem aprovação independente não é publicado."
@@ -19,6 +21,8 @@ n=$(jq '.reviewers | length' <<<"$rule")
 who=$(gh api "repos/$REPO/actions/runs/$RUN_ID/approvals" \
   --jq '[.[] | select(.state == "approved") | select([.environments[]?.name] | index("rollback")) | .user.login] | unique | join(" ")')
 [ -n "$who" ] || no "nenhuma aprovação registrada para o ambiente \"rollback\" nesta execução."
-indep=""; for u in $who; do [ "$u" != "$ACTOR" ] && indep="$indep $u"; done
+# GitHub logins ignore letter case: compare them lowercased
+actor=$(tr '[:upper:]' '[:lower:]' <<<"$ACTOR")
+indep=""; for u in $who; do [ "$(tr '[:upper:]' '[:lower:]' <<<"$u")" != "$actor" ] && indep="$indep $u"; done
 [ -n "$indep" ] || no "a única aprovação veio de quem disparou o deploy ($ACTOR): não é independente."
 say "Rollback aprovado de forma independente por:$indep (disparado por $ACTOR)."

@@ -75,3 +75,55 @@ test('rollback approval: approved by someone else → accepted', () => {
   const r = approve({ ...ENV(reviewers), ...APPROVALS([by('luiscredie'), by('outra-pessoa')]) });
   assert.equal(r.code, 0, r.text); assert.match(r.text, /independente por: outra-pessoa/);
 });
+
+// automatic deploy: the run that triggered it (tools/verify-workflow-run.sh)
+const RUN = (over = {}) => ({ name: 'Inkwell release checks', path: '.github/workflows/validate.yml', event: 'push', head_branch: 'main',
+  head_repository: { full_name: 'o/r' }, head_sha: HEAD, status: 'completed', conclusion: 'success', ...over });
+const JOBS = (bad = {}) => ({ jobs: ['js', 'python', 'smoke', 'journeys-webkit'].map((name) => ({ name, conclusion: bad[name] || 'success' })) });
+const auto = (runOver = {}, more = {}, env = {}) => run('verify-workflow-run.sh', { RUN_ID: '5', SHA: HEAD, ...env }, {
+  'repos/o/r/actions/runs/5': RUN(runOver), 'repos/o/r/actions/runs/5/jobs?filter=latest&per_page=50': JOBS(), [`repos/o/r/compare/${HEAD}...main`]: { status: 'identical' }, ...more });
+
+test('automatic deploy: the official run of a push to main of this repository → accepted', () => {
+  const r = auto(); assert.equal(r.code, 0, r.text); assert.match(r.text, /OK: .* execução oficial 5/);
+  const older = auto({}, { [`repos/o/r/compare/${HEAD}...main`]: { status: 'ahead' } }); assert.equal(older.code, 0, older.text);   // main moved on since
+});
+test('automatic deploy: a pull request from a fork whose branch is called "main" → refused', () => {
+  const r = auto({ event: 'pull_request', head_repository: { full_name: 'someone/inkwell' } });
+  assert.notEqual(r.code, 0); assert.match(r.text, /pull_request/);
+  assert.match(auto({ head_repository: { full_name: 'someone/inkwell' } }).text, /outro repositório/);
+  assert.match(auto({ head_repository: null }).text, /outro repositório/);
+});
+test('automatic deploy: another workflow, branch, commit, or a run that did not succeed → refused', () => {
+  assert.match(auto({ name: 'Other' }).text, /não é "Inkwell release checks"/);
+  assert.match(auto({ path: '.github/workflows/other.yml' }).text, /não é "Inkwell release checks"/);
+  assert.match(auto({ head_branch: 'feature' }).text, /não da main/);
+  assert.match(auto({ head_sha: OLD }).text, /testou/);
+  assert.match(auto({ conclusion: 'failure' }).text, /não concluiu com sucesso/);
+  assert.match(auto({ status: 'in_progress', conclusion: null }).text, /não concluiu com sucesso/);
+});
+test('automatic deploy: one of the four checks skipped or failed in that run → refused', () => {
+  for (const j of ['js', 'python', 'smoke', 'journeys-webkit']) for (const c of ['failure', 'skipped', 'cancelled']) {
+    const r = auto({}, { 'repos/o/r/actions/runs/5/jobs?filter=latest&per_page=50': JOBS({ [j]: c }) });
+    assert.notEqual(r.code, 0, `${j}=${c}`); assert.match(r.text, new RegExp(`job ${j} não concluiu`));
+  }
+});
+test('automatic deploy: a commit not on main, an unreadable run, or bad inputs → refused (fails closed)', () => {
+  assert.match(auto({}, { [`repos/o/r/compare/${HEAD}...main`]: { status: 'diverged' } }).text, /não está na main/);
+  assert.match(run('verify-workflow-run.sh', { RUN_ID: '5', SHA: HEAD }, {}).text, /não foi possível ler/);
+  assert.match(auto({}, {}, { RUN_ID: '5; rm -rf /' }).text, /execução de origem inválida/);
+  assert.match(auto({}, {}, { SHA: 'abc' }).text, /SHA de origem inválido/);
+});
+
+test('rollback approval: today\'s configuration (the only reviewer is the person who starts the run) → always refused', () => {
+  const only = { ...reviewers, reviewers: [{ type: 'User', reviewer: { login: 'luiscredie' } }] };
+  assert.match(approve({ ...ENV(only), ...APPROVALS([by('luiscredie')]) }).text, /não é independente/);
+  assert.match(approve({ ...ENV(only), ...APPROVALS([]) }).text, /nenhuma aprovação/);
+});
+test('rollback approval: the same person under another letter case is not independent (logins ignore case)', () => {
+  assert.match(approve({ ...ENV(reviewers), ...APPROVALS([by('LuisCredie')]) }).text, /não é independente/);
+  assert.match(run('verify-rollback-approval.sh', { RUN_ID: '9', ACTOR: 'LUISCREDIE' }, { ...ENV(reviewers), ...APPROVALS([by('luiscredie')]) }).text, /não é independente/);
+});
+test('rollback approval: no actor or run id → refused (fails closed)', () => {
+  assert.match(run('verify-rollback-approval.sh', { RUN_ID: '9', ACTOR: '' }, { ...ENV(reviewers), ...APPROVALS([by('outra-pessoa')]) }).text, /quem disparou/);
+  assert.match(run('verify-rollback-approval.sh', { RUN_ID: 'x', ACTOR: 'luiscredie' }, { ...ENV(reviewers), ...APPROVALS([by('outra-pessoa')]) }).text, /execução inválida/);
+});
