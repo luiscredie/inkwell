@@ -38,7 +38,7 @@ for(const width of [320,375,390,430,1280]){
         const blurred=[];
         for(let node=card;node&&node.nodeType===1;node=node.parentElement){
           const style=getComputedStyle(node);
-          if(/blur\\s*\\(/i.test(style.filter)||/blur\\s*\\(/i.test(style.backdropFilter||'')){
+          if(/blur\s*\(/i.test(style.filter)||/blur\s*\(/i.test(style.backdropFilter||'')){
             blurred.push(node.className||node.tagName);
           }
         }
@@ -67,9 +67,9 @@ for(const width of [320,375,390,430,1280]){
       const sheet=[...document.styleSheets].find(s=>s.href?.endsWith('/experience.css'));
       const text=[...(sheet?.cssRules||[])].map(r=>r.cssText).join(' ');
       return {
-        leaf:/\\.binder-leaf\\s*\\{[^}]*animation:\\s*leaf-in\\s+\\.16s/.test(text),
-        next:/is-turning-next[^}]*page-turn-next\\s+\\.16s/.test(text),
-        prev:/is-turning-prev[^}]*page-turn-prev\\s+\\.16s/.test(text)
+        leaf:/\.binder-leaf\s*\{[^}]*animation:\s*leaf-in\s+\.16s/.test(text),
+        next:/is-turning-next[^}]*page-turn-next\s+\.16s/.test(text),
+        prev:/is-turning-prev[^}]*page-turn-prev\s+\.16s/.test(text)
       };
     });
     assert(Object.values(animationDurations).every(Boolean),'Binder CSS animation exceeds 160ms interaction window');
