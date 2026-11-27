@@ -1765,7 +1765,9 @@ const CARD_INDEX = /*@CARD_INDEX@*/;
   const identify = (img, grid) => SE().identify(img, grid || undefined);
   // Lightness fallback without the slow gradient (foil shine): on by default since the 24/11 measurement;
   // INKWELL_SCAN_EXP = "nodetrend" switches it off for comparisons (tools/pagescan-bench.spec.mjs, PAGESCAN_EXP).
-  const scanExp = () => ({ detrend: window.INKWELL_SCAN_EXP !== "nodetrend" });
+  // ?reflexo=1 (kept for the tab): the experimental glare filter (scanengine.js GLARE), off by default; only to be measured.
+  const GLARE_ON = (() => { try { const on = new URLSearchParams(location.search).get("reflexo") === "1" || sessionStorage.getItem("inkwellReflexo") === "1"; if (on) sessionStorage.setItem("inkwellReflexo", "1"); return on; } catch { return false; } })();
+  const scanExp = () => ({ detrend: window.INKWELL_SCAN_EXP !== "nodetrend", glare: GLARE_ON || window.INKWELL_SCAN_GLARE === true });
   const identifyPocket = (img) => SE().identifyPocket(img, scanExp());
   window.__inkwellScanIdentify = (img) => (SCAN ? identify(img) : null);   // used by the browser test
 
@@ -1857,21 +1859,8 @@ self.onmessage = async (e) => {
   window.__inkwellScanWorkers = () => (PW ? PW.length : 0);   // used by the browser test
 
   // Same art in several printings (reprints, promos): read the collector line "29/204 · EN · 11" to pick one.
-  function pickByCollector(text, group) {
-    if (String(text).includes(" | ")) {   // several readings: add up each one's evidence
-      const total = new Map(); for (const t of String(text).split(" | ")) for (const [id, sc] of collectorScores(t, group)) total.set(id, (total.get(id) || 0) + sc);
-      const r = [...total].sort((a, b) => b[1] - a[1]); return r.length && r[0][1] >= 2 && r[0][1] >= (r[1]?.[1] ?? 0) + 2 ? r[0][0] : null;
-    }
-    const r = collectorScores(text, group);
-    return r.length && r[0][1] >= 2 && r[0][1] >= (r[1]?.[1] ?? 0) + 2 ? r[0][0] : null;
-  }
-  function collectorScores(text, group) {
-    const toks = String(text || "").match(/\d+/g) || [];
-    if (!toks.length) return [];
-    const first = toks[0], nums = new Set([first, first.length > 3 ? first.slice(0, -3) : first]), last = toks[toks.length - 1];
-    const score = (id) => { const m = id.match(/^LOR(\d+)-(\d+)$/); if (!m) return 0; let s = 0; if (nums.has(m[2]) || toks.includes(m[2])) s += 2; if (last === m[1]) s += 2; else if (toks.length > 1 && last.endsWith(m[1])) s += 1; return s; };
-    return group.map((id) => [id, score(id)]).sort((a, b) => b[1] - a[1]);
-  }
+  // Reprints in the one-card scanner: unchanged, now in pagescan.js (PS().pickByCollector) so it can be tested in Node.
+  const pickByCollector = (text, group) => PS().pickByCollector(text, group);
   let ocrWorker = null;
   // The collector line is small white text on the dark border: cut it from the full-resolution video frame, enlarge it 3×,
   // stretch the contrast and try it inverted (dark on light, what OCR reads best), thresholded and as is.
@@ -2195,7 +2184,7 @@ self.onmessage = async (e) => {
     // reprints: read the collector numbers in the background; a clear reading settles the pocket unless the person did
     // The reader (Tesseract, ~MBs from a CDN the first time) starts only now: started during the recognition, it took the
     // CPU from it on a 2-core device (Android emulator, 24/11). The person is checking pockets meanwhile.
-    const choose = pg.pockets.filter((p) => p.status === "choose").length;
+    const choose = pg.pockets.filter(needsReading).length;
     if (!choose) { LAST_TIMING.ocr = 0; console.info("[inkwell] escanear página", JSON.stringify(LAST_TIMING)); return; }
     setReading(pg, true);
     const to = performance.now();
@@ -2211,27 +2200,43 @@ self.onmessage = async (e) => {
     if (!on) { el?.remove(); return; }
     if (el || !box) return;
     const n = document.createElement("p"); n.className = "small muted pg-note"; n.dataset.testid = "page-reading"; n.setAttribute("data-testid", "page-reading");
-    n.textContent = P("Lendo o número das reimpressões… você já pode conferir.", "Reading the reprints' numbers… you can check meanwhile.");
+    n.textContent = P("Lendo o número das cartas… você já pode conferir.", "Reading the cards' numbers… you can check meanwhile.");
     box.querySelector("footer")?.prepend(n);
   }
   // Pockets whose art exists in several printings: read each one's collector line from the full photo, like the
   // one-card scanner does. A clear reading settles the pocket; otherwise the person picks.
+  // Pockets worth reading the collector line of: reprints (same art, several printings) and pockets the art alone didn't
+  // settle ("check" / "unknown": gloss on the sleeve, an Enchanted foil, a card the art confuses with another).
+  const needsReading = (p) => p && !p.resolved && !p.skip && (p.status === "choose" || p.status === "check" || p.status === "unknown");
+  // Read each such pocket's collector line from the full photo, like the one-card scanner does. What the readings settle is
+  // PS().decideNumber (pagescan.js): a clear number settles the pocket, a number naming another card only goes first as a
+  // suggestion, readings that disagree change nothing.
   async function pickPrintings(pg) {
     const L = PS().LAYOUTS[scan.layout], W = L.cols * SG.W, H = L.rows * SG.H;
     for (const p of pg.pockets) {
-      if (scan.pg !== pg || p.status !== "choose" || p.resolved || p.skip) continue;
-      const q = PS().stripQuad(p, pg.quad, W, H, SG.M); if (!q) continue;
-      const sw = Math.hypot(q[1][0] - q[0][0], q[1][1] - q[0][1]), ow = Math.max(300, Math.min(1200, Math.round(sw * 3))), oh = Math.max(40, Math.round(ow * 0.05 / 0.34 * SG.H / SG.W));
-      let strip; try { strip = PS().warp(pg.image, q, ow, oh); } catch { continue; }
-      const cv = document.createElement("canvas"); cv.width = ow; cv.height = oh; cv.getContext("2d").putImageData(new ImageData(strip.data, ow, oh), 0, 0);
-      const reads = []; let pick = null;
-      for (const im of collectorImages({ x: 0, y: 0, w: ow, h: oh }, cv)) {
-        let text = ""; try { text = await readCollector(im); } catch { text = ""; }
-        reads.push(text); pick = pickByCollector(reads.join(" | "), p.group) || pickByCollector(text, p.group);
-        if (pick) break;
-      }
-      if (pick) applyReading(pg, p, pick);
+      if (scan.pg !== pg || !needsReading(p)) continue;
+      const d = await decideByNumber(pg.image, pg.quad, p, W, H);
+      if (!d || scan.pg !== pg || p.resolved || p.skip) continue;
+      if (d.pick) { applyReading(pg, p, d.pick); continue; }
+      if (pg.sheet != null && pg.pockets[pg.sheet] === p) continue;   // never under the person's finger
+      p.top = [{ id: d.suggest, s: 1 }, ...(p.top || []).filter((t) => t.id !== d.suggest)];
+      p.id = d.suggest; p.status = "check"; p.ocr = true;
+      patchPage(pg);
     }
+  }
+  // The readings of one pocket's collector line and what they settle, without touching the screen.
+  async function decideByNumber(image, quad, p, W, H) {
+    const q = PS().stripQuad(p, quad, W, H, SG.M); if (!q) return null;
+    const sw = Math.hypot(q[1][0] - q[0][0], q[1][1] - q[0][1]), ow = Math.max(300, Math.min(1200, Math.round(sw * 3))), oh = Math.max(40, Math.round(ow * 0.05 / 0.34 * SG.H / SG.W));
+    let strip; try { strip = PS().warp(image, q, ow, oh); } catch { return null; }
+    const cv = document.createElement("canvas"); cv.width = ow; cv.height = oh; cv.getContext("2d").putImageData(new ImageData(strip.data, ow, oh), 0, 0);
+    const reads = []; let d = null;
+    for (const im of collectorImages({ x: 0, y: 0, w: ow, h: oh }, cv)) {
+      let text = ""; try { text = await readCollector(im); } catch { text = ""; }
+      reads.push(text); d = PS().decideNumber(p, reads, (id) => BY.has(id));
+      if (d && d.pick) break;
+    }
+    return d;   // a suggestion only after all three images: a later reading may disagree and cancel it
   }
   // What the check screen shows: the page and a margin around it (room to drag the corners), not the whole camera picture.
   function pageView(pg) {
@@ -2372,7 +2377,7 @@ self.onmessage = async (e) => {
             <b>${i + 1}. ${esc(c ? label(p) : p ? stTxt(s) : "…")}</b><span class="chip">${esc(pkChip(p))}</span></button>`; }).join("")}</div>
       </div>
       <footer>${pg.note ? `<p class="small pg-note pg-ok" data-testid="page-note">${esc(pg.note)}</p>` : `<p class="small muted pg-note">${Tx("Nothing will be saved until you confirm.")}</p>`}
-        ${pg.reading ? `<p class="small muted pg-note" data-testid="page-reading">${esc(P("Lendo o número das reimpressões… você já pode conferir.", "Reading the reprints' numbers… you can check meanwhile."))}</p>` : ""}
+        ${pg.reading ? `<p class="small muted pg-note" data-testid="page-reading">${esc(P("Lendo o número das cartas… você já pode conferir.", "Reading the cards' numbers… you can check meanwhile."))}</p>` : ""}
         ${!pg.busy && out.length ? `<p class="small pg-note pg-out" data-testid="page-out">${esc(outText(out))}</p>` : ""}
         <button type="button" class="btn primary" id="pgAdd" data-testid="page-add" ${pg.busy || (!pend && !list.length) ? "disabled" : ""}>${esc(addTxt(pg, pend, list))}</button>
         ${pg.armDup ? `<p class="small pg-note pg-dup" data-testid="page-dup">${esc(P("Estas mesmas cartas já foram para a lista na foto anterior.", "These same cards went on the list with the last photo."))}</p>` : ""}
@@ -2535,6 +2540,7 @@ self.onmessage = async (e) => {
     };
     svg.onpointerup = svg.onpointercancel = () => { if (k < 0) return; k = -1; pg.moved = true; };
   }
+  window.__inkwellScanExp = () => scanExp();   // tests: the engine options in force (the glare filter must be off by default)
   window.__inkwellScanPageState = () => (scan.pg ? { busy: !!scan.pg.busy, sheet: scan.pg.sheet ?? null, adjust: !!scan.pg.adjust, quad: scan.pg.quad, pockets: scan.pg.pockets.map((p) => p && { status: p.status, id: p.id, resolved: !!p.resolved, skip: !!p.skip, qty: p.qty, foil: !!p.foil, group: p.group || [] }) } : null);   // used by the browser test
 
   async function openScanner(from) {
