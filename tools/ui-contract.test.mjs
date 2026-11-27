@@ -101,6 +101,12 @@ check(
     deployWorkflow.includes('test ! -f index.html')
 );
 check(
+  'Pages deploy runs in its own job after the build uploaded the artifact',
+  /\n  deploy:\n    needs: build\n/.test(deployWorkflow) &&
+    deployWorkflow.indexOf('uses: actions/upload-pages-artifact@v3') < deployWorkflow.indexOf('\n  deploy:\n') &&
+    deployWorkflow.indexOf('uses: actions/deploy-pages@v4') > deployWorkflow.indexOf('\n  deploy:\n')
+);
+check(
   'browser smoke contains no conditional existence skips',
   !/if\s*\(\s*await\s+[^)]*\.count\(\)/.test(smoke)
 );

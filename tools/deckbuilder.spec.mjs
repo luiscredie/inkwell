@@ -404,7 +404,10 @@ test('panel: no request beyond the deck saves while building (prices and collect
   const seen = [];
   page.on('request', (r) => { const u = r.url(); if (/\/rest\/v1\/|\/data\/.*\.json|\/functions\//.test(u)) seen.push(u.replace(/^.*?(\/rest\/v1\/|\/data\/|\/functions\/)/, '$1')); });
   const g = tile(page, 'Gurgi');
-  for (let i = 0; i < 5; i++) { await g.locator('[data-bq$=":-1"]').click(); await g.locator('[data-bq$=":1"]').click(); }
+  // 3 round trips are enough to see a stray request. With 5, WebKit took 18–28 s of the 30 s limit (26/11, 2 workers):
+  // each +/− costs ~0.5 s of style/layout/paint there (the handler 3–14 ms; Chromium ~30 ms in all). See the issue on
+  // measuring this in real Safari (#347).
+  for (let i = 0; i < 3; i++) { await g.locator('[data-bq$=":-1"]').click(); await g.locator('[data-bq$=":1"]').click(); }
   await page.waitForTimeout(1200);
   expect(seen.filter((u) => u !== '/rest/v1/rpc/save_deck')).toEqual([]);
 });

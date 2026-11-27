@@ -86,7 +86,10 @@ jobs:
           ACTOR: ${{ github.triggering_actor }}
         run: bash tools/verify-rollback-approval.sh
 
-  deploy:
+  # Montagem e publicacao em jobs separados (#348): num job so, o deploy-pages consultava o artefato ~0,5 s
+  # depois do upload e o GitHub, de forma intermitente, respondia "Found 0 artifact(s)" (e47eb89, 26/11). Separado,
+  # o artefato ja esta registrado quando o deploy comeca, e "Re-run failed jobs" refaz so o deploy, com o mesmo artefato.
+  build:
     needs: [guard, rollback-approval]
     # automatic: the release checks of that commit passed. Manual: the guard passed and, for a rollback, the
     # independent approval too. Never when anything before it failed or was cancelled.
@@ -96,9 +99,6 @@ jobs:
         (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && needs.guard.result == 'success' &&
           (needs.guard.outputs.rollback != 'true' || needs.rollback-approval.result == 'success'))
       )
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Check out revision
@@ -143,6 +143,15 @@ jobs:
         with:
           path: _site
 
+  # only after the build of the approved commit (and, for a rollback, the independent approval) succeeded
+  deploy:
+    needs: build
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
