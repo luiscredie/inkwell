@@ -34,6 +34,8 @@ jobs:
         run: node tools/stillcapture.test.mjs
       - name: Scanner 2.0, A3 evaluation report
         run: node --test tools/pagescan-report.test.mjs
+      - name: Scanner 2.0, A3 video × photo comparison
+        run: node --test tools/pagescan-a3-compare.test.mjs
       - name: Deck portfolio advisor
         run: node tools/deck-portfolio-v4.test.mjs
       - name: Match center

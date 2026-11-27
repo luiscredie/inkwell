@@ -102,3 +102,81 @@ com `Image.decode()` (o mesmo problema da #333) e agora usa `createImageBitmap`,
 | Tempo por página | ≤ 4 s no aparelho mais lento | Otimizar o motor no Worker (menos posições, SIMD). |
 
 Os resultados são publicados como medidos, inclusive quando não atingem a meta. A meta de 95% só é declarada atingida com este protocolo cumprido.
+
+## 6. Comparação controlada: vídeo × fotografia (e o filtro de reflexo)
+
+Objetivo: decidir, com medição em aparelhos reais, se a fotografia tirada pelo site (`ImageCapture.takePhoto`, desligada por padrão; `?captura=foto`) reconhece melhor que o quadro do vídeo, e se o filtro de reflexo experimental (`?reflexo=1`, desligado por padrão) ajuda. **Nenhum ganho é declarado antes desta medição.** Emulador não vale para esta seção.
+
+### 6.1 Como a comparação é controlada
+
+Com `?medicao=a3`, cada toque em "Fotografar página" guarda **o quadro do vídeo e a fotografia do mesmo instante**: mesma página, mesmo enquadramento, mesma luz e mesmo reflexo. A diferença medida vem só da captura. Depois que a página da pessoa fica pronta, o site lê as duas imagens com os mesmos passos do uso normal (motor + número de colecionador, quando a versão do site tem essa etapa) e, se o motor tiver o filtro de reflexo, lê as duas de novo com o filtro. A tela não muda: a página da pessoa usa o vídeo, como no padrão. No fim aparece **Baixar medição**: um arquivo JSON por página (formato `a3: 2`).
+
+- **Privacidade:** o arquivo existe só na memória do aparelho e no download. Nada é enviado: nenhuma requisição leva imagem ou medição, o analytics recebe os mesmos nomes de evento de sempre (sem conteúdo) e nada fica guardado no navegador. Isso é verificado em teste automático. As imagens são do fichário da pessoa: ficam no computador que mede, **fora do repositório** (o `.gitignore` ignora `a3-p*.json`, `a3-p*-foto.jpg`, `a3-p*-video.jpg` e `a3-relatorio*` caso caiam ali).
+- Num aparelho sem `takePhoto` (iOS < 18.4), a página registra o fallback com o motivo. Isso também é resultado.
+
+### 6.2 Gabarito e relatório
+
+As mesmas definições da seção 3 (`tools/pagescan-report.mjs`: `verdict`, `summarise`): automática certa, 1ª sugestão certa, correção manual, carta tomada por vazio e falso positivo significam exatamente o mesmo aqui.
+
+```bash
+node tools/pagescan-a3-compare.mjs extract /pasta/das/medicoes      # gera <nome>-foto.jpg e <nome>-video.jpg
+# anotar as -foto.jpg (ou a -video.jpg de uma página sem foto) em tools/pagescan-annotate.html; exportar truth.json para a pasta
+node tools/pagescan-a3-compare.mjs report  /pasta/das/medicoes /pasta/das/medicoes/a3-relatorio.json /pasta/das/medicoes/a3-relatorio.md
+```
+
+O relatório traz uma coluna por leitura (**video**, **foto**, **video+reflexo**, **foto+reflexo** e **Site**, o que a página usou), por aparelho e no total, e as comparações pareadas.
+
+| Registrado | Como |
+|---|---|
+| Resolução | vídeo entregue pelo navegador; foto entregue pela câmera e o tamanho mantido (≤ 3000 px no lado maior) |
+| Tempo total | por leitura, no aparelho: captura (vídeo: o quadro; foto: quadro + `takePhoto` + alinhamento) + motor + números; e o tempo até a página ficar pronta |
+| Sucesso do alinhamento | correlação da foto com o quadro (≥ 0,6 = alinhou); mediana e mínimo |
+| Reconhecimento correto | automática certa, 1ª sugestão certa, correção manual, identificação |
+| Falsos positivos | por leitura e pareados (posições em que só uma das leituras errou com certeza); também as **sugestões erradas** exclusivas de cada lado |
+| Fallback | páginas sem foto ou sem alinhamento, e o motivo |
+
+**Pareado:** para cada posição com carta, conta-se onde só A identificou e onde só B identificou (McNemar exato). **"Evidência de ganho"** só quando A identifica mais, com p < 0,05, e não tem mais falsos positivos que B. Caso contrário, o relatório diz "sem evidência de ganho".
+
+### 6.3 Critérios do Conselho (26/11) para ligar a fotografia por padrão
+
+| Critério | Verificação |
+|---|---|
+| Nenhuma regressão na captura existente | suíte completa (Chromium + WebKit) verde; com a fotografia desligada o botão roda exatamente o código anterior (teste: nenhuma foto é tirada) |
+| Nenhuma perda de interação | a tela de conferência fica pronta e usável no mesmo tempo ou menos; tocar, rolar e resolver posições funcionam durante a leitura (testes + roteiro 7) |
+| Fallback confiável | 100% das páginas sem foto ou sem alinhamento caem no vídeo e são reconhecidas; nenhuma página perdida |
+| Evidência de melhoria real | **Foto × vídeo** com evidência de ganho (acima) no total; falsos positivos da foto ≤ vídeo (meta 0) |
+
+O filtro de reflexo segue o mesmo critério (**filtro × sem**, nas duas capturas). Sem evidência de ganho, os dois continuam desligados por padrão.
+
+## 7. Roteiro curto de validação física (2–3 páginas, iPhone e Android)
+
+Objetivo: ver no aparelho real se a fotografia funciona, se o fallback funciona e se a interação continua boa, **sem cadastrar nenhuma carta**. Não substitui a seção 1: é a primeira verificação. Cerca de 15 minutos por aparelho.
+
+**Onde:** publicado em inkwell.com.br desde 26/11 (#349, #350, #351; autorização do proprietário). Nada precisa ser servido do computador.
+
+- Medição (página com o vídeo, como no padrão; guarda vídeo e foto): `https://inkwell.com.br/colecao/?medicao=a3`
+- Medição com a página usando a foto: `https://inkwell.com.br/colecao/?medicao=a3&captura=foto`
+- Os modos valem para a aba aberta: para voltar ao padrão, fechar a aba e abrir `https://inkwell.com.br/colecao/` numa aba nova.
+- iPhone: iOS ≥ 18.4 (Ajustes → Geral → Sobre) para haver foto; abaixo disso a medição registra "sem ImageCapture", o que também é resultado.
+
+**Antes (no celular):** abrir a Coleção e **anotar o total de cartas**, para conferir no fim que nada mudou.
+
+**As páginas:** P1 com luz boa e de frente; P2 com reflexo (lâmpada refletindo no plástico); P3 com pelo menos 2 foils, 1 bolso vazio e, se possível, uma reimpressão.
+
+**Para cada página (com `?medicao=a3`):**
+1. Coleção → Escanear → Página 3×3. Enquadrar e tocar **Fotografar página** uma vez.
+2. Na tela de conferência, anotar o **tempo do rodapé** e se a câmera **piscou, congelou, fez som de obturador ou apagou a lanterna**.
+3. Enquanto a faixa "Medição A3…" trabalha, rolar a tela e abrir uma posição: anotar se algo travou ou se um toque se perdeu.
+4. Quando a faixa disser "pronta", tocar **Baixar medição** (iPhone: salvar em Arquivos).
+5. **Não tocar em "Adicionar"**. Voltar (seta ou Esc) e **descartar** a página.
+
+**Depois, uma vez por aparelho:** repetir a P2 com `?medicao=a3&captura=foto` (agora a própria página usa a foto) e anotar o tempo do rodapé e a sensação de espera, para comparar com o passo 2.
+
+**Ao final:** conferir na Coleção que o **total de cartas é o mesmo**. Passar os arquivos `a3-p*.json` para uma pasta **fora do repositório** no computador e seguir a seção 6.2. As observações dos passos 2 e 3 vão para o PR junto com o relatório.
+
+| Aparelho | Sistema | Página | Tempo do rodapé | Câmera piscou / congelou / som / lanterna | Travou ou perdeu toque | Arquivo |
+|---|---|---|---|---|---|---|
+| | | P1 | | | | |
+| | | P2 | | | | |
+| | | P3 | | | | |
+| | | P2 (`captura=foto`) | | | | |
